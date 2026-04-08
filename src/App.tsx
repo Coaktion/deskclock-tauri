@@ -6,6 +6,7 @@ import { PlanningOverlay } from "@presentation/overlays/PlanningOverlay";
 import { CompactOverlay } from "@presentation/overlays/CompactOverlay";
 import { TasksPage } from "@presentation/pages/TasksPage";
 import { PlanningPage } from "@presentation/pages/PlanningPage";
+import { HistoryPage } from "@presentation/pages/HistoryPage";
 import { DataPage } from "@presentation/pages/DataPage";
 import { PlaceholderPage } from "@presentation/pages/PlaceholderPage";
 
@@ -16,7 +17,7 @@ function PageContent({ page }: { page: Page }) {
     case "tasks":    return <TasksPage />;
     case "planning": return <PlanningPage />;
     case "data":     return <DataPage />;
-    case "history":  return <PlaceholderPage title="Histórico" />;
+    case "history":  return <HistoryPage />;
     case "settings": return <PlaceholderPage title="Configurações" />;
   }
 }
