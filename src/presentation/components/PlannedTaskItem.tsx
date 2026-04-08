@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Play, Check, Copy, Trash2, RotateCcw, Pencil, X } from "lucide-react";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -11,6 +12,7 @@ interface UpdateInput {
   projectId?: UUID | null;
   categoryId?: UUID | null;
   billable?: boolean;
+  scheduleDate?: string | null;
 }
 
 interface PlannedTaskItemProps {
@@ -18,6 +20,7 @@ interface PlannedTaskItemProps {
   dateISO: string;
   projects: Project[];
   categories: Category[];
+  showDateField?: boolean;
   onPlay: (task: PlannedTask) => void;
   onUpdate: (id: string, input: UpdateInput) => Promise<void>;
   onComplete: (id: string, date: string) => void;
@@ -31,6 +34,7 @@ export function PlannedTaskItem({
   dateISO,
   projects,
   categories,
+  showDateField = false,
   onPlay,
   onUpdate,
   onComplete,
@@ -49,8 +53,11 @@ export function PlannedTaskItem({
   const [categoryId, setCategoryId] = useState<UUID | null>(task.categoryId);
   const [categoryName, setCategoryName] = useState(category?.name ?? "");
   const [billable, setBillable] = useState(task.billable);
+  const [scheduleDate, setScheduleDate] = useState(task.scheduleDate ?? "");
   const dirty = useRef(false);
   const formRef = useRef<HTMLDivElement>(null);
+
+  const canEditDate = showDateField && task.scheduleType === "specific_date";
 
   // Sincroniza estado local quando a task mudar externamente
   useEffect(() => {
@@ -61,6 +68,7 @@ export function PlannedTaskItem({
       setCategoryId(task.categoryId);
       setCategoryName(categories.find((c) => c.id === task.categoryId)?.name ?? "");
       setBillable(task.billable);
+      setScheduleDate(task.scheduleDate ?? "");
     }
   }, [task, editing, projects, categories]);
 
@@ -71,7 +79,13 @@ export function PlannedTaskItem({
 
   async function save() {
     if (!dirty.current) { setEditing(false); return; }
-    await onUpdate(task.id, { name: name.trim() || task.name, projectId, categoryId, billable });
+    await onUpdate(task.id, {
+      name: name.trim() || task.name,
+      projectId,
+      categoryId,
+      billable,
+      ...(canEditDate ? { scheduleDate: scheduleDate || null } : {}),
+    });
     dirty.current = false;
     setEditing(false);
   }
@@ -83,6 +97,7 @@ export function PlannedTaskItem({
     setCategoryId(task.categoryId);
     setCategoryName(category?.name ?? "");
     setBillable(task.billable);
+    setScheduleDate(task.scheduleDate ?? "");
     dirty.current = false;
     setEditing(false);
   }
@@ -91,14 +106,16 @@ export function PlannedTaskItem({
   useEffect(() => {
     if (!editing) return;
     function handleOutside(e: MouseEvent) {
-      if (formRef.current && !formRef.current.contains(e.target as Node)) {
+      const target = e.target as Element;
+      if (target.closest("[data-datepicker-portal]")) return;
+      if (formRef.current && !formRef.current.contains(target)) {
         void save();
       }
     }
     document.addEventListener("mousedown", handleOutside);
     return () => document.removeEventListener("mousedown", handleOutside);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing, name, projectId, categoryId, billable]);
+  }, [editing, name, projectId, categoryId, billable, scheduleDate]);
 
   if (editing) {
     return (
@@ -106,14 +123,23 @@ export function PlannedTaskItem({
         ref={formRef}
         className="flex flex-col gap-2 px-4 py-3 border-b border-gray-700 bg-gray-800/60"
       >
-        <input
-          autoFocus
-          type="text"
-          value={name}
-          onChange={(e) => { setName(e.target.value); dirty.current = true; }}
-          onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") cancel(); }}
-          className="w-full px-2.5 py-1.5 text-sm bg-gray-900 border border-gray-600 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-        />
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            type="text"
+            value={name}
+            onChange={(e) => { setName(e.target.value); dirty.current = true; }}
+            onKeyDown={(e) => { if (e.key === "Enter") void save(); if (e.key === "Escape") cancel(); }}
+            className="flex-1 px-2.5 py-1.5 text-sm bg-gray-900 border border-gray-600 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          />
+          {canEditDate && (
+            <DatePickerInput
+              value={scheduleDate}
+              onChange={(v) => { setScheduleDate(v); dirty.current = true; }}
+              className="w-36 shrink-0"
+            />
+          )}
+        </div>
         <div className="flex gap-2">
           <Autocomplete
             value={projectName}
