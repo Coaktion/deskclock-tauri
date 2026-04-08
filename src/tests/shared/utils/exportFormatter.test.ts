@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   formatDuration,
   formatDate,
+  formatDateTime,
   buildExportRows,
   toCSV,
   toJSON,
@@ -76,6 +77,20 @@ describe("formatDate", () => {
   });
 });
 
+describe("formatDateTime", () => {
+  it("formata ISO com data e hora (YYYY-MM-DD HH:MM)", () => {
+    const result = formatDateTime("2026-04-08T12:00:00.000Z", "iso");
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+  });
+  it("formata dd/mm/yyyy com hora (DD/MM/YYYY HH:MM)", () => {
+    const result = formatDateTime("2026-04-08T12:00:00.000Z", "dd/mm/yyyy");
+    expect(result).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+  });
+  it("retorna vazio para string vazia", () => {
+    expect(formatDateTime("", "iso")).toBe("");
+  });
+});
+
 describe("buildExportRows", () => {
   it("constrói linhas com colunas visíveis", () => {
     const profile = makeProfile();
@@ -119,10 +134,18 @@ describe("buildExportRows", () => {
     expect(rows[0]["Duração"]).toBe("1.00");
   });
 
-  it("formata data conforme perfil", () => {
+  it("formata início como data e hora no formato dd/mm/yyyy", () => {
     const profile = makeProfile({ dateFormat: "dd/mm/yyyy" });
     const rows = buildExportRows([makeTask()], profile, projects, categories);
-    expect(rows[0]["Início"]).toBe("08/04/2026");
+    // deve conter DD/MM/YYYY HH:MM
+    expect(rows[0]["Início"]).toMatch(/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}$/);
+  });
+
+  it("formata início como data e hora no formato ISO", () => {
+    const profile = makeProfile({ dateFormat: "iso" });
+    const rows = buildExportRows([makeTask()], profile, projects, categories);
+    // deve conter YYYY-MM-DD HH:MM
+    expect(rows[0]["Início"]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
   });
 });
 

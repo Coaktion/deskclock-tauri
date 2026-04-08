@@ -26,6 +26,18 @@ export function formatDate(isoString: string, format: DateFormat): string {
   return `${d}/${m}/${y}`;
 }
 
+export function formatDateTime(isoString: string, format: DateFormat): string {
+  if (!isoString) return "";
+  const dt = new Date(isoString);
+  const y = dt.getFullYear();
+  const mo = String(dt.getMonth() + 1).padStart(2, "0");
+  const d = String(dt.getDate()).padStart(2, "0");
+  const h = String(dt.getHours()).padStart(2, "0");
+  const mi = String(dt.getMinutes()).padStart(2, "0");
+  if (format === "iso") return `${y}-${mo}-${d} ${h}:${mi}`;
+  return `${d}/${mo}/${y} ${h}:${mi}`;
+}
+
 type ExportRow = Record<string, string>;
 
 export function buildExportRows(
@@ -58,10 +70,10 @@ export function buildExportRows(
           row[col.label] = task.billable ? "Sim" : "Não";
           break;
         case "startTime":
-          row[col.label] = formatDate(task.startTime, profile.dateFormat);
+          row[col.label] = formatDateTime(task.startTime, profile.dateFormat);
           break;
         case "endTime":
-          row[col.label] = task.endTime ? formatDate(task.endTime, profile.dateFormat) : "";
+          row[col.label] = task.endTime ? formatDateTime(task.endTime, profile.dateFormat) : "";
           break;
         case "durationSeconds":
           row[col.label] = formatDuration(task.durationSeconds ?? 0, profile.durationFormat);
