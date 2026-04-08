@@ -10,6 +10,8 @@ export interface AppConfig {
   // Geral
   userName: string;
   showWelcomeMessage: boolean;
+  startOnBoot: boolean;
+  liveTrayTimer: boolean;
   // Overlay
   overlayAlwaysVisible: boolean;
   overlayShowOnStart: boolean;
@@ -24,6 +26,8 @@ export interface AppConfig {
 const DEFAULTS: AppConfig = {
   userName: "",
   showWelcomeMessage: true,
+  startOnBoot: false,
+  liveTrayTimer: false,
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
   overlayOpacity: 100,

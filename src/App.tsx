@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
+import { formatHHMMSS } from "@shared/utils/time";
 import { Sidebar, type Page } from "@presentation/components/Sidebar";
 import { TasksPage } from "@presentation/pages/TasksPage";
 import { PlanningPage } from "@presentation/pages/PlanningPage";
@@ -44,7 +47,26 @@ function MainContent({
   setPage: (p: Page) => void;
   welcomeActiveRef: React.MutableRefObject<boolean>;
 }) {
-  const { startTask } = useRunningTask();
+  const { startTask, runningTask } = useRunningTask();
+  const config = useAppConfig();
+
+  // Live tray timer — atualiza tooltip do ícone da bandeja a cada segundo
+  useEffect(() => {
+    if (!runningTask || runningTask.status !== "running") {
+      invoke("update_tray_tooltip", { text: null }).catch(() => {});
+      return;
+    }
+    const interval = setInterval(() => {
+      if (!config.get("liveTrayTimer")) {
+        invoke("update_tray_tooltip", { text: null }).catch(() => {});
+        return;
+      }
+      const elapsed = effectiveDuration(runningTask, new Date().toISOString());
+      const name = runningTask.name ?? "(sem nome)";
+      invoke("update_tray_tooltip", { text: `${name} — ${formatHHMMSS(elapsed)}` }).catch(() => {});
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [runningTask, config]);
 
   useEffect(() => {
     const unlisten = listen<WelcomeClosedPayload>(

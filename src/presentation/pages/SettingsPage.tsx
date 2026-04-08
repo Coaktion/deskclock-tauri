@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { emit } from "@tauri-apps/api/event";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 
@@ -139,6 +140,8 @@ export function SettingsPage() {
   // Estado local para evitar escrita a cada keystroke no input de nome
   const [userName, setUserName] = useState("");
   const [showWelcome, setShowWelcome] = useState(true);
+  const [startOnBoot, setStartOnBoot] = useState(false);
+  const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [overlayAlwaysVisible, setOverlayAlwaysVisible] = useState(true);
   const [overlayShowOnStart, setOverlayShowOnStart] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
@@ -155,15 +158,28 @@ export function SettingsPage() {
     setOverlayOpacity(config.get("overlayOpacity"));
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
     setOverlayShowGridIndicator(config.get("overlayShowGridIndicator"));
+    setLiveTrayTimer(config.get("liveTrayTimer"));
+    // Lê estado real do autostart do SO
+    isEnabled().then(setStartOnBoot).catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleToggle(
-    key: "showWelcomeMessage" | "overlayAlwaysVisible" | "overlayShowOnStart" | "overlaySnapToGrid" | "overlayShowGridIndicator",
+    key: "showWelcomeMessage" | "overlayAlwaysVisible" | "overlayShowOnStart" | "overlaySnapToGrid" | "overlayShowGridIndicator" | "liveTrayTimer",
     setter: (v: boolean) => void,
     value: boolean,
   ) {
     setter(value);
     await config.set(key, value);
+  }
+
+  async function handleStartOnBoot(value: boolean) {
+    setStartOnBoot(value);
+    await config.set("startOnBoot", value);
+    if (value) {
+      await enable();
+    } else {
+      await disable();
+    }
   }
 
   async function handleSlider(
@@ -211,6 +227,18 @@ export function SettingsPage() {
             description="Exibe uma saudação ao abrir o app"
             value={showWelcome}
             onChange={(v) => handleToggle("showWelcomeMessage", setShowWelcome, v)}
+          />
+          <ToggleRow
+            label="Iniciar na inicialização do computador"
+            description="Abre o DeskClock automaticamente ao ligar o computador"
+            value={startOnBoot}
+            onChange={handleStartOnBoot}
+          />
+          <ToggleRow
+            label="Timer ao vivo no ícone da bandeja"
+            description="Mostra o tempo da tarefa em execução no tooltip do ícone"
+            value={liveTrayTimer}
+            onChange={(v) => handleToggle("liveTrayTimer", setLiveTrayTimer, v)}
           />
         </Section>
 
