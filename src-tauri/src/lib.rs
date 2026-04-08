@@ -15,6 +15,12 @@ pub fn run() {
             sql: include_str!("../migrations/002_tasks.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 3,
+            description: "planned_tasks",
+            sql: include_str!("../migrations/003_planned_tasks.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

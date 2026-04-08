@@ -1,3 +1,15 @@
+const DAY_NAMES = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+const MONTH_NAMES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+function formatTodayHeader(dateISO: string): string {
+  const d = new Date(dateISO + "T12:00:00Z");
+  const day = DAY_NAMES[d.getUTCDay()];
+  const date = d.getUTCDate();
+  const month = MONTH_NAMES[d.getUTCMonth()];
+  const year = d.getUTCFullYear();
+  return `${day.charAt(0).toUpperCase() + day.slice(1)}, ${date} de ${month} de ${year}`;
+}
+
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
@@ -38,6 +50,9 @@ export function TodayPlanningView() {
 
   return (
     <div className="flex flex-col">
+      <div className="px-4 py-3 border-b border-gray-700">
+        <h2 className="text-sm font-medium text-gray-200">{formatTodayHeader(today)}</h2>
+      </div>
       <PlannedTaskForm
         projects={projects}
         categories={categories}

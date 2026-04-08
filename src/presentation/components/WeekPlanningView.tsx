@@ -139,6 +139,7 @@ export function WeekPlanningView() {
 
       {/* Formulário */}
       <PlannedTaskForm
+        key={dayFilter !== "all" ? dayFilter : start}
         projects={projects}
         categories={categories}
         showDateFields={true}
