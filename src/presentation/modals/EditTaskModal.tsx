@@ -88,7 +88,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-gray-900 border border-gray-700 rounded-lg w-full max-w-sm p-5 shadow-xl">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-100">Editar tarefa</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
@@ -107,28 +107,30 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
           />
 
           {/* Projeto e categoria */}
-          <Autocomplete
-            value={projectName}
-            onChange={setProjectName}
-            onSelect={(o) => setSelectedProjectId(o.id)}
-            options={projects}
-            placeholder="Projeto"
-          />
-          <Autocomplete
-            value={categoryName}
-            onChange={(v) => {
-              setCategoryName(v);
-              const cat = categories.find((c) => c.name === v);
-              if (cat) setBillable(cat.defaultBillable);
-            }}
-            onSelect={(o) => {
-              setSelectedCategoryId(o.id);
-              const cat = categories.find((c) => c.id === o.id);
-              if (cat) setBillable(cat.defaultBillable);
-            }}
-            options={categories}
-            placeholder="Categoria"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <Autocomplete
+              value={projectName}
+              onChange={setProjectName}
+              onSelect={(o) => setSelectedProjectId(o.id)}
+              options={projects}
+              placeholder="Projeto"
+            />
+            <Autocomplete
+              value={categoryName}
+              onChange={(v) => {
+                setCategoryName(v);
+                const cat = categories.find((c) => c.name === v);
+                if (cat) setBillable(cat.defaultBillable);
+              }}
+              onSelect={(o) => {
+                setSelectedCategoryId(o.id);
+                const cat = categories.find((c) => c.id === o.id);
+                if (cat) setBillable(cat.defaultBillable);
+              }}
+              options={categories}
+              placeholder="Categoria"
+            />
+          </div>
 
           {/* Billable */}
           <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Search, ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Pencil, Trash2, FileDown } from "lucide-react";
 import { useHistory, type QuickFilter } from "@presentation/hooks/useHistory";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
+import { ExportModal } from "@presentation/modals/ExportModal";
 import { formatHHMMSS, formatHHMM, formatHistoryDayHeader } from "@shared/utils/time";
 import type { Task } from "@domain/entities/Task";
 
@@ -23,6 +24,7 @@ export function HistoryPage() {
   const { categories } = useCategories();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
 
@@ -122,13 +124,23 @@ export function HistoryPage() {
           </div>
         )}
 
-        <button
-          onClick={handleSearch}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium transition-colors"
-        >
-          <Search size={14} />
-          Buscar
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleSearch}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm font-medium transition-colors"
+          >
+            <Search size={14} />
+            Buscar
+          </button>
+          <button
+            onClick={() => setExportOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 rounded text-sm font-medium transition-colors"
+            title="Exportar"
+          >
+            <FileDown size={14} />
+            Exportar
+          </button>
+        </div>
       </div>
 
       {/* Totalizadores */}
@@ -223,6 +235,11 @@ export function HistoryPage() {
           </div>
         ))}
       </div>
+
+      {/* Modal de exportação */}
+      {exportOpen && (
+        <ExportModal projects={projects} categories={categories} onClose={() => setExportOpen(false)} />
+      )}
 
       {/* Modal de edição */}
       {editingTask && (

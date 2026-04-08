@@ -168,6 +168,7 @@ export function WeekPlanningView() {
                   dateISO={day}
                   projects={projects}
                   categories={categories}
+                  showDateField
                   onPlay={handlePlay}
                   onUpdate={update}
                   onComplete={complete}
