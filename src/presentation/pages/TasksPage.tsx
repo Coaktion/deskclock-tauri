@@ -3,18 +3,41 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useTasks } from "@presentation/hooks/useTasks";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { RunningTaskSection } from "@presentation/components/RunningTaskSection";
 import { TotalsSection } from "@presentation/components/TotalsSection";
 import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
+import { PlannedTasksSection } from "@presentation/components/PlannedTasksSection";
+import { startPlannedTask } from "@domain/usecases/plannedTasks/StartPlannedTask";
+import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { TaskRepository } from "@infra/database/TaskRepository";
+import { todayISO } from "@shared/utils/time";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
+
+const plannedRepo = new PlannedTaskRepository();
+const taskRepo = new TaskRepository();
 
 export function TasksPage() {
+  const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { groups, totals, reload } = useTasks();
   const { startTask, runningTask } = useRunningTask();
+  const { tasks: plannedTasks, reload: reloadPlanned } = usePlannedTasksForDate(today);
 
   async function handleNewTask() {
     await startTask({ billable: true });
+  }
+
+  async function handlePlayPlanned(task: PlannedTask) {
+    await startPlannedTask(plannedRepo, taskRepo, task.id, new Date().toISOString());
+    await startTask({
+      name: task.name,
+      projectId: task.projectId,
+      categoryId: task.categoryId,
+      billable: task.billable,
+    });
+    await reloadPlanned();
   }
 
   const totalToday = totals.billableSeconds + totals.nonBillableSeconds;
@@ -32,6 +55,13 @@ export function TasksPage() {
           Iniciar nova tarefa
         </button>
       )}
+
+      <PlannedTasksSection
+        tasks={plannedTasks}
+        projects={projects}
+        dateISO={today}
+        onPlay={handlePlayPlanned}
+      />
 
       <TotalsSection
         billableSeconds={totals.billableSeconds}
