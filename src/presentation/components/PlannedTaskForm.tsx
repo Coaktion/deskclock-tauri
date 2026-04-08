@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Plus } from "lucide-react";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { ScheduleType } from "@domain/entities/PlannedTask";
@@ -176,11 +177,9 @@ export function PlannedTaskForm({
           </div>
 
           {form.scheduleType === "specific_date" && (
-            <input
-              type="date"
+            <DatePickerInput
               value={form.scheduleDate}
-              onChange={(e) => set("scheduleDate", e.target.value)}
-              className="px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
+              onChange={(v) => set("scheduleDate", v)}
             />
           )}
 
@@ -204,19 +203,17 @@ export function PlannedTaskForm({
           )}
 
           {form.scheduleType === "period" && (
-            <div className="flex gap-2">
-              <input
-                type="date"
+            <div className="flex items-center gap-2">
+              <DatePickerInput
                 value={form.periodStart}
-                onChange={(e) => set("periodStart", e.target.value)}
-                className="flex-1 px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
+                onChange={(v) => set("periodStart", v)}
+                className="flex-1"
               />
-              <span className="self-center text-gray-500 text-sm">→</span>
-              <input
-                type="date"
+              <span className="text-gray-500 text-sm shrink-0">→</span>
+              <DatePickerInput
                 value={form.periodEnd}
-                onChange={(e) => set("periodEnd", e.target.value)}
-                className="flex-1 px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
+                onChange={(v) => set("periodEnd", v)}
+                className="flex-1"
               />
             </div>
           )}

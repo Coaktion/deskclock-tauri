@@ -8,14 +8,8 @@ import { RunningTaskSection } from "@presentation/components/RunningTaskSection"
 import { TotalsSection } from "@presentation/components/TotalsSection";
 import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
 import { PlannedTasksSection } from "@presentation/components/PlannedTasksSection";
-import { startPlannedTask } from "@domain/usecases/plannedTasks/StartPlannedTask";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-
-const plannedRepo = new PlannedTaskRepository();
-const taskRepo = new TaskRepository();
 
 export function TasksPage() {
   const today = todayISO();
@@ -30,7 +24,6 @@ export function TasksPage() {
   }
 
   async function handlePlayPlanned(task: PlannedTask) {
-    await startPlannedTask(plannedRepo, taskRepo, task.id, new Date().toISOString());
     await startTask({
       name: task.name,
       projectId: task.projectId,

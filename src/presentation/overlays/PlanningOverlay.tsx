@@ -2,14 +2,8 @@ import { Play, Minimize2, X, LayoutList } from "lucide-react";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { useProjects } from "@presentation/hooks/useProjects";
-import { startPlannedTask } from "@domain/usecases/plannedTasks/StartPlannedTask";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-
-const plannedRepo = new PlannedTaskRepository();
-const taskRepo = new TaskRepository();
 
 interface PlanningOverlayProps {
   onMinimize: () => void;
@@ -28,7 +22,6 @@ export function PlanningOverlay({ onMinimize, onClose, onNavigatePlanning }: Pla
   if (runningTask) return null;
 
   async function handlePlay(task: PlannedTask) {
-    await startPlannedTask(plannedRepo, taskRepo, task.id, new Date().toISOString());
     await startTask({
       name: task.name,
       projectId: task.projectId,

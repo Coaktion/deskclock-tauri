@@ -6,13 +6,7 @@ import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
-import { startPlannedTask } from "@domain/usecases/plannedTasks/StartPlannedTask";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-
-const plannedRepo = new PlannedTaskRepository();
-const taskRepo = new TaskRepository();
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -74,12 +68,11 @@ export function WeekPlanningView() {
 
   const { projects } = useProjects();
   const { categories } = useCategories();
-  const { tasks, reload, create, remove, complete, uncomplete, duplicate } =
+  const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
   const { startTask } = useRunningTask();
 
   async function handlePlay(task: PlannedTask) {
-    await startPlannedTask(plannedRepo, taskRepo, task.id, new Date().toISOString());
     await startTask({
       name: task.name,
       projectId: task.projectId,
@@ -176,6 +169,7 @@ export function WeekPlanningView() {
                   projects={projects}
                   categories={categories}
                   onPlay={handlePlay}
+                  onUpdate={update}
                   onComplete={complete}
                   onUncomplete={uncomplete}
                   onDuplicate={duplicate}

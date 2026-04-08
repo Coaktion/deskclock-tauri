@@ -16,26 +16,18 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
-import { startPlannedTask } from "@domain/usecases/plannedTasks/StartPlannedTask";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-
-const plannedRepo = new PlannedTaskRepository();
-const taskRepo = new TaskRepository();
 
 export function TodayPlanningView() {
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
-  const { tasks, reload, create, remove, complete, uncomplete, duplicate } =
+  const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForDate(today);
   const { startTask } = useRunningTask();
 
   async function handlePlay(task: PlannedTask) {
-    await startPlannedTask(plannedRepo, taskRepo, task.id, new Date().toISOString());
-    // Sincroniza o contexto buscando a tarefa recém-criada
     await startTask({
       name: task.name,
       projectId: task.projectId,
@@ -76,6 +68,7 @@ export function TodayPlanningView() {
           projects={projects}
           categories={categories}
           onPlay={handlePlay}
+          onUpdate={update}
           onComplete={complete}
           onUncomplete={uncomplete}
           onDuplicate={duplicate}
@@ -96,6 +89,7 @@ export function TodayPlanningView() {
               projects={projects}
               categories={categories}
               onPlay={handlePlay}
+              onUpdate={update}
               onComplete={complete}
               onUncomplete={uncomplete}
               onDuplicate={duplicate}
