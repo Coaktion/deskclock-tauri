@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { Plus } from "lucide-react";
+import { todayISO } from "@shared/utils/time";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import type { Project } from "@domain/entities/Project";
@@ -177,10 +178,24 @@ export function PlannedTaskForm({
           </div>
 
           {form.scheduleType === "specific_date" && (
-            <DatePickerInput
-              value={form.scheduleDate}
-              onChange={(v) => set("scheduleDate", v)}
-            />
+            <div className="flex items-center gap-2">
+              <DatePickerInput
+                value={form.scheduleDate}
+                onChange={(v) => set("scheduleDate", v)}
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => set("scheduleDate", todayISO())}
+                className={`px-2.5 py-1.5 text-xs rounded border transition-colors whitespace-nowrap ${
+                  form.scheduleDate === todayISO()
+                    ? "bg-blue-900/40 border-blue-600 text-blue-300"
+                    : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500"
+                }`}
+              >
+                Hoje
+              </button>
+            </div>
           )}
 
           {form.scheduleType === "recurring" && (

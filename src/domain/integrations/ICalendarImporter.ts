@@ -8,6 +8,13 @@ export interface CalendarEvent {
   /** Horário de fim "HH:MM" — ausente se evento de dia inteiro */
   endTime?: string;
   allDay: boolean;
+  /** ID do evento recorrente base, presente quando é instância de série */
+  recurringEventId?: string;
+  /**
+   * Dias da semana sugeridos para recorrência, extraídos do RRULE (0=Dom…6=Sáb).
+   * Preenchido apenas quando o evento é recorrente e o padrão é suportado.
+   */
+  suggestedRecurringDays?: number[];
 }
 
 export interface ICalendarImporter {

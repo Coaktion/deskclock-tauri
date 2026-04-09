@@ -184,6 +184,8 @@ export function WeekPlanningView() {
           fromISO={calendarFromISO}
           toISO={calendarToISO}
           weekLabel={label}
+          projects={projects}
+          categories={categories}
           onImported={handleImported}
           onClose={() => setShowImportModal(false)}
         />
