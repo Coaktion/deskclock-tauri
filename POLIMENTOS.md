@@ -43,10 +43,10 @@
 
 | # | Item | Status | Notas |
 |---|------|--------|-------|
-| L1 | Reordenar telas na sidebar: Tasks → Retroativo → Planejamento → Histórico → Dados → Integrações → Configs | ⬜ | Ajustar ordem dos ícones em `Sidebar.tsx` |
-| L2 | Adicionar label de texto abaixo dos ícones na sidebar | ⬜ | Texto pequeno, sempre visível ou ao hover |
-| L3 | Title bar customizada — remover barra padrão do Windows | ⬜ | `decorations: false` na janela main + implementar barra própria com minimize/maximize/close e título da página atual |
-| L4 | Janela principal travada em posição fixa acima do tray | ⬜ | Posição inicial calculada com base na posição do tray (Tauri API) |
+| L1 | Reordenar telas na sidebar: Tasks → Retroativo → Planejamento → Histórico → Dados → Integrações → Configs | ✅ | Ordem e label "Manual" aplicados em `Sidebar.tsx` |
+| L2 | Adicionar label de texto abaixo dos ícones na sidebar | ✅ | Label curto sempre visível; sidebar 68px |
+| L3 | Title bar customizada — remover barra padrão do Windows | ✅ | `decorations: false` + `TitleBar.tsx` com drag, minimize e close→hide |
+| L4 | Janela principal travada em posição fixa acima do tray | ✅ | Posicionamento relativo ao clique no tray em Rust (`lib.rs`) |
 
 ### 3.2 Overlays
 
@@ -114,4 +114,4 @@ Sprint 6 — Features novas
 
 ---
 
-*Última atualização: 09/04/2026 — Sprint 1 concluída*
+*Última atualização: 09/04/2026 — Sprints 1 e 2 concluídas*
