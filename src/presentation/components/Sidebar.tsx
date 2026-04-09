@@ -26,7 +26,7 @@ interface SidebarProps {
 
 const ITEMS: { page: Page; icon: React.ReactNode; label: string; short: string }[] = [
   { page: "tasks", icon: <Timer size={18} />, label: "Tarefas", short: "Tarefas" },
-  { page: "retroactive", icon: <FileClock size={18} />, label: "Lançamento retroativo", short: "Retroativo" },
+  { page: "retroactive", icon: <FileClock size={18} />, label: "Lançamento manual", short: "Manual" },
   { page: "planning", icon: <CalendarDays size={18} />, label: "Planejamento", short: "Planos" },
   { page: "history", icon: <History size={18} />, label: "Histórico", short: "Histórico" },
   { page: "data", icon: <Database size={18} />, label: "Dados", short: "Dados" },

@@ -6,7 +6,7 @@ const appWindow = getCurrentWindow();
 
 const PAGE_LABELS: Record<Page, string> = {
   tasks: "Tarefas",
-  retroactive: "Lançamento Retroativo",
+  retroactive: "Lançamento Manual",
   planning: "Planejamento",
   history: "Histórico",
   data: "Dados",

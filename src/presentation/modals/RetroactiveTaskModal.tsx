@@ -108,7 +108,7 @@ export function RetroactiveTaskModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
       <div className="bg-gray-900 border border-gray-700 rounded-lg w-full max-w-md p-5 shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-100">Lançamento retroativo</h2>
+          <h2 className="text-sm font-semibold text-gray-100">Lançamento manual</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
             <X size={16} />
           </button>
