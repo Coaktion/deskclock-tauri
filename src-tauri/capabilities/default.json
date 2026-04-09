@@ -24,6 +24,7 @@
     "sql:allow-load",
     "autostart:allow-enable",
     "autostart:allow-disable",
-    "autostart:allow-is-enabled"
+    "autostart:allow-is-enabled",
+    "opener:allow-open-url"
   ]
 }
