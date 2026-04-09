@@ -8,6 +8,8 @@ import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/Runn
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
 import { formatHHMMSS } from "@shared/utils/time";
 import { applyFontSize } from "@shared/utils/fontSize";
+import { applyTheme } from "@shared/utils/theme";
+import type { Theme } from "@shared/utils/theme";
 import { Sidebar, type Page } from "@presentation/components/Sidebar";
 import { TasksPage } from "@presentation/pages/TasksPage";
 import { PlanningPage } from "@presentation/pages/PlanningPage";
@@ -136,10 +138,11 @@ function AppInner() {
   const [page, setPage] = useState<Page>("tasks");
   const welcomeActiveRef = useRef(false);
 
-  // Aplica tamanho de fonte salvo ao iniciar
+  // Aplica tamanho de fonte e tema salvos ao iniciar
   useEffect(() => {
     if (!config.isLoaded) return;
     applyFontSize(config.get("fontSize"));
+    applyTheme(config.get("theme") as Theme);
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Registra atalhos globais salvos ao iniciar

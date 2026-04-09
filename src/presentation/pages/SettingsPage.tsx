@@ -4,6 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { applyFontSize } from "@shared/utils/fontSize";
+import { applyTheme, THEMES } from "@shared/utils/theme";
+import type { Theme } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -182,6 +184,7 @@ export function SettingsPage() {
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [overlayShowGridIndicator, setOverlayShowGridIndicator] = useState(false);
   const [fontSize, setFontSize] = useState<"P" | "M" | "G" | "GG">("M");
+  const [theme, setTheme] = useState<Theme>("azul");
   const [shortcutToggleTask, setShortcutToggleTask] = useState("");
   const [shortcutStopTask, setShortcutStopTask] = useState("");
   const [shortcutToggleOverlay, setShortcutToggleOverlay] = useState("");
@@ -199,6 +202,7 @@ export function SettingsPage() {
     setOverlayShowGridIndicator(config.get("overlayShowGridIndicator"));
     setLiveTrayTimer(config.get("liveTrayTimer"));
     setFontSize(config.get("fontSize"));
+    setTheme(config.get("theme") as Theme);
     setShortcutToggleTask(config.get("shortcutToggleTask"));
     setShortcutStopTask(config.get("shortcutStopTask"));
     setShortcutToggleOverlay(config.get("shortcutToggleOverlay"));
@@ -206,6 +210,13 @@ export function SettingsPage() {
     // Lê estado real do autostart do SO
     isEnabled().then(setStartOnBoot).catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleTheme(value: string) {
+    const t = value as Theme;
+    setTheme(t);
+    applyTheme(t);
+    await config.set("theme", t);
+  }
 
   async function handleFontSize(value: string) {
     const size = value as "P" | "M" | "G" | "GG";
@@ -357,6 +368,16 @@ export function SettingsPage() {
         </Section>
 
         <Section title="Acessibilidade">
+          <SelectRow
+            label="Tema"
+            description="Paleta de cores da interface"
+            value={theme}
+            options={THEMES.map((t) => ({
+              value: t,
+              label: t.charAt(0).toUpperCase() + t.slice(1),
+            }))}
+            onChange={handleTheme}
+          />
           <SelectRow
             label="Tamanho da fonte"
             description="Escala o texto em toda a interface"

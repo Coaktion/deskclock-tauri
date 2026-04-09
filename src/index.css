@@ -4,6 +4,51 @@
   font-size: var(--app-font-size, 14px);
 }
 
+/* ── Tema Verde: troca accent azul por verde ── */
+[data-theme="verde"] {
+  --color-blue-50:  var(--color-green-50);
+  --color-blue-100: var(--color-green-100);
+  --color-blue-200: var(--color-green-200);
+  --color-blue-300: var(--color-green-300);
+  --color-blue-400: var(--color-green-400);
+  --color-blue-500: var(--color-green-500);
+  --color-blue-600: var(--color-green-600);
+  --color-blue-700: var(--color-green-700);
+  --color-blue-800: var(--color-green-800);
+  --color-blue-900: var(--color-green-900);
+  --color-blue-950: var(--color-green-950);
+}
+
+/* ── Tema Escuro: fundos gray → zinc (neutro mais profundo) ── */
+[data-theme="escuro"] {
+  --color-gray-50:  var(--color-zinc-50);
+  --color-gray-100: var(--color-zinc-100);
+  --color-gray-200: var(--color-zinc-200);
+  --color-gray-300: var(--color-zinc-300);
+  --color-gray-400: var(--color-zinc-400);
+  --color-gray-500: var(--color-zinc-500);
+  --color-gray-600: var(--color-zinc-600);
+  --color-gray-700: var(--color-zinc-700);
+  --color-gray-800: var(--color-zinc-800);
+  --color-gray-900: var(--color-zinc-900);
+  --color-gray-950: var(--color-zinc-950);
+}
+
+/* ── Tema Claro: inverte o mapa de gray ── */
+[data-theme="claro"] {
+  color-scheme: light;
+  --color-gray-950: var(--color-gray-50);
+  --color-gray-900: var(--color-gray-100);
+  --color-gray-800: var(--color-gray-200);
+  --color-gray-700: var(--color-gray-300);
+  --color-gray-600: var(--color-gray-400);
+  --color-gray-400: var(--color-gray-600);
+  --color-gray-300: var(--color-gray-700);
+  --color-gray-200: var(--color-gray-800);
+  --color-gray-100: var(--color-gray-900);
+  --color-gray-50:  var(--color-gray-950);
+}
+
 select {
   color-scheme: dark;
   appearance: none;
@@ -12,4 +57,8 @@ select {
   background-repeat: no-repeat;
   background-position: right 0.5rem center;
   padding-right: 2rem !important;
+}
+
+[data-theme="claro"] select {
+  color-scheme: light;
 }
