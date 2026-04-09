@@ -413,8 +413,9 @@ src/
 3. TESTAR      → Escrever testes primeiro (TDD): unit tests para domain/usecases, integration para infra, e2e para fluxos críticos.
 4. IMPLEMENTAR → Código de produção que faz os testes passarem.
 5. VALIDAR     → App deve compilar e executar sem erros após cada implementação.
-6. COMMITAR    → Commits semânticos (feat:, fix:, refactor:, test:, docs:, chore:).
-7. MERGEAR     → Branch por feature → merge em main.
+6. FORMATAR    → Antes de commitar tudo o que foi produzido, rode o lint para garantir padrão de estilo do código.
+7. COMMITAR    → Commits semânticos (feat:, fix:, refactor:, test:, docs:, chore:).
+8. MERGEAR     → Branch por feature → merge em main.
 ```
 
 ### 7.2 Regras de branch
