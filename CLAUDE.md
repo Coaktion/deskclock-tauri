@@ -12,10 +12,11 @@
 
 **Princípios de design:**
 - Cadastros devem exigir o mínimo de cliques possível.
-- Edições sempre em modais (exceto planejamento, que é inline).
+- Edições sempre em modais (exceto planejamento e lançamento retroativo, que são inline).
 - Exclusões sem confirmação — a ação é imediata.
 - Overlays arrastáveis com persistência de posição.
 - Atalhos globais para operações frequentes.
+- Lançamento retroativo como tela dedicada — fluxo de entrada rápida em sequência, sem modal.
 
 ---
 
@@ -48,10 +49,10 @@ src/
 │   ├── integrations/ # Google Sheets, Google Calendar
 │   └── system/       # Atalhos globais, tray, overlay window management
 ├── presentation/     # React UI
-│   ├── pages/        # Tasks, Planning, History, Data, Settings
-│   ├── components/   # Componentes reutilizáveis
+│   ├── pages/        # Tasks, Planning, History, Retroactive, Data, Settings
+│   ├── components/   # Componentes reutilizáveis (Autocomplete, DatePickerInput…)
 │   ├── overlays/     # WelcomeOverlay, PlanningOverlay, CompactOverlay, ExecutionOverlay
-│   ├── modals/       # Modais de edição
+│   ├── modals/       # Modais de edição (EditTaskModal, ExportModal…)
 │   └── hooks/        # Custom hooks
 ├── shared/           # Types, utils, constants
 └── tests/            # Espelha a estrutura de src/
@@ -186,18 +187,16 @@ src/
 - **Cancel:** Descarta a tarefa imediatamente, sem confirmação.
 - **Atalhos globais:** Se configurados, exibir abaixo como texto informativo (ex: "Ctrl+Shift+S para parar").
 
-#### Seção 2 — Lançamento retroativo
-- Botão que abre modal com campos: Nome, Projeto, Categoria, Billable, e duração.
-- **Modo de duração:** Hora início + Hora fim, OU Hora início + Duração (app calcula hora fim).
-
-#### Seção 3 — Tarefas planejadas para hoje
+#### Seção 2 — Tarefas planejadas para hoje
 - Lista compacta: Nome + botão Play.
 - Play inicia execução com dados da tarefa planejada preenchidos. Executa ações configuradas.
 
-#### Seção 4 — Totalizadores
+> **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
+
+#### Seção 3 — Totalizadores
 - Horas billable hoje | Horas non-billable hoje | Total semana com dias (ex: "15:00 2d").
 
-#### Seção 5 — Entradas de hoje
+#### Seção 4 — Entradas de hoje
 - **Header:** Título "Entradas de Hoje" + botão "Modo de envio" + total de horas hoje.
 - **Lista de tarefas registradas hoje:**
   - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.
@@ -314,10 +313,10 @@ src/
 | Mostrar indicador visual da grade | toggle | Exibe grid visual ao arrastar overlay |
 
 #### Acessibilidade
-| Configuração | Tipo | Descrição |
-|---|---|---|
-| Tamanho da fonte | select: P, M, G, GG | Escala texto e elementos da interface |
-| Tema | select: Azul, Verde, Escuro, Claro | Paleta de cores da interface |
+| Configuração | Tipo | Status | Descrição |
+|---|---|---|---|
+| Tamanho da fonte | select: P, M, G, GG | ✅ implementado | Escala texto via `--app-font-size` CSS custom property |
+| Tema | select: Azul, Verde, Escuro, Claro | ⏳ pendente | Paleta de cores via CSS custom properties |
 
 #### Atalhos globais
 | Ação | Tipo | Descrição |
@@ -342,7 +341,26 @@ src/
 | Autorização | botão OAuth |
 
 #### Feedback
-- Botão que abre URL externa no navegador padrão do usuário para envio de feedbacks, bugs, sugestões.
+- Botão na **sidebar** (não dentro das configurações) que abre URL externa no navegador padrão para envio de feedbacks, bugs, sugestões.
+- Implementado via `tauri-plugin-opener` (`openUrl`).
+- Posição: rodapé da sidebar, ícone `MessageSquare` (Lucide).
+
+---
+
+### 5.8 Tela de Lançamento Retroativo
+
+> **Decisão de produto:** O lançamento retroativo era originalmente especificado como um modal na Tela de Tarefas. Foi convertido em tela dedicada acessível pela sidebar para permitir entrada rápida em sequência de múltiplas tarefas sem fechar e reabrir o fluxo.
+
+- **Acesso:** Ícone `FileClock` na sidebar.
+- **Navegação de data:** Setas ← → e DatePickerInput. Não é possível avançar além de hoje.
+- **Formulário inline (sem modal):** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração.
+- **Modo de duração:** Toggle "Hora fim" / "Duração". Na duração, aceita `HH:MM:SS`, `MM:SS` ou inteiro (minutos).
+- **Overnight:** Se hora fim < hora início, considera-se que a tarefa cruzou meia-noite — end é atribuído ao dia seguinte.
+- **Cadeia de horários:** Após adicionar uma tarefa, o campo "Início" da próxima é automaticamente preenchido com o fim da tarefa recém-criada.
+- **Tecla Enter:** Cria a tarefa (exceto quando autocomplete está aberto — nesse caso, seleciona o item).
+- **Lista de tarefas do dia:** Tarefas completadas do dia selecionado, ordenadas da mais recente para a mais antiga.
+  - Botões por linha: Editar (abre `EditTaskModal`) | Excluir (sem confirmação).
+- **Total do dia:** Exibido no header quando há tarefas.
 
 ---
 
@@ -366,15 +384,23 @@ src/
 
 ### 6.4 Autocomplete
 - Filtra conforme digitação.
-- Enter seleciona o primeiro item filtrado.
-- Se nenhum resultado, permite texto livre (não cria projeto/categoria automaticamente).
+- Enter com dropdown aberto: seleciona o primeiro item filtrado.
+- Enter com dropdown fechado (ou sem resultados): dispara `onEnter` (geralmente cria/salva o item do formulário pai).
+- Dropdown fecha ao perder foco (`onBlur`).
+- Permite texto livre se nenhum resultado — não cria projeto/categoria automaticamente.
 
 ### 6.5 Ações de tarefa planejada
 - Ao iniciar uma tarefa planejada via Play, todas as ações configuradas são executadas em sequência.
 - `open_url`: Abre URL no navegador padrão. Auto-prepend `https://` se não contiver `http://` ou `https://`.
 - `open_file`: Abre arquivo/pasta no explorador de arquivos do SO.
 
-### 6.6 Tarefas recorrentes
+### 6.6 Data de referência da tarefa
+- A data de uma tarefa é sempre a **data local do `startTime`** (menor horário).
+- Tarefas que cruzam meia-noite (início em um dia, fim no seguinte) pertencem ao dia de início.
+- Toda lógica de agrupamento por dia (histórico, lançamento retroativo) extrai a data no fuso local do usuário — nunca faz `.slice(0, 10)` direto no ISO UTC.
+- As funções `startOfDayISO(dateISO)` e `endOfDayISO(dateISO)` constroem limites UTC a partir do horário local: `new Date(dateISO + "T00:00:00").toISOString()`.
+
+### 6.7 Tarefas recorrentes
 - Sem data de término — aparecem indefinidamente nos dias configurados.
 - Excluir remove a tarefa completamente de todos os dias futuros.
 - Concluir afeta apenas o dia atual (adiciona data ao `completed_dates`).
@@ -450,17 +476,17 @@ src/
 
 > Esta é a ordem sugerida para desenvolvimento incremental. Cada fase deve resultar em um app funcional.
 
-| Fase | Escopo |
-|---|---|
-| 1 — Fundação | Setup Tauri + React + TS + Tailwind + SQLite + Clean Architecture scaffold. CRUD de Project e Category. Tela de Dados funcional. |
-| 2 — Core Timer | Entidade Task + timer + execução/pausa/stop. Tela de Tarefas (seções 1, 4, 5). Execution Overlay básico. |
-| 3 — Planejamento | PlannedTask + Tela de Planejamento (hoje + semana). Planning Overlay + Compact Overlay. |
-| 4 — Histórico | Tela de Histórico com filtros e agrupamento por dia. |
-| 5 — Export | Perfis de exportação + CSV/XLSX/JSON + seleção de colunas. |
-| 6 — Overlays completos | Welcome Overlay. Comportamentos de arrastar, snap-to-grid, persistência de posição, opacidade. |
-| 7 — Configurações | Tela de Configurações completa. Atalhos globais. Acessibilidade (tema + fonte). Tray icon. |
-| 8 — Integrações | Google Sheets (envio + sync automática). Google Calendar (importação). Modo de envio. |
-| 9 — Polish | Lançamento retroativo. Ações de tarefa (open URL/file). Feedback link. Build multiplataforma. README final. |
+| Fase | Status | Escopo |
+|---|---|---|
+| 1 — Fundação | ✅ concluída | Setup Tauri + React + TS + Tailwind + SQLite + Clean Architecture scaffold. CRUD de Project e Category. Tela de Dados funcional. |
+| 2 — Core Timer | ✅ concluída | Entidade Task + timer + execução/pausa/stop. Tela de Tarefas (seções 1, 3, 4). Execution Overlay básico. |
+| 3 — Planejamento | ✅ concluída | PlannedTask + Tela de Planejamento (hoje + semana). Planning Overlay + Compact Overlay. |
+| 4 — Histórico | ✅ concluída | Tela de Histórico com filtros e agrupamento por dia (local timezone). |
+| 5 — Export | ✅ concluída | Perfis de exportação + CSV/XLSX/JSON + seleção de colunas. |
+| 6 — Overlays completos | ✅ concluída | Welcome Overlay. Comportamentos de arrastar, snap-to-grid, persistência de posição, opacidade. |
+| 7 — Configurações | ✅ concluída | Tela de Configurações. Atalhos globais. Acessibilidade (tamanho de fonte). Tray icon. Autostart. Tema: ⏳ pendente. |
+| 8 — Integrações | ⏳ pendente | Google Sheets (envio + sync automática). Google Calendar (importação). Modo de envio. |
+| 9 — Polish | 🔄 parcial | ✅ Lançamento retroativo (tela dedicada). ✅ Feedback link (sidebar). ⏳ Ações de tarefa (open URL/file). ⏳ Build multiplataforma. ⏳ README final. |
 
 ---
 
@@ -495,7 +521,11 @@ src/
 | 08/04/2026 | Build script: `tsc --noEmit && vite build` | Evita complexidade de project references (`tsc -b`); Vite transpila TS internamente |
 | 08/04/2026 | Mock de `@tauri-apps/plugin-sql` em `tests/setup.ts` | Plugin não funciona fora do runtime Tauri; testes de repositório mockam `getDb()` via `vi.mock("@infra/database/db")` |
 | 08/04/2026 | `default_billable` armazenado como INTEGER 0/1 no SQLite | SQLite não tem tipo BOOLEAN nativo; conversão feita na camada infra |
+| 09/04/2026 | Lançamento retroativo como tela dedicada (não modal) | Modal limitava entrada em sequência; tela dedicada com cadeia de horários permite registrar um bloco de trabalho retroativo muito mais rápido |
+| 09/04/2026 | Data local do `startTime` como referência da tarefa | Usar `.slice(0,10)` no ISO UTC causava atribuição errada do dia em fusos UTC+; `startOfDayISO`/`endOfDayISO` agora convertem data local → UTC |
+| 09/04/2026 | Feedback como botão na sidebar (não em configurações) | Acesso com um clique sem navegar até a tela de configurações; usa `tauri-plugin-opener` |
+| 09/04/2026 | `EditTaskModal` edita hora início + hora fim (não duração) | A duração é derivada; editar os dois extremos é mais intuitivo e evita ambiguidade. ESC fecha, Enter salva |
 
 ---
 
-*Última atualização: 08/04/2026*
+*Última atualização: 09/04/2026*
