@@ -41,10 +41,15 @@ function quickToRange(quick: QuickFilter, startDate: string, endDate: string): {
   }
 }
 
+function localDateISO(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function groupByDay(tasks: Task[]): DayGroup[] {
   const map = new Map<string, Task[]>();
   for (const t of tasks) {
-    const dateISO = t.startTime.slice(0, 10);
+    const dateISO = localDateISO(t.startTime);
     if (!map.has(dateISO)) map.set(dateISO, []);
     map.get(dateISO)!.push(t);
   }

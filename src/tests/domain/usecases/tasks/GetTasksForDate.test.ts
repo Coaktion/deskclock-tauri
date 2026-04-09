@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
+import { startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 
 describe("getTasksForDate", () => {
-  it("chama findByDateRange com range correto para a data", async () => {
+  it("chama findByDateRange com range do horário local para a data", async () => {
     const repo: ITaskRepository = {
       save: vi.fn(), update: vi.fn(), findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
@@ -12,8 +13,8 @@ describe("getTasksForDate", () => {
     };
     await getTasksForDate(repo, "2026-04-08");
     expect(repo.findByDateRange).toHaveBeenCalledWith(
-      "2026-04-08T00:00:00.000Z",
-      "2026-04-08T23:59:59.999Z"
+      startOfDayISO("2026-04-08"),
+      endOfDayISO("2026-04-08"),
     );
   });
 

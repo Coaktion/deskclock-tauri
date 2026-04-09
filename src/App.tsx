@@ -14,6 +14,7 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { HistoryPage } from "@presentation/pages/HistoryPage";
 import { DataPage } from "@presentation/pages/DataPage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
+import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import {
   OVERLAY_EVENTS,
   type WelcomeClosedPayload,
@@ -22,11 +23,12 @@ import {
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
-    case "tasks":    return <TasksPage />;
-    case "planning": return <PlanningPage />;
-    case "data":     return <DataPage />;
-    case "history":  return <HistoryPage />;
-    case "settings": return <SettingsPage />;
+    case "tasks":       return <TasksPage />;
+    case "planning":    return <PlanningPage />;
+    case "data":        return <DataPage />;
+    case "history":     return <HistoryPage />;
+    case "retroactive": return <RetroactivePage />;
+    case "settings":    return <SettingsPage />;
   }
 }
 

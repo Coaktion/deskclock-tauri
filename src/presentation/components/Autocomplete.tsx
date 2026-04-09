@@ -9,6 +9,7 @@ interface AutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onSelect?: (option: Option) => void;
+  onEnter?: () => void;
   options: Option[];
   placeholder?: string;
   className?: string;
@@ -18,6 +19,7 @@ export function Autocomplete({
   value,
   onChange,
   onSelect,
+  onEnter,
   options,
   placeholder = "",
   className = "",
@@ -40,12 +42,17 @@ export function Autocomplete({
   }, []);
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && filtered.length > 0) {
+    if (e.key === "Enter") {
       e.preventDefault();
-      const first = filtered[0];
-      onChange(first.name);
-      onSelect?.(first);
-      setOpen(false);
+      if (open && filtered.length > 0) {
+        const first = filtered[0];
+        onChange(first.name);
+        onSelect?.(first);
+        setOpen(false);
+      } else {
+        setOpen(false);
+        onEnter?.();
+      }
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -64,6 +71,7 @@ export function Autocomplete({
         value={value}
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"

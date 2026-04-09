@@ -1,7 +1,7 @@
-import { Timer, Database, CalendarDays, History, Settings, MessageSquare } from "lucide-react";
+import { Timer, Database, CalendarDays, History, Settings, MessageSquare, FileClock } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
-export type Page = "tasks" | "data" | "planning" | "history" | "settings";
+export type Page = "tasks" | "data" | "planning" | "history" | "retroactive" | "settings";
 
 interface SidebarProps {
   current: Page;
@@ -9,11 +9,12 @@ interface SidebarProps {
 }
 
 const ITEMS: { page: Page; icon: React.ReactNode; label: string }[] = [
-  { page: "tasks",    icon: <Timer size={20} />,        label: "Tarefas" },
-  { page: "data",     icon: <Database size={20} />,     label: "Dados" },
-  { page: "planning", icon: <CalendarDays size={20} />, label: "Planejamento" },
-  { page: "history",  icon: <History size={20} />,      label: "Histórico" },
-  { page: "settings", icon: <Settings size={20} />,     label: "Configurações" },
+  { page: "tasks",       icon: <Timer size={20} />,        label: "Tarefas" },
+  { page: "data",        icon: <Database size={20} />,     label: "Dados" },
+  { page: "planning",    icon: <CalendarDays size={20} />, label: "Planejamento" },
+  { page: "history",     icon: <History size={20} />,      label: "Histórico" },
+  { page: "retroactive", icon: <FileClock size={20} />,    label: "Lançamento retroativo" },
+  { page: "settings",    icon: <Settings size={20} />,     label: "Configurações" },
 ];
 
 const FEEDBACK_URL = "https://github.com/emeirav/deskclock-tauri/issues";

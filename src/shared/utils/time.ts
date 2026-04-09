@@ -69,11 +69,11 @@ export function formatHistoryDayHeader(dateISO: string): string {
 }
 
 export function startOfDayISO(dateISO: string): string {
-  return `${dateISO}T00:00:00.000Z`;
+  return new Date(dateISO + "T00:00:00").toISOString();
 }
 
 export function endOfDayISO(dateISO: string): string {
-  return `${dateISO}T23:59:59.999Z`;
+  return new Date(dateISO + "T23:59:59.999").toISOString();
 }
 
 export function addDaysISO(dateISO: string, days: number): string {
