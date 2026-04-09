@@ -6,9 +6,10 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 
 ### Registro de tarefas
 - Timer ao vivo com play, pausa e stop
-- Edição de hora de início com recalculo automático do timer
+- Edição de hora de início com recálculo automático do timer
 - Cancelamento imediato de tarefa sem confirmação
 - Inicia nova tarefa automaticamente parando a tarefa atual
+- Confirmação de conclusão ao parar (Concluída / Pendente)
 - Totalizadores diários e semanais (billable / non-billable)
 
 ### Lançamento retroativo
@@ -19,11 +20,19 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Navegação de data com DatePicker
 
 ### Planejamento
-- **Hoje:** formulário inline com Nome, Projeto, Categoria e Ações automáticas
-- **Semana:** navegação por semana, filtros por dia, tipos `specific_date` / `recurring` / `period`
+- Visão semanal com navegação ← → e filtros rápidos por dia
+- Tipos de agendamento: `specific_date` (atalho "Hoje"), `recurring` (dias da semana), `period` (intervalo de datas)
 - Tarefas recorrentes sem data de término
 - Concluir/Pendente por dia (sem excluir a tarefa)
 - Ações por tarefa: abrir URL ou arquivo ao iniciar
+
+### Importação do Google Calendar
+- Importa eventos da semana atual como tarefas planejadas
+- Agrupamento por dia com accordion expansível
+- Seleção por dia ou individual por evento
+- Editor inline por evento: projeto, categoria, tipo de agendamento
+- Detecção automática de recorrência via RRULE
+- Filtra automaticamente eventos de local de trabalho, ausência e foco
 
 ### Histórico
 - Filtros rápidos: Hoje, 7 dias, 30 dias, Este mês
@@ -41,6 +50,11 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Colunas reordenáveis com toggle de visibilidade
 - Destino: salvar arquivo, copiar para área de transferência
 
+### Integrações
+- **Google Sheets:** envio manual (modo de envio) ou automático ao concluir tarefa; duração como formato de hora nativo da planilha
+- **Google Calendar:** importação de eventos como tarefas planejadas (ver seção acima)
+- Conexão OAuth única para Sheets + Calendar
+
 ### Projetos e Categorias
 - Importação em massa (um por linha)
 - Adição individual + exclusão sem confirmação
@@ -51,6 +65,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - **Planning Overlay:** lista de tarefas planejadas para hoje, minimizável
 - **Compact Overlay:** ícone + badge com contador de tarefas pendentes
 - **Welcome Overlay:** saudação por hora do dia ao abrir o app
+- **Toast:** notificações de sistema (ex: confirmação de sync) no canto inferior direito
 - Opacidade em repouso configurável, snap-to-grid opcional
 
 ### Configurações
@@ -73,7 +88,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 | Ícones | Lucide React |
 | Banco de dados | SQLite (`tauri-plugin-sql`) |
 | Arquitetura | Clean Architecture |
-| Testes | Vitest |
+| Testes | Vitest (unit) |
 | Links externos | `tauri-plugin-opener` |
 | Atalhos globais | `tauri-plugin-global-shortcut` |
 | Autostart | `tauri-plugin-autostart` |
@@ -89,7 +104,9 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - [Rust](https://rustup.rs/) (stable, mínimo 1.77.2)
 - Dependências do sistema para o seu SO (ver seção abaixo)
 
-#### Dependências do sistema — Linux (Ubuntu/Debian)
+### Dependências do sistema
+
+#### Linux (Ubuntu/Debian)
 
 ```bash
 sudo apt-get update
@@ -102,9 +119,41 @@ sudo apt-get install -y \
   libayatana-appindicator3-dev
 ```
 
-#### Dependências do sistema — Windows
+#### WSL2 (Windows Subsystem for Linux)
+
+O Tauri no WSL2 requer um servidor X ou Wayland para renderizar janelas. A forma mais simples é usar o **WSLg**, disponível no Windows 11 e Windows 10 (build 21364+):
+
+```bash
+# Verifique se WSLg está ativo
+ls /mnt/wslg
+
+# Instale as dependências normais de Linux (acima)
+# e as dependências de display
+sudo apt-get install -y libgl1-mesa-glx libgl1-mesa-dri
+```
+
+> Se o WSLg não estiver disponível, instale um servidor X (ex: VcXsrv) e defina `DISPLAY=:0` antes de rodar `pnpm tauri dev`.
+
+#### Windows
 
 Nenhuma instalação adicional necessária. O Tauri utiliza o WebView2, que já vem integrado no Windows 10 (atualização 1803+) e Windows 11.
+
+### Variáveis de ambiente (integrações Google)
+
+As integrações com Google Sheets e Google Calendar requerem credenciais OAuth do Google Cloud Platform. Sem elas o app funciona normalmente — apenas as integrações ficam indisponíveis.
+
+1. Crie um projeto no [Google Cloud Console](https://console.cloud.google.com/)
+2. Ative as APIs: **Google Sheets API** e **Google Calendar API**
+3. Crie credenciais OAuth 2.0 do tipo **Desktop app**
+4. Copie o Client ID e o Client Secret
+5. Crie um arquivo `.env` na raiz do projeto:
+
+```env
+GCP_CLIENT_ID=seu-client-id.apps.googleusercontent.com
+GCP_CLIENT_SECRET=seu-client-secret
+```
+
+> O prefixo `GCP_` é permitido pelo Vite (configurado em `vite.config.ts`). Nunca commite o arquivo `.env`.
 
 ### Instalação
 
@@ -136,6 +185,8 @@ pnpm test:watch
 # Cobertura
 pnpm test:coverage
 ```
+
+Os testes são **unitários**, focados em casos de uso de domínio e utilitários puros. Veja a seção [Testes](#testes-1) para mais detalhes.
 
 ### Linting e formatação
 
@@ -181,7 +232,7 @@ Roda automaticamente em todo **push para `main`** e em todo **pull request** abe
 
 **O que executa:**
 1. `pnpm tsc --noEmit` — verifica tipos TypeScript sem gerar artefatos
-2. `pnpm test` — roda os 245+ testes unitários com Vitest
+2. `pnpm test` — roda os testes unitários com Vitest
 3. `pnpm lint` — valida o código com ESLint
 
 Um PR só deve ser mergeado se todos esses passos passarem.
@@ -193,11 +244,7 @@ Gera instaladores nativos e publica uma release no GitHub. Pode ser ativado de d
 #### 1. Via tag Git (fluxo principal)
 
 ```bash
-# Certifique-se de que main está estável e os testes passam
-git checkout main
-git pull
-
-# Crie e empurre a tag com o número da versão
+git checkout main && git pull
 git tag v0.1.0
 git push origin v0.1.0
 ```
@@ -210,20 +257,6 @@ O workflow é disparado automaticamente, builda para Linux e Windows em paralelo
 2. Clique em **Run workflow**
 3. Escolha se deseja criar como rascunho ou publicar diretamente
 
-#### O que o workflow faz
-
-```
-Para cada plataforma (ubuntu-22.04, windows-latest):
-  1. Instala dependências do sistema (apenas Linux)
-  2. Configura pnpm, Node 20 e Rust stable
-  3. Restaura cache do Cargo (acelera rebuilds)
-  4. pnpm install
-  5. pnpm tsc --noEmit    ← falha rápido se houver erro de tipo
-  6. pnpm test            ← falha rápido se algum teste quebrar
-  7. pnpm tauri build     ← gera o instalador
-  8. Publica no GitHub Releases
-```
-
 #### Artefatos produzidos por release
 
 | Plataforma | Arquivo | Uso |
@@ -233,13 +266,36 @@ Para cada plataforma (ubuntu-22.04, windows-latest):
 | Windows | `DeskClock_x.y.z_x64.msi` | Instalador MSI (recomendado para empresas) |
 | Windows | `DeskClock_x.y.z_x64-setup.exe` | Instalador NSIS (recomendado para usuários finais) |
 
-#### Publicar o rascunho
+---
 
-Após o workflow concluir:
-1. Acesse **Releases** no repositório
-2. Abra o rascunho gerado
-3. Revise a descrição, adicione notas de versão se necessário
-4. Clique em **Publish release**
+## Testes
+
+O projeto usa **Vitest** com foco em testes unitários das camadas de domínio e utilitários puros.
+
+### O que está coberto
+
+| Camada | Arquivos de teste |
+|---|---|
+| `domain/usecases/` | Use cases de Task, PlannedTask, Category, Project, ExportProfile |
+| `infra/database/` | Repositórios SQLite (com `getDb()` mockado) |
+| `infra/integrations/google/` | `parseRRuleDays` (lógica de RRULE) |
+| `shared/utils/` | time, groupTasks, exportFormatter, theme, snapToGrid, actions |
+
+### O que não está coberto
+
+| Motivo | Exemplos |
+|---|---|
+| Dependem de `fetch` externo | `GoogleCalendarImporter`, `GoogleSheetsTaskSender` |
+| Acoplados ao runtime Tauri | `RunningTaskContext`, overlays |
+| Requerem `@testing-library/react` (não configurado) | Componentes React |
+
+### Rodando os testes
+
+```bash
+pnpm test          # execução única
+pnpm test:watch    # modo watch
+pnpm test:coverage # cobertura
+```
 
 ---
 
@@ -252,19 +308,21 @@ src/
 │   ├── repositories/ # Interfaces (ports)
 │   └── usecases/     # Lógica de negócio pura, sem dependências de framework
 ├── infra/            # Implementações concretas
-│   └── database/     # Repositórios SQLite via tauri-plugin-sql
+│   ├── database/     # Repositórios SQLite via tauri-plugin-sql
+│   └── integrations/ # Google Sheets, Google Calendar (OAuth, sender, importer)
 ├── presentation/     # React UI
-│   ├── pages/        # Tasks, Planning, Retroactive, History, Data, Settings
-│   ├── components/   # Autocomplete, DatePickerInput, Sidebar…
-│   ├── overlays/     # Execution, Planning, Compact, Welcome
-│   ├── modals/       # EditTaskModal, ExportModal…
+│   ├── pages/        # Tasks, Planning, Retroactive, History, Data, Settings, Integrations
+│   ├── components/   # Autocomplete, DatePickerInput, Sidebar, PlannedTaskForm…
+│   ├── overlays/     # Execution, Planning, Compact, Welcome, Toast
+│   ├── modals/       # EditTaskModal, ExportModal, ImportCalendarModal…
 │   ├── hooks/        # useRunningTask, useHistory, usePlannedTasks…
-│   └── contexts/     # ConfigContext (configurações globais)
-├── shared/           # Types, utils (time, groupTasks, fontSize, theme)
+│   └── contexts/     # RunningTaskContext, ConfigContext
+├── shared/           # Types, utils (time, groupTasks, fontSize, theme, toast)
 └── tests/            # Espelha src/ — unit tests com Vitest
 src-tauri/            # Backend Rust (Tauri)
-├── src/lib.rs        # Comandos, tray, atalhos globais, janelas
+├── src/lib.rs        # Comandos, tray, atalhos globais, servidor OAuth, janelas
 ├── capabilities/     # Permissões por janela (default.json)
+├── migrations/       # Migrações SQLite
 └── Cargo.toml
 .github/
 ├── workflows/ci.yml       # Testes e lint em todo push/PR
@@ -273,12 +331,47 @@ src-tauri/            # Backend Rust (Tauri)
 
 ---
 
-## Convenções de desenvolvimento
+## Como contribuir
 
-- Commits semânticos: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
-- Branches: `feat/<nome>`, `fix/<nome>`, `refactor/<nome>`, `chore/<nome>`
-- `main` sempre estável e com testes passando
-- Pull requests devem passar no CI antes do merge
+### Fluxo de trabalho
+
+1. Crie um branch a partir de `main`:
+   ```bash
+   git checkout -b feat/nome-da-feature
+   # ou
+   git checkout -b fix/nome-do-bug
+   ```
+
+2. Implemente a mudança. Se adicionar lógica de domínio ou utilitários puros, **escreva testes**.
+
+3. Verifique antes de abrir PR:
+   ```bash
+   pnpm tsc --noEmit   # sem erros de tipo
+   pnpm test           # todos os testes passando
+   pnpm lint           # sem warnings de lint
+   ```
+
+4. Abra um Pull Request contra `main`. O CI valida automaticamente os três passos acima.
+
+### Convenções de commit
+
+O projeto usa [commits semânticos](https://www.conventionalcommits.org/):
+
+| Prefixo | Uso |
+|---|---|
+| `feat:` | Nova funcionalidade |
+| `fix:` | Correção de bug |
+| `refactor:` | Refatoração sem mudança de comportamento |
+| `test:` | Adição ou correção de testes |
+| `docs:` | Documentação (CLAUDE.md, README.md) |
+| `chore:` | Configuração, dependências, CI |
+
+### Regras gerais
+
+- `main` deve sempre compilar e ter todos os testes passando
+- PRs pequenos e focados são preferidos a PRs grandes
+- Não faça commit de `.env` ou arquivos com credenciais
+- Siga a Clean Architecture: `domain/` não importa `infra/` ou `presentation/`
 
 ---
 
@@ -291,11 +384,3 @@ O projeto segue [Semantic Versioning](https://semver.org/lang/pt-BR/):
 - **PATCH** (`v0.1.1`): correções de bugs
 
 A versão é definida em `tauri.conf.json` (`"version"`) e deve estar alinhada com `Cargo.toml`.
-
----
-
-## Pendências (próximas versões)
-
-- [ ] Modo de envio (selecionar tarefas → enviar para integração externa)
-- [ ] Integração Google Sheets
-- [ ] Integração Google Calendar

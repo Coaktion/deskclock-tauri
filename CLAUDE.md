@@ -217,25 +217,21 @@ src/
 
 ### 5.3 Tela de Planejamento
 
-**Toggle no topo:** Hoje | Semana
+> **Decisão de produto:** A visão "Hoje" foi removida. A visão Semana já permite selecionar qualquer data (incluindo hoje) e é suficiente para todos os fluxos de planejamento.
 
-#### 5.3.1 Planejamento de Hoje
-- **Header:** Data atual.
-- **Formulário inline (sem modal):** Nome, Projeto (autocomplete, Enter seleciona primeiro item), Categoria (autocomplete, Enter seleciona primeiro item), Ações.
+- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← →.
+- **Botões rápidos de dia:** Todos | Dom | Seg | Ter | Qua | Qui | Sex | Sáb. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
+- **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campo Data.
+- **Atalho "Hoje":** No campo Data única, botão de atalho seleciona a data atual.
+- **Tipos de agendamento:**
+  - `specific_date`: Dia único. Campo data com botão atalho "Hoje".
+  - `recurring`: Seleção de dias da semana. Sem data de término. Aparece até ser excluída.
+  - `period`: Data início + Data fim. Aparece durante todo o período.
 - **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa.
 - **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
 - **Edição:** Inline. Salva ao perder foco se houve alteração.
 - **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação).
-
-#### 5.3.2 Planejamento da Semana
-- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← →.
-- **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex. Ao clicar em um dia, o campo Data do formulário é preenchido automaticamente.
-- **Formulário:** Mesmos campos de "Hoje" + campo Data.
-- **Tipos de Data:**
-  - `specific_date`: Dia único.
-  - `recurring`: Seleção de dias da semana. Sem data de término. Aparece até ser excluída.
-  - `period`: Data início + Data fim. Aparece durante todo o período.
-- **Importar Google Agenda:** Botão que puxa eventos do Google Calendar e cria PlannedTasks com nome e data preenchidos.
+- **Importar Google Agenda:** Botão visível quando Google conectado. Modal com eventos agrupados por dia (accordion), seleção por dia, editor inline por evento (projeto, categoria, recorrência). Filtra `workingLocation`, `outOfOffice` e `focusTime`.
 
 #### Lógica de Concluir/Pendente
 - **Concluir:** Adiciona a data atual ao array `completed_dates`. Tarefa deixa de aparecer na lista de planejadas na Tela de Tarefas para aquele dia, mas permanece no planejamento.
@@ -316,7 +312,7 @@ src/
 | Configuração | Tipo | Status | Descrição |
 |---|---|---|---|
 | Tamanho da fonte | select: P, M, G, GG | ✅ implementado | Escala texto via `--app-font-size` CSS custom property |
-| Tema | select: Azul, Verde, Escuro, Claro | ⏳ pendente | Paleta de cores via CSS custom properties |
+| Tema | select: Azul, Verde, Escuro, Claro | ✅ implementado | Paleta de cores via CSS custom properties |
 
 #### Atalhos globais
 | Ação | Tipo | Descrição |
@@ -442,6 +438,26 @@ src/
 - **CLAUDE.md** (este arquivo): Atualizar sempre que padrões, decisões ou modelos mudarem.
 - **README.md**: Manter atualizado com funcionalidades, setup local, como contribuir, e como buildar para cada plataforma.
 
+### 7.6 Estratégia de testes
+
+O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis sem dependências de runtime externo (Tauri, DOM, rede).
+
+**O que testamos:**
+- `domain/usecases/` — lógica de negócio pura com repositório mockado (`vi.fn()`)
+- `infra/database/` — repositórios SQLite com `getDb()` mockado via `vi.mock`
+- `infra/integrations/google/` — funções utilitárias puras (ex: `parseRRuleDays`)
+- `shared/utils/` — funções utilitárias sem side-effects
+
+**O que não testamos (e por quê):**
+- Componentes React — requereria `@testing-library/react`, não configurado
+- `GoogleCalendarImporter` / `GoogleSheetsTaskSender` — dependem de `fetch` externo
+- Contexts React (`RunningTaskContext`) — acoplados ao runtime Tauri e DOM
+
+**Convenções:**
+- Arquivos espelham o source: `src/tests/domain/usecases/plannedTasks/CreatePlannedTask.test.ts`
+- Factory `makeRepo()` reutilizada por arquivo de teste para minimizar boilerplate
+- Casos de teste nomeados em português, descrevendo o comportamento esperado
+
 ---
 
 ## 8. CONVENÇÕES DE CÓDIGO
@@ -485,7 +501,7 @@ src/
 | 5 — Export | ✅ concluída | Perfis de exportação + CSV/XLSX/JSON + seleção de colunas. |
 | 6 — Overlays completos | ✅ concluída | Welcome Overlay. Comportamentos de arrastar, snap-to-grid, persistência de posição, opacidade. |
 | 7 — Configurações | ✅ concluída | Tela de Configurações. Atalhos globais. Acessibilidade (tamanho de fonte). Tray icon. Autostart. Temas (Azul, Verde, Escuro, Claro). |
-| 8 — Integrações | 🔄 parcial | ✅ Modo de envio (UI + ITaskSender). ✅ Tela de Integrações. ✅ Google Sheets OAuth + sender. ⏳ Google Sheets auto-sync. ⏳ Google Calendar (importação). |
+| 8 — Integrações | ✅ concluída | ✅ Modo de envio (UI + ITaskSender). ✅ Tela de Integrações (conector Google unificado). ✅ Google Sheets OAuth + sender + auto-sync ao concluir tarefa. ✅ Google Calendar: importação com editor inline, recorrência via RRULE, filtro de eventos não relevantes. |
 | 9 — Polish | ✅ concluída | ✅ Lançamento retroativo. ✅ Feedback link. ✅ Ações de tarefa (open URL/file). ✅ Build multiplataforma + CI/CD. ✅ README final. |
 
 ---
@@ -531,6 +547,11 @@ src/
 | 09/04/2026 | Tokens OAuth salvos no Config (SQLite) | MVP: aceitável. Upgrade futuro: `tauri-plugin-stronghold` para armazenamento seguro |
 | 09/04/2026 | `ITaskSender` no domain — integrações expansíveis | Novas integrações (Jira, API própria, Notion…) implementam a interface em `infra/integrations/` sem alterar domain ou UI |
 | 09/04/2026 | Modo de envio: seleção por grupo (não por tarefa individual) | Grupos são a unidade semântica de envio; selecionar por tarefa individual dentro do grupo seria overengineering para o caso de uso principal |
+| 09/04/2026 | Duração enviada ao Sheets como fração de dia (`durationSeconds / 86400`) | Permite que a planilha aplique formato `[hh]:mm` ou `[hh]:mm:ss` nativamente via `batchUpdate` com `numberFormat` tipo TIME |
+| 09/04/2026 | Conector Google único para Sheets + Calendar | Tokens compartilhados com `ALL_GOOGLE_SCOPES`; evita conflito de tokens ao conectar serviços separados |
+| 09/04/2026 | Auto-sync centralizado em `RunningTaskContext` (janela main) | Overlay emite `TASK_STOPPED` com a `Task` completa; main escuta e executa o sync — garante acesso ao config e evita duplicação |
+| 09/04/2026 | `parseRRuleDays` extraído para `infra/integrations/google/rrule.ts` | Testabilidade: função pura isolada do `GoogleCalendarImporter` que depende de `fetch` |
+| 09/04/2026 | Planejamento sem visão "Hoje" — apenas visão Semana | A visão Semana com filtro por dia e botão "Hoje" no campo de data é suficiente; remover "Hoje" simplifica a navegação |
 
 ---
 

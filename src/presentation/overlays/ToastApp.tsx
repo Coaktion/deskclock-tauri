@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow, primaryMonitor } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
@@ -41,7 +41,7 @@ export function ToastApp() {
     visible: false,
   });
   const [animating, setAnimating] = useState(false);
-  const dismissTimerRef = { current: null as ReturnType<typeof setTimeout> | null };
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Posiciona no canto inferior direito do monitor primário ao montar
   useEffect(() => {
