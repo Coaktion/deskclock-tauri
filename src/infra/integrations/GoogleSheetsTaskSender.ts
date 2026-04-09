@@ -31,11 +31,24 @@ export class GoogleSheetsTaskSender implements ITaskSender {
     await this.ensureSheetExists(token, sheetName, enabledCols.map((c) => c.label));
 
     const rows = tasks.map((t) => this.taskToRow(t, enabledCols.map((c) => c.field)));
-    const range = encodeURIComponent(`${sheetName}!A:${colLetter(enabledCols.length)}`);
-    const url = `${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+
+    // Descobre a primeira linha vazia contando linhas ocupadas na coluna A
+    // (mesmo padrão do script legado — evita o append ir para o fim da planilha)
+    const colAUrl = `${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}/values/${encodeURIComponent(`${sheetName}!A:A`)}`;
+    const colARes = await fetch(colAUrl, { headers: { Authorization: `Bearer ${token}` } });
+    const colABody = await colARes.json().catch(() => ({}));
+    const existingRows: unknown[][] = colABody.values ?? [];
+    const nextRow = existingRows.length + 1;
+
+    // Escreve as linhas a partir de nextRow com range explícito (values.update)
+    const lastCol = colLetter(enabledCols.length);
+    const writeRange = encodeURIComponent(
+      `${sheetName}!A${nextRow}:${lastCol}${nextRow + rows.length - 1}`,
+    );
+    const url = `${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}/values/${writeRange}?valueInputOption=USER_ENTERED`;
 
     const res = await fetch(url, {
-      method: "POST",
+      method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -43,9 +56,21 @@ export class GoogleSheetsTaskSender implements ITaskSender {
       body: JSON.stringify({ values: rows }),
     });
 
+    const body = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message ?? "Erro ao enviar para o Google Sheets.");
+      throw new Error(
+        body?.error?.message ?? `Erro HTTP ${res.status} ao enviar para o Google Sheets.`,
+      );
+    }
+
+    // values.update retorna updatedRows diretamente (ao contrário de values.append)
+    const updatedRows: number = body?.updatedRows ?? 0;
+    if (updatedRows === 0) {
+      throw new Error(
+        `A planilha aceitou a requisição mas nenhuma linha foi escrita. ` +
+        `Verifique o nome da aba "${sheetName}" e as permissões da planilha.`,
+      );
     }
   }
 
@@ -90,7 +115,6 @@ export class GoogleSheetsTaskSender implements ITaskSender {
     const fmt2 = (n: number) => String(n).padStart(2, "0");
     const fmtDate = (d: Date) => `${fmt2(d.getDate())}/${fmt2(d.getMonth() + 1)}/${d.getFullYear()}`;
     const fmtTime = (d: Date) => `${fmt2(d.getHours())}:${fmt2(d.getMinutes())}`;
-
     const valueFor = (field: TaskField): string => {
       switch (field) {
         case "date":      return fmtDate(start);
