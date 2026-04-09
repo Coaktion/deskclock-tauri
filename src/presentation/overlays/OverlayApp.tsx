@@ -17,6 +17,7 @@ import {
   type OverlayConfigChangedPayload,
 } from "@shared/types/overlayEvents";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
+import { applyFontSize } from "@shared/utils/fontSize";
 import { ExecutionOverlayContent } from "./ExecutionOverlayContent";
 import { PlanningOverlayContent } from "./PlanningOverlayContent";
 import { CompactOverlayContent } from "./CompactOverlayContent";
@@ -56,6 +57,12 @@ function OverlayAppInner() {
     [config],
   );
 
+  // Aplica tamanho de fonte ao iniciar
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    applyFontSize(config.get("fontSize"));
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Carrega task inicial, define modo e sincroniza opacidade
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -74,6 +81,8 @@ function OverlayAppInner() {
       ({ payload }) => {
         if (payload.key === "overlayOpacity") {
           setOverlayOpacity(payload.value as number);
+        } else if (payload.key === "fontSize") {
+          applyFontSize(payload.value as string);
         }
       },
     );

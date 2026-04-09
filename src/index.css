@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+:root {
+  font-size: var(--app-font-size, 14px);
+}
+
 select {
   color-scheme: dark;
   appearance: none;

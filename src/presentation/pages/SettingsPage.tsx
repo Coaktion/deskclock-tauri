@@ -3,6 +3,7 @@ import { emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { applyFontSize } from "@shared/utils/fontSize";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -124,6 +125,38 @@ function TextRow({
   );
 }
 
+function SelectRow({
+  label,
+  description,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  description?: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-gray-200">{label}</p>
+        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+      </div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-blue-500"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 function ComingSoonSection({ title }: { title: string }) {
   return (
     <div className="mb-8">
@@ -148,6 +181,7 @@ export function SettingsPage() {
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [overlayShowGridIndicator, setOverlayShowGridIndicator] = useState(false);
+  const [fontSize, setFontSize] = useState<"P" | "M" | "G" | "GG">("M");
   const [shortcutToggleTask, setShortcutToggleTask] = useState("");
   const [shortcutStopTask, setShortcutStopTask] = useState("");
   const [shortcutToggleOverlay, setShortcutToggleOverlay] = useState("");
@@ -164,6 +198,7 @@ export function SettingsPage() {
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
     setOverlayShowGridIndicator(config.get("overlayShowGridIndicator"));
     setLiveTrayTimer(config.get("liveTrayTimer"));
+    setFontSize(config.get("fontSize"));
     setShortcutToggleTask(config.get("shortcutToggleTask"));
     setShortcutStopTask(config.get("shortcutStopTask"));
     setShortcutToggleOverlay(config.get("shortcutToggleOverlay"));
@@ -171,6 +206,17 @@ export function SettingsPage() {
     // Lê estado real do autostart do SO
     isEnabled().then(setStartOnBoot).catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleFontSize(value: string) {
+    const size = value as "P" | "M" | "G" | "GG";
+    setFontSize(size);
+    applyFontSize(size);
+    await config.set("fontSize", size);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "fontSize",
+      value: size,
+    } satisfies OverlayConfigChangedPayload);
+  }
 
   async function applyShortcuts(overrides?: Partial<{
     toggleTask: string; stopTask: string; toggleOverlay: string; toggleWindow: string;
@@ -310,7 +356,20 @@ export function SettingsPage() {
           />
         </Section>
 
-        <ComingSoonSection title="Acessibilidade" />
+        <Section title="Acessibilidade">
+          <SelectRow
+            label="Tamanho da fonte"
+            description="Escala o texto em toda a interface"
+            value={fontSize}
+            options={[
+              { value: "P", label: "P — Pequeno" },
+              { value: "M", label: "M — Médio (padrão)" },
+              { value: "G", label: "G — Grande" },
+              { value: "GG", label: "GG — Extra grande" },
+            ]}
+            onChange={handleFontSize}
+          />
+        </Section>
 
         <Section title="Atalhos globais">
           <p className="text-xs text-gray-500 -mt-2 mb-2">

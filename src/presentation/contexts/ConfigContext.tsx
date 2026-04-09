@@ -12,6 +12,8 @@ export interface AppConfig {
   showWelcomeMessage: boolean;
   startOnBoot: boolean;
   liveTrayTimer: boolean;
+  // Acessibilidade
+  fontSize: "P" | "M" | "G" | "GG";
   // Atalhos globais
   shortcutToggleTask: string;
   shortcutStopTask: string;
@@ -33,6 +35,7 @@ const DEFAULTS: AppConfig = {
   showWelcomeMessage: true,
   startOnBoot: false,
   liveTrayTimer: false,
+  fontSize: "M" as const,
   shortcutToggleTask: "",
   shortcutStopTask: "",
   shortcutToggleOverlay: "",
