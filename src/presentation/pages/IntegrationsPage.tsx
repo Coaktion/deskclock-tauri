@@ -1,9 +1,16 @@
 import { useEffect, useState } from "react";
-import { TableProperties, Calendar, CheckCircle2, Circle, LogIn, LogOut, Loader2, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from "lucide-react";
+import { TableProperties, Calendar, CheckCircle2, Circle, LogIn, LogOut, Loader2, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
-import { DEFAULT_COLUMN_MAPPING, type SheetColumnMapping } from "@shared/types/sheetsConfig";
+import { DEFAULT_COLUMN_MAPPING, type SheetColumn, type SheetColumnMapping } from "@shared/types/sheetsConfig";
 
 const SHEETS_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
@@ -88,6 +95,38 @@ function IntegrationCard({
 
 /* ── Column mapping editor ── */
 
+interface SortableSheetColumnProps {
+  col: SheetColumn;
+  idx: number;
+  onToggle: (idx: number) => void;
+  onRename: (idx: number, label: string) => void;
+}
+
+function SortableSheetColumn({ col, idx, onToggle, onRename }: SortableSheetColumnProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.field });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 px-2 py-1.5 rounded ${col.enabled ? "bg-gray-800/50" : "bg-gray-900/30 opacity-60"}`}
+    >
+      <button {...attributes} {...listeners} className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0">
+        <GripVertical size={13} />
+      </button>
+      <Toggle checked={col.enabled} onChange={() => onToggle(idx)} />
+      <input
+        type="text"
+        value={col.label}
+        onChange={(e) => onRename(idx, e.target.value)}
+        disabled={!col.enabled}
+        className="flex-1 bg-transparent border-b border-gray-700 focus:border-blue-500 text-xs text-gray-200 outline-none py-0.5 disabled:text-gray-600"
+      />
+      <span className="text-xs text-gray-600 w-16 shrink-0">{col.field}</span>
+    </div>
+  );
+}
+
 function ColumnMappingEditor({
   mapping,
   onChange,
@@ -95,67 +134,35 @@ function ColumnMappingEditor({
   mapping: SheetColumnMapping;
   onChange: (m: SheetColumnMapping) => void;
 }) {
+  const sensors = useSensors(useSensor(PointerSensor));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIdx = mapping.findIndex((c) => c.field === active.id);
+      const newIdx = mapping.findIndex((c) => c.field === over.id);
+      onChange(arrayMove(mapping, oldIdx, newIdx));
+    }
+  }
+
   function toggleEnabled(idx: number) {
-    const next = mapping.map((c, i) => i === idx ? { ...c, enabled: !c.enabled } : c);
-    onChange(next);
+    onChange(mapping.map((c, i) => i === idx ? { ...c, enabled: !c.enabled } : c));
   }
 
   function setLabel(idx: number, label: string) {
-    const next = mapping.map((c, i) => i === idx ? { ...c, label } : c);
-    onChange(next);
-  }
-
-  function moveUp(idx: number) {
-    if (idx === 0) return;
-    const next = [...mapping];
-    [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-    onChange(next);
-  }
-
-  function moveDown(idx: number) {
-    if (idx === mapping.length - 1) return;
-    const next = [...mapping];
-    [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
-    onChange(next);
+    onChange(mapping.map((c, i) => i === idx ? { ...c, label } : c));
   }
 
   return (
-    <div className="space-y-1">
-      {mapping.map((col, idx) => (
-        <div
-          key={col.field}
-          className={`flex items-center gap-2 px-2 py-1.5 rounded ${
-            col.enabled ? "bg-gray-800/50" : "bg-gray-900/30 opacity-50"
-          }`}
-        >
-          <Toggle checked={col.enabled} onChange={() => toggleEnabled(idx)} />
-          <input
-            type="text"
-            value={col.label}
-            onChange={(e) => setLabel(idx, e.target.value)}
-            disabled={!col.enabled}
-            className="flex-1 bg-transparent border-b border-gray-700 focus:border-blue-500 text-xs text-gray-200 outline-none py-0.5 disabled:text-gray-600"
-          />
-          <span className="text-xs text-gray-600 w-16 shrink-0">{col.field}</span>
-          <div className="flex gap-0.5">
-            <button
-              onClick={() => moveUp(idx)}
-              disabled={idx === 0}
-              className="p-0.5 text-gray-600 hover:text-gray-300 disabled:opacity-20"
-            >
-              <ArrowUp size={12} />
-            </button>
-            <button
-              onClick={() => moveDown(idx)}
-              disabled={idx === mapping.length - 1}
-              className="p-0.5 text-gray-600 hover:text-gray-300 disabled:opacity-20"
-            >
-              <ArrowDown size={12} />
-            </button>
-          </div>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={mapping.map((c) => c.field)} strategy={verticalListSortingStrategy}>
+        <div className="flex flex-col gap-1">
+          {mapping.map((col, idx) => (
+            <SortableSheetColumn key={col.field} col={col} idx={idx} onToggle={toggleEnabled} onRename={setLabel} />
+          ))}
         </div>
-      ))}
-    </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 

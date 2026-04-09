@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Send, CheckSquare, Square, X } from "lucide-react";
+import { Send, CheckSquare, Square, X, Loader2 } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -65,12 +65,13 @@ export function TodayEntriesSection({
     if (!spreadsheetId || !refreshToken) return null;
     return new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.isLoaded]);
+  }, [config.isLoaded, projects, categories]);
 
   // send mode
   const [sendMode, setSendMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [sendMessage, setSendMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [sending, setSending] = useState(false);
 
   function enterSendMode() {
     setSendMode(true);
@@ -116,9 +117,9 @@ export function TodayEntriesSection({
       return;
     }
 
+    setSending(true);
     try {
       await sendTasks(googleSheetsSender, tasksToSend);
-      // Marca as tarefas como enviadas no banco
       await repo.markSentToSheets(tasksToSend.map((t) => t.id));
       reload();
       setSendMessage({ text: `${tasksToSend.length} tarefa(s) enviada(s) com sucesso.`, error: false });
@@ -132,6 +133,8 @@ export function TodayEntriesSection({
         const msg = err instanceof Error ? err.message : "Erro ao enviar tarefas.";
         setSendMessage({ text: msg, error: true });
       }
+    } finally {
+      setSending(false);
     }
   }
 
@@ -198,10 +201,13 @@ export function TodayEntriesSection({
             <div className="flex-1" />
             <button
               onClick={handleSend}
-              className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded"
+              disabled={sending || selectedKeys.size === 0}
+              className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-2 py-1 rounded"
             >
-              <Send size={12} />
-              Enviar selecionadas ({selectedKeys.size})
+              {sending
+                ? <><Loader2 size={12} className="animate-spin" />Enviando…</>
+                : <><Send size={12} />Enviar selecionadas ({selectedKeys.size})</>
+              }
             </button>
             <button
               onClick={exitSendMode}
