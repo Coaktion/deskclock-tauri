@@ -85,13 +85,16 @@ export function TodayEntriesSection({
 
     try {
       await sendTasks(googleSheetsSender, tasksToSend);
+      setSendMessage({ text: `${tasksToSend.length} tarefa(s) enviada(s) com sucesso.`, error: false });
+      setSelectedKeys(new Set());
     } catch (err) {
       if (err instanceof NoIntegrationError) {
         setSendMessage({ text: "Nenhuma integração configurada.", error: true });
       } else if (err instanceof NoTasksSelectedError) {
         setSendMessage({ text: "Selecione ao menos uma tarefa.", error: true });
       } else {
-        setSendMessage({ text: "Erro ao enviar tarefas.", error: true });
+        const msg = err instanceof Error ? err.message : "Erro ao enviar tarefas.";
+        setSendMessage({ text: msg, error: true });
       }
     }
   }
