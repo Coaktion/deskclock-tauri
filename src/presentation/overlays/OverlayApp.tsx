@@ -18,6 +18,8 @@ import {
 } from "@shared/types/overlayEvents";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
 import { applyFontSize } from "@shared/utils/fontSize";
+import { applyTheme } from "@shared/utils/theme";
+import type { Theme } from "@shared/utils/theme";
 import { ExecutionOverlayContent } from "./ExecutionOverlayContent";
 import { PlanningOverlayContent } from "./PlanningOverlayContent";
 import { CompactOverlayContent } from "./CompactOverlayContent";
@@ -57,10 +59,11 @@ function OverlayAppInner() {
     [config],
   );
 
-  // Aplica tamanho de fonte ao iniciar
+  // Aplica tamanho de fonte e tema ao iniciar
   useEffect(() => {
     if (!config.isLoaded) return;
     applyFontSize(config.get("fontSize"));
+    applyTheme(config.get("theme") as Theme);
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Carrega task inicial, define modo e sincroniza opacidade
@@ -83,6 +86,8 @@ function OverlayAppInner() {
           setOverlayOpacity(payload.value as number);
         } else if (payload.key === "fontSize") {
           applyFontSize(payload.value as string);
+        } else if (payload.key === "theme") {
+          applyTheme(payload.value as Theme);
         }
       },
     );

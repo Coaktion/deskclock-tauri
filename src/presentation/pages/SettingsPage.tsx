@@ -216,6 +216,10 @@ export function SettingsPage() {
     setTheme(t);
     applyTheme(t);
     await config.set("theme", t);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "theme",
+      value: t,
+    } satisfies OverlayConfigChangedPayload);
   }
 
   async function handleFontSize(value: string) {

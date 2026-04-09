@@ -5,6 +5,9 @@ import { emit } from "@tauri-apps/api/event";
 import { CalendarDays, Plus, X } from "lucide-react";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { OVERLAY_EVENTS, type WelcomeClosedPayload } from "@shared/types/overlayEvents";
+import { applyFontSize } from "@shared/utils/fontSize";
+import { applyTheme } from "@shared/utils/theme";
+import type { Theme } from "@shared/utils/theme";
 
 const WINDOW_WIDTH = 320;
 const WINDOW_HEIGHT = 190;
@@ -27,6 +30,12 @@ function WelcomeAppInner() {
     const y = window.screen.availHeight - WINDOW_HEIGHT - MARGIN;
     appWindow.setPosition(new LogicalPosition(x, y));
   }, []);
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    applyFontSize(config.get("fontSize"));
+    applyTheme(config.get("theme") as Theme);
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function close(action: WelcomeClosedPayload["action"]) {
     await emit(OVERLAY_EVENTS.WELCOME_CLOSED, { action } satisfies WelcomeClosedPayload);
