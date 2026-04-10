@@ -172,7 +172,6 @@ export function SettingsPage() {
   const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
-  const [overlayShowGridIndicator, setOverlayShowGridIndicator] = useState(false);
   const [fontSize, setFontSize] = useState<"P" | "M" | "G" | "GG">("M");
   const [theme, setTheme] = useState<Theme>("azul");
   const [shortcutToggleTask, setShortcutToggleTask] = useState("");
@@ -185,7 +184,6 @@ export function SettingsPage() {
     if (!config.isLoaded) return;
     setUserName(config.get("userName"));
     setShowWelcome(config.get("showWelcomeMessage"));
-    setOverlayShowGridIndicator(config.get("overlayShowGridIndicator"));
     setOverlayOpacity(config.get("overlayOpacity"));
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
     setLiveTrayTimer(config.get("liveTrayTimer"));
@@ -250,11 +248,7 @@ export function SettingsPage() {
   }
 
   async function handleToggle(
-    key:
-      | "showWelcomeMessage"
-      | "overlaySnapToGrid"
-      | "overlayShowGridIndicator"
-      | "liveTrayTimer",
+    key: "showWelcomeMessage" | "overlaySnapToGrid" | "liveTrayTimer",
     setter: (v: boolean) => void,
     value: boolean
   ) {
@@ -343,14 +337,6 @@ export function SettingsPage() {
             description="Encaixa o overlay em grade ao soltar o arraste"
             value={overlaySnapToGrid}
             onChange={(v) => handleToggle("overlaySnapToGrid", setOverlaySnapToGrid, v)}
-          />
-          <ToggleRow
-            label="Mostrar indicador visual da grade"
-            description="Exibe um highlight da posição alvo ao arrastar o overlay"
-            value={overlayShowGridIndicator}
-            onChange={(v) =>
-              handleToggle("overlayShowGridIndicator", setOverlayShowGridIndicator, v)
-            }
           />
         </Section>
 
