@@ -75,27 +75,27 @@ export function ExecutionOverlayContent({
         <>
           {/* Drag handle — área de nome + timer */}
           <div data-tauri-drag-region className="flex-1 min-w-0 cursor-move select-none">
-            <p className="text-sm font-medium text-gray-100 truncate pointer-events-none">
+            <p className="text-[11px] text-gray-400 truncate leading-tight pointer-events-none">
               {displayName}
             </p>
-            <p className="text-lg font-mono text-gray-200 pointer-events-none">
+            <p className="text-xl font-mono font-semibold text-gray-100 leading-tight pointer-events-none">
               {formatHHMMSS(seconds)}
             </p>
           </div>
 
           {/* Botões interativos */}
-          <div className="flex gap-1 shrink-0">
+          <div className="flex flex-col gap-1 shrink-0">
             <button
               onClick={isRunning ? onPause : onResume}
-              className="p-1.5 text-gray-400 hover:text-gray-100 rounded hover:bg-gray-800"
+              className="p-1.5 text-gray-400 hover:text-gray-100 rounded hover:bg-gray-800 transition-colors"
             >
-              {isRunning ? <Pause size={16} /> : <Play size={16} />}
+              {isRunning ? <Pause size={15} /> : <Play size={15} />}
             </button>
             <button
               onClick={() => setConfirmingStop(true)}
-              className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800"
+              className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
             >
-              <Square size={16} />
+              <Square size={15} />
             </button>
           </div>
         </>

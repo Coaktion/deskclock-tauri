@@ -196,11 +196,9 @@ function AppInner() {
       });
       // Janela principal permanece oculta até o Welcome ser dispensado
     } else {
-      // Sem welcome: mostra a janela principal imediatamente
+      // Sem welcome: mostra a janela principal e o overlay imediatamente
       appWindow.show();
-      if (config.get("overlayAlwaysVisible")) {
-        getOverlay().then((overlay) => overlay?.show());
-      }
+      getOverlay().then((overlay) => overlay?.show());
     }
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 

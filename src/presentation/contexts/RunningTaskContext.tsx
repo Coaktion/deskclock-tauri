@@ -61,11 +61,6 @@ async function showOverlay() {
   await overlay?.show();
 }
 
-async function hideOverlay() {
-  const overlay = await getOverlayWindow();
-  await overlay?.hide();
-}
-
 async function notifyOverlay(task: Task | null) {
   await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
     task,
@@ -119,11 +114,9 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       setRunningTask(task);
       triggerReload();
       await notifyOverlay(task);
-      if (config.isLoaded && config.get("overlayShowOnStart")) {
-        await showOverlay();
-      }
+      await showOverlay();
     },
-    [triggerReload, config]
+    [triggerReload]
   );
 
   const pauseTask = useCallback(async () => {
@@ -174,15 +167,12 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         if (payload.completed) {
           await autoSyncTask(payload.task);
         }
-        if (config.isLoaded && !config.get("overlayAlwaysVisible")) {
-          await hideOverlay();
-        }
       }
     );
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [autoSyncTask, config]);
+  }, [autoSyncTask]);
 
   const stopTask = useCallback(
     async (completed: boolean) => {
@@ -191,14 +181,11 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       setRunningTask(null);
       triggerReload();
       await notifyOverlay(null);
-      if (config.isLoaded && !config.get("overlayAlwaysVisible")) {
-        await hideOverlay();
-      }
       if (completed) {
         await autoSyncTask(stoppedTask);
       }
     },
-    [runningTask, triggerReload, config, autoSyncTask]
+    [runningTask, triggerReload, autoSyncTask]
   );
 
   const cancelTask = useCallback(async () => {
@@ -207,10 +194,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     setRunningTask(null);
     triggerReload();
     await notifyOverlay(null);
-    if (config.isLoaded && !config.get("overlayAlwaysVisible")) {
-      await hideOverlay();
-    }
-  }, [runningTask, triggerReload, config]);
+  }, [runningTask, triggerReload]);
 
   const updateActiveTask = useCallback(
     async (input: UpdateInput) => {

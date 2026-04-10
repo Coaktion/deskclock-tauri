@@ -12,7 +12,8 @@ import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 
 const OVERLAY_WIDTH = 288;
 const HEADER_H = 37;
-const FOOTER_H = 45;
+const NEW_TASK_H = 45;
+const FOOTER_H = NEW_TASK_H;
 const ROW_H = 42;
 const EMPTY_H = 60;
 const MAX_VISIBLE_ROWS = 6;
@@ -98,6 +99,16 @@ export function PlanningOverlayContent({
         </div>
       </div>
 
+      {/* Nova tarefa — no topo, antes da lista */}
+      <div className="p-2 border-b border-gray-700 shrink-0">
+        <button
+          onClick={() => onStartTask({ billable: true })}
+          className="w-full py-1.5 text-xs text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded transition-colors"
+        >
+          + Nova tarefa
+        </button>
+      </div>
+
       {/* Lista de tarefas */}
       <div className="flex-1 overflow-y-auto">
         {pending.length === 0 ? (
@@ -124,16 +135,6 @@ export function PlanningOverlayContent({
             );
           })
         )}
-      </div>
-
-      {/* Nova tarefa */}
-      <div className="p-2 border-t border-gray-700 shrink-0">
-        <button
-          onClick={() => onStartTask({ billable: true })}
-          className="w-full py-1.5 text-xs text-gray-300 hover:text-white bg-gray-800 hover:bg-gray-700 rounded transition-colors"
-        >
-          + Nova tarefa
-        </button>
       </div>
     </div>
   );
