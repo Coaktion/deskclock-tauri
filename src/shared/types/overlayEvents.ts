@@ -3,6 +3,7 @@ import type { Task } from "@domain/entities/Task";
 export const OVERLAY_EVENTS = {
   RUNNING_TASK_CHANGED: "running-task-changed",
   OVERLAY_NAVIGATE_PLANNING: "overlay-navigate-planning",
+  OVERLAY_FOCUS_TASK_EDIT: "overlay-focus-task-edit",
   WELCOME_CLOSED: "welcome-closed",
   OVERLAY_SET_MODE: "overlay-set-mode",
   OVERLAY_CONFIG_CHANGED: "overlay-config-changed",

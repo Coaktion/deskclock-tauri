@@ -226,6 +226,16 @@ function AppInner() {
     };
   }, []);
 
+  // Navigate to tasks when overlay requests task edit focus
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, () => {
+      setPage("tasks");
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
   return (
     <RunningTaskProvider config={config}>
       <MainContent page={page} setPage={setPage} welcomeActiveRef={welcomeActiveRef} />

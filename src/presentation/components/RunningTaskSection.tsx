@@ -1,10 +1,13 @@
-import { useState } from "react";
-import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock, ArrowRight } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { RunningTaskEditForm } from "./RunningTaskEditForm";
+import { Autocomplete } from "./Autocomplete";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 
 interface RunningTaskSectionProps {
@@ -17,9 +20,31 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
     useRunningTask();
   const seconds = useTaskTimer(runningTask);
   const [editing, setEditing] = useState(false);
+  const [editFocusField, setEditFocusField] = useState<"name" | "project" | "category" | undefined>();
   const [confirmingStop, setConfirmingStop] = useState(false);
+  const [fillingRequired, setFillingRequired] = useState(false);
+  const [fillName, setFillName] = useState("");
+  const [fillProjectName, setFillProjectName] = useState("");
+  const [fillProjectId, setFillProjectId] = useState<string | null>(null);
   const [editingStartTime, setEditingStartTime] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState("");
+
+  // Abre edição com foco no primeiro campo vazio ao receber evento do overlay
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, () => {
+      if (!runningTask) return;
+      const focusField = !runningTask.name?.trim()
+        ? "name"
+        : !runningTask.projectId
+          ? "project"
+          : !runningTask.categoryId
+            ? "category"
+            : undefined;
+      setEditFocusField(focusField);
+      setEditing(true);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [runningTask]);
 
   if (!runningTask) return null;
 
@@ -31,6 +56,26 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
   async function handlePlayPause() {
     if (isRunning) await pauseTask();
     else await resumeTask();
+  }
+
+  function handleStopClick() {
+    const missingName = !runningTask.name?.trim();
+    const missingProject = !runningTask.projectId;
+    if (missingName || missingProject) {
+      setFillName(runningTask.name ?? "");
+      setFillProjectName(projects.find((p) => p.id === runningTask.projectId)?.name ?? "");
+      setFillProjectId(runningTask.projectId);
+      setFillingRequired(true);
+    } else {
+      setConfirmingStop(true);
+    }
+  }
+
+  async function handleFillSubmit() {
+    const pId = projects.find((p) => p.name === fillProjectName)?.id ?? fillProjectId ?? null;
+    await updateActiveTask({ name: fillName.trim() || null, projectId: pId });
+    setFillingRequired(false);
+    setConfirmingStop(true);
   }
 
   async function handleStopConfirm(completed: boolean) {
@@ -47,6 +92,7 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
   }) {
     await updateActiveTask(data);
     setEditing(false);
+    setEditFocusField(undefined);
   }
 
   function handleStartTimeClick() {
@@ -147,7 +193,7 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
                 {isRunning ? <Pause size={16} /> : <Play size={16} />}
               </button>
               <button
-                onClick={() => setConfirmingStop(true)}
+                onClick={handleStopClick}
                 title="Parar"
                 className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800"
               >
@@ -172,13 +218,51 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
         </div>
       </div>
 
+      {fillingRequired && (
+        <div className="mt-3 pt-3 border-t border-gray-700 space-y-2">
+          <p className="text-xs text-yellow-400">Preencha antes de concluir:</p>
+          <input
+            type="text"
+            value={fillName}
+            onChange={(e) => setFillName(e.target.value)}
+            placeholder="Nome da tarefa"
+            autoFocus
+            className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          />
+          <Autocomplete
+            value={fillProjectName}
+            onChange={setFillProjectName}
+            onSelect={(o) => setFillProjectId(o.id)}
+            onEnter={handleFillSubmit}
+            options={projects}
+            placeholder="Projeto"
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={() => setFillingRequired(false)}
+              className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleFillSubmit}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors"
+            >
+              <ArrowRight size={12} />
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
+
       {editing && (
         <RunningTaskEditForm
           task={runningTask}
           projects={projects}
           categories={categories}
+          focusField={editFocusField}
           onSave={handleSaveEdit}
-          onCancel={() => setEditing(false)}
+          onCancel={() => { setEditing(false); setEditFocusField(undefined); }}
         />
       )}
     </section>

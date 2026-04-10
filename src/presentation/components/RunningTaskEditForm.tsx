@@ -8,6 +8,7 @@ interface RunningTaskEditFormProps {
   task: Task;
   projects: Project[];
   categories: Category[];
+  focusField?: "name" | "project" | "category";
   onSave: (data: {
     name: string | null;
     projectId: string | null;
@@ -21,6 +22,7 @@ export function RunningTaskEditForm({
   task,
   projects,
   categories,
+  focusField,
   onSave,
   onCancel,
 }: RunningTaskEditFormProps) {
@@ -48,6 +50,7 @@ export function RunningTaskEditForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Nome (opcional)"
+        autoFocus={focusField === "name" || !focusField}
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
       />
       <div className="flex gap-2">
@@ -58,6 +61,7 @@ export function RunningTaskEditForm({
           options={projects}
           placeholder="Projeto"
           className="flex-1"
+          autoFocus={focusField === "project"}
         />
         <Autocomplete
           value={categoryName}
@@ -74,6 +78,7 @@ export function RunningTaskEditForm({
           options={categories}
           placeholder="Categoria"
           className="flex-1"
+          autoFocus={focusField === "category"}
         />
       </div>
       <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
