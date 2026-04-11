@@ -20,13 +20,13 @@
 
 ---
 
-## Branch 2 — Formulários e Atalhos 🔧
+## Branch 2 — Formulários e Atalhos ✅
 
 | # | Item | Status | Notas |
 |---|------|--------|-------|
-| F1 | Enter no formulário de edição da tarefa não salva | ⬜ | `RunningTaskEditForm`: falta `onKeyDown` no input nome + `onEnter` nos Autocompletes |
-| F2 | Categoria obrigatória ao concluir tarefa | ⬜ | `RunningTaskSection.handleStopClick`: só valida nome e projeto; falta `categoryId` |
-| F3 | Atalhos globais não funcionam | ⬜ | `Shift+1` → `!`, `Shift+2` → `@` etc. O plugin não reconhece símbolos; normalizar teclas antes de salvar/registrar |
+| F1 | Enter no formulário de edição da tarefa não salva | ✅ | `onKeyDown` Enter no input nome + `onEnter={handleSave}` nos dois Autocompletes |
+| F2 | Categoria obrigatória ao concluir tarefa | ✅ | Validação de `categoryId` em `handleStopClick`; campo Categoria adicionado ao formulário de preenchimento obrigatório |
+| F3 | Atalhos globais não funcionam | ✅ | `buildAccelerator` usa `e.code` (Digit1, KeyA…) em vez de `e.key` (!,@,#) ao normalizar teclas com Shift |
 
 ---
 
@@ -63,7 +63,7 @@
 
 ```
 Branch 1 — fix/window-controls         ✅ mergeado em main
-Branch 2 — fix/form-and-shortcuts      ⬜ F1, F2, F3
+Branch 2 — fix/form-and-shortcuts      ✅ F1, F2, F3
 Branch 3 — fix/overlay-behavior        ⬜ O1, O2, O3, O4, O5, O6
 Branch 4 — fix/sheets-duration         ⬜ S1
 Branch 5 — feat/compact-execution-overlay ⬜ E1
@@ -71,4 +71,4 @@ Branch 5 — feat/compact-execution-overlay ⬜ E1
 
 ---
 
-*Última atualização: 11/04/2026 — Branch 1 concluído*
+*Última atualização: 11/04/2026 — Branches 1 e 2 concluídos*
