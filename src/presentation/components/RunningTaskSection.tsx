@@ -26,6 +26,8 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
   const [fillName, setFillName] = useState("");
   const [fillProjectName, setFillProjectName] = useState("");
   const [fillProjectId, setFillProjectId] = useState<string | null>(null);
+  const [fillCategoryName, setFillCategoryName] = useState("");
+  const [fillCategoryId, setFillCategoryId] = useState<string | null>(null);
   const [editingStartTime, setEditingStartTime] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState("");
 
@@ -62,10 +64,13 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
     if (!runningTask) return;
     const missingName = !runningTask.name?.trim();
     const missingProject = !runningTask.projectId;
-    if (missingName || missingProject) {
+    const missingCategory = !runningTask.categoryId;
+    if (missingName || missingProject || missingCategory) {
       setFillName(runningTask.name ?? "");
       setFillProjectName(projects.find((p) => p.id === runningTask.projectId)?.name ?? "");
       setFillProjectId(runningTask.projectId);
+      setFillCategoryName(categories.find((c) => c.id === runningTask.categoryId)?.name ?? "");
+      setFillCategoryId(runningTask.categoryId);
       setFillingRequired(true);
     } else {
       setConfirmingStop(true);
@@ -74,7 +79,8 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
 
   async function handleFillSubmit() {
     const pId = projects.find((p) => p.name === fillProjectName)?.id ?? fillProjectId ?? null;
-    await updateActiveTask({ name: fillName.trim() || null, projectId: pId });
+    const cId = categories.find((c) => c.name === fillCategoryName)?.id ?? fillCategoryId ?? null;
+    await updateActiveTask({ name: fillName.trim() || null, projectId: pId, categoryId: cId });
     setFillingRequired(false);
     setConfirmingStop(true);
   }
@@ -236,9 +242,20 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
             value={fillProjectName}
             onChange={setFillProjectName}
             onSelect={(o) => setFillProjectId(o.id)}
-            onEnter={handleFillSubmit}
             options={projects}
             placeholder="Projeto"
+          />
+          <Autocomplete
+            value={fillCategoryName}
+            onChange={(v) => {
+              setFillCategoryName(v);
+              const cat = categories.find((c) => c.name === v);
+              if (cat) setFillCategoryId(cat.id);
+            }}
+            onSelect={(o) => setFillCategoryId(o.id)}
+            onEnter={handleFillSubmit}
+            options={categories}
+            placeholder="Categoria"
           />
           <div className="flex gap-2 justify-end">
             <button

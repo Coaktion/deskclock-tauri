@@ -49,6 +49,7 @@ export function RunningTaskEditForm({
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
         placeholder="Nome (opcional)"
         autoFocus={focusField === "name" || !focusField}
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
@@ -58,6 +59,7 @@ export function RunningTaskEditForm({
           value={projectName}
           onChange={setProjectName}
           onSelect={(o) => setProjectId(o.id)}
+          onEnter={handleSave}
           options={projects}
           placeholder="Projeto"
           className="flex-1"
@@ -75,6 +77,7 @@ export function RunningTaskEditForm({
             const cat = categories.find((c) => c.id === o.id);
             if (cat) setBillable(cat.defaultBillable);
           }}
+          onEnter={handleSave}
           options={categories}
           placeholder="Categoria"
           className="flex-1"

@@ -135,15 +135,27 @@ const KEY_MAP: Record<string, string> = {
   Meta: "Super",
 };
 
+/**
+ * Extrai a tecla base a partir de e.code para evitar que Shift+1 vire "!"
+ * em vez de "1". e.code retorna o identificador físico da tecla independente
+ * de modificadores: "Digit1", "KeyA", "Space", "F5", etc.
+ */
+function baseKeyFromCode(code: string, fallbackKey: string): string {
+  const digit = /^Digit(\d)$/.exec(code);
+  if (digit) return digit[1];
+  const letter = /^Key([A-Z])$/.exec(code);
+  if (letter) return letter[1];
+  return KEY_MAP[fallbackKey] ?? (fallbackKey.length === 1 ? fallbackKey.toUpperCase() : fallbackKey);
+}
+
 function buildAccelerator(e: React.KeyboardEvent): string {
   const parts: string[] = [];
   if (e.ctrlKey) parts.push("CmdOrCtrl");
   if (e.shiftKey) parts.push("Shift");
   if (e.altKey) parts.push("Alt");
   if (e.metaKey && !e.ctrlKey) parts.push("CmdOrCtrl");
-  const key = e.key;
-  if (!MODIFIER_KEYS.has(key)) {
-    parts.push(KEY_MAP[key] ?? (key.length === 1 ? key.toUpperCase() : key));
+  if (!MODIFIER_KEYS.has(e.key)) {
+    parts.push(baseKeyFromCode(e.code, e.key));
   }
   return parts.join("+");
 }
