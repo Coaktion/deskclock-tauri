@@ -9,7 +9,9 @@ import {
 export async function showToast(
   variant: ToastVariant,
   message: string,
-  duration = 3500
+  duration = 3500,
+  actionLabel?: string,
+  actionEvent?: string
 ): Promise<void> {
   const win = await WebviewWindow.getByLabel("toast");
   if (!win) return;
@@ -20,5 +22,7 @@ export async function showToast(
     variant,
     message,
     duration,
+    actionLabel,
+    actionEvent,
   } satisfies ToastMessagePayload);
 }

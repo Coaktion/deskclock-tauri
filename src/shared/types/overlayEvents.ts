@@ -9,6 +9,7 @@ export const OVERLAY_EVENTS = {
   OVERLAY_CONFIG_CHANGED: "overlay-config-changed",
   TASK_STOPPED: "task-stopped",
   TOAST_MESSAGE: "toast-message",
+  NAVIGATE_SETTINGS: "navigate-settings",
 } as const;
 
 export interface RunningTaskChangedPayload {
@@ -34,10 +35,12 @@ export interface TaskStoppedPayload {
   completed: boolean;
 }
 
-export type ToastVariant = "success" | "error" | "info";
+export type ToastVariant = "success" | "error" | "info" | "update";
 
 export interface ToastMessagePayload {
   variant: ToastVariant;
   message: string;
   duration?: number;
+  actionLabel?: string;
+  actionEvent?: string;
 }

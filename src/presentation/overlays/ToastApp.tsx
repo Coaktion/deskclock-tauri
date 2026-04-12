@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow, primaryMonitor } from "@tauri-apps/api/window";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
-import { listen } from "@tauri-apps/api/event";
-import { CheckCircle2, XCircle, Info, X } from "lucide-react";
+import { emit, listen } from "@tauri-apps/api/event";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { CheckCircle2, XCircle, Info, ArrowDownToLine, X } from "lucide-react";
 import {
   OVERLAY_EVENTS,
   type ToastMessagePayload,
@@ -18,6 +19,8 @@ interface ToastState {
   variant: ToastVariant;
   message: string;
   visible: boolean;
+  actionLabel?: string;
+  actionEvent?: string;
 }
 
 const VARIANT_STYLES: Record<
@@ -39,6 +42,11 @@ const VARIANT_STYLES: Record<
     icon: <Info size={18} className="text-blue-400 shrink-0" />,
     text: "text-blue-100",
   },
+  update: {
+    border: "border-violet-500",
+    icon: <ArrowDownToLine size={18} className="text-violet-400 shrink-0" />,
+    text: "text-violet-100",
+  },
 };
 
 export function ToastApp() {
@@ -46,6 +54,8 @@ export function ToastApp() {
     variant: "info",
     message: "",
     visible: false,
+    actionLabel: undefined,
+    actionEvent: undefined,
   });
   const [animating, setAnimating] = useState(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,7 +80,13 @@ export function ToastApp() {
     const unlisten = listen<ToastMessagePayload>(OVERLAY_EVENTS.TOAST_MESSAGE, ({ payload }) => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
 
-      setToast({ variant: payload.variant, message: payload.message, visible: true });
+      setToast({
+        variant: payload.variant,
+        message: payload.message,
+        visible: true,
+        actionLabel: payload.actionLabel,
+        actionEvent: payload.actionEvent,
+      });
       setAnimating(true);
 
       const duration = payload.duration ?? 3500;
@@ -97,6 +113,16 @@ export function ToastApp() {
     }, 300);
   }
 
+  async function handleAction(actionEvent: string) {
+    handleDismiss();
+    const mainWin = await WebviewWindow.getByLabel("main");
+    if (mainWin) {
+      await mainWin.show();
+      await mainWin.setFocus();
+    }
+    await emit(actionEvent, null);
+  }
+
   if (!toast.visible) return null;
 
   const styles = VARIANT_STYLES[toast.variant];
@@ -113,6 +139,14 @@ export function ToastApp() {
     >
       {styles.icon}
       <p className={`flex-1 text-sm leading-tight ${styles.text}`}>{toast.message}</p>
+      {toast.actionLabel && toast.actionEvent && (
+        <button
+          onClick={() => handleAction(toast.actionEvent!)}
+          className="text-xs font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded border border-violet-700 hover:border-violet-500"
+        >
+          {toast.actionLabel}
+        </button>
+      )}
       <button
         onClick={handleDismiss}
         className="text-gray-500 hover:text-gray-300 shrink-0 transition-colors"

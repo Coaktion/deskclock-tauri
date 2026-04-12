@@ -7,6 +7,8 @@ import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme, THEMES } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
+import { useUpdater } from "@presentation/hooks/useUpdater";
+import { RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2 } from "lucide-react";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -267,6 +269,109 @@ function SelectRow({
   );
 }
 
+function UpdaterSection() {
+  const { state, check, downloadAndInstall, relaunch } = useUpdater();
+  const appVersion = "0.1.0";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500">Versão atual: {appVersion}</p>
+      </div>
+
+      {state.status === "idle" && (
+        <button
+          onClick={check}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-200 hover:border-gray-500 transition-colors"
+        >
+          <RefreshCw size={14} />
+          Verificar atualizações
+        </button>
+      )}
+
+      {state.status === "checking" && (
+        <p className="text-sm text-gray-400 flex items-center gap-2">
+          <RefreshCw size={14} className="animate-spin" />
+          Verificando…
+        </p>
+      )}
+
+      {state.status === "available" && (
+        <div className="space-y-2">
+          <p className="text-sm text-violet-300 flex items-center gap-2">
+            <Download size={14} />
+            DeskClock {state.version} disponível
+          </p>
+          {state.body && (
+            <p className="text-xs text-gray-500 bg-gray-800 rounded-lg px-3 py-2 whitespace-pre-wrap">
+              {state.body}
+            </p>
+          )}
+          <button
+            onClick={downloadAndInstall}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-700 hover:bg-violet-600 text-sm text-white transition-colors"
+          >
+            <Download size={14} />
+            Baixar e instalar
+          </button>
+        </div>
+      )}
+
+      {state.status === "downloading" && (
+        <div className="space-y-2">
+          <p className="text-sm text-gray-300">Baixando…</p>
+          <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-violet-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${state.progress ?? 0}%` }}
+            />
+          </div>
+          {state.progress != null && (
+            <p className="text-xs text-gray-500 tabular-nums">{state.progress}%</p>
+          )}
+        </div>
+      )}
+
+      {state.status === "ready" && (
+        <div className="space-y-2">
+          <p className="text-sm text-green-300 flex items-center gap-2">
+            <CheckCircle2 size={14} />
+            Pronto para instalar
+          </p>
+          <button
+            onClick={relaunch}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-700 hover:bg-green-600 text-sm text-white transition-colors"
+          >
+            <RotateCcw size={14} />
+            Reiniciar agora
+          </button>
+        </div>
+      )}
+
+      {state.status === "error" && (
+        <div className="space-y-2">
+          <p className="text-sm text-red-400 flex items-center gap-2">
+            <AlertCircle size={14} />
+            Falha ao verificar
+          </p>
+          {state.error && (
+            <p className="text-xs text-gray-500 bg-gray-800 rounded-lg px-3 py-2 break-all">
+              {state.error}
+            </p>
+          )}
+          <button
+            onClick={check}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-200 hover:border-gray-500 transition-colors"
+          >
+            <RefreshCw size={14} />
+            Tentar novamente
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const config = useAppConfig();
 
@@ -433,6 +538,10 @@ export function SettingsPage() {
             value={closeOnFocusLoss}
             onChange={(v) => handleToggle("closeOnFocusLoss", setCloseOnFocusLoss, v)}
           />
+        </Section>
+
+        <Section title="Atualizações">
+          <UpdaterSection />
         </Section>
 
         <Section title="Overlay">

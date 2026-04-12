@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { showToast } from "@shared/utils/toast";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
@@ -24,6 +25,11 @@ import {
   type WelcomeClosedPayload,
   type OverlaySetModePayload,
 } from "@shared/types/overlayEvents";
+
+interface UpdateInfo {
+  version: string;
+  body: string | null;
+}
 
 function PageContent({ page }: { page: Page }) {
   switch (page) {
@@ -266,6 +272,37 @@ function AppInner() {
     return () => {
       unlisten.then((fn) => fn());
     };
+  }, []);
+
+  // Navega para Settings quando acionado pelo toast de atualização
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.NAVIGATE_SETTINGS, () => {
+      setPage("settings");
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  // Verifica atualizações silenciosamente ao abrir (delay de 10s)
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      try {
+        const update = await invoke<UpdateInfo | null>("check_for_update");
+        if (update) {
+          await showToast(
+            "update",
+            `DeskClock ${update.version} disponível`,
+            8000,
+            "Ver",
+            OVERLAY_EVENTS.NAVIGATE_SETTINGS
+          );
+        }
+      } catch {
+        // falha silenciosa — não incomodar o usuário por problema de rede
+      }
+    }, 10_000);
+    return () => clearTimeout(timer);
   }, []);
 
   return (

@@ -27,6 +27,8 @@
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "opener:allow-open-url",
-    "opener:allow-open-path"
+    "opener:allow-open-path",
+    "updater:allow-check",
+    "updater:allow-download-and-install"
   ]
 }

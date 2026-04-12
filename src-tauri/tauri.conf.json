@@ -79,5 +79,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "COLE_AQUI_O_CONTEÚDO_DE_deskclock.key.pub",
+      "endpoints": [
+        "https://github.com/EduardoMeira/deskclock-tauri/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

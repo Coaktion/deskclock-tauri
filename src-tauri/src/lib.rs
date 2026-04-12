@@ -6,6 +6,7 @@ use tauri::{
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use tauri_plugin_sql::{Migration, MigrationKind};
+use tauri_plugin_updater::UpdaterExt;
 
 /// Retorna o identificador de plataforma compatível com a convenção Node.js/Electron.
 /// Valores: "win32" | "darwin" | "linux"
@@ -135,6 +136,62 @@ fn extract_oauth_code(request: &str) -> Option<String> {
         }
     }
     None
+}
+
+#[derive(serde::Serialize)]
+struct UpdateInfo {
+    version: String,
+    body: Option<String>,
+}
+
+/// Verifica se há atualização disponível.
+/// Retorna Some(UpdateInfo) se sim, None se o app já está na versão mais recente.
+#[tauri::command]
+async fn check_for_update(app: tauri::AppHandle) -> Result<Option<UpdateInfo>, String> {
+    match app.updater_builder().build().map_err(|e| e.to_string())?.check().await {
+        Ok(Some(update)) => Ok(Some(UpdateInfo {
+            version: update.version.clone(),
+            body: update.body.clone(),
+        })),
+        Ok(None) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Baixa e instala a atualização, emitindo progresso via evento Tauri.
+/// Ao terminar, o frontend deve chamar relaunch_app() para reiniciar.
+#[tauri::command]
+async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), String> {
+    let update = app
+        .updater_builder()
+        .build()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| "Nenhuma atualização encontrada".to_string())?;
+
+    let app_handle = app.clone();
+    update
+        .download_and_install(
+            |chunk, total| {
+                let _ = app_handle.emit(
+                    "update:progress",
+                    serde_json::json!({ "chunk": chunk, "total": total }),
+                );
+            },
+            || {
+                let _ = app_handle.emit("update:ready", ());
+            },
+        )
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Reinicia o aplicativo (chamado após instalação de atualização).
+#[tauri::command]
+fn relaunch_app(app: tauri::AppHandle) {
+    app.restart();
 }
 
 #[tauri::command]
@@ -347,6 +404,7 @@ pub fn run() {
 
             Ok(())
         })
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
@@ -364,6 +422,9 @@ pub fn run() {
             get_platform,
             open_in_browser,
             open_in_file_manager,
+            check_for_update,
+            download_and_install_update,
+            relaunch_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
