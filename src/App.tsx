@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -58,17 +59,36 @@ async function getWelcome() {
   return WebviewWindow.getByLabel("welcome");
 }
 
+const appWindow = getCurrentWindow();
+
+// Posiciona a janela principal no canto inferior direito da área de trabalho
+// (acima da barra de tarefas). screen.availWidth/availHeight reflete a work area
+// do monitor no WebView2/Chromium, excluindo a taskbar automaticamente.
+async function positionWindowBottomRight() {
+  const dpr = window.devicePixelRatio || 1;
+  const outerSize = await appWindow.outerSize();
+  // outerSize() retorna 0 para janelas ainda não exibidas; usa dimensões lógicas × dpr como fallback
+  const winW = outerSize.width > 0 ? outerSize.width : Math.round(800 * dpr);
+  const winH = outerSize.height > 0 ? outerSize.height : Math.round(620 * dpr);
+
+  const x = Math.max(0, Math.round(window.screen.availWidth * dpr) - winW);
+  const y = Math.max(0, Math.round(window.screen.availHeight * dpr) - winH);
+  await appWindow.setPosition(new PhysicalPosition(x, y));
+}
+
 // MainContent — inside RunningTaskProvider, has access to useRunningTask
 function MainContent({
   page,
   setPage,
   welcomeActiveRef,
+  ignoreBlurRef,
   isPinned,
   onTogglePin,
 }: {
   page: Page;
   setPage: (p: Page) => void;
   welcomeActiveRef: React.MutableRefObject<boolean>;
+  ignoreBlurRef: React.MutableRefObject<boolean>;
   isPinned: boolean;
   onTogglePin: () => void;
 }) {
@@ -125,23 +145,30 @@ function MainContent({
       async ({ payload }) => {
         welcomeActiveRef.current = false;
 
-        // Mostra a janela principal em todos os casos
-        await appWindow.show();
-
-        if (payload.action === "navigate-planning") {
-          setPage("planning");
-        } else if (payload.action === "start-task") {
+        if (payload.action === "start-task") {
           await startTask({ billable: true });
-          return; // startTask handles showing the overlay
+          return; // execution overlay handles visibility
         }
 
-        // For "navigate-planning" and "close": show compact overlay
+        // Suprime o closeOnFocusLoss enquanto reorganizamos as janelas
+        ignoreBlurRef.current = true;
+        setTimeout(() => { ignoreBlurRef.current = false; }, 600);
+
+        if (payload.action === "navigate-planning") {
+          await positionWindowBottomRight();
+          await appWindow.show();
+          setPage("planning");
+        }
+        // "close" e "navigate-planning": exibe apenas o overlay compacto
         const overlay = await getOverlay();
         if (overlay) {
           await overlay.show();
           await emit(OVERLAY_EVENTS.OVERLAY_SET_MODE, {
             mode: "compact",
           } satisfies OverlaySetModePayload);
+        }
+        if (payload.action === "navigate-planning") {
+          await appWindow.setFocus();
         }
       }
     );
@@ -165,14 +192,13 @@ function MainContent({
   );
 }
 
-const appWindow = getCurrentWindow();
-
 function AppInner() {
   const config = useAppConfig();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
   const welcomeActiveRef = useRef(false);
   const isPinnedRef = useRef(false);
+  const ignoreBlurRef = useRef(false);
 
   // Mantém ref sincronizada com state (evita closure stale nos listeners)
   useEffect(() => {
@@ -202,6 +228,7 @@ function AppInner() {
   // Fecha janela ao perder foco, se habilitado e não fixada
   useEffect(() => {
     const unlisten = appWindow.listen("tauri://blur", () => {
+      if (ignoreBlurRef.current) return;
       if (!config.get("closeOnFocusLoss")) return;
       if (isPinnedRef.current) return;
       appWindow.hide();
@@ -235,7 +262,7 @@ function AppInner() {
         }, 200);
       });
     } else {
-      appWindow.show();
+      positionWindowBottomRight().then(() => appWindow.show());
       getOverlay().then((overlay) => overlay?.show());
     }
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -264,10 +291,29 @@ function AppInner() {
     };
   }, []);
 
-  // Navigate to tasks when overlay requests task edit focus
+  // Navigate to tasks when overlay requests task edit focus.
+  // Navega diretamente no listener do evento — sem depender de tauri://focus
+  // como intermediário, eliminando a race condition entre IPC e foco.
+  // ignoreBlurRef suprime o closeOnFocusLoss durante a transição.
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, () => {
+      ignoreBlurRef.current = true;
+      setTimeout(() => { ignoreBlurRef.current = false; }, 600);
       setPage("tasks");
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  // Exibe a janela no canto inferior direito quando o tray solicita (evento emitido pelo Rust)
+  useEffect(() => {
+    const unlisten = appWindow.listen("tray:show-main", async () => {
+      ignoreBlurRef.current = true;
+      setTimeout(() => { ignoreBlurRef.current = false; }, 600);
+      await positionWindowBottomRight();
+      await appWindow.show();
+      await appWindow.setFocus();
     });
     return () => {
       unlisten.then((fn) => fn());
@@ -311,6 +357,7 @@ function AppInner() {
         page={page}
         setPage={setPage}
         welcomeActiveRef={welcomeActiveRef}
+        ignoreBlurRef={ignoreBlurRef}
         isPinned={isPinned}
         onTogglePin={() => setIsPinned((v) => !v)}
       />
