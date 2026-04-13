@@ -82,7 +82,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "COLE_AQUI_O_CONTEÚDO_DE_deskclock.key.pub",
+      "pubkey": "untrusted comment: minisign public key: 828E47ABDFD07512\nRWQSddDfq0eOgiT6dfSvyop0HBa5tyS18ksZQJaTB6LDfJrFQT3tEUt/\n",
       "endpoints": [
         "https://github.com/EduardoMeira/deskclock-tauri/releases/latest/download/latest.json"
       ]
