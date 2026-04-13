@@ -5,7 +5,11 @@ import { SearchInput } from "./SearchInput";
 import { BulkImportTextarea } from "./BulkImportTextarea";
 import { ProjectCard } from "./ProjectCard";
 
-export function ProjectsPanel() {
+interface ProjectsPanelProps {
+  showTitle?: boolean;
+}
+
+export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
   const { projects, loading, createProject, bulkImportProjects, deleteProject } = useProjects();
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
@@ -34,7 +38,7 @@ export function ProjectsPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold text-gray-100">Projetos</h2>
+      {showTitle && <h2 className="text-base font-semibold text-gray-100">Projetos</h2>}
 
       <BulkImportTextarea
         value={bulkText}

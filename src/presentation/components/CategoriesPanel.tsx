@@ -6,7 +6,11 @@ import { BulkImportTextarea } from "./BulkImportTextarea";
 import { ToggleBillable } from "./ToggleBillable";
 import { CategoryCard } from "./CategoryCard";
 
-export function CategoriesPanel() {
+interface CategoriesPanelProps {
+  showTitle?: boolean;
+}
+
+export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
   const { categories, loading, createCategory, bulkImportCategories, deleteCategory } =
     useCategories();
   const [search, setSearch] = useState("");
@@ -37,7 +41,7 @@ export function CategoriesPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold text-gray-100">Categorias</h2>
+      {showTitle && <h2 className="text-base font-semibold text-gray-100">Categorias</h2>}
 
       <BulkImportTextarea
         value={bulkText}
