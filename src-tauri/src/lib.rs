@@ -2,6 +2,7 @@ mod commands;
 mod migrations;
 mod tray;
 
+use tauri::Manager;
 use commands::{
     get_platform, open_in_browser, open_in_file_manager, save_file, start_oauth_server,
     update_shortcuts, update_tray_tooltip,
@@ -21,6 +22,18 @@ pub fn run() {
             }
 
             tray::setup_tray(app)?;
+
+            // Mantém o overlay sempre acima da taskbar do Windows.
+            // O JS setAlwaysOnTop passa pela bridge IPC e chega tarde demais quando
+            // a taskbar disputa o z-order. Esta thread chama set_always_on_top
+            // direto no processo nativo, sem IPC, garantindo que HWND_TOPMOST
+            // seja re-afirmado a cada 500ms antes que a taskbar consiga se sobrepor.
+            if let Some(overlay) = app.get_webview_window("overlay") {
+                std::thread::spawn(move || loop {
+                    overlay.set_always_on_top(true).ok();
+                    std::thread::sleep(std::time::Duration::from_millis(500));
+                });
+            }
 
             Ok(())
         })
