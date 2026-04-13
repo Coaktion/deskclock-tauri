@@ -31,7 +31,6 @@ export interface AppConfig {
   overlayPosition_execution: OverlayPosition;
   overlayPosition_planning: OverlayPosition;
   overlayPosition_compact: OverlayPosition;
-  "overlayPosition_execution-compact": OverlayPosition;
   // Integrações
   integrationGoogleSheetsSpreadsheetId: string;
   integrationGoogleSheetsSheetName: string;
@@ -65,7 +64,6 @@ const DEFAULTS: AppConfig = {
   overlayPosition_execution: { x: -1, y: -1 },
   overlayPosition_planning: { x: -1, y: -1 },
   overlayPosition_compact: { x: -1, y: -1 },
-  "overlayPosition_execution-compact": { x: -1, y: -1 },
   integrationGoogleSheetsSpreadsheetId: "",
   integrationGoogleSheetsSheetName: "DeskClock",
   integrationGoogleSheetsColumnMapping: DEFAULT_COLUMN_MAPPING,

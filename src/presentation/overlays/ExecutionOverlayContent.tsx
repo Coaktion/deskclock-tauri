@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Play, Pause, Square, CheckCircle2, Clock, X, Minimize2 } from "lucide-react";
+import { Play, Pause, Square, CheckCircle2, Clock, X, GripVertical } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit } from "@tauri-apps/api/event";
@@ -14,15 +14,13 @@ interface ExecutionOverlayContentProps {
   onPause: () => void;
   onResume: () => void;
   onStop: (completed: boolean) => void;
-  onCompact: () => void;
 }
 
 export function ExecutionOverlayContent({
   task,
   onPause,
   onResume,
-  onStop,
-  onCompact,
+  onStop
 }: ExecutionOverlayContentProps) {
   const seconds = useTaskTimer(task);
   const isRunning = task.status === "running";
@@ -60,43 +58,36 @@ export function ExecutionOverlayContent({
     await emit(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, {});
   }
 
-  // Redimensiona a janela ao entrar/sair do modo de confirmação
   useEffect(() => {
-    const win = getCurrentWindow();
-    if (confirmingStop) {
-      win.setSize(new LogicalSize(280, 96)).catch(() => {});
-    } else {
-      win.setSize(new LogicalSize(280, 80)).catch(() => {});
-    }
+    getCurrentWindow().setSize(new LogicalSize(220, 40)).catch(() => {});
   }, [confirmingStop]);
+
+  const borderColor = task.billable ? "border-l-blue-500" : "border-l-gray-600";
 
   return (
     <div
       data-tauri-drag-region
       onMouseDown={() => { isMouseDownRef.current = true; didMoveRef.current = false; }}
-      className={`w-full h-full flex items-center gap-2 bg-gray-900 border-l-4 rounded-lg shadow-xl px-3 ${
-        task.billable ? "border-l-blue-500" : "border-l-gray-600"
-      }`}
+      className={`w-full h-full flex items-center bg-gray-900 border-l-4 rounded-lg shadow-xl overflow-hidden ${borderColor}`}
     >
+      {/* Área de grip */}
+      <div data-tauri-drag-region className="flex items-center justify-center px-1 h-full text-blue-500 shrink-0 select-none">
+        <GripVertical size={13} className="pointer-events-none" />
+      </div>
+
       {confirmingStop ? (
-        /* Confirmação inline compacta */
-        <div className="flex-1 flex items-center gap-2 min-w-0">
+        /* Confirmação inline — linha única */
+        <div className="flex-1 flex items-center gap-2 min-w-0 pr-2">
           <span className="text-xs text-gray-400 shrink-0">Concluída?</span>
           <button
-            onClick={() => {
-              setConfirmingStop(false);
-              onStop(true);
-            }}
+            onClick={() => { setConfirmingStop(false); onStop(true); }}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded transition-colors shrink-0"
           >
             <CheckCircle2 size={11} />
             Sim
           </button>
           <button
-            onClick={() => {
-              setConfirmingStop(false);
-              onStop(false);
-            }}
+            onClick={() => { setConfirmingStop(false); onStop(false); }}
             className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors shrink-0"
           >
             <Clock size={11} />
@@ -111,40 +102,33 @@ export function ExecutionOverlayContent({
         </div>
       ) : (
         <>
-          {/* Área clicável (nome + timer) — drag via container externo */}
+          {/* Nome + Timer */}
           <div
             onClick={handleAreaClick}
-            className="flex-1 min-w-0 flex flex-col cursor-pointer group select-none"
+            className="flex-1 min-w-0 flex flex-col justify-center cursor-pointer group select-none"
             title="Abrir janela principal"
           >
-            <p className="text-[11px] text-gray-400 truncate leading-tight group-hover:text-gray-200 transition-colors pointer-events-none">
+            <p className="text-[10px] text-gray-400 truncate leading-none group-hover:text-gray-200 transition-colors pointer-events-none">
               {displayName}
             </p>
-            <p className="text-xl font-mono font-semibold text-gray-100 leading-tight pointer-events-none">
+            <p className="text-base font-mono font-semibold text-gray-100 leading-snug pointer-events-none">
               {formatHHMMSS(seconds)}
             </p>
           </div>
 
-          {/* Botões interativos */}
-          <div className="flex flex-col gap-1 shrink-0">
+          {/* Botões em linha horizontal */}
+          <div className="flex items-center gap-0.5 px-2 shrink-0">
             <button
               onClick={isRunning ? onPause : onResume}
               className="p-1.5 text-gray-400 hover:text-gray-100 rounded hover:bg-gray-800 transition-colors"
             >
-              {isRunning ? <Pause size={15} /> : <Play size={15} />}
+              {isRunning ? <Pause size={13} /> : <Play size={13} />}
             </button>
             <button
               onClick={() => setConfirmingStop(true)}
               className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
             >
-              <Square size={15} />
-            </button>
-            <button
-              onClick={onCompact}
-              className="p-1.5 text-gray-600 hover:text-gray-300 rounded hover:bg-gray-800 transition-colors"
-              title="Modo compacto"
-            >
-              <Minimize2 size={13} />
+              <Square size={13} />
             </button>
           </div>
         </>
