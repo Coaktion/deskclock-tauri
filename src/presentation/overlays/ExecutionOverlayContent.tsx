@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, Square, CheckCircle2, Clock, X, GripVertical } from "lucide-react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit } from "@tauri-apps/api/event";
-import { LogicalSize } from "@tauri-apps/api/dpi";
 import type { Task } from "@domain/entities/Task";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
@@ -11,16 +9,20 @@ import { formatHHMMSS } from "@shared/utils/time";
 
 interface ExecutionOverlayContentProps {
   task: Task;
+  isHovered: boolean;
   onPause: () => void;
   onResume: () => void;
   onStop: (completed: boolean) => void;
+  onCancel: () => void;
 }
 
 export function ExecutionOverlayContent({
   task,
+  isHovered,
   onPause,
   onResume,
-  onStop
+  onStop,
+  onCancel,
 }: ExecutionOverlayContentProps) {
   const seconds = useTaskTimer(task);
   const isRunning = task.status === "running";
@@ -29,9 +31,7 @@ export function ExecutionOverlayContent({
   const didMoveRef = useRef(false);
   const isMouseDownRef = useRef(false);
 
-  // Detecta se a janela foi arrastada para distinguir clique de drag.
-  // Só marca didMove quando o botão do mouse está pressionado, evitando
-  // que reposicionamentos programáticos (resize, switchMode) descarte cliques.
+  // Detecta se a janela foi arrastada para distinguir clique de drag
   useEffect(() => {
     const handleMouseUp = () => { isMouseDownRef.current = false; };
     document.addEventListener("mouseup", handleMouseUp);
@@ -39,10 +39,8 @@ export function ExecutionOverlayContent({
   }, []);
 
   useEffect(() => {
-    const unlisten = getCurrentWindow().listen("tauri://move", () => {
-      if (isMouseDownRef.current) {
-        didMoveRef.current = true;
-      }
+    const unlisten = WebviewWindow.getCurrent().listen("tauri://move", () => {
+      if (isMouseDownRef.current) didMoveRef.current = true;
     });
     return () => { unlisten.then((fn) => fn()); };
   }, []);
@@ -53,15 +51,12 @@ export function ExecutionOverlayContent({
       return;
     }
     const main = await WebviewWindow.getByLabel("main");
+    await emit(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, {});
     await main?.show();
     await main?.setFocus();
-    await emit(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, {});
   }
 
-  useEffect(() => {
-    getCurrentWindow().setSize(new LogicalSize(220, 40)).catch(() => {});
-  }, [confirmingStop]);
-
+  const gripColor = isRunning ? "text-blue-500" : "text-amber-500";
   const borderColor = task.billable ? "border-l-blue-500" : "border-l-gray-600";
 
   return (
@@ -70,13 +65,17 @@ export function ExecutionOverlayContent({
       onMouseDown={() => { isMouseDownRef.current = true; didMoveRef.current = false; }}
       className={`w-full h-full flex items-center bg-gray-900 border-l-4 rounded-lg shadow-xl overflow-hidden ${borderColor}`}
     >
-      {/* Área de grip */}
-      <div data-tauri-drag-region className="flex items-center justify-center px-1 h-full text-blue-500 shrink-0 select-none">
+      {/* Grip duplo vertical */}
+      <div
+        data-tauri-drag-region
+        className={`flex flex-col items-center justify-center px-1 h-full shrink-0 select-none ${gripColor} ${isRunning ? "animate-pulse" : ""}`}
+      >
         <GripVertical size={13} className="pointer-events-none" />
+        <GripVertical size={13} className="pointer-events-none" style={{ marginTop: "-2px" }} />
       </div>
 
       {confirmingStop ? (
-        /* Confirmação inline — linha única */
+        /* Confirmação de conclusão */
         <div className="flex-1 flex items-center gap-2 min-w-0 pr-2">
           <span className="text-xs text-gray-400 shrink-0">Concluída?</span>
           <button
@@ -95,9 +94,10 @@ export function ExecutionOverlayContent({
           </button>
           <button
             onClick={() => setConfirmingStop(false)}
-            className="ml-auto p-1 text-gray-600 hover:text-gray-400 rounded shrink-0"
+            title="Retomar tarefa"
+            className="ml-auto p-1 text-gray-500 hover:text-green-400 rounded shrink-0 transition-colors"
           >
-            <X size={12} />
+            <Play size={11} />
           </button>
         </div>
       ) : (
@@ -105,7 +105,7 @@ export function ExecutionOverlayContent({
           {/* Nome + Timer */}
           <div
             onClick={handleAreaClick}
-            className="flex-1 min-w-0 flex flex-col justify-center cursor-pointer group select-none"
+            className="flex-1 min-w-0 flex flex-col justify-center cursor-pointer group select-none pr-1.5 rounded px-1.5 hover:bg-gray-800 transition-colors"
             title="Abrir janela principal"
           >
             <p className="text-[10px] text-gray-400 truncate leading-none group-hover:text-gray-200 transition-colors pointer-events-none">
@@ -116,8 +116,14 @@ export function ExecutionOverlayContent({
             </p>
           </div>
 
-          {/* Botões em linha horizontal */}
-          <div className="flex items-center gap-0.5 px-2 shrink-0">
+          {/* Botões — visíveis apenas no hover */}
+          <div
+            className={`flex items-center gap-0.5 shrink-0 overflow-hidden transition-all duration-150 ease-out ${
+              isHovered
+                ? "max-w-[96px] px-1.5 opacity-100 pointer-events-auto"
+                : "max-w-0 px-0 opacity-0 pointer-events-none"
+            }`}
+          >
             <button
               onClick={isRunning ? onPause : onResume}
               className="p-1.5 text-gray-400 hover:text-gray-100 rounded hover:bg-gray-800 transition-colors"
@@ -127,8 +133,16 @@ export function ExecutionOverlayContent({
             <button
               onClick={() => setConfirmingStop(true)}
               className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
+              title="Parar tarefa"
             >
               <Square size={13} />
+            </button>
+            <button
+              onClick={onCancel}
+              className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
+              title="Cancelar tarefa"
+            >
+              <X size={13} />
             </button>
           </div>
         </>

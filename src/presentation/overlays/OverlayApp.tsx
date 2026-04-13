@@ -9,6 +9,7 @@ import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
 import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
+import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
@@ -29,7 +30,7 @@ import { CompactOverlayContent } from "./CompactOverlayContent";
 export type OverlayMode = "execution" | "planning" | "compact";
 
 const OVERLAY_SIZES: Record<OverlayMode, { width: number; height: number }> = {
-  execution: { width: 280, height: 52 },
+  execution: { width: 220, height: 40 },
   planning: { width: 288, height: 142 }, // altura real calculada em PlanningOverlayContent
   compact: { width: 52, height: 52 },
 };
@@ -214,6 +215,17 @@ function OverlayAppInner() {
     } satisfies RunningTaskChangedPayload);
   }, [runningTask]);
 
+  const handleCancel = useCallback(async () => {
+    if (!runningTask) return;
+    await cancelTaskUC(taskRepo, runningTask.id);
+    setRunningTask(null);
+    await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
+      task: null,
+      source: "overlay",
+    } satisfies RunningTaskChangedPayload);
+    await switchMode("compact");
+  }, [runningTask, switchMode]);
+
   const handleStop = useCallback(
     async (completed: boolean) => {
       if (!runningTask) return;
@@ -267,9 +279,11 @@ function OverlayAppInner() {
       {mode === "execution" && runningTask && (
         <ExecutionOverlayContent
           task={runningTask}
+          isHovered={isHovered}
           onPause={handlePause}
           onResume={handleResume}
           onStop={handleStop}
+          onCancel={handleCancel}
         />
       )}
       {mode === "planning" && (
