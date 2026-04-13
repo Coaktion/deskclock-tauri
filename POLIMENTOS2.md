@@ -51,11 +51,11 @@
 
 ---
 
-## Branch 5 — Overlay de Execução Compacto (nova feature)
+## Branch 5 — Overlay de Execução Compacto (nova feature) ✅
 
 | # | Item | Status | Notas |
 |---|------|--------|-------|
-| E1 | Criar overlay de execução no modo compacto | ⬜ | 62×62px, border-radius suave. Idle: hora em cima, minutos embaixo, segundos à direita pequenos. Hover: expande mostrando nome + projeto + botões Pause/Stop |
+| E1 | Criar overlay de execução no modo compacto | ✅ | 62×62px, rounded-2xl. Idle: HH topo, MM base, ss canto inferior direito. Hover → resize 280×80 com nome · projeto + Pause/Stop + botão expandir. Botão Minimize2 no ExecutionOverlay para entrar no modo. |
 
 ---
 
@@ -66,9 +66,9 @@ Branch 1 — fix/window-controls         ✅ mergeado em main
 Branch 2 — fix/form-and-shortcuts      ✅ F1, F2, F3
 Branch 3 — fix/overlay-behavior        ✅ O1, O2, O3, O4, O5, O6
 Branch 4 — fix/sheets-duration         ⬜ S1
-Branch 5 — feat/compact-execution-overlay ⬜ E1
+Branch 5 — feat/compact-execution-overlay ✅ E1
 ```
 
 ---
 
-*Última atualização: 12/04/2026 — Branches 1, 2 e 3 concluídos*
+*Última atualização: 12/04/2026 — Branches 1, 2, 3 e 5 concluídos*
