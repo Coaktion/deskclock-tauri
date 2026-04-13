@@ -1,5 +1,6 @@
-import { Pin, PinOff, X } from "lucide-react";
+import { Maximize2, Minimize2, Pin, PinOff, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useEffect, useState } from "react";
 import type { Page } from "./Sidebar";
 
 const appWindow = getCurrentWindow();
@@ -22,6 +23,20 @@ interface TitleBarProps {
 }
 
 export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps) {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    appWindow.isMaximized().then(setIsMaximized);
+    const unlisten = appWindow.onResized(() => {
+      appWindow.isMaximized().then(setIsMaximized);
+    });
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  const toggleMaximize = () => appWindow.toggleMaximize();
+
   return (
     <div className="h-8 bg-gray-950 border-b border-gray-800 flex items-center shrink-0 select-none">
       {/* Área de arraste */}
@@ -46,6 +61,13 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
             {isPinned ? <Pin size={12} /> : <PinOff size={12} />}
           </button>
         )}
+        <button
+          onClick={toggleMaximize}
+          title={isMaximized ? "Restaurar" : "Maximizar"}
+          className="h-full px-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+        >
+          {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+        </button>
         <button
           onClick={() => appWindow.hide()}
           title="Fechar (minimiza para o tray)"
