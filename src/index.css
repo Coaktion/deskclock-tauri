@@ -63,6 +63,14 @@
   --color-gray-50: var(--tw-gray-950);
 }
 
+/* ── Cursor de arraste em regiões drag ── */
+[data-tauri-drag-region] {
+  cursor: grab;
+}
+[data-tauri-drag-region]:active {
+  cursor: grabbing;
+}
+
 /* ── Scrollbars uniformes ── */
 ::-webkit-scrollbar {
   width: 5px;
