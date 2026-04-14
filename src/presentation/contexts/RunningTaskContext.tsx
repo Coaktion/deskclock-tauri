@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { Task } from "@domain/entities/Task";
@@ -107,6 +108,12 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const triggerReload = useCallback(() => setReloadSignal((s) => s + 1), []);
+
+  // Sincroniza o status da tarefa com o ícone da bandeja (tray icon)
+  useEffect(() => {
+    const status = runningTask?.status ?? "idle";
+    invoke("update_tray_icon", { status }).catch(console.error);
+  }, [runningTask?.status]);
 
   const startTask = useCallback(
     async (input: StartInput) => {
