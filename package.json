@@ -1,7 +1,7 @@
 {
   "name": "deskclock",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -62,8 +62,14 @@
   },
   "standard-version": {
     "bumpFiles": [
-      { "filename": "package.json", "type": "json" },
-      { "filename": "src-tauri/tauri.conf.json", "type": "json" }
+      {
+        "filename": "package.json",
+        "type": "json"
+      },
+      {
+        "filename": "src-tauri/tauri.conf.json",
+        "type": "json"
+      }
     ]
   }
 }
