@@ -10,6 +10,23 @@ use commands::{
 };
 use tauri_plugin_autostart::MacosLauncher;
 
+/// Re-afirma HWND_TOPMOST para todas as janelas overlay a cada 200ms.
+///
+/// Necessário no Windows porque a taskbar compete pelo z-order e o caminho
+/// IPC (JS → Tauri) chega tarde demais para vencer a disputa. Chamando
+/// `set_always_on_top` diretamente no processo nativo, sem roundtrip IPC,
+/// o flag HWND_TOPMOST é restaurado antes que a taskbar consiga se sobrepor.
+fn keep_overlays_topmost(handle: tauri::AppHandle) {
+    std::thread::spawn(move || loop {
+        for label in ["overlay", "toast", "welcome"] {
+            if let Some(w) = handle.get_webview_window(label) {
+                w.set_always_on_top(true).ok();
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -24,17 +41,13 @@ pub fn run() {
 
             tray::setup_tray(app)?;
 
-            // Mantém o overlay sempre acima da taskbar do Windows.
+            // Mantém todas as janelas overlay sempre acima da taskbar do Windows.
             // O JS setAlwaysOnTop passa pela bridge IPC e chega tarde demais quando
             // a taskbar disputa o z-order. Esta thread chama set_always_on_top
             // direto no processo nativo, sem IPC, garantindo que HWND_TOPMOST
-            // seja re-afirmado a cada 500ms antes que a taskbar consiga se sobrepor.
-            if let Some(overlay) = app.get_webview_window("overlay") {
-                std::thread::spawn(move || loop {
-                    overlay.set_always_on_top(true).ok();
-                    std::thread::sleep(std::time::Duration::from_millis(500));
-                });
-            }
+            // seja re-afirmado continuamente. Uma única thread cobre overlay,
+            // toast e welcome — janelas ausentes são ignoradas silenciosamente.
+            keep_overlays_topmost(app.handle().clone());
 
             Ok(())
         })
