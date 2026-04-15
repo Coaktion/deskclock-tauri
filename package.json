@@ -61,8 +61,9 @@
     "vitest": "^3"
   },
   "standard-version": {
-    "scripts": {
-      "postbump": "bash scripts/sync-tauri-version.sh"
-    }
+    "bumpFiles": [
+      { "filename": "package.json", "type": "json" },
+      { "filename": "src-tauri/tauri.conf.json", "type": "json" }
+    ]
   }
 }
