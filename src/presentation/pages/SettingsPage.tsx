@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
@@ -271,7 +272,11 @@ function SelectRow({
 
 function UpdaterSection() {
   const { state, check, downloadAndInstall, relaunch } = useUpdater();
-  const appVersion = "0.1.0";
+  const [appVersion, setAppVersion] = useState<string>("");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion);
+  }, []);
 
   return (
     <div className="space-y-3">
