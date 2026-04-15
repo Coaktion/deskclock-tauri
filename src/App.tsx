@@ -292,7 +292,10 @@ function AppInner() {
 
   // Navigate to planning when triggered from overlay
   useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, () => {
+    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, async () => {
+      await positionWindowBottomRight();
+      await appWindow.show();
+      await appWindow.setFocus();
       setPage("planning");
     });
     return () => {

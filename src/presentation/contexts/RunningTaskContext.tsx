@@ -4,6 +4,7 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { Task } from "@domain/entities/Task";
 import { TaskRepository } from "@infra/database/TaskRepository";
+import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { ProjectRepository } from "@infra/database/ProjectRepository";
 import { CategoryRepository } from "@infra/database/CategoryRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
@@ -14,11 +15,13 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
+import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import {
   OVERLAY_EVENTS,
   type RunningTaskChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
+import { todayISO } from "@shared/utils/time";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { showToast } from "@shared/utils/toast";
 
@@ -28,6 +31,7 @@ interface StartInput {
   categoryId?: string | null;
   billable: boolean;
   startTime?: string;
+  plannedTaskId?: string | null;
 }
 
 interface UpdateInput {
@@ -52,6 +56,7 @@ interface RunningTaskContextValue {
 const RunningTaskContext = createContext<RunningTaskContextValue | null>(null);
 
 const repo = new TaskRepository();
+const plannedRepo = new PlannedTaskRepository();
 
 async function getOverlayWindow() {
   return WebviewWindow.getByLabel("overlay");
@@ -77,6 +82,7 @@ interface RunningTaskProviderProps {
 export function RunningTaskProvider({ children, config }: RunningTaskProviderProps) {
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
+  const [activePlannedTaskId, setActivePlannedTaskId] = useState<string | null>(null);
   const mounted = useRef(true);
 
   useEffect(() => {
@@ -99,6 +105,11 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       ({ payload }) => {
         if (payload.source !== "overlay") return;
         setRunningTask(payload.task);
+        if (payload.task) {
+          setActivePlannedTaskId(payload.plannedTaskId ?? null);
+        } else {
+          setActivePlannedTaskId(null);
+        }
         triggerReload();
       }
     );
@@ -119,6 +130,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     async (input: StartInput) => {
       const task = await startTaskUC(repo, input, new Date().toISOString());
       setRunningTask(task);
+      setActivePlannedTaskId(input.plannedTaskId ?? null);
       triggerReload();
       await notifyOverlay(task);
       await showOverlay();
@@ -166,7 +178,13 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     [config, triggerReload]
   );
 
-  // Ouve confirmação de stop vinda do overlay para auto-sync
+  const completePlannedIfNeeded = useCallback(async (plannedTaskId: string | null | undefined) => {
+    if (!plannedTaskId) return;
+    await completePlannedTask(plannedRepo, plannedTaskId, todayISO());
+    await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+  }, []);
+
+  // Ouve confirmação de stop vinda do overlay para auto-sync e conclusão de planned task
   useEffect(() => {
     const unlisten = listen<TaskStoppedPayload>(
       OVERLAY_EVENTS.TASK_STOPPED,
@@ -179,41 +197,47 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
           await showToast("info", "Tarefa descartada (menos de 1 minuto)");
           return;
         }
+        await completePlannedIfNeeded(payload.plannedTaskId);
         await autoSyncTask(payload.task);
       }
     );
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [autoSyncTask, config, triggerReload]);
+  }, [autoSyncTask, completePlannedIfNeeded, config, triggerReload]);
 
   const stopTask = useCallback(
     async (completed: boolean) => {
       if (!runningTask) return;
       const stoppedTask = await stopTaskUC(repo, runningTask.id, new Date().toISOString());
       const duration = stoppedTask.durationSeconds ?? 0;
+      const plannedId = activePlannedTaskId;
       if (config.get("discardTasksUnderOneMinute") && duration < 60) {
         await cancelTaskUC(repo, stoppedTask.id);
         setRunningTask(null);
+        setActivePlannedTaskId(null);
         triggerReload();
         await notifyOverlay(null);
         await showToast("info", "Tarefa descartada (menos de 1 minuto)");
         return;
       }
       setRunningTask(null);
+      setActivePlannedTaskId(null);
       triggerReload();
       await notifyOverlay(null);
       if (completed) {
+        await completePlannedIfNeeded(plannedId);
         await autoSyncTask(stoppedTask);
       }
     },
-    [runningTask, triggerReload, autoSyncTask, config]
+    [runningTask, activePlannedTaskId, triggerReload, completePlannedIfNeeded, autoSyncTask, config]
   );
 
   const cancelTask = useCallback(async () => {
     if (!runningTask) return;
     await cancelTaskUC(repo, runningTask.id);
     setRunningTask(null);
+    setActivePlannedTaskId(null);
     triggerReload();
     await notifyOverlay(null);
   }, [runningTask, triggerReload]);

@@ -27,6 +27,7 @@ interface PlanningOverlayContentProps {
     projectId?: string | null;
     categoryId?: string | null;
     billable: boolean;
+    plannedTaskId?: string | null;
   }) => Promise<void>;
   onTaskStarted: (task: Task) => void;
 }
@@ -59,6 +60,7 @@ export function PlanningOverlayContent({
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      plannedTaskId: task.id,
     });
     await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await reload();

@@ -10,11 +10,13 @@ export const OVERLAY_EVENTS = {
   TASK_STOPPED: "task-stopped",
   TOAST_MESSAGE: "toast-message",
   NAVIGATE_SETTINGS: "navigate-settings",
+  PLANNED_TASKS_CHANGED: "planned-tasks-changed",
 } as const;
 
 export interface RunningTaskChangedPayload {
   task: Task | null;
   source: string;
+  plannedTaskId?: string | null;
 }
 
 export interface WelcomeClosedPayload {
@@ -33,6 +35,7 @@ export interface OverlayConfigChangedPayload {
 export interface TaskStoppedPayload {
   task: Task;
   completed: boolean;
+  plannedTaskId?: string | null;
 }
 
 export type ToastVariant = "success" | "error" | "info" | "update";

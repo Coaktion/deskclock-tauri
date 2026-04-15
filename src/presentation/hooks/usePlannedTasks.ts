@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { emit, listen } from "@tauri-apps/api/event";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
@@ -50,6 +52,16 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Recarrega quando outra janela muta tarefas planejadas
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => {
+      load();
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, [load]);
 
   const create = useCallback(
@@ -115,52 +127,62 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
     load();
   }, [load]);
 
+  const notifyChanged = useCallback(() => {
+    emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+  }, []);
+
   const create = useCallback(
     async (input: CreateInput) => {
       await createPlannedTask(repo, input, new Date().toISOString());
       await load();
+      notifyChanged();
     },
-    [load]
+    [load, notifyChanged]
   );
 
   const update = useCallback(
     async (id: UUID, input: UpdateInput) => {
       await updatePlannedTask(repo, id, input);
       await load();
+      notifyChanged();
     },
-    [load]
+    [load, notifyChanged]
   );
 
   const remove = useCallback(
     async (id: UUID) => {
       await deletePlannedTask(repo, id);
       await load();
+      notifyChanged();
     },
-    [load]
+    [load, notifyChanged]
   );
 
   const complete = useCallback(
     async (id: UUID, date: string) => {
       await completePlannedTask(repo, id, date);
       await load();
+      notifyChanged();
     },
-    [load]
+    [load, notifyChanged]
   );
 
   const uncomplete = useCallback(
     async (id: UUID, date: string) => {
       await uncompletePlannedTask(repo, id, date);
       await load();
+      notifyChanged();
     },
-    [load]
+    [load, notifyChanged]
   );
 
   const duplicate = useCallback(
     async (id: UUID) => {
       await duplicatePlannedTask(repo, id, new Date().toISOString());
       await load();
+      notifyChanged();
     },
-    [load]
+    [load, notifyChanged]
   );
 
   return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };

@@ -31,6 +31,7 @@ export function TasksPage() {
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      plannedTaskId: task.id,
     });
     await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await reloadPlanned();

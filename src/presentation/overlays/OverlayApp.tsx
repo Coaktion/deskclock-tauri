@@ -45,6 +45,7 @@ function OverlayAppInner() {
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [snapToGrid, setSnapToGrid] = useState(false);
+  const [activePlannedTaskId, setActivePlannedTaskId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const modeRef = useRef<OverlayMode>("compact");
@@ -219,6 +220,7 @@ function OverlayAppInner() {
     if (!runningTask) return;
     await cancelTaskUC(taskRepo, runningTask.id);
     setRunningTask(null);
+    setActivePlannedTaskId(null);
     await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
       task: null,
       source: "overlay",
@@ -230,7 +232,9 @@ function OverlayAppInner() {
     async (completed: boolean) => {
       if (!runningTask) return;
       const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
+      const plannedTaskId = activePlannedTaskId;
       setRunningTask(null);
+      setActivePlannedTaskId(null);
       await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
         task: null,
         source: "overlay",
@@ -238,10 +242,11 @@ function OverlayAppInner() {
       await emit(OVERLAY_EVENTS.TASK_STOPPED, {
         task: stoppedTask,
         completed,
+        plannedTaskId,
       } satisfies TaskStoppedPayload);
       await switchMode("planning");
     },
-    [runningTask, switchMode]
+    [runningTask, activePlannedTaskId, switchMode]
   );
 
   const handleStartTask = useCallback(
@@ -250,12 +255,15 @@ function OverlayAppInner() {
       projectId?: string | null;
       categoryId?: string | null;
       billable: boolean;
+      plannedTaskId?: string | null;
     }) => {
       const task = await startTaskUC(taskRepo, input, new Date().toISOString());
       setRunningTask(task);
+      setActivePlannedTaskId(input.plannedTaskId ?? null);
       await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
         task,
         source: "overlay",
+        plannedTaskId: input.plannedTaskId ?? null,
       } satisfies RunningTaskChangedPayload);
       await switchMode("execution");
     },
@@ -264,7 +272,6 @@ function OverlayAppInner() {
 
   const handleNavigatePlanning = useCallback(async () => {
     await emit(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, {});
-    await appWindow.hide();
   }, []);
 
   const opacity = isHovered ? 1 : overlayOpacity / 100;
