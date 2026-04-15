@@ -927,6 +927,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-sql",
  "tauri-plugin-updater",
+ "windows",
 ]
 
 [[package]]
