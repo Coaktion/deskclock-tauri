@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause, Square, CheckCircle2, Clock, X, GripVertical } from "lucide-react";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -39,7 +39,7 @@ export function ExecutionOverlayContent({
   }, []);
 
   useEffect(() => {
-    const unlisten = WebviewWindow.getCurrent().listen("tauri://move", () => {
+    const unlisten = getCurrentWindow().listen("tauri://move", () => {
       if (isMouseDownRef.current) didMoveRef.current = true;
     });
     return () => { unlisten.then((fn) => fn()); };
@@ -50,10 +50,7 @@ export function ExecutionOverlayContent({
       didMoveRef.current = false;
       return;
     }
-    const main = await WebviewWindow.getByLabel("main");
     await emit(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, {});
-    await main?.show();
-    await main?.setFocus();
   }
 
   const gripColor = isRunning ? "text-blue-500" : "text-amber-500";

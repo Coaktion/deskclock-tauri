@@ -32,10 +32,18 @@ interface UpdateInfo {
   body: string | null;
 }
 
-function PageContent({ page }: { page: Page }) {
+function PageContent({
+  page,
+  focusTaskEdit,
+  onFocusTaskEditHandled,
+}: {
+  page: Page;
+  focusTaskEdit: boolean;
+  onFocusTaskEditHandled: () => void;
+}) {
   switch (page) {
     case "tasks":
-      return <TasksPage />;
+      return <TasksPage focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />;
     case "planning":
       return <PlanningPage />;
     case "data":
@@ -84,6 +92,8 @@ function MainContent({
   ignoreBlurRef,
   isPinned,
   onTogglePin,
+  focusTaskEdit,
+  onFocusTaskEditHandled,
 }: {
   page: Page;
   setPage: (p: Page) => void;
@@ -91,6 +101,8 @@ function MainContent({
   ignoreBlurRef: React.MutableRefObject<boolean>;
   isPinned: boolean;
   onTogglePin: () => void;
+  focusTaskEdit: boolean;
+  onFocusTaskEditHandled: () => void;
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const config = useAppConfig();
@@ -194,7 +206,7 @@ function MainContent({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
         <main className="flex-1 overflow-hidden">
-          <PageContent page={page} />
+          <PageContent page={page} focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
         </main>
       </div>
     </div>
@@ -205,6 +217,7 @@ function AppInner() {
   const config = useAppConfig();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
+  const [focusTaskEdit, setFocusTaskEdit] = useState(false);
   const welcomeActiveRef = useRef(false);
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
@@ -304,14 +317,16 @@ function AppInner() {
   }, []);
 
   // Navigate to tasks when overlay requests task edit focus.
-  // Navega diretamente no listener do evento — sem depender de tauri://focus
-  // como intermediário, eliminando a race condition entre IPC e foco.
-  // ignoreBlurRef suprime o closeOnFocusLoss durante a transição.
+  // Eleva o sinal "abrir edição" para estado do AppInner para que
+  // RunningTaskSection o leia ao montar, independente da aba atual.
   useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, () => {
+    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, async () => {
       ignoreBlurRef.current = true;
       setTimeout(() => { ignoreBlurRef.current = false; }, 600);
       setPage("tasks");
+      setFocusTaskEdit(true);
+      await appWindow.show();
+      await appWindow.setFocus();
     });
     return () => {
       unlisten.then((fn) => fn());
@@ -372,6 +387,8 @@ function AppInner() {
         ignoreBlurRef={ignoreBlurRef}
         isPinned={isPinned}
         onTogglePin={() => setIsPinned((v) => !v)}
+        focusTaskEdit={focusTaskEdit}
+        onFocusTaskEditHandled={() => setFocusTaskEdit(false)}
       />
     </RunningTaskProvider>
   );

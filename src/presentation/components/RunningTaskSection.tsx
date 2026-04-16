@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock, ArrowRight, Pen } from "lucide-react";
-import { listen } from "@tauri-apps/api/event";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { RunningTaskEditForm } from "./RunningTaskEditForm";
 import { Autocomplete } from "./Autocomplete";
-import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 
 interface RunningTaskSectionProps {
   projects: Project[];
   categories: Category[];
+  focusTaskEdit?: boolean;
+  onFocusTaskEditHandled?: () => void;
 }
 
-export function RunningTaskSection({ projects, categories }: RunningTaskSectionProps) {
+export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocusTaskEditHandled }: RunningTaskSectionProps) {
   const { runningTask, pauseTask, resumeTask, stopTask, cancelTask, updateActiveTask } =
     useRunningTask();
   const seconds = useTaskTimer(runningTask);
@@ -31,22 +31,22 @@ export function RunningTaskSection({ projects, categories }: RunningTaskSectionP
   const [editingStartTime, setEditingStartTime] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState("");
 
-  // Abre edição com foco no primeiro campo vazio ao receber evento do overlay
+  // Abre edição ao receber sinal do overlay — usa prop em vez de listener Tauri
+  // para garantir que o sinal seja processado mesmo quando o componente ainda
+  // não estava montado no momento do evento (ex: janela em outra aba ou oculta).
   useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, () => {
-      if (!runningTask) return;
-      const focusField = !runningTask.name?.trim()
-        ? "name"
-        : !runningTask.projectId
-          ? "project"
-          : !runningTask.categoryId
-            ? "category"
-            : undefined;
-      setEditFocusField(focusField);
-      setEditing(true);
-    });
-    return () => { unlisten.then((fn) => fn()); };
-  }, [runningTask]);
+    if (!focusTaskEdit || !runningTask) return;
+    const focusField = !runningTask.name?.trim()
+      ? "name"
+      : !runningTask.projectId
+        ? "project"
+        : !runningTask.categoryId
+          ? "category"
+          : undefined;
+    setEditFocusField(focusField);
+    setEditing(true);
+    onFocusTaskEditHandled?.();
+  }, [focusTaskEdit, runningTask, onFocusTaskEditHandled]);
 
   if (!runningTask) return null;
 

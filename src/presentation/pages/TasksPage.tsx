@@ -13,7 +13,12 @@ import { executeActions } from "@shared/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
-export function TasksPage() {
+interface TasksPageProps {
+  focusTaskEdit?: boolean;
+  onFocusTaskEditHandled?: () => void;
+}
+
+export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPageProps = {}) {
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -42,7 +47,12 @@ export function TasksPage() {
   return (
     <div className="h-full flex flex-col gap-4 p-5 overflow-y-auto">
       {runningTask ? (
-        <RunningTaskSection projects={projects} categories={categories} />
+        <RunningTaskSection
+          projects={projects}
+          categories={categories}
+          focusTaskEdit={focusTaskEdit}
+          onFocusTaskEditHandled={onFocusTaskEditHandled}
+        />
       ) : (
         <button
           onClick={handleNewTask}
