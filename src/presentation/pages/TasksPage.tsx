@@ -25,12 +25,13 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
   const { groups, totals, reload } = useTasks();
   const { startTask, runningTask } = useRunningTask();
   const { tasks: plannedTasks, reload: reloadPlanned } = usePlannedTasksForDate(today);
-
   async function handleNewTask() {
     await startTask({ billable: true });
   }
 
   async function handlePlayPlanned(task: PlannedTask) {
+    // Executa ações antes de iniciar — garante que abrem antes do overlay aparecer
+    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await startTask({
       name: task.name,
       projectId: task.projectId,
@@ -38,7 +39,6 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
       billable: task.billable,
       plannedTaskId: task.id,
     });
-    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await reloadPlanned();
   }
 

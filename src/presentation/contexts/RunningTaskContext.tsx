@@ -84,6 +84,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   const [reloadSignal, setReloadSignal] = useState(0);
   const [activePlannedTaskId, setActivePlannedTaskId] = useState<string | null>(null);
   const mounted = useRef(true);
+  const isStartingTaskRef = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -128,12 +129,18 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
 
   const startTask = useCallback(
     async (input: StartInput) => {
-      const task = await startTaskUC(repo, input, new Date().toISOString());
-      setRunningTask(task);
-      setActivePlannedTaskId(input.plannedTaskId ?? null);
-      triggerReload();
-      await notifyOverlay(task);
-      await showOverlay();
+      if (isStartingTaskRef.current) return;
+      isStartingTaskRef.current = true;
+      try {
+        const task = await startTaskUC(repo, input, new Date().toISOString());
+        setRunningTask(task);
+        setActivePlannedTaskId(input.plannedTaskId ?? null);
+        triggerReload();
+        await notifyOverlay(task);
+        await showOverlay();
+      } finally {
+        isStartingTaskRef.current = false;
+      }
     },
     [triggerReload]
   );

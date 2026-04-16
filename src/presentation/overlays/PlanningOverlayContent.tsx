@@ -55,6 +55,8 @@ export function PlanningOverlayContent({
   }, [pending.length]);
 
   async function handlePlay(task: PlannedTask) {
+    // Executa ações antes de chamar onStartTask — componente ainda está montado
+    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await onStartTask({
       name: task.name,
       projectId: task.projectId,
@@ -62,7 +64,6 @@ export function PlanningOverlayContent({
       billable: task.billable,
       plannedTaskId: task.id,
     });
-    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await reload();
   }
 
