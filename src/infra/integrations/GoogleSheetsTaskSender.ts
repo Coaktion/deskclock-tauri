@@ -192,7 +192,7 @@ export class GoogleSheetsTaskSender implements ITaskSender {
 }
 
 /** Converte índice 1-based para letra de coluna: 1→A, 2→B, …, 26→Z, 27→AA */
-function colLetter(n: number): string {
+export function colLetter(n: number): string {
   let result = "";
   while (n > 0) {
     const rem = (n - 1) % 26;
