@@ -105,9 +105,9 @@ export function parseDurationInput(input: string): number | null {
   // HH:MM:SS
   const hms = trimmed.match(/^(\d+):(\d{2}):(\d{2})$/);
   if (hms) return Number(hms[1]) * 3600 + Number(hms[2]) * 60 + Number(hms[3]);
-  // MM:SS
-  const ms = trimmed.match(/^(\d+):(\d{2})$/);
-  if (ms) return Number(ms[1]) * 60 + Number(ms[2]);
+  // HH:MM
+  const hm = trimmed.match(/^(\d+):(\d{2})$/);
+  if (hm) return Number(hm[1]) * 3600 + Number(hm[2]) * 60;
   // inteiro = minutos
   const mins = trimmed.match(/^\d+$/);
   if (mins) return Number(mins[0]) * 60;

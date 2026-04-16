@@ -31,7 +31,9 @@ describe("formatWeekTotal", () => {
 
 describe("parseDurationInput", () => {
   it("parseia HH:MM:SS", () => expect(parseDurationInput("01:30:00")).toBe(5400));
-  it("parseia MM:SS", () => expect(parseDurationInput("90:00")).toBe(5400));
+  it("parseia HH:MM - 1h30m resulta em 5400s", () => expect(parseDurationInput("01:30")).toBe(5400));
+  it("parseia HH:MM - 0h45m resulta em 2700s", () => expect(parseDurationInput("00:45")).toBe(2700));
+  it("parseia HH:MM - 2h00m resulta em 7200s", () => expect(parseDurationInput("02:00")).toBe(7200));
   it("parseia inteiro como minutos", () => expect(parseDurationInput("90")).toBe(5400));
   it("retorna null para formato invalido", () => expect(parseDurationInput("abc")).toBeNull());
 });
