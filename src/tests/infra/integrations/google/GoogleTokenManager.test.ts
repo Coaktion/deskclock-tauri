@@ -115,7 +115,7 @@ describe("GoogleTokenManager", () => {
       expect(config.set).toHaveBeenCalledWith("googleRefreshToken", "new-refresh");
       expect(config.set).toHaveBeenCalledWith("googleUserEmail", "new@example.com");
       const expiryCall = (config.set as ReturnType<typeof vi.fn>).mock.calls.find(
-        ([k]: [string]) => k === "googleTokenExpiry"
+        (call: unknown[]) => call[0] === "googleTokenExpiry"
       );
       const expiry = expiryCall?.[1] as number;
       expect(expiry).toBeGreaterThanOrEqual(before + 3_600_000);

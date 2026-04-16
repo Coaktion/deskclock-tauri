@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { emit } from "@tauri-apps/api/event";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
@@ -10,6 +11,7 @@ import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
 import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
 const plannedRepo = new PlannedTaskRepository();
@@ -103,7 +105,10 @@ export function WeekPlanningView() {
 
   function handleImported(count: number) {
     setShowImportModal(false);
-    if (count > 0) reload();
+    if (count > 0) {
+      reload();
+      emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+    }
   }
 
   const filteredDays = dayFilter === "all" ? days : [dayFilter];
