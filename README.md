@@ -111,6 +111,12 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
+  build-essential \
+  curl \
+  wget \
+  file \
+  pkg-config \
+  libssl-dev \
   libgtk-3-dev \
   libwebkit2gtk-4.1-dev \
   librsvg2-dev \
@@ -119,16 +125,17 @@ sudo apt-get install -y \
   libayatana-appindicator3-dev
 ```
 
+> `build-essential`, `pkg-config` e `libssl-dev` são necessários para compilar crates Rust com dependências nativas. Sem eles o `cargo build` falha.
+
 #### WSL2 (Windows Subsystem for Linux)
 
-O Tauri no WSL2 requer um servidor X ou Wayland para renderizar janelas. A forma mais simples é usar o **WSLg**, disponível no Windows 11 e Windows 10 (build 21364+):
+Instale todas as dependências do Linux acima e adicione as dependências de display. A forma mais simples é usar o **WSLg**, disponível no Windows 11 e Windows 10 (build 21364+):
 
 ```bash
 # Verifique se WSLg está ativo
 ls /mnt/wslg
 
-# Instale as dependências normais de Linux (acima)
-# e as dependências de display
+# Dependências de display adicionais
 sudo apt-get install -y libgl1-mesa-glx libgl1-mesa-dri
 ```
 
@@ -136,7 +143,30 @@ sudo apt-get install -y libgl1-mesa-glx libgl1-mesa-dri
 
 #### Windows
 
-Nenhuma instalação adicional necessária. O Tauri utiliza o WebView2, que já vem integrado no Windows 10 (atualização 1803+) e Windows 11.
+O Rust no Windows utiliza o toolchain **MSVC**, que depende do compilador C++ da Microsoft.
+
+**1. Visual Studio Build Tools**
+
+Baixe e instale o [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/). Durante a instalação, selecione o workload:
+
+- **Desenvolvimento para desktop com C++**
+  - MSVC v143 (ou mais recente)
+  - SDK do Windows 10/11
+
+> Alternativa: instalar o [Visual Studio Community](https://visualstudio.microsoft.com/vs/community/) com o mesmo workload.
+
+**2. Rust**
+
+Instale via [rustup](https://rustup.rs/). O instalador detecta automaticamente o toolchain MSVC. Após a instalação, confirme:
+
+```powershell
+rustup default stable-x86_64-pc-windows-msvc
+rustc --version
+```
+
+**3. WebView2**
+
+Já integrado no Windows 10 (atualização 1803+) e Windows 11. Nenhuma ação necessária.
 
 ### Variáveis de ambiente (integrações Google)
 
