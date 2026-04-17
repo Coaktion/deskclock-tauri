@@ -155,11 +155,23 @@ export function PlannedTaskItem({
     await onUpdate(task.id, { actions: updated });
   }
 
+  function handleFormKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      cancel();
+    }
+  }
+
+  function handleNameKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") void save();
+  }
+
   if (editing) {
     return (
       <>
         <div
           ref={formRef}
+          onKeyDown={handleFormKeyDown}
           className="flex flex-col gap-2 px-4 py-3 border-b border-gray-700 bg-gray-800/60"
         >
           <div className="flex gap-2">
@@ -171,10 +183,7 @@ export function PlannedTaskItem({
                 setName(e.target.value);
                 dirty.current = true;
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void save();
-                if (e.key === "Escape") cancel();
-              }}
+              onKeyDown={handleNameKeyDown}
               className="flex-1 px-2.5 py-1.5 text-sm bg-gray-900 border border-gray-600 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             {canEditDate && (

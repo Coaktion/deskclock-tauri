@@ -147,7 +147,7 @@ export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocu
                 onBlur={handleStartTimeCommit}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleStartTimeCommit();
-                  if (e.key === "Escape") setEditingStartTime(false);
+                  if (e.key === "Escape") { e.stopPropagation(); setEditingStartTime(false); }
                 }}
                 autoFocus
                 className="w-24 bg-gray-800 border border-blue-500 rounded px-2 py-0.5 text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"

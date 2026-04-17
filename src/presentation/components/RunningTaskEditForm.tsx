@@ -43,8 +43,15 @@ export function RunningTaskEditForm({
     onSave({ name: name.trim() || null, projectId: pId, categoryId: cId, billable });
   }
 
+  function handleFormKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.stopPropagation();
+      onCancel();
+    }
+  }
+
   return (
-    <div className="mt-3 space-y-2">
+    <div className="mt-3 space-y-2" onKeyDown={handleFormKeyDown}>
       <input
         type="text"
         value={name}

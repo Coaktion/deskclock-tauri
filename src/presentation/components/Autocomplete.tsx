@@ -77,7 +77,10 @@ export function Autocomplete({
         onEnter?.();
       }
     } else if (e.key === "Escape") {
-      setOpen(false);
+      if (open) {
+        e.stopPropagation();
+        setOpen(false);
+      }
     }
   }
 
