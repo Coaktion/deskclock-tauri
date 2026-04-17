@@ -310,6 +310,7 @@ function OverlayAppInner() {
             setRunningTask(task);
             switchMode("execution");
           }}
+          runningTask={runningTask}
         />
       )}
       {mode === "compact" && (

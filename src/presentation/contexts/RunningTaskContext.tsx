@@ -1,29 +1,29 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import type { Task } from "@domain/entities/Task";
-import { TaskRepository } from "@infra/database/TaskRepository";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { ProjectRepository } from "@infra/database/ProjectRepository";
-import { CategoryRepository } from "@infra/database/CategoryRepository";
-import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
+import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
+import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
-import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
 import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
+import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
-import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
+import { CategoryRepository } from "@infra/database/CategoryRepository";
+import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { ProjectRepository } from "@infra/database/ProjectRepository";
+import { TaskRepository } from "@infra/database/TaskRepository";
+import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
+import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
   type RunningTaskChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { showToast } from "@shared/utils/toast";
+import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 interface StartInput {
   name?: string | null;
@@ -129,6 +129,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
 
   const startTask = useCallback(
     async (input: StartInput) => {
+      if (runningTask) return;
       if (isStartingTaskRef.current) return;
       isStartingTaskRef.current = true;
       try {
@@ -142,7 +143,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         isStartingTaskRef.current = false;
       }
     },
-    [triggerReload]
+    [runningTask, triggerReload]
   );
 
   const pauseTask = useCallback(async () => {

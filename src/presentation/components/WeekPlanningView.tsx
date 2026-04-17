@@ -12,6 +12,8 @@ import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
 import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { executeActions } from "@shared/utils/actions";
+import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
 const plannedRepo = new PlannedTaskRepository();
@@ -80,7 +82,7 @@ export function WeekPlanningView() {
   const { categories } = useCategories();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
-  const { startTask } = useRunningTask();
+  const { startTask, runningTask } = useRunningTask();
 
   const calendarConnected = config.isLoaded && !!config.get("googleRefreshToken");
 
@@ -94,11 +96,14 @@ export function WeekPlanningView() {
   const calendarToISO = new Date(end + "T23:59:59").toISOString();
 
   async function handlePlay(task: PlannedTask) {
+    if (runningTask) return;
+    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await startTask({
       name: task.name,
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      plannedTaskId: task.id,
     });
     await reload();
   }
@@ -231,6 +236,7 @@ export function WeekPlanningView() {
                   projects={projects}
                   categories={categories}
                   showDateField
+                  playDisabled={!!runningTask}
                   onPlay={handlePlay}
                   onUpdate={update}
                   onComplete={complete}

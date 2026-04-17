@@ -30,6 +30,7 @@ interface PlanningOverlayContentProps {
     plannedTaskId?: string | null;
   }) => Promise<void>;
   onTaskStarted: (task: Task) => void;
+  runningTask: Task | null;
 }
 
 export function PlanningOverlayContent({
@@ -37,6 +38,7 @@ export function PlanningOverlayContent({
   onClose,
   onNavigatePlanning,
   onStartTask,
+  runningTask,
 }: PlanningOverlayContentProps) {
   const today = todayISO();
   const { tasks, reload } = usePlannedTasksForDate(today);
@@ -55,7 +57,7 @@ export function PlanningOverlayContent({
   }, [pending.length]);
 
   async function handlePlay(task: PlannedTask) {
-    // Executa ações antes de chamar onStartTask — componente ainda está montado
+    if (runningTask) return;
     await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await onStartTask({
       name: task.name,
@@ -128,12 +130,14 @@ export function PlanningOverlayContent({
                   <p className="text-xs text-gray-200 truncate">{task.name}</p>
                   {project && <p className="text-xs text-gray-500 truncate">{project.name}</p>}
                 </div>
-                <button
-                  onClick={() => handlePlay(task)}
-                  className="p-1 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded transition-colors shrink-0"
-                >
-                  <Play size={12} />
-                </button>
+                {!runningTask && (
+                  <button
+                    onClick={() => handlePlay(task)}
+                    className="p-1 text-gray-400 hover:text-green-400 hover:bg-green-900/20 rounded transition-colors shrink-0"
+                  >
+                    <Play size={12} />
+                  </button>
+                )}
               </div>
             );
           })

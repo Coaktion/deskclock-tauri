@@ -1,17 +1,17 @@
-import { Play } from "lucide-react";
-import { useProjects } from "@presentation/hooks/useProjects";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { useTasks } from "@presentation/hooks/useTasks";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
-import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
-import { RunningTaskSection } from "@presentation/components/RunningTaskSection";
-import { TotalsSection } from "@presentation/components/TotalsSection";
-import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { PlannedTasksSection } from "@presentation/components/PlannedTasksSection";
-import { todayISO } from "@shared/utils/time";
+import { RunningTaskSection } from "@presentation/components/RunningTaskSection";
+import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
+import { TotalsSection } from "@presentation/components/TotalsSection";
+import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useCategories } from "@presentation/hooks/useCategories";
+import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
+import { useProjects } from "@presentation/hooks/useProjects";
+import { useTasks } from "@presentation/hooks/useTasks";
 import { executeActions } from "@shared/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
+import { todayISO } from "@shared/utils/time";
+import { Play } from "lucide-react";
 
 interface TasksPageProps {
   focusTaskEdit?: boolean;
@@ -25,12 +25,13 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
   const { groups, totals, reload } = useTasks();
   const { startTask, runningTask } = useRunningTask();
   const { tasks: plannedTasks, reload: reloadPlanned } = usePlannedTasksForDate(today);
+
   async function handleNewTask() {
     await startTask({ billable: true });
   }
 
   async function handlePlayPlanned(task: PlannedTask) {
-    // Executa ações antes de iniciar — garante que abrem antes do overlay aparecer
+    if (runningTask) return;
     await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await startTask({
       name: task.name,
