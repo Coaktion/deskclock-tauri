@@ -334,23 +334,34 @@ src-tauri/            # Backend Rust (Tauri)
 
 ### Fluxo de trabalho
 
-1. Crie um branch a partir de `main`:
+1. Antes de criar um branch, verifique se há branches antigas já mergeadas para limpar:
+   ```bash
+   git branch --merged main | grep -v '^\* \|  main$'
+   # apague as desnecessárias: git branch -d nome-da-branch
+   ```
+
+2. Crie um branch a partir de `main`:
    ```bash
    git checkout -b feat/nome-da-feature
    # ou
    git checkout -b fix/nome-do-bug
    ```
 
-2. Implemente a mudança. Se adicionar lógica de domínio ou utilitários puros, **escreva testes**.
+3. Implemente a mudança. Se adicionar lógica de domínio ou utilitários puros, **escreva testes**.
 
-3. Verifique antes de abrir PR:
+4. Verifique antes de abrir PR:
    ```bash
    pnpm tsc --noEmit   # sem erros de tipo
    pnpm test           # todos os testes passando
    pnpm lint           # sem warnings de lint
    ```
 
-4. Abra um Pull Request contra `main`. O CI valida automaticamente os três passos acima.
+5. Abra um Pull Request contra `main`. O CI valida automaticamente os três passos acima.
+
+6. Após o merge, apague o branch local:
+   ```bash
+   git branch -d nome-da-feature
+   ```
 
 ### Convenções de commit
 

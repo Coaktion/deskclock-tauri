@@ -418,6 +418,8 @@ src/
 6. FORMATAR    → Antes de commitar tudo o que foi produzido, rode o lint para garantir padrão de estilo do código.
 7. COMMITAR    → Commits semânticos (feat:, fix:, refactor:, test:, docs:, chore:).
 8. MERGEAR     → Branch por feature → merge em main.
+9. LIMPAR      → Após o merge, verificar branches já mergeadas e sugerir exclusão ao usuário:
+                 git branch --merged main | grep -v '^\* \|  main$'
 ```
 
 ### 7.2 Regras de branch
@@ -425,6 +427,8 @@ src/
 - `feat/<nome>` → desenvolvimento de nova funcionalidade.
 - `fix/<nome>` → correção de bug.
 - `refactor/<nome>` → refatoração sem mudança de comportamento.
+
+> **Ao criar uma nova branch:** verificar primeiro se há branches já mergeadas pendentes de exclusão (`git branch --merged main`) e sugerir limpeza ao usuário antes de prosseguir.
 
 ### 7.3 Commits semânticos
 - `feat: add task timer overlay`
@@ -559,7 +563,13 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | 15/04/2026 | Overlays HWND_TOPMOST via `SetWinEventHook` + `SetWindowPos` direto (Windows) | `set_always_on_top` do Tauri usa `SWP_ASYNCWINDOWPOS` que o OS descarta como no-op; `SetWindowPos` síncrono re-afirma TOPMOST ao `EVENT_SYSTEM_FOREGROUND` — zero CPU em idle, sem polling |
 | 15/04/2026 | `PLANNED_TASKS_CHANGED` como evento Tauri cross-window | Overlay e janela principal vivem em processos JS separados; evento emitido após toda mutação de `usePlannedTasksForWeek` garante que `usePlannedTasksForDate` no overlay recarregue sem polling |
 | 15/04/2026 | `plannedTaskId` propagado no flow start→stop para auto-completar PlannedTask | Ao confirmar "Concluída? → Sim" no execution overlay, a PlannedTask associada recebe a data atual em `completedDates` — sem campo extra na entidade `Task`, rastreado apenas em estado de sessão |
+| 17/04/2026 | Guard `runningTask` no play da tela de planejamento e no `RunningTaskContext` | Evita iniciar múltiplas tarefas simultâneas; `isStartingRef` foi descartado pois trata duplo-clique mas não o caso semântico de tarefa já em execução |
+| 17/04/2026 | Ações de tarefa planejada executadas antes de `startTask` na tela de planejamento | `executeActions` estava ausente em `WeekPlanningView`; adicionado com `plannedTaskId` para completar o fluxo |
+| 17/04/2026 | `CREATE_NO_WINDOW` nas chamadas de shell no Windows | Evita janela de terminal piscando na tela ao abrir URL/arquivo via `open_in_browser` e `open_in_file_manager` |
+| 17/04/2026 | Modo de envio: clique na linha inteira alterna checkbox | Extraído para `handleRowClick` nomeado em `TaskGroupCard`; condição `!isGroup && !selectable` evita renderização dupla de tarefa individual |
+| 17/04/2026 | ESC em edição inline usa `stopPropagation` no container do form | Sem `stopPropagation`, o ESC propagava até um handler global que fechava a janela; corrigido em `PlannedTaskItem` e `RunningTaskEditForm` |
+| 17/04/2026 | `target.isConnected` check no `handleOutside` do `PlannedTaskItem` | React (event delegation no root) executa `onMouseDown` do `<li>` e re-renderiza antes de o evento nativo chegar ao `document`; o `<li>` é removido do DOM (`isConnected: false`) e `formRef.contains()` retornava false erroneamente — ignorar nós desconectados resolve |
 
 ---
 
-*Última atualização: 15/04/2026*
+*Última atualização: 17/04/2026*
