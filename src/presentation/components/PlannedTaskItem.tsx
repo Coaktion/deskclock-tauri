@@ -132,6 +132,9 @@ export function PlannedTaskItem({
     if (!editing) return;
     function handleOutside(e: MouseEvent) {
       const target = e.target as Element;
+      // Nó desconectado = foi removido do DOM entre o mousedown e este listener
+      // (ex: item de autocomplete que disparou setOpen(false) antes de chegar aqui)
+      if (!target.isConnected) return;
       if (target.closest("[data-datepicker-portal]")) return;
       if (formRef.current && !formRef.current.contains(target)) {
         void save();
