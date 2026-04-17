@@ -11,6 +11,22 @@ pub fn get_platform() -> &'static str {
     }
 }
 
+/// Detecta o display server no Linux.
+/// Retorna "wayland" se WAYLAND_DISPLAY estiver definido, "x11" caso contrário.
+/// Em outras plataformas retorna "".
+#[tauri::command]
+pub fn get_display_server() -> &'static str {
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var("WAYLAND_DISPLAY").is_ok() {
+            return "wayland";
+        }
+        return "x11";
+    }
+    #[cfg(not(target_os = "linux"))]
+    ""
+}
+
 /// Abre uma URL no navegador padrão do sistema operacional.
 /// Substitui `tauri-plugin-opener` para evitar problemas de escopo de permissão.
 #[tauri::command]

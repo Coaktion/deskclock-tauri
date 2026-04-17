@@ -2,12 +2,13 @@ mod commands;
 mod migrations;
 mod tray;
 
+#[cfg(target_os = "windows")]
 use std::sync::OnceLock;
 use tauri::Manager;
 use commands::{
-    check_for_update, download_and_install_update, get_platform, open_in_browser,
-    open_in_file_manager, relaunch_app, save_file, start_oauth_server, update_shortcuts,
-    update_tray_icon, update_tray_tooltip,
+    check_for_update, download_and_install_update, get_display_server, get_platform,
+    open_in_browser, open_in_file_manager, relaunch_app, save_file, start_oauth_server,
+    update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -120,6 +121,7 @@ pub fn run() {
             update_shortcuts,
             start_oauth_server,
             get_platform,
+            get_display_server,
             open_in_browser,
             open_in_file_manager,
             check_for_update,

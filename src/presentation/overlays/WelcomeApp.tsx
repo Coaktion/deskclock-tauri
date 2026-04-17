@@ -1,17 +1,13 @@
 import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { emit } from "@tauri-apps/api/event";
+import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { CalendarDays, Plus, X } from "lucide-react";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { OVERLAY_EVENTS, type WelcomeClosedPayload } from "@shared/types/overlayEvents";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
-
-const WINDOW_WIDTH = 320;
-const WINDOW_HEIGHT = 190;
-const MARGIN = 16;
 
 const appWindow = getCurrentWindow();
 
@@ -26,9 +22,7 @@ function WelcomeAppInner() {
   const config = useAppConfig();
 
   useEffect(() => {
-    const x = window.screen.availWidth - WINDOW_WIDTH - MARGIN;
-    const y = window.screen.availHeight - WINDOW_HEIGHT - MARGIN;
-    appWindow.setPosition(new LogicalPosition(x, y));
+    positionNearTaskbar(appWindow, { width: 320, height: 190 }).catch(() => {});
   }, []);
 
   useEffect(() => {

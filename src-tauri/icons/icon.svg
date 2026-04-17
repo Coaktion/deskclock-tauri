@@ -1,14 +1,19 @@
-<svg width="64" height="64" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="taperedTray" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="taperedBorder" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="white" stop-opacity="1" />
       <stop offset="100%" stop-color="white" stop-opacity="0.3" />
     </linearGradient>
   </defs>
+
+  <!-- Main D Shape with thicker tapered border -->
   <path d="M140 100V440C140 451.046 148.954 460 160 460H280C384.934 460 470 374.934 470 270C470 165.066 384.934 80 280 80H160C148.954 80 140 88.9543 140 100Z" 
-        fill="#1e293b" stroke="url(#taperedTray)" stroke-width="12"/>
+        fill="#1e293b" stroke="url(#taperedBorder)" stroke-width="18"/>
+  
+  <!-- Progress Curve -->
   <path d="M280 80C384.934 80 470 165.066 470 270" stroke="#3b82f6" stroke-width="40" stroke-linecap="round"/>
+  
+  <!-- Timer Center and Hand -->
   <circle cx="280" cy="270" r="15" fill="white"/>
   <path d="M280 270L330 180" stroke="white" stroke-width="20" stroke-linecap="round"/>
-  <circle cx="410" cy="400" r="70" fill="#10b981" stroke="white" stroke-width="15"/>
 </svg>
