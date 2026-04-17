@@ -17,7 +17,9 @@ pub fn get_platform() -> &'static str {
 pub fn open_in_browser(url: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        // PowerShell trata URLs com '&' corretamente, diferente de cmd /c start
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW impede que uma janela de console pisque na tela ao spawnar o processo
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         std::process::Command::new("powershell")
             .args([
                 "-NoProfile",
@@ -26,6 +28,7 @@ pub fn open_in_browser(url: String) -> Result<(), String> {
                 "-Command",
                 &format!("Start-Process \"{}\"", url.replace('"', "\\\"")),
             ])
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()
             .map_err(|e| e.to_string())?;
     }
@@ -51,8 +54,11 @@ pub fn open_in_browser(url: String) -> Result<(), String> {
 pub fn open_in_file_manager(path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
         std::process::Command::new("explorer")
             .arg(&path)
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()
             .map_err(|e| e.to_string())?;
     }

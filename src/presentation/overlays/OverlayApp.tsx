@@ -49,6 +49,7 @@ function OverlayAppInner() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const modeRef = useRef<OverlayMode>("compact");
+  const isStartingTaskRef = useRef(false);
 
   // Mantém modeRef sincronizado para uso em closures com dep vazia
   useEffect(() => {
@@ -257,15 +258,21 @@ function OverlayAppInner() {
       billable: boolean;
       plannedTaskId?: string | null;
     }) => {
-      const task = await startTaskUC(taskRepo, input, new Date().toISOString());
-      setRunningTask(task);
-      setActivePlannedTaskId(input.plannedTaskId ?? null);
-      await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
-        task,
-        source: "overlay",
-        plannedTaskId: input.plannedTaskId ?? null,
-      } satisfies RunningTaskChangedPayload);
-      await switchMode("execution");
+      if (isStartingTaskRef.current) return;
+      isStartingTaskRef.current = true;
+      try {
+        const task = await startTaskUC(taskRepo, input, new Date().toISOString());
+        setRunningTask(task);
+        setActivePlannedTaskId(input.plannedTaskId ?? null);
+        await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
+          task,
+          source: "overlay",
+          plannedTaskId: input.plannedTaskId ?? null,
+        } satisfies RunningTaskChangedPayload);
+        await switchMode("execution");
+      } finally {
+        isStartingTaskRef.current = false;
+      }
     },
     [switchMode]
   );
@@ -303,6 +310,7 @@ function OverlayAppInner() {
             setRunningTask(task);
             switchMode("execution");
           }}
+          runningTask={runningTask}
         />
       )}
       {mode === "compact" && (
