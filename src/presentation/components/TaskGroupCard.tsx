@@ -46,6 +46,14 @@ export function TaskGroupCard({
   const allSent = tasks.every((t) => t.sentToSheets);
   const someSent = !allSent && tasks.some((t) => t.sentToSheets);
 
+  function handleRowClick() {
+    if (selectable) {
+      onToggleSelect?.(group);
+    } else if (isGroup) {
+      setExpanded((v) => !v);
+    }
+  }
+
   // Tarefa individual sem agrupamento: renderiza direto sem cabeçalho de grupo
   if (!isGroup && !selectable) {
     return (
@@ -68,7 +76,7 @@ export function TaskGroupCard({
     <div className="border border-gray-800 rounded-lg overflow-hidden">
       <div
         className="flex items-center gap-2 px-3 py-2 bg-gray-900 cursor-pointer hover:bg-gray-800/80"
-        onClick={() => !selectable && isGroup && setExpanded((v) => !v)}
+        onClick={handleRowClick}
       >
         {selectable ? (
           <input
@@ -126,7 +134,7 @@ export function TaskGroupCard({
         )}
       </div>
 
-      {(expanded || !isGroup) && (
+      {(expanded || (!isGroup && !selectable)) && (
         <div className="px-1 py-1 bg-gray-950/50">
           {tasks.map((t) => (
             <TaskCard
