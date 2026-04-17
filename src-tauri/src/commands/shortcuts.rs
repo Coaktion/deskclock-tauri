@@ -8,10 +8,12 @@ pub struct ShortcutEntry {
 }
 
 #[tauri::command]
-pub fn update_shortcuts(app: tauri::AppHandle, shortcuts: Vec<ShortcutEntry>) -> Result<(), String> {
+pub fn update_shortcuts(app: tauri::AppHandle, shortcuts: Vec<ShortcutEntry>) -> Result<Vec<String>, String> {
     app.global_shortcut()
         .unregister_all()
         .map_err(|e| e.to_string())?;
+
+    let mut failed: Vec<String> = Vec::new();
 
     for entry in shortcuts {
         if entry.accelerator.is_empty() {
@@ -56,7 +58,8 @@ pub fn update_shortcuts(app: tauri::AppHandle, shortcuts: Vec<ShortcutEntry>) ->
             },
         ) {
             eprintln!("Failed to register shortcut '{}': {}", entry.accelerator, e);
+            failed.push(entry.accelerator);
         }
     }
-    Ok(())
+    Ok(failed)
 }

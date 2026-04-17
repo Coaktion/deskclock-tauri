@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow, currentMonitor } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -69,19 +69,32 @@ async function getWelcome() {
 
 const appWindow = getCurrentWindow();
 
-// Posiciona a janela principal no canto inferior direito da área de trabalho
-// (acima da barra de tarefas). screen.availWidth/availHeight reflete a work area
-// do monitor no WebView2/Chromium, excluindo a taskbar automaticamente.
+// Posiciona a janela principal no canto inferior direito da área de trabalho.
+// Usa monitor.scaleFactor (nativo GTK/Win32) em vez de window.devicePixelRatio
+// para evitar divergência em Linux com scaling fracionado (ex: GNOME 125%).
 async function positionWindowBottomRight() {
-  const dpr = window.devicePixelRatio || 1;
-  const outerSize = await appWindow.outerSize();
-  // outerSize() retorna 0 para janelas ainda não exibidas; usa dimensões lógicas × dpr como fallback
-  const winW = outerSize.width > 0 ? outerSize.width : Math.round(800 * dpr);
-  const winH = outerSize.height > 0 ? outerSize.height : Math.round(620 * dpr);
+  const [monitor, outerSize] = await Promise.all([
+    currentMonitor(),
+    appWindow.outerSize(),
+  ]);
 
-  const x = Math.max(0, Math.round(window.screen.availWidth * dpr) - winW);
-  const y = Math.max(0, Math.round(window.screen.availHeight * dpr) - winH);
-  await appWindow.setPosition(new PhysicalPosition(x, y));
+  // scaleFactor do sistema nativo é mais confiável que devicePixelRatio no Linux
+  const scaleFactor = monitor?.scaleFactor ?? window.devicePixelRatio ?? 1;
+  const winW = outerSize.width > 0 ? outerSize.width : Math.round(800 * scaleFactor);
+  const winH = outerSize.height > 0 ? outerSize.height : Math.round(620 * scaleFactor);
+
+  // screen.availWidth/availHeight em pixels lógicos × scaleFactor → pixels físicos
+  const availPhysW = Math.round(window.screen.availWidth * scaleFactor);
+  const availPhysH = Math.round(window.screen.availHeight * scaleFactor);
+
+  // Inclui offset do monitor para suporte a multi-monitor
+  const baseX = monitor?.position.x ?? 0;
+  const baseY = monitor?.position.y ?? 0;
+
+  await appWindow.setPosition(new PhysicalPosition(
+    baseX + Math.max(0, availPhysW - winW),
+    baseY + Math.max(0, availPhysH - winH),
+  ));
 }
 
 // MainContent — inside RunningTaskProvider, has access to useRunningTask

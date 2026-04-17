@@ -85,7 +85,9 @@ function OverlayAppInner() {
     getActiveTasks(taskRepo).then((tasks) => {
       const running = tasks.find((t) => t.status === "running") ?? tasks[0] ?? null;
       setRunningTask(running);
-      setMode(running ? "execution" : "planning");
+      // switchMode em vez de setMode para garantir que setSize é chamado no boot
+      // (no Linux o GTK não redimensiona automaticamente como o WebView2 no Windows)
+      void switchMode(running ? "execution" : "planning");
     });
     setOverlayOpacity(config.get("overlayOpacity") as number);
     setSnapToGrid(!!config.get("overlaySnapToGrid"));

@@ -9,7 +9,7 @@ import { applyTheme, THEMES } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 import { useUpdater } from "@presentation/hooks/useUpdater";
-import { RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -167,11 +167,13 @@ function ShortcutRow({
   label,
   description,
   value,
+  failed,
   onSave,
 }: {
   label: string;
   description?: string;
   value: string;
+  failed?: boolean;
   onSave: (v: string) => void;
 }) {
   const [recording, setRecording] = useState(false);
@@ -204,8 +206,11 @@ function ShortcutRow({
         {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {failed && (
+          <AlertTriangle size={14} className="text-amber-400 shrink-0" aria-label="Falha ao registrar atalho" />
+        )}
         {value && !recording && (
-          <span className="font-mono text-xs text-gray-300 bg-gray-800 border border-gray-700 px-2 py-1 rounded">
+          <span className={`font-mono text-xs bg-gray-800 border px-2 py-1 rounded ${failed ? "border-amber-600 text-amber-300" : "border-gray-700 text-gray-300"}`}>
             {value}
           </span>
         )}
@@ -395,6 +400,8 @@ export function SettingsPage() {
   const [shortcutStopTask, setShortcutStopTask] = useState("");
   const [shortcutToggleOverlay, setShortcutToggleOverlay] = useState("");
   const [shortcutToggleWindow, setShortcutToggleWindow] = useState("");
+  const [displayServer, setDisplayServer] = useState("");
+  const [failedShortcuts, setFailedShortcuts] = useState<string[]>([]);
 
   // Carrega valores do config quando pronto
   useEffect(() => {
@@ -417,6 +424,12 @@ export function SettingsPage() {
       .then(setStartOnBoot)
       .catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    invoke<string>("get_display_server")
+      .then(setDisplayServer)
+      .catch(() => {});
+  }, []);
 
   async function handleTheme(value: string) {
     const t = value as Theme;
@@ -456,7 +469,7 @@ export function SettingsPage() {
     await config.set("shortcutStopTask", s);
     await config.set("shortcutToggleOverlay", o);
     await config.set("shortcutToggleWindow", w);
-    await invoke("update_shortcuts", {
+    const failed = await invoke<string[]>("update_shortcuts", {
       shortcuts: [
         { action: "toggle-task", accelerator: t },
         { action: "stop-task", accelerator: s },
@@ -464,6 +477,7 @@ export function SettingsPage() {
         { action: "toggle-window", accelerator: w },
       ],
     });
+    setFailedShortcuts(failed);
   }
 
   async function handleToggle(
@@ -569,7 +583,11 @@ export function SettingsPage() {
           />
           <ToggleRow
             label="Snap to grid"
-            description="Encaixa o overlay em grade ao soltar o arraste"
+            description={
+              displayServer === "wayland"
+                ? "Não disponível no Wayland — o compositor controla o posicionamento das janelas"
+                : "Encaixa o overlay em grade ao soltar o arraste"
+            }
             value={overlaySnapToGrid}
             onChange={(v) => handleToggle("overlaySnapToGrid", setOverlaySnapToGrid, v)}
           />
@@ -601,28 +619,50 @@ export function SettingsPage() {
         </Section>
 
         <Section title="Atalhos globais">
+          {displayServer === "wayland" && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
+              <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-300">
+                Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou mude para uma sessão X11 para usar este recurso.
+              </p>
+            </div>
+          )}
+          {failedShortcuts.length > 0 && displayServer !== "wayland" && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
+              <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-300">
+                {failedShortcuts.length === 1
+                  ? "Um atalho não pôde ser registrado — pode estar em uso por outro aplicativo."
+                  : `${failedShortcuts.length} atalhos não puderam ser registrados — podem estar em uso por outro aplicativo.`}
+              </p>
+            </div>
+          )}
           <ShortcutRow
             label="Iniciar / Pausar / Retomar"
             description="Alterna execução da tarefa atual"
             value={shortcutToggleTask}
+            failed={failedShortcuts.includes(shortcutToggleTask) && !!shortcutToggleTask}
             onSave={(v) => { setShortcutToggleTask(v); applyShortcuts({ toggleTask: v }); }}
           />
           <ShortcutRow
             label="Parar"
             description="Para a tarefa em execução"
             value={shortcutStopTask}
+            failed={failedShortcuts.includes(shortcutStopTask) && !!shortcutStopTask}
             onSave={(v) => { setShortcutStopTask(v); applyShortcuts({ stopTask: v }); }}
           />
           <ShortcutRow
             label="Mostrar / Ocultar overlay"
             description="Alterna visibilidade do overlay"
             value={shortcutToggleOverlay}
+            failed={failedShortcuts.includes(shortcutToggleOverlay) && !!shortcutToggleOverlay}
             onSave={(v) => { setShortcutToggleOverlay(v); applyShortcuts({ toggleOverlay: v }); }}
           />
           <ShortcutRow
             label="Mostrar / Ocultar janela"
             description="Alterna visibilidade da janela principal"
             value={shortcutToggleWindow}
+            failed={failedShortcuts.includes(shortcutToggleWindow) && !!shortcutToggleWindow}
             onSave={(v) => { setShortcutToggleWindow(v); applyShortcuts({ toggleWindow: v }); }}
           />
         </Section>
