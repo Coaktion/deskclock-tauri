@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { getCurrentWindow, currentMonitor } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { showToast } from "@shared/utils/toast";
+import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
@@ -68,34 +69,6 @@ async function getWelcome() {
 }
 
 const appWindow = getCurrentWindow();
-
-// Posiciona a janela principal no canto inferior direito da área de trabalho.
-// Usa monitor.scaleFactor (nativo GTK/Win32) em vez de window.devicePixelRatio
-// para evitar divergência em Linux com scaling fracionado (ex: GNOME 125%).
-async function positionWindowBottomRight() {
-  const [monitor, outerSize] = await Promise.all([
-    currentMonitor(),
-    appWindow.outerSize(),
-  ]);
-
-  // scaleFactor do sistema nativo é mais confiável que devicePixelRatio no Linux
-  const scaleFactor = monitor?.scaleFactor ?? window.devicePixelRatio ?? 1;
-  const winW = outerSize.width > 0 ? outerSize.width : Math.round(800 * scaleFactor);
-  const winH = outerSize.height > 0 ? outerSize.height : Math.round(620 * scaleFactor);
-
-  // screen.availWidth/availHeight em pixels lógicos × scaleFactor → pixels físicos
-  const availPhysW = Math.round(window.screen.availWidth * scaleFactor);
-  const availPhysH = Math.round(window.screen.availHeight * scaleFactor);
-
-  // Inclui offset do monitor para suporte a multi-monitor
-  const baseX = monitor?.position.x ?? 0;
-  const baseY = monitor?.position.y ?? 0;
-
-  await appWindow.setPosition(new PhysicalPosition(
-    baseX + Math.max(0, availPhysW - winW),
-    baseY + Math.max(0, availPhysH - winH),
-  ));
-}
 
 // MainContent — inside RunningTaskProvider, has access to useRunningTask
 function MainContent({
@@ -189,7 +162,7 @@ function MainContent({
         setTimeout(() => { ignoreBlurRef.current = false; }, 600);
 
         if (payload.action === "navigate-planning") {
-          await positionWindowBottomRight();
+          await positionNearTaskbar(appWindow);
           await appWindow.show();
           setPage("planning");
         }
@@ -285,6 +258,22 @@ function AppInner() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // Salva posição da janela principal ao ser movida pelo usuário
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const unlisten = appWindow.listen<{ x: number; y: number }>("tauri://move", ({ payload }) => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        config.set("mainWindowPosition", { x: payload.x, y: payload.y });
+      }, 400);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+      if (debounce) clearTimeout(debounce);
+    };
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Show welcome or overlay on startup
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -297,7 +286,12 @@ function AppInner() {
         }, 200);
       });
     } else {
-      positionWindowBottomRight().then(() => appWindow.show());
+      const saved = config.get("mainWindowPosition");
+      const positionPromise =
+        saved.x >= 0 && saved.y >= 0
+          ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
+          : positionNearTaskbar(appWindow);
+      positionPromise.then(() => appWindow.show());
       getOverlay().then((overlay) => overlay?.show());
     }
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -319,7 +313,7 @@ function AppInner() {
   // Navigate to planning when triggered from overlay
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, async () => {
-      await positionWindowBottomRight();
+      await positionNearTaskbar(appWindow);
       await appWindow.show();
       await appWindow.setFocus();
       setPage("planning");
@@ -351,7 +345,7 @@ function AppInner() {
     const unlisten = appWindow.listen("tray:show-main", async () => {
       ignoreBlurRef.current = true;
       setTimeout(() => { ignoreBlurRef.current = false; }, 600);
-      await positionWindowBottomRight();
+      await positionNearTaskbar(appWindow);
       await appWindow.show();
       await appWindow.setFocus();
     });

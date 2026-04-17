@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { getCurrentWindow, primaryMonitor } from "@tauri-apps/api/window";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit, listen } from "@tauri-apps/api/event";
+import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { CheckCircle2, XCircle, Info, ArrowDownToLine, X } from "lucide-react";
 import {
@@ -60,19 +60,9 @@ export function ToastApp() {
   const [animating, setAnimating] = useState(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Posiciona no canto inferior direito do monitor primário ao montar
+  // Posiciona no canto inferior direito da área útil ao montar
   useEffect(() => {
-    primaryMonitor().then((monitor) => {
-      if (!monitor) return;
-      const scale = monitor.scaleFactor;
-      const logicalW = monitor.size.width / scale;
-      const logicalH = monitor.size.height / scale;
-      const logicalX = monitor.position.x / scale;
-      const logicalY = monitor.position.y / scale;
-      const x = logicalX + logicalW - TOAST_WIDTH - 20;
-      const y = logicalY + logicalH - TOAST_HEIGHT - 52;
-      appWindow.setPosition(new LogicalPosition(x, y)).catch(() => {});
-    });
+    positionNearTaskbar(appWindow, { width: TOAST_WIDTH, height: TOAST_HEIGHT }).catch(() => {});
   }, []);
 
   // Escuta eventos de toast

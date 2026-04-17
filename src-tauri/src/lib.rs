@@ -2,6 +2,7 @@ mod commands;
 mod migrations;
 mod tray;
 
+#[cfg(target_os = "windows")]
 use std::sync::OnceLock;
 use tauri::Manager;
 use commands::{

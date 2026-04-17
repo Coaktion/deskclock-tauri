@@ -65,7 +65,11 @@ function OverlayAppInner() {
       const key = `overlayPosition_${newMode}` as Parameters<typeof config.get>[0];
       const saved = config.get(key) as { x: number; y: number };
       if (saved && saved.x >= 0 && saved.y >= 0) {
-        await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y));
+        const pos = new PhysicalPosition(saved.x, saved.y);
+        // Tentativa imediata + retry após 150ms: no Linux/GTK, setPosition pode falhar
+        // silenciosamente em janelas ainda não realizadas pelo compositor.
+        await appWindow.setPosition(pos).catch(() => {});
+        setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
       }
       setMode(newMode);
     },
@@ -127,17 +131,6 @@ function OverlayAppInner() {
     };
   }, [switchMode]);
 
-
-  // Restaura posição salva ao montar
-  useEffect(() => {
-    if (!config.isLoaded) return;
-    const key = `overlayPosition_${mode}` as const;
-    const saved = config.get(key as Parameters<typeof config.get>[0]);
-    const pos = saved as { x: number; y: number };
-    if (pos && pos.x >= 0 && pos.y >= 0) {
-      appWindow.setPosition(new PhysicalPosition(pos.x, pos.y));
-    }
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ouve eventos de mudança de tarefa vindos do main window
   useEffect(() => {
