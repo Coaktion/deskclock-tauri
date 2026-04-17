@@ -18,6 +18,7 @@ const { GoogleCalendarImporter } = await import(
 function makeConfig(): ConfigContextValue {
   return {
     isLoaded: true,
+    loadError: null,
     get: vi.fn(<K extends keyof AppConfig>(_key: K) => "" as AppConfig[K]),
     set: vi.fn(),
   };

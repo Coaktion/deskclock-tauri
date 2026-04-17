@@ -83,6 +83,7 @@ type ConfigKey = keyof AppConfig;
 
 export interface ConfigContextValue {
   isLoaded: boolean;
+  loadError: string | null;
   get<K extends ConfigKey>(key: K): AppConfig[K];
   set<K extends ConfigKey>(key: K, value: AppConfig[K]): Promise<void>;
 }
@@ -93,18 +94,24 @@ const repo = new ConfigRepository();
 
 export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const cache = useRef<AppConfig>({ ...DEFAULTS });
 
   useEffect(() => {
     async function load() {
-      const keys = Object.keys(DEFAULTS) as ConfigKey[];
-      await Promise.all(
-        keys.map(async (key) => {
-          const val = await repo.get(key, DEFAULTS[key]);
-          (cache.current as unknown as Record<string, unknown>)[key] = val;
-        })
-      );
-      setIsLoaded(true);
+      try {
+        const keys = Object.keys(DEFAULTS) as ConfigKey[];
+        await Promise.all(
+          keys.map(async (key) => {
+            const val = await repo.get(key, DEFAULTS[key]);
+            (cache.current as unknown as Record<string, unknown>)[key] = val;
+          })
+        );
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setIsLoaded(true);
+      }
     }
     load();
   }, []);
@@ -118,7 +125,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     await repo.set(key, value);
   }
 
-  return <ConfigContext.Provider value={{ isLoaded, get, set }}>{children}</ConfigContext.Provider>;
+  return <ConfigContext.Provider value={{ isLoaded, loadError, get, set }}>{children}</ConfigContext.Provider>;
 }
 
 export function useAppConfig(): ConfigContextValue {

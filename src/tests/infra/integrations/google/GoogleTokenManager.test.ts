@@ -22,6 +22,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
   };
   return {
     isLoaded: true,
+    loadError: null,
     get: vi.fn(<K extends keyof AppConfig>(key: K) => store[key] as AppConfig[K]),
     set: vi.fn(async <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
       (store as Record<string, unknown>)[key as string] = value;

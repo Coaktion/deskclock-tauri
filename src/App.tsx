@@ -277,6 +277,10 @@ function AppInner() {
   // Show welcome or overlay on startup
   useEffect(() => {
     if (!config.isLoaded) return;
+    if (config.loadError) {
+      positionNearTaskbar(appWindow).catch(() => {}).finally(() => appWindow.show());
+      return;
+    }
     if (config.get("showWelcomeMessage")) {
       getWelcome().then((w) => {
         if (!w) return;
@@ -384,6 +388,29 @@ function AppInner() {
     }, 10_000);
     return () => clearTimeout(timer);
   }, []);
+
+  if (config.isLoaded && config.loadError) {
+    return (
+      <div className="flex flex-col h-screen bg-gray-950 text-gray-100 items-center justify-center gap-6 p-8">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="text-red-400 text-3xl">⚠</span>
+          <h1 className="text-base font-semibold">Falha ao carregar configurações</h1>
+          <p className="text-sm text-gray-400 max-w-xs">
+            Não foi possível inicializar o DeskClock. Reinicie o app para tentar novamente.
+          </p>
+        </div>
+        <pre className="bg-gray-900 rounded p-3 w-full max-w-sm text-xs text-red-300 whitespace-pre-wrap break-all">
+          {config.loadError}
+        </pre>
+        <button
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors"
+          onClick={() => invoke("relaunch_app").catch(() => {})}
+        >
+          Reiniciar DeskClock
+        </button>
+      </div>
+    );
+  }
 
   return (
     <RunningTaskProvider config={config}>
