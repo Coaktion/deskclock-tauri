@@ -1,7 +1,5 @@
 import { useEffect } from "react";
 import { Play, Minimize2, X, LayoutList } from "lucide-react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalSize } from "@tauri-apps/api/dpi";
 import type { Task } from "@domain/entities/Task";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
@@ -22,6 +20,7 @@ interface PlanningOverlayContentProps {
   onMinimize: () => void;
   onClose: () => void;
   onNavigatePlanning: () => void;
+  onResize: (width: number, height: number) => void;
   onStartTask: (input: {
     name?: string | null;
     projectId?: string | null;
@@ -37,6 +36,7 @@ export function PlanningOverlayContent({
   onMinimize,
   onClose,
   onNavigatePlanning,
+  onResize,
   onStartTask,
   runningTask,
 }: PlanningOverlayContentProps) {
@@ -46,15 +46,12 @@ export function PlanningOverlayContent({
 
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
 
-  // Redimensiona a janela para caber exatamente o número de tarefas
+  // Notifica OverlayApp do tamanho necessário para caber exatamente as tarefas
   useEffect(() => {
     const contentH =
       pending.length === 0 ? EMPTY_H : Math.min(pending.length, MAX_VISIBLE_ROWS) * ROW_H;
-    const totalH = HEADER_H + contentH + FOOTER_H;
-    getCurrentWindow()
-      .setSize(new LogicalSize(OVERLAY_WIDTH, totalH))
-      .catch(() => {});
-  }, [pending.length]);
+    onResize(OVERLAY_WIDTH, HEADER_H + contentH + FOOTER_H);
+  }, [pending.length, onResize]);
 
   async function handlePlay(task: PlannedTask) {
     if (runningTask) return;

@@ -50,17 +50,28 @@ function OverlayAppInner() {
   const lastRawPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const modeRef = useRef<OverlayMode>("compact");
   const isStartingTaskRef = useRef(false);
+  // Tamanho intencionado e flag para ignorar eventos de resize que nós mesmos causamos
+  const intendedSizeRef = useRef(OVERLAY_SIZES.compact);
+  const isProgrammaticResizeRef = useRef(false);
 
   // Mantém modeRef sincronizado para uso em closures com dep vazia
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
 
+  // Centraliza todos os setSize: marca flag para ignorar o resize event derivado
+  const programmaticSetSize = useCallback(async (width: number, height: number) => {
+    intendedSizeRef.current = { width, height };
+    isProgrammaticResizeRef.current = true;
+    await appWindow.setSize(new LogicalSize(width, height));
+    setTimeout(() => { isProgrammaticResizeRef.current = false; }, 80);
+  }, []);
+
   // switchMode definido antes dos effects que dependem dele
   const switchMode = useCallback(
     async (newMode: OverlayMode) => {
       const { width, height } = OVERLAY_SIZES[newMode];
-      await appWindow.setSize(new LogicalSize(width, height));
+      await programmaticSetSize(width, height);
 
       const key = `overlayPosition_${newMode}` as Parameters<typeof config.get>[0];
       const saved = config.get(key) as { x: number; y: number };
@@ -73,7 +84,7 @@ function OverlayAppInner() {
       }
       setMode(newMode);
     },
-    [config]
+    [config, programmaticSetSize]
   );
 
   // Aplica tamanho de fonte e tema ao iniciar
@@ -192,6 +203,21 @@ function OverlayAppInner() {
     };
   }, [config, mode, snapToGrid]);
 
+  // Trava resize manual: restaura tamanho intencionado se o usuário redimensionar
+  useEffect(() => {
+    const unlisten = appWindow.listen("tauri://resize", () => {
+      if (isProgrammaticResizeRef.current) return;
+      const { width, height } = intendedSizeRef.current;
+      void programmaticSetSize(width, height);
+    });
+    return () => { unlisten.then((fn) => fn()); };
+  }, [programmaticSetSize]);
+
+  // Callback para PlanningOverlayContent informar seu tamanho dinâmico
+  const handlePlanningResize = useCallback((width: number, height: number) => {
+    void programmaticSetSize(width, height);
+  }, [programmaticSetSize]);
+
   const handlePause = useCallback(async () => {
     if (!runningTask) return;
     const updated = await pauseTaskUC(taskRepo, runningTask.id, new Date().toISOString());
@@ -300,6 +326,7 @@ function OverlayAppInner() {
           onMinimize={() => switchMode("compact")}
           onClose={() => appWindow.hide()}
           onNavigatePlanning={handleNavigatePlanning}
+          onResize={handlePlanningResize}
           onStartTask={handleStartTask}
           onTaskStarted={(task) => {
             setRunningTask(task);
