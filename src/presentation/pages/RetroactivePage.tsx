@@ -1,25 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, Trash2, Pencil, DollarSign } from "lucide-react";
-import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import { useProjects } from "@presentation/hooks/useProjects";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import type { Category } from "@domain/entities/Category";
+import type { Project } from "@domain/entities/Project";
+import type { Task } from "@domain/entities/Task";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import type { Task } from "@domain/entities/Task";
-import type { Project } from "@domain/entities/Project";
-import type { Category } from "@domain/entities/Category";
+import { TaskRepository } from "@infra/database/TaskRepository";
+import { Autocomplete } from "@presentation/components/Autocomplete";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { useCategories } from "@presentation/hooks/useCategories";
+import { useProjects } from "@presentation/hooks/useProjects";
+import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import {
-  todayISO,
   addDaysISO,
-  parseDurationInput,
-  formatHHMMSS,
-  formatHHMM,
   computeDurationHHMM,
   computeEndHHMM,
+  formatHHMM,
+  formatHHMMSS,
+  parseDurationInput,
+  todayISO,
 } from "@shared/utils/time";
+import { ChevronLeft, ChevronRight, DollarSign, Pencil, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const repo = new TaskRepository();
 
@@ -212,10 +212,10 @@ export function RetroactivePage() {
     return true;
   }
 
-  async function handleAdd() {
+  async function handleAdd(overrideEndHHMM?: string) {
     setError("");
     const st = startTime || prevStart.current;
-    const et = endTime || prevEnd.current;
+    const et = overrideEndHHMM ?? (endTime || prevEnd.current);
     const startISO = buildISO(selectedDate, st);
     let endISO = buildISO(selectedDate, et);
     if (new Date(endISO) <= new Date(startISO)) {
@@ -235,7 +235,15 @@ export function RetroactivePage() {
     setSaving(true);
     await createRetroactiveTask(
       repo,
-      { name: name.trim() || null, projectId: pId, categoryId: cId, billable, startTime: startISO, endTime: endISO, durationSeconds },
+      {
+        name: name.trim() || null,
+        projectId: pId,
+        categoryId: cId,
+        billable,
+        startTime: startISO,
+        endTime: endISO,
+        durationSeconds,
+      },
       new Date().toISOString()
     );
     setSaving(false);
@@ -286,7 +294,9 @@ export function RetroactivePage() {
         </button>
         <span className="flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
         {totalSeconds > 0 && (
-          <span className="text-xs text-gray-500 font-mono">{formatHHMMSS(totalSeconds)} total</span>
+          <span className="text-xs text-gray-500 font-mono">
+            {formatHHMMSS(totalSeconds)} total
+          </span>
         )}
       </div>
 
@@ -297,7 +307,9 @@ export function RetroactivePage() {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) void handleAdd(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) void handleAdd();
+          }}
           placeholder="Nome da tarefa (opcional)"
           className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
         />
@@ -332,7 +344,9 @@ export function RetroactivePage() {
           <button
             type="button"
             onClick={() => setBillable((b) => !b)}
-            title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+            title={
+              billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
+            }
             className={`flex items-center gap-1 shrink-0 transition-colors ${
               billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
             }`}
@@ -343,7 +357,32 @@ export function RetroactivePage() {
 
         {/* Início, Fim, Duração */}
         <div className="flex gap-2 items-center">
-          <span className="text-xs text-gray-500 shrink-0">Início</span>
+          <span className="text-xs text-gray-500 shrink-0">Duração</span>
+          <input
+            type="text"
+            value={durationInput}
+            onChange={(e) => setDurationInput(e.target.value)}
+            onBlur={commitDuration}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const raw = durationInput.trim();
+                const parsed = parseDurationInput(raw);
+                if (!raw || !parsed || parsed < 60) {
+                  setDurationInput(computeDurationHHMM(prevStart.current, prevEnd.current));
+                  return;
+                }
+                const newEnd = computeEndHHMM(prevStart.current, parsed);
+                prevEnd.current = newEnd;
+                setEndTime(newEnd);
+                setDurationInput(formatHHMM(parsed));
+                void handleAdd(newEnd);
+              }
+            }}
+            placeholder="HH:MM"
+            title="Duração — editar atualiza hora fim"
+            className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
+          />
+          <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
           <input
             type="time"
             value={startTime}
@@ -351,13 +390,15 @@ export function RetroactivePage() {
             onBlur={(e) => handleStartCommit(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                if (!startTime) { handleStartCommit(""); return; }
+                if (!startTime) {
+                  handleStartCommit("");
+                  return;
+                }
                 void handleAdd();
               }
             }}
             className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
           />
-          <span className="text-xs text-gray-600 shrink-0">→</span>
           <span className="text-xs text-gray-500 shrink-0">Fim</span>
           <input
             type="time"
@@ -366,38 +407,29 @@ export function RetroactivePage() {
             onBlur={(e) => handleEndCommit(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                if (!endTime) { handleEndCommit(""); return; }
+                e.stopPropagation();
+                if (!endTime) {
+                  handleEndCommit("");
+                  return;
+                }
                 void handleAdd();
               }
             }}
             className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
           />
-          <input
-            type="text"
-            value={durationInput}
-            onChange={(e) => setDurationInput(e.target.value)}
-            onBlur={commitDuration}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const valid = commitDuration();
-                if (valid) void handleAdd();
-              }
-            }}
-            placeholder="HH:MM"
-            title="Duração — editar atualiza hora fim"
-            className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
-          />
+
           <button
             onClick={() => void handleAdd()}
             disabled={saving}
-            className="ml-auto px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors disabled:opacity-50"
+            className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors disabled:opacity-50"
           >
             Adicionar
           </button>
         </div>
 
         <p className="text-xs text-gray-600">
-          Duração aceita: <span className="text-gray-500">1:30, 90, 1h, 1h 30m, 1h 30min</span>
+          Duração aceita:{" "}
+          <span className="text-gray-500">1:30, 90, 1h, 1h 30m, 1h 30min, 1h 30</span>
         </p>
 
         {error && <p className="text-xs text-red-400">{error}</p>}
