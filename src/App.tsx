@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { showToast } from "@shared/utils/toast";
 import { positionNearTaskbar } from "@shared/utils/windowPosition";
@@ -24,8 +24,8 @@ import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { IntegrationsPage } from "@presentation/pages/IntegrationsPage";
 import {
   OVERLAY_EVENTS,
-  type WelcomeClosedPayload,
-  type OverlaySetModePayload,
+  type CommandPaletteNavigatePayload,
+  type CommandPaletteStartTaskPayload,
 } from "@shared/types/overlayEvents";
 import { SetupModal } from "@presentation/modals/SetupModal";
 
@@ -65,8 +65,8 @@ async function getOverlay() {
   return WebviewWindow.getByLabel("overlay");
 }
 
-async function getWelcome() {
-  return WebviewWindow.getByLabel("welcome");
+async function getCommandPalette() {
+  return WebviewWindow.getByLabel("command-palette");
 }
 
 const appWindow = getCurrentWindow();
@@ -75,8 +75,6 @@ const appWindow = getCurrentWindow();
 function MainContent({
   page,
   setPage,
-  welcomeActiveRef,
-  ignoreBlurRef,
   isPinned,
   onTogglePin,
   focusTaskEdit,
@@ -84,8 +82,6 @@ function MainContent({
 }: {
   page: Page;
   setPage: (p: Page) => void;
-  welcomeActiveRef: React.MutableRefObject<boolean>;
-  ignoreBlurRef: React.MutableRefObject<boolean>;
   isPinned: boolean;
   onTogglePin: () => void;
   focusTaskEdit: boolean;
@@ -93,6 +89,43 @@ function MainContent({
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const config = useAppConfig();
+
+  // Ctrl+1–7 navigates directly
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const pages: Page[] = [
+          "tasks",
+          "retroactive",
+          "planning",
+          "history",
+          "data",
+          "integrations",
+          "settings",
+        ];
+        const idx = parseInt(e.key) - 1;
+        if (idx >= 0 && idx < pages.length) {
+          e.preventDefault();
+          setPage(pages[idx]);
+        }
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [setPage]);
+
+  // Command palette: start task from standalone window
+  useEffect(() => {
+    const unlisten = listen<CommandPaletteStartTaskPayload>(
+      OVERLAY_EVENTS.COMMAND_PALETTE_START_TASK,
+      async ({ payload }) => {
+        await startTask(payload);
+      }
+    );
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [startTask]);
 
   // Live tray timer — atualiza tooltip do ícone da bandeja a cada segundo
   useEffect(() => {
@@ -147,43 +180,6 @@ function MainContent({
     };
   }, [runningTask, stopTask]);
 
-  useEffect(() => {
-    const unlisten = listen<WelcomeClosedPayload>(
-      OVERLAY_EVENTS.WELCOME_CLOSED,
-      async ({ payload }) => {
-        welcomeActiveRef.current = false;
-
-        if (payload.action === "start-task") {
-          await startTask({ billable: true });
-          return; // execution overlay handles visibility
-        }
-
-        // Suprime o closeOnFocusLoss enquanto reorganizamos as janelas
-        ignoreBlurRef.current = true;
-        setTimeout(() => { ignoreBlurRef.current = false; }, 600);
-
-        if (payload.action === "navigate-planning") {
-          await positionNearTaskbar(appWindow);
-          await appWindow.show();
-          setPage("planning");
-        }
-        // "close" e "navigate-planning": exibe apenas o overlay compacto
-        const overlay = await getOverlay();
-        if (overlay) {
-          await overlay.show();
-          await emit(OVERLAY_EVENTS.OVERLAY_SET_MODE, {
-            mode: "compact",
-          } satisfies OverlaySetModePayload);
-        }
-        if (payload.action === "navigate-planning") {
-          await appWindow.setFocus();
-        }
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [startTask, setPage, welcomeActiveRef]);
 
   const showPin = config.isLoaded && config.get("closeOnFocusLoss");
 
@@ -206,7 +202,6 @@ function AppInner() {
   const [isPinned, setIsPinned] = useState(false);
   const [focusTaskEdit, setFocusTaskEdit] = useState(false);
   const [setupDone, setSetupDone] = useState(false);
-  const welcomeActiveRef = useRef(false);
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
 
@@ -238,6 +233,7 @@ function AppInner() {
         { action: "stop-task", accelerator: config.get("shortcutStopTask") },
         { action: "toggle-overlay", accelerator: config.get("shortcutToggleOverlay") },
         { action: "toggle-window", accelerator: config.get("shortcutToggleWindow") },
+        { action: "toggle-command-palette", accelerator: config.get("shortcutCommandPalette") },
       ],
     }).catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -284,7 +280,7 @@ function AppInner() {
     };
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Show welcome or overlay on startup
+  // Show windows on startup
   useEffect(() => {
     if (!config.isLoaded) return;
     if (config.loadError) {
@@ -295,13 +291,22 @@ function AppInner() {
       positionNearTaskbar(appWindow).catch(() => {}).finally(() => appWindow.show());
       return;
     }
+
     if (config.get("showWelcomeMessage")) {
-      getWelcome().then((w) => {
-        if (!w) return;
-        w.show();
-        setTimeout(() => {
-          welcomeActiveRef.current = true;
-        }, 200);
+      getCommandPalette().then(async (cp) => {
+        if (!cp) {
+          const saved = config.get("mainWindowPosition");
+          const pos =
+            saved.x >= 0 && saved.y >= 0
+              ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
+              : positionNearTaskbar(appWindow);
+          await pos;
+          await appWindow.show();
+          return;
+        }
+        await cp.center();
+        await cp.show();
+        await cp.setFocus();
       });
     } else {
       const saved = config.get("mainWindowPosition");
@@ -310,23 +315,32 @@ function AppInner() {
           ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
           : positionNearTaskbar(appWindow);
       positionPromise.then(() => appWindow.show());
-      getOverlay().then((overlay) => overlay?.show());
     }
+
+    // Overlay always shows at startup (compact by default)
+    getOverlay().then((overlay) => overlay?.show());
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close welcome when main window gains focus (e.g., tray icon click)
+  // Navigate when command palette selects a page
   useEffect(() => {
-    const unlisten = appWindow.listen("tauri://focus", async () => {
-      if (!welcomeActiveRef.current) return;
-      welcomeActiveRef.current = false;
-      const w = await getWelcome();
-      await w?.hide();
-      await appWindow.show();
-    });
+    const unlisten = listen<CommandPaletteNavigatePayload>(
+      OVERLAY_EVENTS.COMMAND_PALETTE_NAVIGATE,
+      async ({ payload }) => {
+        const saved = config.get("mainWindowPosition");
+        const positionPromise =
+          saved.x >= 0 && saved.y >= 0
+            ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
+            : positionNearTaskbar(appWindow);
+        await positionPromise;
+        await appWindow.show();
+        await appWindow.setFocus();
+        setPage(payload.page as Page);
+      }
+    );
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigate to planning when triggered from overlay
   useEffect(() => {
@@ -435,8 +449,6 @@ function AppInner() {
       <MainContent
         page={page}
         setPage={setPage}
-        welcomeActiveRef={welcomeActiveRef}
-        ignoreBlurRef={ignoreBlurRef}
         isPinned={isPinned}
         onTogglePin={() => setIsPinned((v) => !v)}
         focusTaskEdit={focusTaskEdit}

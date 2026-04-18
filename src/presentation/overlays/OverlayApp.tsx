@@ -53,6 +53,8 @@ function OverlayAppInner() {
   // Tamanho intencionado e flag para ignorar eventos de resize que nós mesmos causamos
   const intendedSizeRef = useRef(OVERLAY_SIZES.compact);
   const isProgrammaticResizeRef = useRef(false);
+  // Prevents startup effect from overriding mode set via OVERLAY_SET_MODE event
+  const modeSetByEventRef = useRef(false);
 
   // Mantém modeRef sincronizado para uso em closures com dep vazia
   useEffect(() => {
@@ -105,9 +107,12 @@ function OverlayAppInner() {
     getActiveTasks(taskRepo).then((tasks) => {
       const running = tasks.find((t) => t.status === "running") ?? tasks[0] ?? null;
       setRunningTask(running);
-      // switchMode em vez de setMode para garantir que setSize é chamado no boot
-      // (no Linux o GTK não redimensiona automaticamente como o WebView2 no Windows)
-      void switchMode(running ? "execution" : "planning");
+      if (running) {
+        void switchMode("execution");
+      } else if (!modeSetByEventRef.current) {
+        // Default compact; planning is signalled by App.tsx via OVERLAY_SET_MODE for normal startup
+        void switchMode("compact");
+      }
     });
     setOverlayOpacity(config.get("overlayOpacity") as number);
     setSnapToGrid(!!config.get("overlaySnapToGrid"));
@@ -134,19 +139,19 @@ function OverlayAppInner() {
     };
   }, []);
 
-  // Muda modo quando solicitado pelo main window (ex: após fechar welcome)
+  // Muda modo quando solicitado pelo main window
   useEffect(() => {
     const unlisten = listen<OverlaySetModePayload>(
       OVERLAY_EVENTS.OVERLAY_SET_MODE,
       ({ payload }) => {
-        switchMode(payload.mode);
+        modeSetByEventRef.current = true;
+        void switchMode(payload.mode);
       }
     );
     return () => {
       unlisten.then((fn) => fn());
     };
   }, [switchMode]);
-
 
   // Ouve eventos de mudança de tarefa vindos do main window
   useEffect(() => {
@@ -156,17 +161,24 @@ function OverlayAppInner() {
         if (payload.source === "overlay") return;
         setRunningTask(payload.task);
         if (payload.task) {
-          switchMode("execution");
+          void switchMode("execution");
+          if (config.get("overlayShowOnStart")) {
+            void appWindow.show();
+          }
         } else {
-          // Usa modeRef para ler o modo atual sem depender de closure estale
-          switchMode(modeRef.current === "compact" ? "compact" : "planning");
+          if (config.get("overlayAlwaysVisible")) {
+            // Usa modeRef para ler o modo atual sem depender de closure estale
+            void switchMode(modeRef.current === "compact" ? "compact" : "planning");
+          } else {
+            void appWindow.hide();
+          }
         }
       }
     );
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [switchMode]);
+  }, [switchMode, config]);
 
   // Snap-to-grid + clamp ao monitor + persistência de posição
   // Acumula posição em lastRawPosRef e aplica apenas no debounce final,

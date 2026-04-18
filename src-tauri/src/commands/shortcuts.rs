@@ -53,6 +53,17 @@ pub fn update_shortcuts(app: tauri::AppHandle, shortcuts: Vec<ShortcutEntry>) ->
                             }
                         }
                     }
+                    "toggle-command-palette" => {
+                        if let Some(w) = app_handle.get_webview_window("command-palette") {
+                            if w.is_visible().unwrap_or(false) {
+                                let _ = w.hide();
+                            } else {
+                                let _ = w.center();
+                                let _ = w.show();
+                                let _ = w.set_focus();
+                            }
+                        }
+                    }
                     _ => {}
                 }
             },

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Merge, CheckCheck, DollarSign } from "lucide-react";
+import { ChevronDown, ChevronRight, Merge, CheckCheck } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -75,9 +75,14 @@ export function TaskGroupCard({
   return (
     <div className="border border-gray-800 rounded-lg overflow-hidden">
       <div
-        className="flex items-center gap-2 px-3 py-2 bg-gray-900 cursor-pointer hover:bg-gray-800/80"
+        className="relative flex items-center gap-2 pl-3 pr-2 py-2.5 bg-gray-900 cursor-pointer hover:bg-gray-800/80"
         onClick={handleRowClick}
       >
+        {/* Billable left accent */}
+        {first.billable && (
+          <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
+        )}
+
         {selectable ? (
           <input
             type="checkbox"
@@ -96,13 +101,15 @@ export function TaskGroupCard({
             </span>
           )
         )}
-        <DollarSign
-          size={13}
-          className={`flex-shrink-0 ${first.billable ? "text-green-400" : "text-gray-500"}`}
+
+        {/* Billable dot */}
+        <span
+          className={`shrink-0 w-1.5 h-1.5 rounded-full ${first.billable ? "bg-emerald-400" : "bg-gray-600"}`}
         />
+
         <div className="flex-1 min-w-0">
           <span className="text-sm text-gray-100 truncate block">{displayName}</span>
-          <div className="flex gap-2 text-xs text-gray-500">
+          <div className="flex gap-2 text-[11px] text-gray-500 mt-0.5">
             {project && <span>{project.name}</span>}
             {category && <span>{category.name}</span>}
             {isGroup && <span className="text-gray-600">{tasks.length} registros</span>}

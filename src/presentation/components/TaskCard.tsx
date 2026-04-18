@@ -1,4 +1,4 @@
-import { Play, Pencil, Trash2, CheckCheck, DollarSign } from "lucide-react";
+import { Play, Pencil, Trash2, CheckCheck } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -30,19 +30,13 @@ export function TaskCard({
   const displayName = task.name ?? "(sem nome)";
 
   return (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-800/50 group">
+    <div className="flex items-center gap-2 py-2 px-3 hover:bg-gray-800/50 group transition-colors">
       <button
         onClick={() => onToggleBillable(task)}
-        title={
-          task.billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"
-        }
-        className="flex-shrink-0"
-      >
-        <DollarSign
-          size={13}
-          className={task.billable ? "text-green-400" : "text-gray-500"}
-        />
-      </button>
+        title={task.billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"}
+        className="flex-shrink-0 w-2 h-2 rounded-full mt-0.5 transition-colors"
+        style={{ backgroundColor: task.billable ? "#10b981" : "#4b5563" }}
+      />
 
       <div className="flex-1 min-w-0">
         <span className="text-sm text-gray-200 truncate block">{displayName}</span>
