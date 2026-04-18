@@ -24,6 +24,8 @@ export interface AppConfig {
   shortcutStopTask: string;
   shortcutToggleOverlay: string;
   shortcutToggleWindow: string;
+  // Atalho da janela
+  shortcutCommandPalette: string;
   // Overlay
   overlayAlwaysVisible: boolean;
   overlayShowOnStart: boolean;
@@ -64,6 +66,7 @@ const DEFAULTS: AppConfig = {
   shortcutStopTask: "",
   shortcutToggleOverlay: "",
   shortcutToggleWindow: "",
+  shortcutCommandPalette: "CmdOrCtrl+K",
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
   overlayOpacity: 100,

@@ -7,7 +7,6 @@ import {
   Pen,
   Pencil,
   Play,
-  Square,
   X,
 } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
@@ -353,13 +352,13 @@ export function Omnibox({
       <div className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-hidden">
         {/* Main row */}
         <div className="flex items-center gap-3 px-4 py-3">
-          {/* Play/Pause button */}
+          {/* Play/Pause button — pulses while running */}
           <button
             onClick={handlePlayPause}
             title={isRunning ? "Pausar" : "Retomar"}
             className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
               isRunning
-                ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                ? "bg-emerald-600 hover:bg-emerald-500 text-white animate-pulse"
                 : "bg-gray-700 hover:bg-gray-600 text-gray-200"
             }`}
           >
@@ -369,7 +368,7 @@ export function Omnibox({
           {/* Task info */}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-100 truncate">{displayName}</p>
-            <div className="flex gap-2 mt-1 flex-wrap">
+            <div className="flex gap-2 mt-1 flex-wrap items-center">
               {runProject && (
                 <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300">
                   {runProject.name}
@@ -418,9 +417,9 @@ export function Omnibox({
             </div>
           </div>
 
-          {/* Timer + controls */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <span className="font-mono text-xl text-emerald-400 tracking-tight">
+          {/* Timer + controls stacked on the right */}
+          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+            <span className="font-mono text-2xl text-emerald-400 tracking-tight leading-none">
               {formatHHMMSS(seconds)}
             </span>
             {confirmingStop ? (
@@ -444,33 +443,33 @@ export function Omnibox({
                   onClick={() => setConfirmingStop(false)}
                   className="p-1 text-gray-600 hover:text-gray-400 rounded"
                 >
-                  <X size={13} />
+                  <X size={12} />
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-1">
                 <button
                   onClick={handleStopClick}
-                  title="Parar"
-                  className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
+                  title="Parar tarefa"
+                  className="px-3 py-1 text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                 >
-                  <Square size={16} />
+                  Parar
                 </button>
                 <button
                   onClick={() => setEditing((v) => !v)}
                   title="Editar"
                   className={`p-1.5 rounded hover:bg-gray-800 transition-colors ${
-                    editing ? "text-blue-400" : "text-gray-400 hover:text-gray-100"
+                    editing ? "text-blue-400" : "text-gray-600 hover:text-gray-400"
                   }`}
                 >
-                  <Pencil size={16} />
+                  <Pencil size={13} />
                 </button>
                 <button
                   onClick={() => cancelTask()}
                   title="Cancelar tarefa"
-                  className="p-1.5 text-gray-400 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
+                  className="p-1.5 text-gray-600 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
                 >
-                  <X size={16} />
+                  <X size={13} />
                 </button>
               </div>
             )}

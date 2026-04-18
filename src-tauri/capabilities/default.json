@@ -5,14 +5,15 @@
   "windows": [
     "main",
     "overlay",
-    "welcome",
-    "toast"
+    "toast",
+    "command-palette"
   ],
   "permissions": [
     "core:default",
     "core:window:allow-set-size",
     "core:window:allow-set-min-size",
     "core:window:allow-set-max-size",
+    "core:window:allow-center",
     "core:window:allow-set-position",
     "core:window:allow-show",
     "core:window:allow-hide",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback, Fragment } from "react";
 import {
   Search,
   Play,
@@ -9,8 +9,11 @@ import {
   Settings,
   Plug,
   Timer,
+  Send,
+  FileDown,
 } from "lucide-react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { Project } from "@domain/entities/Project";
 import type { Page } from "@presentation/components/Sidebar";
 
 interface StartTaskInput {
@@ -27,6 +30,9 @@ interface CommandPaletteProps {
   onNavigate: (page: Page) => void;
   onStartTask: (input: StartTaskInput) => Promise<void>;
   plannedTasks: PlannedTask[];
+  projects: Project[];
+  shortcutLabel?: string;
+  standalone?: boolean;
 }
 
 interface CommandItem {
@@ -37,6 +43,60 @@ interface CommandItem {
   kbd?: string;
   group: string;
   action: () => void | Promise<void>;
+}
+
+// Fuzzy match: returns score >= 0 if query chars appear in order in text, else -1.
+// Higher score = better match (consecutive matches and early matches score more).
+function fuzzyScore(text: string, query: string): number {
+  const t = text.toLowerCase();
+  const q = query.toLowerCase();
+  if (!q) return 0;
+  // Exact substring wins
+  const exactIdx = t.indexOf(q);
+  if (exactIdx !== -1) return 2000 - exactIdx;
+  // Fuzzy: all chars must appear in order
+  let qi = 0;
+  let score = 0;
+  let consecutive = 0;
+  let lastMatch = -1;
+  for (let i = 0; i < t.length && qi < q.length; i++) {
+    if (t[i] === q[qi]) {
+      qi++;
+      consecutive = lastMatch === i - 1 ? consecutive + 1 : 0;
+      score += 10 + consecutive * 8 - i * 0.1;
+      lastMatch = i;
+    }
+  }
+  return qi < q.length ? -1 : score;
+}
+
+// Highlight matching chars in text for a given query (fuzzy)
+function highlightFuzzy(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  const t = text.toLowerCase();
+  const q = query.toLowerCase();
+  // Collect matched char indices
+  const matched = new Set<number>();
+  // Try exact first
+  const exactIdx = t.indexOf(q);
+  if (exactIdx !== -1) {
+    for (let i = exactIdx; i < exactIdx + q.length; i++) matched.add(i);
+  } else {
+    let qi = 0;
+    for (let i = 0; i < t.length && qi < q.length; i++) {
+      if (t[i] === q[qi]) { matched.add(i); qi++; }
+    }
+  }
+  if (!matched.size) return text;
+  const parts: React.ReactNode[] = [];
+  for (let i = 0; i < text.length; i++) {
+    if (matched.has(i)) {
+      parts.push(<span key={i} className="text-blue-300 font-semibold">{text[i]}</span>);
+    } else {
+      parts.push(<Fragment key={i}>{text[i]}</Fragment>);
+    }
+  }
+  return <>{parts}</>;
 }
 
 const NAV_ITEMS: { page: Page; label: string; icon: React.ReactNode; kbd: string }[] = [
@@ -55,6 +115,9 @@ export function CommandPalette({
   onNavigate,
   onStartTask,
   plannedTasks,
+  projects,
+  shortcutLabel = "Ctrl+K",
+  standalone = false,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -93,14 +156,32 @@ export function CommandPalette({
         group: "Ações",
         icon: <Play size={16} />,
         label: "Iniciar nova tarefa",
-        action: () => handleNavigate("tasks"),
+        subtitle: "Inicia tarefa em branco agora",
+        action: () => handleStartTask({ billable: true }),
       },
       {
         id: "action-retroactive",
         group: "Ações",
         icon: <FileClock size={16} />,
-        label: "Lançamento manual",
+        label: "Adicionar entrada manual",
+        subtitle: "Lançamento retroativo",
         action: () => handleNavigate("retroactive"),
+      },
+      {
+        id: "action-sheets",
+        group: "Ações",
+        icon: <Send size={16} />,
+        label: "Enviar ao Google Sheets",
+        subtitle: "Ir para integrações",
+        action: () => handleNavigate("integrations"),
+      },
+      {
+        id: "action-export",
+        group: "Ações",
+        icon: <FileDown size={16} />,
+        label: "Exportar CSV",
+        subtitle: "Ir para histórico",
+        action: () => handleNavigate("history"),
       },
     ];
 
@@ -113,32 +194,42 @@ export function CommandPalette({
       action: () => handleNavigate(item.page),
     }));
 
-    const planned: CommandItem[] = plannedTasks.map((task) => ({
-      id: `planned-${task.id}`,
-      group: "Tarefas planejadas",
-      icon: <Play size={16} />,
-      label: task.name,
-      action: () =>
-        handleStartTask({
-          name: task.name,
-          projectId: task.projectId,
-          categoryId: task.categoryId,
-          billable: task.billable,
-          plannedTaskId: task.id,
-        }),
-    }));
+    const planned: CommandItem[] = plannedTasks.map((task) => {
+      const proj = projects.find((p) => p.id === task.projectId);
+      const projName = proj ? (proj.name.length > 30 ? proj.name.slice(0, 30) + "…" : proj.name) : undefined;
+      return {
+        id: `planned-${task.id}`,
+        group: "Iniciar tarefa planejada",
+        icon: <Play size={16} />,
+        label: task.name,
+        subtitle: projName,
+        action: () =>
+          handleStartTask({
+            name: task.name,
+            projectId: task.projectId,
+            categoryId: task.categoryId,
+            billable: task.billable,
+            plannedTaskId: task.id,
+          }),
+      };
+    });
 
     return [...actions, ...nav, ...planned];
-  }, [plannedTasks, handleNavigate, handleStartTask]);
+  }, [plannedTasks, projects, handleNavigate, handleStartTask]);
 
   const filtered = useMemo<CommandItem[]>(() => {
     if (!query.trim()) return allItems;
-    const q = query.toLowerCase();
-    return allItems.filter(
-      (item) =>
-        item.label.toLowerCase().includes(q) ||
-        (item.subtitle ?? "").toLowerCase().includes(q)
-    );
+    const q = query.trim();
+    return allItems
+      .map((item) => {
+        const labelScore = fuzzyScore(item.label, q);
+        const subtitleScore = item.subtitle ? fuzzyScore(item.subtitle, q) : -1;
+        const score = Math.max(labelScore, subtitleScore);
+        return { item, score };
+      })
+      .filter(({ score }) => score >= 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ item }) => item);
   }, [allItems, query]);
 
   // Clamp focusedIndex when filtered list changes
@@ -154,6 +245,16 @@ export function CommandPalette({
   }, [focusedIndex]);
 
   function onKeyDown(e: React.KeyboardEvent) {
+    // Ctrl/Cmd+1–7: navigate to page directly
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+      const pages: Page[] = ["tasks", "retroactive", "planning", "history", "data", "integrations", "settings"];
+      const idx = parseInt(e.key) - 1;
+      if (idx >= 0 && idx < pages.length) {
+        e.preventDefault();
+        void handleNavigate(pages[idx]);
+        return;
+      }
+    }
     if (e.key === "Escape") {
       e.preventDefault();
       onClose();
@@ -191,15 +292,11 @@ export function CommandPalette({
 
   if (!open) return null;
 
-  return (
+  const box = (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20"
-      onMouseDown={() => onClose()}
+      className="w-[520px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden"
+      onMouseDown={(e) => standalone && e.stopPropagation()}
     >
-      <div
-        className="w-[520px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
         {/* Search bar */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
           <Search size={16} className="text-gray-500 shrink-0" />
@@ -212,7 +309,7 @@ export function CommandPalette({
               setFocusedIndex(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Buscar ação ou página..."
+            placeholder="Buscar ação, tela, ou tarefa planejada…"
             className="flex-1 bg-transparent text-sm text-gray-100 outline-none placeholder-gray-500"
           />
           {query && (
@@ -258,9 +355,9 @@ export function CommandPalette({
                     <span className={`w-4 h-4 shrink-0 ${isFocused ? "text-blue-400" : "text-gray-400"}`}>
                       {item.icon}
                     </span>
-                    <span className="flex-1 text-gray-200">{item.label}</span>
+                    <span className="flex-1 text-gray-200">{highlightFuzzy(item.label, query)}</span>
                     {item.subtitle && (
-                      <span className="text-xs text-gray-500">{item.subtitle}</span>
+                      <span className="text-xs text-gray-500">{highlightFuzzy(item.subtitle, query)}</span>
                     )}
                     {item.kbd && (
                       <kbd className="text-[10px] font-mono text-gray-600 px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded">
@@ -275,18 +372,23 @@ export function CommandPalette({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-gray-800 flex gap-4 text-[10.5px] text-gray-600">
-          <span>
-            <kbd className="font-mono">↑↓</kbd> navegar
-          </span>
-          <span>
-            <kbd className="font-mono">Enter</kbd> selecionar
-          </span>
-          <span>
-            <kbd className="font-mono">Esc</kbd> fechar
-          </span>
+        <div className="px-4 py-2 border-t border-gray-800 flex items-center gap-4 text-[10.5px] text-gray-600">
+          <span><kbd className="font-mono">↑↓</kbd> navegar</span>
+          <span><kbd className="font-mono">Enter</kbd> executar</span>
+          <span><kbd className="font-mono">Esc</kbd> fechar</span>
+          {shortcutLabel && <span className="ml-auto">{shortcutLabel} a qualquer momento</span>}
         </div>
       </div>
+  );
+
+  if (standalone) return box;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20"
+      onMouseDown={() => onClose()}
+    >
+      {box}
     </div>
   );
 }
