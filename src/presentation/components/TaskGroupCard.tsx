@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Merge, CheckCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, Merge, CheckCheck, DollarSign } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -96,10 +96,9 @@ export function TaskGroupCard({
             </span>
           )
         )}
-        <span
-          className={`flex-shrink-0 w-2 h-2 rounded-full ${
-            first.billable ? "bg-blue-400" : "bg-gray-600"
-          }`}
+        <DollarSign
+          size={13}
+          className={`flex-shrink-0 ${first.billable ? "text-green-400" : "text-gray-500"}`}
         />
         <div className="flex-1 min-w-0">
           <span className="text-sm text-gray-100 truncate block">{displayName}</span>

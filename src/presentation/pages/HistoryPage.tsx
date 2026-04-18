@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ChevronDown, ChevronUp, Pencil, Trash2, FileDown } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Pencil, Trash2, FileDown, DollarSign } from "lucide-react";
 import { useHistory, type QuickFilter } from "@presentation/hooks/useHistory";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -215,10 +215,12 @@ export function HistoryPage() {
                   className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group"
                 >
                   {/* Indicador billable */}
-                  <div
-                    className={`w-1 h-8 rounded-full shrink-0 ${task.billable ? "bg-blue-500" : "bg-gray-600"}`}
-                    title={task.billable ? "Billable" : "Non-billable"}
-                  />
+                  <span title={task.billable ? "Billable" : "Non-billable"}>
+                    <DollarSign
+                      size={14}
+                      className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
+                    />
+                  </span>
 
                   {/* Dados */}
                   <div className="flex-1 min-w-0">

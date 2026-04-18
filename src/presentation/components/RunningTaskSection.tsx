@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock, ArrowRight, Pen } from "lucide-react";
+import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock, ArrowRight, Pen, DollarSign } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
@@ -129,10 +129,9 @@ export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocu
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                runningTask.billable ? "bg-blue-400" : "bg-gray-500"
-              }`}
+            <DollarSign
+              size={13}
+              className={`flex-shrink-0 ${runningTask.billable ? "text-green-400" : "text-gray-500"}`}
             />
             <span className="text-sm font-medium text-gray-100 truncate">{displayName}</span>
           </div>

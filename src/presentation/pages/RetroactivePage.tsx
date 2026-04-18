@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronLeft, ChevronRight, Trash2, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2, Pencil, DollarSign } from "lucide-react";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
@@ -89,8 +89,9 @@ function TaskRow({ task, projects, categories, onEdit, onDelete }: TaskRowProps)
 
   return (
     <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-900/50">
-      <span
-        className={`w-1.5 h-1.5 rounded-full shrink-0 ${task.billable ? "bg-blue-500" : "bg-gray-600"}`}
+      <DollarSign
+        size={13}
+        className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
       />
       <span className="text-xs text-gray-500 shrink-0 font-mono w-28">
         {formatTimeRange(task.startTime, task.endTime)}
