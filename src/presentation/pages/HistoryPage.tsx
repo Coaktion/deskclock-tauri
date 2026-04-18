@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, ChevronDown, ChevronUp, Pencil, Trash2, FileDown, DollarSign } from "lucide-react";
+import { Search, ChevronDown, ChevronUp, Pencil, Trash2, FileDown } from "lucide-react";
 import { useHistory, type QuickFilter } from "@presentation/hooks/useHistory";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -9,6 +9,7 @@ import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { formatHHMMSS, formatHHMM, formatHistoryDayHeader } from "@shared/utils/time";
 import type { Task } from "@domain/entities/Task";
+import type { Project } from "@domain/entities/Project";
 
 const QUICK_LABELS: Record<QuickFilter, string> = {
   today: "Hoje",
@@ -17,6 +18,58 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
   month: "Este mês",
   custom: "Personalizado",
 };
+
+function Timeline({ tasks }: { tasks: Task[]; projects: Project[] }) {
+  const parseMinutes = (isoString: string) => {
+    const d = new Date(isoString);
+    return d.getHours() * 60 + d.getMinutes();
+  };
+
+  const dayStart = 6 * 60;
+  const dayEnd = 22 * 60;
+  const dayRange = dayEnd - dayStart;
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-lg p-3 mb-3">
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">
+        Linha do tempo
+      </div>
+      <div className="relative h-8 bg-gray-950 rounded overflow-hidden">
+        {tasks.map((task) => {
+          if (!task.endTime) return null;
+          const start = parseMinutes(task.startTime);
+          const end = parseMinutes(task.endTime);
+          const left = Math.max(0, ((start - dayStart) / dayRange) * 100);
+          const width = Math.max(0.5, ((end - start) / dayRange) * 100);
+          const color = task.billable ? "#10b981" : "#64748b";
+          const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const endStr = new Date(task.endTime).toLocaleTimeString("pt-BR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          return (
+            <div
+              key={task.id}
+              className="absolute top-1 bottom-1 rounded-sm"
+              style={{ left: `${left}%`, width: `${width}%`, background: color }}
+              title={`${task.name ?? "(sem nome)"} · ${startStr}–${endStr}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between mt-1">
+        {[6, 8, 10, 12, 14, 16, 18, 20, 22].map((h) => (
+          <span key={h} className="text-[9px] font-mono text-gray-600">
+            {String(h).padStart(2, "0")}h
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function HistoryPage() {
   const { filters, groups, totals, searched, search, updateFilter, setQuick, remove, reload } =
@@ -38,20 +91,22 @@ export function HistoryPage() {
     void search({ ...filters, quick });
   }
 
+  const showTimeline = searched && groups.length === 1;
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filtros */}
       <div className="flex flex-col gap-3 p-4 border-b border-gray-700">
         {/* Filtros rápidos */}
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1.5 flex-wrap">
           {(["today", "7days", "30days", "month"] as QuickFilter[]).map((q) => (
             <button
               key={q}
               onClick={() => handleQuick(q)}
-              className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
                 filters.quick === q
-                  ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                  : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                  ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+                  : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
               }`}
             >
               {QUICK_LABELS[q]}
@@ -59,10 +114,10 @@ export function HistoryPage() {
           ))}
           <button
             onClick={() => setAdvancedOpen((o) => !o)}
-            className={`ml-auto px-3 py-1.5 text-xs rounded border transition-colors flex items-center gap-1 ${
+            className={`ml-auto px-3 py-1.5 text-xs rounded-full border transition-colors flex items-center gap-1 ${
               advancedOpen
                 ? "bg-gray-700 border-gray-600 text-gray-200"
-                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
             }`}
           >
             Avançado {advancedOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -166,14 +221,17 @@ export function HistoryPage() {
 
       {/* Totalizadores */}
       {searched && (
-        <div className="grid grid-cols-4 gap-px bg-gray-700 border-b border-gray-700 shrink-0">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
           {[
             { label: "Total", value: formatHHMMSS(totals.totalSeconds) },
             { label: "Billable", value: formatHHMMSS(totals.billableSeconds) },
             { label: "Non-billable", value: formatHHMMSS(totals.nonBillableSeconds) },
             { label: "Registros", value: String(totals.count) },
           ].map(({ label, value }) => (
-            <div key={label} className="flex flex-col items-center py-3 bg-gray-950">
+            <div
+              key={label}
+              className="bg-gray-900 border border-gray-800 rounded-lg p-3 flex flex-col items-center"
+            >
               <span className="text-xs text-gray-500">{label}</span>
               <span className="text-sm font-mono font-medium text-gray-200 mt-0.5">{value}</span>
             </div>
@@ -205,25 +263,46 @@ export function HistoryPage() {
               </span>
             </div>
 
+            {/* Timeline — apenas quando exibindo um único dia */}
+            {showTimeline && (
+              <div className="px-4 pt-3">
+                <Timeline tasks={group.tasks} projects={projects} />
+              </div>
+            )}
+
             {/* Tarefas do grupo */}
             {group.tasks.map((task) => {
               const project = projects.find((p) => p.id === task.projectId);
               const category = categories.find((c) => c.id === task.categoryId);
+              const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+              const endStr = task.endTime
+                ? new Date(task.endTime).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "—";
               return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group"
+                  className="grid grid-cols-[88px_1fr_auto_auto] items-center gap-2 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group"
                 >
-                  {/* Indicador billable */}
-                  <span title={task.billable ? "Billable" : "Non-billable"}>
-                    <DollarSign
-                      size={14}
-                      className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
+                  {/* Hora início com dot billable */}
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        task.billable ? "bg-emerald-500" : "bg-gray-600"
+                      }`}
                     />
-                  </span>
+                    <span className="text-xs font-mono text-gray-400 tabular-nums">
+                      {startStr}–{endStr}
+                    </span>
+                  </div>
 
                   {/* Dados */}
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0">
                     <p className="text-sm text-gray-100 truncate">{task.name ?? "(sem nome)"}</p>
                     {(project || category) && (
                       <p className="text-xs text-gray-500 truncate mt-0.5">

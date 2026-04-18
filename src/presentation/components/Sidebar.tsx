@@ -50,12 +50,15 @@ export function Sidebar({ current, onChange }: SidebarProps) {
             key={page}
             onClick={() => onChange(page)}
             title={label}
-            className={`w-full flex flex-col items-center gap-0.5 py-1.5 px-1 rounded-lg transition-colors ${
+            className={`relative w-full flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg transition-colors ${
               current === page
-                ? "bg-blue-600 text-white"
-                : "text-gray-500 hover:text-gray-200 hover:bg-gray-800"
+                ? "bg-blue-500/10 text-blue-400"
+                : "text-gray-500 hover:text-gray-200 hover:bg-gray-800/60"
             }`}
           >
+            {current === page && (
+              <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-500 rounded-r-full" />
+            )}
             {icon}
             <span className="text-[9px] font-medium leading-none truncate max-w-full">
               {short}

@@ -9,7 +9,7 @@ import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
-import { formatHHMMSS } from "@shared/utils/time";
+import { formatHHMMSS, todayISO } from "@shared/utils/time";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
@@ -28,6 +28,8 @@ import {
   type OverlaySetModePayload,
 } from "@shared/types/overlayEvents";
 import { SetupModal } from "@presentation/modals/SetupModal";
+import { CommandPalette } from "@presentation/components/CommandPalette";
+import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 
 interface UpdateInfo {
   version: string;
@@ -93,6 +95,38 @@ function MainContent({
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const config = useAppConfig();
+  const [cmdkOpen, setCmdkOpen] = useState(false);
+  const today = todayISO();
+  const { tasks: plannedTasks } = usePlannedTasksForDate(today);
+
+  // Ctrl+K opens command palette; Ctrl+1–7 navigates directly
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setCmdkOpen((v) => !v);
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        const pages: Page[] = [
+          "tasks",
+          "retroactive",
+          "planning",
+          "history",
+          "data",
+          "integrations",
+          "settings",
+        ];
+        const idx = parseInt(e.key) - 1;
+        if (idx >= 0 && idx < pages.length) {
+          e.preventDefault();
+          setPage(pages[idx]);
+        }
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [setPage]);
 
   // Live tray timer — atualiza tooltip do ícone da bandeja a cada segundo
   useEffect(() => {
@@ -188,15 +222,24 @@ function MainContent({
   const showPin = config.isLoaded && config.get("closeOnFocusLoss");
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-gray-100 overflow-hidden">
-      <TitleBar page={page} showPin={showPin} isPinned={isPinned} onTogglePin={onTogglePin} />
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <Sidebar current={page} onChange={setPage} />
-        <main className="flex-1 overflow-hidden">
-          <PageContent page={page} focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
-        </main>
+    <>
+      <div className="flex flex-col h-screen bg-gray-950 text-gray-100 overflow-hidden">
+        <TitleBar page={page} showPin={showPin} isPinned={isPinned} onTogglePin={onTogglePin} />
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          <Sidebar current={page} onChange={setPage} />
+          <main className="flex-1 overflow-hidden">
+            <PageContent page={page} focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
+          </main>
+        </div>
       </div>
-    </div>
+      <CommandPalette
+        open={cmdkOpen}
+        onClose={() => setCmdkOpen(false)}
+        onNavigate={setPage}
+        onStartTask={startTask}
+        plannedTasks={plannedTasks}
+      />
+    </>
   );
 }
 
