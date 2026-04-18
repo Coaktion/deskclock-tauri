@@ -15,8 +15,6 @@ import { todayISO, addDaysISO, parseDurationInput, formatHHMMSS } from "@shared/
 
 const repo = new TaskRepository();
 
-type DurationMode = "endtime" | "duration";
-
 const DAY_NAMES_PT = [
   "domingo",
   "segunda-feira",
@@ -75,6 +73,25 @@ function formatTimeRange(startISO: string, endISO: string | null): string {
   return `${s} – ${e}`;
 }
 
+/** Calcula duração em HH:MM entre dois horários; trata overnight automaticamente */
+function computeDurationHHMM(start: string, end: string): string {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff <= 0) diff += 1440;
+  const h = Math.floor(diff / 60);
+  const m = diff % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+/** Calcula hora fim HH:MM a partir de hora início e duração em segundos */
+function computeEndHHMM(start: string, durationSeconds: number): string {
+  const [sh, sm] = start.split(":").map(Number);
+  const totalMins = sh * 60 + sm + Math.round(durationSeconds / 60);
+  const endMins = ((totalMins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
+}
+
 interface TaskRowProps {
   task: Task;
   projects: Project[];
@@ -124,6 +141,8 @@ function TaskRow({ task, projects, categories, onEdit, onDelete }: TaskRowProps)
   );
 }
 
+const DEFAULT_DURATION_SECS = 3600; // 1h para novas tarefas encadeadas
+
 export function RetroactivePage() {
   const today = todayISO();
   const { projects } = useProjects();
@@ -140,8 +159,7 @@ export function RetroactivePage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [startTime, setStartTime] = useState(nowHHMM);
-  const [mode, setMode] = useState<DurationMode>("endtime");
-  const [endTime, setEndTime] = useState(nowHHMM);
+  const [endTime, setEndTime] = useState(() => computeEndHHMM(nowHHMM(), DEFAULT_DURATION_SECS));
   const [durationInput, setDurationInput] = useState("01:00");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -150,8 +168,6 @@ export function RetroactivePage() {
   const nameRef = useRef<HTMLInputElement>(null);
 
   const loadTasks = useCallback(async () => {
-    // Usa horário local para os limites do dia — consistente com buildISO,
-    // evitando que tasks criadas com offset de fuso fiquem fora do range UTC.
     const startBound = new Date(selectedDate + "T00:00:00").toISOString();
     const endBound = new Date(selectedDate + "T23:59:59.999").toISOString();
     const all = await repo.findByDateRange(startBound, endBound);
@@ -163,29 +179,45 @@ export function RetroactivePage() {
     loadTasks();
   }, [loadTasks]);
 
+  function handleStartChange(val: string) {
+    setStartTime(val);
+    setDurationInput(computeDurationHHMM(val, endTime));
+    setError("");
+  }
+
+  function handleEndChange(val: string) {
+    setEndTime(val);
+    setDurationInput(computeDurationHHMM(startTime, val));
+    setError("");
+  }
+
+  function handleDurationBlur() {
+    const parsed = parseDurationInput(durationInput);
+    if (parsed && parsed > 0) {
+      const newEnd = computeEndHHMM(startTime, parsed);
+      setEndTime(newEnd);
+      // Normaliza o campo para HH:MM
+      const h = Math.floor(parsed / 3600);
+      const m = Math.floor((parsed % 3600) / 60);
+      setDurationInput(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+    }
+  }
+
   async function handleAdd() {
     setError("");
     const startISO = buildISO(selectedDate, startTime);
-    let endISO: string;
-    let durationSeconds: number;
+    let endISO = buildISO(selectedDate, endTime);
+    // Overnight: hora fim anterior à hora início
+    if (new Date(endISO) <= new Date(startISO)) {
+      endISO = buildISO(addDaysISO(selectedDate, 1), endTime);
+    }
+    const durationSeconds = Math.round(
+      (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
+    );
 
-    if (mode === "endtime") {
-      endISO = buildISO(selectedDate, endTime);
-      // Só avança para o dia seguinte se hora fim for estritamente anterior à hora início
-      if (new Date(endISO) < new Date(startISO)) {
-        endISO = buildISO(addDaysISO(selectedDate, 1), endTime);
-      }
-      durationSeconds = Math.round(
-        (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
-      );
-    } else {
-      const parsed = parseDurationInput(durationInput);
-      if (parsed === null || parsed <= 0) {
-        setError("Formato inválido. Use HH:MM:SS, MM:SS ou número de minutos.");
-        return;
-      }
-      durationSeconds = parsed;
-      endISO = new Date(new Date(startISO).getTime() + durationSeconds * 1000).toISOString();
+    if (durationSeconds <= 0) {
+      setError("A duração deve ser maior que zero.");
+      return;
     }
 
     const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
@@ -207,12 +239,15 @@ export function RetroactivePage() {
     );
     setSaving(false);
 
-    // Encadeia: próximo início = fim anterior
+    // Encadeia: próximo início = fim anterior, mantém duração anterior
     const nextStart = isoToHHMM(endISO);
+    const nextEnd = computeEndHHMM(nextStart, durationSeconds);
+    const h = Math.floor(durationSeconds / 3600);
+    const m = Math.floor((durationSeconds % 3600) / 60);
     setName("");
     setStartTime(nextStart);
-    setEndTime(nextStart);
-    setDurationInput("01:00");
+    setEndTime(nextEnd);
+    setDurationInput(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     nameRef.current?.focus();
     await loadTasks();
   }
@@ -263,7 +298,7 @@ export function RetroactivePage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) handleAdd();
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) void handleAdd();
           }}
           placeholder="Nome da tarefa (opcional)"
           className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
@@ -309,50 +344,39 @@ export function RetroactivePage() {
           </button>
         </div>
 
-        {/* Tempos */}
+        {/* Início, Fim, Duração */}
         <div className="flex gap-2 items-center">
-          <span className="text-xs text-gray-500 w-10 shrink-0">Início</span>
+          <span className="text-xs text-gray-500 shrink-0">Início</span>
           <input
             type="time"
             value={startTime}
-            onChange={(e) => { setStartTime(e.target.value); setError(""); }}
-            onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+            onChange={(e) => handleStartChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleAdd(); }}
             className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
           />
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => setMode("endtime")}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${mode === "endtime" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-gray-200"}`}
-            >
-              Hora fim
-            </button>
-            <button
-              onClick={() => setMode("duration")}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${mode === "duration" ? "bg-blue-600 text-white" : "bg-gray-800 text-gray-400 hover:text-gray-200"}`}
-            >
-              Duração
-            </button>
-          </div>
-          {mode === "endtime" ? (
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => { setEndTime(e.target.value); setError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
-            />
-          ) : (
-            <input
-              type="text"
-              value={durationInput}
-              onChange={(e) => { setDurationInput(e.target.value); setError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-              placeholder="HH:MM ou minutos"
-              className="w-36 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-          )}
+          <span className="text-xs text-gray-600 shrink-0">→</span>
+          <span className="text-xs text-gray-500 shrink-0">Fim</span>
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => handleEndChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") void handleAdd(); }}
+            className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-100 focus:outline-none focus:border-blue-500"
+          />
+          <input
+            type="text"
+            value={durationInput}
+            onChange={(e) => setDurationInput(e.target.value)}
+            onBlur={handleDurationBlur}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { handleDurationBlur(); void handleAdd(); }
+            }}
+            placeholder="HH:MM"
+            title="Duração — edite para ajustar hora fim"
+            className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
+          />
           <button
-            onClick={handleAdd}
+            onClick={() => void handleAdd()}
             disabled={saving}
             className="ml-auto px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors disabled:opacity-50"
           >
@@ -363,7 +387,7 @@ export function RetroactivePage() {
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
 
-      {/* Lista de tarefas — pr-2 evita que a scrollbar sobreponha os botões */}
+      {/* Lista de tarefas */}
       <div className="flex-1 overflow-y-auto pr-2">
         {tasks.length === 0 ? (
           <p className="text-center text-gray-600 text-sm py-10">Nenhuma entrada para este dia</p>
