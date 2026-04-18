@@ -79,6 +79,7 @@ export function Autocomplete({
     } else if (e.key === "Escape") {
       if (open) {
         e.stopPropagation();
+        e.preventDefault(); // sinaliza que o ESC foi consumido — impede window listeners de fechar o modal
         setOpen(false);
       }
     }

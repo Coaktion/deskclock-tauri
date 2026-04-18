@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
@@ -57,6 +57,16 @@ export function EditPlannedTaskModal({
   const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
   const [newActionValue, setNewActionValue] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // window listener cobre casos onde o foco está fora do backdrop (portais, body).
+  // defaultPrevented = true significa que o Autocomplete consumiu o ESC para fechar o dropdown.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape" && !e.defaultPrevented) onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   function toggleDay(day: number) {
     setRecurringDays((prev) =>
