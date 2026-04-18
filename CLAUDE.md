@@ -576,7 +576,8 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | 17/04/2026 | `mainWindowPosition` persistida no Config (SQLite) | Salva a posição da janela principal via debounce em `tauri://move`; restaurada no próximo startup antes de chamar `appWindow.show()`. Fallback para `positionNearTaskbar` se não há posição salva |
 | 17/04/2026 | `get_display_server` command detecta Wayland vs X11 | Lê `WAYLAND_DISPLAY` env var. Exibe aviso na UI de atalhos quando em Wayland (onde `XGrabKey` não funciona). `update_shortcuts` retorna `Vec<String>` com os atalhos que falharam ao registrar |
 | 17/04/2026 | Tela de erro ao falhar carregamento das configurações | `ConfigContext` captura exceção no load e expõe `loadError: string \| null`. `AppInner` detecta após `isLoaded` e renderiza tela com código do erro e botão de reinicialização via `relaunch_app` |
+| 18/04/2026 | `setMinSize`/`setMaxSize` para travar resize dos overlays (não `setResizable`) | `setResizable(false)` quebra entrega de eventos de mouse no GTK em janelas pequenas (52×52). `setMinSize(w,h)` + `setMaxSize(w,h)` define os mesmos WM hints sem alterar o flag `resizable`, preservando o comportamento de cliques. Para redimensionamento programático: zera min/max → setSize → reloca min/max. |
 
 ---
 
-*Última atualização: 17/04/2026*
+*Última atualização: 18/04/2026*

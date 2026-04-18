@@ -59,11 +59,16 @@ function OverlayAppInner() {
     modeRef.current = mode;
   }, [mode]);
 
-  // Centraliza todos os setSize: marca flag para ignorar o resize event derivado
+  // Centraliza todos os setSize: limpa constraints, redimensiona e trava via min/max.
+  // Mantém resizable:true (evita quebra de eventos de mouse no GTK/Linux em janelas pequenas).
   const programmaticSetSize = useCallback(async (width: number, height: number) => {
     intendedSizeRef.current = { width, height };
     isProgrammaticResizeRef.current = true;
+    await appWindow.setMinSize(null);
+    await appWindow.setMaxSize(null);
     await appWindow.setSize(new LogicalSize(width, height));
+    await appWindow.setMinSize(new LogicalSize(width, height));
+    await appWindow.setMaxSize(new LogicalSize(width, height));
     setTimeout(() => { isProgrammaticResizeRef.current = false; }, 80);
   }, []);
 
