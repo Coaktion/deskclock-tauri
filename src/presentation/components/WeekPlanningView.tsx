@@ -235,7 +235,6 @@ export function WeekPlanningView() {
                   dateISO={day}
                   projects={projects}
                   categories={categories}
-                  showDateField
                   playDisabled={!!runningTask}
                   onPlay={handlePlay}
                   onUpdate={update}
