@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
+import { X, Plus, ExternalLink, FolderOpen, Trash2, DollarSign } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -172,13 +172,15 @@ export function EditPlannedTaskModal({
               <button
                 type="button"
                 onClick={() => setBillable((b) => !b)}
-                className={`px-3 py-2 text-sm rounded-lg border transition-colors shrink-0 ${
+                title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors shrink-0 ${
                   billable
                     ? "bg-green-900/40 border-green-700 text-green-400"
                     : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
                 }`}
               >
-                {billable ? "Billable" : "N/Billable"}
+                <DollarSign size={14} />
+                {billable ? "Billable" : "Non-billable"}
               </button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus } from "lucide-react";
+import { Plus, DollarSign } from "lucide-react";
 import { todayISO } from "@shared/utils/time";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
@@ -163,13 +163,14 @@ export function PlannedTaskForm({
         <button
           type="button"
           onClick={() => set("billable", !form.billable)}
-          className={`px-2.5 py-1.5 text-xs rounded border transition-colors ${
+          title={form.billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+          className={`flex items-center px-2.5 py-1.5 rounded border transition-colors ${
             form.billable
-              ? "bg-green-900/40 border-green-700 text-green-400"
-              : "bg-gray-800 border-gray-700 text-gray-400"
+              ? "border-green-700 text-green-400"
+              : "border-gray-700 text-gray-500 hover:text-gray-400"
           }`}
         >
-          {form.billable ? "Bill." : "N/Bill."}
+          <DollarSign size={13} />
         </button>
       </div>
 

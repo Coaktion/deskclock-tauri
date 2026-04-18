@@ -297,15 +297,16 @@ export function RetroactivePage() {
             placeholder="Categoria"
             className="flex-1"
           />
-          <label className="flex items-center gap-1.5 text-xs text-gray-400 cursor-pointer shrink-0">
-            <input
-              type="checkbox"
-              checked={billable}
-              onChange={(e) => setBillable(e.target.checked)}
-              className="accent-blue-500"
-            />
-            Billable
-          </label>
+          <button
+            type="button"
+            onClick={() => setBillable((b) => !b)}
+            title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+            className={`flex items-center gap-1 shrink-0 transition-colors ${
+              billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+            }`}
+          >
+            <DollarSign size={14} />
+          </button>
         </div>
 
         {/* Tempos */}

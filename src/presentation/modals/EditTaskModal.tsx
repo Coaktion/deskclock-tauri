@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X } from "lucide-react";
+import { X, DollarSign } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -160,15 +160,19 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
           </div>
 
           {/* Billable */}
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={billable}
-              onChange={(e) => setBillable(e.target.checked)}
-              className="accent-blue-500"
-            />
-            Billable
-          </label>
+          <button
+            type="button"
+            onClick={() => setBillable((b) => !b)}
+            title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
+              billable
+                ? "bg-green-900/40 border-green-700 text-green-400"
+                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
+            }`}
+          >
+            <DollarSign size={14} />
+            {billable ? "Billable" : "Non-billable"}
+          </button>
 
           {/* Data */}
           <DatePickerInput value={startDate} onChange={setStartDate} className="w-full" />
