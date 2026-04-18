@@ -27,6 +27,7 @@ import {
   type WelcomeClosedPayload,
   type OverlaySetModePayload,
 } from "@shared/types/overlayEvents";
+import { SetupModal } from "@presentation/modals/SetupModal";
 
 interface UpdateInfo {
   version: string;
@@ -204,9 +205,17 @@ function AppInner() {
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
   const [focusTaskEdit, setFocusTaskEdit] = useState(false);
+  const [setupDone, setSetupDone] = useState(false);
   const welcomeActiveRef = useRef(false);
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
+
+  // Sincroniza setupDone com o config ao carregar
+  useEffect(() => {
+    if (config.isLoaded && !config.loadError) {
+      setSetupDone(config.get("setupCompleted"));
+    }
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Mantém ref sincronizada com state (evita closure stale nos listeners)
   useEffect(() => {
@@ -279,6 +288,10 @@ function AppInner() {
   useEffect(() => {
     if (!config.isLoaded) return;
     if (config.loadError) {
+      positionNearTaskbar(appWindow).catch(() => {}).finally(() => appWindow.show());
+      return;
+    }
+    if (!config.get("setupCompleted")) {
       positionNearTaskbar(appWindow).catch(() => {}).finally(() => appWindow.show());
       return;
     }
@@ -389,6 +402,10 @@ function AppInner() {
     }, 10_000);
     return () => clearTimeout(timer);
   }, []);
+
+  if (config.isLoaded && !config.loadError && !setupDone) {
+    return <SetupModal config={config} onComplete={() => setSetupDone(true)} />;
+  }
 
   if (config.isLoaded && config.loadError) {
     return (

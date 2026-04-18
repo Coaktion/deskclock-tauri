@@ -9,6 +9,7 @@ export interface OverlayPosition {
 
 export interface AppConfig {
   // Geral
+  setupCompleted: boolean;
   userName: string;
   showWelcomeMessage: boolean;
   startOnBoot: boolean;
@@ -47,6 +48,7 @@ export interface AppConfig {
 }
 
 const DEFAULTS: AppConfig = {
+  setupCompleted: false,
   userName: "",
   showWelcomeMessage: true,
   startOnBoot: false,
