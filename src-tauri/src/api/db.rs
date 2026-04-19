@@ -1,5 +1,5 @@
 use crate::api::models::{CategoryDto, ProjectDto, TaskDto, TodayTotals};
-use chrono::{DateTime, Local, SecondsFormat, TimeZone, Utc};
+use chrono::{DateTime, Local, NaiveDate, SecondsFormat, TimeZone, Utc};
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 use uuid::Uuid;
@@ -87,6 +87,12 @@ impl Db {
                 t.id,
             ],
         )?;
+        Ok(())
+    }
+
+    pub fn delete_task(&self, id: &str) -> rusqlite::Result<()> {
+        self.conn
+            .execute("DELETE FROM tasks WHERE id = ?1", params![id])?;
         Ok(())
     }
 
@@ -359,5 +365,203 @@ impl DateLocalParts for DateTime<Local> {
     fn day_naive(&self) -> u32 {
         use chrono::Datelike;
         self.day()
+    }
+}
+
+// ================================================================
+// PlannedTask
+// ================================================================
+
+#[derive(Debug, Clone)]
+pub struct PlannedTaskRecord {
+    pub id: String,
+    pub name: String,
+    pub project_id: Option<String>,
+    pub category_id: Option<String>,
+    pub billable: bool,
+    pub schedule_type: String,
+    pub schedule_date: Option<String>,
+    pub recurring_days: Option<String>, // JSON array string
+    pub period_start: Option<String>,
+    pub period_end: Option<String>,
+    pub completed_dates: String, // JSON array string, default '[]'
+    pub actions: String,         // JSON array string, default '[]'
+    pub sort_order: i64,
+    pub created_at: String,
+}
+
+const PLANNED_SELECT: &str =
+    "SELECT id, name, project_id, category_id, billable, schedule_type, schedule_date, \
+     recurring_days, period_start, period_end, completed_dates, actions, sort_order, created_at \
+     FROM planned_tasks";
+
+fn row_to_planned_task(r: &Row<'_>) -> rusqlite::Result<PlannedTaskRecord> {
+    let billable: i64 = r.get(4)?;
+    Ok(PlannedTaskRecord {
+        id: r.get(0)?,
+        name: r.get(1)?,
+        project_id: r.get(2)?,
+        category_id: r.get(3)?,
+        billable: billable == 1,
+        schedule_type: r.get(5)?,
+        schedule_date: r.get(6)?,
+        recurring_days: r.get(7)?,
+        period_start: r.get(8)?,
+        period_end: r.get(9)?,
+        completed_dates: r.get(10)?,
+        actions: r.get(11)?,
+        sort_order: r.get(12)?,
+        created_at: r.get(13)?,
+    })
+}
+
+impl Db {
+    // ---------------- PlannedTask ----------------
+
+    pub fn list_planned_tasks(&self) -> rusqlite::Result<Vec<PlannedTaskRecord>> {
+        let sql = format!("{} ORDER BY sort_order ASC, created_at ASC", PLANNED_SELECT);
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt.query_map([], row_to_planned_task)?;
+        rows.collect()
+    }
+
+    pub fn list_planned_tasks_for_date(&self, date: &str) -> rusqlite::Result<Vec<PlannedTaskRecord>> {
+        let weekday = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+            .map(|d| {
+                use chrono::Datelike;
+                d.weekday().num_days_from_sunday()
+            })
+            .unwrap_or(7u32);
+
+        let all = self.list_planned_tasks()?;
+        let filtered = all
+            .into_iter()
+            .filter(|t| match t.schedule_type.as_str() {
+                "specific_date" => t.schedule_date.as_deref() == Some(date),
+                "period" => {
+                    let start = t.period_start.as_deref().unwrap_or("");
+                    let end = t.period_end.as_deref().unwrap_or("");
+                    !start.is_empty() && !end.is_empty() && date >= start && date <= end
+                }
+                "recurring" => {
+                    if let Some(ref days_json) = t.recurring_days {
+                        if let Ok(days) = serde_json::from_str::<Vec<u32>>(days_json) {
+                            return days.contains(&weekday);
+                        }
+                    }
+                    false
+                }
+                _ => false,
+            })
+            .collect();
+        Ok(filtered)
+    }
+
+    pub fn find_planned_task(&self, id: &str) -> rusqlite::Result<Option<PlannedTaskRecord>> {
+        let sql = format!("{} WHERE id = ?1", PLANNED_SELECT);
+        self.conn
+            .query_row(&sql, params![id], row_to_planned_task)
+            .optional()
+    }
+
+    pub fn insert_planned_task(&self, t: &PlannedTaskRecord) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "INSERT INTO planned_tasks \
+             (id, name, project_id, category_id, billable, schedule_type, schedule_date, \
+              recurring_days, period_start, period_end, completed_dates, actions, sort_order, created_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            params![
+                t.id,
+                t.name,
+                t.project_id,
+                t.category_id,
+                t.billable as i64,
+                t.schedule_type,
+                t.schedule_date,
+                t.recurring_days,
+                t.period_start,
+                t.period_end,
+                t.completed_dates,
+                t.actions,
+                t.sort_order,
+                t.created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_planned_task(&self, t: &PlannedTaskRecord) -> rusqlite::Result<()> {
+        self.conn.execute(
+            "UPDATE planned_tasks \
+             SET name = ?1, project_id = ?2, category_id = ?3, billable = ?4, \
+                 schedule_type = ?5, schedule_date = ?6, recurring_days = ?7, \
+                 period_start = ?8, period_end = ?9, completed_dates = ?10, \
+                 actions = ?11, sort_order = ?12 \
+             WHERE id = ?13",
+            params![
+                t.name,
+                t.project_id,
+                t.category_id,
+                t.billable as i64,
+                t.schedule_type,
+                t.schedule_date,
+                t.recurring_days,
+                t.period_start,
+                t.period_end,
+                t.completed_dates,
+                t.actions,
+                t.sort_order,
+                t.id,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_planned_task(&self, id: &str) -> rusqlite::Result<()> {
+        self.conn
+            .execute("DELETE FROM planned_tasks WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn max_planned_task_sort_order(&self) -> rusqlite::Result<i64> {
+        self.conn.query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) FROM planned_tasks",
+            [],
+            |r| r.get::<_, i64>(0),
+        )
+    }
+
+    pub fn complete_planned_task(&self, id: &str, date: &str) -> rusqlite::Result<bool> {
+        let task = match self.find_planned_task(id)? {
+            Some(t) => t,
+            None => return Ok(false),
+        };
+        let mut dates: Vec<String> =
+            serde_json::from_str(&task.completed_dates).unwrap_or_default();
+        if !dates.contains(&date.to_string()) {
+            dates.push(date.to_string());
+            let json = serde_json::to_string(&dates).unwrap_or_else(|_| "[]".to_string());
+            self.conn.execute(
+                "UPDATE planned_tasks SET completed_dates = ?1 WHERE id = ?2",
+                params![json, id],
+            )?;
+        }
+        Ok(true)
+    }
+
+    pub fn uncomplete_planned_task(&self, id: &str, date: &str) -> rusqlite::Result<bool> {
+        let task = match self.find_planned_task(id)? {
+            Some(t) => t,
+            None => return Ok(false),
+        };
+        let mut dates: Vec<String> =
+            serde_json::from_str(&task.completed_dates).unwrap_or_default();
+        dates.retain(|d| d != date);
+        let json = serde_json::to_string(&dates).unwrap_or_else(|_| "[]".to_string());
+        self.conn.execute(
+            "UPDATE planned_tasks SET completed_dates = ?1 WHERE id = ?2",
+            params![json, id],
+        )?;
+        Ok(true)
     }
 }

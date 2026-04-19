@@ -296,8 +296,7 @@ src/
 |---|---|---|
 | Iniciar na inicialização do computador | toggle | Registra o app no startup do SO |
 | Timer ao vivo no ícone da bandeja | toggle | Mostra timer no system tray icon |
-| Mostrar mensagem de boas-vindas | toggle | Exibe Welcome Overlay ao abrir |
-| Como quer ser chamado? | text input | Nome exibido na mensagem de boas-vindas |
+| Abrir acesso rápido ao iniciar | toggle | Exibe o Command Palette ao abrir o app (padrão: ativo). Use Ctrl+K para abrí-lo a qualquer momento. |
 | Fechar ao perder foco | toggle | Janela principal fecha ao perder o foco (padrão: desativado); Pin/Unpin na title bar suspende temporariamente |
 | Descartar tarefas com menos de 1 minuto | toggle | Cancela automaticamente tarefas paradas em menos de 60 s (padrão: desativado) |
 
@@ -506,10 +505,11 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | 3 — Planejamento | ✅ concluída | PlannedTask + Tela de Planejamento (hoje + semana). Planning Overlay + Compact Overlay. |
 | 4 — Histórico | ✅ concluída | Tela de Histórico com filtros e agrupamento por dia (local timezone). |
 | 5 — Export | ✅ concluída | Perfis de exportação + CSV/XLSX/JSON + seleção de colunas. |
-| 6 — Overlays completos | ✅ concluída | Welcome Overlay. Comportamentos de arrastar, snap-to-grid, persistência de posição, opacidade. |
+| 6 — Overlays completos | ✅ concluída | Comportamentos de arrastar, snap-to-grid, persistência de posição, opacidade. Welcome Overlay removido — substituído pelo Command Palette. |
 | 7 — Configurações | ✅ concluída | Tela de Configurações. Atalhos globais. Acessibilidade (tamanho de fonte). Tray icon. Autostart. Temas (Azul, Verde, Escuro, Claro). |
 | 8 — Integrações | ✅ concluída | ✅ Modo de envio (UI + ITaskSender). ✅ Tela de Integrações (conector Google unificado). ✅ Google Sheets OAuth + sender + auto-sync ao concluir tarefa. ✅ Google Calendar: importação com editor inline, recorrência via RRULE, filtro de eventos não relevantes. |
 | 9 — Polish | ✅ concluída | ✅ Lançamento retroativo. ✅ Feedback link. ✅ Ações de tarefa (open URL/file). ✅ Build multiplataforma + CI/CD. ✅ README final. |
+| 10 — API Local + Command Palette | ✅ concluída | ✅ API REST local (axum + utoipa) com Swagger UI. ✅ CRUD de tarefas planejadas via API. ✅ Command Palette (Ctrl+K) substituindo Welcome Overlay. ✅ Busca fuzzy + atalhos Ctrl+1–7. ✅ Startup: CP + compact overlay simultâneos. |
 
 ---
 
@@ -524,6 +524,8 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | Execution Overlay | Overlay que mostra o timer da tarefa em execução. |
 | Planning Overlay | Overlay que lista tarefas planejadas para hoje. |
 | Compact Overlay | Versão minimizada do Planning Overlay (apenas ícone + badge). |
+| Command Palette | Painel flutuante de acesso rápido (Ctrl+K): iniciar tarefa, navegar, ver tarefas planejadas do dia. Substituiu o Welcome Overlay. |
+| API Local | Servidor HTTP embutido (axum, porta 27420) que expõe a API REST do DeskClock para integrações externas. |
 | Modo de envio | Estado da UI onde o usuário seleciona tarefas para enviar a uma integração externa. |
 | Ação (PlannedTask) | Automação executada ao iniciar uma tarefa planejada (abrir URL, abrir arquivo). |
 | Perfil de exportação | Configuração salva que define formato, colunas e opções de um export. |
@@ -577,7 +579,13 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | 17/04/2026 | `get_display_server` command detecta Wayland vs X11 | Lê `WAYLAND_DISPLAY` env var. Exibe aviso na UI de atalhos quando em Wayland (onde `XGrabKey` não funciona). `update_shortcuts` retorna `Vec<String>` com os atalhos que falharam ao registrar |
 | 17/04/2026 | Tela de erro ao falhar carregamento das configurações | `ConfigContext` captura exceção no load e expõe `loadError: string \| null`. `AppInner` detecta após `isLoaded` e renderiza tela com código do erro e botão de reinicialização via `relaunch_app` |
 | 18/04/2026 | `setMinSize`/`setMaxSize` para travar resize dos overlays (não `setResizable`) | `setResizable(false)` quebra entrega de eventos de mouse no GTK em janelas pequenas (52×52). `setMinSize(w,h)` + `setMaxSize(w,h)` define os mesmos WM hints sem alterar o flag `resizable`, preservando o comportamento de cliques. Para redimensionamento programático: zera min/max → setSize → reloca min/max. |
+| 18/04/2026 | Welcome Overlay substituído por Command Palette (`Ctrl+K`) | CP unifica acesso rápido (iniciar tarefa, navegar, tarefas planejadas do dia) sem ocupar espaço permanente na UI. Busca fuzzy com score + highlight. |
+| 18/04/2026 | Startup: mostrar overlay antes do Command Palette | `overlay.show()` rouba foco do CP se executado depois; invertendo a ordem (overlay primeiro, CP por último com `setFocus()`) o CP mantém foco e não fecha pelo listener `tauri://blur`. |
+| 18/04/2026 | `null` body em axum rejeitado com `Option<Json<T>>` — fix via `Bytes` + helper | axum tenta desserializar `null` como o struct e falha. Solução: extrator `Bytes` + `parse_optional_body()` que trata corpo vazio ou `null` como `None`. Aplicado em `post_stop` e `post_toggle`. |
+| 18/04/2026 | Axum 0.8 usa `{param}` em vez de `:param` nas rotas | Quebra em runtime com panic; corrigido trocando `:id` por `{id}` e `:date` por `{date}` em `routes.rs`. |
+| 18/04/2026 | CRUD de tarefas planejadas na API local | 7 endpoints: lista (com filtro por data + regras de recorrência em Rust), get, create, update (PUT), delete, marcar/desmarcar conclusão. `completed_dates`, `recurring_days` e `actions` são JSON strings no SQLite serializados/desserializados na camada API. |
+| 19/04/2026 | `opener:allow-open-url` requer scope explícito para HTTP | Sem scope, apenas HTTPS é permitido. `http://localhost` (Swagger UI) exige objeto `allow` com `{ "url": "http://localhost:*/**" }` em `capabilities/default.json`. |
 
 ---
 
-*Última atualização: 18/04/2026*
+*Última atualização: 19/04/2026*

@@ -1,11 +1,13 @@
-use crate::api::db::{new_uuid, now_iso_utc, task_record_to_dto, Db, TaskRecord};
+use crate::api::db::{new_uuid, now_iso_utc, task_record_to_dto, Db, PlannedTaskRecord, TaskRecord};
 use crate::api::models::{
-    CategoryDto, ErrorResponse, ProjectDto, StartTaskRequest, StatusResponse, StopTaskRequest,
-    TaskDto, ToggleTaskRequest,
+    CategoryDto, CreatePlannedTaskRequest, ErrorResponse, PlannedTaskActionDto,
+    PlannedTaskCompleteRequest, PlannedTaskDto, ProjectDto, StartTaskRequest, StatusResponse,
+    StopTaskRequest, TaskDto, ToggleTaskRequest, UpdatePlannedTaskRequest,
 };
 use crate::api::state::ApiState;
 use axum::{
-    extract::State,
+    body::Bytes,
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
@@ -56,6 +58,16 @@ impl IntoResponse for ApiError {
 }
 
 type ApiResult<T> = Result<T, ApiError>;
+
+// Aceita corpo ausente, vazio ou `null` — todos tratados como None.
+fn parse_optional_body<T: serde::de::DeserializeOwned>(body: &Bytes) -> ApiResult<Option<T>> {
+    if body.is_empty() || body.as_ref() == b"null" {
+        return Ok(None);
+    }
+    serde_json::from_slice(body)
+        .map(Some)
+        .map_err(|e| ApiError::new(StatusCode::BAD_REQUEST, format!("JSON inválido: {e}")))
+}
 
 fn emit_running_task_changed(state: &ApiState, task: Option<&TaskDto>) {
     // O frontend tem filtros de `source` assimétricos: o overlay ignora
@@ -123,7 +135,16 @@ pub async fn get_status(State(state): State<Arc<ApiState>>) -> ApiResult<Json<St
     post,
     path = "/tasks/start",
     tag = "tasks",
-    request_body = StartTaskRequest,
+    request_body(
+        content = StartTaskRequest,
+        description = "Dados da nova tarefa. Todos os campos são opcionais exceto `billable`.",
+        example = json!({
+            "name": "Reunião de planejamento",
+            "projectName": "Meu Projeto",
+            "categoryName": "Reuniões",
+            "billable": true
+        })
+    ),
     responses(
         (status = 201, description = "Tarefa iniciada", body = TaskDto),
         (status = 409, description = "Projeto/categoria não encontrado", body = ErrorResponse)
@@ -233,7 +254,11 @@ pub async fn post_resume(State(state): State<Arc<ApiState>>) -> ApiResult<Json<T
     post,
     path = "/tasks/stop",
     tag = "tasks",
-    request_body = StopTaskRequest,
+    request_body(
+        content = StopTaskRequest,
+        description = "Opcional — corpo pode ser omitido. `completed` define se a tarefa foi concluída (padrão: true).",
+        example = json!({ "completed": true })
+    ),
     responses(
         (status = 200, description = "Tarefa parada", body = TaskDto),
         (status = 404, description = "Nenhuma tarefa ativa", body = ErrorResponse)
@@ -241,10 +266,11 @@ pub async fn post_resume(State(state): State<Arc<ApiState>>) -> ApiResult<Json<T
 )]
 pub async fn post_stop(
     State(state): State<Arc<ApiState>>,
-    body: Option<Json<StopTaskRequest>>,
+    body: Bytes,
 ) -> ApiResult<Json<TaskDto>> {
     let _guard = state.write_lock.lock().unwrap();
-    let _completed = body.map(|Json(b)| b.completed).unwrap_or(true);
+    let req: Option<StopTaskRequest> = parse_optional_body(&body)?;
+    let _completed = req.map(|r| r.completed).unwrap_or(true);
     let db = state.open_db()?;
     let active = db
         .active_task()?
@@ -268,14 +294,24 @@ pub async fn post_stop(
     post,
     path = "/tasks/toggle",
     tag = "tasks",
-    request_body = Option<ToggleTaskRequest>,
+    request_body(
+        content = ToggleTaskRequest,
+        description = "Opcional — pode ser omitido ou enviado como `{}`. \
+            Se houver tarefa em execução: pausa. Se estiver pausada: retoma. \
+            Se não houver tarefa ativa: inicia nova com os dados fornecidos.",
+        example = json!({
+            "name": "Revisão de código",
+            "projectName": "Meu Projeto",
+            "billable": true
+        })
+    ),
     responses(
         (status = 200, description = "Novo estado da tarefa", body = TaskDto)
     )
 )]
 pub async fn post_toggle(
     State(state): State<Arc<ApiState>>,
-    body: Option<Json<ToggleTaskRequest>>,
+    body: Bytes,
 ) -> ApiResult<Json<TaskDto>> {
     let db = state.open_db()?;
     let active = db.active_task()?;
@@ -291,14 +327,7 @@ pub async fn post_toggle(
             Ok(res)
         }
         _ => {
-            let req = body.map(|Json(b)| b).unwrap_or(ToggleTaskRequest {
-                name: None,
-                project_id: None,
-                project_name: None,
-                category_id: None,
-                category_name: None,
-                billable: true,
-            });
+            let req = parse_optional_body::<ToggleTaskRequest>(&body)?.unwrap_or_default();
             let start_req = StartTaskRequest {
                 name: req.name,
                 project_id: req.project_id,
@@ -311,6 +340,28 @@ pub async fn post_toggle(
             Ok(dto)
         }
     }
+}
+
+// ---------------- POST /tasks/cancel ----------------
+
+#[utoipa::path(
+    post,
+    path = "/tasks/cancel",
+    tag = "tasks",
+    responses(
+        (status = 204, description = "Tarefa cancelada e removida"),
+        (status = 404, description = "Nenhuma tarefa ativa", body = ErrorResponse)
+    )
+)]
+pub async fn post_cancel(State(state): State<Arc<ApiState>>) -> ApiResult<StatusCode> {
+    let _guard = state.write_lock.lock().unwrap();
+    let db = state.open_db()?;
+    let active = db
+        .active_task()?
+        .ok_or_else(|| ApiError::not_found("Nenhuma tarefa ativa"))?;
+    db.delete_task(&active.id)?;
+    emit_running_task_changed(&state, None);
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ---------------- GET /projects ----------------
@@ -395,4 +446,350 @@ fn resolve_category(
         };
     }
     Ok(None)
+}
+
+// ================================================================
+// PlannedTask helpers
+// ================================================================
+
+fn planned_task_record_to_dto(
+    task: &PlannedTaskRecord,
+    project_name: Option<String>,
+    category_name: Option<String>,
+) -> PlannedTaskDto {
+    PlannedTaskDto {
+        id: task.id.clone(),
+        name: task.name.clone(),
+        project_id: task.project_id.clone(),
+        project_name,
+        category_id: task.category_id.clone(),
+        category_name,
+        billable: task.billable,
+        schedule_type: task.schedule_type.clone(),
+        schedule_date: task.schedule_date.clone(),
+        recurring_days: task
+            .recurring_days
+            .as_ref()
+            .and_then(|s| serde_json::from_str(s).ok()),
+        period_start: task.period_start.clone(),
+        period_end: task.period_end.clone(),
+        completed_dates: serde_json::from_str(&task.completed_dates).unwrap_or_default(),
+        actions: serde_json::from_str::<Vec<PlannedTaskActionDto>>(&task.actions)
+            .unwrap_or_default(),
+        sort_order: task.sort_order,
+        created_at: task.created_at.clone(),
+    }
+}
+
+fn build_planned_task_dto(db: &Db, task: &PlannedTaskRecord) -> ApiResult<PlannedTaskDto> {
+    let project_name = match &task.project_id {
+        Some(id) => db.find_project_name(id)?,
+        None => None,
+    };
+    let category_name = match &task.category_id {
+        Some(id) => db.find_category_name(id)?,
+        None => None,
+    };
+    Ok(planned_task_record_to_dto(task, project_name, category_name))
+}
+
+// ================================================================
+// GET /planned-tasks
+// ================================================================
+
+#[derive(serde::Deserialize)]
+pub struct PlannedTasksQuery {
+    date: Option<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/planned-tasks",
+    tag = "planned-tasks",
+    params(
+        ("date" = Option<String>, Query, description = "Filtrar por data YYYY-MM-DD (aplica regras de recorrência). Se omitido, retorna todas.")
+    ),
+    responses(
+        (status = 200, description = "Lista de tarefas planejadas", body = Vec<PlannedTaskDto>)
+    )
+)]
+pub async fn get_planned_tasks(
+    State(state): State<Arc<ApiState>>,
+    Query(q): Query<PlannedTasksQuery>,
+) -> ApiResult<Json<Vec<PlannedTaskDto>>> {
+    let db = state.open_db()?;
+    let records = match q.date {
+        Some(ref date) => db.list_planned_tasks_for_date(date)?,
+        None => db.list_planned_tasks()?,
+    };
+    let dtos: Vec<PlannedTaskDto> = records
+        .iter()
+        .map(|t| build_planned_task_dto(&db, t))
+        .collect::<ApiResult<_>>()?;
+    Ok(Json(dtos))
+}
+
+// ================================================================
+// GET /planned-tasks/:id
+// ================================================================
+
+#[utoipa::path(
+    get,
+    path = "/planned-tasks/{id}",
+    tag = "planned-tasks",
+    params(("id" = String, Path, description = "ID da tarefa planejada")),
+    responses(
+        (status = 200, description = "Tarefa planejada", body = PlannedTaskDto),
+        (status = 404, description = "Não encontrada", body = ErrorResponse)
+    )
+)]
+pub async fn get_planned_task(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<String>,
+) -> ApiResult<Json<PlannedTaskDto>> {
+    let db = state.open_db()?;
+    let task = db
+        .find_planned_task(&id)?
+        .ok_or_else(|| ApiError::not_found(format!("Tarefa planejada '{id}' não encontrada")))?;
+    Ok(Json(build_planned_task_dto(&db, &task)?))
+}
+
+// ================================================================
+// POST /planned-tasks
+// ================================================================
+
+#[utoipa::path(
+    post,
+    path = "/planned-tasks",
+    tag = "planned-tasks",
+    request_body(
+        content = CreatePlannedTaskRequest,
+        description = "Dados da nova tarefa planejada.",
+        example = json!({
+            "name": "Daily standup",
+            "categoryName": "Reuniões",
+            "billable": false,
+            "scheduleType": "recurring",
+            "recurringDays": [1, 2, 3, 4, 5]
+        })
+    ),
+    responses(
+        (status = 201, description = "Tarefa planejada criada", body = PlannedTaskDto),
+        (status = 409, description = "Projeto/categoria não encontrado", body = ErrorResponse)
+    )
+)]
+pub async fn post_planned_task(
+    State(state): State<Arc<ApiState>>,
+    Json(req): Json<CreatePlannedTaskRequest>,
+) -> ApiResult<(StatusCode, Json<PlannedTaskDto>)> {
+    let _guard = state.write_lock.lock().unwrap();
+    let db = state.open_db()?;
+
+    let project_id = resolve_project(&db, req.project_id, req.project_name)?;
+    let category_id = resolve_category(&db, req.category_id, req.category_name)?;
+
+    let sort_order = req
+        .sort_order
+        .unwrap_or_else(|| db.max_planned_task_sort_order().unwrap_or(-1) + 1);
+
+    let recurring_days_json = req
+        .recurring_days
+        .as_ref()
+        .map(|d| serde_json::to_string(d).unwrap_or_else(|_| "null".to_string()));
+
+    let actions_json =
+        serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
+
+    let now = now_iso_utc();
+    let task = PlannedTaskRecord {
+        id: new_uuid(),
+        name: req.name,
+        project_id,
+        category_id,
+        billable: req.billable,
+        schedule_type: req.schedule_type,
+        schedule_date: req.schedule_date,
+        recurring_days: recurring_days_json,
+        period_start: req.period_start,
+        period_end: req.period_end,
+        completed_dates: "[]".to_string(),
+        actions: actions_json,
+        sort_order,
+        created_at: now,
+    };
+    db.insert_planned_task(&task)?;
+    let dto = build_planned_task_dto(&db, &task)?;
+    Ok((StatusCode::CREATED, Json(dto)))
+}
+
+// ================================================================
+// PUT /planned-tasks/:id
+// ================================================================
+
+#[utoipa::path(
+    put,
+    path = "/planned-tasks/{id}",
+    tag = "planned-tasks",
+    params(("id" = String, Path, description = "ID da tarefa planejada")),
+    request_body(
+        content = UpdatePlannedTaskRequest,
+        description = "Substitui todos os campos atualizáveis da tarefa planejada. `completedDates` é preservado.",
+        example = json!({
+            "name": "Daily standup",
+            "billable": false,
+            "scheduleType": "recurring",
+            "recurringDays": [1, 2, 3, 4, 5],
+            "actions": []
+        })
+    ),
+    responses(
+        (status = 200, description = "Tarefa planejada atualizada", body = PlannedTaskDto),
+        (status = 404, description = "Não encontrada", body = ErrorResponse),
+        (status = 409, description = "Projeto/categoria não encontrado", body = ErrorResponse)
+    )
+)]
+pub async fn put_planned_task(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<String>,
+    Json(req): Json<UpdatePlannedTaskRequest>,
+) -> ApiResult<Json<PlannedTaskDto>> {
+    let _guard = state.write_lock.lock().unwrap();
+    let db = state.open_db()?;
+
+    let existing = db
+        .find_planned_task(&id)?
+        .ok_or_else(|| ApiError::not_found(format!("Tarefa planejada '{id}' não encontrada")))?;
+
+    let project_id = resolve_project(&db, req.project_id, req.project_name)?;
+    let category_id = resolve_category(&db, req.category_id, req.category_name)?;
+
+    let recurring_days_json = req
+        .recurring_days
+        .as_ref()
+        .map(|d| serde_json::to_string(d).unwrap_or_else(|_| "null".to_string()));
+
+    let actions_json =
+        serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
+
+    let updated = PlannedTaskRecord {
+        id: existing.id.clone(),
+        name: req.name,
+        project_id,
+        category_id,
+        billable: req.billable,
+        schedule_type: req.schedule_type,
+        schedule_date: req.schedule_date,
+        recurring_days: recurring_days_json,
+        period_start: req.period_start,
+        period_end: req.period_end,
+        completed_dates: existing.completed_dates.clone(),
+        actions: actions_json,
+        sort_order: req.sort_order.unwrap_or(existing.sort_order),
+        created_at: existing.created_at.clone(),
+    };
+    db.update_planned_task(&updated)?;
+    Ok(Json(build_planned_task_dto(&db, &updated)?))
+}
+
+// ================================================================
+// DELETE /planned-tasks/:id
+// ================================================================
+
+#[utoipa::path(
+    delete,
+    path = "/planned-tasks/{id}",
+    tag = "planned-tasks",
+    params(("id" = String, Path, description = "ID da tarefa planejada")),
+    responses(
+        (status = 204, description = "Tarefa planejada removida"),
+        (status = 404, description = "Não encontrada", body = ErrorResponse)
+    )
+)]
+pub async fn delete_planned_task(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<String>,
+) -> ApiResult<StatusCode> {
+    let _guard = state.write_lock.lock().unwrap();
+    let db = state.open_db()?;
+    db.find_planned_task(&id)?
+        .ok_or_else(|| ApiError::not_found(format!("Tarefa planejada '{id}' não encontrada")))?;
+    db.delete_planned_task(&id)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ================================================================
+// POST /planned-tasks/:id/complete
+// ================================================================
+
+#[utoipa::path(
+    post,
+    path = "/planned-tasks/{id}/complete",
+    tag = "planned-tasks",
+    params(("id" = String, Path, description = "ID da tarefa planejada")),
+    request_body(
+        content = PlannedTaskCompleteRequest,
+        description = "Data a marcar como concluída. Se omitida, usa hoje.",
+        example = json!({ "date": "2026-04-18" })
+    ),
+    responses(
+        (status = 200, description = "Tarefa marcada como concluída", body = PlannedTaskDto),
+        (status = 404, description = "Não encontrada", body = ErrorResponse)
+    )
+)]
+pub async fn post_planned_task_complete(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<String>,
+    body: Bytes,
+) -> ApiResult<Json<PlannedTaskDto>> {
+    let _guard = state.write_lock.lock().unwrap();
+    let req: Option<PlannedTaskCompleteRequest> = parse_optional_body(&body)?;
+    let date = req
+        .and_then(|r| r.date)
+        .unwrap_or_else(|| chrono::Local::now().format("%Y-%m-%d").to_string());
+    let db = state.open_db()?;
+    let found = db.complete_planned_task(&id, &date)?;
+    if !found {
+        return Err(ApiError::not_found(format!(
+            "Tarefa planejada '{id}' não encontrada"
+        )));
+    }
+    let updated = db
+        .find_planned_task(&id)?
+        .ok_or_else(|| ApiError::internal("Tarefa não encontrada após atualização"))?;
+    Ok(Json(build_planned_task_dto(&db, &updated)?))
+}
+
+// ================================================================
+// DELETE /planned-tasks/:id/complete/:date
+// ================================================================
+
+#[utoipa::path(
+    delete,
+    path = "/planned-tasks/{id}/complete/{date}",
+    tag = "planned-tasks",
+    params(
+        ("id" = String, Path, description = "ID da tarefa planejada"),
+        ("date" = String, Path, description = "Data a desmarcar (YYYY-MM-DD)")
+    ),
+    responses(
+        (status = 200, description = "Conclusão removida", body = PlannedTaskDto),
+        (status = 404, description = "Não encontrada", body = ErrorResponse)
+    )
+)]
+pub async fn delete_planned_task_complete(
+    State(state): State<Arc<ApiState>>,
+    Path((id, date)): Path<(String, String)>,
+) -> ApiResult<Json<PlannedTaskDto>> {
+    let _guard = state.write_lock.lock().unwrap();
+    let db = state.open_db()?;
+    let found = db.uncomplete_planned_task(&id, &date)?;
+    if !found {
+        return Err(ApiError::not_found(format!(
+            "Tarefa planejada '{id}' não encontrada"
+        )));
+    }
+    let updated = db
+        .find_planned_task(&id)?
+        .ok_or_else(|| ApiError::internal("Tarefa não encontrada após atualização"))?;
+    Ok(Json(build_planned_task_dto(&db, &updated)?))
 }

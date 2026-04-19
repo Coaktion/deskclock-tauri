@@ -293,7 +293,8 @@ function AppInner() {
     }
 
     if (config.get("showWelcomeMessage")) {
-      getCommandPalette().then(async (cp) => {
+      void (async () => {
+        const cp = await getCommandPalette();
         if (!cp) {
           const saved = config.get("mainWindowPosition");
           const pos =
@@ -302,12 +303,19 @@ function AppInner() {
               : positionNearTaskbar(appWindow);
           await pos;
           await appWindow.show();
+          // Show overlay only after main window is ready
+          const overlay = await getOverlay();
+          await overlay?.show();
           return;
         }
+        // Show overlay first so it doesn't steal focus from the command palette
+        const overlay = await getOverlay();
+        await overlay?.show();
+        // Command palette shown last — keeps focus
         await cp.center();
         await cp.show();
         await cp.setFocus();
-      });
+      })();
     } else {
       const saved = config.get("mainWindowPosition");
       const positionPromise =
@@ -315,10 +323,9 @@ function AppInner() {
           ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
           : positionNearTaskbar(appWindow);
       positionPromise.then(() => appWindow.show());
+      // Overlay always shows at startup (compact by default)
+      getOverlay().then((overlay) => overlay?.show());
     }
-
-    // Overlay always shows at startup (compact by default)
-    getOverlay().then((overlay) => overlay?.show());
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigate when command palette selects a page

@@ -60,13 +60,26 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Adição individual + exclusão sem confirmação
 - Prefixo `!` para marcar categoria como non-billable na importação
 
+### Acesso rápido (Command Palette)
+- Painel de ações acessível via `Ctrl+K` ou ao abrir o app (configurável)
+- Atalhos numéricos `Ctrl+1–7` para navegar direto às telas
+- Iniciar nova tarefa em branco sem abrir a janela principal
+- Busca fuzzy nas ações e tarefas planejadas do dia
+
 ### Overlays
 - **Execution Overlay:** janela flutuante com timer ao vivo, arrastável, persistência de posição
 - **Planning Overlay:** lista de tarefas planejadas para hoje, minimizável
 - **Compact Overlay:** ícone + badge com contador de tarefas pendentes
-- **Welcome Overlay:** saudação por hora do dia ao abrir o app
 - **Toast:** notificações de sistema (ex: confirmação de sync) no canto inferior direito
 - Opacidade em repouso configurável, snap-to-grid opcional
+
+### API REST local
+- Servidor HTTP embutido acessível em `http://localhost:27420` (porta configurável)
+- Documentação interativa em `/docs` (Swagger UI)
+- Endpoints para controle de timer: `start`, `pause`, `resume`, `stop`, `toggle`, `cancel`
+- CRUD completo de tarefas planejadas: lista por data com regras de recorrência, marcar/desmarcar conclusão
+- Listagem de projetos e categorias
+- Habilitável/desabilitável nas Configurações
 
 ### Configurações
 - Autostart na inicialização do sistema operacional
@@ -74,7 +87,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Atalhos globais configuráveis: toggle tarefa, parar, mostrar/ocultar overlay e janela
 - Temas: Azul, Verde, Escuro, Claro
 - Tamanho de fonte: P, M, G, GG
-- Saudação personalizada no Welcome Overlay
+- Abrir acesso rápido (Command Palette) ao iniciar o app (configurável)
 
 ---
 
@@ -92,6 +105,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 | Links externos | `tauri-plugin-opener` |
 | Atalhos globais | `tauri-plugin-global-shortcut` |
 | Autostart | `tauri-plugin-autostart` |
+| API REST local | axum + utoipa (Swagger UI) |
 
 ---
 
@@ -341,15 +355,18 @@ src/
 │   └── integrations/ # Google Sheets, Google Calendar (OAuth, sender, importer)
 ├── presentation/     # React UI
 │   ├── pages/        # Tasks, Planning, Retroactive, History, Data, Settings, Integrations
-│   ├── components/   # Autocomplete, DatePickerInput, Sidebar, PlannedTaskForm…
-│   ├── overlays/     # Execution, Planning, Compact, Welcome, Toast
+│   ├── components/   # Autocomplete, DatePickerInput, Sidebar, CommandPalette…
+│   ├── overlays/     # Execution, Planning, Compact, CommandPaletteApp, Toast
 │   ├── modals/       # EditTaskModal, ExportModal, ImportCalendarModal…
 │   ├── hooks/        # useRunningTask, useHistory, usePlannedTasks…
 │   └── contexts/     # RunningTaskContext, ConfigContext
 ├── shared/           # Types, utils (time, groupTasks, fontSize, theme, toast)
 └── tests/            # Espelha src/ — unit tests com Vitest
 src-tauri/            # Backend Rust (Tauri)
-├── src/lib.rs        # Comandos, tray, atalhos globais, servidor OAuth, janelas
+├── src/
+│   ├── api/          # Servidor REST local (axum): handlers, models, routes, openapi
+│   ├── commands/     # Comandos Tauri expostos ao frontend
+│   └── lib.rs        # Tray, atalhos globais, servidor OAuth, janelas
 ├── capabilities/     # Permissões por janela (default.json)
 ├── migrations/       # Migrações SQLite
 └── Cargo.toml

@@ -32,7 +32,14 @@
     "autostart:allow-enable",
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
-    "opener:allow-open-url",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://**" },
+        { "url": "http://localhost:*" },
+        { "url": "http://localhost:*/**" }
+      ]
+    },
     "opener:allow-open-path",
     "updater:allow-check",
     "updater:allow-download-and-install"
