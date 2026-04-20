@@ -381,6 +381,11 @@ export function SettingsPage() {
   const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [closeOnFocusLoss, setCloseOnFocusLoss] = useState(false);
   const [discardTasksUnderOneMinute, setDiscardTasksUnderOneMinute] = useState(false);
+  const [dailyGoalHours, setDailyGoalHours] = useState(8);
+  const [dailyGoalInput, setDailyGoalInput] = useState("8");
+  const [weeklyGoalHours, setWeeklyGoalHours] = useState(40);
+  const [weeklyGoalInput, setWeeklyGoalInput] = useState("40");
+  const [showWeekend, setShowWeekend] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [fontSize, setFontSize] = useState<"P" | "M" | "G" | "GG">("M");
@@ -408,6 +413,13 @@ export function SettingsPage() {
     setLiveTrayTimer(config.get("liveTrayTimer"));
     setCloseOnFocusLoss(config.get("closeOnFocusLoss"));
     setDiscardTasksUnderOneMinute(config.get("discardTasksUnderOneMinute"));
+    const daily = config.get("dailyGoalHours");
+    setDailyGoalHours(daily);
+    setDailyGoalInput(String(daily));
+    const weekly = config.get("weeklyGoalHours");
+    setWeeklyGoalHours(weekly);
+    setWeeklyGoalInput(String(weekly));
+    setShowWeekend(config.get("showWeekend"));
     setFontSize(config.get("fontSize"));
     setTheme(config.get("theme") as Theme);
     setShortcutToggleTask(config.get("shortcutToggleTask"));
@@ -555,6 +567,31 @@ export function SettingsPage() {
     }
   }
 
+  async function handleDailyGoalBlur() {
+    const parsed = parseInt(dailyGoalInput, 10);
+    if (isNaN(parsed) || parsed < 1 || parsed > 24) {
+      setDailyGoalInput(String(dailyGoalHours));
+      return;
+    }
+    setDailyGoalHours(parsed);
+    await config.set("dailyGoalHours", parsed);
+  }
+
+  async function handleWeeklyGoalBlur() {
+    const parsed = parseInt(weeklyGoalInput, 10);
+    if (isNaN(parsed) || parsed < 1 || parsed > 168) {
+      setWeeklyGoalInput(String(weeklyGoalHours));
+      return;
+    }
+    setWeeklyGoalHours(parsed);
+    await config.set("weeklyGoalHours", parsed);
+  }
+
+  async function handleShowWeekend(value: boolean) {
+    setShowWeekend(value);
+    await config.set("showWeekend", value);
+  }
+
   async function handleSlider(key: "overlayOpacity", setter: (v: number) => void, value: number) {
     setter(value);
     await config.set(key, value);
@@ -659,6 +696,46 @@ export function SettingsPage() {
                   description="Ao parar uma tarefa com duração inferior a 1 minuto, ela é descartada automaticamente."
                   value={discardTasksUnderOneMinute}
                   onChange={(v) => handleToggle("discardTasksUnderOneMinute", setDiscardTasksUnderOneMinute, v)}
+                />
+              </CardRow>
+            </SettingsCard>
+
+            <SettingsCard>
+              <CardRow>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Jornada</p>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-400 mb-1.5">Meta diária (horas)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={24}
+                      value={dailyGoalInput}
+                      onChange={(e) => setDailyGoalInput(e.target.value)}
+                      onBlur={handleDailyGoalBlur}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-400 mb-1.5">Meta semanal (horas)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={168}
+                      value={weeklyGoalInput}
+                      onChange={(e) => setWeeklyGoalInput(e.target.value)}
+                      onBlur={handleWeeklyGoalBlur}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+                </div>
+              </CardRow>
+              <CardRow>
+                <ToggleRow
+                  label="Exibir fim de semana no planejamento"
+                  description="Mostra sábado e domingo na visualização semanal"
+                  value={showWeekend}
+                  onChange={handleShowWeekend}
                 />
               </CardRow>
             </SettingsCard>

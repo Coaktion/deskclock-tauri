@@ -50,6 +50,10 @@ export interface AppConfig {
   // API REST local
   localApiEnabled: boolean;
   localApiPort: number;
+  // Jornada
+  dailyGoalHours: number;
+  weeklyGoalHours: number;
+  showWeekend: boolean;
 }
 
 const DEFAULTS: AppConfig = {
@@ -87,6 +91,9 @@ const DEFAULTS: AppConfig = {
   googleUserEmail: "",
   localApiEnabled: false,
   localApiPort: 27420,
+  dailyGoalHours: 8,
+  weeklyGoalHours: 40,
+  showWeekend: true,
 };
 
 type ConfigKey = keyof AppConfig;

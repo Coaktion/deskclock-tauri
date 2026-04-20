@@ -1,4 +1,5 @@
 import { formatHHMMSS, formatWeekTotal } from "@shared/utils/time";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
 
 interface TotalsSectionProps {
   billableSeconds: number;
@@ -45,25 +46,29 @@ export function TotalsSection({
   weekSeconds,
   weekDays,
 }: TotalsSectionProps) {
+  const config = useAppConfig();
+  const dailyGoalSec = (config.isLoaded ? config.get("dailyGoalHours") : 8) * 3600;
+  const weeklyGoalSec = (config.isLoaded ? config.get("weeklyGoalHours") : 40) * 3600;
+
   const totalToday = billableSeconds + nonBillableSeconds;
 
-  // Billable: ratio vs total today (fallback: vs 6h target)
+  // Billable: ratio vs total today (fallback: vs daily goal)
   const billablePct =
     totalToday > 0
       ? (billableSeconds / totalToday) * 100
-      : (billableSeconds / (6 * 3600)) * 100;
+      : (billableSeconds / dailyGoalSec) * 100;
 
-  // Non-billable: ratio vs total today (fallback: vs 6h target)
+  // Non-billable: ratio vs total today (fallback: vs daily goal)
   const nonBillablePct =
     totalToday > 0
       ? (nonBillableSeconds / totalToday) * 100
-      : (nonBillableSeconds / (6 * 3600)) * 100;
+      : (nonBillableSeconds / dailyGoalSec) * 100;
 
-  // Total hoje: vs 8h workday target
-  const todayPct = (totalToday / (8 * 3600)) * 100;
+  const todayPct = (totalToday / dailyGoalSec) * 100;
+  const weekPct = (weekSeconds / weeklyGoalSec) * 100;
 
-  // Semana: vs 40h weekly target
-  const weekPct = (weekSeconds / (40 * 3600)) * 100;
+  const dailyLabel = `meta ${config.isLoaded ? config.get("dailyGoalHours") : 8}h`;
+  const weeklyLabel = `meta ${config.isLoaded ? config.get("weeklyGoalHours") : 40}h`;
 
   return (
     <section className="flex gap-3">
@@ -87,14 +92,14 @@ export function TotalsSection({
         value={formatHHMMSS(totalToday)}
         barColor="bg-blue-500"
         barPct={todayPct}
-        hint={`meta 8h`}
+        hint={dailyLabel}
       />
       <KpiCard
         label="Semana"
         value={formatWeekTotal(weekSeconds, weekDays)}
         barColor="bg-blue-500"
         barPct={weekPct}
-        hint={`meta 40h`}
+        hint={weeklyLabel}
       />
     </section>
   );

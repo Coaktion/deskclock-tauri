@@ -96,11 +96,19 @@ export function WeekPlanningView() {
   const calendarFromISO = new Date(start + "T00:00:00").toISOString();
   const calendarToISO = new Date(end + "T23:59:59").toISOString();
 
+  const showWeekend = config.isLoaded ? config.get("showWeekend") : true;
+  const visibleDays = showWeekend
+    ? days
+    : days.filter((d) => {
+        const dow = new Date(d + "T12:00:00Z").getUTCDay();
+        return dow !== 0 && dow !== 6;
+      });
+
   // Stats: total task-day pairs + completed ones for the visible week
   const { totalCount, completedCount } = useMemo(() => {
     let total = 0;
     let completed = 0;
-    for (const day of days) {
+    for (const day of visibleDays) {
       for (const task of tasks) {
         if (isTaskOnDate(task, day)) {
           total++;
@@ -109,7 +117,7 @@ export function WeekPlanningView() {
       }
     }
     return { totalCount: total, completedCount: completed };
-  }, [tasks, days]);
+  }, [tasks, visibleDays]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePlay(task: PlannedTask) {
     if (runningTask) return;
@@ -132,7 +140,7 @@ export function WeekPlanningView() {
     }
   }
 
-  const filteredDays = dayFilter === "all" ? days : [dayFilter];
+  const filteredDays = dayFilter === "all" ? visibleDays : [dayFilter];
 
   return (
     <div className="flex flex-col">
@@ -181,8 +189,9 @@ export function WeekPlanningView() {
         >
           Todos
         </button>
-        {days.map((day, i) => {
+        {visibleDays.map((day) => {
           const isToday = day === today;
+          const dow = new Date(day + "T12:00:00Z").getUTCDay();
           return (
             <button
               key={day}
@@ -195,7 +204,7 @@ export function WeekPlanningView() {
                     : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
               }`}
             >
-              {DAY_SHORT[(i + 1) % 7]}
+              {DAY_SHORT[dow]}
               {isToday && (
                 <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
               )}
