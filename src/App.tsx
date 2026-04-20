@@ -36,10 +36,12 @@ interface UpdateInfo {
 
 function PageContent({
   page,
+  setPage,
   focusTaskEdit,
   onFocusTaskEditHandled,
 }: {
   page: Page;
+  setPage: (p: Page) => void;
   focusTaskEdit: boolean;
   onFocusTaskEditHandled: () => void;
 }) {
@@ -55,7 +57,7 @@ function PageContent({
     case "retroactive":
       return <RetroactivePage />;
     case "integrations":
-      return <IntegrationsPage />;
+      return <IntegrationsPage onNavigate={setPage} />;
     case "settings":
       return <SettingsPage />;
   }
@@ -189,7 +191,7 @@ function MainContent({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
         <main className="flex-1 overflow-hidden">
-          <PageContent page={page} focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
+          <PageContent page={page} setPage={setPage} focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
         </main>
       </div>
     </div>

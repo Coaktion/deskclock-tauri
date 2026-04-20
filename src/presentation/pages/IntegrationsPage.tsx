@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   TableProperties,
   Calendar,
+  CalendarDays,
   CheckCircle2,
   Circle,
   LogIn,
@@ -10,6 +11,8 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  X,
+  ArrowRight,
 } from "lucide-react";
 import {
   DndContext,
@@ -27,13 +30,21 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { type Page } from "@presentation/components/Sidebar";
+import { useProjects } from "@presentation/hooks/useProjects";
+import { useCategories } from "@presentation/hooks/useCategories";
+import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
+import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
+import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import {
   DEFAULT_COLUMN_MAPPING,
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
+
+const plannedRepo = new PlannedTaskRepository();
 
 // Escopos unificados — uma única conexão Google para todos os serviços
 const ALL_GOOGLE_SCOPES = [
@@ -291,15 +302,93 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
 
 /* ── Sub-seção Google Calendar ── */
 
-function CalendarSection({ disabled }: { disabled: boolean }) {
+function CalendarSection({
+  disabled,
+  onNavigate,
+}: {
+  disabled: boolean;
+  onNavigate: (page: Page) => void;
+}) {
+  const config = useAppConfig();
+  const { projects } = useProjects();
+  const { categories } = useCategories();
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importedCount, setImportedCount] = useState<number | null>(null);
+
+  const calendarImporter = useMemo(
+    () => (config.isLoaded ? new GoogleCalendarImporter(config) : null),
+    [config.isLoaded], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  const { fromISO, toISO, weekLabel } = useMemo(() => {
+    const today = new Date();
+    const dow = today.getDay();
+    const diffToMon = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(today);
+    mon.setDate(today.getDate() + diffToMon);
+    const sun = new Date(mon);
+    sun.setDate(mon.getDate() + 6);
+    const fmt = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const fmtLabel = (d: Date) =>
+      `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return {
+      fromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
+      toISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
+      weekLabel: `${fmtLabel(mon)} — ${fmtLabel(sun)}/${sun.getFullYear()}`,
+    };
+  }, []);
+
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
-      <div className="py-2.5">
+      <div className="py-2.5 flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          Importe eventos do Google Calendar como tarefas planejadas diretamente na tela de{" "}
-          <span className="text-gray-400">Planejamento → Semana</span>.
+          Importe eventos da semana atual como tarefas planejadas.
         </p>
+        <button
+          onClick={() => { setImportedCount(null); setShowImportModal(true); }}
+          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0 ml-3"
+        >
+          <CalendarDays size={13} />
+          Importar semana atual
+        </button>
       </div>
+
+      {importedCount !== null && (
+        <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <CheckCircle2 size={14} className="text-green-400 shrink-0" />
+          <span className="text-xs text-green-300 flex-1">
+            {importedCount} evento{importedCount !== 1 ? "s" : ""} importado{importedCount !== 1 ? "s" : ""}.
+          </span>
+          <button
+            onClick={() => { setImportedCount(null); onNavigate("planning"); }}
+            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Ver planejamento
+            <ArrowRight size={11} />
+          </button>
+          <button
+            onClick={() => setImportedCount(null)}
+            className="text-gray-600 hover:text-gray-400 transition-colors ml-1"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {showImportModal && calendarImporter && (
+        <ImportCalendarModal
+          importer={calendarImporter}
+          repo={plannedRepo}
+          fromISO={fromISO}
+          toISO={toISO}
+          weekLabel={weekLabel}
+          projects={projects}
+          categories={categories}
+          onImported={(count) => { setShowImportModal(false); setImportedCount(count); }}
+          onClose={() => setShowImportModal(false)}
+        />
+      )}
     </div>
   );
 }
@@ -333,7 +422,7 @@ function SubSection({
   );
 }
 
-function GoogleIntegrationCard() {
+function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const config = useAppConfig();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
@@ -437,7 +526,7 @@ function GoogleIntegrationCard() {
         <SheetsSection disabled={!connected} />
       </SubSection>
       <SubSection icon={<Calendar size={15} />} title="Google Calendar">
-        <CalendarSection disabled={!connected} />
+        <CalendarSection disabled={!connected} onNavigate={onNavigate} />
       </SubSection>
     </div>
   );
@@ -445,7 +534,7 @@ function GoogleIntegrationCard() {
 
 /* ── Page ── */
 
-export function IntegrationsPage() {
+export function IntegrationsPage({ onNavigate }: { onNavigate: (page: Page) => void }) {
   return (
     <div className="h-full overflow-y-auto">
     <div className="p-6 max-w-2xl mx-auto">
@@ -456,7 +545,7 @@ export function IntegrationsPage() {
         </p>
       </div>
 
-      <GoogleIntegrationCard />
+      <GoogleIntegrationCard onNavigate={onNavigate} />
     </div>
     </div>
   );
