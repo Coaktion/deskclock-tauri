@@ -5,7 +5,6 @@ import {
   Clock,
   Pause,
   Pen,
-  Pencil,
   Play,
   X,
 } from "lucide-react";
@@ -16,7 +15,6 @@ import type { Task } from "@domain/entities/Task";
 import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { Autocomplete } from "./Autocomplete";
-import { RunningTaskEditForm } from "./RunningTaskEditForm";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -186,8 +184,10 @@ export function Omnibox({
 
   // ── Running task UI state ─────────────────────────────────────────────────
   const [confirmingStop, setConfirmingStop] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editFocusField, setEditFocusField] = useState<"name" | "project" | "category" | undefined>();
+  const [editingRunningChip, setEditingRunningChip] = useState<"project" | "category" | null>(null);
+  const [runningChipValue, setRunningChipValue] = useState("");
+  const [editingRunningName, setEditingRunningName] = useState(false);
+  const [runningNameValue, setRunningNameValue] = useState("");
   const [fillingRequired, setFillingRequired] = useState(false);
   const [fillName, setFillName] = useState("");
   const [fillProjectName, setFillProjectName] = useState("");
@@ -200,15 +200,13 @@ export function Omnibox({
   // ── focusTaskEdit signal from overlay ─────────────────────────────────────
   useEffect(() => {
     if (!focusTaskEdit || !runningTask) return;
-    const focusField = !runningTask.name?.trim()
-      ? "name"
-      : !runningTask.projectId
-        ? "project"
-        : !runningTask.categoryId
-          ? "category"
-          : undefined;
-    setEditFocusField(focusField);
-    setEditing(true);
+    if (!runningTask.projectId) {
+      setRunningChipValue("");
+      setEditingRunningChip("project");
+    } else if (!runningTask.categoryId) {
+      setRunningChipValue("");
+      setEditingRunningChip("category");
+    }
     onFocusTaskEditHandled?.();
   }, [focusTaskEdit, runningTask, onFocusTaskEditHandled]);
 
@@ -219,6 +217,7 @@ export function Omnibox({
         setShowSuggestions(false);
         setFocused(false);
         setEditingChip(null);
+        setEditingRunningChip(null);
       }
     }
     document.addEventListener("mousedown", onMouseDown);
@@ -311,19 +310,12 @@ export function Omnibox({
 
   async function handleStopConfirm(completed: boolean) {
     setConfirmingStop(false);
-    setEditing(false);
     await stopTask(completed);
   }
 
-  async function handleSaveEdit(data: {
-    name: string | null;
-    projectId: string | null;
-    categoryId: string | null;
-    billable: boolean;
-  }) {
-    await updateActiveTask(data);
-    setEditing(false);
-    setEditFocusField(undefined);
+  async function handleNameCommit() {
+    setEditingRunningName(false);
+    await updateActiveTask({ name: runningNameValue.trim() || null });
   }
 
   function handleStartTimeClick() {
@@ -349,7 +341,7 @@ export function Omnibox({
   // ── Render: Running state ─────────────────────────────────────────────────
   if (runningTask) {
     return (
-      <div className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-hidden">
+      <div ref={containerRef} className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-visible">
         {/* Main row */}
         <div className="flex items-center gap-3 px-4 py-3">
           {/* Play/Pause button — pulses while running */}
@@ -367,17 +359,110 @@ export function Omnibox({
 
           {/* Task info */}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-100 truncate">{displayName}</p>
+            {editingRunningName ? (
+              <input
+                type="text"
+                value={runningNameValue}
+                onChange={(e) => setRunningNameValue(e.target.value)}
+                onBlur={() => void handleNameCommit()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); void handleNameCommit(); }
+                  if (e.key === "Escape") { e.stopPropagation(); setEditingRunningName(false); }
+                }}
+                autoFocus
+                placeholder="Nome da tarefa"
+                className="w-full text-sm font-medium bg-transparent border-b border-blue-500 text-gray-100 placeholder-gray-500 focus:outline-none pb-0.5"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setRunningNameValue(runningTask.name ?? ""); setEditingRunningName(true); }}
+                title="Editar nome"
+                className="flex items-center gap-1 w-full text-left group"
+              >
+                <span className={`text-sm font-medium truncate ${runningTask.name ? "text-gray-100" : "text-gray-500 italic"}`}>
+                  {displayName}
+                </span>
+                <Pen size={10} className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity" />
+              </button>
+            )}
             <div className="flex gap-2 mt-1 flex-wrap items-center">
-              {runProject && (
-                <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300">
-                  {runProject.name}
-                </span>
+              {editingRunningChip === "project" ? (
+                <div
+                  className="w-40"
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setEditingRunningChip(null);
+                    }
+                  }}
+                >
+                  <Autocomplete
+                    value={runningChipValue}
+                    onChange={setRunningChipValue}
+                    onSelect={(o) => {
+                      void updateActiveTask({ projectId: o.id });
+                      setEditingRunningChip(null);
+                    }}
+                    onEnter={() => setEditingRunningChip(null)}
+                    options={projects}
+                    placeholder="Projeto"
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRunningChipValue(runProject?.name ?? "");
+                    setEditingRunningChip("project");
+                  }}
+                  className={
+                    runProject
+                      ? "bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
+                      : "border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors"
+                  }
+                >
+                  {runProject?.name ?? "Projeto"}
+                </button>
               )}
-              {runCategory && (
-                <span className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300">
-                  {runCategory.name}
-                </span>
+              {editingRunningChip === "category" ? (
+                <div
+                  className="w-40"
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                      setEditingRunningChip(null);
+                    }
+                  }}
+                >
+                  <Autocomplete
+                    value={runningChipValue}
+                    onChange={setRunningChipValue}
+                    onSelect={(o) => {
+                      const cat = categories.find((c) => c.id === o.id);
+                      void updateActiveTask({ categoryId: o.id, billable: cat?.defaultBillable ?? runningTask.billable });
+                      setEditingRunningChip(null);
+                    }}
+                    onEnter={() => setEditingRunningChip(null)}
+                    options={categories}
+                    placeholder="Categoria"
+                    autoFocus
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRunningChipValue(runCategory?.name ?? "");
+                    setEditingRunningChip("category");
+                  }}
+                  className={
+                    runCategory
+                      ? "bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
+                      : "border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors"
+                  }
+                >
+                  {runCategory?.name ?? "Categoria"}
+                </button>
               )}
               <button
                 type="button"
@@ -456,15 +541,6 @@ export function Omnibox({
                   Parar
                 </button>
                 <button
-                  onClick={() => setEditing((v) => !v)}
-                  title="Editar"
-                  className={`p-1.5 rounded hover:bg-gray-800 transition-colors ${
-                    editing ? "text-blue-400" : "text-gray-600 hover:text-gray-400"
-                  }`}
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
                   onClick={() => cancelTask()}
                   title="Cancelar tarefa"
                   className="p-1.5 text-gray-600 hover:text-red-400 rounded hover:bg-gray-800 transition-colors"
@@ -525,19 +601,6 @@ export function Omnibox({
           </div>
         )}
 
-        {/* Edit form */}
-        {editing && (
-          <div className="mx-4 mb-3">
-            <RunningTaskEditForm
-              task={runningTask}
-              projects={projects}
-              categories={categories}
-              focusField={editFocusField}
-              onSave={handleSaveEdit}
-              onCancel={() => { setEditing(false); setEditFocusField(undefined); }}
-            />
-          </div>
-        )}
       </div>
     );
   }
