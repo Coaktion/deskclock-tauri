@@ -1,20 +1,20 @@
-import { useEffect, useRef, useState, useMemo, useCallback, Fragment } from "react";
-import {
-  Search,
-  Play,
-  FileClock,
-  CalendarDays,
-  History,
-  Database,
-  Settings,
-  Plug,
-  Timer,
-  Send,
-  FileDown,
-} from "lucide-react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Page } from "@presentation/components/Sidebar";
+import {
+  CalendarDays,
+  Database,
+  FileClock,
+  FileDown,
+  History,
+  Play,
+  Plug,
+  Search,
+  Send,
+  Settings,
+  Timer,
+} from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface StartTaskInput {
   name?: string | null;
@@ -288,8 +288,6 @@ export function CommandPalette({
   // Build flat index → item mapping for focused tracking
   const flatItems = useMemo(() => filtered, [filtered]);
 
-  let globalIndex = 0;
-
   if (!open) return null;
 
   const box = (
@@ -338,7 +336,6 @@ export function CommandPalette({
               {items.map((item) => {
                 const idx = flatItems.indexOf(item);
                 const isFocused = idx === focusedIndex;
-                globalIndex++;
                 return (
                   <div
                     key={item.id}
