@@ -15,7 +15,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     endTime: null,
     durationSeconds: 0,
     status: "running",
-    sentToSheets: false,
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T09:00:00.000Z",
     ...overrides,
@@ -35,7 +34,6 @@ describe("stopTask", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await stopTask(repo, "t1", NOW);
     expect(result.status).toBe("completed");
@@ -51,7 +49,6 @@ describe("stopTask", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await stopTask(repo, "t1", NOW);
     expect(result.endTime).toBe(NOW);
@@ -67,7 +64,6 @@ describe("stopTask", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await stopTask(repo, "t1", NOW);
     expect(result.durationSeconds).toBe(90); // 30 + 60
@@ -83,7 +79,6 @@ describe("stopTask", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await stopTask(repo, "t1", NOW);
     expect(result.durationSeconds).toBe(300);
@@ -99,7 +94,6 @@ describe("stopTask", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     await expect(stopTask(repo, "t1", NOW)).rejects.toThrow(DomainError);
   });

@@ -24,7 +24,6 @@ export async function mergeTaskGroup(
     endTime: nowISO,
     durationSeconds: totalSeconds,
     status: "completed",
-    sentToSheets: false,
     createdAt: nowISO,
     updatedAt: nowISO,
   };

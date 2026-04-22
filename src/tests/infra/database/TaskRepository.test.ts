@@ -40,7 +40,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     endTime: null,
     durationSeconds: 3600,
     status: "completed",
-    sentToSheets: false,
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T10:00:00.000Z",
     ...overrides,

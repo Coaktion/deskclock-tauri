@@ -9,6 +9,7 @@ interface TaskCardProps {
   task: Task;
   projects: Project[];
   categories: Category[];
+  sent?: boolean;
   playDisabled?: boolean;
   onPlay: (task: Task) => void;
   onEdit: (task: Task) => void;
@@ -20,6 +21,7 @@ export function TaskCard({
   task,
   projects,
   categories,
+  sent = false,
   playDisabled = false,
   onPlay,
   onEdit,
@@ -55,7 +57,7 @@ export function TaskCard({
       <span className="text-xs text-gray-400 font-mono flex-shrink-0">
         {formatDurationCompact(task.durationSeconds ?? 0)}
       </span>
-      {task.sentToSheets && (
+      {sent && (
         <span title="Enviado para o Google Sheets" className="text-green-500 flex-shrink-0">
           <CheckCheck size={12} />
         </span>

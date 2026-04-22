@@ -12,6 +12,7 @@ interface TaskGroupCardProps {
   group: TaskGroup;
   projects: Project[];
   categories: Category[];
+  sentIds?: Set<string>;
   playDisabled?: boolean;
   selectable?: boolean;
   selected?: boolean;
@@ -27,6 +28,7 @@ export function TaskGroupCard({
   group,
   projects,
   categories,
+  sentIds,
   playDisabled = false,
   selectable = false,
   selected = false,
@@ -44,8 +46,8 @@ export function TaskGroupCard({
   const category = categories.find((c) => c.id === first.categoryId);
   const displayName = first.name ?? "(sem nome)";
   const isGroup = tasks.length > 1;
-  const allSent = tasks.every((t) => t.sentToSheets);
-  const someSent = !allSent && tasks.some((t) => t.sentToSheets);
+  const allSent = sentIds ? tasks.every((t) => sentIds.has(t.id)) : false;
+  const someSent = !allSent && (sentIds ? tasks.some((t) => sentIds.has(t.id)) : false);
 
   function handleRowClick() {
     if (selectable) {
@@ -64,6 +66,7 @@ export function TaskGroupCard({
         task={first}
         projects={projects}
         categories={categories}
+        sent={sentIds?.has(first.id)}
         playDisabled={playDisabled}
         onPlay={onPlay}
         onEdit={onEdit}
@@ -150,6 +153,7 @@ export function TaskGroupCard({
               task={t}
               projects={projects}
               categories={categories}
+              sent={sentIds?.has(t.id)}
               playDisabled={playDisabled}
               onPlay={onPlay}
               onEdit={onEdit}

@@ -11,7 +11,6 @@ function makeRepo(overrides: Partial<ITaskRepository> = {}): ITaskRepository {
     findByDateRange: vi.fn(async () => []),
     delete: vi.fn(async () => undefined),
     deleteMany: vi.fn(async () => undefined),
-    markSentToSheets: vi.fn(),
     ...overrides,
   };
 }

@@ -11,7 +11,6 @@ function makeRepo(): ITaskRepository {
     findByDateRange: vi.fn(async () => []),
     delete: vi.fn(async () => undefined),
     deleteMany: vi.fn(),
-    markSentToSheets: vi.fn(),
   };
 }
 

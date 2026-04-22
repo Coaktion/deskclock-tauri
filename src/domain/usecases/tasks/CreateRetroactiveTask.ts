@@ -27,7 +27,6 @@ export async function createRetroactiveTask(
     endTime: input.endTime,
     durationSeconds: input.durationSeconds,
     status: "completed",
-    sentToSheets: false,
     createdAt: nowISO,
     updatedAt: nowISO,
   };

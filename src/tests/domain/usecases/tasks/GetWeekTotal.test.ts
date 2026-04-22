@@ -14,7 +14,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     endTime: "2026-04-08T10:00:00.000Z",
     durationSeconds: 3600,
     status: "completed",
-    sentToSheets: false,
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T10:00:00.000Z",
     ...overrides,
@@ -35,7 +34,6 @@ describe("getWeekTotal", () => {
       findByDateRange: vi.fn(async () => tasks),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await getWeekTotal(repo, "2026-04-07", "2026-04-13");
     expect(result.totalSeconds).toBe(10800);
@@ -50,7 +48,6 @@ describe("getWeekTotal", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await getWeekTotal(repo, "2026-04-07", "2026-04-13");
     expect(result.totalSeconds).toBe(0);
@@ -69,7 +66,6 @@ describe("getWeekTotal", () => {
       findByDateRange: vi.fn(async () => tasks),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await getWeekTotal(repo, "2026-04-07", "2026-04-13");
     expect(result.totalSeconds).toBe(2700);

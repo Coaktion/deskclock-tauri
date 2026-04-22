@@ -13,7 +13,6 @@ describe("getTasksForDate", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     await getTasksForDate(repo, "2026-04-08");
     expect(repo.findByDateRange).toHaveBeenCalledWith(
@@ -34,7 +33,6 @@ describe("getTasksForDate", () => {
         endTime: "2026-04-08T10:00:00.000Z",
         durationSeconds: 3600,
         status: "completed" as const,
-        sentToSheets: false,
         createdAt: "2026-04-08T09:00:00.000Z",
         updatedAt: "2026-04-08T10:00:00.000Z",
       },
@@ -47,7 +45,6 @@ describe("getTasksForDate", () => {
       findByDateRange: vi.fn(async () => tasks),
       delete: vi.fn(),
       deleteMany: vi.fn(),
-      markSentToSheets: vi.fn(),
     };
     const result = await getTasksForDate(repo, "2026-04-08");
     expect(result).toHaveLength(1);

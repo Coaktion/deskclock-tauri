@@ -11,6 +11,7 @@ import { CategoryRepository } from "@infra/database/CategoryRepository";
 import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { ProjectRepository } from "@infra/database/ProjectRepository";
 import { TaskRepository } from "@infra/database/TaskRepository";
+import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import {
@@ -57,6 +58,7 @@ const RunningTaskContext = createContext<RunningTaskContextValue | null>(null);
 
 const repo = new TaskRepository();
 const plannedRepo = new PlannedTaskRepository();
+const logRepo = new TaskIntegrationLogRepository();
 
 async function getOverlayWindow() {
   return WebviewWindow.getByLabel("overlay");
@@ -175,7 +177,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         ]);
         const sender = new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
         await sender.send([stoppedTask]);
-        await repo.markSentToSheets([stoppedTask.id]);
+        await logRepo.markSent([stoppedTask.id], "google_sheets");
         triggerReload();
         await showToast("success", "Tarefa enviada para o Google Sheets");
       } catch (err) {

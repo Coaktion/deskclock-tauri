@@ -12,7 +12,6 @@ interface TaskRow {
   end_time: string | null;
   duration_seconds: number | null;
   status: string;
-  sent_to_sheets: number;
   created_at: string;
   updated_at: string;
 }
@@ -28,7 +27,6 @@ function rowToTask(r: TaskRow): Task {
     endTime: r.end_time,
     durationSeconds: r.duration_seconds,
     status: r.status as TaskStatus,
-    sentToSheets: r.sent_to_sheets === 1,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -40,8 +38,8 @@ export class TaskRepository implements ITaskRepository {
     await db.execute(
       `INSERT INTO tasks
         (id, name, project_id, category_id, billable, start_time, end_time,
-         duration_seconds, status, sent_to_sheets, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+         duration_seconds, status, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         task.id,
         task.name,
@@ -52,7 +50,6 @@ export class TaskRepository implements ITaskRepository {
         task.endTime,
         task.durationSeconds,
         task.status,
-        task.sentToSheets ? 1 : 0,
         task.createdAt,
         task.updatedAt,
       ]
@@ -116,12 +113,5 @@ export class TaskRepository implements ITaskRepository {
     const db = await getDb();
     const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
     await db.execute(`DELETE FROM tasks WHERE id IN (${placeholders})`, ids);
-  }
-
-  async markSentToSheets(ids: string[]): Promise<void> {
-    if (ids.length === 0) return;
-    const db = await getDb();
-    const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
-    await db.execute(`UPDATE tasks SET sent_to_sheets = 1 WHERE id IN (${placeholders})`, ids);
   }
 }

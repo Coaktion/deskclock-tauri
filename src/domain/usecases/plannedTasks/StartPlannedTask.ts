@@ -40,7 +40,6 @@ export async function startPlannedTask(
     endTime: null,
     durationSeconds: 0,
     status: "running",
-    sentToSheets: false,
     createdAt: nowISO,
     updatedAt: nowISO,
   };

@@ -16,7 +16,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     endTime: "2026-04-08T10:00:00.000Z",
     durationSeconds: 3600,
     status: "completed",
-    sentToSheets: false,
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T10:00:00.000Z",
     ...overrides,
@@ -42,7 +41,6 @@ describe("mergeTaskGroup", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(async () => undefined),
-      markSentToSheets: vi.fn(),
     };
     const result = await mergeTaskGroup(repo, tasks, NOW);
     expect(result.durationSeconds).toBe(5400);
@@ -66,7 +64,6 @@ describe("mergeTaskGroup", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(async () => undefined),
-      markSentToSheets: vi.fn(),
     };
     await mergeTaskGroup(repo, tasks, NOW);
     expect(repo.deleteMany).toHaveBeenCalledWith(["t1", "t2"]);
@@ -85,7 +82,6 @@ describe("mergeTaskGroup", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(async () => undefined),
-      markSentToSheets: vi.fn(),
     };
     const result = await mergeTaskGroup(repo, tasks, NOW);
     expect(result.startTime).toBe("2026-04-08T09:00:00.000Z");
@@ -104,7 +100,6 @@ describe("mergeTaskGroup", () => {
       findByDateRange: vi.fn(async () => []),
       delete: vi.fn(),
       deleteMany: vi.fn(async () => undefined),
-      markSentToSheets: vi.fn(),
     };
     const result = await mergeTaskGroup(repo, tasks, NOW);
     expect(result.name).toBe("Task A");
