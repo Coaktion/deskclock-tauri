@@ -8,6 +8,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { formatHHMMSS, formatHHMM, formatHistoryDayHeader } from "@shared/utils/time";
+import { getProjectColor } from "@shared/utils/projectColor";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 
@@ -19,7 +20,7 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
   custom: "Personalizado",
 };
 
-function Timeline({ tasks }: { tasks: Task[] }) {
+function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
   const parseMinutes = (iso: string) => {
     const d = new Date(iso);
     return d.getHours() * 60 + d.getMinutes();
@@ -29,10 +30,6 @@ function Timeline({ tasks }: { tasks: Task[] }) {
   const dayRange = dayEnd - dayStart;
 
   const totalSeconds = tasks.reduce((s, t) => s + (t.durationSeconds ?? 0), 0);
-  const billableSeconds = tasks
-    .filter((t) => t.billable)
-    .reduce((s, t) => s + (t.durationSeconds ?? 0), 0);
-  const nonBillableSeconds = totalSeconds - billableSeconds;
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-3">
@@ -41,19 +38,22 @@ function Timeline({ tasks }: { tasks: Task[] }) {
           <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
             Linha do tempo
           </div>
-          <div className="font-mono text-base text-gray-100 mt-0.5">
+          <div className="font-mono tabular-nums text-base text-gray-100 mt-0.5">
             {formatHHMMSS(totalSeconds)}
           </div>
         </div>
-        <div className="flex gap-3 text-[11px] text-gray-400">
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-sm bg-emerald-500" />
-            Billable {formatHHMM(billableSeconds)}
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2 h-2 rounded-sm bg-gray-500" />
-            Non-billable {formatHHMM(nonBillableSeconds)}
-          </span>
+        <div className="flex gap-2 flex-wrap justify-end">
+          {projects
+            .filter((p) => tasks.some((t) => t.projectId === p.id))
+            .map((p) => (
+              <span key={p.id} className="flex items-center gap-1 text-[11px] text-gray-400">
+                <span
+                  className="inline-block w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: getProjectColor(p.id) }}
+                />
+                {p.name}
+              </span>
+            ))}
         </div>
       </div>
       <div className="relative h-11 bg-gray-950 rounded overflow-hidden">
@@ -63,7 +63,7 @@ function Timeline({ tasks }: { tasks: Task[] }) {
           const end = parseMinutes(task.endTime);
           const left = Math.max(0, ((start - dayStart) / dayRange) * 100);
           const width = Math.max(0.5, ((end - start) / dayRange) * 100);
-          const color = task.billable ? "#10b981" : "#64748b";
+          const color = getProjectColor(task.projectId);
           const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
             hour: "2-digit",
             minute: "2-digit",
@@ -76,7 +76,7 @@ function Timeline({ tasks }: { tasks: Task[] }) {
             <div
               key={task.id}
               className="absolute top-1 bottom-1 rounded-sm"
-              style={{ left: `${left}%`, width: `${width}%`, background: color }}
+              style={{ left: `${left}%`, width: `${width}%`, backgroundColor: color }}
               title={`${task.name ?? "(sem nome)"} · ${startStr}–${endStr}`}
             />
           );
@@ -84,7 +84,7 @@ function Timeline({ tasks }: { tasks: Task[] }) {
       </div>
       <div className="flex justify-between mt-1">
         {[6, 8, 10, 12, 14, 16, 18, 20, 22].map((h) => (
-          <span key={h} className="text-[9px] font-mono text-gray-600">
+          <span key={h} className="text-[9px] font-mono tabular-nums text-gray-600">
             {String(h).padStart(2, "0")}h
           </span>
         ))}
@@ -100,14 +100,14 @@ function ProjectDistribution({
   groups: DayGroup[];
   projects: Project[];
 }) {
-  const totals: Record<string, { name: string; seconds: number }> = {};
+  const totals: Record<string, { id: string | null; name: string; seconds: number }> = {};
   groups.forEach((g) =>
     g.tasks.forEach((t) => {
       const key = t.projectId ?? "__none__";
       const name = t.projectId
         ? (projects.find((p) => p.id === t.projectId)?.name ?? "—")
         : "Sem projeto";
-      if (!totals[key]) totals[key] = { name, seconds: 0 };
+      if (!totals[key]) totals[key] = { id: t.projectId ?? null, name, seconds: 0 };
       totals[key].seconds += t.durationSeconds ?? 0;
     })
   );
@@ -124,20 +124,24 @@ function ProjectDistribution({
         {list.map((x) => {
           const h = Math.floor(x.seconds / 3600);
           const m = Math.floor((x.seconds % 3600) / 60);
+          const color = getProjectColor(x.id);
           return (
             <div key={x.name} className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full shrink-0 bg-slate-500" />
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ backgroundColor: color }}
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-gray-200 truncate pr-2">{x.name}</span>
-                  <span className="font-mono text-gray-400 shrink-0">
+                  <span className="font-mono tabular-nums text-gray-400 shrink-0">
                     {h}h{String(m).padStart(2, "0")}
                   </span>
                 </div>
                 <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-slate-500 rounded-full"
-                    style={{ width: `${(x.seconds / max) * 100}%` }}
+                    className="h-full rounded-full"
+                    style={{ width: `${(x.seconds / max) * 100}%`, backgroundColor: color }}
                   />
                 </div>
               </div>
@@ -315,7 +319,7 @@ export function HistoryPage() {
         {/* Timeline + ProjectDistribution grid */}
         {searched && allTasks.length > 0 && (
           <div className="grid grid-cols-[1.5fr_1fr] gap-2.5 p-4 border-b border-gray-800">
-            <Timeline tasks={allTasks} />
+            <Timeline tasks={allTasks} projects={projects} />
             <ProjectDistribution groups={groups} projects={projects} />
           </div>
         )}
@@ -344,7 +348,7 @@ export function HistoryPage() {
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
                   {label}
                 </span>
-                <span className={`text-sm font-mono font-medium ${color}`}>{value}</span>
+                <span className={`text-sm font-mono tabular-nums font-medium ${color}`}>{value}</span>
               </div>
             ))}
           </div>
@@ -376,7 +380,7 @@ export function HistoryPage() {
               <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
                 {formatHistoryDayHeader(group.dateISO)}
               </span>
-              <span className="text-xs font-mono text-gray-500">
+              <span className="text-xs font-mono tabular-nums text-gray-500">
                 {formatHHMM(group.totalSeconds)}
               </span>
             </div>
@@ -417,20 +421,20 @@ export function HistoryPage() {
                       </p>
                     )}
                   </div>
-                  <span className="text-sm font-mono text-gray-400 shrink-0">
+                  <span className="text-sm font-mono tabular-nums text-gray-400 shrink-0">
                     {formatHHMMSS(task.durationSeconds ?? 0)}
                   </span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                     <button
                       onClick={() => setEditingTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded transition-colors"
+                      className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
                       title="Editar"
                     >
                       <Pencil size={13} />
                     </button>
                     <button
                       onClick={() => void remove(task.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
+                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Excluir"
                     >
                       <Trash2 size={13} />

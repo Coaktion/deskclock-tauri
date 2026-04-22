@@ -5,6 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@shared/utils/groupTasks";
 import { formatDurationCompact } from "@shared/utils/time";
+import { getProjectColor } from "@shared/utils/projectColor";
 import { TaskCard } from "./TaskCard";
 
 interface TaskGroupCardProps {
@@ -54,28 +55,28 @@ export function TaskGroupCard({
     }
   }
 
+  const projectColor = getProjectColor(first.projectId);
+
   // Tarefa individual sem agrupamento: renderiza direto sem cabeçalho de grupo
   if (!isGroup && !selectable) {
     return (
-      <div className="border border-gray-800 rounded-lg overflow-hidden">
-        <TaskCard
-          task={first}
-          projects={projects}
-          categories={categories}
-          playDisabled={playDisabled}
-          onPlay={onPlay}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleBillable={onToggleBillable}
-        />
-      </div>
+      <TaskCard
+        task={first}
+        projects={projects}
+        categories={categories}
+        playDisabled={playDisabled}
+        onPlay={onPlay}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggleBillable={onToggleBillable}
+      />
     );
   }
 
   return (
-    <div className="border border-gray-800 rounded-lg overflow-hidden">
+    <div>
       <div
-        className="relative flex items-center gap-2 pl-3 pr-2 py-2.5 bg-gray-900 cursor-pointer hover:bg-gray-800/80"
+        className="relative flex items-center gap-2 pl-3 pr-2 py-2.5 cursor-pointer hover:bg-gray-800/50 rounded-lg transition-colors"
         onClick={handleRowClick}
       >
         {/* Billable left accent */}
@@ -102,9 +103,10 @@ export function TaskGroupCard({
           )
         )}
 
-        {/* Billable dot */}
+        {/* Project color dot */}
         <span
-          className={`shrink-0 w-1.5 h-1.5 rounded-full ${first.billable ? "bg-emerald-400" : "bg-gray-600"}`}
+          className="shrink-0 w-1.5 h-1.5 rounded-full"
+          style={{ backgroundColor: projectColor }}
         />
 
         <div className="flex-1 min-w-0">
@@ -115,7 +117,7 @@ export function TaskGroupCard({
             {isGroup && <span className="text-gray-600">{tasks.length} registros</span>}
           </div>
         </div>
-        <span className="text-sm font-mono text-gray-300 flex-shrink-0">
+        <span className="text-sm font-mono tabular-nums text-gray-300 flex-shrink-0">
           {formatDurationCompact(group.totalSeconds)}
         </span>
         {(allSent || someSent) && (
@@ -140,8 +142,8 @@ export function TaskGroupCard({
         )}
       </div>
 
-      {(expanded || (!isGroup && !selectable)) && (
-        <div className="px-1 py-1 bg-gray-950/50">
+      {expanded && (
+        <div className="pl-4 ml-3 border-l border-gray-800">
           {tasks.map((t) => (
             <TaskCard
               key={t.id}

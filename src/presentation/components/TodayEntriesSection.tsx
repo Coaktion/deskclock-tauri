@@ -189,7 +189,7 @@ export function TodayEntriesSection({
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-sm font-semibold text-gray-300">Entradas de hoje</h2>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-mono text-gray-500">{formatHHMMSS(totalSeconds)}</span>
+          <span className="text-xs font-mono tabular-nums text-gray-500">{formatHHMMSS(totalSeconds)}</span>
           {!sendMode && groups.length > 0 && (
             <button
               onClick={enterSendMode}
@@ -224,7 +224,7 @@ export function TodayEntriesSection({
             <button
               onClick={handleSend}
               disabled={sending || selectedKeys.size === 0}
-              className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-2 py-1 rounded"
+              className="flex items-center gap-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-2 py-1 rounded-lg"
             >
               {sending ? (
                 <>
