@@ -7,6 +7,8 @@ import {
   Square,
   AlertTriangle,
   CheckCheck,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
@@ -39,6 +41,40 @@ type QuickPeriod = "today" | "yesterday" | "week" | "month" | "custom";
 interface PeriodRange {
   start: string;
   end: string;
+}
+
+interface DayGroup {
+  date: string;
+  groups: TaskGroup[];
+}
+
+function toLocalDate(isoDateTime: string): string {
+  const d = new Date(isoDateTime);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDayLabel(isoDate: string): string {
+  const d = new Date(isoDate + "T12:00:00");
+  const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" });
+  const datePart = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${weekday}, ${datePart}`;
+}
+
+function groupTasksByDay(tasks: Task[]): DayGroup[] {
+  const byDate = new Map<string, Task[]>();
+  for (const task of tasks) {
+    const date = toLocalDate(task.startTime);
+    const list = byDate.get(date) ?? [];
+    list.push(task);
+    byDate.set(date, list);
+  }
+  return [...byDate.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, dayTasks]) => ({ date, groups: groupTasks(dayTasks) }));
+}
+
+function selKey(date: string, groupKey: string): string {
+  return `${date}\0${groupKey}`;
 }
 
 function quickToRange(quick: QuickPeriod, customStart: string, customEnd: string): PeriodRange {
@@ -82,7 +118,7 @@ function validateTasks(tasks: Task[], enabledFields: TaskField[]): string | null
   return incomplete.length === 0 ? null : `Dados incompletos:\n${incomplete.join("\n")}`;
 }
 
-/* ── Row de grupo no modal ── */
+/* ── Row de grupo ── */
 
 interface GroupRowProps {
   group: TaskGroup;
@@ -165,14 +201,14 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
   const [quick, setQuick] = useState<QuickPeriod>("today");
   const [customStart, setCustomStart] = useState(todayISO());
   const [customEnd, setCustomEnd] = useState(todayISO());
-  const [groups, setGroups] = useState<TaskGroup[]>([]);
+  const [dayGroups, setDayGroups] = useState<DayGroup[]>([]);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
-  // Incrementado após envio para forçar reload da lista
   const [reloadKey, setReloadKey] = useState(0);
 
   const sender = useMemo(() => {
@@ -184,15 +220,11 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.isLoaded, projects, categories]);
 
-  // customStart/customEnd via ref para o effect acessar o valor atual sem precisar
-  // de deps que causariam reloads a cada keystroke.
   const customStartRef = useRef(customStart);
   const customEndRef = useRef(customEnd);
   useEffect(() => { customStartRef.current = customStart; }, [customStart]);
   useEffect(() => { customEndRef.current = customEnd; }, [customEnd]);
 
-  // Carrega tarefas sempre que o período ou reloadKey mudam.
-  // Lógica inline no effect garante que `quick` nunca fica stale — sem useCallback.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -210,16 +242,21 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
 
         const completed = tasks.filter((t) => t.status === "completed");
         const newSentIds = new Set(sentIdsArr);
-        const grps = groupTasks(completed);
-        const sorted = [...grps].sort((a, b) => {
-          const aSent = a.tasks.every((t) => newSentIds.has(t.id)) ? 1 : 0;
-          const bSent = b.tasks.every((t) => newSentIds.has(t.id)) ? 1 : 0;
-          return aSent - bSent;
-        });
+        const dg = groupTasksByDay(completed);
 
-        setGroups(sorted);
+        const keys = new Set<string>();
+        for (const { date, groups } of dg) {
+          for (const g of groups) {
+            if (!g.tasks.every((t) => newSentIds.has(t.id))) {
+              keys.add(selKey(date, g.key));
+            }
+          }
+        }
+
+        setDayGroups(dg);
         setSentIds(newSentIds);
-        setSelectedKeys(new Set(sorted.filter((g) => !g.tasks.every((t) => newSentIds.has(t.id))).map((g) => g.key)));
+        setSelectedKeys(keys);
+        setCollapsedDays(new Set());
         setLoaded(true);
       } catch (err) {
         console.error("[SheetsSendModal] loadTasks error:", err);
@@ -236,34 +273,71 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     return () => { cancelled = true; };
   }, [quick, reloadKey]);
 
-  function toggleGroup(key: string) {
+  function toggleGroup(date: string, key: string) {
+    const sk = selKey(date, key);
     setSelectedKeys((prev) => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(sk)) next.delete(sk);
+      else next.add(sk);
+      return next;
+    });
+  }
+
+  function toggleDay(date: string, groups: TaskGroup[]) {
+    const dayKeys = groups.map((g) => selKey(date, g.key));
+    const allSelected = dayKeys.every((k) => selectedKeys.has(k));
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (allSelected) dayKeys.forEach((k) => next.delete(k));
+      else dayKeys.forEach((k) => next.add(k));
+      return next;
+    });
+  }
+
+  function toggleDayCollapse(date: string) {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
       return next;
     });
   }
 
   function selectAll() {
-    setSelectedKeys(new Set(groups.map((g) => g.key)));
+    const keys = new Set<string>();
+    for (const { date, groups } of dayGroups) {
+      for (const g of groups) keys.add(selKey(date, g.key));
+    }
+    setSelectedKeys(keys);
   }
 
   function deselectAll() {
     setSelectedKeys(new Set());
   }
 
-  const hasSentSelected = selectedKeys.size > 0 &&
-    [...selectedKeys].some((k) => {
-      const g = groups.find((g) => g.key === k);
-      return g?.tasks.every((t) => sentIds.has(t.id));
-    });
+  const hasSentSelected = useMemo(() => {
+    if (selectedKeys.size === 0) return false;
+    for (const { date, groups } of dayGroups) {
+      for (const g of groups) {
+        if (selectedKeys.has(selKey(date, g.key)) && g.tasks.every((t) => sentIds.has(t.id))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }, [selectedKeys, dayGroups, sentIds]);
 
   async function handleSend() {
     if (selectedKeys.size === 0) return;
     setMessage(null);
 
-    const selectedGroups = groups.filter((g) => selectedKeys.has(g.key));
+    const selectedGroups: TaskGroup[] = [];
+    for (const { date, groups } of dayGroups) {
+      for (const g of groups) {
+        if (selectedKeys.has(selKey(date, g.key))) selectedGroups.push(g);
+      }
+    }
+
     const tasksToSend = selectedGroups.map((g) => ({
       ...g.tasks[0],
       durationSeconds: g.totalSeconds,
@@ -285,7 +359,6 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
       await config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
       setMessage({ text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`, error: false });
       setSelectedKeys(new Set());
-      // Reload para atualizar badges de "enviado"
       setReloadKey((k) => k + 1);
     } catch (err) {
       if (err instanceof NoIntegrationError) {
@@ -375,23 +448,78 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
             <div className="flex items-center justify-center py-10 text-gray-600">
               <Loader2 size={18} className="animate-spin" />
             </div>
-          ) : groups.length === 0 ? (
+          ) : dayGroups.length === 0 ? (
             <p className="text-sm text-gray-600 text-center py-10">
               Nenhuma tarefa concluída no período.
             </p>
           ) : (
-            <div className="space-y-0.5">
-              {groups.map((g) => (
-                <GroupRow
-                  key={g.key}
-                  group={g}
-                  projects={projects}
-                  categories={categories}
-                  sentIds={sentIds}
-                  selected={selectedKeys.has(g.key)}
-                  onToggle={() => toggleGroup(g.key)}
-                />
-              ))}
+            <div className="space-y-1">
+              {dayGroups.map(({ date, groups }) => {
+                const dayKeys = groups.map((g) => selKey(date, g.key));
+                const selectedCount = dayKeys.filter((k) => selectedKeys.has(k)).length;
+                const allSelected = selectedCount === groups.length;
+                const someSelected = selectedCount > 0 && !allSelected;
+                const isCollapsed = collapsedDays.has(date);
+                const dayTotal = groups.reduce((s, g) => s + g.totalSeconds, 0);
+
+                return (
+                  <div key={date} className="rounded-lg overflow-hidden">
+                    {/* Day header */}
+                    <div
+                      className="flex items-center gap-2 px-3 py-2 bg-gray-800/60 cursor-pointer hover:bg-gray-800 transition-colors select-none"
+                      onClick={() => toggleDayCollapse(date)}
+                    >
+                      <div
+                        className={`w-4 h-4 border rounded flex items-center justify-center transition-colors flex-shrink-0 ${
+                          allSelected
+                            ? "bg-blue-600 border-blue-600"
+                            : someSelected
+                            ? "bg-blue-600/30 border-blue-500/50"
+                            : "border-gray-600 bg-transparent"
+                        }`}
+                        onClick={(e) => { e.stopPropagation(); toggleDay(date, groups); }}
+                      >
+                        {allSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
+                        {someSelected && <div className="w-2 h-0.5 bg-blue-400 rounded-sm" />}
+                      </div>
+
+                      <span className="flex-1 text-xs font-medium text-gray-300 capitalize">
+                        {formatDayLabel(date)}
+                      </span>
+
+                      <span className="text-[11px] text-gray-500">
+                        {selectedCount}/{groups.length}
+                      </span>
+
+                      <span className="text-xs font-mono tabular-nums text-gray-500 mr-1">
+                        {formatDurationCompact(dayTotal)}
+                      </span>
+
+                      {isCollapsed
+                        ? <ChevronRight size={14} className="text-gray-600 shrink-0" />
+                        : <ChevronDown size={14} className="text-gray-600 shrink-0" />
+                      }
+                    </div>
+
+                    {/* Group rows */}
+                    {!isCollapsed && (
+                      <div className="pl-2 space-y-0.5 py-1">
+                        {groups.map((g) => (
+                          <GroupRow
+                            key={g.key}
+                            group={g}
+                            projects={projects}
+                            categories={categories}
+                            sentIds={sentIds}
+                            selected={selectedKeys.has(selKey(date, g.key))}
+                            onToggle={() => toggleGroup(date, g.key)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

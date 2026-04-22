@@ -150,6 +150,7 @@ export function PlannedTaskForm({
                 set("projectId", o.id);
                 set("projectName", o.name);
               }}
+              onEnter={() => void handleSubmit()}
               options={projects}
               placeholder="Projeto"
               className=""
@@ -168,6 +169,7 @@ export function PlannedTaskForm({
                 const cat = categories.find((c) => c.id === o.id);
                 if (cat) set("billable", cat.defaultBillable);
               }}
+              onEnter={() => void handleSubmit()}
               options={categories}
               placeholder="Categoria"
               className=""

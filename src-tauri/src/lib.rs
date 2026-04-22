@@ -119,7 +119,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:deskclock.db", migrations::get_migrations())
+                .add_migrations(
+                    if cfg!(debug_assertions) { "sqlite:deskclock-dev.db" } else { "sqlite:deskclock.db" },
+                    migrations::get_migrations(),
+                )
                 .build(),
         )
         .invoke_handler(tauri::generate_handler![

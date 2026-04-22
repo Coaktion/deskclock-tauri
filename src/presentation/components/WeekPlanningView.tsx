@@ -256,7 +256,7 @@ export function WeekPlanningView() {
                 {isToday && <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>}
               </span>
               {dayTasks.length > 0 && (
-                <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
+                <span className="ml-auto text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
                   {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
                 </span>
               )}

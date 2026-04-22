@@ -19,8 +19,7 @@ import {
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
-import { positionNearTaskbar, readPositionConfig } from "@shared/utils/windowPosition";
-import { currentMonitor, primaryMonitor } from "@tauri-apps/api/window";
+import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
@@ -49,6 +48,7 @@ function OverlayAppInner() {
   const [activePlannedTaskId, setActivePlannedTaskId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const isProgrammaticMoveRef = useRef(false);
   const modeRef = useRef<OverlayMode>("compact");
   const isStartingTaskRef = useRef(false);
   // Tamanho intencionado e flag para ignorar eventos de resize que nós mesmos causamos
@@ -91,9 +91,7 @@ function OverlayAppInner() {
         setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
       } else {
         // Sem posição salva: posiciona próximo à taskbar como padrão
-        void readPositionConfig().then((override) =>
-          positionNearTaskbar(appWindow, { width: OVERLAY_SIZES[newMode].width, height: OVERLAY_SIZES[newMode].height }, override)
-        );
+        void positionNearTaskbar(appWindow, { width: OVERLAY_SIZES[newMode].width, height: OVERLAY_SIZES[newMode].height });
       }
       setMode(newMode);
     },
@@ -186,36 +184,25 @@ function OverlayAppInner() {
     };
   }, [switchMode, config]);
 
-  // Snap-to-grid + clamp ao monitor + persistência de posição
-  // Acumula posição em lastRawPosRef e aplica apenas no debounce final,
-  // evitando pulos durante o arraste quando snap-to-grid está ativo.
+  // Snap-to-grid + persistência de posição.
+  // isProgrammaticMoveRef evita loop: setPosition dispara tauri://move,
+  // que reentraria e chamaria setPosition novamente indefinidamente.
   useEffect(() => {
     const unlisten = appWindow.listen<{ x: number; y: number }>("tauri://move", ({ payload }) => {
+      if (isProgrammaticMoveRef.current) return;
+
       lastRawPosRef.current = { x: payload.x, y: payload.y };
       if (debounceRef.current) clearTimeout(debounceRef.current);
 
       debounceRef.current = setTimeout(async () => {
         const { x: rawX, y: rawY } = lastRawPosRef.current;
 
-        // Clamp: garante que a janela não saia da área do monitor.
-        // Usa outerSize() para obter o tamanho físico real — funciona em
-        // todos os modos.
-        let finalX = rawX;
-        let finalY = rawY;
-        const [monitorRaw, winSize] = await Promise.all([currentMonitor(), appWindow.outerSize()]);
-        const monitor = monitorRaw ?? await primaryMonitor();
-        if (monitor) {
-          const { width: mW, height: mH } = monitor.size;
-          const { x: mX, y: mY } = monitor.position;
-          finalX = Math.max(mX, Math.min(rawX, mX + mW - winSize.width));
-          finalY = Math.max(mY, Math.min(rawY, mY + mH - winSize.height));
-        }
+        const snapped = snapToGrid ? snapPositionToGrid(rawX, rawY) : { x: rawX, y: rawY };
 
-        // Aplica snap apenas depois de todos os ajustes
-        const snapped = snapToGrid ? snapPositionToGrid(finalX, finalY) : { x: finalX, y: finalY };
-
-        if (snapToGrid || finalX !== rawX || finalY !== rawY) {
+        if (snapped.x !== rawX || snapped.y !== rawY) {
+          isProgrammaticMoveRef.current = true;
           await appWindow.setPosition(new PhysicalPosition(snapped.x, snapped.y));
+          setTimeout(() => { isProgrammaticMoveRef.current = false; }, 100);
         }
         const key = `overlayPosition_${mode}` as Parameters<typeof config.set>[0];
         await config.set(key, snapped as never);

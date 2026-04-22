@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { showToast } from "@shared/utils/toast";
-import { positionNearTaskbar, centerOnWorkArea, type WindowPositionOverride } from "@shared/utils/windowPosition";
+import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
@@ -288,25 +288,14 @@ function AppInner() {
     };
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Helper: lê config de posicionamento já carregado no cache — sem SQLite extra.
-  function buildPosOverride(): WindowPositionOverride {
-    return {
-      auto: config.get("windowPositioningAuto"),
-      workAreaWidth: config.get("workAreaWidth"),
-      workAreaHeight: config.get("workAreaHeight"),
-      taskbarPosition: config.get("taskbarPosition"),
-      taskbarSize: config.get("taskbarSize"),
-    };
-  }
-
   // Helper: posiciona e exibe a janela principal. Usa posição salva se válida,
-  // senão positionNearTaskbar com override do config manual.
+  // senão positionNearTaskbar.
   async function showMainWindow(focusToo = false) {
     const saved = config.get("mainWindowPosition");
     if (saved.x >= 0 && saved.y >= 0) {
       await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y));
     } else {
-      await positionNearTaskbar(appWindow, { width: 800, height: 620 }, buildPosOverride());
+      await positionNearTaskbar(appWindow, { width: 800, height: 620 });
     }
     await appWindow.show();
     if (focusToo) await appWindow.setFocus();
@@ -316,7 +305,7 @@ function AppInner() {
   async function showCommandPalette() {
     const cp = await getCommandPalette();
     if (!cp) return;
-    await centerOnWorkArea(cp, { width: 560, height: 500 }, buildPosOverride());
+    await centerOnWorkArea(cp, { width: 560, height: 500 });
     await cp.show();
     await cp.setFocus();
   }
@@ -325,12 +314,12 @@ function AppInner() {
   useEffect(() => {
     if (!config.isLoaded) return;
     if (config.loadError) {
-      positionNearTaskbar(appWindow, { width: 800, height: 620 }, buildPosOverride())
+      positionNearTaskbar(appWindow, { width: 800, height: 620 })
         .catch(() => {}).finally(() => appWindow.show());
       return;
     }
     if (!config.get("setupCompleted")) {
-      positionNearTaskbar(appWindow, { width: 800, height: 620 }, buildPosOverride())
+      positionNearTaskbar(appWindow, { width: 800, height: 620 })
         .catch(() => {}).finally(() => appWindow.show());
       return;
     }

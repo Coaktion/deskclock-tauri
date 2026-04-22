@@ -87,7 +87,8 @@ fn resolve_db_path(app: &AppHandle) -> Result<PathBuf, String> {
         .app_config_dir()
         .or_else(|_| app.path().app_data_dir())
         .map_err(|e| format!("Não foi possível obter o diretório do app: {e}"))?;
-    Ok(dir.join("deskclock.db"))
+    let db_file = if cfg!(debug_assertions) { "deskclock-dev.db" } else { "deskclock.db" };
+    Ok(dir.join(db_file))
 }
 
 /// Lê a configuração `localApiEnabled` do SQLite (valor JSON).

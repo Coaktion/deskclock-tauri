@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit, listen } from "@tauri-apps/api/event";
-import { positionNearTaskbar, readPositionConfig, type WindowPositionOverride } from "@shared/utils/windowPosition";
+import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { CheckCircle2, XCircle, Info, ArrowDownToLine, X } from "lucide-react";
 import {
@@ -59,17 +59,11 @@ export function ToastApp() {
   });
   const [animating, setAnimating] = useState(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const posOverrideRef = useRef<WindowPositionOverride | null>(null);
-
-  // Lê config de posicionamento uma única vez — sem SQLite a cada toast
-  useEffect(() => {
-    readPositionConfig().then((cfg) => { posOverrideRef.current = cfg; }).catch(() => {});
-  }, []);
 
   // Escuta eventos de toast
   useEffect(() => {
     const unlisten = listen<ToastMessagePayload>(OVERLAY_EVENTS.TOAST_MESSAGE, ({ payload }) => {
-      positionNearTaskbar(appWindow, { width: TOAST_WIDTH, height: TOAST_HEIGHT }, posOverrideRef.current ?? undefined).catch(() => {});
+      positionNearTaskbar(appWindow, { width: TOAST_WIDTH, height: TOAST_HEIGHT }).catch(() => {});
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
 
       setToast({

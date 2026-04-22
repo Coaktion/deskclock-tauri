@@ -31,7 +31,6 @@ export interface AppConfig {
   overlayShowOnStart: boolean;
   overlayOpacity: number;
   overlaySnapToGrid: boolean;
-  overlayShowGridIndicator: boolean;
   overlayPosition_execution: OverlayPosition;
   overlayPosition_planning: OverlayPosition;
   overlayPosition_compact: OverlayPosition;
@@ -58,12 +57,6 @@ export interface AppConfig {
   dailyGoalHours: number;
   weeklyGoalHours: number;
   showWeekend: boolean;
-  // Posicionamento de janelas
-  windowPositioningAuto: boolean;
-  workAreaWidth: number;
-  workAreaHeight: number;
-  taskbarPosition: "top" | "bottom" | "left" | "right";
-  taskbarSize: number;
 }
 
 const DEFAULTS: AppConfig = {
@@ -85,7 +78,6 @@ const DEFAULTS: AppConfig = {
   overlayShowOnStart: true,
   overlayOpacity: 100,
   overlaySnapToGrid: false,
-  overlayShowGridIndicator: false,
   overlayPosition_execution: { x: -1, y: -1 },
   overlayPosition_planning: { x: -1, y: -1 },
   overlayPosition_compact: { x: -1, y: -1 },
@@ -108,11 +100,6 @@ const DEFAULTS: AppConfig = {
   dailyGoalHours: 8,
   weeklyGoalHours: 40,
   showWeekend: true,
-  windowPositioningAuto: true,
-  workAreaWidth: 0,
-  workAreaHeight: 0,
-  taskbarPosition: "bottom" as const,
-  taskbarSize: 40,
 };
 
 type ConfigKey = keyof AppConfig;
