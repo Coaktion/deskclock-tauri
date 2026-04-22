@@ -282,7 +282,7 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     try {
       await sendTasks(sender, tasksToSend);
       await logRepo.markSent(allTaskIds, INTEGRATION);
-      await config.set("sheetsDailySyncLastDate", todayISO());
+      await config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
       setMessage({ text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`, error: false });
       setSelectedKeys(new Set());
       // Reload para atualizar badges de "enviado"

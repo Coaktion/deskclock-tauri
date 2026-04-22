@@ -368,32 +368,54 @@ function AppInner() {
     const taskRepo = new AppTaskRepository();
     const logRepo = new TaskIntegrationLogRepository();
 
-    async function runDailySync(dateISO: string) {
+    // Envia todas as tarefas concluídas não sincronizadas no range [startISO, endISO].
+    // Agrupa por nome+projeto+categoria; ignora grupos já totalmente enviados.
+    async function runDailySync(rangeStartISO: string, rangeEndISO: string): Promise<number> {
+      const [tasks, projects, categories] = await Promise.all([
+        taskRepo.findByDateRange(rangeStartISO, rangeEndISO),
+        new ProjectRepository().findAll(),
+        new CategoryRepository().findAll(),
+      ]);
+      const completed = tasks.filter((t) => t.status === "completed");
+      if (completed.length === 0) return 0;
+
+      const sentIds = new Set(await logRepo.findSentIds("google_sheets", rangeStartISO, rangeEndISO));
+      const groups = groupTasks(completed).filter((g) => !g.tasks.every((t) => sentIds.has(t.id)));
+      if (groups.length === 0) return 0;
+
+      const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
+      const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
+
+      const sender = new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
+      await sender.send(tasksToSend);
+      await logRepo.markSent(allIds, "google_sheets");
+      return groups.length;
+    }
+
+    // Calcula o range "desde o último envio" até a data alvo (exclusive hoje para on-open).
+    // Garante que fins de semana e dias perdidos são sempre cobertos.
+    function calcRange(endDateISO: string): { start: string; end: string } | null {
+      const lastTs = config.get("sheetsDailySyncLastTimestamp");
+      // Extrai a data local do último timestamp (ou usa 7 dias atrás como fallback)
+      const lastDateISO = lastTs
+        ? new Date(lastTs).toLocaleDateString("sv-SE") // "YYYY-MM-DD" no locale sueco = ISO date
+        : addDaysISO(todayISO(), -7);
+      const startDateISO = addDaysISO(lastDateISO, 1);
+      if (startDateISO > endDateISO) return null; // já sincronizado
+      return { start: startOfDayISO(startDateISO), end: endOfDayISO(endDateISO) };
+    }
+
+    async function triggerSync(endDateISO: string) {
+      const range = calcRange(endDateISO);
+      if (!range) return; // nada a enviar
       try {
-        const [tasks, projects, categories] = await Promise.all([
-          taskRepo.findByDateRange(startOfDayISO(dateISO), endOfDayISO(dateISO)),
-          new ProjectRepository().findAll(),
-          new CategoryRepository().findAll(),
-        ]);
-        const completed = tasks.filter((t) => t.status === "completed");
-        if (completed.length === 0) return;
-
-        const sentIds = new Set(
-          await logRepo.findSentIds("google_sheets", startOfDayISO(dateISO), endOfDayISO(dateISO))
-        );
-        const groups = groupTasks(completed).filter((g) => !g.tasks.every((t) => sentIds.has(t.id)));
-        if (groups.length === 0) return;
-
-        const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
-        const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
-
-        const sender = new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
-        await sender.send(tasksToSend);
-        await logRepo.markSent(allIds, "google_sheets");
-        await config.set("sheetsDailySyncLastDate", todayISO());
-        await showToast("success", `${groups.length} grupo(s) enviado(s) automaticamente para o Sheets`);
+        const count = await runDailySync(range.start, range.end);
+        await config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
+        if (count > 0) {
+          await showToast("success", `${count} grupo(s) enviado(s) automaticamente para o Sheets`);
+        }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Erro no envio diário ao Sheets.";
+        const msg = typeof err === "string" ? err : err instanceof Error ? err.message : "Erro no envio diário ao Sheets.";
         await showToast("error", msg);
       }
     }
@@ -401,11 +423,8 @@ function AppInner() {
     const trigger = config.get("sheetsAutoSyncTrigger");
 
     if (trigger === "on-open") {
-      // Envia tarefas do dia anterior se ainda não sincronizou hoje
-      const lastDate = config.get("sheetsDailySyncLastDate");
-      if (lastDate !== todayISO()) {
-        void runDailySync(addDaysISO(todayISO(), -1));
-      }
+      // Ao abrir: envia até ontem (não inclui o dia de hoje, ainda em andamento)
+      void triggerSync(addDaysISO(todayISO(), -1));
       return;
     }
 
@@ -417,11 +436,9 @@ function AppInner() {
         if (fired) return;
         const now = new Date();
         if (now.getHours() === hh && now.getMinutes() === mm) {
-          const lastDate = config.get("sheetsDailySyncLastDate");
-          if (lastDate !== todayISO()) {
-            fired = true;
-            void runDailySync(todayISO());
-          }
+          fired = true;
+          // No horário fixo: envia até hoje (dia corrente já concluído no fim do expediente)
+          void triggerSync(todayISO());
         }
       }, 30_000);
 

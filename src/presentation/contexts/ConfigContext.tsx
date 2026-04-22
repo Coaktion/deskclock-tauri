@@ -45,7 +45,7 @@ export interface AppConfig {
   sheetsAutoSyncMode: "per-task" | "daily";
   sheetsAutoSyncTrigger: "fixed-time" | "on-open";
   sheetsAutoSyncTime: string;
-  sheetsDailySyncLastDate: string;
+  sheetsDailySyncLastTimestamp: string;
   // Tokens Google OAuth (armazenados localmente no SQLite)
   googleAccessToken: string;
   googleRefreshToken: string;
@@ -98,7 +98,7 @@ const DEFAULTS: AppConfig = {
   sheetsAutoSyncMode: "per-task" as const,
   sheetsAutoSyncTrigger: "on-open" as const,
   sheetsAutoSyncTime: "18:00",
-  sheetsDailySyncLastDate: "",
+  sheetsDailySyncLastTimestamp: "",
   googleAccessToken: "",
   googleRefreshToken: "",
   googleTokenExpiry: 0,
