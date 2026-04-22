@@ -5,6 +5,7 @@ import { getCategories } from "@domain/usecases/categories/GetCategories";
 import { createCategory } from "@domain/usecases/categories/CreateCategory";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 import { deleteCategory } from "@domain/usecases/categories/DeleteCategory";
+import { updateCategory } from "@domain/usecases/categories/UpdateCategory";
 
 const repo = new CategoryRepository();
 
@@ -40,6 +41,14 @@ export function useCategories() {
     [load]
   );
 
+  const handleUpdate = useCallback(
+    async (id: string, name: string, defaultBillable: boolean) => {
+      await updateCategory(repo, id, name, defaultBillable);
+      await load();
+    },
+    [load]
+  );
+
   const handleDelete = useCallback(
     async (id: string) => {
       await deleteCategory(repo, id);
@@ -53,6 +62,7 @@ export function useCategories() {
     loading,
     createCategory: handleCreate,
     bulkImportCategories: handleBulkImport,
+    updateCategory: handleUpdate,
     deleteCategory: handleDelete,
   };
 }

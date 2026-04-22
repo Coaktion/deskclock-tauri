@@ -28,6 +28,11 @@ export class ProjectRepository implements IProjectRepository {
     await db.execute("INSERT INTO projects (id, name) VALUES ($1, $2)", [project.id, project.name]);
   }
 
+  async update(id: UUID, name: string): Promise<void> {
+    const db = await getDb();
+    await db.execute("UPDATE projects SET name = $1 WHERE id = $2", [name, id]);
+  }
+
   async delete(id: UUID): Promise<void> {
     const db = await getDb();
     await db.execute("DELETE FROM projects WHERE id = $1", [id]);

@@ -5,6 +5,7 @@ import { getProjects } from "@domain/usecases/projects/GetProjects";
 import { createProject } from "@domain/usecases/projects/CreateProject";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { deleteProject } from "@domain/usecases/projects/DeleteProject";
+import { updateProject } from "@domain/usecases/projects/UpdateProject";
 
 const repo = new ProjectRepository();
 
@@ -40,6 +41,14 @@ export function useProjects() {
     [load]
   );
 
+  const handleUpdate = useCallback(
+    async (id: string, name: string) => {
+      await updateProject(repo, id, name);
+      await load();
+    },
+    [load]
+  );
+
   const handleDelete = useCallback(
     async (id: string) => {
       await deleteProject(repo, id);
@@ -53,6 +62,7 @@ export function useProjects() {
     loading,
     createProject: handleCreate,
     bulkImportProjects: handleBulkImport,
+    updateProject: handleUpdate,
     deleteProject: handleDelete,
   };
 }

@@ -45,6 +45,14 @@ export class CategoryRepository implements ICategoryRepository {
     ]);
   }
 
+  async update(id: UUID, name: string, defaultBillable: boolean): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+      "UPDATE categories SET name = $1, default_billable = $2 WHERE id = $3",
+      [name, defaultBillable ? 1 : 0, id]
+    );
+  }
+
   async delete(id: UUID): Promise<void> {
     const db = await getDb();
     await db.execute("DELETE FROM categories WHERE id = $1", [id]);
