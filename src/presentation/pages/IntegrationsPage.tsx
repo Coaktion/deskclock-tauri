@@ -13,6 +13,7 @@ import {
   GripVertical,
   X,
   ArrowRight,
+  Send,
 } from "lucide-react";
 import {
   DndContext,
@@ -33,6 +34,9 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { type Page } from "@presentation/components/Sidebar";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
+import type { Project } from "@domain/entities/Project";
+import type { Category } from "@domain/entities/Category";
+import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
@@ -193,14 +197,26 @@ function ColumnMappingEditor({
 
 /* ── Sub-seção Google Sheets ── */
 
-function SheetsSection({ disabled }: { disabled: boolean }) {
+function SheetsSection({
+  disabled,
+  projects,
+  categories,
+}: {
+  disabled: boolean;
+  projects: Project[];
+  categories: Category[];
+}) {
   const config = useAppConfig();
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetName, setSheetName] = useState("DeskClock");
   const [columnMapping, setColumnMapping] = useState<SheetColumnMapping>(DEFAULT_COLUMN_MAPPING);
   const [durationFormat, setDurationFormat] = useState<"HH:MM" | "HH:MM:SS">("HH:MM");
   const [autoSync, setAutoSync] = useState(false);
+  const [syncMode, setSyncMode] = useState<"per-task" | "daily">("per-task");
+  const [syncTrigger, setSyncTrigger] = useState<"fixed-time" | "on-open">("on-open");
+  const [syncTime, setSyncTime] = useState("18:00");
   const [colsOpen, setColsOpen] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -209,6 +225,9 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
     setColumnMapping(config.get("integrationGoogleSheetsColumnMapping") ?? DEFAULT_COLUMN_MAPPING);
     setDurationFormat(config.get("integrationGoogleSheetsDurationFormat") ?? "HH:MM");
     setAutoSync(config.get("integrationGoogleSheetsAutoSync"));
+    setSyncMode(config.get("sheetsAutoSyncMode") ?? "per-task");
+    setSyncTrigger(config.get("sheetsAutoSyncTrigger") ?? "on-open");
+    setSyncTime(config.get("sheetsAutoSyncTime") ?? "18:00");
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleColumnMappingChange(next: SheetColumnMapping) {
@@ -222,81 +241,162 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
   }
 
   return (
-    <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
-      <Row label="ID da planilha">
-        <input
-          type="text"
-          value={spreadsheetId}
-          onChange={(e) => setSpreadsheetId(e.target.value)}
-          onBlur={() => config.set("integrationGoogleSheetsSpreadsheetId", spreadsheetId.trim())}
-          placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-          className="w-64 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
-        />
-      </Row>
-      <Row label="Nome da aba">
-        <input
-          type="text"
-          value={sheetName}
-          onChange={(e) => setSheetName(e.target.value)}
-          onBlur={async () => {
-            const name = sheetName.trim() || "DeskClock";
-            setSheetName(name);
-            await config.set("integrationGoogleSheetsSheetName", name);
-          }}
-          placeholder="DeskClock"
-          className="w-40 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
-        />
-      </Row>
+    <>
+      <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
+        <Row label="ID da planilha">
+          <input
+            type="text"
+            value={spreadsheetId}
+            onChange={(e) => setSpreadsheetId(e.target.value)}
+            onBlur={() => config.set("integrationGoogleSheetsSpreadsheetId", spreadsheetId.trim())}
+            placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
+            className="w-64 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+          />
+        </Row>
+        <Row label="Nome da aba">
+          <input
+            type="text"
+            value={sheetName}
+            onChange={(e) => setSheetName(e.target.value)}
+            onBlur={async () => {
+              const name = sheetName.trim() || "DeskClock";
+              setSheetName(name);
+              await config.set("integrationGoogleSheetsSheetName", name);
+            }}
+            placeholder="DeskClock"
+            className="w-40 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+          />
+        </Row>
 
-      {/* Mapeamento de colunas */}
-      <div className="py-2.5 border-b border-gray-800">
-        <button
-          onClick={() => setColsOpen((v) => !v)}
-          className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100 w-full text-left"
-        >
-          {colsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          Mapeamento de colunas
-          <span className="ml-auto text-xs text-gray-600">
-            {columnMapping.filter((c) => c.enabled).length}/{columnMapping.length} ativas
-          </span>
-        </button>
-        {colsOpen && (
-          <div className="mt-2">
-            <p className="text-xs text-gray-500 mb-2">
-              Ative/desative colunas, edite os rótulos e reordene conforme a planilha.
-            </p>
-            <ColumnMappingEditor mapping={columnMapping} onChange={handleColumnMappingChange} />
+        {/* Mapeamento de colunas */}
+        <div className="py-2.5 border-b border-gray-800">
+          <button
+            onClick={() => setColsOpen((v) => !v)}
+            className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100 w-full text-left"
+          >
+            {colsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            Mapeamento de colunas
+            <span className="ml-auto text-xs text-gray-600">
+              {columnMapping.filter((c) => c.enabled).length}/{columnMapping.length} ativas
+            </span>
+          </button>
+          {colsOpen && (
+            <div className="mt-2">
+              <p className="text-xs text-gray-500 mb-2">
+                Ative/desative colunas, edite os rótulos e reordene conforme a planilha.
+              </p>
+              <ColumnMappingEditor mapping={columnMapping} onChange={handleColumnMappingChange} />
+            </div>
+          )}
+        </div>
+
+        <Row label="Formato da duração">
+          <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+            {(["HH:MM", "HH:MM:SS"] as const).map((fmt) => (
+              <button
+                key={fmt}
+                onClick={() => handleDurationFormat(fmt)}
+                className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                  durationFormat === fmt
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {fmt}
+              </button>
+            ))}
+          </div>
+        </Row>
+
+        {/* Sincronização automática */}
+        <Row label="Sincronização automática">
+          <Toggle
+            checked={autoSync}
+            onChange={async (v) => {
+              setAutoSync(v);
+              await config.set("integrationGoogleSheetsAutoSync", v);
+            }}
+          />
+        </Row>
+
+        {autoSync && (
+          <div className="pl-4 border-l border-gray-800 ml-1 mb-1 space-y-0">
+            <Row label="Modo">
+              <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+                {(["per-task", "daily"] as const).map((m) => (
+                  <button
+                    key={m}
+                    onClick={async () => {
+                      setSyncMode(m);
+                      await config.set("sheetsAutoSyncMode", m);
+                    }}
+                    className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                      syncMode === m ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {m === "per-task" ? "Por tarefa" : "Diário"}
+                  </button>
+                ))}
+              </div>
+            </Row>
+
+            {syncMode === "daily" && (
+              <>
+                <Row label="Gatilho">
+                  <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+                    {(["on-open", "fixed-time"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={async () => {
+                          setSyncTrigger(t);
+                          await config.set("sheetsAutoSyncTrigger", t);
+                        }}
+                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                          syncTrigger === t ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
+                      </button>
+                    ))}
+                  </div>
+                </Row>
+
+                {syncTrigger === "fixed-time" && (
+                  <Row label="Horário">
+                    <input
+                      type="time"
+                      value={syncTime}
+                      onChange={(e) => setSyncTime(e.target.value)}
+                      onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
+                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                    />
+                  </Row>
+                )}
+              </>
+            )}
           </div>
         )}
+
+        {/* Envio manual */}
+        <div className="pt-2.5">
+          <button
+            onClick={() => setShowSendModal(true)}
+            className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
+          >
+            <Send size={12} />
+            Enviar tarefas manualmente…
+          </button>
+        </div>
       </div>
 
-      <Row label="Formato da duração">
-        <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
-          {(["HH:MM", "HH:MM:SS"] as const).map((fmt) => (
-            <button
-              key={fmt}
-              onClick={() => handleDurationFormat(fmt)}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                durationFormat === fmt
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              {fmt}
-            </button>
-          ))}
-        </div>
-      </Row>
-      <Row label="Sincronizar automaticamente ao concluir tarefa">
-        <Toggle
-          checked={autoSync}
-          onChange={async (v) => {
-            setAutoSync(v);
-            await config.set("integrationGoogleSheetsAutoSync", v);
-          }}
+      {showSendModal && (
+        <SheetsSendModal
+          projects={projects}
+          categories={categories}
+          onClose={() => setShowSendModal(false)}
         />
-      </Row>
-    </div>
+      )}
+    </>
   );
 }
 
@@ -424,6 +524,8 @@ function SubSection({
 
 function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page) => void }) {
   const config = useAppConfig();
+  const { projects } = useProjects();
+  const { categories } = useCategories();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -523,7 +625,7 @@ function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page) => voi
 
       {/* Sub-seções */}
       <SubSection icon={<TableProperties size={15} />} title="Google Sheets">
-        <SheetsSection disabled={!connected} />
+        <SheetsSection disabled={!connected} projects={projects} categories={categories} />
       </SubSection>
       <SubSection icon={<Calendar size={15} />} title="Google Calendar">
         <CalendarSection disabled={!connected} onNavigate={onNavigate} />
