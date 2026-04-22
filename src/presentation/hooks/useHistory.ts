@@ -123,25 +123,30 @@ export function useHistory() {
 
   const remove = useCallback(
     async (id: UUID) => {
+      // Captura a tarefa antes do await — garante dados corretos independente de timing
+      const task = groups.flatMap((g) => g.tasks).find((t) => t.id === id);
       await deleteTask(repo, id);
       setGroups((prev) =>
         prev
-          .map((g) => ({ ...g, tasks: g.tasks.filter((t) => t.id !== id) }))
+          .map((g) => {
+            const tasks = g.tasks.filter((t) => t.id !== id);
+            return {
+              ...g,
+              tasks,
+              totalSeconds: tasks.reduce((sum, t) => sum + (t.durationSeconds ?? 0), 0),
+            };
+          })
           .filter((g) => g.tasks.length > 0)
       );
-      setTotals((prev) => {
-        const task = groups.flatMap((g) => g.tasks).find((t) => t.id === id);
-        if (!task) return prev;
+      if (task) {
         const s = task.durationSeconds ?? 0;
-        return {
+        setTotals((prev) => ({
           count: prev.count - 1,
           totalSeconds: prev.totalSeconds - s,
           billableSeconds: task.billable ? prev.billableSeconds - s : prev.billableSeconds,
-          nonBillableSeconds: !task.billable
-            ? prev.nonBillableSeconds - s
-            : prev.nonBillableSeconds,
-        };
-      });
+          nonBillableSeconds: !task.billable ? prev.nonBillableSeconds - s : prev.nonBillableSeconds,
+        }));
+      }
     },
     [groups]
   );
