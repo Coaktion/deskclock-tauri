@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit, listen } from "@tauri-apps/api/event";
-import { positionNearTaskbar } from "@shared/utils/windowPosition";
+import { positionNearTaskbar, readPositionConfig, type WindowPositionOverride } from "@shared/utils/windowPosition";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { CheckCircle2, XCircle, Info, ArrowDownToLine, X } from "lucide-react";
 import {
@@ -59,11 +59,17 @@ export function ToastApp() {
   });
   const [animating, setAnimating] = useState(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const posOverrideRef = useRef<WindowPositionOverride | null>(null);
+
+  // Lê config de posicionamento uma única vez — sem SQLite a cada toast
+  useEffect(() => {
+    readPositionConfig().then((cfg) => { posOverrideRef.current = cfg; }).catch(() => {});
+  }, []);
 
   // Escuta eventos de toast
   useEffect(() => {
     const unlisten = listen<ToastMessagePayload>(OVERLAY_EVENTS.TOAST_MESSAGE, ({ payload }) => {
-      positionNearTaskbar(appWindow, { width: TOAST_WIDTH, height: TOAST_HEIGHT }).catch(() => {});
+      positionNearTaskbar(appWindow, { width: TOAST_WIDTH, height: TOAST_HEIGHT }, posOverrideRef.current ?? undefined).catch(() => {});
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
 
       setToast({
@@ -128,7 +134,7 @@ export function ToastApp() {
       {toast.actionLabel && toast.actionEvent && (
         <button
           onClick={() => handleAction(toast.actionEvent!)}
-          className="text-xs font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded border border-violet-700 hover:border-violet-500"
+          className="text-xs font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded-lg border border-violet-700 hover:border-violet-500"
         >
           {toast.actionLabel}
         </button>

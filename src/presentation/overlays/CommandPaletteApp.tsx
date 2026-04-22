@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalSize } from "@tauri-apps/api/dpi";
 import { emit } from "@tauri-apps/api/event";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { CommandPalette } from "@presentation/components/CommandPalette";
@@ -31,6 +32,16 @@ function CommandPaletteAppInner() {
     applyFontSize(config.get("fontSize"));
     applyTheme(config.get("theme") as Theme);
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Trava o tamanho — resizable:true é necessário no GTK para eventos de mouse,
+  // mas o usuário não deve conseguir redimensionar a palette.
+  useEffect(() => {
+    const size = new LogicalSize(560, 500);
+    appWindow.setMinSize(size).catch(() => {});
+    appWindow.setMaxSize(size).catch(() => {});
+    // Garante always-on-top após hide/show (GTK pode perder o estado)
+    appWindow.setAlwaysOnTop(true).catch(() => {});
+  }, []);
 
   // Close on focus loss
   useEffect(() => {

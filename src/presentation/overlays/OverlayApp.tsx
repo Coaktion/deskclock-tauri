@@ -19,7 +19,8 @@ import {
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
-import { currentMonitor } from "@tauri-apps/api/window";
+import { positionNearTaskbar, readPositionConfig } from "@shared/utils/windowPosition";
+import { currentMonitor, primaryMonitor } from "@tauri-apps/api/window";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
@@ -88,6 +89,11 @@ function OverlayAppInner() {
         // silenciosamente em janelas ainda não realizadas pelo compositor.
         await appWindow.setPosition(pos).catch(() => {});
         setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
+      } else {
+        // Sem posição salva: posiciona próximo à taskbar como padrão
+        void readPositionConfig().then((override) =>
+          positionNearTaskbar(appWindow, { width: OVERLAY_SIZES[newMode].width, height: OVERLAY_SIZES[newMode].height }, override)
+        );
       }
       setMode(newMode);
     },
@@ -196,7 +202,8 @@ function OverlayAppInner() {
         // todos os modos.
         let finalX = rawX;
         let finalY = rawY;
-        const [monitor, winSize] = await Promise.all([currentMonitor(), appWindow.outerSize()]);
+        const [monitorRaw, winSize] = await Promise.all([currentMonitor(), appWindow.outerSize()]);
+        const monitor = monitorRaw ?? await primaryMonitor();
         if (monitor) {
           const { width: mW, height: mH } = monitor.size;
           const { x: mX, y: mY } = monitor.position;

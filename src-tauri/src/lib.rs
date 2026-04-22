@@ -37,7 +37,7 @@ unsafe extern "system" fn win_event_proc(
         SetWindowPos, HWND_TOPMOST, SWP_NOMOVE, SWP_NOACTIVATE, SWP_NOSIZE,
     };
     let Some(handle) = APP_HANDLE.get() else { return };
-    for label in ["overlay", "toast", "welcome"] {
+    for label in ["overlay", "toast", "command-palette"] {
         let Some(w) = handle.get_webview_window(label) else { continue };
         if !w.is_visible().unwrap_or(false) { continue; }
         let Ok(hwnd) = w.hwnd() else { continue };
@@ -81,9 +81,11 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
     }
     #[cfg(not(target_os = "windows"))]
     std::thread::spawn(move || loop {
-        for label in ["overlay", "toast", "welcome"] {
+        for label in ["overlay", "toast", "command-palette"] {
             if let Some(w) = handle.get_webview_window(label) {
-                w.set_always_on_top(true).ok();
+                if w.is_visible().unwrap_or(false) {
+                    w.set_always_on_top(true).ok();
+                }
             }
         }
         std::thread::sleep(std::time::Duration::from_millis(200));

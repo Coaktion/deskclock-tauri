@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { showToast } from "@shared/utils/toast";
-import { positionNearTaskbar } from "@shared/utils/windowPosition";
+import { positionNearTaskbar, centerOnWorkArea, type WindowPositionOverride } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RunningTaskProvider, useRunningTask } from "@presentation/contexts/RunningTaskContext";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
@@ -282,52 +282,80 @@ function AppInner() {
     };
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Helper: lê config de posicionamento já carregado no cache — sem SQLite extra.
+  function buildPosOverride(): WindowPositionOverride {
+    return {
+      auto: config.get("windowPositioningAuto"),
+      workAreaWidth: config.get("workAreaWidth"),
+      workAreaHeight: config.get("workAreaHeight"),
+      taskbarPosition: config.get("taskbarPosition"),
+      taskbarSize: config.get("taskbarSize"),
+    };
+  }
+
+  // Helper: posiciona e exibe a janela principal. Usa posição salva se válida,
+  // senão positionNearTaskbar com override do config manual.
+  async function showMainWindow(focusToo = false) {
+    const saved = config.get("mainWindowPosition");
+    if (saved.x >= 0 && saved.y >= 0) {
+      await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y));
+    } else {
+      await positionNearTaskbar(appWindow, { width: 800, height: 620 }, buildPosOverride());
+    }
+    await appWindow.show();
+    if (focusToo) await appWindow.setFocus();
+  }
+
+  // Helper: posiciona e exibe o command palette centralizado.
+  async function showCommandPalette() {
+    const cp = await getCommandPalette();
+    if (!cp) return;
+    await centerOnWorkArea(cp, { width: 560, height: 500 }, buildPosOverride());
+    await cp.show();
+    await cp.setFocus();
+  }
+
   // Show windows on startup
   useEffect(() => {
     if (!config.isLoaded) return;
     if (config.loadError) {
-      positionNearTaskbar(appWindow).catch(() => {}).finally(() => appWindow.show());
+      positionNearTaskbar(appWindow, { width: 800, height: 620 }, buildPosOverride())
+        .catch(() => {}).finally(() => appWindow.show());
       return;
     }
     if (!config.get("setupCompleted")) {
-      positionNearTaskbar(appWindow).catch(() => {}).finally(() => appWindow.show());
+      positionNearTaskbar(appWindow, { width: 800, height: 620 }, buildPosOverride())
+        .catch(() => {}).finally(() => appWindow.show());
       return;
     }
 
-    if (config.get("showWelcomeMessage")) {
-      void (async () => {
+    void (async () => {
+      // Overlay sempre sobe no startup (compact por padrão)
+      const overlay = await getOverlay();
+      await overlay?.show();
+
+      if (config.get("showWelcomeMessage")) {
         const cp = await getCommandPalette();
-        if (!cp) {
-          const saved = config.get("mainWindowPosition");
-          const pos =
-            saved.x >= 0 && saved.y >= 0
-              ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
-              : positionNearTaskbar(appWindow);
-          await pos;
-          await appWindow.show();
-          // Show overlay only after main window is ready
-          const overlay = await getOverlay();
-          await overlay?.show();
-          return;
+        if (cp) {
+          // CP aberto no startup — posiciona antes de mostrar para evitar race
+          await showCommandPalette();
+        } else {
+          // Sem CP: mostra a janela principal diretamente
+          await showMainWindow();
         }
-        // Show overlay first so it doesn't steal focus from the command palette
-        const overlay = await getOverlay();
-        await overlay?.show();
-        // Command palette shown last — keeps focus
-        await cp.center();
-        await cp.show();
-        await cp.setFocus();
-      })();
-    } else {
-      const saved = config.get("mainWindowPosition");
-      const positionPromise =
-        saved.x >= 0 && saved.y >= 0
-          ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
-          : positionNearTaskbar(appWindow);
-      positionPromise.then(() => appWindow.show());
-      // Overlay always shows at startup (compact by default)
-      getOverlay().then((overlay) => overlay?.show());
-    }
+      } else {
+        await showMainWindow();
+      }
+    })();
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Atalho de teclado: mostra command palette com posicionamento correto.
+  // O hide já é feito pelo Rust (shortcuts.rs) — este evento só é emitido quando CP está oculto.
+  useEffect(() => {
+    const unlisten = listen("shortcut:show-command-palette", () => {
+      void showCommandPalette();
+    });
+    return () => { unlisten.then((fn) => fn()); };
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigate when command palette selects a page
@@ -335,71 +363,51 @@ function AppInner() {
     const unlisten = listen<CommandPaletteNavigatePayload>(
       OVERLAY_EVENTS.COMMAND_PALETTE_NAVIGATE,
       async ({ payload }) => {
-        const saved = config.get("mainWindowPosition");
-        const positionPromise =
-          saved.x >= 0 && saved.y >= 0
-            ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
-            : positionNearTaskbar(appWindow);
-        await positionPromise;
-        await appWindow.show();
-        await appWindow.setFocus();
+        await showMainWindow(true);
         setPage(payload.page as Page);
       }
     );
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigate to planning when triggered from overlay
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, async () => {
-      await positionNearTaskbar(appWindow);
-      await appWindow.show();
-      await appWindow.setFocus();
+      await showMainWindow(true);
       setPage("planning");
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navigate to tasks when overlay requests task edit focus.
-  // Eleva o sinal "abrir edição" para estado do AppInner para que
-  // RunningTaskSection o leia ao montar, independente da aba atual.
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, async () => {
       ignoreBlurRef.current = true;
       setTimeout(() => { ignoreBlurRef.current = false; }, 600);
       setPage("tasks");
       setFocusTaskEdit(true);
-      const saved = config.get("mainWindowPosition");
-      const positionPromise =
-        saved.x >= 0 && saved.y >= 0
-          ? appWindow.setPosition(new PhysicalPosition(saved.x, saved.y))
-          : positionNearTaskbar(appWindow);
-      await positionPromise;
-      await appWindow.show();
-      await appWindow.setFocus();
+      await showMainWindow(true);
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Exibe a janela no canto inferior direito quando o tray solicita (evento emitido pelo Rust)
+  // Exibe a janela quando o tray solicita
   useEffect(() => {
     const unlisten = appWindow.listen("tray:show-main", async () => {
       ignoreBlurRef.current = true;
       setTimeout(() => { ignoreBlurRef.current = false; }, 600);
-      await positionNearTaskbar(appWindow);
-      await appWindow.show();
-      await appWindow.setFocus();
+      await showMainWindow(true);
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Navega para Settings quando acionado pelo toast de atualização
   useEffect(() => {

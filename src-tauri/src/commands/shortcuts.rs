@@ -58,9 +58,9 @@ pub fn update_shortcuts(app: tauri::AppHandle, shortcuts: Vec<ShortcutEntry>) ->
                             if w.is_visible().unwrap_or(false) {
                                 let _ = w.hide();
                             } else {
-                                let _ = w.center();
-                                let _ = w.show();
-                                let _ = w.set_focus();
+                                // Posicionamento delegado ao main window via evento —
+                                // centerOnWorkArea respeita o config manual do usuário.
+                                let _ = app_handle.emit("shortcut:show-command-palette", ());
                             }
                         }
                     }
