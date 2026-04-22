@@ -386,6 +386,14 @@ export function SettingsPage() {
   const [weeklyGoalHours, setWeeklyGoalHours] = useState(40);
   const [weeklyGoalInput, setWeeklyGoalInput] = useState("40");
   const [showWeekend, setShowWeekend] = useState(true);
+  const [windowPositioningAuto, setWindowPositioningAuto] = useState(true);
+  const [workAreaWidth, setWorkAreaWidth] = useState(0);
+  const [workAreaWidthInput, setWorkAreaWidthInput] = useState("0");
+  const [workAreaHeight, setWorkAreaHeight] = useState(0);
+  const [workAreaHeightInput, setWorkAreaHeightInput] = useState("0");
+  const [taskbarPosition, setTaskbarPosition] = useState<"top" | "bottom" | "left" | "right">("bottom");
+  const [taskbarSize, setTaskbarSize] = useState(40);
+  const [taskbarSizeInput, setTaskbarSizeInput] = useState("40");
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [fontSize, setFontSize] = useState<"P" | "M" | "G" | "GG">("M");
@@ -420,6 +428,14 @@ export function SettingsPage() {
     setWeeklyGoalHours(weekly);
     setWeeklyGoalInput(String(weekly));
     setShowWeekend(config.get("showWeekend"));
+    setWindowPositioningAuto(config.get("windowPositioningAuto"));
+    const ww = config.get("workAreaWidth");
+    setWorkAreaWidth(ww); setWorkAreaWidthInput(String(ww));
+    const wh = config.get("workAreaHeight");
+    setWorkAreaHeight(wh); setWorkAreaHeightInput(String(wh));
+    setTaskbarPosition(config.get("taskbarPosition"));
+    const ts = config.get("taskbarSize");
+    setTaskbarSize(ts); setTaskbarSizeInput(String(ts));
     setFontSize(config.get("fontSize"));
     setTheme(config.get("theme") as Theme);
     setShortcutToggleTask(config.get("shortcutToggleTask"));
@@ -592,6 +608,37 @@ export function SettingsPage() {
     await config.set("showWeekend", value);
   }
 
+  async function handleWindowPositioningAuto(value: boolean) {
+    setWindowPositioningAuto(value);
+    await config.set("windowPositioningAuto", value);
+  }
+
+  async function handleWorkAreaWidthBlur() {
+    const parsed = parseInt(workAreaWidthInput, 10);
+    if (isNaN(parsed) || parsed < 0) { setWorkAreaWidthInput(String(workAreaWidth)); return; }
+    setWorkAreaWidth(parsed);
+    await config.set("workAreaWidth", parsed);
+  }
+
+  async function handleWorkAreaHeightBlur() {
+    const parsed = parseInt(workAreaHeightInput, 10);
+    if (isNaN(parsed) || parsed < 0) { setWorkAreaHeightInput(String(workAreaHeight)); return; }
+    setWorkAreaHeight(parsed);
+    await config.set("workAreaHeight", parsed);
+  }
+
+  async function handleTaskbarPosition(value: "top" | "bottom" | "left" | "right") {
+    setTaskbarPosition(value);
+    await config.set("taskbarPosition", value);
+  }
+
+  async function handleTaskbarSizeBlur() {
+    const parsed = parseInt(taskbarSizeInput, 10);
+    if (isNaN(parsed) || parsed < 0 || parsed > 200) { setTaskbarSizeInput(String(taskbarSize)); return; }
+    setTaskbarSize(parsed);
+    await config.set("taskbarSize", parsed);
+  }
+
   async function handleSlider(key: "overlayOpacity", setter: (v: number) => void, value: number) {
     setter(value);
     await config.set(key, value);
@@ -738,6 +785,91 @@ export function SettingsPage() {
                   onChange={handleShowWeekend}
                 />
               </CardRow>
+            </SettingsCard>
+
+            <SettingsCard>
+              <CardRow>
+                <ToggleRow
+                  label="Detecção automática de monitor"
+                  description="Usa os valores reportados pelo sistema operacional para posicionar janelas"
+                  value={windowPositioningAuto}
+                  onChange={handleWindowPositioningAuto}
+                />
+              </CardRow>
+              <CardRow>
+                <button
+                  onClick={async () => {
+                    await config.set("mainWindowPosition", { x: -1, y: -1 });
+                    await config.set("overlayPosition_execution", { x: -1, y: -1 });
+                    await config.set("overlayPosition_planning", { x: -1, y: -1 });
+                    await config.set("overlayPosition_compact", { x: -1, y: -1 });
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-200 underline underline-offset-2 transition-colors"
+                >
+                  Redefinir posições salvas das janelas
+                </button>
+              </CardRow>
+              {!windowPositioningAuto && (
+                <CardRow>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Posicionamento de janelas</p>
+                  <div className="flex gap-4 mb-3">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-400 mb-1.5">Largura da área de trabalho (px)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={workAreaWidthInput}
+                        onChange={(e) => setWorkAreaWidthInput(e.target.value)}
+                        onBlur={handleWorkAreaWidthBlur}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-400 mb-1.5">Altura da área de trabalho (px)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={workAreaHeightInput}
+                        onChange={(e) => setWorkAreaHeightInput(e.target.value)}
+                        onBlur={handleWorkAreaHeightBlur}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-400 mb-1.5">Posição da barra de tarefas</label>
+                      <div className="flex gap-1">
+                        {(["bottom", "top", "left", "right"] as const).map((pos) => (
+                          <button
+                            key={pos}
+                            onClick={() => handleTaskbarPosition(pos)}
+                            className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
+                              taskbarPosition === pos
+                                ? "bg-blue-600 border-blue-500 text-white"
+                                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                            }`}
+                          >
+                            {{ bottom: "Baixo", top: "Cima", left: "Esquerda", right: "Direita" }[pos]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="w-32">
+                      <label className="block text-xs text-gray-400 mb-1.5">Altura da barra (px)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={200}
+                        value={taskbarSizeInput}
+                        onChange={(e) => setTaskbarSizeInput(e.target.value)}
+                        onBlur={handleTaskbarSizeBlur}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </CardRow>
+              )}
             </SettingsCard>
           </div>
         )}

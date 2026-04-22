@@ -54,6 +54,12 @@ export interface AppConfig {
   dailyGoalHours: number;
   weeklyGoalHours: number;
   showWeekend: boolean;
+  // Posicionamento de janelas
+  windowPositioningAuto: boolean;
+  workAreaWidth: number;
+  workAreaHeight: number;
+  taskbarPosition: "top" | "bottom" | "left" | "right";
+  taskbarSize: number;
 }
 
 const DEFAULTS: AppConfig = {
@@ -94,6 +100,11 @@ const DEFAULTS: AppConfig = {
   dailyGoalHours: 8,
   weeklyGoalHours: 40,
   showWeekend: true,
+  windowPositioningAuto: true,
+  workAreaWidth: 0,
+  workAreaHeight: 0,
+  taskbarPosition: "bottom" as const,
+  taskbarSize: 40,
 };
 
 type ConfigKey = keyof AppConfig;
