@@ -20,6 +20,8 @@ import {
   type ImportEventInput,
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { emit } from "@tauri-apps/api/event";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -340,6 +342,7 @@ export function ImportCalendarModal({
     setImporting(true);
     try {
       const count = await importCalendarEvents(repo, inputs, new Date().toISOString());
+      if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao importar eventos.");

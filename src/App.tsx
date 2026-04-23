@@ -69,9 +69,7 @@ function PageContent({
   }
 }
 
-async function getOverlay() {
-  return WebviewWindow.getByLabel("overlay");
-}
+async function getOverlayCompact() { return WebviewWindow.getByLabel("overlay-compact"); }
 
 async function getCommandPalette() {
   return WebviewWindow.getByLabel("command-palette");
@@ -325,9 +323,19 @@ function AppInner() {
     }
 
     void (async () => {
-      // Overlay sempre sobe no startup (compact por padrão)
-      const overlay = await getOverlay();
-      await overlay?.show();
+      // Compact is always visible — popup auto-shows via RUNNING_TASK_CHANGED listener
+      // in PopupOverlayApp when overlayShowOnStart is configured.
+      const compact = await getOverlayCompact();
+      if (compact) {
+        // Set position before show so GTK compositor receives it on a realized window
+        const savedPos = config.get("overlayPosition_compact") as { x: number; y: number } | null;
+        if (savedPos && !(savedPos.x === -1 && savedPos.y === -1)) {
+          await compact.setPosition(new PhysicalPosition(savedPos.x, savedPos.y));
+        } else {
+          await positionNearTaskbar(compact, { width: 52, height: 52 });
+        }
+        await compact.show();
+      }
 
       if (config.get("showWelcomeMessage")) {
         const cp = await getCommandPalette();
@@ -442,7 +450,7 @@ function AppInner() {
       void showCommandPalette();
     });
     return () => { unlisten.then((fn) => fn()); };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config.isLoaded]);  
 
   // Navigate when command palette selects a page
   useEffect(() => {

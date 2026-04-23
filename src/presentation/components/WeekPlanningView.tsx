@@ -117,7 +117,7 @@ export function WeekPlanningView() {
       }
     }
     return { totalCount: total, completedCount: completed };
-  }, [tasks, visibleDays]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tasks, visibleDays]);  
 
   async function handlePlay(task: PlannedTask) {
     if (runningTask) return;

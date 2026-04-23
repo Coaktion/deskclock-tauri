@@ -6,6 +6,14 @@ export function formatHHMMSS(totalSeconds: number): string {
   return [h, m, sec].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
+/** Compact MM:SS display for small overlays (minutes can exceed 59). */
+export function formatMMSS(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
 export function formatDurationCompact(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);

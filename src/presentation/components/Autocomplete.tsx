@@ -15,6 +15,7 @@ interface AutocompleteProps {
   placeholder?: string;
   className?: string;
   autoFocus?: boolean;
+  dropUp?: boolean;
 }
 
 export function Autocomplete({
@@ -26,6 +27,7 @@ export function Autocomplete({
   placeholder = "",
   className = "",
   autoFocus = false,
+  dropUp = false,
 }: AutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -111,7 +113,7 @@ export function Autocomplete({
       {open && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto"
+          className={`absolute z-50 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
         >
           {filtered.map((o, idx) => (
             <li
