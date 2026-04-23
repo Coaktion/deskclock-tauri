@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { currentMonitor, monitorFromPoint, primaryMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
 import { positionNearTaskbar } from "@shared/utils/windowPosition";
@@ -43,7 +43,24 @@ export function useOverlayDrag(
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
         const { x: rawX, y: rawY } = lastRawPosRef.current;
-        const snapped = snapToGrid ? snapPositionToGrid(rawX, rawY) : { x: rawX, y: rawY };
+        let snapped = snapToGrid ? snapPositionToGrid(rawX, rawY) : { x: rawX, y: rawY };
+
+        // Clamp to monitor bounds — snap can push window past screen edge
+        const winSize = await appWindow.outerSize();
+        const hw = Math.round(winSize.width / 2);
+        const hh = Math.round(winSize.height / 2);
+        const monitor =
+          await monitorFromPoint(rawX + hw, rawY + hh).catch(() => null) ??
+          await currentMonitor().catch(() => null) ??
+          await primaryMonitor().catch(() => null);
+        if (monitor) {
+          const { position: ori, size: scr } = monitor;
+          snapped = {
+            x: Math.max(ori.x, Math.min(snapped.x, ori.x + scr.width  - winSize.width)),
+            y: Math.max(ori.y, Math.min(snapped.y, ori.y + scr.height - winSize.height)),
+          };
+        }
+
         if (snapped.x !== rawX || snapped.y !== rawY) {
           isProgrammaticMoveRef.current = true;
           await appWindow.setPosition(new PhysicalPosition(snapped.x, snapped.y));

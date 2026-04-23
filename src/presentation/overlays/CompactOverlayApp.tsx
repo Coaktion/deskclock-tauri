@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
+import type { Task } from "@domain/entities/Task";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
@@ -27,7 +28,7 @@ function CompactOverlayAppInner() {
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [snapToGrid, setSnapToGrid] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
+  const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
   // Ref-based state for use inside event handlers without stale closure issues
@@ -73,12 +74,12 @@ function CompactOverlayAppInner() {
     return () => { unlisten.then((fn) => fn()); };
   }, []);
 
-  // Track running task for visual state change
+  // Track running task for visual state (timer + ring)
   useEffect(() => {
     const unlisten = listen<RunningTaskChangedPayload>(
       OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
       ({ payload }) => {
-        setIsRunning(!!payload.task);
+        setRunningTask(payload.task);
       }
     );
     return () => { unlisten.then((fn) => fn()); };
@@ -136,7 +137,7 @@ function CompactOverlayAppInner() {
       onMouseLeave={() => setIsHovered(false)}
     >
       <CompactOverlayContent
-        isRunning={isRunning}
+        runningTask={runningTask}
         isPopupOpen={isPopupOpen}
         onMouseDown={handleMouseDown}
         onTogglePopup={handleTogglePopup}

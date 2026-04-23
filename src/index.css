@@ -71,6 +71,17 @@
   cursor: grabbing;
 }
 
+/* ── Compact overlay ring pulse ── */
+@keyframes overlay-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--overlay-ring-clr) 70%, transparent), 0 0 8px color-mix(in srgb, var(--overlay-ring-clr) 40%, transparent); }
+  50%       { box-shadow: 0 0 0 3px color-mix(in srgb, var(--overlay-ring-clr) 15%, transparent), 0 0 3px color-mix(in srgb, var(--overlay-ring-clr) 10%, transparent); }
+}
+.overlay-ring-pulse {
+  --overlay-ring-clr: #3b82f6;
+  animation: overlay-ring-pulse 2s ease-in-out infinite;
+}
+[data-theme="verde"] .overlay-ring-pulse { --overlay-ring-clr: #10b981; }
+
 /* ── Scrollbars uniformes ── */
 ::-webkit-scrollbar {
   width: 5px;
