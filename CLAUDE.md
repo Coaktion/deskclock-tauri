@@ -144,34 +144,22 @@ src/
 
 ### 5.1 Overlays (Janelas flutuantes)
 
-> **Comportamento geral:** Todos os overlays (exceto Welcome) são arrastáveis com persistência de posição no Config. Usar Tauri window API para janelas separadas.
+> **Arquitetura atual:** 2 janelas independentes — Compact Overlay (sempre visível) + Popup Flyout (aparece ao clicar). O Welcome Overlay foi substituído pelo Command Palette. O Execution Overlay foi unificado no Popup Flyout.
 
-#### 5.1.1 Welcome Overlay
-- **Quando aparece:** Ao abrir o app, se habilitado nas configurações.
-- **Conteúdo:** "Bom dia/tarde/noite, {nome}!" (saudação baseada na hora atual: 6-12=dia, 12-18=tarde, 18-6=noite). Nome obtido do campo "Como quer ser chamado?" nas configurações.
-- **Subtítulo:** "No que iremos trabalhar hoje?"
-- **Botões:** `Planejamento` → abre tela de planejamento. `Nova tarefa` → inicia tarefa imediatamente.
-- **NÃO é arrastável.** Desaparece ao escolher uma ação.
+#### 5.1.1 Compact Overlay
+- **Sempre visível** (always-on-top), arrastável, com persistência de posição.
+- **Estado idle** (sem tarefa em execução): ícone do app + badge com contador de tarefas planejadas pendentes.
+- **Estado running**: timer `MM:SS` pulsante substituindo o ícone; anel com glow animado no estilo da cor de status.
+- **Estado paused**: indicador visual de pausa.
+- **Clique:** abre o Popup Flyout. Se não há tarefa e não há planejadas, inicia nova tarefa em branco.
+- **Grip bar** para arraste, com snap-to-grid opcional.
 
-#### 5.1.2 Planning Overlay (Expandido)
-- **Quando aparece:** Quando não há tarefa em execução E overlay está habilitado.
-- **Conteúdo:** Lista de tarefas planejadas para hoje (nome + projeto + botão play).
-- **Botão "Nova tarefa":** Inicia tarefa não planejada → abre Execution Overlay, fecha este overlay.
-- **Title bar:** 3 botões — `Ir para planejamento` (navega à tela) / `Minimizar` (mostra Compact Overlay) / `Fechar`.
-- **Play em tarefa:** Inicia execução → abre Execution Overlay, fecha este overlay. Executa ações configuradas na tarefa (abrir URLs/arquivos).
-
-#### 5.1.3 Compact Overlay
-- **Quando aparece:** Ao minimizar o Planning Overlay.
-- **Conteúdo:** Ícone do app + badge com contador de tarefas planejadas pendentes (canto superior direito).
-- **Clique:** Se há tarefas planejadas → expande Planning Overlay. Se não há → inicia nova tarefa → abre Execution Overlay.
-- **Arrastável** com área de arraste dedicada.
-
-#### 5.1.4 Execution Overlay
-- **Quando aparece:** Ao iniciar qualquer tarefa.
-- **Conteúdo:** Nome da tarefa (ou "(sem nome)"), timer ativo abaixo do nome, borda lateral esquerda colorida (billable/non-billable).
-- **Botões:** Play/Pause, Stop, Fechar.
-- **Arrastável** por todos os monitores.
-- **Ao parar (stop):** Se overlay "Sempre visível" estiver ativo → mostra Planning Overlay. Senão → fecha.
+#### 5.1.2 Popup Flyout (Overlay de execução)
+- **Aparece ao clicar** no Compact Overlay — flyout acoplado, não janela separada.
+- **Estado idle:** lista de tarefas planejadas para hoje + botão "Nova tarefa". Botões: `Ir para planejamento` | `Fechar`.
+- **Estado running/paused:** nome da tarefa, timer ao vivo, borda lateral colorida (billable/non-billable). Controles: Play/Pause, Stop (com confirmação Concluída/Pendente), Cancelar, Fechar.
+- **Edição inline por campo:** clique em nome, projeto ou categoria abre edição in-place sem modal.
+- **Hora de início** editável — recalcula o timer ao alterar.
 
 ---
 
@@ -492,6 +480,72 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 - Temas implementados via CSS custom properties controladas pela configuração de tema.
 - Tamanhos de fonte escalados via variável CSS controlada pela configuração de acessibilidade.
 
+## Fonte da verdade visual
+
+- **Design system:** `.claude/design-system/`
+- **Tokens CSS:** `.claude/design-system/colors_and_type.css` — tokens importados em `src/index.css`
+- **UI de referência:** `.claude/design-system/ui_kits/deskclock/index.html` — abrir no navegador para comparação visual
+- **Mapa de componentes:** `.claude/migration/component-map.md`
+- **Mapa de tokens:** `.claude/migration/token-map.md`
+- **Critérios de aceitação:** `.claude/migration/acceptance.md`
+
+## Regras obrigatórias
+
+1. **Zero hardcode visual.** Nunca crie cores, tamanhos, raios, sombras ou tipografias com valores literais. Use sempre variáveis CSS de `tokens.css`. Se precisar de um valor que não existe, pare e pergunte — não invente um novo.
+
+2. **Mapa antes de código.** Ao tocar qualquer componente, consulte `component-map.md` primeiro para confirmar qual arquivo corresponde a qual bloco do design. Se não estiver no mapa, pare e peça para adicionar.
+
+3. **Um componente por conversa.** Não refatore múltiplas telas/componentes na mesma mudança. Escopo pequeno é verificável.
+
+4. **Screenshot diff é obrigatório.** Nenhuma mudança visual é "pronta" sem comparação screenshot do resultado vs. referência do design system.
+
+5. **Ambiguidade pausa o trabalho.** Se encontrar conflito entre design e código existente (ex: props diferentes, dados diferentes, lógica conflitante), PARE e pergunte. Não adivinhe.
+
+6. **Mudanças fora do escopo são rejeitadas.** Não "melhore" partes do código que não foram pedidas, mesmo que pareçam problemas óbvios. Documente em `.claude/migration/findings.md` e continue.
+
+7. **Ordem de migração é fixa.** Siga a ordem de Fase 0 → 7 do `MIGRATION_GUIDE.md`. Não pule fases.
+
+## Workflow padrão por tarefa
+
+Antes de qualquer mudança:
+- [ ] Ler o README do design system
+- [ ] Ler `component-map.md` para o componente em questão
+- [ ] Confirmar props preservadas e escopo
+- [ ] Rodar a tela atual e tirar screenshot "antes"
+
+Ao terminar:
+- [ ] Tirar screenshot "depois"
+- [ ] Comparar com referência do design system
+- [ ] Preencher checklist de `acceptance.md` para o componente
+- [ ] Listar no resumo do PR: (a) arquivos tocados, (b) checklist preenchido, (c) screenshot diff
+
+## Critérios de "pronto" (universal)
+
+Todo PR visual deve passar em:
+
+- [ ] Zero valores hex/rgb fora de `tokens.css`
+- [ ] Zero valores de espaçamento literal (px) fora de tokens
+- [ ] Testes existentes passam
+- [ ] Sem console warnings novos
+- [ ] Screenshot diff anexado com < 2% de pixels divergentes (ou justificativa)
+- [ ] Checklist de aceitação preenchido
+
+## Tom e linguagem
+
+- UI em **português (Brasil)**, sentence case, sem emoji, sem gírias
+- Números: tempos em `HH:MM:SS`, durações compactas `1h30` ou `45m`
+- Botões: verbo no infinitivo ("Iniciar", "Parar & salvar")
+- Mensagens: curtas e informativas, nunca paternalistas
+
+## Quando pedir ajuda humana
+
+Pare e pergunte se:
+- Correspondência de componente não está no mapa
+- Token novo parece necessário
+- Props antigas conflitam com estrutura nova
+- Comportamento interativo ambíguo (ex: hover em mobile?)
+- Mais de 3 divergências remanescentes após tentativa de fidelidade
+
 ---
 
 ## 9. PRIORIDADE DE IMPLEMENTAÇÃO SUGERIDA
@@ -510,6 +564,7 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | 8 — Integrações | ✅ concluída | ✅ Modo de envio (UI + ITaskSender). ✅ Tela de Integrações (conector Google unificado). ✅ Google Sheets OAuth + sender + auto-sync ao concluir tarefa. ✅ Google Calendar: importação com editor inline, recorrência via RRULE, filtro de eventos não relevantes. |
 | 9 — Polish | ✅ concluída | ✅ Lançamento retroativo. ✅ Feedback link. ✅ Ações de tarefa (open URL/file). ✅ Build multiplataforma + CI/CD. ✅ README final. |
 | 10 — API Local + Command Palette | ✅ concluída | ✅ API REST local (axum + utoipa) com Swagger UI. ✅ CRUD de tarefas planejadas via API. ✅ Command Palette (Ctrl+K) substituindo Welcome Overlay. ✅ Busca fuzzy + atalhos Ctrl+1–7. ✅ Startup: CP + compact overlay simultâneos. |
+| 11 — Redesign visual (Design System) | 🚧 em andamento | Migração para design system dark-first com tokens CSS semânticos, Inter + JetBrains Mono, e componentes auditados vs. referência visual. Branch: `feature/v2-layout-refine`. |
 
 ---
 
@@ -585,7 +640,9 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 | 18/04/2026 | Axum 0.8 usa `{param}` em vez de `:param` nas rotas | Quebra em runtime com panic; corrigido trocando `:id` por `{id}` e `:date` por `{date}` em `routes.rs`. |
 | 18/04/2026 | CRUD de tarefas planejadas na API local | 7 endpoints: lista (com filtro por data + regras de recorrência em Rust), get, create, update (PUT), delete, marcar/desmarcar conclusão. `completed_dates`, `recurring_days` e `actions` são JSON strings no SQLite serializados/desserializados na camada API. |
 | 19/04/2026 | `opener:allow-open-url` requer scope explícito para HTTP | Sem scope, apenas HTTPS é permitido. `http://localhost` (Swagger UI) exige objeto `allow` com `{ "url": "http://localhost:*/**" }` em `capabilities/default.json`. |
+| 24/04/2026 | Overlays refatorados para padrão Compact + Popup Flyout (2 janelas) | 3 janelas separadas (Compact, Execution, Planning) criavam conflitos de foco e complexidade de posicionamento; 2 janelas com flyout acoplado ao compact simplifica o ciclo de vida e melhora a UX no GTK/Windows |
+| 24/04/2026 | Design system migration iniciada em `feature/v2-layout-refine` | Tokens CSS semânticos adicionados a `index.css`; artefatos de referência em `.claude/design-system/`; mapas de migração em `.claude/migration/`; `TotalsSection` e `PlannedTasksSection` são os primeiros componentes migrados |
 
 ---
 
-*Última atualização: 19/04/2026*
+*Última atualização: 24/04/2026*

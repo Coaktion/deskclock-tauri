@@ -5,7 +5,7 @@ import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { getWeekTotal } from "@domain/usecases/tasks/GetWeekTotal";
 import { groupTasks } from "@shared/utils/groupTasks";
 import { todayISO, weekBoundsISO } from "@shared/utils/time";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 
 const repo = new TaskRepository();
 

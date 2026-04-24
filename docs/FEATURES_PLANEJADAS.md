@@ -8,20 +8,16 @@
 
 ## F1 — API Local (REST/WebSocket)
 
-**Status:** ⬜
+**Status:** ✅ concluída (v1.0.0)
 
-**Descrição:**  
-Expor uma API local que permita automação externa — iniciar/pausar/parar tarefas, consultar status da tarefa em execução — integrável com qualquer app de terceiros (Raycast, scripts, automações de SO).
+**Implementação:**  
+Servidor axum em Rust, porta `27420` (configurável), bind em `127.0.0.1`. Documentação interativa via Swagger UI (`/docs`). Habilitável nas Configurações.
 
-**Opções técnicas:**
-- `tauri-plugin-http` (servidor embutido)
-- Servidor interno leve em Rust (tokio + axum/warp)
-- WebSocket para push de eventos em tempo real
+**Endpoints implementados:** `GET /status`, `POST /tasks/start`, `/tasks/stop`, `/tasks/toggle`, `/tasks/pause`, `/tasks/resume`, `/tasks/cancel`, `GET /projects`, `GET /categories`, CRUD completo de tarefas planejadas (7 endpoints com regras de recorrência em Rust).
 
-**Pontos a refinar antes da implementação:**
-- Autenticação da API (token local? sem auth?)
-- Quais endpoints são necessários no MVP
-- Impacto no consumo de CPU/memória em idle
+**Decisões tomadas:** sem autenticação (bind local), sem WebSocket (polling suficiente para casos de uso), evento Tauri `running-task-changed` emitido após cada mutação para sincronizar a UI.
+
+**Referência:** `docs/F1_LOCAL_REST_API.md` (doc de planejamento), `src-tauri/src/api/`
 
 ---
 
@@ -71,30 +67,17 @@ Exemplo: tarefa de 22 min → arredonda para **20 min** (pra baixo) ou **25 min*
 
 ## F4 — Modos de Sincronização com Google Sheets
 
-**Status:** ⬜
+**Status:** ✅ concluída (v1.1.0)
 
-**Descrição:**  
-Atualmente o app suporta apenas sincronização unitária (envia para a planilha cada vez que uma tarefa é concluída). Esta feature adiciona a opção de **sincronização diária** — o usuário define quando o envio consolidado do dia deve acontecer.
-
-**Modos disponíveis:**
-| Modo | Descrição |
+**Implementação:**  
+Três modos disponíveis nas configurações de integração Google Sheets:
+| Modo | Status |
 |---|---|
-| Por tarefa (atual) | Envia automaticamente para a planilha cada vez que uma tarefa é concluída |
-| Diário — horário fixo | Envia todas as tarefas do dia em um horário definido pelo usuário (ex: 18:00) |
-| Diário — ao abrir o app | Ao abrir o app, envia automaticamente todas as tarefas registradas no dia anterior |
+| Por tarefa | ✅ — envia ao concluir cada tarefa (auto-sync em `RunningTaskContext`) |
+| Diário — ao abrir o app | ✅ — envia tarefas desde o último envio ao iniciar o app |
+| Diário — horário fixo | ✅ — cron interno dispara no horário configurado pelo usuário |
 
-**Configurações necessárias (modo diário):**
-| Configuração | Tipo |
-|---|---|
-| Modo de sincronização | select: por tarefa / diário |
-| Gatilho (se diário) | select: horário fixo / ao abrir o app |
-| Horário (se gatilho = horário fixo) | time input (HH:MM) |
-
-**Pontos a refinar antes da implementação:**
-- Como garantir que o envio acontece mesmo que o app esteja minimizado no tray (tarefas agendadas via cron interno?)
-- Tratamento de duplicidade: o que acontece se o envio diário rodar e algumas tarefas já foram enviadas unitariamente no mesmo dia?
-- Indicador visual na UI de "último envio realizado em X"
-- Comportamento se o horário configurado passa enquanto o app estava fechado
+Envio por range (desde último envio) evita duplicidades. Indicador "Sincronizado · há Xmin" visível na UI. Comportamento se app estava fechado no horário: envio executado na próxima abertura.
 
 ---
 
@@ -138,4 +121,4 @@ const CLIENT_SECRET = import.meta.env.GCP_CLIENT_SECRET as string;
 
 ---
 
-*Última atualização: 15/04/2026*
+*Última atualização: 24/04/2026*

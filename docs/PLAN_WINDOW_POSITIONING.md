@@ -1,5 +1,8 @@
 # Especificação Técnica: Posicionamento Robusto de Janelas (Linux & Windows)
 
+> **Status: ✅ Implementada em v1.0.0** — `src/shared/utils/windowPosition.ts` + lógica equivalente em Rust (`positionNearTaskbar`).  
+> A solução `workArea` foi adotada. Adicionalmente: fallback `primaryMonitor()` para janelas ocultas no GTK, retry de 150ms no `setPosition`, e `currentMonitor()` → `primaryMonitor()` para overlays. Referência: CLAUDE.md — Registro de Decisões 17/04/2026.
+
 Este documento detalha a implementação de um sistema centralizado de posicionamento de janelas para o DeskClock, garantindo que as janelas de Boas-vindas, Principal e Toast sejam sempre exibidas no canto inferior direito da área útil da tela, respeitando a posição da barra de tarefas (taskbar/panel) em qualquer sistema operacional (especialmente Linux).
 
 ## 1. Problema Atual

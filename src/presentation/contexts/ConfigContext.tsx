@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { DEFAULT_COLUMN_MAPPING, type SheetColumnMapping } from "@shared/types/sheetsConfig";
+import type { RoundingSlot } from "@shared/utils/roundDuration";
 
 export interface OverlayPosition {
   x: number;
@@ -57,6 +58,10 @@ export interface AppConfig {
   dailyGoalHours: number;
   weeklyGoalHours: number;
   showWeekend: boolean;
+  // Arredondamento de duração
+  roundingEnabled: boolean;
+  roundingSlots: RoundingSlot[];
+  roundingTolerance: number;
 }
 
 const DEFAULTS: AppConfig = {
@@ -100,6 +105,9 @@ const DEFAULTS: AppConfig = {
   dailyGoalHours: 8,
   weeklyGoalHours: 40,
   showWeekend: true,
+  roundingEnabled: false,
+  roundingSlots: [15, 30, 45, 60] as RoundingSlot[],
+  roundingTolerance: 0,
 };
 
 type ConfigKey = keyof AppConfig;

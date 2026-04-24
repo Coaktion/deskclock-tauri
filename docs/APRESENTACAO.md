@@ -85,12 +85,14 @@ src/
 | Janela | Função |
 |---|---|
 | `main` | Janela principal (7 telas) |
-| `overlay` | Execution · Planning · Compact (modo único, troca interna) |
-| `welcome` | Saudação ao abrir o app |
+| `compact` | Indicador always-on-top: timer MM:SS (running) · ícone + badge (idle) |
+| `popup` | Flyout acoplado ao compact: controles de tarefa + edição inline por campo |
 | `toast` | Notificações no canto inferior direito |
 | `tray` | Ícone + timer ao vivo na bandeja |
 
 Cada janela tem seu próprio contexto JS — estado sincronizado via **eventos Tauri cross-window**.
+
+> Welcome Overlay substituído pelo Command Palette (Ctrl+K). Execution e Planning Overlay unificados no padrão Compact + Popup Flyout (v1.2.0).
 
 ---
 
@@ -253,16 +255,16 @@ git push origin main --follow-tags  # dispara release.yml
 
 | Métrica | Valor |
 |---|---|
-| Versão atual | 0.6.0 |
+| Versão atual | 1.2.0 |
 | Bundle size (Windows .msi) | ~10 MB |
 | Janelas Tauri | 5 |
 | Telas na janela principal | 7 |
-| Eventos cross-window | 10 |
+| Eventos cross-window | 10+ |
 | Arquivos de teste | 49 |
 | Casos de teste | 342 |
 | Plataformas de build | Windows · Ubuntu/Debian · AppImage |
-| Linhas de Rust (backend) | ~1.200 |
-| Linhas de TypeScript (frontend) | ~8.000 |
+| Linhas de Rust (backend) | ~1.500 |
+| Linhas de TypeScript (frontend) | ~9.000 |
 
 ---
 
@@ -289,4 +291,4 @@ Eventos Tauri como barramento de mensagens — sem biblioteca de estado global, 
 
 **Repositório:** `github.com/EduardoMeira/deskclock-tauri`
 **Stack:** Tauri v2 · React 19 · TypeScript · SQLite · Rust
-**Versão atual:** 0.6.0
+**Versão atual:** 1.2.0

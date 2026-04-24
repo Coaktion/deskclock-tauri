@@ -1,7 +1,8 @@
 # F1 — API REST Local para Integração com Apps Terceiros
 
-> Documento de planejamento para implementação de um servidor HTTP local
-> que expõe endpoints REST para controle externo do DeskClock.
+> **Status: ✅ Implementada em v1.0.0** — `src-tauri/src/api/`
+>
+> Documento de planejamento original. Serve como referência histórica das decisões arquiteturais tomadas.
 
 ---
 
@@ -492,15 +493,17 @@ done
 
 ## 10. Checklist de Validação
 
-- [ ] Servidor inicia e responde em `http://localhost:{porta}/status`
-- [ ] `POST /tasks/start` cria tarefa e o overlay reflete imediatamente
-- [ ] `POST /tasks/stop` para tarefa e a lista de hoje atualiza
-- [ ] `POST /tasks/toggle` funciona nos 3 estados (sem tarefa, running, paused)
-- [ ] Desativar toggle na UI encerra o servidor
-- [ ] Reativar toggle na UI reinicia o servidor
-- [ ] Porta ocupada mostra mensagem de erro na UI
-- [ ] App reiniciado com API ativa: servidor reinicia automaticamente
-- [ ] Múltiplas requisições simultâneas não causam deadlock
+- [x] Servidor inicia e responde em `http://localhost:{porta}/status`
+- [x] `POST /tasks/start` cria tarefa e o overlay reflete imediatamente
+- [x] `POST /tasks/stop` para tarefa e a lista de hoje atualiza
+- [x] `POST /tasks/toggle` funciona nos 3 estados (sem tarefa, running, paused)
+- [x] Desativar toggle na UI encerra o servidor
+- [x] Reativar toggle na UI reinicia o servidor
+- [x] Porta ocupada mostra mensagem de erro na UI
+- [x] App reiniciado com API ativa: servidor reinicia automaticamente
+- [x] Múltiplas requisições simultâneas não causam deadlock
+
+> Swagger UI disponível em `http://localhost:{porta}/docs` (utoipa). Implementação: `src-tauri/src/api/`.
 
 ---
 

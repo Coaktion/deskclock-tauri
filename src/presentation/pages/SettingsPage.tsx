@@ -4,6 +4,8 @@ import { emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
+import type { RoundingSlot } from "@shared/utils/roundDuration";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme, THEMES } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
@@ -381,6 +383,9 @@ export function SettingsPage() {
   const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [closeOnFocusLoss, setCloseOnFocusLoss] = useState(false);
   const [discardTasksUnderOneMinute, setDiscardTasksUnderOneMinute] = useState(false);
+  const [roundingEnabled, setRoundingEnabled] = useState(false);
+  const [roundingSlots, setRoundingSlots] = useState<RoundingSlot[]>([15, 30, 45, 60]);
+  const [roundingTolerance, setRoundingTolerance] = useState(0);
   const [dailyGoalHours, setDailyGoalHours] = useState(8);
   const [dailyGoalInput, setDailyGoalInput] = useState("8");
   const [weeklyGoalHours, setWeeklyGoalHours] = useState(40);
@@ -413,6 +418,9 @@ export function SettingsPage() {
     setLiveTrayTimer(config.get("liveTrayTimer"));
     setCloseOnFocusLoss(config.get("closeOnFocusLoss"));
     setDiscardTasksUnderOneMinute(config.get("discardTasksUnderOneMinute"));
+    setRoundingEnabled(config.get("roundingEnabled"));
+    setRoundingSlots(config.get("roundingSlots"));
+    setRoundingTolerance(config.get("roundingTolerance"));
     const daily = config.get("dailyGoalHours");
     setDailyGoalHours(daily);
     setDailyGoalInput(String(daily));
@@ -557,6 +565,24 @@ export function SettingsPage() {
     await config.set(key, value);
   }
 
+  async function handleRoundingEnabled(value: boolean) {
+    setRoundingEnabled(value);
+    await config.set("roundingEnabled", value);
+  }
+
+  async function handleRoundingSlotToggle(slot: RoundingSlot) {
+    const next = roundingSlots.includes(slot)
+      ? roundingSlots.filter((s) => s !== slot)
+      : [...roundingSlots, slot].sort((a, b) => a - b) as RoundingSlot[];
+    setRoundingSlots(next);
+    await config.set("roundingSlots", next);
+  }
+
+  async function handleRoundingTolerance(value: number) {
+    setRoundingTolerance(value);
+    await config.set("roundingTolerance", value);
+  }
+
   async function handleStartOnBoot(value: boolean) {
     setStartOnBoot(value);
     await config.set("startOnBoot", value);
@@ -697,6 +723,60 @@ export function SettingsPage() {
                   value={discardTasksUnderOneMinute}
                   onChange={(v) => handleToggle("discardTasksUnderOneMinute", setDiscardTasksUnderOneMinute, v)}
                 />
+              </CardRow>
+              <CardRow>
+                <ToggleRow
+                  label="Arredondar duração ao parar"
+                  description="Arredonda a duração registrada para o slot de tempo ativo mais próximo."
+                  value={roundingEnabled}
+                  onChange={handleRoundingEnabled}
+                />
+                {roundingEnabled && (
+                  <div className="mt-3 space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-2">Slots ativos</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ALL_ROUNDING_SLOTS.map((slot) => {
+                          const active = roundingSlots.includes(slot);
+                          return (
+                            <button
+                              key={slot}
+                              onClick={() => handleRoundingSlotToggle(slot)}
+                              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                                active
+                                  ? "bg-blue-600 border-blue-600 text-white"
+                                  : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200"
+                              }`}
+                            >
+                              {slot === 60 ? "1h" : `${slot}m`}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">Tolerância</p>
+                      <p className="text-xs text-gray-500 mb-2">
+                        Quando uma tarefa passa de um slot ativo, se for encerrada ainda dentro desta tolerância, é arredondada para o slot recém ultrapassado. Do contrário, irá para o próximo slot.
+                      </p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {[0, 1, 2, 5, 10, 15].map((min) => (
+                          <button
+                            key={min}
+                            onClick={() => handleRoundingTolerance(min)}
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                              roundingTolerance === min
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200"
+                            }`}
+                          >
+                            {min === 0 ? "0m (sempre sobe)" : `${min}m`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardRow>
             </SettingsCard>
 

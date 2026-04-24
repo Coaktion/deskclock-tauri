@@ -1,6 +1,6 @@
 import { Clock } from "lucide-react";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { todayISO } from "@shared/utils/time";
 
 interface CompactOverlayProps {
