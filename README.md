@@ -67,10 +67,9 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Busca fuzzy nas ações e tarefas planejadas do dia
 
 ### Overlays
-- **Execution Overlay:** janela flutuante com timer ao vivo, arrastável, persistência de posição
-- **Planning Overlay:** lista de tarefas planejadas para hoje, minimizável
-- **Compact Overlay:** ícone + badge com contador de tarefas pendentes
-- **Toast:** notificações de sistema (ex: confirmação de sync) no canto inferior direito
+- **Compact Overlay:** sempre visível (always-on-top), arrastável com persistência de posição; mostra ícone + badge de tarefas pendentes quando idle, timer `MM:SS` pulsante quando em execução
+- **Popup Flyout:** aberto ao clicar no Compact; mostra tarefas planejadas (idle) ou controles da tarefa em execução (running/paused); edição inline por campo (nome, projeto, categoria, hora de início) sem abrir modal
+- **Toast:** notificações de sistema no canto inferior direito
 - Opacidade em repouso configurável, snap-to-grid opcional
 
 ### API REST local
