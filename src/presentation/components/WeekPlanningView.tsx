@@ -4,7 +4,7 @@ import { emit } from "@tauri-apps/api/event";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";

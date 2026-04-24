@@ -5,7 +5,7 @@ import { PlannedTasksSection } from "@presentation/components/PlannedTasksSectio
 import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
 import { TotalsSection } from "@presentation/components/TotalsSection";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";

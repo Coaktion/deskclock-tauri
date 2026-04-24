@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock, ArrowRight, Pen, DollarSign } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { RunningTaskEditForm } from "./RunningTaskEditForm";
 import { Autocomplete } from "./Autocomplete";

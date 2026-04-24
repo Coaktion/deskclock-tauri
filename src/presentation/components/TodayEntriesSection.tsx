@@ -10,7 +10,7 @@ import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLog
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
-import { useRunningTask } from "@presentation/contexts/RunningTaskContext";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
 
 const repo = new TaskRepository();

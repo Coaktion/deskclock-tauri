@@ -10,8 +10,8 @@ import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
 import { CategoryRepository } from "@infra/database/CategoryRepository";
 import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { ProjectRepository } from "@infra/database/ProjectRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
+import { TaskRepository } from "@infra/database/TaskRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import {
@@ -19,11 +19,12 @@ import {
   type RunningTaskChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
+import { roundDuration } from "@shared/utils/roundDuration";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useEffect, useRef, useState } from "react";
 
 interface StartInput {
   name?: string | null;
@@ -42,7 +43,7 @@ interface UpdateInput {
   startTime?: string;
 }
 
-interface RunningTaskContextValue {
+export interface RunningTaskContextValue {
   runningTask: Task | null;
   reloadSignal: number;
   startTask: (input: StartInput) => Promise<void>;
@@ -53,7 +54,7 @@ interface RunningTaskContextValue {
   updateActiveTask: (input: UpdateInput) => Promise<void>;
 }
 
-const RunningTaskContext = createContext<RunningTaskContextValue | null>(null);
+export const RunningTaskContext = createContext<RunningTaskContextValue | null>(null);
 
 const repo = new TaskRepository();
 const plannedRepo = new PlannedTaskRepository();
@@ -189,7 +190,6 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     const unlisten = listen<TaskStoppedPayload>(
       OVERLAY_EVENTS.TASK_STOPPED,
       async ({ payload }) => {
-        if (!payload.completed) return;
         const duration = payload.task.durationSeconds ?? 0;
         if (config.get("discardTasksUnderOneMinute") && duration < 60) {
           await cancelTaskUC(repo, payload.task.id);
@@ -197,8 +197,26 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
           await showToast("info", "Tarefa descartada (menos de 1 minuto)");
           return;
         }
+        let finalTask = payload.task;
+        if (config.get("roundingEnabled") && duration > 0) {
+          const rounded = roundDuration(
+            duration,
+            config.get("roundingSlots"),
+            config.get("roundingTolerance")
+          );
+          if (rounded !== duration) {
+            finalTask = await updateTaskUC(
+              repo,
+              payload.task.id,
+              { durationSeconds: rounded },
+              payload.task.updatedAt
+            );
+            triggerReload();
+          }
+        }
+        if (!payload.completed) return;
         await completePlannedIfNeeded(payload.plannedTaskId);
-        await autoSyncTask(payload.task);
+        await autoSyncTask(finalTask);
       }
     );
     return () => {
@@ -209,7 +227,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   const stopTask = useCallback(
     async (completed: boolean) => {
       if (!runningTask) return;
-      const stoppedTask = await stopTaskUC(repo, runningTask.id, new Date().toISOString());
+      let stoppedTask = await stopTaskUC(repo, runningTask.id, new Date().toISOString());
       const duration = stoppedTask.durationSeconds ?? 0;
       const plannedId = activePlannedTaskId;
       if (config.get("discardTasksUnderOneMinute") && duration < 60) {
@@ -220,6 +238,21 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         await notifyOverlay(null);
         await showToast("info", "Tarefa descartada (menos de 1 minuto)");
         return;
+      }
+      if (config.get("roundingEnabled") && duration > 0) {
+        const rounded = roundDuration(
+          duration,
+          config.get("roundingSlots"),
+          config.get("roundingTolerance")
+        );
+        if (rounded !== duration) {
+          stoppedTask = await updateTaskUC(
+            repo,
+            stoppedTask.id,
+            { durationSeconds: rounded },
+            stoppedTask.updatedAt
+          );
+        }
       }
       setRunningTask(null);
       setActivePlannedTaskId(null);
@@ -270,8 +303,3 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   );
 }
 
-export function useRunningTask(): RunningTaskContextValue {
-  const ctx = useContext(RunningTaskContext);
-  if (!ctx) throw new Error("useRunningTask must be inside RunningTaskProvider");
-  return ctx;
-}
