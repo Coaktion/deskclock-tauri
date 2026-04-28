@@ -37,7 +37,7 @@ Permitir uso pessoal vs. profissional com perfis separados. Cada perfil teria se
 
 ## F3 — Arredondamento Automático de Duração
 
-**Status:** ⬜
+**Status:** ✅ concluída (v1.3.0)
 
 **Descrição:**  
 Feature flag nas configurações do app. Quando ativada, ao parar uma tarefa, a duração registrada é arredondada para o intervalo de tempo mais próximo (configurável).
