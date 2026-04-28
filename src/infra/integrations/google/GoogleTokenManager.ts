@@ -2,7 +2,6 @@ import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const CLIENT_ID = import.meta.env.GCP_CLIENT_ID as string;
-const CLIENT_SECRET = import.meta.env.GCP_CLIENT_SECRET as string;
 
 /**
  * Gerencia ciclo de vida dos tokens OAuth do Google:
@@ -58,7 +57,6 @@ export class GoogleTokenManager {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
         refresh_token: refreshToken,
         grant_type: "refresh_token",
       }),

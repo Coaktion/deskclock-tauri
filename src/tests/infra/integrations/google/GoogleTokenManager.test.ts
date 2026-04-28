@@ -3,7 +3,6 @@ import type { AppConfig, ConfigContextValue } from "@presentation/contexts/Confi
 
 // Stub de env antes do import do módulo (constantes capturadas no load-time)
 vi.stubEnv("GCP_CLIENT_ID", "test-client-id");
-vi.stubEnv("GCP_CLIENT_SECRET", "test-client-secret");
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -153,7 +152,7 @@ describe("GoogleTokenManager", () => {
       expect(body.get("refresh_token")).toBe("my-refresh-token");
       expect(body.get("grant_type")).toBe("refresh_token");
       expect(body.get("client_id")).toBe("test-client-id");
-      expect(body.get("client_secret")).toBe("test-client-secret");
+      expect(body.get("client_secret")).toBeNull();
     });
 
     it("atualiza o access_token após refresh bem-sucedido", async () => {
