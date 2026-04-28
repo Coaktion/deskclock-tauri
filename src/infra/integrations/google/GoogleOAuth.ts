@@ -4,6 +4,7 @@ import { openInBrowser } from "@shared/utils/shell";
 import { generateCodeChallenge, generateCodeVerifier } from "./pkce";
 
 const CLIENT_ID = import.meta.env.GCP_CLIENT_ID as string;
+const CLIENT_SECRET = import.meta.env.GCP_CLIENT_SECRET as string;
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo";
 const AUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
@@ -74,6 +75,7 @@ export async function startGoogleOAuth(scopes: string[]): Promise<GoogleTokens> 
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
       redirect_uri: redirectUri,
       code,
       code_verifier: verifier,
