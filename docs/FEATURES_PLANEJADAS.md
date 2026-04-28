@@ -85,40 +85,15 @@ Envio por range (desde último envio) evita duplicidades. Indicador "Sincronizad
 
 ## S1 — Migrar OAuth para PKCE (Segurança)
 
-**Status:** ⬜
+**Status:** ✅ concluída (branch `fix/pkce-oauth`)
 
-**Descrição:**  
-Atualmente o fluxo OAuth usa **Authorization Code + client_secret**, que fica embutido no bundle compilado do app e pode ser extraído por qualquer pessoa com acesso ao instalador. O fluxo **PKCE (Proof Key for Code Exchange)** elimina a necessidade do `client_secret` em apps desktop — foi criado exatamente para esse cenário.
+**Implementação:**  
+PKCE (RFC 7636) adicionado como camada de segurança sobre o fluxo Authorization Code. O par `code_verifier` / `code_challenge` é gerado via Web Crypto API (`src/infra/integrations/google/pkce.ts`) antes de abrir o browser; o `code_challenge` vai na URL de autorização e o `code_verifier` é enviado na troca do code por token.
 
-**Problema atual:**
-```typescript
-// client_secret compilado no bundle — visível após descompactar o instalador
-const CLIENT_SECRET = import.meta.env.GCP_CLIENT_SECRET as string;
-```
+**Limitação descoberta:** clientes OAuth do tipo "Desktop application" no Google Cloud Console ainda exigem `client_secret` na troca de code e no refresh — o PKCE para esse tipo de cliente é complementar, não substituto. O `client_secret` permanece no bundle, mas o `code_verifier` protege contra interceptação do authorization code (atacante que capture o code não consegue trocá-lo sem o verifier).
 
-**Solução com PKCE:**
-```
-1. App gera code_verifier (aleatório) + code_challenge (SHA-256 do verifier)
-2. Inicia OAuth enviando code_challenge — sem client_secret
-3. Google devolve o code
-4. App troca code por token enviando code_verifier — Google valida o hash
-5. Sem client_secret em nenhuma etapa
-```
-
-**O que muda na implementação:**
-- Remover `GCP_CLIENT_SECRET` do `.env` e do código
-- Adicionar geração de `code_verifier` e `code_challenge` no frontend antes de iniciar o fluxo
-- Atualizar a troca de `code` por token para usar `code_verifier` em vez de `client_secret`
-- Backend Rust (servidor OAuth local) não muda
-- Configurar o app no Google Cloud Console como **Desktop app sem secret**
-
-**Impacto:**
-- `GCP_CLIENT_SECRET` sai completamente do projeto
-- `.env` passa a ter apenas `GCP_CLIENT_ID`
-- Conformidade com as políticas do Google para apps OAuth públicos
-
-**Referência de decisão:** CLAUDE.md — Registro de Decisões 09/04/2026 (OAuth via Authorization Code aceito como trade-off de MVP)
+**Arquivos alterados:** `pkce.ts` (novo), `GoogleOAuth.ts`, `GoogleTokenManager.ts`, `GoogleTokenManager.test.ts`
 
 ---
 
-*Última atualização: 24/04/2026*
+*Última atualização: 28/04/2026*
