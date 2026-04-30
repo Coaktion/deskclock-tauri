@@ -35,11 +35,14 @@ pub fn update_shortcuts(app: tauri::AppHandle, shortcuts: Vec<ShortcutEntry>) ->
                         let _ = app_handle.emit("shortcut:stop-task", ());
                     }
                     "toggle-overlay" => {
-                        if let Some(w) = app_handle.get_webview_window("overlay") {
-                            if w.is_visible().unwrap_or(false) {
-                                let _ = w.hide();
+                        if let Some(compact) = app_handle.get_webview_window("overlay-compact") {
+                            if compact.is_visible().unwrap_or(false) {
+                                let _ = compact.hide();
+                                if let Some(popup) = app_handle.get_webview_window("overlay-popup") {
+                                    let _ = popup.hide();
+                                }
                             } else {
-                                let _ = w.show();
+                                let _ = compact.show();
                             }
                         }
                     }

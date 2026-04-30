@@ -491,11 +491,6 @@ export function SettingsPage() {
     const o = overrides?.toggleOverlay ?? shortcutToggleOverlay;
     const w = overrides?.toggleWindow ?? shortcutToggleWindow;
     const cp = overrides?.commandPalette ?? shortcutCommandPalette;
-    await config.set("shortcutToggleTask", t);
-    await config.set("shortcutStopTask", s);
-    await config.set("shortcutToggleOverlay", o);
-    await config.set("shortcutToggleWindow", w);
-    await config.set("shortcutCommandPalette", cp);
     const failed = await invoke<string[]>("update_shortcuts", {
       shortcuts: [
         { action: "toggle-task", accelerator: t },
@@ -506,6 +501,11 @@ export function SettingsPage() {
       ],
     });
     setFailedShortcuts(failed);
+    await config.set("shortcutToggleTask", t);
+    await config.set("shortcutStopTask", s);
+    await config.set("shortcutToggleOverlay", o);
+    await config.set("shortcutToggleWindow", w);
+    await config.set("shortcutCommandPalette", cp);
   }
 
   async function handleLocalApiToggle(enabled: boolean) {
