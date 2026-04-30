@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.3.1](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.3.0...v1.3.1) (2026-04-30)
+
+
+### Bug Fixes
+
+* **db:** retry Database.load on migration race condition at startup ([03d1fb9](https://github.com/EduardoMeira/deskclock-tauri/commit/03d1fb9b165e5fead3ecaf23690f224f6117d332))
+* **oauth:** migrate Google OAuth to PKCE, remove client_secret ([8ec9e3c](https://github.com/EduardoMeira/deskclock-tauri/commit/8ec9e3cc44f0e9add16337d202ad8586f054103d))
+* **oauth:** restore client_secret alongside PKCE for Google Desktop clients ([e57c45a](https://github.com/EduardoMeira/deskclock-tauri/commit/e57c45adf67dc749ff3f74376ff31a4678f613af))
+* **shortcuts:** update overlay labels and save config after registration ([5b1c322](https://github.com/EduardoMeira/deskclock-tauri/commit/5b1c3227310c5d1cf7a68cf277a15291db9b7145))
+
 ## [1.3.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.2.0...v1.3.0) (2026-04-24)
 
 ## [1.2.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.1.0...v1.2.0) (2026-04-23)
