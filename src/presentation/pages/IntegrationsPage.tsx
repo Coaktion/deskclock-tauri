@@ -814,8 +814,8 @@ function ClockifyIntegrationCard() {
 
   return (
     <>
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50">
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden">
           <div className="mt-0.5 shrink-0">
             <ClockifyLogo size={20} />
           </div>
@@ -1040,6 +1040,8 @@ function ClockifyMappingsSection({
   const [importingProjects, setImportingProjects] = useState(false);
   const [importingTags, setImportingTags] = useState(false);
   const [open, setOpen] = useState(false);
+  const [projectsOpen, setProjectsOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   const workspaceId = config.get("clockifyActiveWorkspaceId");
 
@@ -1058,12 +1060,16 @@ function ClockifyMappingsSection({
     );
   }
 
+  function projectDisplayName(p: { name: string; clientName?: string | null }) {
+    return p.clientName ? `${p.clientName} - ${p.name}` : p.name;
+  }
+
   async function fetchProjects() {
     setLoadingProjects(true);
     try {
       const client = await getClient();
       const list = await client.listProjects(workspaceId);
-      setClockifyProjects(list.map((p) => ({ id: p.id, name: p.name })));
+      setClockifyProjects(list.map((p) => ({ id: p.id, name: projectDisplayName(p) })));
     } catch {
       // erro silencioso
     } finally {
@@ -1088,7 +1094,7 @@ function ClockifyMappingsSection({
     try {
       const client = await getClient();
       const list = await client.listProjects(workspaceId);
-      setClockifyProjects(list.map((p) => ({ id: p.id, name: p.name })));
+      setClockifyProjects(list.map((p) => ({ id: p.id, name: projectDisplayName(p) })));
 
       const { ProjectRepository } = await import("@infra/database/ProjectRepository");
       const { createProject: createProjectUC } = await import("@domain/usecases/projects/CreateProject");
@@ -1111,7 +1117,7 @@ function ClockifyMappingsSection({
         newMappings.push({
           deskclockProjectId: proj.id,
           clockifyProjectId: cp.id,
-          clockifyProjectName: cp.name,
+          clockifyProjectName: projectDisplayName(cp),
           workspaceId,
         });
       }
@@ -1232,100 +1238,130 @@ function ClockifyMappingsSection({
       {open && (
         <div className="px-4 pb-4 space-y-5">
           {/* Projetos */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
+          <div className="border border-gray-800 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setProjectsOpen((v) => !v)}
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-gray-800/40 hover:bg-gray-800/60 transition-colors"
+            >
               <span className="text-xs font-medium text-gray-300">Projetos</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => fetchProjects()}
-                  disabled={loadingProjects}
-                  className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
-                  title="Atualizar lista"
-                >
-                  <RefreshCw size={12} className={loadingProjects ? "animate-spin" : ""} />
-                </button>
-                <button
-                  onClick={handleImportProjects}
-                  disabled={importingProjects}
-                  className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
-                >
-                  {importingProjects && <Loader2 size={10} className="animate-spin" />}
-                  Importar do Clockify
-                </button>
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-500 mb-2">
-              Importar cria projetos no DeskClock e os vincula automaticamente.
-            </p>
-            {projects.length === 0 ? (
-              <p className="text-xs text-gray-600 italic">Nenhum projeto no DeskClock.</p>
-            ) : (
-              <div className="space-y-1">
-                {projects.map((p) => {
-                  const mapped = projectMapping.find((m) => m.deskclockProjectId === p.id);
-                  return (
-                    <div key={p.id} className="flex items-center gap-3 py-1">
-                      <span className="text-xs text-gray-300 flex-1 truncate">{p.name}</span>
-                      <select
-                        value={mapped?.clockifyProjectId ?? ""}
-                        onChange={(e) => updateProjectMapping(p.id, e.target.value)}
-                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[200px]"
-                      >
-                        <option value="">— sem mapeamento —</option>
-                        {clockifyProjects.map((cp) => (
-                          <option key={cp.id} value={cp.id}>{cp.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
+              <span className="text-xs text-gray-600 ml-1">
+                ({projectMapping.length}/{projects.length})
+              </span>
+              <span className="ml-auto text-gray-600">
+                {projectsOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              </span>
+            </button>
+            {projectsOpen && (
+              <div className="p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] text-gray-500">
+                    Importar cria projetos no DeskClock e os vincula automaticamente.
+                  </p>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <button
+                      onClick={() => fetchProjects()}
+                      disabled={loadingProjects}
+                      className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                      title="Atualizar lista"
+                    >
+                      <RefreshCw size={12} className={loadingProjects ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                      onClick={handleImportProjects}
+                      disabled={importingProjects}
+                      className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                    >
+                      {importingProjects && <Loader2 size={10} className="animate-spin" />}
+                      Importar do Clockify
+                    </button>
+                  </div>
+                </div>
+                {projects.length === 0 ? (
+                  <p className="text-xs text-gray-600 italic">Nenhum projeto no DeskClock.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {projects.map((p) => {
+                      const mapped = projectMapping.find((m) => m.deskclockProjectId === p.id);
+                      return (
+                        <div key={p.id} className="flex items-center gap-3 py-1">
+                          <span className="text-xs text-gray-300 flex-1 truncate">{p.name}</span>
+                          <select
+                            value={mapped?.clockifyProjectId ?? ""}
+                            onChange={(e) => updateProjectMapping(p.id, e.target.value)}
+                            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[200px]"
+                          >
+                            <option value="">— sem mapeamento —</option>
+                            {clockifyProjects.map((cp) => (
+                              <option key={cp.id} value={cp.id}>{cp.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Categorias → Tags */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
+          <div className="border border-gray-800 rounded-lg overflow-visible">
+            <button
+              onClick={() => setCategoriesOpen((v) => !v)}
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-gray-800/40 hover:bg-gray-800/60 transition-colors rounded-lg"
+            >
               <span className="text-xs font-medium text-gray-300">Categorias para tags</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => fetchTags()}
-                  disabled={loadingTags}
-                  className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
-                  title="Atualizar lista"
-                >
-                  <RefreshCw size={12} className={loadingTags ? "animate-spin" : ""} />
-                </button>
-                <button
-                  onClick={handleImportTags}
-                  disabled={importingTags}
-                  className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
-                >
-                  {importingTags && <Loader2 size={10} className="animate-spin" />}
-                  Importar do Clockify
-                </button>
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-500 mb-2">
-              Importar cria categorias no DeskClock para cada tag e as vincula automaticamente.
-            </p>
-            {categories.length === 0 ? (
-              <p className="text-xs text-gray-600 italic">Nenhuma categoria no DeskClock.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {categories.map((c) => {
-                  const mapped = categoryMapping.find((m) => m.deskclockCategoryId === c.id);
-                  return (
-                    <div key={c.id} className="flex items-center gap-3 py-1">
-                      <span className="text-xs text-gray-300 flex-1 truncate">{c.name}</span>
-                      <TagMultiSelect
-                        allTags={clockifyTags}
-                        selectedIds={mapped?.clockifyTagIds ?? []}
-                        onChange={(ids) => updateCategoryMapping(c.id, ids)}
-                      />
-                    </div>
-                  );
-                })}
+              <span className="text-xs text-gray-600 ml-1">
+                ({categoryMapping.length}/{categories.length})
+              </span>
+              <span className="ml-auto text-gray-600">
+                {categoriesOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+              </span>
+            </button>
+            {categoriesOpen && (
+              <div className="p-3 pt-0">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] text-gray-500">
+                    Importar cria categorias no DeskClock para cada tag e as vincula automaticamente.
+                  </p>
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    <button
+                      onClick={() => fetchTags()}
+                      disabled={loadingTags}
+                      className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                      title="Atualizar lista"
+                    >
+                      <RefreshCw size={12} className={loadingTags ? "animate-spin" : ""} />
+                    </button>
+                    <button
+                      onClick={handleImportTags}
+                      disabled={importingTags}
+                      className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                    >
+                      {importingTags && <Loader2 size={10} className="animate-spin" />}
+                      Importar do Clockify
+                    </button>
+                  </div>
+                </div>
+                {categories.length === 0 ? (
+                  <p className="text-xs text-gray-600 italic">Nenhuma categoria no DeskClock.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {categories.map((c) => {
+                      const mapped = categoryMapping.find((m) => m.deskclockCategoryId === c.id);
+                      return (
+                        <div key={c.id} className="flex items-center gap-3 py-1">
+                          <span className="text-xs text-gray-300 flex-1 truncate">{c.name}</span>
+                          <TagMultiSelect
+                            allTags={clockifyTags}
+                            selectedIds={mapped?.clockifyTagIds ?? []}
+                            onChange={(ids) => updateCategoryMapping(c.id, ids)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

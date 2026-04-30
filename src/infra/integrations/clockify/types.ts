@@ -13,6 +13,7 @@ export interface ClockifyWorkspace {
 export interface ClockifyProject {
   id: string;
   name: string;
+  clientName?: string | null;
   archived: boolean;
 }
 
