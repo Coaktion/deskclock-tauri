@@ -2,6 +2,11 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { DEFAULT_COLUMN_MAPPING, type SheetColumnMapping } from "@shared/types/sheetsConfig";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
+import type {
+  ClockifyWorkspaceRef,
+  ClockifyProjectMapping,
+  ClockifyCategoryMapping,
+} from "@shared/types/clockifyConfig";
 
 export interface OverlayPosition {
   x: number;
@@ -62,6 +67,21 @@ export interface AppConfig {
   roundingEnabled: boolean;
   roundingSlots: RoundingSlot[];
   roundingTolerance: number;
+  // Clockify
+  clockifyApiKey: string;
+  clockifyUserEmail: string;
+  clockifyUserId: string;
+  clockifyActiveWorkspaceId: string;
+  clockifyActiveWorkspaceName: string;
+  clockifyDefaultTagIds: string[];
+  clockifyProjectMapping: ClockifyProjectMapping[];
+  clockifyCategoryMapping: ClockifyCategoryMapping[];
+  clockifyAutoSync: boolean;
+  clockifyAutoSyncMode: "per-task" | "daily";
+  clockifyAutoSyncTrigger: "on-open" | "fixed-time";
+  clockifyAutoSyncTime: string;
+  clockifyDailySyncLastTimestamp: string;
+  clockifyWorkspaceCache: ClockifyWorkspaceRef[];
 }
 
 const DEFAULTS: AppConfig = {
@@ -108,6 +128,20 @@ const DEFAULTS: AppConfig = {
   roundingEnabled: false,
   roundingSlots: [15, 30, 45, 60] as RoundingSlot[],
   roundingTolerance: 0,
+  clockifyApiKey: "",
+  clockifyUserEmail: "",
+  clockifyUserId: "",
+  clockifyActiveWorkspaceId: "",
+  clockifyActiveWorkspaceName: "",
+  clockifyDefaultTagIds: [],
+  clockifyProjectMapping: [],
+  clockifyCategoryMapping: [],
+  clockifyAutoSync: false,
+  clockifyAutoSyncMode: "per-task" as const,
+  clockifyAutoSyncTrigger: "on-open" as const,
+  clockifyAutoSyncTime: "18:00",
+  clockifyDailySyncLastTimestamp: "",
+  clockifyWorkspaceCache: [],
 };
 
 type ConfigKey = keyof AppConfig;
