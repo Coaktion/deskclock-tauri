@@ -778,6 +778,8 @@ function ClockifyLogo({ size = 20 }: { size?: number }) {
 
 function ClockifyIntegrationCard() {
   const config = useAppConfig();
+  const { projects, reload: reloadProjects } = useProjects();
+  const { categories, reload: reloadCategories } = useCategories();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -847,7 +849,12 @@ function ClockifyIntegrationCard() {
         </div>
 
         {connected && (
-          <ClockifyConnectedSections />
+          <ClockifyConnectedSections
+            projects={projects}
+            categories={categories}
+            reloadProjects={reloadProjects}
+            reloadCategories={reloadCategories}
+          />
         )}
       </div>
 
@@ -934,10 +941,428 @@ function ClockifyWorkspaceSection() {
   );
 }
 
-function ClockifyConnectedSections() {
+/* ── Sub-seção Mapeamentos ── */
+
+interface ClockifyRef { id: string; name: string }
+
+function TagMultiSelect({
+  allTags,
+  selectedIds,
+  onChange,
+}: {
+  allTags: ClockifyRef[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  function toggle(id: string) {
+    onChange(
+      selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]
+    );
+  }
+
+  const selected = allTags.filter((t) => selectedIds.includes(t.id));
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-left focus:outline-none focus:border-blue-500"
+      >
+        {selected.length === 0 ? (
+          <span className="text-gray-500">Nenhuma tag</span>
+        ) : (
+          selected.map((t) => (
+            <span key={t.id} className="bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded text-[10px]">
+              {t.name}
+            </span>
+          ))
+        )}
+        <ChevronDown size={11} className="ml-auto shrink-0 text-gray-500" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-gray-800 border border-gray-700 rounded-lg shadow-xl w-52 max-h-48 overflow-y-auto">
+          {allTags.length === 0 ? (
+            <p className="text-xs text-gray-500 px-3 py-2">Nenhuma tag disponível</p>
+          ) : (
+            allTags.map((t) => (
+              <label
+                key={t.id}
+                className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(t.id)}
+                  onChange={() => toggle(t.id)}
+                  className="accent-blue-500"
+                />
+                <span className="text-xs text-gray-200">{t.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClockifyMappingsSection({
+  projects,
+  categories,
+  reloadProjects,
+  reloadCategories,
+}: {
+  projects: import("@domain/entities/Project").Project[];
+  categories: import("@domain/entities/Category").Category[];
+  reloadProjects: () => Promise<void>;
+  reloadCategories: () => Promise<void>;
+}) {
+  const config = useAppConfig();
+  const [clockifyProjects, setClockifyProjects] = useState<ClockifyRef[]>([]);
+  const [clockifyTags, setClockifyTags] = useState<ClockifyRef[]>([]);
+  const [projectMapping, setProjectMapping] = useState<import("@shared/types/clockifyConfig").ClockifyProjectMapping[]>([]);
+  const [categoryMapping, setCategoryMapping] = useState<import("@shared/types/clockifyConfig").ClockifyCategoryMapping[]>([]);
+  const [defaultTagIds, setDefaultTagIds] = useState<string[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingTags, setLoadingTags] = useState(false);
+  const [importingProjects, setImportingProjects] = useState(false);
+  const [importingTags, setImportingTags] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const workspaceId = config.get("clockifyActiveWorkspaceId");
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    const allPM = config.get("clockifyProjectMapping");
+    setProjectMapping(allPM.filter((m) => m.workspaceId === workspaceId));
+    const allCM = config.get("clockifyCategoryMapping");
+    setCategoryMapping(allCM.filter((m) => m.workspaceId === workspaceId));
+    setDefaultTagIds(config.get("clockifyDefaultTagIds"));
+  }, [config.isLoaded, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function getClient() {
+    return import("@infra/integrations/clockify/ClockifyClient").then(
+      ({ ClockifyClient: C }) => new C(config.get("clockifyApiKey"))
+    );
+  }
+
+  async function fetchProjects() {
+    setLoadingProjects(true);
+    try {
+      const client = await getClient();
+      const list = await client.listProjects(workspaceId);
+      setClockifyProjects(list.map((p) => ({ id: p.id, name: p.name })));
+    } catch {
+      // erro silencioso
+    } finally {
+      setLoadingProjects(false);
+    }
+  }
+
+  async function fetchTags() {
+    setLoadingTags(true);
+    try {
+      const client = await getClient();
+      const list = await client.listTags(workspaceId);
+      setClockifyTags(list.map((t) => ({ id: t.id, name: t.name })));
+    } finally {
+      setLoadingTags(false);
+    }
+  }
+
+  async function handleImportProjects() {
+    if (clockifyProjects.length === 0) await fetchProjects();
+    setImportingProjects(true);
+    try {
+      const client = await getClient();
+      const list = await client.listProjects(workspaceId);
+      setClockifyProjects(list.map((p) => ({ id: p.id, name: p.name })));
+
+      const { ProjectRepository } = await import("@infra/database/ProjectRepository");
+      const { createProject: createProjectUC } = await import("@domain/usecases/projects/CreateProject");
+      const repo = new ProjectRepository();
+
+      const allPM = config.get("clockifyProjectMapping");
+      const otherWS = allPM.filter((m) => m.workspaceId !== workspaceId);
+      const newMappings: import("@shared/types/clockifyConfig").ClockifyProjectMapping[] = [];
+
+      for (const cp of list) {
+        let proj = await repo.findByName(cp.name);
+        if (!proj) {
+          try {
+            proj = await createProjectUC(repo, cp.name);
+          } catch {
+            proj = await repo.findByName(cp.name);
+          }
+        }
+        if (!proj) continue;
+        newMappings.push({
+          deskclockProjectId: proj.id,
+          clockifyProjectId: cp.id,
+          clockifyProjectName: cp.name,
+          workspaceId,
+        });
+      }
+
+      const merged = [...otherWS, ...newMappings];
+      await config.set("clockifyProjectMapping", merged);
+      setProjectMapping(newMappings);
+      await reloadProjects();
+      await showToast("success", `${list.length} projeto(s) importado(s).`);
+    } catch (err) {
+      await showToast("error", err instanceof Error ? err.message : "Erro ao importar projetos.");
+    } finally {
+      setImportingProjects(false);
+    }
+  }
+
+  async function handleImportTags() {
+    if (clockifyTags.length === 0) await fetchTags();
+    setImportingTags(true);
+    try {
+      const client = await getClient();
+      const list = await client.listTags(workspaceId);
+      setClockifyTags(list.map((t) => ({ id: t.id, name: t.name })));
+
+      const { CategoryRepository } = await import("@infra/database/CategoryRepository");
+      const { createCategory: createCategoryUC } = await import("@domain/usecases/categories/CreateCategory");
+      const repo = new CategoryRepository();
+
+      const allCM = config.get("clockifyCategoryMapping");
+      const otherWS = allCM.filter((m) => m.workspaceId !== workspaceId);
+      const newMappings: import("@shared/types/clockifyConfig").ClockifyCategoryMapping[] = [];
+
+      for (const tag of list) {
+        let cat = await repo.findByName(tag.name);
+        if (!cat) {
+          try {
+            cat = await createCategoryUC(repo, tag.name, true);
+          } catch {
+            cat = await repo.findByName(tag.name);
+          }
+        }
+        if (!cat) continue;
+        const existingTagIds = allCM.find(
+          (m) => m.deskclockCategoryId === cat!.id && m.workspaceId === workspaceId
+        )?.clockifyTagIds ?? [];
+        newMappings.push({
+          deskclockCategoryId: cat.id,
+          clockifyTagIds: existingTagIds.length > 0 ? existingTagIds : [tag.id],
+          workspaceId,
+        });
+      }
+
+      const merged = [...otherWS, ...newMappings];
+      await config.set("clockifyCategoryMapping", merged);
+      setCategoryMapping(newMappings);
+      await reloadCategories();
+      await showToast("success", `${list.length} tag(s) importada(s) como categorias.`);
+    } catch (err) {
+      await showToast("error", err instanceof Error ? err.message : "Erro ao importar tags.");
+    } finally {
+      setImportingTags(false);
+    }
+  }
+
+  async function updateProjectMapping(deskclockProjectId: string, clockifyProjectId: string) {
+    const allPM = config.get("clockifyProjectMapping");
+    const rest = allPM.filter(
+      (m) => !(m.workspaceId === workspaceId && m.deskclockProjectId === deskclockProjectId)
+    );
+    const updated = [...rest];
+    if (clockifyProjectId) {
+      const cp = clockifyProjects.find((p) => p.id === clockifyProjectId);
+      updated.push({
+        deskclockProjectId,
+        clockifyProjectId,
+        clockifyProjectName: cp?.name ?? "",
+        workspaceId,
+      });
+    }
+    await config.set("clockifyProjectMapping", updated);
+    setProjectMapping(updated.filter((m) => m.workspaceId === workspaceId));
+  }
+
+  async function updateCategoryMapping(deskclockCategoryId: string, tagIds: string[]) {
+    const allCM = config.get("clockifyCategoryMapping");
+    const rest = allCM.filter(
+      (m) => !(m.workspaceId === workspaceId && m.deskclockCategoryId === deskclockCategoryId)
+    );
+    const updated = [...rest, { deskclockCategoryId, clockifyTagIds: tagIds, workspaceId }];
+    await config.set("clockifyCategoryMapping", updated);
+    setCategoryMapping(updated.filter((m) => m.workspaceId === workspaceId));
+  }
+
+  async function updateDefaultTags(ids: string[]) {
+    setDefaultTagIds(ids);
+    await config.set("clockifyDefaultTagIds", ids);
+  }
+
+  return (
+    <div className="border-t border-gray-800">
+      <button
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) {
+            if (clockifyProjects.length === 0) fetchProjects();
+            if (clockifyTags.length === 0) fetchTags();
+          }
+        }}
+        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-800/30 transition-colors"
+      >
+        <span className="text-sm font-medium text-gray-200">Mapeamentos</span>
+        <span className="ml-auto text-gray-600">
+          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 space-y-5">
+          {/* Projetos */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-300">Projetos</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchProjects()}
+                  disabled={loadingProjects}
+                  className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                  title="Atualizar lista"
+                >
+                  <RefreshCw size={12} className={loadingProjects ? "animate-spin" : ""} />
+                </button>
+                <button
+                  onClick={handleImportProjects}
+                  disabled={importingProjects}
+                  className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                >
+                  {importingProjects && <Loader2 size={10} className="animate-spin" />}
+                  Importar do Clockify
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-2">
+              Importar cria projetos no DeskClock e os vincula automaticamente.
+            </p>
+            {projects.length === 0 ? (
+              <p className="text-xs text-gray-600 italic">Nenhum projeto no DeskClock.</p>
+            ) : (
+              <div className="space-y-1">
+                {projects.map((p) => {
+                  const mapped = projectMapping.find((m) => m.deskclockProjectId === p.id);
+                  return (
+                    <div key={p.id} className="flex items-center gap-3 py-1">
+                      <span className="text-xs text-gray-300 flex-1 truncate">{p.name}</span>
+                      <select
+                        value={mapped?.clockifyProjectId ?? ""}
+                        onChange={(e) => updateProjectMapping(p.id, e.target.value)}
+                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[200px]"
+                      >
+                        <option value="">— sem mapeamento —</option>
+                        {clockifyProjects.map((cp) => (
+                          <option key={cp.id} value={cp.id}>{cp.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Categorias → Tags */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-300">Categorias para tags</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchTags()}
+                  disabled={loadingTags}
+                  className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                  title="Atualizar lista"
+                >
+                  <RefreshCw size={12} className={loadingTags ? "animate-spin" : ""} />
+                </button>
+                <button
+                  onClick={handleImportTags}
+                  disabled={importingTags}
+                  className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                >
+                  {importingTags && <Loader2 size={10} className="animate-spin" />}
+                  Importar do Clockify
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-2">
+              Importar cria categorias no DeskClock para cada tag e as vincula automaticamente.
+            </p>
+            {categories.length === 0 ? (
+              <p className="text-xs text-gray-600 italic">Nenhuma categoria no DeskClock.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {categories.map((c) => {
+                  const mapped = categoryMapping.find((m) => m.deskclockCategoryId === c.id);
+                  return (
+                    <div key={c.id} className="flex items-center gap-3 py-1">
+                      <span className="text-xs text-gray-300 flex-1 truncate">{c.name}</span>
+                      <TagMultiSelect
+                        allTags={clockifyTags}
+                        selectedIds={mapped?.clockifyTagIds ?? []}
+                        onChange={(ids) => updateCategoryMapping(c.id, ids)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Tags padrão */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-300">Tags padrão</span>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-2">
+              Adicionadas em todos os envios, independente da categoria.
+            </p>
+            <TagMultiSelect
+              allTags={clockifyTags}
+              selectedIds={defaultTagIds}
+              onChange={updateDefaultTags}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── ClockifyAutoSyncSection — será adicionado na Fase 8 ── */
+
+interface ClockifyConnectedSectionsProps {
+  projects: import("@domain/entities/Project").Project[];
+  categories: import("@domain/entities/Category").Category[];
+  reloadProjects: () => Promise<void>;
+  reloadCategories: () => Promise<void>;
+}
+
+function ClockifyConnectedSections({
+  projects,
+  categories,
+  reloadProjects,
+  reloadCategories,
+}: ClockifyConnectedSectionsProps) {
   return (
     <>
       <ClockifyWorkspaceSection />
+      <ClockifyMappingsSection
+        projects={projects}
+        categories={categories}
+        reloadProjects={reloadProjects}
+        reloadCategories={reloadCategories}
+      />
     </>
   );
 }
