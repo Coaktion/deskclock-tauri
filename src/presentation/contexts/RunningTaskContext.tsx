@@ -7,12 +7,10 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { CategoryRepository } from "@infra/database/CategoryRepository";
 import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { ProjectRepository } from "@infra/database/ProjectRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { TaskRepository } from "@infra/database/TaskRepository";
-import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
+import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
@@ -155,25 +153,16 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   const autoSyncTask = useCallback(
     async (stoppedTask: Task) => {
       if (!config.isLoaded) return;
-      if (!config.get("integrationGoogleSheetsAutoSync")) return;
-      if (config.get("sheetsAutoSyncMode") !== "per-task") return;
-      const spreadsheetId = config.get("integrationGoogleSheetsSpreadsheetId");
-      const refreshToken = config.get("googleRefreshToken");
-      if (!spreadsheetId || !refreshToken) return;
-
-      try {
-        const [projects, categories] = await Promise.all([
-          new ProjectRepository().findAll(),
-          new CategoryRepository().findAll(),
-        ]);
-        const sender = new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
-        await sender.send([stoppedTask]);
-        await logRepo.markSent([stoppedTask.id], "google_sheets");
-        triggerReload();
-        await showToast("success", "Tarefa enviada para o Google Sheets");
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Erro ao enviar para o Sheets.";
-        await showToast("error", msg);
+      const runner = new AutoSyncRunner(config, logRepo);
+      const results = await runner.runPerTask(stoppedTask);
+      triggerReload();
+      for (const r of results) {
+        if (r.error) {
+          await showToast("error", r.error.message);
+        } else if (r.count > 0) {
+          const name = r.integration === "google_sheets" ? "Google Sheets" : "Clockify";
+          await showToast("success", `Tarefa enviada para o ${name}`);
+        }
       }
     },
     [config, triggerReload]

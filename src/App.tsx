@@ -10,13 +10,9 @@ import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigConte
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
-import { formatHHMMSS, todayISO, addDaysISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
-import { TaskRepository as AppTaskRepository } from "@infra/database/TaskRepository";
+import { formatHHMMSS, todayISO, addDaysISO } from "@shared/utils/time";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
-import { ProjectRepository } from "@infra/database/ProjectRepository";
-import { CategoryRepository } from "@infra/database/CategoryRepository";
-import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
@@ -353,81 +349,48 @@ function AppInner() {
     })();
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // F4: sincronização diária com Google Sheets
+  // Sincronização diária (Sheets + Clockify) — ativada se qualquer integração estiver no modo "daily"
   useEffect(() => {
     if (!config.isLoaded) return;
-    if (!config.get("integrationGoogleSheetsAutoSync")) return;
-    if (config.get("sheetsAutoSyncMode") !== "daily") return;
 
-    const spreadsheetId = config.get("integrationGoogleSheetsSpreadsheetId");
-    const refreshToken = config.get("googleRefreshToken");
-    if (!spreadsheetId || !refreshToken) return;
+    const sheetsDaily =
+      config.get("integrationGoogleSheetsAutoSync") && config.get("sheetsAutoSyncMode") === "daily";
+    const clockifyDaily =
+      config.get("clockifyAutoSync") && config.get("clockifyAutoSyncMode") === "daily";
 
-    const taskRepo = new AppTaskRepository();
+    if (!sheetsDaily && !clockifyDaily) return;
+
     const logRepo = new TaskIntegrationLogRepository();
-
-    // Envia todas as tarefas concluídas não sincronizadas no range [startISO, endISO].
-    // Agrupa por nome+projeto+categoria; ignora grupos já totalmente enviados.
-    async function runDailySync(rangeStartISO: string, rangeEndISO: string): Promise<number> {
-      const [tasks, projects, categories] = await Promise.all([
-        taskRepo.findByDateRange(rangeStartISO, rangeEndISO),
-        new ProjectRepository().findAll(),
-        new CategoryRepository().findAll(),
-      ]);
-      const completed = tasks.filter((t) => t.status === "completed");
-      if (completed.length === 0) return 0;
-
-      const sentIds = new Set(await logRepo.findSentIds("google_sheets", rangeStartISO, rangeEndISO));
-      const groups = groupTasks(completed).filter((g) => !g.tasks.every((t) => sentIds.has(t.id)));
-      if (groups.length === 0) return 0;
-
-      const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
-      const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
-
-      const sender = new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
-      await sender.send(tasksToSend);
-      await logRepo.markSent(allIds, "google_sheets");
-      return groups.length;
-    }
-
-    // Calcula o range "desde o último envio" até a data alvo (exclusive hoje para on-open).
-    // Garante que fins de semana e dias perdidos são sempre cobertos.
-    function calcRange(endDateISO: string): { start: string; end: string } | null {
-      const lastTs = config.get("sheetsDailySyncLastTimestamp");
-      // Extrai a data local do último timestamp (ou usa 7 dias atrás como fallback)
-      const lastDateISO = lastTs
-        ? new Date(lastTs).toLocaleDateString("sv-SE") // "YYYY-MM-DD" no locale sueco = ISO date
-        : addDaysISO(todayISO(), -7);
-      const startDateISO = addDaysISO(lastDateISO, 1);
-      if (startDateISO > endDateISO) return null; // já sincronizado
-      return { start: startOfDayISO(startDateISO), end: endOfDayISO(endDateISO) };
-    }
+    const runner = new AutoSyncRunner(config, logRepo);
 
     async function triggerSync(endDateISO: string) {
-      const range = calcRange(endDateISO);
-      if (!range) return; // nada a enviar
-      try {
-        const count = await runDailySync(range.start, range.end);
-        await config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
-        if (count > 0) {
-          await showToast("success", `${count} grupo(s) enviado(s) automaticamente para o Sheets`);
+      const results = await runner.runDaily(endDateISO);
+      const totalCount = results.reduce((s, r) => s + r.count, 0);
+      const errors = results.filter((r) => r.error);
+      if (errors.length > 0) {
+        for (const e of errors) {
+          await showToast("error", e.error!.message);
         }
-      } catch (err) {
-        const msg = typeof err === "string" ? err : err instanceof Error ? err.message : "Erro no envio diário ao Sheets.";
-        await showToast("error", msg);
+      } else if (totalCount > 0) {
+        await showToast("success", `${totalCount} grupo(s) enviado(s) automaticamente`);
       }
     }
 
-    const trigger = config.get("sheetsAutoSyncTrigger");
+    // Determina o trigger prioritário (Sheets define o ritmo se ambos ativos)
+    const sheetsTrigger = config.get("sheetsAutoSyncTrigger");
+    const clockifyTrigger = config.get("clockifyAutoSyncTrigger");
+    const trigger = sheetsDaily ? sheetsTrigger : clockifyTrigger;
 
     if (trigger === "on-open") {
-      // Ao abrir: envia até ontem (não inclui o dia de hoje, ainda em andamento)
       void triggerSync(addDaysISO(todayISO(), -1));
       return;
     }
 
     if (trigger === "fixed-time") {
-      const [hh, mm] = config.get("sheetsAutoSyncTime").split(":").map(Number);
+      const timeStr = sheetsDaily
+        ? config.get("sheetsAutoSyncTime")
+        : config.get("clockifyAutoSyncTime");
+      const [hh, mm] = timeStr.split(":").map(Number);
       let fired = false;
 
       const interval = setInterval(() => {
@@ -435,7 +398,6 @@ function AppInner() {
         const now = new Date();
         if (now.getHours() === hh && now.getMinutes() === mm) {
           fired = true;
-          // No horário fixo: envia até hoje (dia corrente já concluído no fim do expediente)
           void triggerSync(todayISO());
         }
       }, 30_000);
