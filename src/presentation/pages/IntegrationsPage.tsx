@@ -47,6 +47,7 @@ import { TaskRepository } from "@infra/database/TaskRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
+import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { groupTasks } from "@shared/utils/groupTasks";
 import { showToast } from "@shared/utils/toast";
 import { addDaysISO, todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
@@ -784,6 +785,7 @@ function ClockifyIntegrationCard() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -854,6 +856,7 @@ function ClockifyIntegrationCard() {
             categories={categories}
             reloadProjects={reloadProjects}
             reloadCategories={reloadCategories}
+            onShowSendModal={() => setShowSendModal(true)}
           />
         )}
       </div>
@@ -862,6 +865,14 @@ function ClockifyIntegrationCard() {
         <ClockifyConnectModal
           onConnected={handleConnected}
           onClose={() => setShowConnectModal(false)}
+        />
+      )}
+
+      {showSendModal && (
+        <ClockifySendModal
+          projects={projects}
+          categories={categories}
+          onClose={() => setShowSendModal(false)}
         />
       )}
     </>
@@ -1346,6 +1357,7 @@ interface ClockifyConnectedSectionsProps {
   categories: import("@domain/entities/Category").Category[];
   reloadProjects: () => Promise<void>;
   reloadCategories: () => Promise<void>;
+  onShowSendModal: () => void;
 }
 
 function ClockifyConnectedSections({
@@ -1353,6 +1365,7 @@ function ClockifyConnectedSections({
   categories,
   reloadProjects,
   reloadCategories,
+  onShowSendModal,
 }: ClockifyConnectedSectionsProps) {
   return (
     <>
@@ -1363,6 +1376,15 @@ function ClockifyConnectedSections({
         reloadProjects={reloadProjects}
         reloadCategories={reloadCategories}
       />
+      <div className="border-t border-gray-800 px-4 py-3">
+        <button
+          onClick={onShowSendModal}
+          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
+        >
+          <Send size={12} />
+          Enviar tarefas manualmente…
+        </button>
+      </div>
     </>
   );
 }
