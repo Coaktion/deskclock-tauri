@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   TableProperties,
   Calendar,
@@ -46,6 +47,7 @@ import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { TaskRepository } from "@infra/database/TaskRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
+import { Autocomplete } from "@presentation/components/Autocomplete";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { groupTasks } from "@shared/utils/groupTasks";
@@ -966,6 +968,9 @@ function TagMultiSelect({
   onChange: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   function toggle(id: string) {
     onChange(
@@ -973,12 +978,38 @@ function TagMultiSelect({
     );
   }
 
+  function openDropdown() {
+    if (triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect();
+      setDropStyle({
+        position: "fixed",
+        top: r.bottom + 4,
+        right: window.innerWidth - r.right,
+        minWidth: r.width,
+      });
+    }
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      const t = e.target as Node;
+      if (!triggerRef.current?.contains(t) && !dropRef.current?.contains(t)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
   const selected = allTags.filter((t) => selectedIds.includes(t.id));
 
   return (
-    <div className="relative">
+    <div>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={triggerRef}
+        onClick={() => (open ? setOpen(false) : openDropdown())}
         className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-left focus:outline-none focus:border-blue-500"
       >
         {selected.length === 0 ? (
@@ -992,28 +1023,81 @@ function TagMultiSelect({
         )}
         <ChevronDown size={11} className="ml-auto shrink-0 text-gray-500" />
       </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 z-20 bg-gray-800 border border-gray-700 rounded-lg shadow-xl w-52 max-h-48 overflow-y-auto">
-          {allTags.length === 0 ? (
-            <p className="text-xs text-gray-500 px-3 py-2">Nenhuma tag disponível</p>
-          ) : (
-            allTags.map((t) => (
-              <label
-                key={t.id}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(t.id)}
-                  onChange={() => toggle(t.id)}
-                  className="accent-blue-500"
-                />
-                <span className="text-xs text-gray-200">{t.name}</span>
-              </label>
-            ))
-          )}
+      {open &&
+        createPortal(
+          <div
+            ref={dropRef}
+            style={dropStyle}
+            className="z-[9999] bg-gray-800 border border-gray-700 rounded-lg shadow-xl w-52 max-h-48 overflow-y-auto"
+          >
+            {allTags.length === 0 ? (
+              <p className="text-xs text-gray-500 px-3 py-2">Nenhuma tag disponível</p>
+            ) : (
+              allTags.map((t) => (
+                <label
+                  key={t.id}
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(t.id)}
+                    onChange={() => toggle(t.id)}
+                    className="accent-blue-500"
+                  />
+                  <span className="text-xs text-gray-200">{t.name}</span>
+                </label>
+              ))
+            )}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
+
+function ProjectMappingRow({
+  project,
+  clockifyProjects,
+  mapped,
+  onUpdate,
+}: {
+  project: import("@domain/entities/Project").Project;
+  clockifyProjects: ClockifyRef[];
+  mapped: { clockifyProjectId: string; clockifyProjectName: string } | undefined;
+  onUpdate: (deskclockProjectId: string, clockifyProjectId: string) => void;
+}) {
+  const [inputValue, setInputValue] = useState(mapped?.clockifyProjectName ?? "");
+
+  useEffect(() => {
+    setInputValue(mapped?.clockifyProjectName ?? "");
+  }, [mapped?.clockifyProjectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="flex items-center gap-2 py-1">
+      <span className="text-xs text-gray-300 flex-1 truncate min-w-0">{project.name}</span>
+      <div className="flex items-center gap-1 w-[210px] shrink-0">
+        <div className="flex-1">
+          <Autocomplete
+            value={inputValue}
+            onChange={setInputValue}
+            onSelect={(opt) => {
+              setInputValue(opt.name);
+              onUpdate(project.id, opt.id);
+            }}
+            options={clockifyProjects}
+            placeholder="sem mapeamento"
+          />
         </div>
-      )}
+        {mapped?.clockifyProjectId && (
+          <button
+            onClick={() => { setInputValue(""); onUpdate(project.id, ""); }}
+            title="Remover mapeamento"
+            className="text-gray-600 hover:text-gray-400 transition-colors shrink-0"
+          >
+            <X size={11} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1069,7 +1153,11 @@ function ClockifyMappingsSection({
     try {
       const client = await getClient();
       const list = await client.listProjects(workspaceId);
-      setClockifyProjects(list.map((p) => ({ id: p.id, name: projectDisplayName(p) })));
+      setClockifyProjects(
+        list
+          .map((p) => ({ id: p.id, name: projectDisplayName(p) }))
+          .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+      );
     } catch {
       // erro silencioso
     } finally {
@@ -1094,7 +1182,10 @@ function ClockifyMappingsSection({
     try {
       const client = await getClient();
       const list = await client.listProjects(workspaceId);
-      setClockifyProjects(list.map((p) => ({ id: p.id, name: projectDisplayName(p) })));
+      const sortedProjects = list
+        .map((p) => ({ id: p.id, name: projectDisplayName(p) }))
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+      setClockifyProjects(sortedProjects);
 
       const { ProjectRepository } = await import("@infra/database/ProjectRepository");
       const { createProject: createProjectUC } = await import("@domain/usecases/projects/CreateProject");
@@ -1238,7 +1329,7 @@ function ClockifyMappingsSection({
       {open && (
         <div className="px-4 pb-4 space-y-5">
           {/* Projetos */}
-          <div className="border border-gray-800 rounded-lg overflow-hidden">
+          <div className="border border-gray-800 rounded-lg">
             <button
               onClick={() => setProjectsOpen((v) => !v)}
               className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-gray-800/40 hover:bg-gray-800/60 transition-colors"
@@ -1280,24 +1371,15 @@ function ClockifyMappingsSection({
                   <p className="text-xs text-gray-600 italic">Nenhum projeto no DeskClock.</p>
                 ) : (
                   <div className="space-y-1">
-                    {projects.map((p) => {
-                      const mapped = projectMapping.find((m) => m.deskclockProjectId === p.id);
-                      return (
-                        <div key={p.id} className="flex items-center gap-3 py-1">
-                          <span className="text-xs text-gray-300 flex-1 truncate">{p.name}</span>
-                          <select
-                            value={mapped?.clockifyProjectId ?? ""}
-                            onChange={(e) => updateProjectMapping(p.id, e.target.value)}
-                            className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[200px]"
-                          >
-                            <option value="">— sem mapeamento —</option>
-                            {clockifyProjects.map((cp) => (
-                              <option key={cp.id} value={cp.id}>{cp.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      );
-                    })}
+                    {projects.map((p) => (
+                      <ProjectMappingRow
+                        key={p.id}
+                        project={p}
+                        clockifyProjects={clockifyProjects}
+                        mapped={projectMapping.find((m) => m.deskclockProjectId === p.id)}
+                        onUpdate={updateProjectMapping}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
