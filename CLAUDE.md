@@ -325,6 +325,18 @@ src/
 |---|---|
 | Autorização | botão OAuth |
 
+**Clockify:**
+| Campo | Tipo |
+|---|---|
+| API Key | input password + instrução inline |
+| Workspace ativo | dropdown (buscado via API) |
+| Importar projetos | botão → cria Projects no DeskClock + mapeamento automático |
+| Importar tags | botão → cria Categories no DeskClock + mapeamento automático |
+| Mapeamento de projetos | tabela DeskClock Project ↔ Clockify Project (por workspace) |
+| Mapeamento de categorias | tabela DeskClock Category ↔ Clockify Tags (multi-select, por workspace) |
+| Tags padrão | multi-select de tags sempre incluídas em todo envio |
+| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
+
 #### Feedback
 - Botão na **sidebar** (não dentro das configurações) que abre URL externa no navegador padrão para envio de feedbacks, bugs, sugestões.
 - Implementado via `tauri-plugin-opener` (`openUrl`).
