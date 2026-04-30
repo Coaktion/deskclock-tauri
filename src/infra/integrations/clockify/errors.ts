@@ -20,9 +20,11 @@ export class ClockifyValidationError extends Error {
 }
 
 export class ClockifyNetworkError extends Error {
-  constructor(cause?: unknown) {
+  readonly originalCause?: unknown;
+
+  constructor(originalCause?: unknown) {
     super("Erro de conexão com o Clockify. Verifique sua internet.");
     this.name = "ClockifyNetworkError";
-    if (cause instanceof Error) this.cause = cause;
+    this.originalCause = originalCause;
   }
 }

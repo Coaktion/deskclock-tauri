@@ -46,6 +46,7 @@ import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
 import { TaskRepository } from "@infra/database/TaskRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
+import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
 import { groupTasks } from "@shared/utils/groupTasks";
 import { showToast } from "@shared/utils/toast";
 import { addDaysISO, todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
@@ -749,6 +750,126 @@ function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page) => voi
   );
 }
 
+/* ── SVG Clockify ── */
+
+function ClockifyLogo({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <rect width="32" height="32" rx="8" fill="#03A9F4" />
+      <path
+        d="M16 7C11.029 7 7 11.029 7 16C7 20.971 11.029 25 16 25C20.971 25 25 20.971 25 16C25 11.029 20.971 7 16 7ZM16 23C12.134 23 9 19.866 9 16C9 12.134 12.134 9 16 9C19.866 9 23 12.134 23 16C23 19.866 19.866 23 16 23Z"
+        fill="white"
+      />
+      <path
+        d="M17 11.5H15V16.414L18.293 19.707L19.707 18.293L17 15.586V11.5Z"
+        fill="white"
+      />
+    </svg>
+  );
+}
+
+/* ── Card Clockify ── */
+
+function ClockifyIntegrationCard() {
+  const config = useAppConfig();
+  const [connected, setConnected] = useState(false);
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    setConnected(!!config.get("clockifyApiKey"));
+    setEmail(config.get("clockifyUserEmail"));
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleConnected() {
+    setConnected(true);
+    setEmail(config.get("clockifyUserEmail"));
+    setShowConnectModal(false);
+  }
+
+  async function handleDisconnect() {
+    setLoading(true);
+    await config.set("clockifyApiKey", "");
+    await config.set("clockifyUserEmail", "");
+    await config.set("clockifyUserId", "");
+    await config.set("clockifyActiveWorkspaceId", "");
+    await config.set("clockifyActiveWorkspaceName", "");
+    await config.set("clockifyWorkspaceCache", []);
+    setConnected(false);
+    setEmail("");
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
+          <div className="mt-0.5 shrink-0">
+            <ClockifyLogo size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-100">Clockify</h2>
+              <StatusBadge connected={connected} email={email} />
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Registre entradas de tempo diretamente no Clockify.
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            {connected ? (
+              <button
+                onClick={handleDisconnect}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded transition-colors"
+              >
+                {loading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                Desconectar
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowConnectModal(true)}
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
+              >
+                <LogIn size={12} />
+                Conectar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {connected && (
+          <ClockifyConnectedSections />
+        )}
+      </div>
+
+      {showConnectModal && (
+        <ClockifyConnectModal
+          onConnected={handleConnected}
+          onClose={() => setShowConnectModal(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function ClockifyConnectedSections() {
+  return (
+    <div className="px-4 py-3 text-xs text-gray-500">
+      {/* Workspace picker e mapeamentos serão adicionados nas próximas fases */}
+      Configuração de workspace e mapeamentos em breve.
+    </div>
+  );
+}
+
 /* ── Page ── */
 
 export function IntegrationsPage({ onNavigate }: { onNavigate: (page: Page) => void }) {
@@ -762,7 +883,10 @@ export function IntegrationsPage({ onNavigate }: { onNavigate: (page: Page) => v
         </p>
       </div>
 
-      <GoogleIntegrationCard onNavigate={onNavigate} />
+      <div className="space-y-4">
+        <GoogleIntegrationCard onNavigate={onNavigate} />
+        <ClockifyIntegrationCard />
+      </div>
     </div>
     </div>
   );
