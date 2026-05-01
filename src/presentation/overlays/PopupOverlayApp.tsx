@@ -58,13 +58,17 @@ function PopupOverlayAppInner() {
       const physH = Math.round(height * monitor.scaleFactor);
       const maxY = monitor.position.y + monitor.size.height - physH;
       if (pos.y > maxY) {
-        await appWindow.setPosition(new PhysicalPosition(pos.x, Math.max(monitor.position.y, maxY)));
+        await appWindow.setPosition(
+          new PhysicalPosition(pos.x, Math.max(monitor.position.y, maxY))
+        );
       }
     }
 
     await appWindow.setMinSize(new LogicalSize(width, height));
     await appWindow.setMaxSize(new LogicalSize(width, height));
-    setTimeout(() => { isProgrammaticResizeRef.current = false; }, 80);
+    setTimeout(() => {
+      isProgrammaticResizeRef.current = false;
+    }, 80);
   }, []);
 
   // Lock manual resize
@@ -74,7 +78,9 @@ function PopupOverlayAppInner() {
       const { width, height } = intendedSizeRef.current;
       void programmaticSetSize(width, height);
     });
-    return () => { unlisten.then((fn) => fn()); };
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, [programmaticSetSize]);
 
   useEffect(() => {
@@ -101,7 +107,9 @@ function PopupOverlayAppInner() {
         else if (payload.key === "theme") applyTheme(payload.value as Theme);
       }
     );
-    return () => { unlisten.then((fn) => fn()); };
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   // Auto-show/hide based on running task changes
@@ -116,7 +124,10 @@ function PopupOverlayAppInner() {
           if (config.get("overlayShowOnStart")) {
             const isVis = await appWindow.isVisible();
             if (!isVis) {
-              await positionPopupNearCompact(appWindow, { width: POPUP_W, height: POPUP_H_ESTIMATE });
+              await positionPopupNearCompact(appWindow, {
+                width: POPUP_W,
+                height: POPUP_H_ESTIMATE,
+              });
               await appWindow.show();
               await appWindow.setFocus();
             }
@@ -126,7 +137,10 @@ function PopupOverlayAppInner() {
           if (config.get("overlayAlwaysVisible")) {
             const isVis = await appWindow.isVisible();
             if (!isVis) {
-              await positionPopupNearCompact(appWindow, { width: POPUP_W, height: POPUP_H_ESTIMATE });
+              await positionPopupNearCompact(appWindow, {
+                width: POPUP_W,
+                height: POPUP_H_ESTIMATE,
+              });
               await appWindow.show();
               await appWindow.setFocus();
             }
@@ -134,8 +148,10 @@ function PopupOverlayAppInner() {
         }
       }
     );
-    return () => { unlisten.then((fn) => fn()); };
-  }, [config]);  
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [config]);
 
   // Close on blur (focus moved away from this popup)
   useEffect(() => {
@@ -143,7 +159,9 @@ function PopupOverlayAppInner() {
       await emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {});
       await appWindow.hide();
     });
-    return () => { unlisten.then((fn) => fn()); };
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []);
 
   // ESC closes popup
@@ -156,39 +174,45 @@ function PopupOverlayAppInner() {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const handleStartTask = useCallback(async (input: {
-    name?: string | null;
-    projectId?: string | null;
-    categoryId?: string | null;
-    billable: boolean;
-    plannedTaskId?: string | null;
-  }) => {
-    if (isStartingTaskRef.current) return;
-    isStartingTaskRef.current = true;
-    try {
-      const task = await startTaskUC(taskRepo, input, new Date().toISOString());
-      activePlannedTaskId.current = input.plannedTaskId ?? null;
-      await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
-        task,
-        source: "overlay",
-        plannedTaskId: input.plannedTaskId ?? null,
-      } satisfies RunningTaskChangedPayload);
-    } finally {
-      isStartingTaskRef.current = false;
-    }
-  }, []);
+  const handleStartTask = useCallback(
+    async (input: {
+      name?: string | null;
+      projectId?: string | null;
+      categoryId?: string | null;
+      billable: boolean;
+      plannedTaskId?: string | null;
+    }) => {
+      if (isStartingTaskRef.current) return;
+      isStartingTaskRef.current = true;
+      try {
+        const task = await startTaskUC(taskRepo, input, new Date().toISOString());
+        activePlannedTaskId.current = input.plannedTaskId ?? null;
+        await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
+          task,
+          source: "overlay",
+          plannedTaskId: input.plannedTaskId ?? null,
+        } satisfies RunningTaskChangedPayload);
+      } finally {
+        isStartingTaskRef.current = false;
+      }
+    },
+    []
+  );
 
-  const handlePlay = useCallback(async (task: PlannedTask) => {
-    if (runningTask) return;
-    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
-    await handleStartTask({
-      name: task.name,
-      projectId: task.projectId,
-      categoryId: task.categoryId,
-      billable: task.billable,
-      plannedTaskId: task.id,
-    });
-  }, [runningTask, handleStartTask]);
+  const handlePlay = useCallback(
+    async (task: PlannedTask) => {
+      if (runningTask) return;
+      await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
+      await handleStartTask({
+        name: task.name,
+        projectId: task.projectId,
+        categoryId: task.categoryId,
+        billable: task.billable,
+        plannedTaskId: task.id,
+      });
+    },
+    [runningTask, handleStartTask]
+  );
 
   const handlePause = useCallback(async () => {
     if (!runningTask) return;
@@ -210,22 +234,25 @@ function PopupOverlayAppInner() {
     } satisfies RunningTaskChangedPayload);
   }, [runningTask]);
 
-  const handleStop = useCallback(async (completed: boolean) => {
-    if (!runningTask) return;
-    const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
-    const plannedTaskId = activePlannedTaskId.current;
-    activePlannedTaskId.current = null;
-    setRunningTask(null);
-    await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
-      task: null,
-      source: "overlay",
-    } satisfies RunningTaskChangedPayload);
-    await emit(OVERLAY_EVENTS.TASK_STOPPED, {
-      task: stoppedTask,
-      completed,
-      plannedTaskId,
-    } satisfies TaskStoppedPayload);
-  }, [runningTask]);
+  const handleStop = useCallback(
+    async (completed: boolean) => {
+      if (!runningTask) return;
+      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
+      const plannedTaskId = activePlannedTaskId.current;
+      activePlannedTaskId.current = null;
+      setRunningTask(null);
+      await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
+        task: null,
+        source: "overlay",
+      } satisfies RunningTaskChangedPayload);
+      await emit(OVERLAY_EVENTS.TASK_STOPPED, {
+        task: stoppedTask,
+        completed,
+        plannedTaskId,
+      } satisfies TaskStoppedPayload);
+    },
+    [runningTask]
+  );
 
   const handleCancel = useCallback(async () => {
     if (!runningTask) return;
@@ -238,21 +265,24 @@ function PopupOverlayAppInner() {
     } satisfies RunningTaskChangedPayload);
   }, [runningTask]);
 
-  const handleUpdate = useCallback(async (input: {
-    name?: string | null;
-    projectId?: string | null;
-    categoryId?: string | null;
-    billable?: boolean;
-    startTime?: string;
-  }) => {
-    if (!runningTask) return;
-    const updated = await updateTaskUC(taskRepo, runningTask.id, input, new Date().toISOString());
-    setRunningTask(updated);
-    await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
-      task: updated,
-      source: "overlay",
-    } satisfies RunningTaskChangedPayload);
-  }, [runningTask]);
+  const handleUpdate = useCallback(
+    async (input: {
+      name?: string | null;
+      projectId?: string | null;
+      categoryId?: string | null;
+      billable?: boolean;
+      startTime?: string;
+    }) => {
+      if (!runningTask) return;
+      const updated = await updateTaskUC(taskRepo, runningTask.id, input, new Date().toISOString());
+      setRunningTask(updated);
+      await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
+        task: updated,
+        source: "overlay",
+      } satisfies RunningTaskChangedPayload);
+    },
+    [runningTask]
+  );
 
   const handleClose = useCallback(async () => {
     await emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {});

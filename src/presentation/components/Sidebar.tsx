@@ -26,7 +26,12 @@ interface SidebarProps {
 
 const ITEMS: { page: Page; icon: React.ReactNode; label: string; short: string }[] = [
   { page: "tasks", icon: <Timer size={18} />, label: "Tarefas", short: "Tarefas" },
-  { page: "retroactive", icon: <FileClock size={18} />, label: "Lançamento manual", short: "Manual" },
+  {
+    page: "retroactive",
+    icon: <FileClock size={18} />,
+    label: "Lançamento manual",
+    short: "Manual",
+  },
   { page: "planning", icon: <CalendarDays size={18} />, label: "Planejamento", short: "Planos" },
   { page: "history", icon: <History size={18} />, label: "Histórico", short: "Histórico" },
   { page: "data", icon: <Database size={18} />, label: "Dados", short: "Dados" },
@@ -60,9 +65,7 @@ export function Sidebar({ current, onChange }: SidebarProps) {
               <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-500 rounded-r-full" />
             )}
             {icon}
-            <span className="text-[9px] font-medium leading-none truncate max-w-full">
-              {short}
-            </span>
+            <span className="text-[9px] font-medium leading-none truncate max-w-full">{short}</span>
           </button>
         ))}
       </div>

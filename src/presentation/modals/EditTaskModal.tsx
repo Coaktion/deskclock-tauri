@@ -163,7 +163,9 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
           <button
             type="button"
             onClick={() => setBillable((b) => !b)}
-            title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+            title={
+              billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
+            }
             className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
               billable
                 ? "bg-green-900/40 border-green-700 text-green-400"

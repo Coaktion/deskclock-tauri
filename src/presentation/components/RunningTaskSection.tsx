@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
-import { Play, Pause, Square, Pencil, X, CheckCircle2, Clock, ArrowRight, Pen, DollarSign } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Square,
+  Pencil,
+  X,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  Pen,
+  DollarSign,
+} from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
@@ -15,12 +26,19 @@ interface RunningTaskSectionProps {
   onFocusTaskEditHandled?: () => void;
 }
 
-export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocusTaskEditHandled }: RunningTaskSectionProps) {
+export function RunningTaskSection({
+  projects,
+  categories,
+  focusTaskEdit,
+  onFocusTaskEditHandled,
+}: RunningTaskSectionProps) {
   const { runningTask, pauseTask, resumeTask, stopTask, cancelTask, updateActiveTask } =
     useRunningTask();
   const seconds = useTaskTimer(runningTask);
   const [editing, setEditing] = useState(false);
-  const [editFocusField, setEditFocusField] = useState<"name" | "project" | "category" | undefined>();
+  const [editFocusField, setEditFocusField] = useState<
+    "name" | "project" | "category" | undefined
+  >();
   const [confirmingStop, setConfirmingStop] = useState(false);
   const [fillingRequired, setFillingRequired] = useState(false);
   const [fillName, setFillName] = useState("");
@@ -146,7 +164,10 @@ export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocu
                 onBlur={handleStartTimeCommit}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleStartTimeCommit();
-                  if (e.key === "Escape") { e.stopPropagation(); setEditingStartTime(false); }
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setEditingStartTime(false);
+                  }
                 }}
                 autoFocus
                 className="w-24 bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -165,7 +186,9 @@ export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocu
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          <span className="text-lg font-mono tabular-nums text-gray-100 mr-2">{formatHHMMSS(seconds)}</span>
+          <span className="text-lg font-mono tabular-nums text-gray-100 mr-2">
+            {formatHHMMSS(seconds)}
+          </span>
           {confirmingStop ? (
             <div className="flex items-center gap-1">
               <span className="text-xs text-gray-500 mr-1">Concluída?</span>
@@ -282,7 +305,10 @@ export function RunningTaskSection({ projects, categories, focusTaskEdit, onFocu
           categories={categories}
           focusField={editFocusField}
           onSave={handleSaveEdit}
-          onCancel={() => { setEditing(false); setEditFocusField(undefined); }}
+          onCancel={() => {
+            setEditing(false);
+            setEditFocusField(undefined);
+          }}
         />
       )}
     </section>

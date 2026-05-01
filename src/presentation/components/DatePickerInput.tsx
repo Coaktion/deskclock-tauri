@@ -124,7 +124,8 @@ export function DatePickerInput({
                 root: "text-sm",
                 month_caption: "text-gray-200 font-medium text-sm mb-1",
                 nav: "flex items-center gap-1",
-                button_previous: "p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg",
+                button_previous:
+                  "p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg",
                 button_next: "p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg",
                 weeks: "mt-1",
                 weekdays: "flex",

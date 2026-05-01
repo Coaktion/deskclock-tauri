@@ -71,7 +71,9 @@ export function TodayEntriesSection({
     <section>
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-sm font-semibold text-gray-300">Entradas de hoje</h2>
-        <span className="text-xs font-mono tabular-nums text-gray-500">{formatHHMMSS(totalSeconds)}</span>
+        <span className="text-xs font-mono tabular-nums text-gray-500">
+          {formatHHMMSS(totalSeconds)}
+        </span>
       </div>
 
       {groups.length === 0 ? (

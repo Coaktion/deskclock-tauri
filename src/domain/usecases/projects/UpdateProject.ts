@@ -11,7 +11,8 @@ export async function updateProject(
   if (!trimmed) throw new DomainError("O nome do projeto não pode ser vazio.");
 
   const existing = await repository.findByName(trimmed);
-  if (existing && existing.id !== id) throw new DuplicateNameError(`Projeto "${trimmed}" já existe.`);
+  if (existing && existing.id !== id)
+    throw new DuplicateNameError(`Projeto "${trimmed}" já existe.`);
 
   await repository.update(id, trimmed);
 }

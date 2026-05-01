@@ -8,10 +8,10 @@ use std::sync::OnceLock;
 use std::sync::Arc;
 use tauri::Manager;
 use commands::{
-    check_for_update, download_and_install_update, get_display_server, get_local_api_status,
-    get_platform, open_in_browser, open_in_file_manager, relaunch_app, save_file,
-    start_local_api, start_oauth_server, stop_local_api, update_shortcuts, update_tray_icon,
-    update_tray_tooltip,
+    check_for_update, download_and_install_update, get_bearer_json, get_display_server,
+    get_local_api_status, get_platform, open_in_browser, open_in_file_manager, post_form_json,
+    relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
+    update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri_plugin_autostart::MacosLauncher;
 
@@ -131,6 +131,8 @@ pub fn run() {
             update_tray_icon,
             update_shortcuts,
             start_oauth_server,
+            post_form_json,
+            get_bearer_json,
             get_platform,
             get_display_server,
             open_in_browser,

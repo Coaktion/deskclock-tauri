@@ -5,7 +5,7 @@ import { PhysicalPosition } from "@tauri-apps/api/dpi";
 
 export async function centerOnWorkArea(
   win: Window | WebviewWindow,
-  fallback?: { width: number; height: number },
+  fallback?: { width: number; height: number }
 ): Promise<void> {
   const [monitorResult, outerSize] = await Promise.all([
     currentMonitor().then((m) => m ?? primaryMonitor()),
@@ -14,8 +14,10 @@ export async function centerOnWorkArea(
   if (!monitorResult) return;
 
   const { scaleFactor, workArea } = monitorResult;
-  const winW = outerSize.width > 0 ? outerSize.width : Math.round((fallback?.width ?? 560) * scaleFactor);
-  const winH = outerSize.height > 0 ? outerSize.height : Math.round((fallback?.height ?? 500) * scaleFactor);
+  const winW =
+    outerSize.width > 0 ? outerSize.width : Math.round((fallback?.width ?? 560) * scaleFactor);
+  const winH =
+    outerSize.height > 0 ? outerSize.height : Math.round((fallback?.height ?? 500) * scaleFactor);
 
   const x = workArea.position.x + Math.round((workArea.size.width - winW) / 2);
   const y = workArea.position.y + Math.round((workArea.size.height - winH) / 2);
@@ -26,7 +28,7 @@ export async function centerOnWorkArea(
 /** Positions the overlay popup adjacent to the compact overlay, screen-quadrant-aware. */
 export async function positionPopupNearCompact(
   popup: Window | WebviewWindow,
-  logicalSize: { width: number; height: number },
+  logicalSize: { width: number; height: number }
 ): Promise<void> {
   const compact = await WebviewWindow.getByLabel("overlay-compact");
   if (!compact) return;
@@ -39,7 +41,8 @@ export async function positionPopupNearCompact(
   // Find the monitor containing the compact window's center point
   const cx = compactPos.x + Math.round(compactSize.width / 2);
   const cy = compactPos.y + Math.round(compactSize.height / 2);
-  const monitorResult = await monitorFromPoint(cx, cy).catch(() => null) ?? await primaryMonitor();
+  const monitorResult =
+    (await monitorFromPoint(cx, cy).catch(() => null)) ?? (await primaryMonitor());
   if (!monitorResult) return;
 
   const { scaleFactor, size: screenSize, position: screenOrigin } = monitorResult;
@@ -49,7 +52,10 @@ export async function positionPopupNearCompact(
 
   // Prefer right of compact; fall back to left if it would overflow
   let x: number;
-  if (compactPos.x + compactSize.width + gapPhys + popupPhysW <= screenOrigin.x + screenSize.width) {
+  if (
+    compactPos.x + compactSize.width + gapPhys + popupPhysW <=
+    screenOrigin.x + screenSize.width
+  ) {
     x = compactPos.x + compactSize.width + gapPhys;
   } else {
     x = compactPos.x - gapPhys - popupPhysW;
@@ -69,7 +75,7 @@ export async function positionPopupNearCompact(
 
 export async function positionNearTaskbar(
   win: Window | WebviewWindow,
-  fallback?: { width: number; height: number },
+  fallback?: { width: number; height: number }
 ): Promise<void> {
   const [monitorResult, outerSize] = await Promise.all([
     currentMonitor().then((m) => m ?? primaryMonitor()),
@@ -78,8 +84,10 @@ export async function positionNearTaskbar(
   if (!monitorResult) return;
 
   const { scaleFactor, workArea } = monitorResult;
-  const winW = outerSize.width > 0 ? outerSize.width : Math.round((fallback?.width ?? 800) * scaleFactor);
-  const winH = outerSize.height > 0 ? outerSize.height : Math.round((fallback?.height ?? 620) * scaleFactor);
+  const winW =
+    outerSize.width > 0 ? outerSize.width : Math.round((fallback?.width ?? 800) * scaleFactor);
+  const winH =
+    outerSize.height > 0 ? outerSize.height : Math.round((fallback?.height ?? 620) * scaleFactor);
 
   const x = workArea.position.x + Math.max(0, workArea.size.width - winW);
   const y = workArea.position.y + Math.max(0, workArea.size.height - winH);

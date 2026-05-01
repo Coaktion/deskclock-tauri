@@ -11,7 +11,15 @@ import { applyTheme, THEMES } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 import { useUpdater } from "@presentation/hooks/useUpdater";
-import { RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2, AlertTriangle, ExternalLink } from "lucide-react";
+import {
+  RefreshCw,
+  Download,
+  RotateCcw,
+  AlertCircle,
+  CheckCircle2,
+  AlertTriangle,
+  ExternalLink,
+} from "lucide-react";
 
 interface ApiStatus {
   running: boolean;
@@ -115,7 +123,9 @@ function baseKeyFromCode(code: string, fallbackKey: string): string {
   if (digit) return digit[1];
   const letter = /^Key([A-Z])$/.exec(code);
   if (letter) return letter[1];
-  return KEY_MAP[fallbackKey] ?? (fallbackKey.length === 1 ? fallbackKey.toUpperCase() : fallbackKey);
+  return (
+    KEY_MAP[fallbackKey] ?? (fallbackKey.length === 1 ? fallbackKey.toUpperCase() : fallbackKey)
+  );
 }
 
 function buildAccelerator(e: React.KeyboardEvent): string {
@@ -174,10 +184,16 @@ function ShortcutRow({
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {failed && (
-          <AlertTriangle size={14} className="text-amber-400 shrink-0" aria-label="Falha ao registrar atalho" />
+          <AlertTriangle
+            size={14}
+            className="text-amber-400 shrink-0"
+            aria-label="Falha ao registrar atalho"
+          />
         )}
         {value && !recording && (
-          <span className={`font-mono text-xs bg-gray-800 border px-2 py-1 rounded ${failed ? "border-amber-600 text-amber-300" : "border-gray-700 text-gray-300"}`}>
+          <span
+            className={`font-mono text-xs bg-gray-800 border px-2 py-1 rounded ${failed ? "border-amber-600 text-amber-300" : "border-gray-700 text-gray-300"}`}
+          >
             {value}
           </span>
         )}
@@ -557,7 +573,12 @@ export function SettingsPage() {
   }
 
   async function handleToggle(
-    key: "showWelcomeMessage" | "overlaySnapToGrid" | "liveTrayTimer" | "closeOnFocusLoss" | "discardTasksUnderOneMinute",
+    key:
+      | "showWelcomeMessage"
+      | "overlaySnapToGrid"
+      | "liveTrayTimer"
+      | "closeOnFocusLoss"
+      | "discardTasksUnderOneMinute",
     setter: (v: boolean) => void,
     value: boolean
   ) {
@@ -573,7 +594,7 @@ export function SettingsPage() {
   async function handleRoundingSlotToggle(slot: RoundingSlot) {
     const next = roundingSlots.includes(slot)
       ? roundingSlots.filter((s) => s !== slot)
-      : [...roundingSlots, slot].sort((a, b) => a - b) as RoundingSlot[];
+      : ([...roundingSlots, slot].sort((a, b) => a - b) as RoundingSlot[]);
     setRoundingSlots(next);
     await config.set("roundingSlots", next);
   }
@@ -671,7 +692,9 @@ export function SettingsPage() {
                 {userName ? userName[0].toUpperCase() : "?"}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Como quer ser chamado?</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
+                  Como quer ser chamado?
+                </p>
                 <input
                   type="text"
                   value={userName}
@@ -721,7 +744,9 @@ export function SettingsPage() {
                   label="Descartar tarefas com menos de 1 minuto"
                   description="Ao parar uma tarefa com duração inferior a 1 minuto, ela é descartada automaticamente."
                   value={discardTasksUnderOneMinute}
-                  onChange={(v) => handleToggle("discardTasksUnderOneMinute", setDiscardTasksUnderOneMinute, v)}
+                  onChange={(v) =>
+                    handleToggle("discardTasksUnderOneMinute", setDiscardTasksUnderOneMinute, v)
+                  }
                 />
               </CardRow>
               <CardRow>
@@ -757,7 +782,9 @@ export function SettingsPage() {
                     <div>
                       <p className="text-xs text-gray-400 mb-1">Tolerância</p>
                       <p className="text-xs text-gray-500 mb-2">
-                        Quando uma tarefa passa de um slot ativo, se for encerrada ainda dentro desta tolerância, é arredondada para o slot recém ultrapassado. Do contrário, irá para o próximo slot.
+                        Quando uma tarefa passa de um slot ativo, se for encerrada ainda dentro
+                        desta tolerância, é arredondada para o slot recém ultrapassado. Do
+                        contrário, irá para o próximo slot.
                       </p>
                       <div className="flex gap-1.5 flex-wrap">
                         {[0, 1, 2, 5, 10, 15].map((min) => (
@@ -782,10 +809,14 @@ export function SettingsPage() {
 
             <SettingsCard>
               <CardRow>
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">Jornada</p>
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">
+                  Jornada
+                </p>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1.5">Meta diária (horas)</label>
+                    <label className="block text-xs text-gray-400 mb-1.5">
+                      Meta diária (horas)
+                    </label>
                     <input
                       type="number"
                       min={1}
@@ -797,7 +828,9 @@ export function SettingsPage() {
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-xs text-gray-400 mb-1.5">Meta semanal (horas)</label>
+                    <label className="block text-xs text-gray-400 mb-1.5">
+                      Meta semanal (horas)
+                    </label>
                     <input
                       type="number"
                       min={1}
@@ -845,7 +878,8 @@ export function SettingsPage() {
               <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
                 <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
                 <p className="text-xs text-amber-300">
-                  Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou mude para uma sessão X11 para usar este recurso.
+                  Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em
+                  XWayland ou mude para uma sessão X11 para usar este recurso.
                 </p>
               </div>
             )}
@@ -865,8 +899,13 @@ export function SettingsPage() {
                   label="Acesso rápido (Command Palette)"
                   description="Abre o painel de ações de qualquer lugar, mesmo com a janela fechada"
                   value={shortcutCommandPalette}
-                  failed={failedShortcuts.includes(shortcutCommandPalette) && !!shortcutCommandPalette}
-                  onSave={(v) => { setShortcutCommandPalette(v); applyShortcuts({ commandPalette: v }); }}
+                  failed={
+                    failedShortcuts.includes(shortcutCommandPalette) && !!shortcutCommandPalette
+                  }
+                  onSave={(v) => {
+                    setShortcutCommandPalette(v);
+                    applyShortcuts({ commandPalette: v });
+                  }}
                 />
               </CardRow>
             </SettingsCard>
@@ -878,7 +917,10 @@ export function SettingsPage() {
                   description="Alterna execução da tarefa atual"
                   value={shortcutToggleTask}
                   failed={failedShortcuts.includes(shortcutToggleTask) && !!shortcutToggleTask}
-                  onSave={(v) => { setShortcutToggleTask(v); applyShortcuts({ toggleTask: v }); }}
+                  onSave={(v) => {
+                    setShortcutToggleTask(v);
+                    applyShortcuts({ toggleTask: v });
+                  }}
                 />
               </CardRow>
               <CardRow>
@@ -887,7 +929,10 @@ export function SettingsPage() {
                   description="Para a tarefa em execução"
                   value={shortcutStopTask}
                   failed={failedShortcuts.includes(shortcutStopTask) && !!shortcutStopTask}
-                  onSave={(v) => { setShortcutStopTask(v); applyShortcuts({ stopTask: v }); }}
+                  onSave={(v) => {
+                    setShortcutStopTask(v);
+                    applyShortcuts({ stopTask: v });
+                  }}
                 />
               </CardRow>
               <CardRow>
@@ -895,8 +940,13 @@ export function SettingsPage() {
                   label="Mostrar / Ocultar overlay"
                   description="Alterna visibilidade do overlay"
                   value={shortcutToggleOverlay}
-                  failed={failedShortcuts.includes(shortcutToggleOverlay) && !!shortcutToggleOverlay}
-                  onSave={(v) => { setShortcutToggleOverlay(v); applyShortcuts({ toggleOverlay: v }); }}
+                  failed={
+                    failedShortcuts.includes(shortcutToggleOverlay) && !!shortcutToggleOverlay
+                  }
+                  onSave={(v) => {
+                    setShortcutToggleOverlay(v);
+                    applyShortcuts({ toggleOverlay: v });
+                  }}
                 />
               </CardRow>
               <CardRow>
@@ -905,7 +955,10 @@ export function SettingsPage() {
                   description="Alterna visibilidade da janela principal"
                   value={shortcutToggleWindow}
                   failed={failedShortcuts.includes(shortcutToggleWindow) && !!shortcutToggleWindow}
-                  onSave={(v) => { setShortcutToggleWindow(v); applyShortcuts({ toggleWindow: v }); }}
+                  onSave={(v) => {
+                    setShortcutToggleWindow(v);
+                    applyShortcuts({ toggleWindow: v });
+                  }}
                 />
               </CardRow>
             </SettingsCard>
@@ -992,7 +1045,9 @@ export function SettingsPage() {
                   <div className="space-y-1.5">
                     <div>
                       <p className="text-sm text-gray-200">Porta</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Entre 1024 e 65535. Alterações reiniciam o servidor.</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Entre 1024 e 65535. Alterações reiniciam o servidor.
+                      </p>
                     </div>
                     <input
                       type="number"
@@ -1014,22 +1069,22 @@ export function SettingsPage() {
                       localApiLoading
                         ? "bg-yellow-400 animate-pulse"
                         : localApiStatus?.running
-                        ? "bg-green-400"
-                        : localApiStatus?.error
-                        ? "bg-red-500"
-                        : "bg-gray-600"
+                          ? "bg-green-400"
+                          : localApiStatus?.error
+                            ? "bg-red-500"
+                            : "bg-gray-600"
                     }`}
                   />
                   <span className="text-xs text-gray-400">
                     {localApiLoading === "starting"
                       ? "Iniciando…"
                       : localApiLoading === "stopping"
-                      ? "Parando…"
-                      : localApiStatus?.running
-                      ? `Ativo na porta ${localApiStatus.port}`
-                      : localApiStatus?.error
-                      ? "Erro ao iniciar"
-                      : "Desativado"}
+                        ? "Parando…"
+                        : localApiStatus?.running
+                          ? `Ativo na porta ${localApiStatus.port}`
+                          : localApiStatus?.error
+                            ? "Erro ao iniciar"
+                            : "Desativado"}
                   </span>
                   {localApiStatus?.running && !localApiLoading && (
                     <a

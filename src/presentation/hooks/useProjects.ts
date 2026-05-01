@@ -60,6 +60,7 @@ export function useProjects() {
   return {
     projects,
     loading,
+    reload: load,
     createProject: handleCreate,
     bulkImportProjects: handleBulkImport,
     updateProject: handleUpdate,

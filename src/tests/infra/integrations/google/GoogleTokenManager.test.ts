@@ -8,9 +8,7 @@ vi.stubEnv("GCP_CLIENT_SECRET", "test-client-secret");
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-const { GoogleTokenManager } = await import(
-  "@infra/integrations/google/GoogleTokenManager"
-);
+const { GoogleTokenManager } = await import("@infra/integrations/google/GoogleTokenManager");
 
 function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
   const store: Partial<AppConfig> = {

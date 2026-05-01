@@ -30,9 +30,7 @@ export function PlannedTasksSection({
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
           Planejadas para hoje
-          <span className="ml-1.5 text-gray-600 normal-case font-normal">
-            {pending.length}
-          </span>
+          <span className="ml-1.5 text-gray-600 normal-case font-normal">{pending.length}</span>
         </h2>
         {onNavigatePlanning && (
           <button

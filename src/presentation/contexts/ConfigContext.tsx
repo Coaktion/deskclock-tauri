@@ -2,6 +2,11 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { DEFAULT_COLUMN_MAPPING, type SheetColumnMapping } from "@shared/types/sheetsConfig";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
+import type {
+  ClockifyWorkspaceRef,
+  ClockifyProjectMapping,
+  ClockifyCategoryMapping,
+} from "@shared/types/clockifyConfig";
 
 export interface OverlayPosition {
   x: number;
@@ -51,6 +56,14 @@ export interface AppConfig {
   googleRefreshToken: string;
   googleTokenExpiry: number;
   googleUserEmail: string;
+  // Tokens Zendesk OAuth
+  zendeskSubdomain: string;
+  zendeskClientId: string;
+  zendeskClientSecret: string;
+  zendeskAccessToken: string;
+  zendeskRefreshToken: string;
+  zendeskTokenExpiry: number;
+  zendeskUserEmail: string;
   // API REST local
   localApiEnabled: boolean;
   localApiPort: number;
@@ -62,6 +75,21 @@ export interface AppConfig {
   roundingEnabled: boolean;
   roundingSlots: RoundingSlot[];
   roundingTolerance: number;
+  // Clockify
+  clockifyApiKey: string;
+  clockifyUserEmail: string;
+  clockifyUserId: string;
+  clockifyActiveWorkspaceId: string;
+  clockifyActiveWorkspaceName: string;
+  clockifyDefaultTagIds: string[];
+  clockifyProjectMapping: ClockifyProjectMapping[];
+  clockifyCategoryMapping: ClockifyCategoryMapping[];
+  clockifyAutoSync: boolean;
+  clockifyAutoSyncMode: "per-task" | "daily";
+  clockifyAutoSyncTrigger: "on-open" | "fixed-time";
+  clockifyAutoSyncTime: string;
+  clockifyDailySyncLastTimestamp: string;
+  clockifyWorkspaceCache: ClockifyWorkspaceRef[];
 }
 
 const DEFAULTS: AppConfig = {
@@ -100,6 +128,13 @@ const DEFAULTS: AppConfig = {
   googleRefreshToken: "",
   googleTokenExpiry: 0,
   googleUserEmail: "",
+  zendeskSubdomain: "",
+  zendeskClientId: "",
+  zendeskClientSecret: "",
+  zendeskAccessToken: "",
+  zendeskRefreshToken: "",
+  zendeskTokenExpiry: 0,
+  zendeskUserEmail: "",
   localApiEnabled: false,
   localApiPort: 27420,
   dailyGoalHours: 8,
@@ -108,6 +143,20 @@ const DEFAULTS: AppConfig = {
   roundingEnabled: false,
   roundingSlots: [15, 30, 45, 60] as RoundingSlot[],
   roundingTolerance: 0,
+  clockifyApiKey: "",
+  clockifyUserEmail: "",
+  clockifyUserId: "",
+  clockifyActiveWorkspaceId: "",
+  clockifyActiveWorkspaceName: "",
+  clockifyDefaultTagIds: [],
+  clockifyProjectMapping: [],
+  clockifyCategoryMapping: [],
+  clockifyAutoSync: false,
+  clockifyAutoSyncMode: "per-task" as const,
+  clockifyAutoSyncTrigger: "on-open" as const,
+  clockifyAutoSyncTime: "18:00",
+  clockifyDailySyncLastTimestamp: "",
+  clockifyWorkspaceCache: [],
 };
 
 type ConfigKey = keyof AppConfig;
@@ -156,7 +205,11 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     await repo.set(key, value);
   }
 
-  return <ConfigContext.Provider value={{ isLoaded, loadError, get, set }}>{children}</ConfigContext.Provider>;
+  return (
+    <ConfigContext.Provider value={{ isLoaded, loadError, get, set }}>
+      {children}
+    </ConfigContext.Provider>
+  );
 }
 
 export function useAppConfig(): ConfigContextValue {

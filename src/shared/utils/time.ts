@@ -134,7 +134,7 @@ export function computeDurationHHMM(start: string, end: string): string {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   if ([sh, sm, eh, em].some((v) => !isFinite(v))) return "00:01";
-  let diff = (eh * 60 + em) - (sh * 60 + sm);
+  let diff = eh * 60 + em - (sh * 60 + sm);
   if (diff <= 0) diff += 1440;
   return `${String(Math.floor(diff / 60)).padStart(2, "0")}:${String(diff % 60).padStart(2, "0")}`;
 }

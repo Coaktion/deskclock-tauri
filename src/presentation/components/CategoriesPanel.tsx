@@ -12,8 +12,14 @@ interface CategoriesPanelProps {
 }
 
 export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
-  const { categories, loading, createCategory, bulkImportCategories, updateCategory, deleteCategory } =
-    useCategories();
+  const {
+    categories,
+    loading,
+    createCategory,
+    bulkImportCategories,
+    updateCategory,
+    deleteCategory,
+  } = useCategories();
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [newBillable, setNewBillable] = useState(true);
@@ -36,7 +42,12 @@ export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
       {showTitle && <h2 className="text-base font-semibold text-gray-100">Categorias</h2>}
 
       <div className="flex gap-2">
-        <SearchInput value={search} onChange={setSearch} placeholder="Filtrar categorias..." className="flex-1" />
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Filtrar categorias..."
+          className="flex-1"
+        />
         <button
           type="button"
           onClick={() => setBulkOpen(true)}

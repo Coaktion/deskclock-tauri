@@ -60,6 +60,7 @@ export function useCategories() {
   return {
     categories,
     loading,
+    reload: load,
     createCategory: handleCreate,
     bulkImportCategories: handleBulkImport,
     updateCategory: handleUpdate,

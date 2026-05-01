@@ -34,9 +34,7 @@ export function Autocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
-  const filtered = value
-    ? options.filter((o) => fuzzyMatch(value, o.name))
-    : options;
+  const filtered = value ? options.filter((o) => fuzzyMatch(value, o.name)) : options;
 
   // Reseta o índice ativo quando a lista muda
   useEffect(() => {
@@ -63,7 +61,10 @@ export function Autocomplete({
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      if (!open) { setOpen(true); return; }
+      if (!open) {
+        setOpen(true);
+        return;
+      }
       setActiveIdx((i) => Math.min(i + 1, filtered.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();

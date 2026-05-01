@@ -54,7 +54,10 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
             onKeyDown={handleKeyDown}
             className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
           />
-          <button onClick={confirmEdit} className="p-1 text-green-400 hover:text-green-300 shrink-0">
+          <button
+            onClick={confirmEdit}
+            className="p-1 text-green-400 hover:text-green-300 shrink-0"
+          >
             <Check size={13} />
           </button>
           <button onClick={cancelEdit} className="p-1 text-gray-500 hover:text-gray-300 shrink-0">

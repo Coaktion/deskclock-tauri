@@ -17,7 +17,14 @@ interface KpiCardProps {
   valueColor?: string;
 }
 
-function KpiCard({ label, value, barColor, barPct, hint, valueColor = "text-gray-100" }: KpiCardProps) {
+function KpiCard({
+  label,
+  value,
+  barColor,
+  barPct,
+  hint,
+  valueColor = "text-gray-100",
+}: KpiCardProps) {
   const pct = Math.min(100, Math.max(0, barPct));
   return (
     <div className="flex-1 bg-gray-900 border border-gray-800 rounded-lg p-3 flex flex-col gap-1 min-w-0">
@@ -33,9 +40,7 @@ function KpiCard({ label, value, barColor, barPct, hint, valueColor = "text-gray
           style={{ width: `${pct}%` }}
         />
       </div>
-      {hint && (
-        <div className="text-[10.5px] text-gray-500 mt-0.5">{hint}</div>
-      )}
+      {hint && <div className="text-[10.5px] text-gray-500 mt-0.5">{hint}</div>}
     </div>
   );
 }
@@ -54,9 +59,7 @@ export function TotalsSection({
 
   // Billable: ratio vs total today (fallback: vs daily goal)
   const billablePct =
-    totalToday > 0
-      ? (billableSeconds / totalToday) * 100
-      : (billableSeconds / dailyGoalSec) * 100;
+    totalToday > 0 ? (billableSeconds / totalToday) * 100 : (billableSeconds / dailyGoalSec) * 100;
 
   // Non-billable: ratio vs total today (fallback: vs daily goal)
   const nonBillablePct =

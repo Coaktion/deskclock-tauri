@@ -57,7 +57,9 @@ export function RunningTaskEditForm({
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+        }}
         placeholder="Nome (opcional)"
         autoFocus={focusField === "name" || !focusField}
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"

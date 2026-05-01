@@ -129,7 +129,6 @@ export function EditPlannedTaskModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
-
           {/* Dados da tarefa */}
           <div className="flex flex-col gap-3">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tarefa</p>
@@ -172,7 +171,11 @@ export function EditPlannedTaskModal({
               <button
                 type="button"
                 onClick={() => setBillable((b) => !b)}
-                title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+                title={
+                  billable
+                    ? "Billable — clique para alternar"
+                    : "Non-billable — clique para alternar"
+                }
                 className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors shrink-0 ${
                   billable
                     ? "bg-green-900/40 border-green-700 text-green-400"
@@ -253,17 +256,9 @@ export function EditPlannedTaskModal({
 
             {scheduleType === "period" && (
               <div className="flex items-center gap-3">
-                <DatePickerInput
-                  value={periodStart}
-                  onChange={setPeriodStart}
-                  className="flex-1"
-                />
+                <DatePickerInput value={periodStart} onChange={setPeriodStart} className="flex-1" />
                 <span className="text-gray-500 text-sm shrink-0">→</span>
-                <DatePickerInput
-                  value={periodEnd}
-                  onChange={setPeriodEnd}
-                  className="flex-1"
-                />
+                <DatePickerInput value={periodEnd} onChange={setPeriodEnd} className="flex-1" />
               </div>
             )}
           </div>
@@ -279,10 +274,7 @@ export function EditPlannedTaskModal({
             {actions.length > 0 && (
               <ul className="flex flex-col gap-1.5">
                 {actions.map((action, i) => (
-                  <li
-                    key={i}
-                    className="flex items-center gap-3 px-3 py-2 bg-gray-800 rounded-lg"
-                  >
+                  <li key={i} className="flex items-center gap-3 px-3 py-2 bg-gray-800 rounded-lg">
                     <span
                       className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
                     >
@@ -292,10 +284,7 @@ export function EditPlannedTaskModal({
                         <FolderOpen size={14} />
                       )}
                     </span>
-                    <span
-                      className="flex-1 text-sm text-gray-300 truncate"
-                      title={action.value}
-                    >
+                    <span className="flex-1 text-sm text-gray-300 truncate" title={action.value}>
                       {action.value}
                     </span>
                     <button

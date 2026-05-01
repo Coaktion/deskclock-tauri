@@ -29,9 +29,7 @@ export function DataPage() {
             }`}
           >
             {label}
-            <span
-              className={`ml-1.5 ${section === key ? "text-blue-400/60" : "text-gray-600"}`}
-            >
+            <span className={`ml-1.5 ${section === key ? "text-blue-400/60" : "text-gray-600"}`}>
               {count}
             </span>
           </button>

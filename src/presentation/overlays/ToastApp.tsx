@@ -3,7 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit, listen } from "@tauri-apps/api/event";
 import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { CheckCircle2, XCircle, Info, ArrowDownToLine, X } from "lucide-react";
+import { CheckCircle2, XCircle, Info, ArrowDownToLine, AlertTriangle, X } from "lucide-react";
 import {
   OVERLAY_EVENTS,
   type ToastMessagePayload,
@@ -46,6 +46,11 @@ const VARIANT_STYLES: Record<
     border: "border-violet-500",
     icon: <ArrowDownToLine size={18} className="text-violet-400 shrink-0" />,
     text: "text-violet-100",
+  },
+  warning: {
+    border: "border-amber-500",
+    icon: <AlertTriangle size={18} className="text-amber-400 shrink-0" />,
+    text: "text-amber-100",
   },
 };
 

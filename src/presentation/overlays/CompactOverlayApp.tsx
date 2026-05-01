@@ -42,7 +42,7 @@ function CompactOverlayAppInner() {
   const syncPopupOpen = (value: boolean) => {
     isPopupOpenRef.current = value;
     setIsPopupOpen(value);
-  };  
+  };
 
   // Close popup if compact moves (user dragging)
   const handlePositionChange = useCallback(() => {
@@ -52,7 +52,10 @@ function CompactOverlayAppInner() {
     }
   }, []);
 
-  useOverlayDrag("overlayPosition_compact", snapToGrid, config, handlePositionChange, { width: 78, height: 52 });
+  useOverlayDrag("overlayPosition_compact", snapToGrid, config, handlePositionChange, {
+    width: 78,
+    height: 52,
+  });
 
   useEffect(() => {
     if (!config.isLoaded) return;

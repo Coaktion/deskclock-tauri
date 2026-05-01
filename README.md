@@ -54,6 +54,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - **Google Sheets:** envio manual (modo de envio) ou automático ao concluir tarefa; duração como formato de hora nativo da planilha
 - **Google Calendar:** importação de eventos como tarefas planejadas (ver seção acima)
 - Conexão OAuth única para Sheets + Calendar
+- **Clockify:** envio de time-entries via API Key; importação de projetos/tags como entidades do DeskClock; mapeamento por workspace; tags padrão; auto-sync por tarefa ou diário; **modal "Gerenciar apontamentos" com CRUD direto sobre as time entries do Clockify** (criar, editar inline, excluir; filtros por período e por tags padrão)
 
 ### Projetos e Categorias
 - Importação em massa (um por linha)
@@ -180,6 +181,18 @@ rustc --version
 **3. WebView2**
 
 Já integrado no Windows 10 (atualização 1803+) e Windows 11. Nenhuma ação necessária.
+
+### Integração Clockify (sem variáveis de ambiente)
+
+A integração com o Clockify usa **API Key** gerada diretamente no painel do usuário — sem credenciais de servidor necessárias.
+
+1. Acesse [app.clockify.me/user/preferences#advanced](https://app.clockify.me/user/preferences#advanced)
+2. Role até a seção **API** e clique em **Generate**
+3. Copie a chave e cole em **Configurações → Integrações → Clockify → Conectar**
+
+Após conectar, selecione o workspace ativo, importe projetos e tags do Clockify e configure os mapeamentos.
+
+Para visualizar e editar as time entries diretamente no DeskClock (sem precisar abrir o painel do Clockify), use **Gerenciar apontamentos** no card Clockify — abre um modal com filtro por período, criar/editar/excluir e o filtro "Apenas com tags padrão" ligado por padrão quando há tags padrão configuradas.
 
 ### Variáveis de ambiente (integrações Google)
 

@@ -84,14 +84,21 @@ function highlightFuzzy(text: string, query: string): React.ReactNode {
   } else {
     let qi = 0;
     for (let i = 0; i < t.length && qi < q.length; i++) {
-      if (t[i] === q[qi]) { matched.add(i); qi++; }
+      if (t[i] === q[qi]) {
+        matched.add(i);
+        qi++;
+      }
     }
   }
   if (!matched.size) return text;
   const parts: React.ReactNode[] = [];
   for (let i = 0; i < text.length; i++) {
     if (matched.has(i)) {
-      parts.push(<span key={i} className="text-blue-300 font-semibold">{text[i]}</span>);
+      parts.push(
+        <span key={i} className="text-blue-300 font-semibold">
+          {text[i]}
+        </span>
+      );
     } else {
       parts.push(<Fragment key={i}>{text[i]}</Fragment>);
     }
@@ -196,7 +203,11 @@ export function CommandPalette({
 
     const planned: CommandItem[] = plannedTasks.map((task) => {
       const proj = projects.find((p) => p.id === task.projectId);
-      const projName = proj ? (proj.name.length > 30 ? proj.name.slice(0, 30) + "…" : proj.name) : undefined;
+      const projName = proj
+        ? proj.name.length > 30
+          ? proj.name.slice(0, 30) + "…"
+          : proj.name
+        : undefined;
       return {
         id: `planned-${task.id}`,
         group: "Iniciar tarefa planejada",
@@ -247,7 +258,15 @@ export function CommandPalette({
   function onKeyDown(e: React.KeyboardEvent) {
     // Ctrl/Cmd+1–7: navigate to page directly
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
-      const pages: Page[] = ["tasks", "retroactive", "planning", "history", "data", "integrations", "settings"];
+      const pages: Page[] = [
+        "tasks",
+        "retroactive",
+        "planning",
+        "history",
+        "data",
+        "integrations",
+        "settings",
+      ];
       const idx = parseInt(e.key) - 1;
       if (idx >= 0 && idx < pages.length) {
         e.preventDefault();
@@ -295,87 +314,95 @@ export function CommandPalette({
       className="w-[520px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden"
       onMouseDown={(e) => standalone && e.stopPropagation()}
     >
-        {/* Search bar */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
-          <Search size={16} className="text-gray-500 shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setFocusedIndex(0);
-            }}
-            onKeyDown={onKeyDown}
-            placeholder="Buscar ação, tela, ou tarefa planejada…"
-            className="flex-1 bg-transparent text-sm text-gray-100 outline-none placeholder-gray-500"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
-            >
-              Limpar
-            </button>
-          )}
-        </div>
-
-        {/* Results list */}
-        <div ref={listRef} className="max-h-80 overflow-y-auto py-1.5">
-          {filtered.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-gray-500">
-              Nenhum resultado encontrado
-            </p>
-          )}
-
-          {groups.map(([groupLabel, items]) => (
-            <div key={groupLabel}>
-              <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-                {groupLabel}
-              </div>
-              {items.map((item) => {
-                const idx = flatItems.indexOf(item);
-                const isFocused = idx === focusedIndex;
-                return (
-                  <div
-                    key={item.id}
-                    data-index={idx}
-                    className={`flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors ${
-                      isFocused ? "bg-blue-500/15" : "hover:bg-gray-800/60"
-                    }`}
-                    onMouseEnter={() => setFocusedIndex(idx)}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      void item.action();
-                    }}
-                  >
-                    <span className={`w-4 h-4 shrink-0 ${isFocused ? "text-blue-400" : "text-gray-400"}`}>
-                      {item.icon}
-                    </span>
-                    <span className="flex-1 text-gray-200">{highlightFuzzy(item.label, query)}</span>
-                    {item.subtitle && (
-                      <span className="text-xs text-gray-500">{highlightFuzzy(item.subtitle, query)}</span>
-                    )}
-                    {item.kbd && (
-                      <kbd className="text-[10px] font-mono text-gray-600 px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded">
-                        {item.kbd}
-                      </kbd>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        {/* Footer */}
-        <div className="px-4 py-2 border-t border-gray-800 flex items-center gap-4 text-[10.5px] text-gray-600">
-          <span><kbd className="font-mono">↑↓</kbd> navegar</span>
-          <span><kbd className="font-mono">Enter</kbd> executar</span>
-          <span><kbd className="font-mono">Esc</kbd> fechar</span>
-          {shortcutLabel && <span className="ml-auto">{shortcutLabel} a qualquer momento</span>}
-        </div>
+      {/* Search bar */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
+        <Search size={16} className="text-gray-500 shrink-0" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setFocusedIndex(0);
+          }}
+          onKeyDown={onKeyDown}
+          placeholder="Buscar ação, tela, ou tarefa planejada…"
+          className="flex-1 bg-transparent text-sm text-gray-100 outline-none placeholder-gray-500"
+        />
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+          >
+            Limpar
+          </button>
+        )}
       </div>
+
+      {/* Results list */}
+      <div ref={listRef} className="max-h-80 overflow-y-auto py-1.5">
+        {filtered.length === 0 && (
+          <p className="px-4 py-6 text-center text-sm text-gray-500">Nenhum resultado encontrado</p>
+        )}
+
+        {groups.map(([groupLabel, items]) => (
+          <div key={groupLabel}>
+            <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
+              {groupLabel}
+            </div>
+            {items.map((item) => {
+              const idx = flatItems.indexOf(item);
+              const isFocused = idx === focusedIndex;
+              return (
+                <div
+                  key={item.id}
+                  data-index={idx}
+                  className={`flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors ${
+                    isFocused ? "bg-blue-500/15" : "hover:bg-gray-800/60"
+                  }`}
+                  onMouseEnter={() => setFocusedIndex(idx)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    void item.action();
+                  }}
+                >
+                  <span
+                    className={`w-4 h-4 shrink-0 ${isFocused ? "text-blue-400" : "text-gray-400"}`}
+                  >
+                    {item.icon}
+                  </span>
+                  <span className="flex-1 text-gray-200">{highlightFuzzy(item.label, query)}</span>
+                  {item.subtitle && (
+                    <span className="text-xs text-gray-500">
+                      {highlightFuzzy(item.subtitle, query)}
+                    </span>
+                  )}
+                  {item.kbd && (
+                    <kbd className="text-[10px] font-mono text-gray-600 px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded">
+                      {item.kbd}
+                    </kbd>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2 border-t border-gray-800 flex items-center gap-4 text-[10.5px] text-gray-600">
+        <span>
+          <kbd className="font-mono">↑↓</kbd> navegar
+        </span>
+        <span>
+          <kbd className="font-mono">Enter</kbd> executar
+        </span>
+        <span>
+          <kbd className="font-mono">Esc</kbd> fechar
+        </span>
+        {shortcutLabel && <span className="ml-auto">{shortcutLabel} a qualquer momento</span>}
+      </div>
+    </div>
   );
 
   if (standalone) return box;

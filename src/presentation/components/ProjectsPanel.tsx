@@ -34,7 +34,12 @@ export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
       {showTitle && <h2 className="text-base font-semibold text-gray-100">Projetos</h2>}
 
       <div className="flex gap-2">
-        <SearchInput value={search} onChange={setSearch} placeholder="Filtrar projetos..." className="flex-1" />
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Filtrar projetos..."
+          className="flex-1"
+        />
         <button
           type="button"
           onClick={() => setBulkOpen(true)}
@@ -67,12 +72,7 @@ export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
           </p>
         ) : (
           filtered.map((p) => (
-            <ProjectCard
-              key={p.id}
-              project={p}
-              onUpdate={updateProject}
-              onDelete={deleteProject}
-            />
+            <ProjectCard key={p.id} project={p} onUpdate={updateProject} onDelete={deleteProject} />
           ))
         )}
       </div>

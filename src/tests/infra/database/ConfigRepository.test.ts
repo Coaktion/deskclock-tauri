@@ -64,10 +64,9 @@ describe("ConfigRepository", () => {
     it("consulta com a chave correta", async () => {
       const repo = new ConfigRepository();
       await repo.get("minha-chave", null);
-      expect(mockDb.select).toHaveBeenCalledWith(
-        expect.stringContaining("WHERE key"),
-        ["minha-chave"]
-      );
+      expect(mockDb.select).toHaveBeenCalledWith(expect.stringContaining("WHERE key"), [
+        "minha-chave",
+      ]);
     });
   });
 
@@ -75,37 +74,28 @@ describe("ConfigRepository", () => {
     it("serializa objeto como JSON", async () => {
       const repo = new ConfigRepository();
       await repo.set("overlayPosition", { x: 50, y: 75 });
-      expect(mockDb.execute).toHaveBeenCalledWith(
-        expect.stringContaining("INSERT"),
-        ["overlayPosition", JSON.stringify({ x: 50, y: 75 })]
-      );
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining("INSERT"), [
+        "overlayPosition",
+        JSON.stringify({ x: 50, y: 75 }),
+      ]);
     });
 
     it("serializa string como JSON", async () => {
       const repo = new ConfigRepository();
       await repo.set("theme", "verde");
-      expect(mockDb.execute).toHaveBeenCalledWith(
-        expect.anything(),
-        ["theme", '"verde"']
-      );
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.anything(), ["theme", '"verde"']);
     });
 
     it("serializa número como JSON", async () => {
       const repo = new ConfigRepository();
       await repo.set("overlayOpacity", 60);
-      expect(mockDb.execute).toHaveBeenCalledWith(
-        expect.anything(),
-        ["overlayOpacity", "60"]
-      );
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.anything(), ["overlayOpacity", "60"]);
     });
 
     it("serializa boolean como JSON", async () => {
       const repo = new ConfigRepository();
       await repo.set("autostart", true);
-      expect(mockDb.execute).toHaveBeenCalledWith(
-        expect.anything(),
-        ["autostart", "true"]
-      );
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.anything(), ["autostart", "true"]);
     });
 
     it("usa upsert (ON CONFLICT)", async () => {
@@ -122,10 +112,9 @@ describe("ConfigRepository", () => {
     it("executa DELETE com a chave correta", async () => {
       const repo = new ConfigRepository();
       await repo.delete("overlayPosition");
-      expect(mockDb.execute).toHaveBeenCalledWith(
-        expect.stringContaining("DELETE"),
-        ["overlayPosition"]
-      );
+      expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining("DELETE"), [
+        "overlayPosition",
+      ]);
     });
   });
 });

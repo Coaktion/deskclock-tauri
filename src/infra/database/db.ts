@@ -17,7 +17,10 @@ async function loadWithRetry(retries = 5, delayMs = 200): Promise<Database> {
       return await Database.load(DB_URL);
     } catch (err) {
       const msg = String(err);
-      if (i < retries - 1 && (msg.includes("previously applied") || msg.includes("has been modified"))) {
+      if (
+        i < retries - 1 &&
+        (msg.includes("previously applied") || msg.includes("has been modified"))
+      ) {
         await sleep(delayMs * (i + 1));
         continue;
       }
