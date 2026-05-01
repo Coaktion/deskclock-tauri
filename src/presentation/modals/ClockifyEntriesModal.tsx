@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, RefreshCw, Loader2, Pencil, DollarSign, Plus } from "lucide-react";
+import { X, RefreshCw, Loader2, Pencil, Trash2, DollarSign, Plus } from "lucide-react";
 import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
 import type {
   ClockifyHydratedProject,
@@ -194,6 +194,18 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
       setRefreshSignal((n) => n + 1);
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao criar.");
+    }
+  }
+
+  async function handleDelete(entryId: string) {
+    const client = new ClockifyClient(apiKey);
+    try {
+      await client.deleteTimeEntry(workspaceId, entryId);
+      await showToast("success", "Apontamento excluído.");
+      if (editingId === entryId) setEditingId(null);
+      setRefreshSignal((n) => n + 1);
+    } catch (err) {
+      await showToast("error", err instanceof Error ? err.message : "Erro ao excluir.");
     }
   }
 
@@ -409,6 +421,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
                       onStartEdit={() => setEditingId(entry.id)}
                       onCancelEdit={() => setEditingId(null)}
                       onSave={(payload) => handleSaveEdit(entry.id, payload)}
+                      onDelete={() => handleDelete(entry.id)}
                     />
                   ))}
                 </div>
@@ -429,6 +442,7 @@ interface EntryRowProps {
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSave: (payload: ClockifyTimeEntryPayload) => Promise<void>;
+  onDelete: () => Promise<void>;
 }
 
 function EntryRow(props: EntryRowProps) {
@@ -436,7 +450,7 @@ function EntryRow(props: EntryRowProps) {
   return <EntryDisplay {...props} />;
 }
 
-function EntryDisplay({ entry, onStartEdit }: EntryRowProps) {
+function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
   const startStr = formatTimeLocal(entry.timeInterval.start);
   const endStr = entry.timeInterval.end ? formatTimeLocal(entry.timeInterval.end) : "—";
   const duration = entryDurationSeconds(entry);
@@ -498,6 +512,13 @@ function EntryDisplay({ entry, onStartEdit }: EntryRowProps) {
           title="Editar"
         >
           <Pencil size={13} />
+        </button>
+        <button
+          onClick={() => void onDelete()}
+          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+          title="Excluir"
+        >
+          <Trash2 size={13} />
         </button>
       </div>
     </div>
