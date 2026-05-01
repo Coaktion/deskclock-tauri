@@ -4,6 +4,7 @@ import type {
   ClockifyProject,
   ClockifyTag,
   ClockifyTimeEntry,
+  ClockifyTimeEntryFull,
   ClockifyTimeEntryPayload,
 } from "./types";
 import {
@@ -15,6 +16,7 @@ import {
 
 const BASE_URL = "https://api.clockify.me/api/v1";
 const PAGE_SIZE = 200;
+const TIME_ENTRIES_PAGE_SIZE = 1000;
 
 export class ClockifyClient {
   constructor(private readonly apiKey: string) {}
@@ -48,6 +50,7 @@ export class ClockifyClient {
       throw new ClockifyValidationError(msg);
     }
 
+    if (res.status === 204) return undefined as T;
     return res.json() as Promise<T>;
   }
 
@@ -91,6 +94,45 @@ export class ClockifyClient {
     return this.request<ClockifyTimeEntry>(
       `/workspaces/${workspaceId}/time-entries`,
       { method: "POST", body: JSON.stringify(entry) }
+    );
+  }
+
+  async listTimeEntries(
+    workspaceId: string,
+    userId: string,
+    start: string,
+    end: string,
+  ): Promise<ClockifyTimeEntryFull[]> {
+    const all: ClockifyTimeEntryFull[] = [];
+    let page = 1;
+    while (true) {
+      const chunk = await this.request<ClockifyTimeEntryFull[]>(
+        `/workspaces/${workspaceId}/user/${userId}/time-entries`
+          + `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
+          + `&hydrated=true&page-size=${TIME_ENTRIES_PAGE_SIZE}&page=${page}`
+      );
+      all.push(...chunk);
+      if (chunk.length < TIME_ENTRIES_PAGE_SIZE) break;
+      page++;
+    }
+    return all;
+  }
+
+  updateTimeEntry(
+    workspaceId: string,
+    entryId: string,
+    payload: ClockifyTimeEntryPayload,
+  ): Promise<ClockifyTimeEntryFull> {
+    return this.request<ClockifyTimeEntryFull>(
+      `/workspaces/${workspaceId}/time-entries/${entryId}`,
+      { method: "PUT", body: JSON.stringify(payload) }
+    );
+  }
+
+  async deleteTimeEntry(workspaceId: string, entryId: string): Promise<void> {
+    await this.request<void>(
+      `/workspaces/${workspaceId}/time-entries/${entryId}`,
+      { method: "DELETE" }
     );
   }
 }

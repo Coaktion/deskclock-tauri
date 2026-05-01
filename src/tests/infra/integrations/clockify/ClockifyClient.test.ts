@@ -185,4 +185,170 @@ describe("ClockifyClient", () => {
       ).rejects.toBeInstanceOf(ClockifyAuthError);
     });
   });
+
+  describe("listTimeEntries", () => {
+    const USER_ID = "u1";
+    const START = "2026-04-30T00:00:00.000Z";
+    const END = "2026-04-30T23:59:59.999Z";
+
+    it("usa endpoint /user/:id/time-entries com hydrated=true e encoda datas", async () => {
+      mockFetch.mockResolvedValue(makeResponse([]));
+
+      const client = new ClockifyClient(API_KEY);
+      await client.listTimeEntries(WORKSPACE_ID, USER_ID, START, END);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain(`/workspaces/${WORKSPACE_ID}/user/${USER_ID}/time-entries`);
+      expect(url).toContain("hydrated=true");
+      expect(url).toContain(`start=${encodeURIComponent(START)}`);
+      expect(url).toContain(`end=${encodeURIComponent(END)}`);
+      expect(url).toContain("page=1");
+    });
+
+    it("retorna entries hidratadas em uma única página", async () => {
+      const entries = [
+        {
+          id: "e1",
+          description: "Tarefa",
+          projectId: "p1",
+          tagIds: ["t1"],
+          billable: true,
+          timeInterval: { start: START, end: END, duration: "PT1H" },
+          project: { id: "p1", name: "Proj", clientName: "Cliente", color: "#fff" },
+          tags: [{ id: "t1", name: "tag1" }],
+        },
+      ];
+      mockFetch.mockResolvedValue(makeResponse(entries));
+
+      const client = new ClockifyClient(API_KEY);
+      const result = await client.listTimeEntries(WORKSPACE_ID, USER_ID, START, END);
+
+      expect(result).toEqual(entries);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("pagina automaticamente quando retorna page-size completo (1000)", async () => {
+      const page1 = Array.from({ length: 1000 }, (_, i) => ({
+        id: `e${i}`,
+        description: "",
+        projectId: null,
+        tagIds: [],
+        billable: false,
+        timeInterval: { start: START, end: END, duration: null },
+      }));
+      const page2 = [
+        {
+          id: "e1000",
+          description: "",
+          projectId: null,
+          tagIds: [],
+          billable: false,
+          timeInterval: { start: START, end: END, duration: null },
+        },
+      ];
+
+      mockFetch
+        .mockResolvedValueOnce(makeResponse(page1))
+        .mockResolvedValueOnce(makeResponse(page2));
+
+      const client = new ClockifyClient(API_KEY);
+      const result = await client.listTimeEntries(WORKSPACE_ID, USER_ID, START, END);
+
+      expect(result).toHaveLength(1001);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        expect.stringContaining("page=2"),
+        expect.anything()
+      );
+    });
+
+    it("lança ClockifyAuthError em 401", async () => {
+      mockFetch.mockResolvedValue(makeResponse({}, 401));
+      const client = new ClockifyClient(API_KEY);
+      await expect(
+        client.listTimeEntries(WORKSPACE_ID, USER_ID, START, END)
+      ).rejects.toBeInstanceOf(ClockifyAuthError);
+    });
+  });
+
+  describe("updateTimeEntry", () => {
+    it("faz PUT para o endpoint da entry e envia o payload", async () => {
+      const updated = {
+        id: "e1",
+        description: "Atualizado",
+        projectId: "p1",
+        tagIds: ["t1"],
+        billable: false,
+        timeInterval: { start: "2026-04-30T09:00:00Z", end: "2026-04-30T10:00:00Z", duration: "PT1H" },
+      };
+      mockFetch.mockResolvedValue(makeResponse(updated));
+
+      const client = new ClockifyClient(API_KEY);
+      const payload = {
+        start: "2026-04-30T09:00:00Z",
+        end: "2026-04-30T10:00:00Z",
+        description: "Atualizado",
+        projectId: "p1",
+        tagIds: ["t1"],
+        billable: false,
+      };
+      const result = await client.updateTimeEntry(WORKSPACE_ID, "e1", payload);
+
+      expect(result).toEqual(updated);
+      expect(mockFetch).toHaveBeenCalledWith(
+        `https://api.clockify.me/api/v1/workspaces/${WORKSPACE_ID}/time-entries/e1`,
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify(payload),
+          headers: expect.objectContaining({
+            "X-Api-Key": API_KEY,
+            "Content-Type": "application/json",
+          }),
+        })
+      );
+    });
+
+    it("lança ClockifyValidationError em 400 da API", async () => {
+      mockFetch.mockResolvedValue(makeResponse({ message: "Invalid range" }, 400));
+      const client = new ClockifyClient(API_KEY);
+      await expect(
+        client.updateTimeEntry(WORKSPACE_ID, "e1", {
+          start: "2026-04-30T10:00:00Z",
+          end: "2026-04-30T09:00:00Z",
+          description: "",
+          billable: false,
+        })
+      ).rejects.toBeInstanceOf(ClockifyValidationError);
+    });
+  });
+
+  describe("deleteTimeEntry", () => {
+    it("faz DELETE no endpoint correto e resolve sem erro em 204", async () => {
+      mockFetch.mockResolvedValue(makeResponse(null, 204));
+
+      const client = new ClockifyClient(API_KEY);
+      await expect(client.deleteTimeEntry(WORKSPACE_ID, "e1")).resolves.toBeUndefined();
+      expect(mockFetch).toHaveBeenCalledWith(
+        `https://api.clockify.me/api/v1/workspaces/${WORKSPACE_ID}/time-entries/e1`,
+        expect.objectContaining({ method: "DELETE" })
+      );
+    });
+
+    it("lança ClockifyAuthError em 401", async () => {
+      mockFetch.mockResolvedValue(makeResponse({}, 401));
+      const client = new ClockifyClient(API_KEY);
+      await expect(
+        client.deleteTimeEntry(WORKSPACE_ID, "e1")
+      ).rejects.toBeInstanceOf(ClockifyAuthError);
+    });
+
+    it("lança ClockifyNetworkError em falha de rede", async () => {
+      mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+      const client = new ClockifyClient(API_KEY);
+      await expect(
+        client.deleteTimeEntry(WORKSPACE_ID, "e1")
+      ).rejects.toBeInstanceOf(ClockifyNetworkError);
+    });
+  });
 });

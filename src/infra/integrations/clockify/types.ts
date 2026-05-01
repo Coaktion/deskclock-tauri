@@ -35,3 +35,30 @@ export interface ClockifyTimeEntryPayload {
 export interface ClockifyTimeEntry {
   id: string;
 }
+
+export interface ClockifyHydratedProject {
+  id: string;
+  name: string;
+  clientName?: string | null;
+  color?: string;
+}
+
+export interface ClockifyHydratedTag {
+  id: string;
+  name: string;
+}
+
+export interface ClockifyTimeEntryFull {
+  id: string;
+  description: string;
+  projectId: string | null;
+  tagIds: string[];
+  billable: boolean;
+  timeInterval: {
+    start: string;
+    end: string | null;
+    duration: string | null;
+  };
+  project?: ClockifyHydratedProject | null;
+  tags?: ClockifyHydratedTag[];
+}
