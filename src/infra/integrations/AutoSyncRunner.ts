@@ -4,6 +4,10 @@ import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { ProjectRepository } from "@infra/database/ProjectRepository";
 import { CategoryRepository } from "@infra/database/CategoryRepository";
 import { TaskRepository } from "@infra/database/TaskRepository";
+import {
+  validateTaskForSheets,
+  validateTaskForClockify,
+} from "@domain/integrations/taskValidation";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 import { ClockifyTaskSender } from "./ClockifyTaskSender";
 import { groupTasks } from "@shared/utils/groupTasks";
@@ -84,6 +88,9 @@ export class AutoSyncRunner {
   }
 
   private async sheetsPerTask(task: Task): Promise<AutoSyncResult> {
+    if (!validateTaskForSheets(task).ok) {
+      return { integration: "google_sheets", count: 0 };
+    }
     try {
       const spreadsheetId = this.config.get("integrationGoogleSheetsSpreadsheetId");
       const [projects, categories] = await Promise.all([
@@ -108,7 +115,9 @@ export class AutoSyncRunner {
         new ProjectRepository().findAll(),
         new CategoryRepository().findAll(),
       ]);
-      const completed = tasks.filter((t) => t.status === "completed");
+      const completed = tasks.filter(
+        (t) => t.status === "completed" && validateTaskForSheets(t).ok
+      );
       if (completed.length === 0) return { integration: "google_sheets", count: 0 };
 
       const sentIds = new Set(await this.logRepo.findSentIds("google_sheets", startISO, endISO));
@@ -148,6 +157,9 @@ export class AutoSyncRunner {
   }
 
   private async clockifyPerTask(task: Task): Promise<AutoSyncResult> {
+    if (!validateTaskForClockify(task).ok) {
+      return { integration: "clockify", count: 0 };
+    }
     try {
       const sender = new ClockifyTaskSender(this.config);
       await sender.send([task]);
@@ -162,7 +174,9 @@ export class AutoSyncRunner {
   private async clockifyDaily(startISO: string, endISO: string): Promise<AutoSyncResult> {
     try {
       const tasks = await this.taskRepo.findByDateRange(startISO, endISO);
-      const completed = tasks.filter((t) => t.status === "completed");
+      const completed = tasks.filter(
+        (t) => t.status === "completed" && validateTaskForClockify(t).ok
+      );
       if (completed.length === 0) return { integration: "clockify", count: 0 };
 
       const sentIds = new Set(await this.logRepo.findSentIds("clockify", startISO, endISO));

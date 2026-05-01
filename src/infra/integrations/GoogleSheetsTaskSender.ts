@@ -4,6 +4,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import type { TaskField } from "@shared/types/sheetsConfig";
+import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { GoogleTokenManager } from "./google/GoogleTokenManager";
 
 const SHEETS_API = "https://sheets.googleapis.com/v4/spreadsheets";
@@ -22,6 +23,14 @@ export class GoogleSheetsTaskSender implements ITaskSender {
   }
 
   async send(tasks: Task[]): Promise<void> {
+    const validTasks = tasks.filter((t) => validateTaskForSheets(t).ok);
+    if (validTasks.length === 0 && tasks.length > 0) {
+      throw new Error(
+        "Nenhuma tarefa válida para enviar ao Google Sheets (precisa de nome, projeto e categoria)."
+      );
+    }
+    if (validTasks.length === 0) return;
+
     const token = await this.tokenManager.getValidAccessToken();
     const sheetName = this.config.get("integrationGoogleSheetsSheetName") || "DeskClock";
     const mapping = this.config.get("integrationGoogleSheetsColumnMapping");
@@ -29,7 +38,7 @@ export class GoogleSheetsTaskSender implements ITaskSender {
 
     const sheetId = await this.ensureSheetExists(token, sheetName, enabledCols.map((c) => c.label));
 
-    const rows = tasks.map((t) =>
+    const rows = validTasks.map((t) =>
       this.taskToRow(
         t,
         enabledCols.map((c) => c.field)

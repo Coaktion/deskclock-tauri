@@ -14,6 +14,10 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@shared/utils/groupTasks";
 import { groupTasks } from "@shared/utils/groupTasks";
+import {
+  validateTaskForClockify,
+  formatMissingFields,
+} from "@domain/integrations/taskValidation";
 import { TaskRepository } from "@infra/database/TaskRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
@@ -107,30 +111,47 @@ function GroupRow({
   const allSent = group.tasks.every((t) => sentIds.has(t.id));
   const someSent = !allSent && group.tasks.some((t) => sentIds.has(t.id));
   const projectColor = getProjectColor(first.projectId);
+  const validation = validateTaskForClockify(first);
+  const isInvalid = !validation.ok;
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer transition-colors"
-      onClick={onToggle}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+        isInvalid
+          ? "opacity-60 cursor-not-allowed"
+          : "hover:bg-gray-800/50 cursor-pointer"
+      }`}
+      onClick={isInvalid ? undefined : onToggle}
+      title={isInvalid ? `Faltando: ${formatMissingFields(validation.missing)}` : undefined}
     >
       <input
         type="checkbox"
-        checked={selected}
+        checked={selected && !isInvalid}
+        disabled={isInvalid}
         onChange={onToggle}
         onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 accent-blue-500 cursor-pointer"
+        className="flex-shrink-0 accent-blue-500 disabled:cursor-not-allowed"
       />
       <span className="shrink-0 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: projectColor }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-100 truncate">{first.name ?? "(sem nome)"}</span>
-          {allSent && (
+          {isInvalid && (
+            <span
+              className="flex items-center gap-0.5 text-[10px] text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-full shrink-0"
+              title={`Faltando: ${formatMissingFields(validation.missing)}`}
+            >
+              <AlertTriangle size={10} />
+              Faltando: {formatMissingFields(validation.missing)}
+            </span>
+          )}
+          {!isInvalid && allSent && (
             <span className="flex items-center gap-0.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <CheckCheck size={10} />
               Enviado
             </span>
           )}
-          {someSent && (
+          {!isInvalid && someSent && (
             <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <AlertTriangle size={10} />
               Parcial
@@ -207,7 +228,9 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
         const keys = new Set<string>();
         for (const { date, groups } of dg) {
           for (const g of groups) {
-            if (!g.tasks.every((t) => newSentIds.has(t.id))) {
+            const allSent = g.tasks.every((t) => newSentIds.has(t.id));
+            const valid = validateTaskForClockify(g.tasks[0]).ok;
+            if (!allSent && valid) {
               keys.add(selKey(date, g.key));
             }
           }
@@ -232,7 +255,8 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
     return () => { cancelled = true; };
   }, [quick, reloadKey]);
 
-  function toggleGroup(date: string, key: string) {
+  function toggleGroup(date: string, key: string, group: TaskGroup) {
+    if (!validateTaskForClockify(group.tasks[0]).ok) return;
     const sk = selKey(date, key);
     setSelectedKeys((prev) => {
       const next = new Set(prev);
@@ -243,7 +267,9 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
   }
 
   function toggleDay(date: string, groups: TaskGroup[]) {
-    const dayKeys = groups.map((g) => selKey(date, g.key));
+    const validGroups = groups.filter((g) => validateTaskForClockify(g.tasks[0]).ok);
+    const dayKeys = validGroups.map((g) => selKey(date, g.key));
+    if (dayKeys.length === 0) return;
     const allSelected = dayKeys.every((k) => selectedKeys.has(k));
     setSelectedKeys((prev) => {
       const next = new Set(prev);
@@ -265,7 +291,11 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
   function selectAll() {
     const keys = new Set<string>();
     for (const { date, groups } of dayGroups) {
-      for (const g of groups) keys.add(selKey(date, g.key));
+      for (const g of groups) {
+        if (validateTaskForClockify(g.tasks[0]).ok) {
+          keys.add(selKey(date, g.key));
+        }
+      }
     }
     setSelectedKeys(keys);
   }
@@ -445,7 +475,7 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
                             categories={categories}
                             sentIds={sentIds}
                             selected={selectedKeys.has(selKey(date, g.key))}
-                            onToggle={() => toggleGroup(date, g.key)}
+                            onToggle={() => toggleGroup(date, g.key, g)}
                           />
                         ))}
                       </div>

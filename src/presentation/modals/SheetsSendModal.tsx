@@ -30,6 +30,7 @@ import {
 } from "@shared/utils/time";
 import { NULLABLE_FIELDS, type TaskField } from "@shared/types/sheetsConfig";
 import { getProjectColor } from "@shared/utils/projectColor";
+import { validateTaskForSheets, formatMissingFields } from "@domain/integrations/taskValidation";
 
 const taskRepo = new TaskRepository();
 const logRepo = new TaskIntegrationLogRepository();
@@ -136,18 +137,23 @@ function GroupRow({ group, projects, categories, sentIds, selected, onToggle }: 
   const allSent = group.tasks.every((t) => sentIds.has(t.id));
   const someSent = !allSent && group.tasks.some((t) => sentIds.has(t.id));
   const projectColor = getProjectColor(first.projectId);
+  const validation = validateTaskForSheets(first);
+  const isInvalid = !validation.ok;
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 cursor-pointer transition-colors"
-      onClick={onToggle}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+        isInvalid ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-800/50 cursor-pointer"
+      }`}
+      onClick={isInvalid ? undefined : onToggle}
     >
       <input
         type="checkbox"
         checked={selected}
-        onChange={onToggle}
+        onChange={isInvalid ? undefined : onToggle}
         onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 accent-blue-500 cursor-pointer"
+        disabled={isInvalid}
+        className="flex-shrink-0 accent-blue-500 cursor-pointer disabled:cursor-not-allowed"
       />
 
       <span
@@ -158,13 +164,19 @@ function GroupRow({ group, projects, categories, sentIds, selected, onToggle }: 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-100 truncate">{first.name ?? "(sem nome)"}</span>
-          {allSent && (
+          {isInvalid && (
+            <span className="flex items-center gap-0.5 text-[10px] text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+              <AlertTriangle size={10} />
+              Faltando: {formatMissingFields(validation.missing)}
+            </span>
+          )}
+          {!isInvalid && allSent && (
             <span className="flex items-center gap-0.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <CheckCheck size={10} />
               Enviado
             </span>
           )}
-          {someSent && (
+          {!isInvalid && someSent && (
             <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <AlertTriangle size={10} />
               Parcial
@@ -247,7 +259,8 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
         const keys = new Set<string>();
         for (const { date, groups } of dg) {
           for (const g of groups) {
-            if (!g.tasks.every((t) => newSentIds.has(t.id))) {
+            const valid = validateTaskForSheets(g.tasks[0]).ok;
+            if (valid && !g.tasks.every((t) => newSentIds.has(t.id))) {
               keys.add(selKey(date, g.key));
             }
           }
@@ -273,7 +286,8 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     return () => { cancelled = true; };
   }, [quick, reloadKey]);
 
-  function toggleGroup(date: string, key: string) {
+  function toggleGroup(date: string, key: string, group: TaskGroup) {
+    if (!validateTaskForSheets(group.tasks[0]).ok) return;
     const sk = selKey(date, key);
     setSelectedKeys((prev) => {
       const next = new Set(prev);
@@ -284,7 +298,8 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
   }
 
   function toggleDay(date: string, groups: TaskGroup[]) {
-    const dayKeys = groups.map((g) => selKey(date, g.key));
+    const validGroups = groups.filter((g) => validateTaskForSheets(g.tasks[0]).ok);
+    const dayKeys = validGroups.map((g) => selKey(date, g.key));
     const allSelected = dayKeys.every((k) => selectedKeys.has(k));
     setSelectedKeys((prev) => {
       const next = new Set(prev);
@@ -306,7 +321,9 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
   function selectAll() {
     const keys = new Set<string>();
     for (const { date, groups } of dayGroups) {
-      for (const g of groups) keys.add(selKey(date, g.key));
+      for (const g of groups) {
+        if (validateTaskForSheets(g.tasks[0]).ok) keys.add(selKey(date, g.key));
+      }
     }
     setSelectedKeys(keys);
   }
@@ -512,7 +529,7 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
                             categories={categories}
                             sentIds={sentIds}
                             selected={selectedKeys.has(selKey(date, g.key))}
-                            onToggle={() => toggleGroup(date, g.key)}
+                            onToggle={() => toggleGroup(date, g.key, g)}
                           />
                         ))}
                       </div>

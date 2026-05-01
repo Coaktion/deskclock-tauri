@@ -598,17 +598,19 @@ function EntryForm({
     [clockifyProjects]
   );
 
-  async function handleSave() {
-    if (saving) return;
+  // Resolve project ID from current input state (same logic as handleSave)
+  const resolvedProjectId = useMemo<string | null>(() => {
+    if (!projectInput.trim()) return null;
+    const match = projectOptions.find((o) => o.name === projectInput);
+    return match?.id ?? selectedProjectId;
+  }, [projectInput, projectOptions, selectedProjectId]);
 
-    // Resolver projectId: input vazio → null; match exato pelo display name → id; senão mantém o último selecionado
-    let projectId: string | null;
-    if (!projectInput.trim()) {
-      projectId = null;
-    } else {
-      const match = projectOptions.find((o) => o.name === projectInput);
-      projectId = match?.id ?? selectedProjectId;
-    }
+  const canSave = description.trim() !== "" && resolvedProjectId !== null;
+
+  async function handleSave() {
+    if (saving || !canSave) return;
+
+    const projectId = resolvedProjectId;
 
     const startISO = buildISO(dateISO, startHHMM);
     let endISO = buildISO(dateISO, endHHMM);
@@ -639,7 +641,7 @@ function EntryForm({
         type="text"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
-        placeholder="Descrição (opcional)"
+        placeholder="Descrição *"
         autoFocus
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
       />
@@ -653,7 +655,7 @@ function EntryForm({
             setSelectedProjectId(o.id);
           }}
           options={projectOptions}
-          placeholder="Projeto (opcional)"
+          placeholder="Projeto *"
         />
         <TagMultiSelect
           allTags={clockifyTags}
@@ -701,8 +703,8 @@ function EntryForm({
           </button>
           <button
             onClick={handleSave}
-            disabled={saving}
-            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+            disabled={saving || !canSave}
+            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {saving && <Loader2 size={11} className="animate-spin" />}
             {saveLabel}

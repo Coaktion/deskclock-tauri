@@ -1,6 +1,7 @@
 import type { Task } from "@domain/entities/Task";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import { validateTaskForClockify } from "@domain/integrations/taskValidation";
 import { ClockifyClient } from "./clockify/ClockifyClient";
 
 export class ClockifyTaskSender implements ITaskSender {
@@ -26,9 +27,12 @@ export class ClockifyTaskSender implements ITaskSender {
     );
     const defaultTagIds = this.config.get("clockifyDefaultTagIds");
 
-    const completedTasks = tasks.filter(
-      (t) => t.status === "completed" && t.endTime != null
-    );
+    const allCompleted = tasks.filter((t) => t.status === "completed" && t.endTime != null);
+    const completedTasks = allCompleted.filter((t) => validateTaskForClockify(t).ok);
+
+    if (completedTasks.length === 0 && allCompleted.length > 0) {
+      throw new Error("Nenhuma tarefa válida para enviar ao Clockify (precisa de nome e projeto).");
+    }
 
     for (const task of completedTasks) {
       const start = new Date(task.startTime);
@@ -48,7 +52,7 @@ export class ClockifyTaskSender implements ITaskSender {
       await this.client.createTimeEntry(workspaceId, {
         start: start.toISOString(),
         end: end.toISOString(),
-        description: task.name ?? "(sem nome)",
+        description: task.name!.trim(),
         ...(projectEntry ? { projectId: projectEntry.clockifyProjectId } : {}),
         ...(tagIds.length > 0 ? { tagIds } : {}),
         billable: task.billable,

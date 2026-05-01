@@ -26,7 +26,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
     name: "Tarefa teste",
-    projectId: null,
+    projectId: "proj-1",
     categoryId: null,
     billable: true,
     startTime: "2026-04-30T09:00:00.000Z",
@@ -84,16 +84,11 @@ describe("ClockifyTaskSender", () => {
     expect(call[1].end).toBe("2026-04-30T10:00:00.000Z");
   });
 
-  it("usa '(sem nome)' quando tarefa não tem nome", async () => {
+  it("lança erro quando todas as tarefas concluídas são inválidas (sem nome)", async () => {
     const config = makeConfig();
     const sender = new ClockifyTaskSender(config, client);
-    await sender.send([makeTask({ name: null })]);
-
-    const call = (client.createTimeEntry as ReturnType<typeof vi.fn>).mock.calls[0] as [
-      string,
-      ClockifyTimeEntryPayload,
-    ];
-    expect(call[1].description).toBe("(sem nome)");
+    await expect(sender.send([makeTask({ name: null })])).rejects.toThrow("válida");
+    expect(client.createTimeEntry).not.toHaveBeenCalled();
   });
 
   it("mapeia projeto DeskClock para projectId do Clockify", async () => {
