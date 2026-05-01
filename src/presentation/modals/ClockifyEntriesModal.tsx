@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, RefreshCw, Loader2, Pencil, DollarSign } from "lucide-react";
+import { X, RefreshCw, Loader2, Pencil, DollarSign, Plus } from "lucide-react";
 import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
 import type {
   ClockifyHydratedProject,
@@ -114,6 +114,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   const [clockifyProjects, setClockifyProjects] = useState<ClockifyHydratedProject[]>([]);
   const [clockifyTags, setClockifyTags] = useState<ClockifyHydratedTag[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   // ESC fecha
   useEffect(() => {
@@ -183,6 +184,37 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao salvar.");
     }
   }
+
+  async function handleCreate(payload: ClockifyTimeEntryPayload) {
+    const client = new ClockifyClient(apiKey);
+    try {
+      await client.createTimeEntry(workspaceId, payload);
+      await showToast("success", "Apontamento criado.");
+      setCreateOpen(false);
+      setRefreshSignal((n) => n + 1);
+    } catch (err) {
+      await showToast("error", err instanceof Error ? err.message : "Erro ao criar.");
+    }
+  }
+
+  // Defaults para o form de criação: agora arredondado pra baixo, +1h pro fim,
+  // tags padrão pré-selecionadas (mesmas usadas no envio automático)
+  const createInitial = useMemo<EntryFormInitial>(() => {
+    const now = new Date();
+    const startHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const endDate = new Date(now.getTime() + 60 * 60 * 1000);
+    const endHHMM = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+    return {
+      description: "",
+      projectId: null,
+      projectName: "",
+      tagIds: defaultTagIds,
+      billable: false,
+      dateISO: todayISO(),
+      startHHMM,
+      endHHMM,
+    };
+  }, [defaultTagIds, createOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pipeline de filtragem: oculta in-progress e (opcional) filtra por tags padrão
   const visibleEntries = useMemo(() => {
@@ -287,21 +319,42 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
             </div>
           )}
 
-          {defaultTagIds.length > 0 && (
-            <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer ml-auto">
-              <input
-                type="checkbox"
-                checked={onlyDefaultTags}
-                onChange={(e) => setOnlyDefaultTags(e.target.checked)}
-                className="accent-blue-500"
-              />
-              Apenas com tags padrão
-            </label>
-          )}
+          <div className="ml-auto flex items-center gap-3">
+            {defaultTagIds.length > 0 && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={onlyDefaultTags}
+                  onChange={(e) => setOnlyDefaultTags(e.target.checked)}
+                  className="accent-blue-500"
+                />
+                Apenas com tags padrão
+              </label>
+            )}
+            <button
+              onClick={() => setCreateOpen((v) => !v)}
+              disabled={createOpen}
+              className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-full transition-colors"
+            >
+              <Plus size={12} />
+              Novo apontamento
+            </button>
+          </div>
         </div>
 
         {/* Lista */}
         <div className="flex-1 overflow-y-auto">
+          {createOpen && (
+            <EntryForm
+              initial={createInitial}
+              clockifyProjects={clockifyProjects}
+              clockifyTags={clockifyTags}
+              saveLabel="Criar"
+              onCancel={() => setCreateOpen(false)}
+              onSave={handleCreate}
+            />
+          )}
+
           {!rangeValid && (
             <p className="text-center text-gray-500 text-sm py-12">
               Selecione um período válido.
@@ -458,18 +511,65 @@ function EntryEditForm({
   onCancelEdit,
   onSave,
 }: EntryRowProps) {
-  const initialProjectName = entry.project ? projectDisplayName(entry.project) : "";
-
-  const [description, setDescription] = useState(entry.description ?? "");
-  const [projectInput, setProjectInput] = useState(initialProjectName);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(entry.projectId);
-  const [tagIds, setTagIds] = useState<string[]>(entry.tagIds);
-  const [billable, setBillable] = useState(entry.billable);
-  const [dateISO, setDateISO] = useState(toLocalDate(entry.timeInterval.start));
-  const [startHHMM, setStartHHMM] = useState(isoToHHMM(entry.timeInterval.start));
-  const [endHHMM, setEndHHMM] = useState(
-    entry.timeInterval.end ? isoToHHMM(entry.timeInterval.end) : isoToHHMM(entry.timeInterval.start)
+  return (
+    <EntryForm
+      initial={{
+        description: entry.description ?? "",
+        projectId: entry.projectId,
+        projectName: entry.project ? projectDisplayName(entry.project) : "",
+        tagIds: entry.tagIds,
+        billable: entry.billable,
+        dateISO: toLocalDate(entry.timeInterval.start),
+        startHHMM: isoToHHMM(entry.timeInterval.start),
+        endHHMM: entry.timeInterval.end
+          ? isoToHHMM(entry.timeInterval.end)
+          : isoToHHMM(entry.timeInterval.start),
+      }}
+      clockifyProjects={clockifyProjects}
+      clockifyTags={clockifyTags}
+      saveLabel="Salvar"
+      onCancel={onCancelEdit}
+      onSave={onSave}
+    />
   );
+}
+
+interface EntryFormInitial {
+  description: string;
+  projectId: string | null;
+  projectName: string;
+  tagIds: string[];
+  billable: boolean;
+  dateISO: string;
+  startHHMM: string;
+  endHHMM: string;
+}
+
+interface EntryFormProps {
+  initial: EntryFormInitial;
+  clockifyProjects: ClockifyHydratedProject[];
+  clockifyTags: ClockifyHydratedTag[];
+  saveLabel: string;
+  onCancel: () => void;
+  onSave: (payload: ClockifyTimeEntryPayload) => Promise<void>;
+}
+
+function EntryForm({
+  initial,
+  clockifyProjects,
+  clockifyTags,
+  saveLabel,
+  onCancel,
+  onSave,
+}: EntryFormProps) {
+  const [description, setDescription] = useState(initial.description);
+  const [projectInput, setProjectInput] = useState(initial.projectName);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(initial.projectId);
+  const [tagIds, setTagIds] = useState<string[]>(initial.tagIds);
+  const [billable, setBillable] = useState(initial.billable);
+  const [dateISO, setDateISO] = useState(initial.dateISO);
+  const [startHHMM, setStartHHMM] = useState(initial.startHHMM);
+  const [endHHMM, setEndHHMM] = useState(initial.endHHMM);
   const [saving, setSaving] = useState(false);
 
   const projectOptions = useMemo(
@@ -572,7 +672,7 @@ function EntryEditForm({
         />
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={onCancelEdit}
+            onClick={onCancel}
             disabled={saving}
             className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
           >
@@ -584,7 +684,7 @@ function EntryEditForm({
             className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 flex items-center gap-1.5"
           >
             {saving && <Loader2 size={11} className="animate-spin" />}
-            Salvar
+            {saveLabel}
           </button>
         </div>
       </div>
