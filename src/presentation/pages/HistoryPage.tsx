@@ -93,13 +93,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
   );
 }
 
-function ProjectDistribution({
-  groups,
-  projects,
-}: {
-  groups: DayGroup[];
-  projects: Project[];
-}) {
+function ProjectDistribution({ groups, projects }: { groups: DayGroup[]; projects: Project[] }) {
   const totals: Record<string, { id: string | null; name: string; seconds: number }> = {};
   groups.forEach((g) =>
     g.tasks.forEach((t) => {
@@ -276,9 +270,7 @@ export function HistoryPage() {
             />
             <select
               value={filters.billable}
-              onChange={(e) =>
-                updateFilter("billable", e.target.value as "all" | "yes" | "no")
-              }
+              onChange={(e) => updateFilter("billable", e.target.value as "all" | "yes" | "no")}
               className="px-2.5 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="all">Billable: Todos</option>
@@ -348,7 +340,9 @@ export function HistoryPage() {
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
                   {label}
                 </span>
-                <span className={`text-sm font-mono tabular-nums font-medium ${color}`}>{value}</span>
+                <span className={`text-sm font-mono tabular-nums font-medium ${color}`}>
+                  {value}
+                </span>
               </div>
             ))}
           </div>

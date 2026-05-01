@@ -15,9 +15,8 @@ vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
   })),
 }));
 
-const { GoogleSheetsTaskSender, colLetter } = await import(
-  "@infra/integrations/GoogleSheetsTaskSender"
-);
+const { GoogleSheetsTaskSender, colLetter } =
+  await import("@infra/integrations/GoogleSheetsTaskSender");
 
 function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
   const store: Partial<AppConfig> = {
@@ -70,8 +69,14 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 }
 
 // Acessa taskToRow via cast para testar o método privado diretamente
-function callTaskToRow(sender: InstanceType<typeof GoogleSheetsTaskSender>, task: Task, fields: TaskField[]) {
-  return (sender as unknown as { taskToRow(t: Task, f: TaskField[]): (string | number)[] }).taskToRow(task, fields);
+function callTaskToRow(
+  sender: InstanceType<typeof GoogleSheetsTaskSender>,
+  task: Task,
+  fields: TaskField[]
+) {
+  return (
+    sender as unknown as { taskToRow(t: Task, f: TaskField[]): (string | number)[] }
+  ).taskToRow(task, fields);
 }
 
 describe("colLetter", () => {

@@ -43,7 +43,6 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
   period: "Período",
 };
 
-
 interface PlannedTaskFormProps {
   projects: Project[];
   categories: Category[];

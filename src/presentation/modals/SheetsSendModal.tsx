@@ -18,7 +18,11 @@ import { groupTasks } from "@shared/utils/groupTasks";
 import { TaskRepository } from "@infra/database/TaskRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
-import { sendTasks, NoIntegrationError, NoTasksSelectedError } from "@domain/usecases/tasks/SendTasks";
+import {
+  sendTasks,
+  NoIntegrationError,
+  NoTasksSelectedError,
+} from "@domain/usecases/tasks/SendTasks";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   todayISO,
@@ -101,8 +105,14 @@ function validateTasks(tasks: Task[], enabledFields: TaskField[]): string | null
   if (requiredNullable.length === 0) return null;
 
   const fieldLabel: Record<TaskField, string> = {
-    date: "data", name: "nome", project: "projeto", category: "categoria",
-    billable: "billable", startTime: "início", endTime: "fim", duration: "duração",
+    date: "data",
+    name: "nome",
+    project: "projeto",
+    category: "categoria",
+    billable: "billable",
+    startTime: "início",
+    endTime: "fim",
+    duration: "duração",
   };
 
   const incomplete: string[] = [];
@@ -110,7 +120,8 @@ function validateTasks(tasks: Task[], enabledFields: TaskField[]): string | null
     const missing: string[] = [];
     if (requiredNullable.includes("name") && !task.name?.trim()) missing.push(fieldLabel.name);
     if (requiredNullable.includes("project") && !task.projectId) missing.push(fieldLabel.project);
-    if (requiredNullable.includes("category") && !task.categoryId) missing.push(fieldLabel.category);
+    if (requiredNullable.includes("category") && !task.categoryId)
+      missing.push(fieldLabel.category);
     if (missing.length > 0) {
       incomplete.push(`"${task.name ?? "(sem nome)"}" — faltam: ${missing.join(", ")}`);
     }
@@ -234,8 +245,12 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
 
   const customStartRef = useRef(customStart);
   const customEndRef = useRef(customEnd);
-  useEffect(() => { customStartRef.current = customStart; }, [customStart]);
-  useEffect(() => { customEndRef.current = customEnd; }, [customEnd]);
+  useEffect(() => {
+    customStartRef.current = customStart;
+  }, [customStart]);
+  useEffect(() => {
+    customEndRef.current = customEnd;
+  }, [customEnd]);
 
   useEffect(() => {
     let cancelled = false;
@@ -274,7 +289,12 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
       } catch (err) {
         console.error("[SheetsSendModal] loadTasks error:", err);
         if (!cancelled) {
-          const msg = err instanceof Error ? err.message : typeof err === "string" ? err : JSON.stringify(err);
+          const msg =
+            err instanceof Error
+              ? err.message
+              : typeof err === "string"
+                ? err
+                : JSON.stringify(err);
           setMessage({ text: msg || "Erro ao carregar tarefas.", error: true });
         }
       } finally {
@@ -283,7 +303,9 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     }
 
     void run();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [quick, reloadKey]);
 
   function toggleGroup(date: string, key: string, group: TaskGroup) {
@@ -374,7 +396,10 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
       await sendTasks(sender, tasksToSend);
       await logRepo.markSent(allTaskIds, INTEGRATION);
       await config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
-      setMessage({ text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`, error: false });
+      setMessage({
+        text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`,
+        error: false,
+      });
       setSelectedKeys(new Set());
       setReloadKey((k) => k + 1);
     } catch (err) {
@@ -405,7 +430,9 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <div>
             <h2 className="text-sm font-semibold text-gray-100">Enviar para Google Sheets</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Selecione o período e as tarefas a enviar</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Selecione o período e as tarefas a enviar
+            </p>
           </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
             <X size={16} />
@@ -491,10 +518,13 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
                           allSelected
                             ? "bg-blue-600 border-blue-600"
                             : someSelected
-                            ? "bg-blue-600/30 border-blue-500/50"
-                            : "border-gray-600 bg-transparent"
+                              ? "bg-blue-600/30 border-blue-500/50"
+                              : "border-gray-600 bg-transparent"
                         }`}
-                        onClick={(e) => { e.stopPropagation(); toggleDay(date, groups); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleDay(date, groups);
+                        }}
                       >
                         {allSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
                         {someSelected && <div className="w-2 h-0.5 bg-blue-400 rounded-sm" />}
@@ -512,10 +542,11 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
                         {formatDurationCompact(dayTotal)}
                       </span>
 
-                      {isCollapsed
-                        ? <ChevronRight size={14} className="text-gray-600 shrink-0" />
-                        : <ChevronDown size={14} className="text-gray-600 shrink-0" />
-                      }
+                      {isCollapsed ? (
+                        <ChevronRight size={14} className="text-gray-600 shrink-0" />
+                      ) : (
+                        <ChevronDown size={14} className="text-gray-600 shrink-0" />
+                      )}
                     </div>
 
                     {/* Group rows */}
@@ -546,14 +577,17 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
           <div className="mx-4 mb-2 flex items-start gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <AlertTriangle size={13} className="text-yellow-400 shrink-0 mt-0.5" />
             <p className="text-xs text-yellow-300">
-              Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas na planilha.
+              Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas na
+              planilha.
             </p>
           </div>
         )}
 
         {/* Mensagem de resultado */}
         {message && (
-          <p className={`mx-5 mb-2 text-xs whitespace-pre-line ${message.error ? "text-red-400" : "text-green-400"}`}>
+          <p
+            className={`mx-5 mb-2 text-xs whitespace-pre-line ${message.error ? "text-red-400" : "text-green-400"}`}
+          >
             {message.text}
           </p>
         )}

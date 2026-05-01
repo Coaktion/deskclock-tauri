@@ -7,7 +7,12 @@ interface SearchInputProps {
   className?: string;
 }
 
-export function SearchInput({ value, onChange, placeholder = "Filtrar...", className = "" }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  placeholder = "Filtrar...",
+  className = "",
+}: SearchInputProps) {
   return (
     <div className={`relative ${className}`}>
       <Search

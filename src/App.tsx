@@ -50,7 +50,9 @@ function PageContent({
 }) {
   switch (page) {
     case "tasks":
-      return <TasksPage focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />;
+      return (
+        <TasksPage focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
+      );
     case "planning":
       return <PlanningPage />;
     case "data":
@@ -66,7 +68,9 @@ function PageContent({
   }
 }
 
-async function getOverlayCompact() { return WebviewWindow.getByLabel("overlay-compact"); }
+async function getOverlayCompact() {
+  return WebviewWindow.getByLabel("overlay-compact");
+}
 
 async function getCommandPalette() {
   return WebviewWindow.getByLabel("command-palette");
@@ -183,7 +187,6 @@ function MainContent({
     };
   }, [runningTask, stopTask]);
 
-
   const showPin = config.isLoaded && config.get("closeOnFocusLoss");
 
   return (
@@ -192,7 +195,12 @@ function MainContent({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
         <main className="flex-1 overflow-hidden">
-          <PageContent page={page} setPage={setPage} focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
+          <PageContent
+            page={page}
+            setPage={setPage}
+            focusTaskEdit={focusTaskEdit}
+            onFocusTaskEditHandled={onFocusTaskEditHandled}
+          />
         </main>
       </div>
     </div>
@@ -310,12 +318,14 @@ function AppInner() {
     if (!config.isLoaded) return;
     if (config.loadError) {
       positionNearTaskbar(appWindow, { width: 800, height: 620 })
-        .catch(() => {}).finally(() => appWindow.show());
+        .catch(() => {})
+        .finally(() => appWindow.show());
       return;
     }
     if (!config.get("setupCompleted")) {
       positionNearTaskbar(appWindow, { width: 800, height: 620 })
-        .catch(() => {}).finally(() => appWindow.show());
+        .catch(() => {})
+        .finally(() => appWindow.show());
       return;
     }
 
@@ -419,8 +429,10 @@ function AppInner() {
     const unlisten = listen("shortcut:show-command-palette", () => {
       void showCommandPalette();
     });
-    return () => { unlisten.then((fn) => fn()); };
-  }, [config.isLoaded]);  
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [config.isLoaded]);
 
   // Navigate when command palette selects a page
   useEffect(() => {
@@ -451,7 +463,9 @@ function AppInner() {
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, async () => {
       ignoreBlurRef.current = true;
-      setTimeout(() => { ignoreBlurRef.current = false; }, 600);
+      setTimeout(() => {
+        ignoreBlurRef.current = false;
+      }, 600);
       setPage("tasks");
       setFocusTaskEdit(true);
       await showMainWindow(true);
@@ -465,7 +479,9 @@ function AppInner() {
   useEffect(() => {
     const unlisten = appWindow.listen("tray:show-main", async () => {
       ignoreBlurRef.current = true;
-      setTimeout(() => { ignoreBlurRef.current = false; }, 600);
+      setTimeout(() => {
+        ignoreBlurRef.current = false;
+      }, 600);
       await showMainWindow(true);
     });
     return () => {

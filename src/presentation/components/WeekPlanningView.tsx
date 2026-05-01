@@ -117,7 +117,7 @@ export function WeekPlanningView() {
       }
     }
     return { totalCount: total, completedCount: completed };
-  }, [tasks, visibleDays]);  
+  }, [tasks, visibleDays]);
 
   async function handlePlay(task: PlannedTask) {
     if (runningTask) return;
@@ -147,7 +147,10 @@ export function WeekPlanningView() {
       {/* ── Header: week selector + completed count ─────────────────────────── */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
         <button
-          onClick={() => { setWeekOffset((o) => o - 1); setDayFilter("all"); }}
+          onClick={() => {
+            setWeekOffset((o) => o - 1);
+            setDayFilter("all");
+          }}
           className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
         >
           <ChevronLeft size={15} />
@@ -156,7 +159,10 @@ export function WeekPlanningView() {
         <span className="text-sm font-medium text-gray-100 truncate">{label}</span>
 
         <button
-          onClick={() => { setWeekOffset((o) => o + 1); setDayFilter("all"); }}
+          onClick={() => {
+            setWeekOffset((o) => o + 1);
+            setDayFilter("all");
+          }}
           className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
         >
           <ChevronRight size={15} />
@@ -250,10 +256,16 @@ export function WeekPlanningView() {
 
         return (
           <div key={day}>
-            <div className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}>
-              <span className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}>
+            <div
+              className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
+            >
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
+              >
                 {dayLabel}
-                {isToday && <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>}
+                {isToday && (
+                  <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>
+                )}
               </span>
               {dayTasks.length > 0 && (
                 <span className="ml-auto text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">

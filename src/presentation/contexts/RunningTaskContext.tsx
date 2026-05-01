@@ -304,4 +304,3 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     </RunningTaskContext.Provider>
   );
 }
-

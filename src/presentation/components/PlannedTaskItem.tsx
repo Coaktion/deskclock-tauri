@@ -80,7 +80,9 @@ export function PlannedTaskItem({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <p className={`text-sm text-gray-100 truncate leading-snug ${isCompleted ? "line-through text-gray-500" : ""}`}>
+            <p
+              className={`text-sm text-gray-100 truncate leading-snug ${isCompleted ? "line-through text-gray-500" : ""}`}
+            >
               {task.name}
             </p>
             {task.scheduleType === "recurring" && (

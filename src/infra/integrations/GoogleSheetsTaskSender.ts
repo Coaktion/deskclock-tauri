@@ -36,7 +36,11 @@ export class GoogleSheetsTaskSender implements ITaskSender {
     const mapping = this.config.get("integrationGoogleSheetsColumnMapping");
     const enabledCols = mapping.filter((c) => c.enabled);
 
-    const sheetId = await this.ensureSheetExists(token, sheetName, enabledCols.map((c) => c.label));
+    const sheetId = await this.ensureSheetExists(
+      token,
+      sheetName,
+      enabledCols.map((c) => c.label)
+    );
 
     const rows = validTasks.map((t) =>
       this.taskToRow(
@@ -87,34 +91,31 @@ export class GoogleSheetsTaskSender implements ITaskSender {
     // Aplica formato de duração [h]:mm:ss na coluna de duração das linhas recém-escritas
     const durationColIndex = enabledCols.findIndex((c) => c.field === "duration");
     if (sheetId !== -1 && durationColIndex !== -1) {
-      await fetch(
-        `${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}:batchUpdate`,
-        {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            requests: [
-              {
-                repeatCell: {
-                  range: {
-                    sheetId,
-                    startRowIndex: nextRow - 1,
-                    endRowIndex: nextRow + rows.length - 1,
-                    startColumnIndex: durationColIndex,
-                    endColumnIndex: durationColIndex + 1,
-                  },
-                  cell: {
-                    userEnteredFormat: {
-                      numberFormat: { type: "TIME", pattern: "[h]:mm:ss" },
-                    },
-                  },
-                  fields: "userEnteredFormat.numberFormat",
+      await fetch(`${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}:batchUpdate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [
+            {
+              repeatCell: {
+                range: {
+                  sheetId,
+                  startRowIndex: nextRow - 1,
+                  endRowIndex: nextRow + rows.length - 1,
+                  startColumnIndex: durationColIndex,
+                  endColumnIndex: durationColIndex + 1,
                 },
+                cell: {
+                  userEnteredFormat: {
+                    numberFormat: { type: "TIME", pattern: "[h]:mm:ss" },
+                  },
+                },
+                fields: "userEnteredFormat.numberFormat",
               },
-            ],
-          }),
-        }
-      ).catch(() => {
+            },
+          ],
+        }),
+      }).catch(() => {
         // Falha silenciosa: dados já foram escritos; formato é cosmético
       });
     }

@@ -12,7 +12,8 @@ export async function updateCategory(
   if (!trimmed) throw new DomainError("O nome da categoria não pode ser vazio.");
 
   const existing = await repository.findByName(trimmed);
-  if (existing && existing.id !== id) throw new DuplicateNameError(`Categoria "${trimmed}" já existe.`);
+  if (existing && existing.id !== id)
+    throw new DuplicateNameError(`Categoria "${trimmed}" já existe.`);
 
   await repository.update(id, trimmed, defaultBillable);
 }

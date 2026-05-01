@@ -56,6 +56,14 @@ export interface AppConfig {
   googleRefreshToken: string;
   googleTokenExpiry: number;
   googleUserEmail: string;
+  // Tokens Zendesk OAuth
+  zendeskSubdomain: string;
+  zendeskClientId: string;
+  zendeskClientSecret: string;
+  zendeskAccessToken: string;
+  zendeskRefreshToken: string;
+  zendeskTokenExpiry: number;
+  zendeskUserEmail: string;
   // API REST local
   localApiEnabled: boolean;
   localApiPort: number;
@@ -120,6 +128,13 @@ const DEFAULTS: AppConfig = {
   googleRefreshToken: "",
   googleTokenExpiry: 0,
   googleUserEmail: "",
+  zendeskSubdomain: "",
+  zendeskClientId: "",
+  zendeskClientSecret: "",
+  zendeskAccessToken: "",
+  zendeskRefreshToken: "",
+  zendeskTokenExpiry: 0,
+  zendeskUserEmail: "",
   localApiEnabled: false,
   localApiPort: 27420,
   dailyGoalHours: 8,
@@ -190,7 +205,11 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
     await repo.set(key, value);
   }
 
-  return <ConfigContext.Provider value={{ isLoaded, loadError, get, set }}>{children}</ConfigContext.Provider>;
+  return (
+    <ConfigContext.Provider value={{ isLoaded, loadError, get, set }}>
+      {children}
+    </ConfigContext.Provider>
+  );
 }
 
 export function useAppConfig(): ConfigContextValue {

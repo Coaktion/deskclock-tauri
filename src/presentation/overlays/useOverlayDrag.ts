@@ -2,10 +2,18 @@ import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
 import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
-import { currentMonitor, getCurrentWindow, monitorFromPoint, primaryMonitor } from "@tauri-apps/api/window";
+import {
+  currentMonitor,
+  getCurrentWindow,
+  monitorFromPoint,
+  primaryMonitor,
+} from "@tauri-apps/api/window";
 import { useEffect, useRef } from "react";
 
-type PositionKey = "overlayPosition_compact" | "overlayPosition_execution" | "overlayPosition_planning";
+type PositionKey =
+  | "overlayPosition_compact"
+  | "overlayPosition_execution"
+  | "overlayPosition_planning";
 
 const appWindow = getCurrentWindow();
 
@@ -13,7 +21,7 @@ const appWindow = getCurrentWindow();
 export async function restoreOverlayPosition(
   configKey: PositionKey,
   config: ConfigContextValue,
-  fallbackSize: { width: number; height: number },
+  fallbackSize: { width: number; height: number }
 ) {
   const saved = config.get(configKey) as { x: number; y: number };
   // Check for explicit save (default sentinel is {x:-1, y:-1}); allow negative coords for
@@ -33,7 +41,7 @@ export function useOverlayDrag(
   snapToGrid: boolean,
   config: ConfigContextValue,
   onPositionChange?: () => void,
-  overlaySize?: { width: number; height: number },
+  overlaySize?: { width: number; height: number }
 ) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef({ x: 0, y: 0 });
@@ -53,26 +61,34 @@ export function useOverlayDrag(
         const contentSize = overlaySize ?? winSize;
         // When content is smaller than the window (e.g. 78×52 inside a 200×200 GTK window),
         // compute the centering offset so clamping anchors on the visible area, not the window frame.
-        const offsetX = Math.round((winSize.width  - contentSize.width)  / 2);
+        const offsetX = Math.round((winSize.width - contentSize.width) / 2);
         const offsetY = Math.round((winSize.height - contentSize.height) / 2);
         const hw = Math.round(winSize.width / 2);
         const hh = Math.round(winSize.height / 2);
         const monitor =
-          await monitorFromPoint(rawX + hw, rawY + hh).catch(() => null) ??
-          await currentMonitor().catch(() => null) ??
-          await primaryMonitor().catch(() => null);
+          (await monitorFromPoint(rawX + hw, rawY + hh).catch(() => null)) ??
+          (await currentMonitor().catch(() => null)) ??
+          (await primaryMonitor().catch(() => null));
         if (monitor) {
           const { position: ori, size: scr } = monitor;
           snapped = {
-            x: Math.max(ori.x - offsetX, Math.min(snapped.x, ori.x + scr.width  - offsetX - contentSize.width)),
-            y: Math.max(ori.y - offsetY, Math.min(snapped.y, ori.y + scr.height - offsetY - contentSize.height)),
+            x: Math.max(
+              ori.x - offsetX,
+              Math.min(snapped.x, ori.x + scr.width - offsetX - contentSize.width)
+            ),
+            y: Math.max(
+              ori.y - offsetY,
+              Math.min(snapped.y, ori.y + scr.height - offsetY - contentSize.height)
+            ),
           };
         }
 
         if (snapped.x !== rawX || snapped.y !== rawY) {
           isProgrammaticMoveRef.current = true;
           await appWindow.setPosition(new PhysicalPosition(snapped.x, snapped.y));
-          setTimeout(() => { isProgrammaticMoveRef.current = false; }, 100);
+          setTimeout(() => {
+            isProgrammaticMoveRef.current = false;
+          }, 100);
         }
         await config.set(configKey, snapped as never);
         onPositionChange?.();

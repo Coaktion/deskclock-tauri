@@ -51,7 +51,11 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
         {showPin && (
           <button
             onClick={onTogglePin}
-            title={isPinned ? "Desafixar janela (fecha ao perder foco)" : "Fixar janela (não fecha ao perder foco)"}
+            title={
+              isPinned
+                ? "Desafixar janela (fecha ao perder foco)"
+                : "Fixar janela (não fecha ao perder foco)"
+            }
             className={`h-full px-3 transition-colors ${
               isPinned
                 ? "text-blue-400 hover:text-blue-300 hover:bg-gray-800"

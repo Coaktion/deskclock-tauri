@@ -144,7 +144,9 @@ export function useHistory() {
           count: prev.count - 1,
           totalSeconds: prev.totalSeconds - s,
           billableSeconds: task.billable ? prev.billableSeconds - s : prev.billableSeconds,
-          nonBillableSeconds: !task.billable ? prev.nonBillableSeconds - s : prev.nonBillableSeconds,
+          nonBillableSeconds: !task.billable
+            ? prev.nonBillableSeconds - s
+            : prev.nonBillableSeconds,
         }));
       }
     },

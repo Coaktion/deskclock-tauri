@@ -11,9 +11,7 @@ vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
-const { GoogleCalendarImporter } = await import(
-  "@infra/integrations/GoogleCalendarImporter"
-);
+const { GoogleCalendarImporter } = await import("@infra/integrations/GoogleCalendarImporter");
 
 function makeConfig(): ConfigContextValue {
   return {

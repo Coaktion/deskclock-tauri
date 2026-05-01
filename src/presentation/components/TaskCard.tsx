@@ -41,7 +41,9 @@ export function TaskCard({
       )}
       <button
         onClick={() => onToggleBillable(task)}
-        title={task.billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"}
+        title={
+          task.billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"
+        }
         className="flex-shrink-0 w-2 h-2 rounded-full mt-0.5 transition-colors"
         style={{ backgroundColor: projectColor }}
       />

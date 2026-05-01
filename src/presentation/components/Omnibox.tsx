@@ -1,13 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  Pause,
-  Pen,
-  Play,
-  X,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, Pause, Pen, Play, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
@@ -144,9 +136,7 @@ function buildSuggestions(
   if (!q) return all.slice(0, 8);
   return all
     .filter(
-      (s) =>
-        s.name.toLowerCase().includes(q) ||
-        (s.projectName?.toLowerCase().includes(q) ?? false)
+      (s) => s.name.toLowerCase().includes(q) || (s.projectName?.toLowerCase().includes(q) ?? false)
     )
     .slice(0, 8);
 }
@@ -239,7 +229,14 @@ export function Omnibox({
       categoryId: draft.categoryId,
       billable: draft.billable,
     });
-    setDraft({ name: "", projectName: "", projectId: null, categoryName: "", categoryId: null, billable: true });
+    setDraft({
+      name: "",
+      projectName: "",
+      projectId: null,
+      categoryName: "",
+      categoryId: null,
+      billable: true,
+    });
     setShowSuggestions(false);
     onStarted?.();
   }
@@ -341,7 +338,10 @@ export function Omnibox({
   // ── Render: Running state ─────────────────────────────────────────────────
   if (runningTask) {
     return (
-      <div ref={containerRef} className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-visible">
+      <div
+        ref={containerRef}
+        className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-visible"
+      >
         {/* Main row */}
         <div className="flex items-center gap-3 px-4 py-3">
           {/* Play/Pause button — pulses while running */}
@@ -366,8 +366,14 @@ export function Omnibox({
                 onChange={(e) => setRunningNameValue(e.target.value)}
                 onBlur={() => void handleNameCommit()}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); void handleNameCommit(); }
-                  if (e.key === "Escape") { e.stopPropagation(); setEditingRunningName(false); }
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleNameCommit();
+                  }
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setEditingRunningName(false);
+                  }
                 }}
                 autoFocus
                 placeholder="Nome da tarefa"
@@ -376,14 +382,22 @@ export function Omnibox({
             ) : (
               <button
                 type="button"
-                onClick={() => { setRunningNameValue(runningTask.name ?? ""); setEditingRunningName(true); }}
+                onClick={() => {
+                  setRunningNameValue(runningTask.name ?? "");
+                  setEditingRunningName(true);
+                }}
                 title="Editar nome"
                 className="flex items-center gap-1 w-full text-left group"
               >
-                <span className={`text-sm font-medium truncate ${runningTask.name ? "text-gray-100" : "text-gray-500 italic"}`}>
+                <span
+                  className={`text-sm font-medium truncate ${runningTask.name ? "text-gray-100" : "text-gray-500 italic"}`}
+                >
                   {displayName}
                 </span>
-                <Pen size={10} className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity" />
+                <Pen
+                  size={10}
+                  className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity"
+                />
               </button>
             )}
             <div className="flex gap-2 mt-1 flex-wrap items-center">
@@ -439,7 +453,10 @@ export function Omnibox({
                     onChange={setRunningChipValue}
                     onSelect={(o) => {
                       const cat = categories.find((c) => c.id === o.id);
-                      void updateActiveTask({ categoryId: o.id, billable: cat?.defaultBillable ?? runningTask.billable });
+                      void updateActiveTask({
+                        categoryId: o.id,
+                        billable: cat?.defaultBillable ?? runningTask.billable,
+                      });
                       setEditingRunningChip(null);
                     }}
                     onEnter={() => setEditingRunningChip(null)}
@@ -484,7 +501,10 @@ export function Omnibox({
                   onBlur={handleStartTimeCommit}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") void handleStartTimeCommit();
-                    if (e.key === "Escape") { e.stopPropagation(); setEditingStartTime(false); }
+                    if (e.key === "Escape") {
+                      e.stopPropagation();
+                      setEditingStartTime(false);
+                    }
                   }}
                   autoFocus
                   className="w-24 bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -600,7 +620,6 @@ export function Omnibox({
             </div>
           </div>
         )}
-
       </div>
     );
   }
@@ -610,9 +629,7 @@ export function Omnibox({
     <div
       ref={containerRef}
       className={`bg-gradient-to-b from-gray-800/80 to-gray-900/80 border rounded-xl overflow-visible transition-all ${
-        focused
-          ? "border-blue-500/50 ring-2 ring-blue-500/20"
-          : "border-gray-700"
+        focused ? "border-blue-500/50 ring-2 ring-blue-500/20" : "border-gray-700"
       }`}
     >
       {/* Main input row */}

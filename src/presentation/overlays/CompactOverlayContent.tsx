@@ -23,8 +23,8 @@ export function CompactOverlayContent({
   const seconds = useTaskTimer(runningTask);
 
   const isRunning = runningTask?.status === "running";
-  const isPaused  = runningTask?.status === "paused";
-  const hasTask   = !!runningTask;
+  const isPaused = runningTask?.status === "paused";
+  const hasTask = !!runningTask;
 
   const borderClass = isRunning
     ? "border-blue-500 overlay-ring-pulse"
@@ -49,7 +49,9 @@ export function CompactOverlayContent({
         className="flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer"
       >
         {hasTask ? (
-          <span className={`font-mono text-[14px] font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}>
+          <span
+            className={`font-mono text-[14px] font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
+          >
             {formatHHMMSS(seconds)}
           </span>
         ) : (

@@ -65,7 +65,10 @@ export function CategoryCard({ category, onUpdate, onDelete }: CategoryCardProps
             <DollarSign size={11} />
             {editBillable ? "Bill." : "Non."}
           </button>
-          <button onClick={confirmEdit} className="p-1 text-green-400 hover:text-green-300 shrink-0">
+          <button
+            onClick={confirmEdit}
+            className="p-1 text-green-400 hover:text-green-300 shrink-0"
+          >
             <Check size={13} />
           </button>
           <button onClick={cancelEdit} className="p-1 text-gray-500 hover:text-gray-300 shrink-0">
