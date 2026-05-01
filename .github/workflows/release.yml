@@ -12,27 +12,48 @@ on:
         default: true
 
 jobs:
-  build:
-    name: Build — ${{ matrix.platform }}
+  # ── Cria a release no GitHub ──────────────────────────────────────────────
+  create-release:
+    name: Criar release
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: ubuntu-22.04
-            label: Linux
-          - platform: windows-latest
-            label: Windows
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar release draft
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: DeskClock ${{ github.ref_name }}
+          draft: ${{ github.event.inputs.draft != 'false' }}
+          body: |
+            ## DeskClock ${{ github.ref_name }}
 
-    runs-on: ${{ matrix.platform }}
+            ### Instalação
 
+            | Plataforma | Arquivo |
+            |---|---|
+            | Windows | `.msi` ou `.exe` (NSIS) |
+            | Ubuntu / Debian | `.deb` |
+            | Arch Linux | `*_arch.AppImage` |
+            | Linux (universal) | `.AppImage` |
+
+            Consulte o [README](https://github.com/${{ github.repository }}#build) para instruções detalhadas.
+
+  # ── Ubuntu / Debian + AppImage ────────────────────────────────────────────
+  build-ubuntu:
+    name: Build — Ubuntu
+    needs: create-release
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      # ── Dependências do sistema (Linux) ────────────────────────────────
-      - name: Instalar dependências do sistema (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
+      - name: Instalar dependências do sistema
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -43,7 +64,6 @@ jobs:
             libxdo-dev \
             libayatana-appindicator3-dev
 
-      # ── Node + pnpm ────────────────────────────────────────────────────
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -53,21 +73,16 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      # ── Rust ───────────────────────────────────────────────────────────
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      # ── Instalar dependências JS ───────────────────────────────────────
       - run: pnpm install
-
-      # ── Testes antes de buildar ────────────────────────────────────────
       - run: pnpm tsc --noEmit
       - run: pnpm test
 
-      # ── Build Tauri + publicar release ────────────────────────────────
       - uses: tauri-apps/tauri-action@v0.5.16
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,20 +91,126 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
+          releaseId: ${{ needs.create-release.outputs.release-id }}
           tagName: ${{ github.ref_name }}
-          releaseName: 'DeskClock ${{ github.ref_name }}'
-          releaseBody: |
-            ## DeskClock ${{ github.ref_name }}
-
-            ### Instalação
-
-            | Plataforma | Arquivo |
-            |---|---|
-            | Windows | `.msi` ou `.exe` (NSIS) |
-            | Ubuntu / Debian | `.deb` |
-            | Linux (universal) | `.AppImage` |
-
-            Consulte o [README](https://github.com/${{ github.repository }}#build) para instruções detalhadas.
-          releaseDraft: ${{ github.event.inputs.draft || 'true' }}
-          prerelease: false
           updaterJsonPreferNsis: true
+
+  # ── Windows ───────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build — Windows
+    needs: create-release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - run: pnpm install
+      - run: pnpm tsc --noEmit
+      - run: pnpm test
+
+      - uses: tauri-apps/tauri-action@v0.5.16
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GCP_CLIENT_ID: ${{ secrets.GCP_CLIENT_ID }}
+          GCP_CLIENT_SECRET: ${{ secrets.GCP_CLIENT_SECRET }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.create-release.outputs.release-id }}
+          tagName: ${{ github.ref_name }}
+          updaterJsonPreferNsis: true
+
+  # ── Arch Linux ────────────────────────────────────────────────────────────
+  # Gera um AppImage nativo do Arch usando libappindicator-gtk3 (repo oficial)
+  # em vez do libayatana-appindicator (AUR, deps quebradas no libdbusmenu).
+  # Tauri 2.x não suporta bundle pacman nativamente.
+  build-arch:
+    name: Build — Arch Linux
+    needs: create-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: archlinux/archlinux:base-devel
+
+    steps:
+      - name: Instalar dependências do sistema
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm \
+            git \
+            github-cli \
+            webkit2gtk-4.1 \
+            gtk3 \
+            libappindicator-gtk3 \
+            librsvg \
+            xdotool \
+            patchelf \
+            nodejs \
+            npm \
+            curl \
+            squashfs-tools \
+            xdg-utils
+
+      - uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        run: npm install -g pnpm@9
+
+      - name: Instalar Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target-arch'
+
+      - run: pnpm install
+      - run: pnpm tsc --noEmit
+      - run: pnpm test
+
+      - name: Build Tauri AppImage (Arch Linux)
+        run: pnpm tauri build --bundles appimage
+        env:
+          CARGO_TARGET_DIR: src-tauri/target-arch
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          GCP_CLIENT_ID: ${{ secrets.GCP_CLIENT_ID }}
+          GCP_CLIENT_SECRET: ${{ secrets.GCP_CLIENT_SECRET }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Renomear AppImage para identificar origem Arch
+        run: |
+          cd src-tauri/target-arch/release/bundle/appimage
+          for f in *.AppImage; do
+            mv "$f" "${f%.AppImage}_arch.AppImage"
+          done
+          for f in *.AppImage.tar.gz; do
+            mv "$f" "${f%.AppImage.tar.gz}_arch.AppImage.tar.gz"
+          done
+
+      - name: Upload artefatos para release
+        run: |
+          gh release upload "${{ github.ref_name }}" \
+            src-tauri/target-arch/release/bundle/appimage/*_arch.AppImage \
+            src-tauri/target-arch/release/bundle/appimage/*_arch.AppImage.tar.gz \
+            --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
