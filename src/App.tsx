@@ -374,6 +374,9 @@ function AppInner() {
       } else if (totalCount > 0) {
         await showToast("success", `${totalCount} grupo(s) enviado(s) automaticamente`);
       }
+      for (const r of results) {
+        if (r.warning) await showToast("warning", r.warning);
+      }
     }
 
     // Determina o trigger prioritário (Sheets define o ritmo se ambos ativos)

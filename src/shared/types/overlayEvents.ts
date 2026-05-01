@@ -48,7 +48,7 @@ export interface TaskStoppedPayload {
   plannedTaskId?: string | null;
 }
 
-export type ToastVariant = "success" | "error" | "info" | "update";
+export type ToastVariant = "success" | "error" | "info" | "update" | "warning";
 
 export interface ToastMessagePayload {
   variant: ToastVariant;

@@ -7,6 +7,7 @@ import { TaskRepository } from "@infra/database/TaskRepository";
 import {
   validateTaskForSheets,
   validateTaskForClockify,
+  formatMissingFields,
 } from "@domain/integrations/taskValidation";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 import { ClockifyTaskSender } from "./ClockifyTaskSender";
@@ -16,6 +17,7 @@ import { startOfDayISO, endOfDayISO, addDaysISO, todayISO } from "@shared/utils/
 export interface AutoSyncResult {
   integration: string;
   count: number;
+  warning?: string;
   error?: Error;
 }
 
@@ -88,8 +90,13 @@ export class AutoSyncRunner {
   }
 
   private async sheetsPerTask(task: Task): Promise<AutoSyncResult> {
-    if (!validateTaskForSheets(task).ok) {
-      return { integration: "google_sheets", count: 0 };
+    const validation = validateTaskForSheets(task);
+    if (!validation.ok) {
+      return {
+        integration: "google_sheets",
+        count: 0,
+        warning: `Tarefa não enviada ao Google Sheets: faltam ${formatMissingFields(validation.missing)}.`,
+      };
     }
     try {
       const spreadsheetId = this.config.get("integrationGoogleSheetsSpreadsheetId");
@@ -115,14 +122,18 @@ export class AutoSyncRunner {
         new ProjectRepository().findAll(),
         new CategoryRepository().findAll(),
       ]);
-      const completed = tasks.filter(
-        (t) => t.status === "completed" && validateTaskForSheets(t).ok
-      );
-      if (completed.length === 0) return { integration: "google_sheets", count: 0 };
+      const allCompleted = tasks.filter((t) => t.status === "completed");
+      const completed = allCompleted.filter((t) => validateTaskForSheets(t).ok);
+      const invalidCount = allCompleted.length - completed.length;
+      const invalidWarning = invalidCount > 0
+        ? `${invalidCount} tarefa(s) ignorada(s) no envio diário ao Google Sheets: dados incompletos.`
+        : undefined;
+
+      if (completed.length === 0) return { integration: "google_sheets", count: 0, warning: invalidWarning };
 
       const sentIds = new Set(await this.logRepo.findSentIds("google_sheets", startISO, endISO));
       const groups = groupTasks(completed).filter((g) => !g.tasks.every((t) => sentIds.has(t.id)));
-      if (groups.length === 0) return { integration: "google_sheets", count: 0 };
+      if (groups.length === 0) return { integration: "google_sheets", count: 0, warning: invalidWarning };
 
       const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
       const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
@@ -130,7 +141,7 @@ export class AutoSyncRunner {
       await sender.send(tasksToSend);
       await this.logRepo.markSent(allIds, "google_sheets");
       await this.config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
-      return { integration: "google_sheets", count: groups.length };
+      return { integration: "google_sheets", count: groups.length, warning: invalidWarning };
     } catch (err) {
       return { integration: "google_sheets", count: 0, error: err instanceof Error ? err : new Error(String(err)) };
     }
@@ -157,8 +168,13 @@ export class AutoSyncRunner {
   }
 
   private async clockifyPerTask(task: Task): Promise<AutoSyncResult> {
-    if (!validateTaskForClockify(task).ok) {
-      return { integration: "clockify", count: 0 };
+    const validation = validateTaskForClockify(task);
+    if (!validation.ok) {
+      return {
+        integration: "clockify",
+        count: 0,
+        warning: `Tarefa não enviada ao Clockify: faltam ${formatMissingFields(validation.missing)}.`,
+      };
     }
     try {
       const sender = new ClockifyTaskSender(this.config);
@@ -174,14 +190,18 @@ export class AutoSyncRunner {
   private async clockifyDaily(startISO: string, endISO: string): Promise<AutoSyncResult> {
     try {
       const tasks = await this.taskRepo.findByDateRange(startISO, endISO);
-      const completed = tasks.filter(
-        (t) => t.status === "completed" && validateTaskForClockify(t).ok
-      );
-      if (completed.length === 0) return { integration: "clockify", count: 0 };
+      const allCompleted = tasks.filter((t) => t.status === "completed");
+      const completed = allCompleted.filter((t) => validateTaskForClockify(t).ok);
+      const invalidCount = allCompleted.length - completed.length;
+      const invalidWarning = invalidCount > 0
+        ? `${invalidCount} tarefa(s) ignorada(s) no envio diário ao Clockify: dados incompletos.`
+        : undefined;
+
+      if (completed.length === 0) return { integration: "clockify", count: 0, warning: invalidWarning };
 
       const sentIds = new Set(await this.logRepo.findSentIds("clockify", startISO, endISO));
       const groups = groupTasks(completed).filter((g) => !g.tasks.every((t) => sentIds.has(t.id)));
-      if (groups.length === 0) return { integration: "clockify", count: 0 };
+      if (groups.length === 0) return { integration: "clockify", count: 0, warning: invalidWarning };
 
       const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
       const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
@@ -189,7 +209,7 @@ export class AutoSyncRunner {
       await sender.send(tasksToSend);
       await this.logRepo.markSent(allIds, "clockify");
       await this.config.set("clockifyDailySyncLastTimestamp", new Date().toISOString());
-      return { integration: "clockify", count: groups.length };
+      return { integration: "clockify", count: groups.length, warning: invalidWarning };
     } catch (err) {
       return { integration: "clockify", count: 0, error: err instanceof Error ? err : new Error(String(err)) };
     }
