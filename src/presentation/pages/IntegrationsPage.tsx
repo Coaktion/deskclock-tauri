@@ -805,19 +805,19 @@ function ClockifyLogo({ size = 20 }: { size?: number }) {
 /* ── SVG Zendesk ── */
 
 function ZendeskLogoSmall({ size = 20 }: { size?: number }) {
-  const inner = Math.round(size * 0.65);
   return (
-    <div
-      style={{ width: size, height: size }}
-      className="rounded flex items-center justify-center bg-[#03363D]"
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 26 26"
+      aria-hidden="true"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" width={inner} height={inner} viewBox="0 0 52 52">
-        <path
-          fill="#fff"
-          d="M24 16.4v29L0 16.4h24zm4 0h24L28 45.4V16.4zM24 6.6C24 12.4 19.5 17 14 17S4 12.4 4 6.6h20zm4 0h20c0 5.8-4.5 10.4-10 10.4S28 12.4 28 6.6z"
-        />
-      </svg>
-    </div>
+      <path
+        fill="#03363D"
+        d="M12 8.2v14.5H0zM12 3c0 3.3-2.7 6-6 6S0 6.3 0 3h12zm2 19.7c0-3.3 2.7-6 6-6s6 2.7 6 6H14zm0-5.2V3h12z"
+      />
+    </svg>
   );
 }
 
@@ -1713,6 +1713,30 @@ function ZendeskIntegrationCard() {
 
       {/* Credenciais OAuth */}
       <SubSection icon={<Key size={15} />} title="Credenciais OAuth" defaultOpen={!connected}>
+        {!connected && (
+          <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 px-4 py-3 space-y-2 mb-1">
+            <p className="text-xs font-medium text-gray-300">Como criar um OAuth client no Zendesk:</p>
+            <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+              <li>
+                Acesse{" "}
+                <span className="text-gray-300 font-medium">
+                  Admin Center → Apps e integrações → APIs → APIs do Zendesk → Clientes OAuth
+                </span>
+              </li>
+              <li>
+                Clique em <span className="text-gray-300 font-medium">Adicionar cliente OAuth</span>
+              </li>
+              <li>
+                Em <span className="text-gray-300 font-medium">URLs de redirecionamento</span>, adicione exatamente:{" "}
+                <code className="text-blue-400 font-mono text-[11px]">http://localhost:27422/callback</code>
+              </li>
+              <li>
+                Copie o <span className="text-gray-300 font-medium">Identificador único</span> (Client ID)
+                e o <span className="text-gray-300 font-medium">Secret</span> gerado
+              </li>
+            </ol>
+          </div>
+        )}
         <Row label="Subdomínio">
           <div className="flex items-center gap-1.5">
             <input
