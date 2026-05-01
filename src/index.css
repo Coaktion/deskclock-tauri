@@ -91,6 +91,10 @@
   --overlay-ring-clr: #10b981;
 }
 
+/* ── Zendesk logo: teal legível nos temas escuros; cor da marca no tema claro ── */
+.zendesk-logo { color: oklch(0.72 0.08 190); }
+[data-theme="claro"] .zendesk-logo { color: #03363D; }
+
 /* ── Scrollbars uniformes ── */
 ::-webkit-scrollbar {
   width: 5px;
