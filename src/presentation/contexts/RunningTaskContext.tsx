@@ -156,14 +156,25 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       const runner = new AutoSyncRunner(config, logRepo);
       const results = await runner.runPerTask(stoppedTask);
       triggerReload();
-      for (const r of results) {
-        if (r.error) {
-          await showToast("error", r.error.message);
-        } else if (r.warning) {
-          await showToast("warning", r.warning);
-        } else if (r.count > 0) {
-          const name = r.integration === "google_sheets" ? "Google Sheets" : "Clockify";
-          await showToast("success", `Tarefa enviada para o ${name}`);
+      const errors = results.filter((r) => r.error);
+      const sent = results.filter((r) => !r.error && r.count > 0);
+      const warnings = results.filter((r) => !r.error && r.warning);
+
+      for (const r of errors) await showToast("error", r.error!.message);
+
+      if (errors.length === 0) {
+        const integrationName = (integration: string) =>
+          integration === "google_sheets" ? "Google Sheets" : "Clockify";
+
+        const sentLabel = sent.map((r) => integrationName(r.integration)).join(" e ");
+        const warningText = warnings.map((r) => r.warning!).join(" ");
+
+        if (sent.length > 0 && warnings.length === 0) {
+          await showToast("success", `Tarefa enviada para ${sentLabel}`);
+        } else if (sent.length > 0 && warnings.length > 0) {
+          await showToast("warning", `Tarefa enviada para ${sentLabel}. ${warningText}`);
+        } else if (warnings.length > 0) {
+          await showToast("warning", warningText);
         }
       }
     },

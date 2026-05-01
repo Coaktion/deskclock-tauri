@@ -367,15 +367,19 @@ function AppInner() {
       const results = await runner.runDaily(endDateISO);
       const totalCount = results.reduce((s, r) => s + r.count, 0);
       const errors = results.filter((r) => r.error);
+      const warnings = results.flatMap((r) => (r.warning ? [r.warning] : []));
+
       if (errors.length > 0) {
-        for (const e of errors) {
-          await showToast("error", e.error!.message);
-        }
-      } else if (totalCount > 0) {
-        await showToast("success", `${totalCount} grupo(s) enviado(s) automaticamente`);
+        for (const e of errors) await showToast("error", e.error!.message);
+        return;
       }
-      for (const r of results) {
-        if (r.warning) await showToast("warning", r.warning);
+
+      if (totalCount > 0 && warnings.length === 0) {
+        await showToast("success", `${totalCount} tarefa(s) enviada(s) automaticamente`);
+      } else if (totalCount > 0 && warnings.length > 0) {
+        await showToast("warning", `${totalCount} tarefa(s) enviada(s). ${warnings.join(" ")}`);
+      } else if (warnings.length > 0) {
+        for (const w of warnings) await showToast("warning", w);
       }
     }
 
