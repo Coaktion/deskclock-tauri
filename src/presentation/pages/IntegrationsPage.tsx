@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Send,
   RefreshCw,
+  ListChecks,
 } from "lucide-react";
 import {
   DndContext,
@@ -50,6 +51,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
+import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { groupTasks } from "@shared/utils/groupTasks";
 import { showToast } from "@shared/utils/toast";
 import { addDaysISO, todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
@@ -788,6 +790,7 @@ function ClockifyIntegrationCard() {
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showEntriesModal, setShowEntriesModal] = useState(false);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -859,6 +862,7 @@ function ClockifyIntegrationCard() {
             reloadProjects={reloadProjects}
             reloadCategories={reloadCategories}
             onShowSendModal={() => setShowSendModal(true)}
+            onShowEntriesModal={() => setShowEntriesModal(true)}
           />
         )}
       </div>
@@ -876,6 +880,10 @@ function ClockifyIntegrationCard() {
           categories={categories}
           onClose={() => setShowSendModal(false)}
         />
+      )}
+
+      {showEntriesModal && (
+        <ClockifyEntriesModal onClose={() => setShowEntriesModal(false)} />
       )}
     </>
   );
@@ -1487,6 +1495,7 @@ interface ClockifyConnectedSectionsProps {
   reloadProjects: () => Promise<void>;
   reloadCategories: () => Promise<void>;
   onShowSendModal: () => void;
+  onShowEntriesModal: () => void;
 }
 
 function ClockifyConnectedSections({
@@ -1495,6 +1504,7 @@ function ClockifyConnectedSections({
   reloadProjects,
   reloadCategories,
   onShowSendModal,
+  onShowEntriesModal,
 }: ClockifyConnectedSectionsProps) {
   return (
     <>
@@ -1506,10 +1516,17 @@ function ClockifyConnectedSections({
         reloadCategories={reloadCategories}
       />
       <ClockifyAutoSyncSection />
-      <div className="border-t border-gray-800 px-4 py-3">
+      <div className="border-t border-gray-800 px-4 py-3 flex items-center gap-2">
+        <button
+          onClick={onShowEntriesModal}
+          className="flex-1 flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors justify-center border border-gray-700"
+        >
+          <ListChecks size={12} />
+          Gerenciar apontamentos…
+        </button>
         <button
           onClick={onShowSendModal}
-          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
+          className="flex-1 flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors justify-center border border-gray-700"
         >
           <Send size={12} />
           Enviar tarefas manualmente…
