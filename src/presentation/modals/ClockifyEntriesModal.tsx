@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { X, RefreshCw, Loader2 } from "lucide-react";
+import { X, RefreshCw, Loader2, Pencil, DollarSign } from "lucide-react";
 import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
-import type { ClockifyTimeEntryFull } from "@infra/integrations/clockify/types";
+import type {
+  ClockifyHydratedProject,
+  ClockifyHydratedTag,
+  ClockifyTimeEntryFull,
+  ClockifyTimeEntryPayload,
+} from "@infra/integrations/clockify/types";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { Autocomplete } from "@presentation/components/Autocomplete";
+import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import {
   todayISO,
   addDaysISO,
@@ -41,6 +48,18 @@ function toLocalDate(iso: string): string {
 
 function formatTimeLocal(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function isoToHHMM(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function buildISO(dateISO: string, hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(`${dateISO}T00:00:00`);
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
 }
 
 function entryDurationSeconds(entry: ClockifyTimeEntryFull): number {
@@ -92,6 +111,10 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
 
   const [onlyDefaultTags, setOnlyDefaultTags] = useState(defaultTagIds.length > 0);
 
+  const [clockifyProjects, setClockifyProjects] = useState<ClockifyHydratedProject[]>([]);
+  const [clockifyTags, setClockifyTags] = useState<ClockifyHydratedTag[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   // ESC fecha
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -128,6 +151,38 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
       })
       .finally(() => setLoading(false));
   }, [apiKey, workspaceId, userId, range.start, range.end, rangeValid, refreshSignal]);
+
+  // Cache de projetos/tags Clockify para os formulários (1x ao abrir, refetch ao trocar workspace)
+  useEffect(() => {
+    if (!apiKey || !workspaceId) return;
+    const client = new ClockifyClient(apiKey);
+    Promise.all([client.listProjects(workspaceId), client.listTags(workspaceId)])
+      .then(([ps, ts]) => {
+        setClockifyProjects(
+          [...ps].sort((a, b) =>
+            projectDisplayName(a).localeCompare(projectDisplayName(b), "pt-BR", { sensitivity: "base" })
+          )
+        );
+        setClockifyTags(
+          [...ts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+        );
+      })
+      .catch((err) => {
+        showToast("error", err instanceof Error ? err.message : "Erro ao carregar projetos/tags.");
+      });
+  }, [apiKey, workspaceId]);
+
+  async function handleSaveEdit(entryId: string, payload: ClockifyTimeEntryPayload) {
+    const client = new ClockifyClient(apiKey);
+    try {
+      await client.updateTimeEntry(workspaceId, entryId, payload);
+      await showToast("success", "Apontamento atualizado.");
+      setEditingId(null);
+      setRefreshSignal((n) => n + 1);
+    } catch (err) {
+      await showToast("error", err instanceof Error ? err.message : "Erro ao salvar.");
+    }
+  }
 
   // Pipeline de filtragem: oculta in-progress e (opcional) filtra por tags padrão
   const visibleEntries = useMemo(() => {
@@ -292,7 +347,16 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
                     </span>
                   </div>
                   {group.entries.map((entry) => (
-                    <EntryRow key={entry.id} entry={entry} />
+                    <EntryRow
+                      key={entry.id}
+                      entry={entry}
+                      isEditing={editingId === entry.id}
+                      clockifyProjects={clockifyProjects}
+                      clockifyTags={clockifyTags}
+                      onStartEdit={() => setEditingId(entry.id)}
+                      onCancelEdit={() => setEditingId(null)}
+                      onSave={(payload) => handleSaveEdit(entry.id, payload)}
+                    />
                   ))}
                 </div>
               ))}
@@ -304,7 +368,22 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   );
 }
 
-function EntryRow({ entry }: { entry: ClockifyTimeEntryFull }) {
+interface EntryRowProps {
+  entry: ClockifyTimeEntryFull;
+  isEditing: boolean;
+  clockifyProjects: ClockifyHydratedProject[];
+  clockifyTags: ClockifyHydratedTag[];
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSave: (payload: ClockifyTimeEntryPayload) => Promise<void>;
+}
+
+function EntryRow(props: EntryRowProps) {
+  if (props.isEditing) return <EntryEditForm {...props} />;
+  return <EntryDisplay {...props} />;
+}
+
+function EntryDisplay({ entry, onStartEdit }: EntryRowProps) {
   const startStr = formatTimeLocal(entry.timeInterval.start);
   const endStr = entry.timeInterval.end ? formatTimeLocal(entry.timeInterval.end) : "—";
   const duration = entryDurationSeconds(entry);
@@ -312,7 +391,7 @@ function EntryRow({ entry }: { entry: ClockifyTimeEntryFull }) {
   const projectColor = entry.project?.color ?? "#6b7280";
 
   return (
-    <div className="grid grid-cols-[110px_1fr_auto] items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors">
+    <div className="grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group">
       <div className="flex items-center gap-1.5 shrink-0">
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -358,6 +437,157 @@ function EntryRow({ entry }: { entry: ClockifyTimeEntryFull }) {
       <span className="text-sm font-mono tabular-nums text-gray-300 shrink-0">
         {formatDurationCompact(duration)}
       </span>
+
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={onStartEdit}
+          className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+          title="Editar"
+        >
+          <Pencil size={13} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EntryEditForm({
+  entry,
+  clockifyProjects,
+  clockifyTags,
+  onCancelEdit,
+  onSave,
+}: EntryRowProps) {
+  const initialProjectName = entry.project ? projectDisplayName(entry.project) : "";
+
+  const [description, setDescription] = useState(entry.description ?? "");
+  const [projectInput, setProjectInput] = useState(initialProjectName);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(entry.projectId);
+  const [tagIds, setTagIds] = useState<string[]>(entry.tagIds);
+  const [billable, setBillable] = useState(entry.billable);
+  const [dateISO, setDateISO] = useState(toLocalDate(entry.timeInterval.start));
+  const [startHHMM, setStartHHMM] = useState(isoToHHMM(entry.timeInterval.start));
+  const [endHHMM, setEndHHMM] = useState(
+    entry.timeInterval.end ? isoToHHMM(entry.timeInterval.end) : isoToHHMM(entry.timeInterval.start)
+  );
+  const [saving, setSaving] = useState(false);
+
+  const projectOptions = useMemo(
+    () => clockifyProjects.map((p) => ({ id: p.id, name: projectDisplayName(p) })),
+    [clockifyProjects]
+  );
+
+  async function handleSave() {
+    if (saving) return;
+
+    // Resolver projectId: input vazio → null; match exato pelo display name → id; senão mantém o último selecionado
+    let projectId: string | null;
+    if (!projectInput.trim()) {
+      projectId = null;
+    } else {
+      const match = projectOptions.find((o) => o.name === projectInput);
+      projectId = match?.id ?? selectedProjectId;
+    }
+
+    const startISO = buildISO(dateISO, startHHMM);
+    let endISO = buildISO(dateISO, endHHMM);
+    if (new Date(endISO) < new Date(startISO)) {
+      endISO = buildISO(addDaysISO(dateISO, 1), endHHMM);
+    }
+
+    const payload: ClockifyTimeEntryPayload = {
+      start: startISO,
+      end: endISO,
+      description: description.trim(),
+      billable,
+      ...(projectId ? { projectId } : {}),
+      ...(tagIds.length > 0 ? { tagIds } : {}),
+    };
+
+    setSaving(true);
+    try {
+      await onSave(payload);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2">
+      <input
+        type="text"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Descrição (opcional)"
+        autoFocus
+        className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+      />
+
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-start">
+        <Autocomplete
+          value={projectInput}
+          onChange={setProjectInput}
+          onSelect={(o) => {
+            setProjectInput(o.name);
+            setSelectedProjectId(o.id);
+          }}
+          options={projectOptions}
+          placeholder="Projeto (opcional)"
+        />
+        <TagMultiSelect
+          allTags={clockifyTags}
+          selectedIds={tagIds}
+          onChange={setTagIds}
+        />
+        <button
+          type="button"
+          onClick={() => setBillable((b) => !b)}
+          title={billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
+            billable
+              ? "bg-green-900/40 border-green-700 text-green-400"
+              : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
+          }`}
+        >
+          <DollarSign size={13} />
+          {billable ? "Faturável" : "Não-faturável"}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <DatePickerInput value={dateISO} onChange={setDateISO} />
+        <span className="text-xs text-gray-500">Início</span>
+        <input
+          type="time"
+          value={startHHMM}
+          onChange={(e) => setStartHHMM(e.target.value)}
+          className="w-24 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+        />
+        <span className="text-xs text-gray-500">Fim</span>
+        <input
+          type="time"
+          value={endHHMM}
+          onChange={(e) => setEndHHMM(e.target.value)}
+          className="w-24 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+        />
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={onCancelEdit}
+            disabled={saving}
+            className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+          >
+            {saving && <Loader2 size={11} className="animate-spin" />}
+            Salvar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
