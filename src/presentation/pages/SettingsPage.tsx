@@ -258,6 +258,60 @@ function SelectRow({
   );
 }
 
+const SECTION_LABELS: Record<string, string> = {
+  Features: "Novidades",
+  "Bug Fixes": "Correções",
+  "Performance Improvements": "Melhorias",
+  "BREAKING CHANGES": "Mudanças importantes",
+};
+
+function ReleaseNotes({ body }: { body: string }) {
+  const changelogPart = body.split(/\n---\n/)[0];
+  const lines = changelogPart.split("\n");
+  const items: { type: "header" | "bullet"; text: string; key: number }[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line || line.startsWith("## ") || line.startsWith("### Instalação")) continue;
+    if (line.startsWith("### ")) {
+      const raw = line.slice(4);
+      items.push({ type: "header", text: SECTION_LABELS[raw] ?? raw, key: i });
+    } else if (line.startsWith("* ") || line.startsWith("- ")) {
+      const text = line
+        .slice(2)
+        .replace(/\s*\(\[[\da-f]+\]\([^)]+\)\)/g, "")
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .trim();
+      if (text) items.push({ type: "bullet", text, key: i });
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <p className="text-xs text-gray-500 bg-gray-800 rounded-lg px-3 py-2 whitespace-pre-wrap">
+        {body}
+      </p>
+    );
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-lg px-3 py-2 space-y-0.5 max-h-48 overflow-y-auto">
+      {items.map((item) =>
+        item.type === "header" ? (
+          <p key={item.key} className="text-xs font-medium text-gray-300 pt-1.5 first:pt-0">
+            {item.text}
+          </p>
+        ) : (
+          <div key={item.key} className="flex gap-1.5 text-xs text-gray-400">
+            <span className="text-gray-600 shrink-0">•</span>
+            <span>{item.text}</span>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
 function UpdaterSection() {
   const { state, check, downloadAndInstall, relaunch } = useUpdater();
   const [appVersion, setAppVersion] = useState<string>("");
@@ -295,11 +349,7 @@ function UpdaterSection() {
             <Download size={14} />
             DeskClock {state.version} disponível
           </p>
-          {state.body && (
-            <p className="text-xs text-gray-500 bg-gray-800 rounded-lg px-3 py-2 whitespace-pre-wrap">
-              {state.body}
-            </p>
-          )}
+          {state.body && <ReleaseNotes body={state.body} />}
           <button
             onClick={downloadAndInstall}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-violet-700 hover:bg-violet-600 text-sm text-white transition-colors"
