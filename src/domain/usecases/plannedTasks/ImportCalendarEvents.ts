@@ -19,7 +19,8 @@ export interface ImportEventInput {
 export async function importCalendarEvents(
   repo: IPlannedTaskRepository,
   inputs: ImportEventInput[],
-  nowISO: string
+  nowISO: string,
+  addOpenUrlAction = false
 ): Promise<number> {
   if (inputs.length === 0) return 0;
 
@@ -36,6 +37,10 @@ export async function importCalendarEvents(
         scheduleType: isRecurring ? "recurring" : "specific_date",
         scheduleDate: isRecurring ? null : event.date,
         recurringDays: isRecurring ? recurringDays : null,
+        actions:
+          addOpenUrlAction && event.htmlLink
+            ? [{ type: "open_url", value: event.htmlLink }]
+            : [],
       },
       nowISO
     );

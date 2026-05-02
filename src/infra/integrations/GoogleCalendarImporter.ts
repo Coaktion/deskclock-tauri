@@ -20,6 +20,7 @@ interface GoogleEvent {
   eventType?: string;
   recurringEventId?: string;
   recurrence?: string[]; // presente apenas no evento base
+  htmlLink?: string;
 }
 
 interface GoogleEventsResponse {
@@ -147,6 +148,7 @@ export class GoogleCalendarImporter implements ICalendarImporter {
         date: event.start.date!,
         allDay: true,
         recurringEventId: event.recurringEventId,
+        htmlLink: event.htmlLink,
       };
     }
 
@@ -166,6 +168,7 @@ export class GoogleCalendarImporter implements ICalendarImporter {
       endTime: toTimeStr(endDate),
       allDay: false,
       recurringEventId: event.recurringEventId,
+      htmlLink: event.htmlLink,
     };
   }
 }

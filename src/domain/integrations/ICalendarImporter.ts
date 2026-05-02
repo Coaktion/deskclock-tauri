@@ -15,6 +15,8 @@ export interface CalendarEvent {
    * Preenchido apenas quando o evento é recorrente e o padrão é suportado.
    */
   suggestedRecurringDays?: number[];
+  /** URL do evento no Google Calendar */
+  htmlLink?: string;
 }
 
 export interface ICalendarImporter {
