@@ -157,6 +157,8 @@ export function HistoryPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     void search(filters);
@@ -173,6 +175,27 @@ export function HistoryPage() {
   }
 
   const allTasks = groups.flatMap((g) => g.tasks);
+
+  function toggleSelectTask(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  async function handleBulkDelete() {
+    for (const id of selectedIds) {
+      await remove(id);
+    }
+    exitSelectMode();
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -364,6 +387,41 @@ export function HistoryPage() {
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
               Entradas
             </span>
+            {selectMode ? (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    const allSelected = allTasks.length > 0 && selectedIds.size >= allTasks.length;
+                    setSelectedIds(allSelected ? new Set() : new Set(allTasks.map((t) => t.id)));
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  {allTasks.length > 0 && selectedIds.size >= allTasks.length
+                    ? "Desmarcar todas"
+                    : "Selecionar todas"}
+                </button>
+                <button
+                  onClick={() => void handleBulkDelete()}
+                  disabled={selectedIds.size === 0}
+                  className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                >
+                  Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                </button>
+                <button
+                  onClick={exitSelectMode}
+                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setSelectMode(true)}
+                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
+              >
+                Selecionar tarefas
+              </button>
+            )}
           </div>
         )}
 
@@ -374,9 +432,28 @@ export function HistoryPage() {
               <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
                 {formatHistoryDayHeader(group.dateISO)}
               </span>
-              <span className="text-xs font-mono tabular-nums text-gray-500">
-                {formatHHMM(group.totalSeconds)}
-              </span>
+              <div className="flex items-center gap-2">
+                {selectMode && group.tasks.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const groupIds = group.tasks.map((t) => t.id);
+                      const allSelected = groupIds.every((id) => selectedIds.has(id));
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (allSelected) groupIds.forEach((id) => next.delete(id));
+                        else groupIds.forEach((id) => next.add(id));
+                        return next;
+                      });
+                    }}
+                    className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    {group.tasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
+                  </button>
+                )}
+                <span className="text-xs font-mono tabular-nums text-gray-500">
+                  {formatHHMM(group.totalSeconds)}
+                </span>
+              </div>
             </div>
 
             {group.tasks.map((task) => {
@@ -392,11 +469,26 @@ export function HistoryPage() {
                     minute: "2-digit",
                   })
                 : "—";
+              const isSelected = selectedIds.has(task.id);
               return (
                 <div
                   key={task.id}
-                  className="grid grid-cols-[88px_1fr_auto_auto] items-center gap-2 px-4 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group"
+                  className={`grid items-center gap-2 px-4 py-3 border-b border-gray-800 transition-colors ${
+                    selectMode
+                      ? `cursor-pointer grid-cols-[20px_88px_1fr_auto] ${isSelected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-800/40"}`
+                      : "grid-cols-[88px_1fr_auto_auto] group hover:bg-gray-800/40"
+                  }`}
+                  onClick={selectMode ? () => toggleSelectTask(task.id) : undefined}
                 >
+                  {selectMode ? (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectTask(task.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-3.5 h-3.5 accent-blue-500 cursor-pointer"
+                    />
+                  ) : null}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span
                       className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -418,22 +510,24 @@ export function HistoryPage() {
                   <span className="text-sm font-mono tabular-nums text-gray-400 shrink-0">
                     {formatHHMMSS(task.durationSeconds ?? 0)}
                   </span>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      onClick={() => setEditingTask(task)}
-                      className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-                      title="Editar"
-                    >
-                      <Pencil size={13} />
-                    </button>
-                    <button
-                      onClick={() => void remove(task.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                      title="Excluir"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                  {!selectMode && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        onClick={() => setEditingTask(task)}
+                        className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil size={13} />
+                      </button>
+                      <button
+                        onClick={() => void remove(task.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                        title="Excluir"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
