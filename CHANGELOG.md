@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.3.1...v1.4.0) (2026-05-01)
+
+
+### Features
+
+* **clockify:** add AutoSyncRunner, Clockify auto-sync, and refactor daily sync ([48e86de](https://github.com/EduardoMeira/deskclock-tauri/commit/48e86dea81d0b99aa2f945acc61c412b100a0904))
+* **clockify:** add Clockify card and connect modal with API key flow ([d8002bb](https://github.com/EduardoMeira/deskclock-tauri/commit/d8002bb04cc2bfd5b4e5964833e20fde59bb78f5))
+* **clockify:** add ClockifyClient HTTP layer with typed errors ([37a5be2](https://github.com/EduardoMeira/deskclock-tauri/commit/37a5be265ac4b4ba2f1bab72c63675a36020d712))
+* **clockify:** add ClockifySendModal and manual send button ([3870399](https://github.com/EduardoMeira/deskclock-tauri/commit/3870399a5d29eeb8dc3eb5a0725bbb9139041dd5))
+* **clockify:** add ClockifyTaskSender implementing ITaskSender ([aa7ac9e](https://github.com/EduardoMeira/deskclock-tauri/commit/aa7ac9e7decbb9ac764314a918f986342eacdaa5))
+* **clockify:** add config keys and types for Clockify integration ([1a8472a](https://github.com/EduardoMeira/deskclock-tauri/commit/1a8472ad3d04f7ea20b9dd82125a80e706d74a3b))
+* **clockify:** add import, project/category mappings and default tags UI ([f3194ce](https://github.com/EduardoMeira/deskclock-tauri/commit/f3194ce124809d1795990826ed9469d7de1e043e))
+* **clockify:** add workspace picker with refresh ([d3202a1](https://github.com/EduardoMeira/deskclock-tauri/commit/d3202a19844967282bb83b90fc90d7ed00120ec2))
+* **clockify:** adiciona ClockifyEntriesModal read-only com filtros e agrupamento ([c21a61e](https://github.com/EduardoMeira/deskclock-tauri/commit/c21a61ef5de5a1757d0697eb741a00444c219972))
+* **clockify:** adiciona criação de apontamentos no ClockifyEntriesModal ([12467f1](https://github.com/EduardoMeira/deskclock-tauri/commit/12467f1c8288d388dc43c8073aadff6a8acf0101))
+* **clockify:** adiciona exclusão de apontamentos no ClockifyEntriesModal ([78befa1](https://github.com/EduardoMeira/deskclock-tauri/commit/78befa17584173387e2dcec4eca87705613e249f))
+* **clockify:** adiciona métodos list/update/delete time entries no ClockifyClient ([e8b2924](https://github.com/EduardoMeira/deskclock-tauri/commit/e8b29246e0d24cd82692483c5402c846c5979e73))
+* **clockify:** edição inline de apontamentos no ClockifyEntriesModal ([a725b22](https://github.com/EduardoMeira/deskclock-tauri/commit/a725b22fcf218f56f438cd5d32c5f2f8ab030566))
+* **integrations:** drill-down navigation e homogeneidade de inputs ([9c5ae61](https://github.com/EduardoMeira/deskclock-tauri/commit/9c5ae61efca1ce81aae82ef952a6e33098a33c5b))
+* **validation:** aplica obrigatoriedades por integração ([db88261](https://github.com/EduardoMeira/deskclock-tauri/commit/db882617216a3c84520e5ca437bedcf4499033ff))
+* **validation:** notifica usuário via toast quando tarefa é ignorada por campos faltantes ([d015843](https://github.com/EduardoMeira/deskclock-tauri/commit/d015843631f4563472682ec597d17ef2070ac5a2))
+* **zendesk:** adiciona integração OAuth e importação de tickets ([af7271e](https://github.com/EduardoMeira/deskclock-tauri/commit/af7271eefdd76119b17c2a11288809bd65078741))
+
+
+### Bug Fixes
+
+* **clockify:** autocomplete no mapeamento, sort alfabético e dropdown via portal ([21ca79a](https://github.com/EduardoMeira/deskclock-tauri/commit/21ca79ae7f504ed58da290810fa4c36a3a8adbc4))
+* **clockify:** modal de apontamentos respeita 8px de margem em todos os lados ([6ac3714](https://github.com/EduardoMeira/deskclock-tauri/commit/6ac3714fc30c3080738614193509c32cbef6e087))
+* **clockify:** ui adjustments — clientName concat, mapping accordions, dropdown position ([042d6b6](https://github.com/EduardoMeira/deskclock-tauri/commit/042d6b657adc5668495062a5fe0d2b1951c68211))
+* **validation:** unifica toasts de sucesso e aviso num único toast ([7582dc5](https://github.com/EduardoMeira/deskclock-tauri/commit/7582dc58181b1c03dd9939386668c8e146473209))
+* **zendesk:** adapta cor do logo ao tema atual ([327ec92](https://github.com/EduardoMeira/deskclock-tauri/commit/327ec9221d5e78461287b5a8f547d35e1659cebf)), closes [#03363](https://github.com/EduardoMeira/deskclock-tauri/issues/03363)
+* **zendesk:** restaura SVG oficial e adiciona instruções de OAuth client ([60cb751](https://github.com/EduardoMeira/deskclock-tauri/commit/60cb7514a353b492a0deefcb13be4b4610cdc4bc)), closes [#03363](https://github.com/EduardoMeira/deskclock-tauri/issues/03363)
+
 ### [1.3.1](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.3.0...v1.3.1) (2026-04-30)
 
 

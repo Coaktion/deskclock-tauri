@@ -264,6 +264,7 @@ export function ImportCalendarModal({
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -341,7 +342,7 @@ export function ImportCalendarModal({
 
     setImporting(true);
     try {
-      const count = await importCalendarEvents(repo, inputs, new Date().toISOString());
+      const count = await importCalendarEvents(repo, inputs, new Date().toISOString(), addOpenUrlAction);
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {
@@ -478,27 +479,47 @@ export function ImportCalendarModal({
 
         {/* Footer */}
         {!loading && !error && events.length > 0 && (
-          <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
-            <button
-              onClick={onClose}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          <div className="flex flex-col gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
+            <label
+              className="flex items-center gap-2 cursor-pointer select-none"
+              onClick={() => setAddOpenUrlAction((v) => !v)}
             >
-              Cancelar
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={importing || selected.size === 0}
-              className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
-            >
-              {importing ? (
-                <>
-                  <Loader2 size={12} className="animate-spin" />
-                  Importando…
-                </>
-              ) : (
-                <>Importar selecionados ({selected.size})</>
-              )}
-            </button>
+              <div
+                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                  addOpenUrlAction ? "bg-blue-600" : "bg-gray-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                    addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </div>
+              <span className="text-xs text-gray-400">Abrir URL do evento ao iniciar tarefa</span>
+            </label>
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={onClose}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={importing || selected.size === 0}
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {importing ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Importando…
+                  </>
+                ) : (
+                  <>Importar selecionados ({selected.size})</>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>
