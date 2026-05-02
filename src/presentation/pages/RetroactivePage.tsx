@@ -85,18 +85,47 @@ interface TaskRowProps {
   categories: Category[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
-function TaskRow({ task, projects, categories, onEdit, onDelete }: TaskRowProps) {
+function TaskRow({
+  task,
+  projects,
+  categories,
+  onEdit,
+  onDelete,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
+}: TaskRowProps) {
   const projectName = projects.find((p) => p.id === task.projectId)?.name;
   const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
 
   return (
-    <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-900/50">
-      <DollarSign
-        size={13}
-        className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
-      />
+    <div
+      className={`flex items-center gap-3 px-5 py-3 border-b border-gray-800 transition-colors ${
+        selectMode
+          ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-900/50"}`
+          : "hover:bg-gray-900/50"
+      }`}
+      onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
+    >
+      {selectMode ? (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onToggleSelect?.(task.id)}
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+        />
+      ) : (
+        <DollarSign
+          size={13}
+          className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
+        />
+      )}
       <span className="text-xs text-gray-500 shrink-0 font-mono tabular-nums w-28">
         {formatTimeRange(task.startTime, task.endTime)}
       </span>
@@ -112,18 +141,22 @@ function TaskRow({ task, projects, categories, onEdit, onDelete }: TaskRowProps)
       <span className="text-xs text-gray-500 font-mono tabular-nums shrink-0">
         {formatHHMMSS(task.durationSeconds ?? 0)}
       </span>
-      <button
-        onClick={() => onEdit(task)}
-        className="text-gray-700 hover:text-gray-300 transition-colors shrink-0"
-      >
-        <Pencil size={13} />
-      </button>
-      <button
-        onClick={() => onDelete(task.id)}
-        className="text-gray-700 hover:text-red-400 transition-colors shrink-0 mr-1"
-      >
-        <Trash2 size={14} />
-      </button>
+      {!selectMode && (
+        <>
+          <button
+            onClick={() => onEdit(task)}
+            className="text-gray-700 hover:text-gray-300 transition-colors shrink-0"
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            onClick={() => onDelete(task.id)}
+            className="text-gray-700 hover:text-red-400 transition-colors shrink-0 mr-1"
+          >
+            <Trash2 size={14} />
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -137,6 +170,8 @@ export function RetroactivePage() {
 
   const [selectedDate, setSelectedDate] = useState(today);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
@@ -268,6 +303,28 @@ export function RetroactivePage() {
     await loadTasks();
   }
 
+  function toggleSelectTask(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  async function handleBulkDelete() {
+    for (const id of selectedIds) {
+      await deleteTask(repo, id);
+    }
+    await loadTasks();
+    exitSelectMode();
+  }
+
   const totalSeconds = tasks.reduce((acc, t) => acc + (t.durationSeconds ?? 0), 0);
 
   return (
@@ -293,10 +350,38 @@ export function RetroactivePage() {
           <ChevronRight size={16} />
         </button>
         <span className="flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
-        {totalSeconds > 0 && (
-          <span className="text-xs text-gray-500 font-mono tabular-nums">
-            {formatHHMMSS(totalSeconds)} total
-          </span>
+        {tasks.length > 0 && (
+          selectMode ? (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => void handleBulkDelete()}
+                disabled={selectedIds.size === 0}
+                className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+              </button>
+              <button
+                onClick={exitSelectMode}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {totalSeconds > 0 && (
+                <span className="text-xs text-gray-500 font-mono tabular-nums">
+                  {formatHHMMSS(totalSeconds)} total
+                </span>
+              )}
+              <button
+                onClick={() => setSelectMode(true)}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Selecionar tarefas
+              </button>
+            </div>
+          )
         )}
       </div>
 
@@ -448,6 +533,9 @@ export function RetroactivePage() {
               categories={categories}
               onEdit={setEditingTask}
               onDelete={handleDelete}
+              selectMode={selectMode}
+              selected={selectedIds.has(t.id)}
+              onToggleSelect={toggleSelectTask}
             />
           ))
         )}

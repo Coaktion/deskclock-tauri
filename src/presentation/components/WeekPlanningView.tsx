@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
 import { emit } from "@tauri-apps/api/event";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -75,6 +76,8 @@ export function WeekPlanningView() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [showImportModal, setShowImportModal] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { start, end, label } = getWeekBounds(weekOffset);
   const days = getDaysOfWeek(start);
   const today = todayISO();
@@ -132,6 +135,29 @@ export function WeekPlanningView() {
     await reload();
   }
 
+  function toggleSelectTask(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  async function handleBulkDelete() {
+    for (const id of selectedIds) {
+      await deletePlannedTask(plannedRepo, id);
+    }
+    await reload();
+    await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+    exitSelectMode();
+  }
+
   function handleImported(count: number) {
     setShowImportModal(false);
     if (count > 0) {
@@ -168,7 +194,7 @@ export function WeekPlanningView() {
           <ChevronRight size={15} />
         </button>
 
-        {calendarConnected && (
+        {calendarConnected && !selectMode && (
           <button
             onClick={() => setShowImportModal(true)}
             title="Importar do Google Calendar"
@@ -178,9 +204,37 @@ export function WeekPlanningView() {
           </button>
         )}
 
-        <span className="ml-auto text-xs text-gray-400 shrink-0 whitespace-nowrap">
-          {completedCount} de {totalCount} concluídas
-        </span>
+        <div className="ml-auto flex items-center gap-3 shrink-0">
+          {selectMode ? (
+            <>
+              <button
+                onClick={() => void handleBulkDelete()}
+                disabled={selectedIds.size === 0}
+                className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+              </button>
+              <button
+                onClick={exitSelectMode}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setSelectMode(true)}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Selecionar tarefas
+              </button>
+              <span className="text-xs text-gray-400 whitespace-nowrap">
+                {completedCount} de {totalCount} concluídas
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* ── Day filter pills ─────────────────────────────────────────────────── */}
@@ -290,6 +344,9 @@ export function WeekPlanningView() {
                   onUncomplete={uncomplete}
                   onDuplicate={duplicate}
                   onDelete={remove}
+                  selectMode={selectMode}
+                  selected={selectedIds.has(task.id)}
+                  onToggleSelect={toggleSelectTask}
                 />
               ))
             )}
