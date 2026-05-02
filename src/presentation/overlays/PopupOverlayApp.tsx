@@ -119,7 +119,9 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
       async ({ payload }) => {
         setRunningTask(payload.task);
-        activePlannedTaskId.current = payload.plannedTaskId ?? null;
+        if (payload.plannedTaskId !== undefined) {
+          activePlannedTaskId.current = payload.plannedTaskId;
+        }
         if (payload.task) {
           if (config.get("overlayShowOnStart")) {
             const isVis = await appWindow.isVisible();
