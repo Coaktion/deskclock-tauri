@@ -38,8 +38,8 @@ export async function importCalendarEvents(
         scheduleDate: isRecurring ? null : event.date,
         recurringDays: isRecurring ? recurringDays : null,
         actions:
-          addOpenUrlAction && event.htmlLink
-            ? [{ type: "open_url", value: event.htmlLink }]
+          addOpenUrlAction && (event.conferenceLink ?? event.htmlLink)
+            ? [{ type: "open_url", value: (event.conferenceLink ?? event.htmlLink)! }]
             : [],
       },
       nowISO

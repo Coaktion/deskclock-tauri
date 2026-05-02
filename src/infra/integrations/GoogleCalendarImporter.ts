@@ -11,6 +11,11 @@ interface GoogleEventDateTime {
   timeZone?: string;
 }
 
+interface GoogleConferenceEntryPoint {
+  entryPointType: string; // "video" | "phone" | "sip" | "more"
+  uri: string;
+}
+
 interface GoogleEvent {
   id: string;
   summary?: string;
@@ -21,6 +26,7 @@ interface GoogleEvent {
   recurringEventId?: string;
   recurrence?: string[]; // presente apenas no evento base
   htmlLink?: string;
+  conferenceData?: { entryPoints?: GoogleConferenceEntryPoint[] };
 }
 
 interface GoogleEventsResponse {
@@ -140,6 +146,9 @@ export class GoogleCalendarImporter implements ICalendarImporter {
 
   private mapEvent(event: GoogleEvent): CalendarEvent {
     const allDay = !event.start.dateTime;
+    const conferenceLink = event.conferenceData?.entryPoints?.find(
+      (ep) => ep.entryPointType === "video"
+    )?.uri;
 
     if (allDay) {
       return {
@@ -149,6 +158,7 @@ export class GoogleCalendarImporter implements ICalendarImporter {
         allDay: true,
         recurringEventId: event.recurringEventId,
         htmlLink: event.htmlLink,
+        conferenceLink,
       };
     }
 
@@ -169,6 +179,7 @@ export class GoogleCalendarImporter implements ICalendarImporter {
       allDay: false,
       recurringEventId: event.recurringEventId,
       htmlLink: event.htmlLink,
+      conferenceLink,
     };
   }
 }
