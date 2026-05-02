@@ -390,6 +390,17 @@ export function HistoryPage() {
             {selectMode ? (
               <div className="flex items-center gap-3">
                 <button
+                  onClick={() => {
+                    const allSelected = allTasks.length > 0 && selectedIds.size >= allTasks.length;
+                    setSelectedIds(allSelected ? new Set() : new Set(allTasks.map((t) => t.id)));
+                  }}
+                  className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  {allTasks.length > 0 && selectedIds.size >= allTasks.length
+                    ? "Desmarcar todas"
+                    : "Selecionar todas"}
+                </button>
+                <button
                   onClick={() => void handleBulkDelete()}
                   disabled={selectedIds.size === 0}
                   className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
@@ -406,7 +417,7 @@ export function HistoryPage() {
             ) : (
               <button
                 onClick={() => setSelectMode(true)}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
               >
                 Selecionar tarefas
               </button>
@@ -421,9 +432,28 @@ export function HistoryPage() {
               <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
                 {formatHistoryDayHeader(group.dateISO)}
               </span>
-              <span className="text-xs font-mono tabular-nums text-gray-500">
-                {formatHHMM(group.totalSeconds)}
-              </span>
+              <div className="flex items-center gap-2">
+                {selectMode && group.tasks.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const groupIds = group.tasks.map((t) => t.id);
+                      const allSelected = groupIds.every((id) => selectedIds.has(id));
+                      setSelectedIds((prev) => {
+                        const next = new Set(prev);
+                        if (allSelected) groupIds.forEach((id) => next.delete(id));
+                        else groupIds.forEach((id) => next.add(id));
+                        return next;
+                      });
+                    }}
+                    className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    {group.tasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
+                  </button>
+                )}
+                <span className="text-xs font-mono tabular-nums text-gray-500">
+                  {formatHHMM(group.totalSeconds)}
+                </span>
+              </div>
             </div>
 
             {group.tasks.map((task) => {

@@ -354,6 +354,15 @@ export function RetroactivePage() {
           selectMode ? (
             <div className="flex items-center gap-3">
               <button
+                onClick={() => {
+                  const allSelected = selectedIds.size >= tasks.length;
+                  setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
+                }}
+                className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
+              </button>
+              <button
                 onClick={() => void handleBulkDelete()}
                 disabled={selectedIds.size === 0}
                 className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
@@ -376,7 +385,7 @@ export function RetroactivePage() {
               )}
               <button
                 onClick={() => setSelectMode(true)}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
               >
                 Selecionar tarefas
               </button>

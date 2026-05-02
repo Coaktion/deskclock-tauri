@@ -168,6 +168,27 @@ export function WeekPlanningView() {
 
   const filteredDays = dayFilter === "all" ? visibleDays : [dayFilter];
 
+  const allVisibleTaskIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const day of filteredDays) {
+      for (const task of tasks) {
+        if (isTaskOnDate(task, day)) ids.add(task.id);
+      }
+    }
+    return ids;
+  }, [tasks, filteredDays]);
+
+  function toggleSelectAllForDay(day: string) {
+    const dayTaskIds = tasks.filter((t) => isTaskOnDate(t, day)).map((t) => t.id);
+    const allSelected = dayTaskIds.length > 0 && dayTaskIds.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) dayTaskIds.forEach((id) => next.delete(id));
+      else dayTaskIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
   return (
     <div className="flex flex-col">
       {/* ── Header: week selector + completed count ─────────────────────────── */}
@@ -208,6 +229,18 @@ export function WeekPlanningView() {
           {selectMode ? (
             <>
               <button
+                onClick={() => {
+                  const allSelected =
+                    allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
+                  setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
+                }}
+                className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
+                  ? "Desmarcar todas"
+                  : "Selecionar todas"}
+              </button>
+              <button
                 onClick={() => void handleBulkDelete()}
                 disabled={selectedIds.size === 0}
                 className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
@@ -225,7 +258,7 @@ export function WeekPlanningView() {
             <>
               <button
                 onClick={() => setSelectMode(true)}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
               >
                 Selecionar tarefas
               </button>
@@ -321,11 +354,21 @@ export function WeekPlanningView() {
                   <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>
                 )}
               </span>
-              {dayTasks.length > 0 && (
-                <span className="ml-auto text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
-                  {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
-                </span>
-              )}
+              <div className="ml-auto flex items-center gap-2">
+                {selectMode && dayTasks.length > 0 && (
+                  <button
+                    onClick={() => toggleSelectAllForDay(day)}
+                    className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    {dayTasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
+                  </button>
+                )}
+                {dayTasks.length > 0 && (
+                  <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
+                    {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
+                  </span>
+                )}
+              </div>
             </div>
             {dayTasks.length === 0 ? (
               <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
