@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { getPlannedTasksForWeek } from "@domain/usecases/plannedTasks/GetPlannedTasksForWeek";
@@ -41,150 +42,105 @@ interface UpdateInput {
   actions?: PlannedTaskAction[];
 }
 
-export function usePlannedTasksForDate(dateISO: string) {
+function usePlannedTasksBase(
+  loadFn: (repo: IPlannedTaskRepository) => Promise<PlannedTask[]>,
+  onMutate?: () => void
+) {
   const { plannedTaskRepo } = useRepositories();
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
 
   const load = useCallback(async () => {
-    const result = await getPlannedTasksForDate(plannedTaskRepo, dateISO);
-    setTasks(result);
-  }, [plannedTaskRepo, dateISO]);
+    setTasks(await loadFn(plannedTaskRepo));
+  }, [plannedTaskRepo, loadFn]);
 
   useEffect(() => {
     load();
-  }, [load]);
-
-  // Recarrega quando outra janela muta tarefas planejadas
-  useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => {
-      load();
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
   }, [load]);
 
   const create = useCallback(
     async (input: CreateInput) => {
       await createPlannedTask(plannedTaskRepo, input, new Date().toISOString());
       await load();
+      onMutate?.();
     },
-    [plannedTaskRepo, load]
+    [plannedTaskRepo, load, onMutate]
   );
 
   const update = useCallback(
     async (id: UUID, input: UpdateInput) => {
       await updatePlannedTask(plannedTaskRepo, id, input);
       await load();
+      onMutate?.();
     },
-    [plannedTaskRepo, load]
+    [plannedTaskRepo, load, onMutate]
   );
 
   const remove = useCallback(
     async (id: UUID) => {
       await deletePlannedTask(plannedTaskRepo, id);
       await load();
+      onMutate?.();
     },
-    [plannedTaskRepo, load]
+    [plannedTaskRepo, load, onMutate]
   );
 
   const complete = useCallback(
     async (id: UUID, date: string) => {
       await completePlannedTask(plannedTaskRepo, id, date);
       await load();
+      onMutate?.();
     },
-    [plannedTaskRepo, load]
+    [plannedTaskRepo, load, onMutate]
   );
 
   const uncomplete = useCallback(
     async (id: UUID, date: string) => {
       await uncompletePlannedTask(plannedTaskRepo, id, date);
       await load();
+      onMutate?.();
     },
-    [plannedTaskRepo, load]
+    [plannedTaskRepo, load, onMutate]
   );
 
   const duplicate = useCallback(
     async (id: UUID) => {
       await duplicatePlannedTask(plannedTaskRepo, id, new Date().toISOString());
       await load();
+      onMutate?.();
     },
-    [plannedTaskRepo, load]
+    [plannedTaskRepo, load, onMutate]
   );
 
   return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };
 }
 
-export function usePlannedTasksForWeek(startISO: string, endISO: string) {
-  const { plannedTaskRepo } = useRepositories();
-  const [tasks, setTasks] = useState<PlannedTask[]>([]);
+export function usePlannedTasksForDate(dateISO: string) {
+  const loadFn = useCallback(
+    (repo: IPlannedTaskRepository) => getPlannedTasksForDate(repo, dateISO),
+    [dateISO]
+  );
+  const base = usePlannedTasksBase(loadFn);
+  const { reload } = base;
 
-  const load = useCallback(async () => {
-    const result = await getPlannedTasksForWeek(plannedTaskRepo, startISO, endISO);
-    setTasks(result);
-  }, [plannedTaskRepo, startISO, endISO]);
-
+  // Recarrega quando outra janela muta tarefas planejadas
   useEffect(() => {
-    load();
-  }, [load]);
+    const unlisten = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => reload());
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [reload]);
 
-  const notifyChanged = useCallback(() => {
+  return base;
+}
+
+export function usePlannedTasksForWeek(startISO: string, endISO: string) {
+  const loadFn = useCallback(
+    (repo: IPlannedTaskRepository) => getPlannedTasksForWeek(repo, startISO, endISO),
+    [startISO, endISO]
+  );
+  const onMutate = useCallback(() => {
     emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
   }, []);
 
-  const create = useCallback(
-    async (input: CreateInput) => {
-      await createPlannedTask(plannedTaskRepo, input, new Date().toISOString());
-      await load();
-      notifyChanged();
-    },
-    [plannedTaskRepo, load, notifyChanged]
-  );
-
-  const update = useCallback(
-    async (id: UUID, input: UpdateInput) => {
-      await updatePlannedTask(plannedTaskRepo, id, input);
-      await load();
-      notifyChanged();
-    },
-    [plannedTaskRepo, load, notifyChanged]
-  );
-
-  const remove = useCallback(
-    async (id: UUID) => {
-      await deletePlannedTask(plannedTaskRepo, id);
-      await load();
-      notifyChanged();
-    },
-    [plannedTaskRepo, load, notifyChanged]
-  );
-
-  const complete = useCallback(
-    async (id: UUID, date: string) => {
-      await completePlannedTask(plannedTaskRepo, id, date);
-      await load();
-      notifyChanged();
-    },
-    [plannedTaskRepo, load, notifyChanged]
-  );
-
-  const uncomplete = useCallback(
-    async (id: UUID, date: string) => {
-      await uncompletePlannedTask(plannedTaskRepo, id, date);
-      await load();
-      notifyChanged();
-    },
-    [plannedTaskRepo, load, notifyChanged]
-  );
-
-  const duplicate = useCallback(
-    async (id: UUID) => {
-      await duplicatePlannedTask(plannedTaskRepo, id, new Date().toISOString());
-      await load();
-      notifyChanged();
-    },
-    [plannedTaskRepo, load, notifyChanged]
-  );
-
-  return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };
+  return usePlannedTasksBase(loadFn, onMutate);
 }
