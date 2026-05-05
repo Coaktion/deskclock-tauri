@@ -7,13 +7,14 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { showToast } from "@shared/utils/toast";
 import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
-import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
+import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
 import { formatHHMMSS, todayISO, addDaysISO } from "@shared/utils/time";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
+import { SheetsSyncStrategy } from "@infra/integrations/SheetsSyncStrategy";
+import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import type { Theme } from "@shared/utils/theme";
@@ -210,6 +211,7 @@ function MainContent({
 
 function AppInner() {
   const config = useAppConfig();
+  const { taskRepo, projectRepo, categoryRepo, taskLogRepo } = useRepositories();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
   const [focusTaskEdit, setFocusTaskEdit] = useState(false);
@@ -371,8 +373,10 @@ function AppInner() {
 
     if (!sheetsDaily && !clockifyDaily) return;
 
-    const logRepo = new TaskIntegrationLogRepository();
-    const runner = new AutoSyncRunner(config, logRepo);
+    const runner = new AutoSyncRunner([
+      new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
+      new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
+    ]);
 
     async function triggerSync(endDateISO: string) {
       const results = await runner.runDaily(endDateISO);

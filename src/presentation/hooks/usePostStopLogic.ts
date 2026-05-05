@@ -3,6 +3,8 @@ import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlann
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
+import { SheetsSyncStrategy } from "@infra/integrations/SheetsSyncStrategy";
+import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { Task } from "@domain/entities/Task";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -13,11 +15,14 @@ import { emit } from "@tauri-apps/api/event";
 import { useCallback } from "react";
 
 export function usePostStopLogic(config: ConfigContextValue, triggerReload: () => void) {
-  const { taskRepo, plannedTaskRepo, taskLogRepo } = useRepositories();
+  const { taskRepo, plannedTaskRepo, projectRepo, categoryRepo, taskLogRepo } = useRepositories();
   const autoSyncTask = useCallback(
     async (stoppedTask: Task) => {
       if (!config.isLoaded) return;
-      const runner = new AutoSyncRunner(config, taskLogRepo);
+      const runner = new AutoSyncRunner([
+        new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
+        new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
+      ]);
       const results = await runner.runPerTask(stoppedTask);
       triggerReload();
       const errors = results.filter((r) => r.error);
@@ -27,9 +32,7 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
       for (const r of errors) await showToast("error", r.error!.message);
 
       if (errors.length === 0) {
-        const integrationName = (integration: string) =>
-          integration === "google_sheets" ? "Google Sheets" : "Clockify";
-        const sentLabel = sent.map((r) => integrationName(r.integration)).join(" e ");
+        const sentLabel = sent.map((r) => r.integration).join(" e ");
         const warningText = warnings.map((r) => r.warning!).join(" ");
         if (sent.length > 0 && warnings.length === 0) {
           await showToast("success", `Tarefa enviada para ${sentLabel}`);
@@ -40,7 +43,7 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
         }
       }
     },
-    [config, taskLogRepo, triggerReload]
+    [config, taskRepo, projectRepo, categoryRepo, taskLogRepo, triggerReload]
   );
 
   const completePlannedIfNeeded = useCallback(
