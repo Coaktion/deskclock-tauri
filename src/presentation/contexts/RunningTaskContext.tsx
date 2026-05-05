@@ -8,14 +8,11 @@ import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { usePostStopLogic } from "@presentation/hooks/usePostStopLogic";
+import { useOverlaySync } from "@presentation/hooks/useOverlaySync";
+import { useTraySync } from "@presentation/hooks/useTraySync";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
-import {
-  OVERLAY_EVENTS,
-  type RunningTaskChangedPayload,
-  type TaskStoppedPayload,
-} from "@shared/types/overlayEvents";
-import { invoke } from "@tauri-apps/api/core";
-import { emit, listen } from "@tauri-apps/api/event";
+import { OVERLAY_EVENTS, type RunningTaskChangedPayload } from "@shared/types/overlayEvents";
+import { emit } from "@tauri-apps/api/event";
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
 
 interface StartInput {
@@ -85,31 +82,18 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     };
   }, [taskRepo]);
 
-  // Ouve ações vindas do overlay (pause, resume, stop iniciados lá)
-  useEffect(() => {
-    const unlisten = listen<RunningTaskChangedPayload>(
-      OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
-      ({ payload }) => {
-        if (payload.source !== "overlay") return;
-        setRunningTask(payload.task);
-        if (payload.task) {
-          setActivePlannedTaskId(payload.plannedTaskId ?? null);
-        } else {
-          setActivePlannedTaskId(null);
-        }
-        triggerReload();
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useOverlaySync({
+    onTaskChanged: (task, plannedTaskId) => {
+      setRunningTask(task);
+      setActivePlannedTaskId(task ? (plannedTaskId ?? null) : null);
+      triggerReload();
+    },
+    onTaskStopped: (task, plannedTaskId, completed) => {
+      applyStopRules(task, plannedTaskId, completed);
+    },
+  });
 
-  // Sincroniza o status da tarefa com o ícone da bandeja (tray icon)
-  useEffect(() => {
-    const status = runningTask?.status ?? "idle";
-    invoke("update_tray_icon", { status }).catch(console.error);
-  }, [runningTask?.status]);
+  useTraySync(runningTask?.status);
 
   const startTask = useCallback(
     async (input: StartInput) => {
@@ -142,19 +126,6 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     setRunningTask(updated);
     await notifyOverlay(updated);
   }, [taskRepo, runningTask]);
-
-  // Ouve confirmação de stop vinda do overlay para aplicar regras pós-stop
-  useEffect(() => {
-    const unlisten = listen<TaskStoppedPayload>(
-      OVERLAY_EVENTS.TASK_STOPPED,
-      async ({ payload }) => {
-        await applyStopRules(payload.task, payload.plannedTaskId, payload.completed);
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [applyStopRules]);
 
   const stopTask = useCallback(
     async (completed: boolean) => {
