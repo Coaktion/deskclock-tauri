@@ -35,6 +35,9 @@ interface PlannedTaskItemProps {
   onUncomplete: (id: string, date: string) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 export function PlannedTaskItem({
@@ -49,6 +52,9 @@ export function PlannedTaskItem({
   onUncomplete,
   onDuplicate,
   onDelete,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
 }: PlannedTaskItemProps) {
   const isCompleted = task.completedDates.includes(dateISO);
   const project = projects.find((p) => p.id === task.projectId);
@@ -62,21 +68,36 @@ export function PlannedTaskItem({
   return (
     <>
       <div
-        className={`relative flex items-center gap-3 pl-5 pr-3 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group ${
-          isCompleted ? "opacity-50" : ""
+        className={`relative flex items-center gap-3 pl-5 pr-3 py-3 border-b border-gray-800 transition-colors group ${
+          isCompleted && !selectMode ? "opacity-50" : ""
+        } ${
+          selectMode
+            ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-800/40"}`
+            : "hover:bg-gray-800/40"
         }`}
+        onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
       >
         {/* Billable left accent */}
-        {task.billable && !isCompleted && (
+        {task.billable && !isCompleted && !selectMode && (
           <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
         )}
 
-        {/* Dot indicator */}
-        <span
-          className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-            task.billable ? "bg-emerald-400" : "bg-gray-600"
-          }`}
-        />
+        {/* Checkbox (select mode) or dot indicator */}
+        {selectMode ? (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(task.id)}
+            onClick={(e) => e.stopPropagation()}
+            className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+          />
+        ) : (
+          <span
+            className={`shrink-0 w-1.5 h-1.5 rounded-full ${
+              task.billable ? "bg-emerald-400" : "bg-gray-600"
+            }`}
+          />
+        )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -107,7 +128,7 @@ export function PlannedTaskItem({
           )}
         </div>
 
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!selectMode && <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           {!isCompleted && !playDisabled && (
             <button
               onClick={() => onPlay(task)}
@@ -151,10 +172,10 @@ export function PlannedTaskItem({
           >
             <Trash2 size={13} />
           </button>
-        </div>
+        </div>}
       </div>
 
-      {showModal && (
+      {showModal && !selectMode && (
         <EditPlannedTaskModal
           task={task}
           projects={projects}

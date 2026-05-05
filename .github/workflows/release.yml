@@ -67,6 +67,27 @@ jobs:
       - run: pnpm tsc --noEmit
       - run: pnpm test
 
+      # ── Extrair notas de versão do CHANGELOG.md ───────────────────────
+      - name: Extrair notas de versão
+        id: changelog
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const version = process.env.TAG.replace(/^v/, '');
+          const lines = fs.readFileSync('CHANGELOG.md', 'utf8').split('\n');
+          let inSection = false;
+          const notes = [];
+          for (const line of lines) {
+            if (line.startsWith(`## [${version}]`)) { inSection = true; continue; }
+            if (inSection && line.startsWith('## [')) break;
+            if (inSection) notes.push(line);
+          }
+          const trimmed = notes.join('\n').trim();
+          const output = process.env.GITHUB_OUTPUT;
+          fs.appendFileSync(output, `notes<<EOF\n${trimmed}\nEOF\n`);
+        env:
+          TAG: ${{ github.ref_name }}
+
       # ── Build Tauri + publicar release ────────────────────────────────
       - uses: tauri-apps/tauri-action@v0.5.16
         env:
@@ -80,6 +101,10 @@ jobs:
           releaseName: 'DeskClock ${{ github.ref_name }}'
           releaseBody: |
             ## DeskClock ${{ github.ref_name }}
+
+            ${{ steps.changelog.outputs.notes }}
+
+            ---
 
             ### Instalação
 
