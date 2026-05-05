@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import type { Task } from "@domain/entities/Task";
 
 function makeTask(overrides: Partial<Task> = {}): Task {

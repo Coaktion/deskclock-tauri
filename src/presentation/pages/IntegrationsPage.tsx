@@ -40,7 +40,7 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import { addDaysISO, endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {

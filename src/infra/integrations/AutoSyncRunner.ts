@@ -11,7 +11,7 @@ import {
 } from "@domain/integrations/taskValidation";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 import { ClockifyTaskSender } from "./ClockifyTaskSender";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import { startOfDayISO, endOfDayISO, addDaysISO, todayISO } from "@shared/utils/time";
 
 export interface AutoSyncResult {

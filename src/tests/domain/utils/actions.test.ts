@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { normalizeUrl, executeActions } from "@shared/utils/actions";
+import { normalizeUrl, executeActions } from "@domain/utils/actions";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
 
 describe("normalizeUrl", () => {

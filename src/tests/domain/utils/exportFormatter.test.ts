@@ -6,7 +6,7 @@ import {
   buildExportRows,
   toCSV,
   toJSON,
-} from "@shared/utils/exportFormatter";
+} from "@domain/utils/exportFormatter";
 import type { ExportProfile } from "@domain/entities/ExportProfile";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";

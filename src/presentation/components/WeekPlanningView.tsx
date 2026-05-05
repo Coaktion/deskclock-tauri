@@ -13,7 +13,7 @@ import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
 import { plannedTaskRepo } from "@presentation/contexts/repositories";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { executeActions } from "@shared/utils/actions";
+import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";

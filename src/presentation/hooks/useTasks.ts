@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import type { TaskGroup } from "@shared/utils/groupTasks";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { getWeekTotal } from "@domain/usecases/tasks/GetWeekTotal";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import { todayISO, weekBoundsISO } from "@shared/utils/time";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { taskRepo } from "@presentation/contexts/repositories";

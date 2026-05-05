@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { TaskGroup } from "@shared/utils/groupTasks";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
