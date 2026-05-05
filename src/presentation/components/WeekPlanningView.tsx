@@ -11,7 +11,7 @@ import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
-import { plannedTaskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
@@ -72,6 +72,7 @@ function isTaskOnDate(task: PlannedTask, dateISO: string): boolean {
 type DayFilter = "all" | string;
 
 export function WeekPlanningView() {
+  const { plannedTaskRepo } = useRepositories();
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [showImportModal, setShowImportModal] = useState(false);

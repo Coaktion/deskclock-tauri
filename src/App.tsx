@@ -7,6 +7,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { showToast } from "@shared/utils/toast";
 import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
+import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
@@ -564,7 +565,9 @@ function AppInner() {
 function App() {
   return (
     <ConfigProvider>
-      <AppInner />
+      <RepositoriesProvider>
+        <AppInner />
+      </RepositoriesProvider>
     </ConfigProvider>
   );
 }

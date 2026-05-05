@@ -18,7 +18,7 @@ import {
   validateTaskForClockify,
   formatMissingFields,
 } from "@domain/integrations/taskValidation";
-import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
 import { sendTasks, NoIntegrationError, NoTasksSelectedError } from "@domain/usecases/tasks/SendTasks";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -177,6 +177,7 @@ interface ClockifySendModalProps {
 }
 
 export function ClockifySendModal({ projects, categories, onClose }: ClockifySendModalProps) {
+  const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
 
   const [quick, setQuick] = useState<QuickPeriod>("today");
@@ -250,7 +251,7 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
 
     void run();
     return () => { cancelled = true; };
-  }, [quick, reloadKey]);
+  }, [taskRepo, taskLogRepo, quick, reloadKey]);
 
   function toggleGroup(date: string, key: string, group: TaskGroup) {
     if (!validateTaskForClockify(group.tasks[0]).ok) return;

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import { plannedTaskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { getPlannedTasksForWeek } from "@domain/usecases/plannedTasks/GetPlannedTasksForWeek";
 import { createPlannedTask } from "@domain/usecases/plannedTasks/CreatePlannedTask";
@@ -42,12 +42,13 @@ interface UpdateInput {
 }
 
 export function usePlannedTasksForDate(dateISO: string) {
+  const { plannedTaskRepo } = useRepositories();
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
 
   const load = useCallback(async () => {
     const result = await getPlannedTasksForDate(plannedTaskRepo, dateISO);
     setTasks(result);
-  }, [dateISO]);
+  }, [plannedTaskRepo, dateISO]);
 
   useEffect(() => {
     load();
@@ -68,7 +69,7 @@ export function usePlannedTasksForDate(dateISO: string) {
       await createPlannedTask(plannedTaskRepo, input, new Date().toISOString());
       await load();
     },
-    [load]
+    [plannedTaskRepo, load]
   );
 
   const update = useCallback(
@@ -76,7 +77,7 @@ export function usePlannedTasksForDate(dateISO: string) {
       await updatePlannedTask(plannedTaskRepo, id, input);
       await load();
     },
-    [load]
+    [plannedTaskRepo, load]
   );
 
   const remove = useCallback(
@@ -84,7 +85,7 @@ export function usePlannedTasksForDate(dateISO: string) {
       await deletePlannedTask(plannedTaskRepo, id);
       await load();
     },
-    [load]
+    [plannedTaskRepo, load]
   );
 
   const complete = useCallback(
@@ -92,7 +93,7 @@ export function usePlannedTasksForDate(dateISO: string) {
       await completePlannedTask(plannedTaskRepo, id, date);
       await load();
     },
-    [load]
+    [plannedTaskRepo, load]
   );
 
   const uncomplete = useCallback(
@@ -100,7 +101,7 @@ export function usePlannedTasksForDate(dateISO: string) {
       await uncompletePlannedTask(plannedTaskRepo, id, date);
       await load();
     },
-    [load]
+    [plannedTaskRepo, load]
   );
 
   const duplicate = useCallback(
@@ -108,19 +109,20 @@ export function usePlannedTasksForDate(dateISO: string) {
       await duplicatePlannedTask(plannedTaskRepo, id, new Date().toISOString());
       await load();
     },
-    [load]
+    [plannedTaskRepo, load]
   );
 
   return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };
 }
 
 export function usePlannedTasksForWeek(startISO: string, endISO: string) {
+  const { plannedTaskRepo } = useRepositories();
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
 
   const load = useCallback(async () => {
     const result = await getPlannedTasksForWeek(plannedTaskRepo, startISO, endISO);
     setTasks(result);
-  }, [startISO, endISO]);
+  }, [plannedTaskRepo, startISO, endISO]);
 
   useEffect(() => {
     load();
@@ -136,7 +138,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
       await load();
       notifyChanged();
     },
-    [load, notifyChanged]
+    [plannedTaskRepo, load, notifyChanged]
   );
 
   const update = useCallback(
@@ -145,7 +147,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
       await load();
       notifyChanged();
     },
-    [load, notifyChanged]
+    [plannedTaskRepo, load, notifyChanged]
   );
 
   const remove = useCallback(
@@ -154,7 +156,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
       await load();
       notifyChanged();
     },
-    [load, notifyChanged]
+    [plannedTaskRepo, load, notifyChanged]
   );
 
   const complete = useCallback(
@@ -163,7 +165,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
       await load();
       notifyChanged();
     },
-    [load, notifyChanged]
+    [plannedTaskRepo, load, notifyChanged]
   );
 
   const uncomplete = useCallback(
@@ -172,7 +174,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
       await load();
       notifyChanged();
     },
-    [load, notifyChanged]
+    [plannedTaskRepo, load, notifyChanged]
   );
 
   const duplicate = useCallback(
@@ -181,7 +183,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
       await load();
       notifyChanged();
     },
-    [load, notifyChanged]
+    [plannedTaskRepo, load, notifyChanged]
   );
 
   return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };

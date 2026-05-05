@@ -2,7 +2,7 @@ import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { taskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -141,6 +141,7 @@ function TaskRow({
 }
 
 export function RetroactivePage() {
+  const { taskRepo } = useRepositories();
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -158,7 +159,7 @@ export function RetroactivePage() {
     const all = await taskRepo.findByDateRange(startBound, endBound);
     const completed = all.filter((t) => t.status === "completed");
     setTasks([...completed].sort((a, b) => b.startTime.localeCompare(a.startTime)));
-  }, [selectedDate]);
+  }, [taskRepo, selectedDate]);
 
   const form = useRetroactiveForm({
     selectedDate,

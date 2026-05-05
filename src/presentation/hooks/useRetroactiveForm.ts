@@ -1,7 +1,7 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
-import { taskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import {
   addDaysISO,
   computeDurationHHMM,
@@ -43,6 +43,7 @@ export function useRetroactiveForm({
   categories,
   onTaskAdded,
 }: UseRetroactiveFormOptions) {
+  const { taskRepo } = useRepositories();
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");

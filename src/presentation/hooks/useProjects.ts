@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Project } from "@domain/entities/Project";
-import { projectRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { getProjects } from "@domain/usecases/projects/GetProjects";
 import { createProject } from "@domain/usecases/projects/CreateProject";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
@@ -9,6 +9,7 @@ import { updateProject } from "@domain/usecases/projects/UpdateProject";
 
 
 export function useProjects() {
+  const { projectRepo } = useRepositories();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +18,7 @@ export function useProjects() {
     const data = await getProjects(projectRepo);
     setProjects(data);
     setLoading(false);
-  }, []);
+  }, [projectRepo]);
 
   useEffect(() => {
     load();
@@ -28,7 +29,7 @@ export function useProjects() {
       await createProject(projectRepo, name);
       await load();
     },
-    [load]
+    [projectRepo, load]
   );
 
   const handleBulkImport = useCallback(
@@ -37,7 +38,7 @@ export function useProjects() {
       await load();
       return result;
     },
-    [load]
+    [projectRepo, load]
   );
 
   const handleUpdate = useCallback(
@@ -45,7 +46,7 @@ export function useProjects() {
       await updateProject(projectRepo, id, name);
       await load();
     },
-    [load]
+    [projectRepo, load]
   );
 
   const handleDelete = useCallback(
@@ -53,7 +54,7 @@ export function useProjects() {
       await deleteProject(projectRepo, id);
       await load();
     },
-    [load]
+    [projectRepo, load]
   );
 
   return {

@@ -15,7 +15,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
-import { taskRepo, plannedTaskRepo, taskLogRepo, categoryRepo, projectRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
@@ -232,6 +232,7 @@ function SheetsSection({
   projects: Project[];
   categories: Category[];
 }) {
+  const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetName, setSheetName] = useState("DeskClock");
@@ -536,6 +537,7 @@ function CalendarSection({
   disabled: boolean;
   onNavigate: (page: Page) => void;
 }) {
+  const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -1069,6 +1071,7 @@ function ClockifyMappingsSection({
   reloadProjects: () => Promise<void>;
   reloadCategories: () => Promise<void>;
 }) {
+  const { projectRepo, categoryRepo } = useRepositories();
   const config = useAppConfig();
   const [clockifyProjects, setClockifyProjects] = useState<ClockifyRef[]>([]);
   const [clockifyTags, setClockifyTags] = useState<ClockifyRef[]>([]);
@@ -1602,6 +1605,7 @@ function ClockifyConnectedSections({
 /* ── Card Zendesk ── */
 
 function ZendeskIntegrationCard() {
+  const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
   const { projects } = useProjects();
   const { categories } = useCategories();

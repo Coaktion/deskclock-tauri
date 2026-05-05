@@ -5,7 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { taskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
 
@@ -36,6 +36,7 @@ function buildISO(dateISO: string, hhmm: string): string {
 }
 
 export function EditTaskModal({ task, projects, categories, onSave, onClose }: EditTaskModalProps) {
+  const { taskRepo } = useRepositories();
   const [name, setName] = useState(task.name ?? "");
   const [projectName, setProjectName] = useState(
     projects.find((p) => p.id === task.projectId)?.name ?? ""
