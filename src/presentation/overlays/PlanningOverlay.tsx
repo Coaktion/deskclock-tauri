@@ -3,7 +3,7 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { todayISO } from "@shared/utils/time";
-import { executeActions } from "@shared/utils/actions";
+import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 

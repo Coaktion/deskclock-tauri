@@ -10,7 +10,7 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTasks } from "@presentation/hooks/useTasks";
-import { executeActions } from "@shared/utils/actions";
+import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { todayISO } from "@shared/utils/time";
 

@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Merge, CheckCheck } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { TaskGroup } from "@shared/utils/groupTasks";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { formatDurationCompact } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { TaskCard } from "./TaskCard";

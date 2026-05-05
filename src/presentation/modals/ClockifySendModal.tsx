@@ -12,8 +12,8 @@ import {
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { TaskGroup } from "@shared/utils/groupTasks";
-import { groupTasks } from "@shared/utils/groupTasks";
+import type { TaskGroup } from "@domain/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import {
   validateTaskForClockify,
   formatMissingFields,

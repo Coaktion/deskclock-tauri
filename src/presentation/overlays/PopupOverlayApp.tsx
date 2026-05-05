@@ -18,7 +18,7 @@ import {
   type OverlayConfigChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
-import { executeActions } from "@shared/utils/actions";
+import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";

@@ -20,11 +20,11 @@ import { CSS } from "@dnd-kit/utilities";
 import * as XLSX from "xlsx";
 import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { buildExportRows, toCSV, toJSON } from "@shared/utils/exportFormatter";
+import { buildExportRows, toCSV, toJSON } from "@domain/utils/exportFormatter";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { taskRepo } from "@presentation/contexts/repositories";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import type {
   ExportProfile,
   ExportFormat,
