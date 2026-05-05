@@ -1,25 +1,17 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
-import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { taskRepo } from "@presentation/contexts/repositories";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import {
-  addDaysISO,
-  computeDurationHHMM,
-  computeEndHHMM,
-  formatHHMM,
-  formatHHMMSS,
-  parseDurationInput,
-  todayISO,
-} from "@shared/utils/time";
+import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 
 const DAY_NAMES_PT = [
@@ -53,18 +45,6 @@ function formatDateHeader(dateISO: string): string {
   const month = MONTH_NAMES_PT[d.getUTCMonth()];
   const year = d.getUTCFullYear();
   return `${day.charAt(0).toUpperCase() + day.slice(1)}, ${num} de ${month} de ${year}`;
-}
-
-function nowHHMM(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(dateISO + "T00:00:00");
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 
 function isoToHHMM(iso: string): string {
@@ -160,8 +140,6 @@ function TaskRow({
   );
 }
 
-const DEFAULT_DURATION_SECS = 3600;
-
 export function RetroactivePage() {
   const today = todayISO();
   const { projects } = useProjects();
@@ -172,23 +150,7 @@ export function RetroactivePage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [name, setName] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [categoryName, setCategoryName] = useState("");
-  const [billable, setBillable] = useState(true);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState(nowHHMM);
-  const [endTime, setEndTime] = useState(() => computeEndHHMM(nowHHMM(), DEFAULT_DURATION_SECS));
-  const [durationInput, setDurationInput] = useState("01:00");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
-  const nameRef = useRef<HTMLInputElement>(null);
-  // Guarda últimos valores válidos para reset-on-empty
-  const prevStart = useRef(startTime);
-  const prevEnd = useRef(endTime);
 
   const loadTasks = useCallback(async () => {
     const startBound = new Date(selectedDate + "T00:00:00").toISOString();
@@ -198,104 +160,16 @@ export function RetroactivePage() {
     setTasks([...completed].sort((a, b) => b.startTime.localeCompare(a.startTime)));
   }, [selectedDate]);
 
+  const form = useRetroactiveForm({
+    selectedDate,
+    projects,
+    categories,
+    onTaskAdded: loadTasks,
+  });
+
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
-
-  function handleStartChange(val: string) {
-    setStartTime(val);
-    if (val) {
-      prevStart.current = val;
-      setDurationInput(computeDurationHHMM(val, prevEnd.current));
-    }
-    setError("");
-  }
-
-  function handleStartCommit(val: string) {
-    if (!val) setStartTime(prevStart.current);
-  }
-
-  function handleEndChange(val: string) {
-    setEndTime(val);
-    if (val) {
-      prevEnd.current = val;
-      setDurationInput(computeDurationHHMM(prevStart.current, val));
-    }
-    setError("");
-  }
-
-  function handleEndCommit(val: string) {
-    if (!val) setEndTime(prevEnd.current);
-  }
-
-  function commitDuration(): boolean {
-    const raw = durationInput.trim();
-    if (!raw) {
-      setDurationInput(computeDurationHHMM(prevStart.current, prevEnd.current));
-      return false;
-    }
-    const parsed = parseDurationInput(raw);
-    if (!parsed || parsed < 60) {
-      setDurationInput(computeDurationHHMM(prevStart.current, prevEnd.current));
-      return false;
-    }
-    const newEnd = computeEndHHMM(prevStart.current, parsed);
-    setEndTime(newEnd);
-    prevEnd.current = newEnd;
-    setDurationInput(formatHHMM(parsed));
-    return true;
-  }
-
-  async function handleAdd(overrideEndHHMM?: string) {
-    setError("");
-    const st = startTime || prevStart.current;
-    const et = overrideEndHHMM ?? (endTime || prevEnd.current);
-    const startISO = buildISO(selectedDate, st);
-    let endISO = buildISO(selectedDate, et);
-    if (new Date(endISO) <= new Date(startISO)) {
-      endISO = buildISO(addDaysISO(selectedDate, 1), et);
-    }
-    const durationSeconds = Math.round(
-      (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
-    );
-    if (durationSeconds < 60) {
-      setError("A duração mínima é 1 minuto.");
-      return;
-    }
-
-    const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
-    const cId = categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null;
-
-    setSaving(true);
-    await createRetroactiveTask(
-      taskRepo,
-      {
-        name: name.trim() || null,
-        projectId: pId,
-        categoryId: cId,
-        billable,
-        startTime: startISO,
-        endTime: endISO,
-        durationSeconds,
-      },
-      new Date().toISOString()
-    );
-    setSaving(false);
-
-    // Encadeia: próximo início = fim anterior, mantém mesma duração
-    const nextStart = isoToHHMM(endISO);
-    const nextEnd = computeEndHHMM(nextStart, durationSeconds);
-    const h = Math.floor(durationSeconds / 3600);
-    const m = Math.floor((durationSeconds % 3600) / 60);
-    setName("");
-    setStartTime(nextStart);
-    setEndTime(nextEnd);
-    prevStart.current = nextStart;
-    prevEnd.current = nextEnd;
-    setDurationInput(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
-    nameRef.current?.focus();
-    await loadTasks();
-  }
 
   async function handleDelete(id: string) {
     await deleteTask(taskRepo, id);
@@ -396,12 +270,12 @@ export function RetroactivePage() {
       {/* Formulário inline */}
       <div className="px-5 py-4 border-b border-gray-800 space-y-3">
         <input
-          ref={nameRef}
+          ref={form.nameRef}
           type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={form.name}
+          onChange={(e) => form.setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) void handleAdd();
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) void form.handleAdd();
           }}
           placeholder="Nome da tarefa (opcional)"
           className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
@@ -409,39 +283,41 @@ export function RetroactivePage() {
 
         <div className="flex gap-2 items-center">
           <Autocomplete
-            value={projectName}
-            onChange={setProjectName}
-            onSelect={(o) => setSelectedProjectId(o.id)}
-            onEnter={handleAdd}
+            value={form.projectName}
+            onChange={form.setProjectName}
+            onSelect={(o) => form.setSelectedProjectId(o.id)}
+            onEnter={form.handleAdd}
             options={projects}
             placeholder="Projeto"
             className="flex-1"
           />
           <Autocomplete
-            value={categoryName}
+            value={form.categoryName}
             onChange={(v) => {
-              setCategoryName(v);
+              form.setCategoryName(v);
               const cat = categories.find((c) => c.name === v);
-              if (cat) setBillable(cat.defaultBillable);
+              if (cat) form.setBillable(cat.defaultBillable);
             }}
             onSelect={(o) => {
-              setSelectedCategoryId(o.id);
+              form.setSelectedCategoryId(o.id);
               const cat = categories.find((c) => c.id === o.id);
-              if (cat) setBillable(cat.defaultBillable);
+              if (cat) form.setBillable(cat.defaultBillable);
             }}
-            onEnter={handleAdd}
+            onEnter={form.handleAdd}
             options={categories}
             placeholder="Categoria"
             className="flex-1"
           />
           <button
             type="button"
-            onClick={() => setBillable((b) => !b)}
+            onClick={() => form.setBillable((b) => !b)}
             title={
-              billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
+              form.billable
+                ? "Billable — clique para alternar"
+                : "Non-billable — clique para alternar"
             }
             className={`flex items-center gap-1 shrink-0 transition-colors ${
-              billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+              form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
             }`}
           >
             <DollarSign size={14} />
@@ -453,22 +329,13 @@ export function RetroactivePage() {
           <span className="text-xs text-gray-500 shrink-0">Duração</span>
           <input
             type="text"
-            value={durationInput}
-            onChange={(e) => setDurationInput(e.target.value)}
-            onBlur={commitDuration}
+            value={form.durationInput}
+            onChange={(e) => form.setDurationInput(e.target.value)}
+            onBlur={form.commitDuration}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                const raw = durationInput.trim();
-                const parsed = parseDurationInput(raw);
-                if (!raw || !parsed || parsed < 60) {
-                  setDurationInput(computeDurationHHMM(prevStart.current, prevEnd.current));
-                  return;
-                }
-                const newEnd = computeEndHHMM(prevStart.current, parsed);
-                prevEnd.current = newEnd;
-                setEndTime(newEnd);
-                setDurationInput(formatHHMM(parsed));
-                void handleAdd(newEnd);
+                const newEnd = form.commitDuration();
+                if (newEnd) void form.handleAdd(newEnd);
               }
             }}
             placeholder="HH:MM"
@@ -478,16 +345,16 @@ export function RetroactivePage() {
           <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
           <input
             type="time"
-            value={startTime}
-            onChange={(e) => handleStartChange(e.target.value)}
-            onBlur={(e) => handleStartCommit(e.target.value)}
+            value={form.startTime}
+            onChange={(e) => form.handleStartChange(e.target.value)}
+            onBlur={(e) => form.handleStartCommit(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                if (!startTime) {
-                  handleStartCommit("");
+                if (!form.startTime) {
+                  form.handleStartCommit("");
                   return;
                 }
-                void handleAdd();
+                void form.handleAdd();
               }
             }}
             className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
@@ -495,25 +362,25 @@ export function RetroactivePage() {
           <span className="text-xs text-gray-500 shrink-0">Fim</span>
           <input
             type="time"
-            value={endTime}
-            onChange={(e) => handleEndChange(e.target.value)}
-            onBlur={(e) => handleEndCommit(e.target.value)}
+            value={form.endTime}
+            onChange={(e) => form.handleEndChange(e.target.value)}
+            onBlur={(e) => form.handleEndCommit(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.stopPropagation();
-                if (!endTime) {
-                  handleEndCommit("");
+                if (!form.endTime) {
+                  form.handleEndCommit("");
                   return;
                 }
-                void handleAdd();
+                void form.handleAdd();
               }
             }}
             className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
           />
 
           <button
-            onClick={() => void handleAdd()}
-            disabled={saving}
+            onClick={() => void form.handleAdd()}
+            disabled={form.saving}
             className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
           >
             Adicionar
@@ -525,7 +392,7 @@ export function RetroactivePage() {
           <span className="text-gray-500">1:30, 90, 1h, 1h 30m, 1h 30min, 1h 30</span>
         </p>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {form.error && <p className="text-xs text-red-400">{form.error}</p>}
       </div>
 
       {/* Lista de tarefas */}
