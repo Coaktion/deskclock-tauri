@@ -15,9 +15,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo, plannedTaskRepo, taskLogRepo, categoryRepo, projectRepo } from "@presentation/contexts/repositories";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
@@ -67,7 +65,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-const plannedRepo = new PlannedTaskRepository();
 
 // Escopos unificados — uma única conexão Google para todos os serviços
 const ALL_GOOGLE_SCOPES = [
@@ -295,11 +292,9 @@ function SheetsSection({
       const rangeStartISO = startOfDayISO(startDateISO);
       const rangeEndISO = endOfDayISO(endDateISO);
 
-      const taskRepo = new TaskRepository();
-      const logRepo = new TaskIntegrationLogRepository();
       const [tasks, sentIdsArr] = await Promise.all([
         taskRepo.findByDateRange(rangeStartISO, rangeEndISO),
-        logRepo.findSentIds("google_sheets", rangeStartISO, rangeEndISO),
+        taskLogRepo.findSentIds("google_sheets", rangeStartISO, rangeEndISO),
       ]);
       const completed = tasks.filter((t) => t.status === "completed");
       const sentIds = new Set(sentIdsArr);
@@ -317,7 +312,7 @@ function SheetsSection({
       const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
       const sender = new GoogleSheetsTaskSender(config, spreadsheet, projects, categories);
       await sender.send(tasksToSend);
-      await logRepo.markSent(allIds, "google_sheets");
+      await taskLogRepo.markSent(allIds, "google_sheets");
       await config.set("sheetsDailySyncLastTimestamp", nowIso);
       setLastSyncTs(nowIso);
       await showToast("success", `${groups.length} grupo(s) enviado(s) para o Sheets.`);
@@ -618,7 +613,7 @@ function CalendarSection({
       {showImportModal && calendarImporter && (
         <ImportCalendarModal
           importer={calendarImporter}
-          repo={plannedRepo}
+          repo={plannedTaskRepo}
           fromISO={fromISO}
           toISO={toISO}
           weekLabel={weekLabel}
@@ -1152,22 +1147,20 @@ function ClockifyMappingsSection({
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
       setClockifyProjects(sortedProjects);
 
-      const { ProjectRepository } = await import("@infra/database/ProjectRepository");
       const { createProject: createProjectUC } =
         await import("@domain/usecases/projects/CreateProject");
-      const repo = new ProjectRepository();
 
       const allPM = config.get("clockifyProjectMapping");
       const otherWS = allPM.filter((m) => m.workspaceId !== workspaceId);
       const newMappings: import("@shared/types/clockifyConfig").ClockifyProjectMapping[] = [];
 
       for (const cp of list) {
-        let proj = await repo.findByName(cp.name);
+        let proj = await projectRepo.findByName(cp.name);
         if (!proj) {
           try {
-            proj = await createProjectUC(repo, cp.name);
+            proj = await createProjectUC(projectRepo, cp.name);
           } catch {
-            proj = await repo.findByName(cp.name);
+            proj = await projectRepo.findByName(cp.name);
           }
         }
         if (!proj) continue;
@@ -1199,22 +1192,20 @@ function ClockifyMappingsSection({
       const list = await client.listTags(workspaceId);
       setClockifyTags(list.map((t) => ({ id: t.id, name: t.name })));
 
-      const { CategoryRepository } = await import("@infra/database/CategoryRepository");
       const { createCategory: createCategoryUC } =
         await import("@domain/usecases/categories/CreateCategory");
-      const repo = new CategoryRepository();
 
       const allCM = config.get("clockifyCategoryMapping");
       const otherWS = allCM.filter((m) => m.workspaceId !== workspaceId);
       const newMappings: import("@shared/types/clockifyConfig").ClockifyCategoryMapping[] = [];
 
       for (const tag of list) {
-        let cat = await repo.findByName(tag.name);
+        let cat = await categoryRepo.findByName(tag.name);
         if (!cat) {
           try {
-            cat = await createCategoryUC(repo, tag.name, true);
+            cat = await createCategoryUC(categoryRepo, tag.name, true);
           } catch {
-            cat = await repo.findByName(tag.name);
+            cat = await categoryRepo.findByName(tag.name);
           }
         }
         if (!cat) continue;
@@ -1813,7 +1804,7 @@ function ZendeskIntegrationCard() {
       {showImportModal && ticketImporter && (
         <ImportZendeskModal
           importer={ticketImporter}
-          repo={plannedRepo}
+          repo={plannedTaskRepo}
           projects={projects}
           categories={categories}
           onImported={(count) => {

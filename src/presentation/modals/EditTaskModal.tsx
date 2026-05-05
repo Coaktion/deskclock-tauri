@@ -5,11 +5,10 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo } from "@presentation/contexts/repositories";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
 
-const repo = new TaskRepository();
 
 interface EditTaskModalProps {
   task: Task;
@@ -87,7 +86,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
 
     setSaving(true);
     await updateTask(
-      repo,
+      taskRepo,
       task.id,
       {
         name: name.trim() || null,

@@ -11,14 +11,13 @@ import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { plannedTaskRepo } from "@presentation/contexts/repositories";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { executeActions } from "@shared/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
-const plannedRepo = new PlannedTaskRepository();
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -151,7 +150,7 @@ export function WeekPlanningView() {
 
   async function handleBulkDelete() {
     for (const id of selectedIds) {
-      await deletePlannedTask(plannedRepo, id);
+      await deletePlannedTask(plannedTaskRepo, id);
     }
     await reload();
     await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
@@ -320,7 +319,7 @@ export function WeekPlanningView() {
       {showImportModal && calendarImporter && (
         <ImportCalendarModal
           importer={calendarImporter}
-          repo={plannedRepo}
+          repo={plannedTaskRepo}
           fromISO={calendarFromISO}
           toISO={calendarToISO}
           weekLabel={label}

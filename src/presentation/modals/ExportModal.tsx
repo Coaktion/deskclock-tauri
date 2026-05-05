@@ -23,7 +23,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { buildExportRows, toCSV, toJSON } from "@shared/utils/exportFormatter";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo } from "@presentation/contexts/repositories";
 import { groupTasks } from "@shared/utils/groupTasks";
 import type {
   ExportProfile,
@@ -38,7 +38,6 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { Task } from "@domain/entities/Task";
 
-const taskRepo = new TaskRepository();
 
 type Tab = "export" | "profiles" | "edit-profile";
 type PeriodMode = "today" | "custom";

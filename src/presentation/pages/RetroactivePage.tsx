@@ -3,7 +3,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo } from "@presentation/contexts/repositories";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -21,7 +21,6 @@ import {
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-const repo = new TaskRepository();
 
 const DAY_NAMES_PT = [
   "domingo",
@@ -194,7 +193,7 @@ export function RetroactivePage() {
   const loadTasks = useCallback(async () => {
     const startBound = new Date(selectedDate + "T00:00:00").toISOString();
     const endBound = new Date(selectedDate + "T23:59:59.999").toISOString();
-    const all = await repo.findByDateRange(startBound, endBound);
+    const all = await taskRepo.findByDateRange(startBound, endBound);
     const completed = all.filter((t) => t.status === "completed");
     setTasks([...completed].sort((a, b) => b.startTime.localeCompare(a.startTime)));
   }, [selectedDate]);
@@ -269,7 +268,7 @@ export function RetroactivePage() {
 
     setSaving(true);
     await createRetroactiveTask(
-      repo,
+      taskRepo,
       {
         name: name.trim() || null,
         projectId: pId,
@@ -299,7 +298,7 @@ export function RetroactivePage() {
   }
 
   async function handleDelete(id: string) {
-    await deleteTask(repo, id);
+    await deleteTask(taskRepo, id);
     await loadTasks();
   }
 
@@ -319,7 +318,7 @@ export function RetroactivePage() {
 
   async function handleBulkDelete() {
     for (const id of selectedIds) {
-      await deleteTask(repo, id);
+      await deleteTask(taskRepo, id);
     }
     await loadTasks();
     exitSelectMode();
