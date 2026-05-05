@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { AppConfig, ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { AppConfig, ConfigContextValue } from "@shared/types/appConfig";
 
 // Stub de env antes do import do módulo (constantes capturadas no load-time)
 vi.stubEnv("GCP_CLIENT_ID", "test-client-id");

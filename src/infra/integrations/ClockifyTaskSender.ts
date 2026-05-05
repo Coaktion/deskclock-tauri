@@ -1,6 +1,6 @@
 import type { Task } from "@domain/entities/Task";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 import { validateTaskForClockify } from "@domain/integrations/taskValidation";
 import { ClockifyClient } from "./clockify/ClockifyClient";
 

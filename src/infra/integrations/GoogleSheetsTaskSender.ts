@@ -2,7 +2,7 @@ import type { Task } from "@domain/entities/Task";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { TaskField } from "@shared/types/sheetsConfig";
 import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { GoogleTokenManager } from "./google/GoogleTokenManager";

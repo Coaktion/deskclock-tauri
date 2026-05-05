@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@domain/entities/Task";
-import type { AppConfig, ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { AppConfig, ConfigContextValue } from "@shared/types/appConfig";
 import type { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
 import type { ClockifyTimeEntryPayload } from "@infra/integrations/clockify/types";
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";

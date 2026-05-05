@@ -1,5 +1,5 @@
 import type { ITicketImporter, ZendeskTicket } from "@domain/integrations/ITicketImporter";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 import { ZendeskTokenManager } from "./zendesk/ZendeskTokenManager";
 import { ZendeskClient } from "./zendesk/ZendeskClient";
 

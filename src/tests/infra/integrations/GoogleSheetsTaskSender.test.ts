@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { AppConfig, ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { AppConfig, ConfigContextValue } from "@shared/types/appConfig";
 import type { TaskField } from "@shared/types/sheetsConfig";
 
 vi.stubEnv("GCP_CLIENT_ID", "test-client-id");

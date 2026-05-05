@@ -1,4 +1,4 @@
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const CLIENT_ID = import.meta.env.GCP_CLIENT_ID as string;
