@@ -1,6 +1,7 @@
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
+import { shouldDiscardTask, computeRoundedDuration } from "@domain/utils/taskStopRules";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
 import { SheetsSyncStrategy } from "@infra/integrations/SheetsSyncStrategy";
@@ -8,7 +9,6 @@ import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { Task } from "@domain/entities/Task";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { roundDuration } from "@shared/utils/roundDuration";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { emit } from "@tauri-apps/api/event";
@@ -65,7 +65,7 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
     ): Promise<Task | null> => {
       const duration = task.durationSeconds ?? 0;
 
-      if (config.get("discardTasksUnderOneMinute") && duration < 60) {
+      if (shouldDiscardTask(duration, config.get("discardTasksUnderOneMinute"))) {
         await cancelTaskUC(taskRepo, task.id);
         triggerReload();
         await showToast("info", "Tarefa descartada (menos de 1 minuto)");
@@ -73,21 +73,20 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
       }
 
       let finalTask = task;
-      if (config.get("roundingEnabled") && duration > 0) {
-        const rounded = roundDuration(
-          duration,
-          config.get("roundingSlots"),
-          config.get("roundingTolerance")
+      const rounded = computeRoundedDuration(
+        duration,
+        config.get("roundingEnabled"),
+        config.get("roundingSlots"),
+        config.get("roundingTolerance")
+      );
+      if (rounded !== null) {
+        finalTask = await updateTaskUC(
+          taskRepo,
+          task.id,
+          { durationSeconds: rounded },
+          task.updatedAt
         );
-        if (rounded !== duration) {
-          finalTask = await updateTaskUC(
-            taskRepo,
-            task.id,
-            { durationSeconds: rounded },
-            task.updatedAt
-          );
-          triggerReload();
-        }
+        triggerReload();
       }
 
       if (completed) {
