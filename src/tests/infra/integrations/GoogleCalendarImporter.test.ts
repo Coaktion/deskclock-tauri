@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { AppConfig, ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { AppConfig, ConfigContextValue } from "@shared/types/appConfig";
 
 // Mock do GoogleTokenManager para isolar da rede
 vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { plannedTaskRepo } from "@presentation/contexts/repositories";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { getPlannedTasksForWeek } from "@domain/usecases/plannedTasks/GetPlannedTasksForWeek";
 import { createPlannedTask } from "@domain/usecases/plannedTasks/CreatePlannedTask";
@@ -14,7 +14,6 @@ import { duplicatePlannedTask } from "@domain/usecases/plannedTasks/DuplicatePla
 import type { ScheduleType, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { UUID } from "@shared/types";
 
-const repo = new PlannedTaskRepository();
 
 interface CreateInput {
   name: string;
@@ -46,7 +45,7 @@ export function usePlannedTasksForDate(dateISO: string) {
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
 
   const load = useCallback(async () => {
-    const result = await getPlannedTasksForDate(repo, dateISO);
+    const result = await getPlannedTasksForDate(plannedTaskRepo, dateISO);
     setTasks(result);
   }, [dateISO]);
 
@@ -66,7 +65,7 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   const create = useCallback(
     async (input: CreateInput) => {
-      await createPlannedTask(repo, input, new Date().toISOString());
+      await createPlannedTask(plannedTaskRepo, input, new Date().toISOString());
       await load();
     },
     [load]
@@ -74,7 +73,7 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   const update = useCallback(
     async (id: UUID, input: UpdateInput) => {
-      await updatePlannedTask(repo, id, input);
+      await updatePlannedTask(plannedTaskRepo, id, input);
       await load();
     },
     [load]
@@ -82,7 +81,7 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   const remove = useCallback(
     async (id: UUID) => {
-      await deletePlannedTask(repo, id);
+      await deletePlannedTask(plannedTaskRepo, id);
       await load();
     },
     [load]
@@ -90,7 +89,7 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   const complete = useCallback(
     async (id: UUID, date: string) => {
-      await completePlannedTask(repo, id, date);
+      await completePlannedTask(plannedTaskRepo, id, date);
       await load();
     },
     [load]
@@ -98,7 +97,7 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   const uncomplete = useCallback(
     async (id: UUID, date: string) => {
-      await uncompletePlannedTask(repo, id, date);
+      await uncompletePlannedTask(plannedTaskRepo, id, date);
       await load();
     },
     [load]
@@ -106,7 +105,7 @@ export function usePlannedTasksForDate(dateISO: string) {
 
   const duplicate = useCallback(
     async (id: UUID) => {
-      await duplicatePlannedTask(repo, id, new Date().toISOString());
+      await duplicatePlannedTask(plannedTaskRepo, id, new Date().toISOString());
       await load();
     },
     [load]
@@ -119,7 +118,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
 
   const load = useCallback(async () => {
-    const result = await getPlannedTasksForWeek(repo, startISO, endISO);
+    const result = await getPlannedTasksForWeek(plannedTaskRepo, startISO, endISO);
     setTasks(result);
   }, [startISO, endISO]);
 
@@ -133,7 +132,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
 
   const create = useCallback(
     async (input: CreateInput) => {
-      await createPlannedTask(repo, input, new Date().toISOString());
+      await createPlannedTask(plannedTaskRepo, input, new Date().toISOString());
       await load();
       notifyChanged();
     },
@@ -142,7 +141,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
 
   const update = useCallback(
     async (id: UUID, input: UpdateInput) => {
-      await updatePlannedTask(repo, id, input);
+      await updatePlannedTask(plannedTaskRepo, id, input);
       await load();
       notifyChanged();
     },
@@ -151,7 +150,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
 
   const remove = useCallback(
     async (id: UUID) => {
-      await deletePlannedTask(repo, id);
+      await deletePlannedTask(plannedTaskRepo, id);
       await load();
       notifyChanged();
     },
@@ -160,7 +159,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
 
   const complete = useCallback(
     async (id: UUID, date: string) => {
-      await completePlannedTask(repo, id, date);
+      await completePlannedTask(plannedTaskRepo, id, date);
       await load();
       notifyChanged();
     },
@@ -169,7 +168,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
 
   const uncomplete = useCallback(
     async (id: UUID, date: string) => {
-      await uncompletePlannedTask(repo, id, date);
+      await uncompletePlannedTask(plannedTaskRepo, id, date);
       await load();
       notifyChanged();
     },
@@ -178,7 +177,7 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
 
   const duplicate = useCallback(
     async (id: UUID) => {
-      await duplicatePlannedTask(repo, id, new Date().toISOString());
+      await duplicatePlannedTask(plannedTaskRepo, id, new Date().toISOString());
       await load();
       notifyChanged();
     },

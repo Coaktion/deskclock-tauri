@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import type { Task } from "@domain/entities/Task";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo } from "@presentation/contexts/repositories";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { getHistoryTotals, type HistoryTotals } from "@domain/usecases/tasks/GetHistoryTotals";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
@@ -13,7 +13,6 @@ import {
 } from "@shared/utils/time";
 import type { UUID } from "@shared/types";
 
-const repo = new TaskRepository();
 
 export type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
 
@@ -97,7 +96,7 @@ export function useHistory() {
 
   const search = useCallback(async (f: HistoryFilters) => {
     const { start, end } = quickToRange(f.quick, f.startDate, f.endDate);
-    const tasks = await searchTasks(repo, {
+    const tasks = await searchTasks(taskRepo, {
       startISO: startOfDayISO(start),
       endISO: endOfDayISO(end),
       name: f.name || undefined,
@@ -125,7 +124,7 @@ export function useHistory() {
     async (id: UUID) => {
       // Captura a tarefa antes do await — garante dados corretos independente de timing
       const task = groups.flatMap((g) => g.tasks).find((t) => t.id === id);
-      await deleteTask(repo, id);
+      await deleteTask(taskRepo, id);
       setGroups((prev) =>
         prev
           .map((g) => {

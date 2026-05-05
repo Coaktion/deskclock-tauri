@@ -1,6 +1,6 @@
 import type { Task } from "@domain/entities/Task";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo } from "@presentation/contexts/repositories";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
@@ -21,7 +21,6 @@ import { restoreOverlayPosition, useOverlayDrag } from "./useOverlayDrag";
 
 const appWindow = getCurrentWindow();
 
-const taskRepo = new TaskRepository();
 
 async function getPopup() {
   return WebviewWindow.getByLabel("overlay-popup");

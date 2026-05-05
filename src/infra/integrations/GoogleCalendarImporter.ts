@@ -1,5 +1,5 @@
 import type { ICalendarImporter, CalendarEvent } from "@domain/integrations/ICalendarImporter";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 import { GoogleTokenManager } from "./google/GoogleTokenManager";
 import { parseRRuleDays } from "./google/rrule";
 

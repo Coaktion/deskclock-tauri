@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Project } from "@domain/entities/Project";
-import { ProjectRepository } from "@infra/database/ProjectRepository";
+import { projectRepo } from "@presentation/contexts/repositories";
 import { getProjects } from "@domain/usecases/projects/GetProjects";
 import { createProject } from "@domain/usecases/projects/CreateProject";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { deleteProject } from "@domain/usecases/projects/DeleteProject";
 import { updateProject } from "@domain/usecases/projects/UpdateProject";
 
-const repo = new ProjectRepository();
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -15,7 +14,7 @@ export function useProjects() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getProjects(repo);
+    const data = await getProjects(projectRepo);
     setProjects(data);
     setLoading(false);
   }, []);
@@ -26,7 +25,7 @@ export function useProjects() {
 
   const handleCreate = useCallback(
     async (name: string) => {
-      await createProject(repo, name);
+      await createProject(projectRepo, name);
       await load();
     },
     [load]
@@ -34,7 +33,7 @@ export function useProjects() {
 
   const handleBulkImport = useCallback(
     async (rawText: string) => {
-      const result = await bulkImportProjects(repo, rawText);
+      const result = await bulkImportProjects(projectRepo, rawText);
       await load();
       return result;
     },
@@ -43,7 +42,7 @@ export function useProjects() {
 
   const handleUpdate = useCallback(
     async (id: string, name: string) => {
-      await updateProject(repo, id, name);
+      await updateProject(projectRepo, id, name);
       await load();
     },
     [load]
@@ -51,7 +50,7 @@ export function useProjects() {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      await deleteProject(repo, id);
+      await deleteProject(projectRepo, id);
       await load();
     },
     [load]

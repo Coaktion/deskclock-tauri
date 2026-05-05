@@ -7,9 +7,7 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo, plannedTaskRepo, taskLogRepo } from "@presentation/contexts/repositories";
 import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import {
@@ -54,9 +52,6 @@ export interface RunningTaskContextValue {
 
 export const RunningTaskContext = createContext<RunningTaskContextValue | null>(null);
 
-const repo = new TaskRepository();
-const plannedRepo = new PlannedTaskRepository();
-const logRepo = new TaskIntegrationLogRepository();
 
 async function notifyOverlay(task: Task | null) {
   await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
@@ -79,7 +74,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
 
   useEffect(() => {
     mounted.current = true;
-    getActiveTasks(repo).then((tasks) => {
+    getActiveTasks(taskRepo).then((tasks) => {
       if (!mounted.current) return;
       const running = tasks.find((t) => t.status === "running");
       const active = running ?? tasks[0] ?? null;
@@ -124,7 +119,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       if (isStartingTaskRef.current) return;
       isStartingTaskRef.current = true;
       try {
-        const task = await startTaskUC(repo, input, new Date().toISOString());
+        const task = await startTaskUC(taskRepo, input, new Date().toISOString());
         setRunningTask(task);
         setActivePlannedTaskId(input.plannedTaskId ?? null);
         triggerReload();
@@ -138,14 +133,14 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
 
   const pauseTask = useCallback(async () => {
     if (!runningTask) return;
-    const updated = await pauseTaskUC(repo, runningTask.id, new Date().toISOString());
+    const updated = await pauseTaskUC(taskRepo, runningTask.id, new Date().toISOString());
     setRunningTask(updated);
     await notifyOverlay(updated);
   }, [runningTask]);
 
   const resumeTask = useCallback(async () => {
     if (!runningTask) return;
-    const updated = await resumeTaskUC(repo, runningTask.id, new Date().toISOString());
+    const updated = await resumeTaskUC(taskRepo, runningTask.id, new Date().toISOString());
     setRunningTask(updated);
     await notifyOverlay(updated);
   }, [runningTask]);
@@ -153,7 +148,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   const autoSyncTask = useCallback(
     async (stoppedTask: Task) => {
       if (!config.isLoaded) return;
-      const runner = new AutoSyncRunner(config, logRepo);
+      const runner = new AutoSyncRunner(config, taskLogRepo);
       const results = await runner.runPerTask(stoppedTask);
       triggerReload();
       const errors = results.filter((r) => r.error);
@@ -183,7 +178,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
 
   const completePlannedIfNeeded = useCallback(async (plannedTaskId: string | null | undefined) => {
     if (!plannedTaskId) return;
-    await completePlannedTask(plannedRepo, plannedTaskId, todayISO());
+    await completePlannedTask(plannedTaskRepo, plannedTaskId, todayISO());
     await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
   }, []);
 
@@ -194,7 +189,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       async ({ payload }) => {
         const duration = payload.task.durationSeconds ?? 0;
         if (config.get("discardTasksUnderOneMinute") && duration < 60) {
-          await cancelTaskUC(repo, payload.task.id);
+          await cancelTaskUC(taskRepo, payload.task.id);
           triggerReload();
           await showToast("info", "Tarefa descartada (menos de 1 minuto)");
           return;
@@ -208,7 +203,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
           );
           if (rounded !== duration) {
             finalTask = await updateTaskUC(
-              repo,
+              taskRepo,
               payload.task.id,
               { durationSeconds: rounded },
               payload.task.updatedAt
@@ -229,11 +224,11 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   const stopTask = useCallback(
     async (completed: boolean) => {
       if (!runningTask) return;
-      let stoppedTask = await stopTaskUC(repo, runningTask.id, new Date().toISOString());
+      let stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
       const duration = stoppedTask.durationSeconds ?? 0;
       const plannedId = activePlannedTaskId;
       if (config.get("discardTasksUnderOneMinute") && duration < 60) {
-        await cancelTaskUC(repo, stoppedTask.id);
+        await cancelTaskUC(taskRepo, stoppedTask.id);
         setRunningTask(null);
         setActivePlannedTaskId(null);
         triggerReload();
@@ -249,7 +244,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         );
         if (rounded !== duration) {
           stoppedTask = await updateTaskUC(
-            repo,
+            taskRepo,
             stoppedTask.id,
             { durationSeconds: rounded },
             stoppedTask.updatedAt
@@ -270,7 +265,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
 
   const cancelTask = useCallback(async () => {
     if (!runningTask) return;
-    await cancelTaskUC(repo, runningTask.id);
+    await cancelTaskUC(taskRepo, runningTask.id);
     setRunningTask(null);
     setActivePlannedTaskId(null);
     triggerReload();
@@ -280,7 +275,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   const updateActiveTask = useCallback(
     async (input: UpdateInput) => {
       if (!runningTask) return;
-      const updated = await updateTaskUC(repo, runningTask.id, input, new Date().toISOString());
+      const updated = await updateTaskUC(taskRepo, runningTask.id, input, new Date().toISOString());
       setRunningTask(updated);
       await notifyOverlay(updated);
     },

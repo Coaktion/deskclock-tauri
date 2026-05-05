@@ -18,8 +18,7 @@ import {
   validateTaskForClockify,
   formatMissingFields,
 } from "@domain/integrations/taskValidation";
-import { TaskRepository } from "@infra/database/TaskRepository";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
+import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
 import { sendTasks, NoIntegrationError, NoTasksSelectedError } from "@domain/usecases/tasks/SendTasks";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -33,8 +32,6 @@ import {
 } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 
-const taskRepo = new TaskRepository();
-const logRepo = new TaskIntegrationLogRepository();
 
 const INTEGRATION = "clockify";
 
@@ -217,7 +214,7 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
         const { start, end } = quickToRange(quick, customStartRef.current, customEndRef.current);
         const [tasks, sentIdsArr] = await Promise.all([
           taskRepo.findByDateRange(startOfDayISO(start), endOfDayISO(end)),
-          logRepo.findSentIds(INTEGRATION, startOfDayISO(start), endOfDayISO(end)),
+          taskLogRepo.findSentIds(INTEGRATION, startOfDayISO(start), endOfDayISO(end)),
         ]);
         if (cancelled) return;
 
@@ -334,7 +331,7 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
     setSending(true);
     try {
       await sendTasks(sender, tasksToSend);
-      await logRepo.markSent(allTaskIds, INTEGRATION);
+      await taskLogRepo.markSent(allTaskIds, INTEGRATION);
       await config.set("clockifyDailySyncLastTimestamp", new Date().toISOString());
       setMessage({ text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`, error: false });
       setSelectedKeys(new Set());

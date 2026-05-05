@@ -15,8 +15,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@shared/utils/groupTasks";
 import { groupTasks } from "@shared/utils/groupTasks";
-import { TaskRepository } from "@infra/database/TaskRepository";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
+import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import {
   sendTasks,
@@ -36,8 +35,6 @@ import { NULLABLE_FIELDS, type TaskField } from "@shared/types/sheetsConfig";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { validateTaskForSheets, formatMissingFields } from "@domain/integrations/taskValidation";
 
-const taskRepo = new TaskRepository();
-const logRepo = new TaskIntegrationLogRepository();
 
 const INTEGRATION = "google_sheets";
 
@@ -262,7 +259,7 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
         const { start, end } = quickToRange(quick, customStartRef.current, customEndRef.current);
         const [tasks, sentIdsArr] = await Promise.all([
           taskRepo.findByDateRange(startOfDayISO(start), endOfDayISO(end)),
-          logRepo.findSentIds(INTEGRATION, startOfDayISO(start), endOfDayISO(end)),
+          taskLogRepo.findSentIds(INTEGRATION, startOfDayISO(start), endOfDayISO(end)),
         ]);
 
         if (cancelled) return;
@@ -394,7 +391,7 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     setSending(true);
     try {
       await sendTasks(sender, tasksToSend);
-      await logRepo.markSent(allTaskIds, INTEGRATION);
+      await taskLogRepo.markSent(allTaskIds, INTEGRATION);
       await config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
       setMessage({
         text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`,

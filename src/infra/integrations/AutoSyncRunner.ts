@@ -1,6 +1,6 @@
 import type { Task } from "@domain/entities/Task";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 import { ProjectRepository } from "@infra/database/ProjectRepository";
 import { CategoryRepository } from "@infra/database/CategoryRepository";
 import { TaskRepository } from "@infra/database/TaskRepository";

@@ -3,7 +3,7 @@ import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { taskRepo } from "@presentation/contexts/repositories";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
@@ -30,7 +30,6 @@ import { PopupOverlayContent } from "./PopupOverlayContent";
 const POPUP_W = 288;
 const POPUP_H_ESTIMATE = 380;
 
-const taskRepo = new TaskRepository();
 const appWindow = getCurrentWindow();
 
 function PopupOverlayAppInner() {

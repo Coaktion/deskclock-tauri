@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { ChevronRight, ChevronLeft, Clock } from "lucide-react";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
-import { ProjectRepository } from "@infra/database/ProjectRepository";
-import { CategoryRepository } from "@infra/database/CategoryRepository";
+import { projectRepo, categoryRepo } from "@presentation/contexts/repositories";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 
-const projectRepo = new ProjectRepository();
-const categoryRepo = new CategoryRepository();
 
 const STEPS = ["Boas-vindas", "Projetos", "Categorias"] as const;
 

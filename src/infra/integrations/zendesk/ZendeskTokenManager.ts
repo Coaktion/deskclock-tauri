@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { ConfigContextValue } from "@shared/types/appConfig";
 
 const BUFFER_MS = 5 * 60 * 1000;
 

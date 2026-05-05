@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import type { TaskGroup } from "@shared/utils/groupTasks";
-import { TaskRepository } from "@infra/database/TaskRepository";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { getWeekTotal } from "@domain/usecases/tasks/GetWeekTotal";
 import { groupTasks } from "@shared/utils/groupTasks";
 import { todayISO, weekBoundsISO } from "@shared/utils/time";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
-
-const repo = new TaskRepository();
+import { taskRepo } from "@presentation/contexts/repositories";
 
 interface TaskTotals {
   billableSeconds: number;
@@ -39,8 +37,8 @@ export function useTasks() {
   const load = useCallback(async () => {
     const { start, end } = weekBoundsISO();
     const [tasks, weekData] = await Promise.all([
-      getTasksForDate(repo, todayISO()),
-      getWeekTotal(repo, start, end),
+      getTasksForDate(taskRepo, todayISO()),
+      getWeekTotal(taskRepo, start, end),
     ]);
 
     const completed = tasks.filter((t) => t.status === "completed");

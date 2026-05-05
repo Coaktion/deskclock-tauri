@@ -5,16 +5,13 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@shared/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import { TaskRepository } from "@infra/database/TaskRepository";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
+import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
 
-const repo = new TaskRepository();
-const logRepo = new TaskIntegrationLogRepository();
 
 interface TodayEntriesSectionProps {
   groups: TaskGroup[];
@@ -37,7 +34,7 @@ export function TodayEntriesSection({
 
   useEffect(() => {
     const today = todayISO();
-    logRepo
+    taskLogRepo
       .findSentIds("google_sheets", startOfDayISO(today), endOfDayISO(today))
       .then((ids) => setSentIds(new Set(ids)))
       .catch(() => {});
@@ -53,17 +50,17 @@ export function TodayEntriesSection({
   }
 
   async function handleDelete(task: Task) {
-    await deleteTask(repo, task.id);
+    await deleteTask(taskRepo, task.id);
     reload();
   }
 
   async function handleToggleBillable(task: Task) {
-    await updateTask(repo, task.id, { billable: !task.billable }, new Date().toISOString());
+    await updateTask(taskRepo, task.id, { billable: !task.billable }, new Date().toISOString());
     reload();
   }
 
   async function handleMerge(group: TaskGroup) {
-    await mergeTaskGroup(repo, group.tasks, new Date().toISOString());
+    await mergeTaskGroup(taskRepo, group.tasks, new Date().toISOString());
     reload();
   }
 
