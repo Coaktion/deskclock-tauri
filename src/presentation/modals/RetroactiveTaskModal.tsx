@@ -4,7 +4,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { taskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { todayISO, parseDurationInput, addDaysISO } from "@shared/utils/time";
 
@@ -36,6 +36,7 @@ export function RetroactiveTaskModal({
   onSave,
   onClose,
 }: RetroactiveTaskModalProps) {
+  const { taskRepo } = useRepositories();
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");

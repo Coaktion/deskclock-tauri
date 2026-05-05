@@ -3,7 +3,10 @@ import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
-import { taskRepo } from "@presentation/contexts/repositories";
+import {
+  RepositoriesProvider,
+  useRepositories,
+} from "@presentation/contexts/RepositoriesContext";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
@@ -34,6 +37,7 @@ const appWindow = getCurrentWindow();
 
 function PopupOverlayAppInner() {
   const config = useAppConfig();
+  const { taskRepo } = useRepositories();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
@@ -197,7 +201,7 @@ function PopupOverlayAppInner() {
         isStartingTaskRef.current = false;
       }
     },
-    []
+    [taskRepo]
   );
 
   const handlePlay = useCallback(
@@ -223,7 +227,7 @@ function PopupOverlayAppInner() {
       task: updated,
       source: "overlay",
     } satisfies RunningTaskChangedPayload);
-  }, [runningTask]);
+  }, [taskRepo, runningTask]);
 
   const handleResume = useCallback(async () => {
     if (!runningTask) return;
@@ -233,7 +237,7 @@ function PopupOverlayAppInner() {
       task: updated,
       source: "overlay",
     } satisfies RunningTaskChangedPayload);
-  }, [runningTask]);
+  }, [taskRepo, runningTask]);
 
   const handleStop = useCallback(
     async (completed: boolean) => {
@@ -252,7 +256,7 @@ function PopupOverlayAppInner() {
         plannedTaskId,
       } satisfies TaskStoppedPayload);
     },
-    [runningTask]
+    [taskRepo, runningTask]
   );
 
   const handleCancel = useCallback(async () => {
@@ -264,7 +268,7 @@ function PopupOverlayAppInner() {
       task: null,
       source: "overlay",
     } satisfies RunningTaskChangedPayload);
-  }, [runningTask]);
+  }, [taskRepo, runningTask]);
 
   const handleUpdate = useCallback(
     async (input: {
@@ -282,7 +286,7 @@ function PopupOverlayAppInner() {
         source: "overlay",
       } satisfies RunningTaskChangedPayload);
     },
-    [runningTask]
+    [taskRepo, runningTask]
   );
 
   const handleClose = useCallback(async () => {
@@ -323,7 +327,9 @@ function PopupOverlayAppInner() {
 export function PopupOverlayApp() {
   return (
     <ConfigProvider>
-      <PopupOverlayAppInner />
+      <RepositoriesProvider>
+        <PopupOverlayAppInner />
+      </RepositoriesProvider>
     </ConfigProvider>
   );
 }

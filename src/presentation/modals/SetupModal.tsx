@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, ChevronLeft, Clock } from "lucide-react";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
-import { projectRepo, categoryRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 
@@ -14,6 +14,7 @@ interface SetupModalProps {
 }
 
 export function SetupModal({ config, onComplete }: SetupModalProps) {
+  const { projectRepo, categoryRepo } = useRepositories();
   const [step, setStep] = useState(0);
   const [userName, setUserName] = useState("");
   const [projectsText, setProjectsText] = useState("");

@@ -5,7 +5,7 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
@@ -28,6 +28,7 @@ export function TodayEntriesSection({
   reload,
   totalSeconds,
 }: TodayEntriesSectionProps) {
+  const { taskRepo, taskLogRepo } = useRepositories();
   const { startTask, runningTask } = useRunningTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
@@ -38,7 +39,7 @@ export function TodayEntriesSection({
       .findSentIds("google_sheets", startOfDayISO(today), endOfDayISO(today))
       .then((ids) => setSentIds(new Set(ids)))
       .catch(() => {});
-  }, [groups]);
+  }, [taskLogRepo, groups]);
 
   async function handlePlay(task: Task) {
     await startTask({

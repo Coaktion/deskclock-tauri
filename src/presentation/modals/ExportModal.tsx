@@ -23,7 +23,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { buildExportRows, toCSV, toJSON } from "@domain/utils/exportFormatter";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
-import { taskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { groupTasks } from "@domain/utils/groupTasks";
 import type {
   ExportProfile,
@@ -258,6 +258,7 @@ function ProfileForm({ initial, onSave, onCancel }: ProfileFormProps) {
 // ─── Modal principal ──────────────────────────────────────────────────────────
 
 export function ExportModal({ projects, categories, onClose }: ExportModalProps) {
+  const { taskRepo } = useRepositories();
   const { profiles, create, update, remove, setDefault } = useExportProfiles();
   const [tab, setTab] = useState<Tab>("export");
   const [editingProfile, setEditingProfile] = useState<ExportProfile | null>(null);

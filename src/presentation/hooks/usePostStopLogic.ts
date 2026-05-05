@@ -1,7 +1,7 @@
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { taskRepo, plannedTaskRepo, taskLogRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { Task } from "@domain/entities/Task";
@@ -13,6 +13,7 @@ import { emit } from "@tauri-apps/api/event";
 import { useCallback } from "react";
 
 export function usePostStopLogic(config: ConfigContextValue, triggerReload: () => void) {
+  const { taskRepo, plannedTaskRepo, taskLogRepo } = useRepositories();
   const autoSyncTask = useCallback(
     async (stoppedTask: Task) => {
       if (!config.isLoaded) return;
@@ -39,14 +40,17 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
         }
       }
     },
-    [config, triggerReload]
+    [config, taskLogRepo, triggerReload]
   );
 
-  const completePlannedIfNeeded = useCallback(async (plannedTaskId: string | null | undefined) => {
-    if (!plannedTaskId) return;
-    await completePlannedTask(plannedTaskRepo, plannedTaskId, todayISO());
-    await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-  }, []);
+  const completePlannedIfNeeded = useCallback(
+    async (plannedTaskId: string | null | undefined) => {
+      if (!plannedTaskId) return;
+      await completePlannedTask(plannedTaskRepo, plannedTaskId, todayISO());
+      await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+    },
+    [plannedTaskRepo]
+  );
 
   // Aplica regras pós-stop: descarte (<1 min) e arredondamento.
   // Retorna a tarefa final (possivelmente atualizada) ou null se descartada.
@@ -90,7 +94,7 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
 
       return finalTask;
     },
-    [config, triggerReload, completePlannedIfNeeded, autoSyncTask]
+    [config, taskRepo, triggerReload, completePlannedIfNeeded, autoSyncTask]
   );
 
   return { applyStopRules };

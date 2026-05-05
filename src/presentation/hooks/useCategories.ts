@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Category } from "@domain/entities/Category";
-import { categoryRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { getCategories } from "@domain/usecases/categories/GetCategories";
 import { createCategory } from "@domain/usecases/categories/CreateCategory";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
@@ -9,6 +9,7 @@ import { updateCategory } from "@domain/usecases/categories/UpdateCategory";
 
 
 export function useCategories() {
+  const { categoryRepo } = useRepositories();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +18,7 @@ export function useCategories() {
     const data = await getCategories(categoryRepo);
     setCategories(data);
     setLoading(false);
-  }, []);
+  }, [categoryRepo]);
 
   useEffect(() => {
     load();
@@ -28,7 +29,7 @@ export function useCategories() {
       await createCategory(categoryRepo, name, defaultBillable);
       await load();
     },
-    [load]
+    [categoryRepo, load]
   );
 
   const handleBulkImport = useCallback(
@@ -37,7 +38,7 @@ export function useCategories() {
       await load();
       return result;
     },
-    [load]
+    [categoryRepo, load]
   );
 
   const handleUpdate = useCallback(
@@ -45,7 +46,7 @@ export function useCategories() {
       await updateCategory(categoryRepo, id, name, defaultBillable);
       await load();
     },
-    [load]
+    [categoryRepo, load]
   );
 
   const handleDelete = useCallback(
@@ -53,7 +54,7 @@ export function useCategories() {
       await deleteCategory(categoryRepo, id);
       await load();
     },
-    [load]
+    [categoryRepo, load]
   );
 
   return {

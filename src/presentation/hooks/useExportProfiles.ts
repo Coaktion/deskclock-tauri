@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ExportProfile } from "@domain/entities/ExportProfile";
-import { exportProfileRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { getExportProfiles } from "@domain/usecases/exportProfiles/GetExportProfiles";
 import { createExportProfile } from "@domain/usecases/exportProfiles/CreateExportProfile";
 import { updateExportProfile } from "@domain/usecases/exportProfiles/UpdateExportProfile";
@@ -13,11 +13,12 @@ type CreateInput = Parameters<typeof createExportProfile>[1];
 type UpdateInput = Parameters<typeof updateExportProfile>[2];
 
 export function useExportProfiles() {
+  const { exportProfileRepo } = useRepositories();
   const [profiles, setProfiles] = useState<ExportProfile[]>([]);
 
   const load = useCallback(async () => {
     setProfiles(await getExportProfiles(exportProfileRepo));
-  }, []);
+  }, [exportProfileRepo]);
 
   useEffect(() => {
     void load();
@@ -28,7 +29,7 @@ export function useExportProfiles() {
       await createExportProfile(exportProfileRepo, input);
       await load();
     },
-    [load]
+    [exportProfileRepo, load]
   );
 
   const update = useCallback(
@@ -36,7 +37,7 @@ export function useExportProfiles() {
       await updateExportProfile(exportProfileRepo, id, input);
       await load();
     },
-    [load]
+    [exportProfileRepo, load]
   );
 
   const remove = useCallback(
@@ -44,7 +45,7 @@ export function useExportProfiles() {
       await deleteExportProfile(exportProfileRepo, id);
       await load();
     },
-    [load]
+    [exportProfileRepo, load]
   );
 
   const setDefault = useCallback(
@@ -52,7 +53,7 @@ export function useExportProfiles() {
       await setDefaultExportProfile(exportProfileRepo, id);
       await load();
     },
-    [load]
+    [exportProfileRepo, load]
   );
 
   return { profiles, reload: load, create, update, remove, setDefault };

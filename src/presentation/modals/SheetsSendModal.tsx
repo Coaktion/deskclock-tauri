@@ -15,7 +15,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { groupTasks } from "@domain/utils/groupTasks";
-import { taskRepo, taskLogRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import {
   sendTasks,
@@ -216,6 +216,7 @@ interface SheetsSendModalProps {
 }
 
 export function SheetsSendModal({ projects, categories, onClose }: SheetsSendModalProps) {
+  const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
 
   const [quick, setQuick] = useState<QuickPeriod>("today");
@@ -303,7 +304,7 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     return () => {
       cancelled = true;
     };
-  }, [quick, reloadKey]);
+  }, [taskRepo, taskLogRepo, quick, reloadKey]);
 
   function toggleGroup(date: string, key: string, group: TaskGroup) {
     if (!validateTaskForSheets(group.tasks[0]).ok) return;

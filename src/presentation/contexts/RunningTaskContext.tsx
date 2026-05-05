@@ -6,7 +6,7 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { taskRepo } from "@presentation/contexts/repositories";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { usePostStopLogic } from "@presentation/hooks/usePostStopLogic";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import {
@@ -62,6 +62,7 @@ interface RunningTaskProviderProps {
 }
 
 export function RunningTaskProvider({ children, config }: RunningTaskProviderProps) {
+  const { taskRepo } = useRepositories();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
   const [activePlannedTaskId, setActivePlannedTaskId] = useState<string | null>(null);
@@ -82,7 +83,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     return () => {
       mounted.current = false;
     };
-  }, []);
+  }, [taskRepo]);
 
   // Ouve ações vindas do overlay (pause, resume, stop iniciados lá)
   useEffect(() => {
@@ -125,7 +126,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         isStartingTaskRef.current = false;
       }
     },
-    [runningTask, triggerReload]
+    [taskRepo, runningTask, triggerReload]
   );
 
   const pauseTask = useCallback(async () => {
@@ -133,14 +134,14 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     const updated = await pauseTaskUC(taskRepo, runningTask.id, new Date().toISOString());
     setRunningTask(updated);
     await notifyOverlay(updated);
-  }, [runningTask]);
+  }, [taskRepo, runningTask]);
 
   const resumeTask = useCallback(async () => {
     if (!runningTask) return;
     const updated = await resumeTaskUC(taskRepo, runningTask.id, new Date().toISOString());
     setRunningTask(updated);
     await notifyOverlay(updated);
-  }, [runningTask]);
+  }, [taskRepo, runningTask]);
 
   // Ouve confirmação de stop vinda do overlay para aplicar regras pós-stop
   useEffect(() => {
@@ -166,7 +167,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       await notifyOverlay(null);
       await applyStopRules(stoppedTask, plannedId, completed);
     },
-    [runningTask, activePlannedTaskId, triggerReload, applyStopRules]
+    [taskRepo, runningTask, activePlannedTaskId, triggerReload, applyStopRules]
   );
 
   const cancelTask = useCallback(async () => {
@@ -176,7 +177,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     setActivePlannedTaskId(null);
     triggerReload();
     await notifyOverlay(null);
-  }, [runningTask, triggerReload]);
+  }, [taskRepo, runningTask, triggerReload]);
 
   const updateActiveTask = useCallback(
     async (input: UpdateInput) => {
@@ -185,7 +186,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       setRunningTask(updated);
       await notifyOverlay(updated);
     },
-    [runningTask]
+    [taskRepo, runningTask]
   );
 
   return (
