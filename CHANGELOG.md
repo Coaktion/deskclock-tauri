@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.1](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.0...v1.4.1) (2026-05-05)
+
+
+### Features
+
+* adds gitnexus to the project ([e7903ab](https://github.com/EduardoMeira/deskclock-tauri/commit/e7903ab183bbb16f45e4d80d6b0e0cf46a6926a3))
+* **bulk-delete:** exclusão em massa no planejamento, retroativo e histórico ([d8e022a](https://github.com/EduardoMeira/deskclock-tauri/commit/d8e022ad5a1af79abe0c12f3d55b4533e3efd6d1))
+* **calendar:** abre URL do evento ao iniciar tarefa importada do Google Calendar ([f6c9ccc](https://github.com/EduardoMeira/deskclock-tauri/commit/f6c9cccb8f158d8c0452cda0f279a441cc6a4989))
+* **calendar:** prefere link de videoconferência ao link do evento no Google Calendar ([4ef063a](https://github.com/EduardoMeira/deskclock-tauri/commit/4ef063a09089590bd3f49641572d70bdcadedff2))
+* **updater:** exibe notas de versão estruturadas na tela de atualizações ([dbe9036](https://github.com/EduardoMeira/deskclock-tauri/commit/dbe9036031a6ea49d9e1e8488f729fd4e87cc298))
+
 ## [1.4.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.3.1...v1.4.0) (2026-05-01)
 
 
