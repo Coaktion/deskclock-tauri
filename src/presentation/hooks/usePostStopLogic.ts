@@ -3,9 +3,7 @@ import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlann
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
 import { shouldDiscardTask, computeRoundedDuration } from "@domain/utils/taskStopRules";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
-import { SheetsSyncStrategy } from "@infra/integrations/SheetsSyncStrategy";
-import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
+import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { Task } from "@domain/entities/Task";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -15,15 +13,12 @@ import { emit } from "@tauri-apps/api/event";
 import { useCallback } from "react";
 
 export function usePostStopLogic(config: ConfigContextValue, triggerReload: () => void) {
-  const { taskRepo, plannedTaskRepo, projectRepo, categoryRepo, taskLogRepo } = useRepositories();
+  const { taskRepo, plannedTaskRepo } = useRepositories();
+  const { runPerTask } = useAutoSync();
   const autoSyncTask = useCallback(
     async (stoppedTask: Task) => {
       if (!config.isLoaded) return;
-      const runner = new AutoSyncRunner([
-        new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
-        new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
-      ]);
-      const results = await runner.runPerTask(stoppedTask);
+      const results = await runPerTask(stoppedTask);
       triggerReload();
       const errors = results.filter((r) => r.error);
       const sent = results.filter((r) => !r.error && r.count > 0);
@@ -43,7 +38,7 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
         }
       }
     },
-    [config, taskRepo, projectRepo, categoryRepo, taskLogRepo, triggerReload]
+    [config, runPerTask, triggerReload]
   );
 
   const completePlannedIfNeeded = useCallback(
