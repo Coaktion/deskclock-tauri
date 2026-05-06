@@ -2,7 +2,7 @@ import type { Task } from "@domain/entities/Task";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
-import type { ConfigContextValue } from "@shared/types/appConfig";
+import type { IClockifyConfigPort } from "@domain/integrations/IClockifyConfigPort";
 import { validateTaskForClockify, formatMissingFields } from "@domain/integrations/taskValidation";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { startOfDayISO, endOfDayISO, addDaysISO, todayISO } from "@shared/utils/time";
@@ -12,7 +12,7 @@ export class ClockifySyncStrategy implements ISyncStrategy {
   readonly integrationName = "Clockify";
 
   constructor(
-    private config: ConfigContextValue,
+    private config: IClockifyConfigPort,
     private taskRepo: ITaskRepository,
     private logRepo: ITaskIntegrationLogRepository
   ) {}

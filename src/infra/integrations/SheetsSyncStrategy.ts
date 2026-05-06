@@ -4,7 +4,8 @@ import type { IProjectRepository } from "@domain/repositories/IProjectRepository
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
-import type { ConfigContextValue } from "@shared/types/appConfig";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
+import type { ISheetsConfigPort } from "@domain/integrations/ISheetsConfigPort";
 import { validateTaskForSheets, formatMissingFields } from "@domain/integrations/taskValidation";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { startOfDayISO, endOfDayISO, addDaysISO, todayISO } from "@shared/utils/time";
@@ -14,7 +15,7 @@ export class SheetsSyncStrategy implements ISyncStrategy {
   readonly integrationName = "Google Sheets";
 
   constructor(
-    private config: ConfigContextValue,
+    private config: ISheetsConfigPort & IGoogleAuthPort,
     private taskRepo: ITaskRepository,
     private projectRepo: IProjectRepository,
     private categoryRepo: ICategoryRepository,

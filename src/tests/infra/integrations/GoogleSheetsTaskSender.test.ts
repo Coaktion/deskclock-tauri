@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { AppConfig, ConfigContextValue } from "@shared/types/appConfig";
+import type { AppConfig } from "@shared/types/appConfig";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
+import type { ISheetsConfigPort } from "@domain/integrations/ISheetsConfigPort";
 import type { TaskField } from "@shared/types/sheetsConfig";
 
 vi.stubEnv("GCP_CLIENT_ID", "test-client-id");
@@ -18,7 +20,7 @@ vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
 const { GoogleSheetsTaskSender, colLetter } =
   await import("@infra/integrations/GoogleSheetsTaskSender");
 
-function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
+function makeConfig(overrides: Partial<AppConfig> = {}): ISheetsConfigPort & IGoogleAuthPort {
   const store: Partial<AppConfig> = {
     integrationGoogleSheetsSheetName: "DeskClock",
     integrationGoogleSheetsColumnMapping: [
@@ -34,8 +36,6 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
     ...overrides,
   };
   return {
-    isLoaded: true,
-    loadError: null,
     get: vi.fn(<K extends keyof AppConfig>(key: K) => store[key] as AppConfig[K]),
     set: vi.fn(),
   };
