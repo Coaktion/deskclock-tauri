@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
+import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
 import type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition } from "@shared/types/appConfig";
 
@@ -74,9 +75,16 @@ const DEFAULTS: AppConfig = {
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);
 
-const repo = new ConfigRepository();
+export function ConfigProvider({
+  children,
+  repository,
+}: {
+  children: React.ReactNode;
+  repository?: IConfigRepository;
+}) {
+  const repoRef = useRef<IConfigRepository>();
+  if (!repoRef.current) repoRef.current = repository ?? new ConfigRepository();
 
-export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const cache = useRef<AppConfig>({ ...DEFAULTS });
@@ -87,7 +95,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
         const keys = Object.keys(DEFAULTS) as ConfigKey[];
         await Promise.all(
           keys.map(async (key) => {
-            const val = await repo.get(key, DEFAULTS[key]);
+            const val = await repoRef.current!.get(key, DEFAULTS[key]);
             (cache.current as unknown as Record<string, unknown>)[key] = val;
           })
         );
@@ -106,7 +114,7 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
 
   async function set<K extends ConfigKey>(key: K, value: AppConfig[K]): Promise<void> {
     (cache.current as unknown as Record<string, unknown>)[key] = value;
-    await repo.set(key, value);
+    await repoRef.current!.set(key, value);
   }
 
   return (
