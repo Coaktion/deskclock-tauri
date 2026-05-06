@@ -7,10 +7,10 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
-import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { executeActions } from "@domain/utils/actions";
@@ -83,6 +83,7 @@ export function WeekPlanningView() {
   const today = todayISO();
 
   const config = useAppConfig();
+  const factories = useIntegrations();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
@@ -92,8 +93,8 @@ export function WeekPlanningView() {
   const calendarConnected = config.isLoaded && !!config.get("googleRefreshToken");
 
   const calendarImporter = useMemo(
-    () => (config.isLoaded ? new GoogleCalendarImporter(config) : null),
-    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
+    () => (config.isLoaded ? factories.createCalendarImporter() : null),
+    [config.isLoaded, factories]
   );
 
   const calendarFromISO = new Date(start + "T00:00:00").toISOString();

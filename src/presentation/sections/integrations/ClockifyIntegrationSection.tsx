@@ -1,5 +1,6 @@
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
@@ -48,6 +49,7 @@ export function ClockifyLogo({ size = 20 }: { size?: number }) {
 
 function ClockifyWorkspaceSection() {
   const config = useAppConfig();
+  const factories = useIntegrations();
   const [activeId, setActiveId] = useState("");
   const [activeName, setActiveName] = useState("");
   const [workspaces, setWorkspaces] = useState<{ id: string; name: string }[]>([]);
@@ -64,9 +66,7 @@ function ClockifyWorkspaceSection() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const { ClockifyClient: CClient } =
-        await import("@infra/integrations/clockify/ClockifyClient");
-      const client = new CClient(config.get("clockifyApiKey"));
+      const client = factories.createClockifyApi();
       const list = await client.listWorkspaces();
       setWorkspaces(list);
       await config.set("clockifyWorkspaceCache", list);
@@ -190,6 +190,7 @@ function ClockifyMappingsSection({
 }) {
   const { projectRepo, categoryRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const [clockifyProjects, setClockifyProjects] = useState<ClockifyRef[]>([]);
   const [clockifyTags, setClockifyTags] = useState<ClockifyRef[]>([]);
   const [projectMapping, setProjectMapping] = useState<
@@ -219,9 +220,7 @@ function ClockifyMappingsSection({
   }, [config.isLoaded, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function getClient() {
-    return import("@infra/integrations/clockify/ClockifyClient").then(
-      ({ ClockifyClient: C }) => new C(config.get("clockifyApiKey"))
-    );
+    return factories.createClockifyApi();
   }
 
   function projectDisplayName(p: { name: string; clientName?: string | null }) {
@@ -231,7 +230,7 @@ function ClockifyMappingsSection({
   async function fetchProjects() {
     setLoadingProjects(true);
     try {
-      const client = await getClient();
+      const client = getClient();
       const list = await client.listProjects(workspaceId);
       setClockifyProjects(
         list
@@ -248,7 +247,7 @@ function ClockifyMappingsSection({
   async function fetchTags() {
     setLoadingTags(true);
     try {
-      const client = await getClient();
+      const client = getClient();
       const list = await client.listTags(workspaceId);
       setClockifyTags(list.map((t) => ({ id: t.id, name: t.name })));
     } finally {
@@ -260,7 +259,7 @@ function ClockifyMappingsSection({
     if (clockifyProjects.length === 0) await fetchProjects();
     setImportingProjects(true);
     try {
-      const client = await getClient();
+      const client = getClient();
       const list = await client.listProjects(workspaceId);
       const sortedProjects = list
         .map((p) => ({ id: p.id, name: projectDisplayName(p) }))
@@ -308,7 +307,7 @@ function ClockifyMappingsSection({
     if (clockifyTags.length === 0) await fetchTags();
     setImportingTags(true);
     try {
-      const client = await getClient();
+      const client = getClient();
       const list = await client.listTags(workspaceId);
       setClockifyTags(list.map((t) => ({ id: t.id, name: t.name })));
 

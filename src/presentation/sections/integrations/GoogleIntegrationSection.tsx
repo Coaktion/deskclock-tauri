@@ -18,10 +18,9 @@ import type { Project } from "@domain/entities/Project";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
-import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
-import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
@@ -169,6 +168,7 @@ function SheetsSection({
 }) {
   const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetName, setSheetName] = useState("DeskClock");
   const [columnMapping, setColumnMapping] = useState<SheetColumnMapping>(DEFAULT_COLUMN_MAPPING);
@@ -246,7 +246,7 @@ function SheetsSection({
 
       const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
       const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
-      const sender = new GoogleSheetsTaskSender(config, spreadsheet, projects, categories);
+      const sender = factories.createSheetsTaskSender({ spreadsheetId: spreadsheet, projects, categories });
       await sender.send(tasksToSend);
       await taskLogRepo.markSent(allIds, "google_sheets");
       await config.set("sheetsDailySyncLastTimestamp", nowIso);
@@ -474,14 +474,15 @@ function CalendarSection({
 }) {
   const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const [showImportModal, setShowImportModal] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
 
   const calendarImporter = useMemo(
-    () => (config.isLoaded ? new GoogleCalendarImporter(config) : null),
-    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
+    () => (config.isLoaded ? factories.createCalendarImporter() : null),
+    [config.isLoaded, factories]
   );
 
   const { fromISO, toISO, weekLabel } = useMemo(() => {

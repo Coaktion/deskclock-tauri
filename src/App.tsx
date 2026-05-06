@@ -8,6 +8,7 @@ import { showToast } from "@shared/utils/toast";
 import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
@@ -570,7 +571,9 @@ function App() {
   return (
     <ConfigProvider>
       <RepositoriesProvider>
-        <AppInner />
+        <IntegrationsProvider>
+          <AppInner />
+        </IntegrationsProvider>
       </RepositoriesProvider>
     </ConfigProvider>
   );

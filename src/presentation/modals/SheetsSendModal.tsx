@@ -16,7 +16,7 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import {
   sendTasks,
   NoIntegrationError,
@@ -218,6 +218,7 @@ interface SheetsSendModalProps {
 export function SheetsSendModal({ projects, categories, onClose }: SheetsSendModalProps) {
   const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
 
   const [quick, setQuick] = useState<QuickPeriod>("today");
   const [customStart, setCustomStart] = useState(todayISO());
@@ -237,7 +238,7 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
     const spreadsheetId = config.get("integrationGoogleSheetsSpreadsheetId");
     const refreshToken = config.get("googleRefreshToken");
     if (!spreadsheetId || !refreshToken) return null;
-    return new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories);
+    return factories.createSheetsTaskSender({ spreadsheetId, projects, categories });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.isLoaded, projects, categories]);
 

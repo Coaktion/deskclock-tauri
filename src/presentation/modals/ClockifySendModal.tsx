@@ -19,7 +19,7 @@ import {
   formatMissingFields,
 } from "@domain/integrations/taskValidation";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { sendTasks, NoIntegrationError, NoTasksSelectedError } from "@domain/usecases/tasks/SendTasks";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
@@ -179,6 +179,7 @@ interface ClockifySendModalProps {
 export function ClockifySendModal({ projects, categories, onClose }: ClockifySendModalProps) {
   const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
 
   const [quick, setQuick] = useState<QuickPeriod>("today");
   const [customStart, setCustomStart] = useState(todayISO());
@@ -196,7 +197,7 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
   const sender = useMemo(() => {
     if (!config.isLoaded) return null;
     if (!config.get("clockifyApiKey") || !config.get("clockifyActiveWorkspaceId")) return null;
-    return new ClockifyTaskSender(config);
+    return factories.createClockifyTaskSender();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.isLoaded]);
 

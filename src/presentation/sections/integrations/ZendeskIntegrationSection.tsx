@@ -1,10 +1,10 @@
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { startZendeskOAuth } from "@infra/integrations/zendesk/ZendeskOAuth";
 import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenManager";
-import { ZendeskTicketImporter } from "@infra/integrations/ZendeskTicketImporter";
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
 import {
   CalendarDays,
@@ -43,6 +43,7 @@ export function ZendeskLogoSmall({ size = 20 }: { size?: number }) {
 export function ZendeskIntegrationCard() {
   const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const [connected, setConnected] = useState(false);
@@ -102,7 +103,7 @@ export function ZendeskIntegrationCard() {
     setEmail("");
   }
 
-  const ticketImporter = connected ? new ZendeskTicketImporter(config) : null;
+  const ticketImporter = connected ? factories.createTicketImporter() : null;
 
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
