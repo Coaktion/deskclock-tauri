@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ConfigContextValue } from "@shared/types/appConfig";
+import type { IZendeskAuthPort } from "@domain/integrations/IZendeskAuthPort";
 
 const BUFFER_MS = 5 * 60 * 1000;
 
@@ -10,7 +10,7 @@ interface RustHttpResponse {
 
 export class ZendeskTokenManager {
   constructor(
-    private config: ConfigContextValue,
+    private config: IZendeskAuthPort,
     private subdomain: string
   ) {}
 

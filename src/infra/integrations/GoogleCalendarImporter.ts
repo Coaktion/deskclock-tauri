@@ -1,5 +1,5 @@
 import type { ICalendarImporter, CalendarEvent } from "@domain/integrations/ICalendarImporter";
-import type { ConfigContextValue } from "@shared/types/appConfig";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 import { GoogleTokenManager } from "./google/GoogleTokenManager";
 import { parseRRuleDays } from "./google/rrule";
 
@@ -37,7 +37,7 @@ interface GoogleEventsResponse {
 export class GoogleCalendarImporter implements ICalendarImporter {
   private tokenManager: GoogleTokenManager;
 
-  constructor(config: ConfigContextValue) {
+  constructor(config: IGoogleAuthPort) {
     this.tokenManager = new GoogleTokenManager(config);
   }
 

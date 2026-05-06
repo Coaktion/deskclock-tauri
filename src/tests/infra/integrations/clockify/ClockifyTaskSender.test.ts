@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@domain/entities/Task";
-import type { AppConfig, ConfigContextValue } from "@shared/types/appConfig";
+import type { AppConfig } from "@shared/types/appConfig";
+import type { IClockifyConfigPort } from "@domain/integrations/IClockifyConfigPort";
 import type { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
 import type { ClockifyTimeEntryPayload } from "@infra/integrations/clockify/types";
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
 
-function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
+function makeConfig(overrides: Partial<AppConfig> = {}): IClockifyConfigPort {
   const store: Partial<AppConfig> = {
     clockifyApiKey: "key-test",
     clockifyActiveWorkspaceId: "ws1",
@@ -15,8 +16,6 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
     ...overrides,
   };
   return {
-    isLoaded: true,
-    loadError: null,
     get: vi.fn(<K extends keyof AppConfig>(key: K) => store[key] as AppConfig[K]),
     set: vi.fn(),
   };
