@@ -26,6 +26,7 @@ import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
 import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
+import { TourProvider } from "@presentation/contexts/TourContext";
 
 function PageContent({
   page,
@@ -248,14 +249,16 @@ function AppInner() {
 
   return (
     <RunningTaskProvider config={config}>
-      <MainContent
-        page={page}
-        setPage={setPage}
-        isPinned={isPinned}
-        onTogglePin={() => setIsPinned((v) => !v)}
-        focusTaskEdit={focusTaskEdit}
-        onFocusTaskEditHandled={() => setFocusTaskEdit(false)}
-      />
+      <TourProvider config={config}>
+        <MainContent
+          page={page}
+          setPage={setPage}
+          isPinned={isPinned}
+          onTogglePin={() => setIsPinned((v) => !v)}
+          focusTaskEdit={focusTaskEdit}
+          onFocusTaskEditHandled={() => setFocusTaskEdit(false)}
+        />
+      </TourProvider>
     </RunningTaskProvider>
   );
 }

@@ -71,6 +71,7 @@ const DEFAULTS: AppConfig = {
   clockifyAutoSyncTime: "18:00",
   clockifyDailySyncLastTimestamp: "",
   clockifyWorkspaceCache: [],
+  toursSeen: [],
 };
 
 const ConfigContext = createContext<ConfigContextValue | null>(null);

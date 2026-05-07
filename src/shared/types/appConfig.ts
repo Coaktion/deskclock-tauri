@@ -88,6 +88,8 @@ export interface AppConfig {
   clockifyAutoSyncTime: string;
   clockifyDailySyncLastTimestamp: string;
   clockifyWorkspaceCache: ClockifyWorkspaceRef[];
+  // Tours
+  toursSeen: string[];
 }
 
 export type ConfigKey = keyof AppConfig;
