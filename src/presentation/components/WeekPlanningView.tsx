@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
 import { emit } from "@tauri-apps/api/event";
@@ -12,6 +12,7 @@ import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useTour } from "@presentation/hooks/useTour";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
@@ -167,6 +168,15 @@ export function WeekPlanningView() {
     }
   }
 
+  const { startTour, hasSeenTour } = useTour("planning");
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filteredDays = dayFilter === "all" ? visibleDays : [dayFilter];
 
   const allVisibleTaskIds = useMemo(() => {
@@ -193,7 +203,7 @@ export function WeekPlanningView() {
   return (
     <div className="flex flex-col">
       {/* ── Header: week selector + completed count ─────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
+      <div data-tour="planning-header" className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
         <button
           onClick={() => {
             setWeekOffset((o) => o - 1);
@@ -266,13 +276,20 @@ export function WeekPlanningView() {
               <span className="text-xs text-gray-400 whitespace-nowrap">
                 {completedCount} de {totalCount} concluídas
               </span>
+              <button
+                onClick={() => startTour()}
+                title="Ver tour da página"
+                className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+              >
+                ?
+              </button>
             </>
           )}
         </div>
       </div>
 
       {/* ── Day filter pills ─────────────────────────────────────────────────── */}
-      <div className="flex gap-1.5 px-4 py-2.5 border-b border-gray-800 overflow-x-auto">
+      <div data-tour="planning-day-filter" className="flex gap-1.5 px-4 py-2.5 border-b border-gray-800 overflow-x-auto">
         <button
           onClick={() => setDayFilter("all")}
           className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
@@ -308,6 +325,7 @@ export function WeekPlanningView() {
       </div>
 
       {/* ── Form ─────────────────────────────────────────────────────────────── */}
+      <div data-tour="planning-form">
       <PlannedTaskForm
         key={dayFilter !== "all" ? dayFilter : start}
         projects={projects}
@@ -316,6 +334,7 @@ export function WeekPlanningView() {
         defaultDate={dayFilter !== "all" ? dayFilter : today}
         onSubmit={create}
       />
+      </div>
 
       {/* ── Google Calendar import modal ─────────────────────────────────────── */}
       {showImportModal && calendarImporter && (
@@ -333,6 +352,7 @@ export function WeekPlanningView() {
       )}
 
       {/* ── Task list grouped by day ──────────────────────────────────────────── */}
+      <div data-tour="planning-task-list">
       {filteredDays.map((day) => {
         const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
         if (dayTasks.length === 0 && dayFilter !== "all") return null;
@@ -397,6 +417,7 @@ export function WeekPlanningView() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }
