@@ -3,6 +3,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useTour } from "@presentation/hooks/useTour";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -199,12 +200,21 @@ export function RetroactivePage() {
     exitSelectMode();
   }
 
+  const { startTour, hasSeenTour } = useTour("retroactive");
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const totalSeconds = tasks.reduce((acc, t) => acc + (t.durationSeconds ?? 0), 0);
 
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="px-5 py-3 border-b border-gray-800 flex items-center gap-3">
+      <div data-tour="retroactive-header" className="px-5 py-3 border-b border-gray-800 flex items-center gap-3">
         <button
           onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))}
           className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors"
@@ -266,10 +276,17 @@ export function RetroactivePage() {
             </div>
           )
         )}
+        <button
+          onClick={() => startTour()}
+          title="Ver tour da página"
+          className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+        >
+          ?
+        </button>
       </div>
 
       {/* Formulário inline */}
-      <div className="px-5 py-4 border-b border-gray-800 space-y-3">
+      <div data-tour="retroactive-form" className="px-5 py-4 border-b border-gray-800 space-y-3">
         <input
           ref={form.nameRef}
           type="text"
@@ -326,7 +343,7 @@ export function RetroactivePage() {
         </div>
 
         {/* Início, Fim, Duração */}
-        <div className="flex gap-2 items-center">
+        <div data-tour="retroactive-timeinputs" className="flex gap-2 items-center">
           <span className="text-xs text-gray-500 shrink-0">Duração</span>
           <input
             type="text"
@@ -397,6 +414,7 @@ export function RetroactivePage() {
       </div>
 
       {/* Lista de tarefas */}
+      <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
       <div className="flex-1 overflow-y-auto pr-2">
         {tasks.length === 0 ? (
           <p className="text-center text-gray-600 text-sm py-10">Nenhuma entrada para este dia</p>
@@ -415,6 +433,7 @@ export function RetroactivePage() {
             />
           ))
         )}
+      </div>
       </div>
 
       {editingTask && (
