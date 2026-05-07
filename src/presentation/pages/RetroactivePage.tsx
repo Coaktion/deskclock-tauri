@@ -346,6 +346,7 @@ export function RetroactivePage() {
         <div data-tour="retroactive-timeinputs" className="flex gap-2 items-center">
           <span className="text-xs text-gray-500 shrink-0">Duração</span>
           <input
+            data-tour="retroactive-duration"
             type="text"
             value={form.durationInput}
             onChange={(e) => form.setDurationInput(e.target.value)}

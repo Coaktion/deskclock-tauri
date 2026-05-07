@@ -22,6 +22,16 @@ export const retroactiveTourSteps: DriveStep[] = [
     },
   },
   {
+    element: '[data-tour="retroactive-duration"]',
+    popover: {
+      title: "Campo de duração",
+      description:
+        "Aceita linguagem natural: '1h 30', '1h30m', '90' (minutos) ou 'HH:MM'. Ao confirmar, o campo Fim é calculado automaticamente. Você pode preencher só a duração e deixar o início em branco — o app usa a hora atual.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
     element: '[data-tour="retroactive-timeinputs"]',
     popover: {
       title: "Início em sequência",
