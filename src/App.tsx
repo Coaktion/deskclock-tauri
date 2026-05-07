@@ -1,22 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { PhysicalPosition } from "@tauri-apps/api/dpi";
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { showToast } from "@shared/utils/toast";
-import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
 import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
-import { formatHHMMSS, todayISO, addDaysISO } from "@shared/utils/time";
+import { formatHHMMSS } from "@shared/utils/time";
 import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
-import { applyFontSize } from "@shared/utils/fontSize";
-import { applyTheme } from "@shared/utils/theme";
-import type { Theme } from "@shared/utils/theme";
+import { invoke } from "@tauri-apps/api/core";
 import { Sidebar, type Page } from "@presentation/components/Sidebar";
 import { TitleBar } from "@presentation/components/TitleBar";
 import { TasksPage } from "@presentation/pages/TasksPage";
@@ -26,17 +18,14 @@ import { DataPage } from "@presentation/pages/DataPage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { IntegrationsPage } from "@presentation/pages/IntegrationsPage";
-import {
-  OVERLAY_EVENTS,
-  type CommandPaletteNavigatePayload,
-  type CommandPaletteStartTaskPayload,
-} from "@shared/types/overlayEvents";
+import { OVERLAY_EVENTS, type CommandPaletteStartTaskPayload } from "@shared/types/overlayEvents";
 import { SetupModal } from "@presentation/modals/SetupModal";
-
-interface UpdateInfo {
-  version: string;
-  body: string | null;
-}
+import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
+import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
+import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
+import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
+import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
+import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
 
 function PageContent({
   page,
@@ -68,16 +57,6 @@ function PageContent({
       return <SettingsPage />;
   }
 }
-
-async function getOverlayCompact() {
-  return WebviewWindow.getByLabel("overlay-compact");
-}
-
-async function getCommandPalette() {
-  return WebviewWindow.getByLabel("command-palette");
-}
-
-const appWindow = getCurrentWindow();
 
 // MainContent — inside RunningTaskProvider, has access to useRunningTask
 function MainContent({
@@ -178,7 +157,7 @@ function MainContent({
     };
   }, [runningTask, startTask, pauseTask, resumeTask]);
 
-  // Atalhos globais: stop-task (para como pendente — sem UI para confirmar)
+  // Atalhos globais: stop-task
   useEffect(() => {
     const unlisten = listen("shortcut:stop-task", async () => {
       if (runningTask) await stopTask(false);
@@ -218,306 +197,27 @@ function AppInner() {
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
 
-  // Sincroniza setupDone com o config ao carregar
   useEffect(() => {
-    if (config.isLoaded && !config.loadError) {
-      setSetupDone(config.get("setupCompleted"));
-    }
+    if (config.isLoaded && !config.loadError) setSetupDone(config.get("setupCompleted"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Mantém ref sincronizada com state (evita closure stale nos listeners)
   useEffect(() => {
     isPinnedRef.current = isPinned;
   }, [isPinned]);
 
-  // Aplica tamanho de fonte e tema salvos ao iniciar
-  useEffect(() => {
-    if (!config.isLoaded) return;
-    applyFontSize(config.get("fontSize"));
-    applyTheme(config.get("theme") as Theme);
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Registra atalhos globais salvos ao iniciar
-  useEffect(() => {
-    if (!config.isLoaded) return;
-    invoke("update_shortcuts", {
-      shortcuts: [
-        { action: "toggle-task", accelerator: config.get("shortcutToggleTask") },
-        { action: "stop-task", accelerator: config.get("shortcutStopTask") },
-        { action: "toggle-overlay", accelerator: config.get("shortcutToggleOverlay") },
-        { action: "toggle-window", accelerator: config.get("shortcutToggleWindow") },
-        { action: "toggle-command-palette", accelerator: config.get("shortcutCommandPalette") },
-      ],
-    }).catch(() => {});
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fecha janela ao perder foco, se habilitado e não fixada
-  useEffect(() => {
-    const unlisten = appWindow.listen("tauri://blur", () => {
-      if (ignoreBlurRef.current) return;
-      if (!config.get("closeOnFocusLoss")) return;
-      if (isPinnedRef.current) return;
-      appWindow.hide();
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ESC fecha a janela (exceto quando um input/textarea/select está focado)
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      const tag = (document.activeElement as HTMLElement)?.tagName ?? "";
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
-      if (document.querySelector("[data-modal-open]")) return;
-      appWindow.hide();
-    }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  // Salva posição da janela principal ao ser movida pelo usuário
-  useEffect(() => {
-    if (!config.isLoaded) return;
-    let debounce: ReturnType<typeof setTimeout> | null = null;
-    const unlisten = appWindow.listen<{ x: number; y: number }>("tauri://move", ({ payload }) => {
-      if (debounce) clearTimeout(debounce);
-      debounce = setTimeout(() => {
-        config.set("mainWindowPosition", { x: payload.x, y: payload.y });
-      }, 400);
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-      if (debounce) clearTimeout(debounce);
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Helper: posiciona e exibe a janela principal. Usa posição salva se válida,
-  // senão positionNearTaskbar.
-  async function showMainWindow(focusToo = false) {
-    const saved = config.get("mainWindowPosition");
-    if (saved.x >= 0 && saved.y >= 0) {
-      await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y));
-    } else {
-      await positionNearTaskbar(appWindow, { width: 800, height: 620 });
-    }
-    await appWindow.show();
-    if (focusToo) await appWindow.setFocus();
-  }
-
-  // Helper: posiciona e exibe o command palette centralizado.
-  async function showCommandPalette() {
-    const cp = await getCommandPalette();
-    if (!cp) return;
-    await centerOnWorkArea(cp, { width: 560, height: 500 });
-    await cp.show();
-    await cp.setFocus();
-  }
-
-  // Show windows on startup
-  useEffect(() => {
-    if (!config.isLoaded) return;
-    if (config.loadError) {
-      positionNearTaskbar(appWindow, { width: 800, height: 620 })
-        .catch(() => {})
-        .finally(() => appWindow.show());
-      return;
-    }
-    if (!config.get("setupCompleted")) {
-      positionNearTaskbar(appWindow, { width: 800, height: 620 })
-        .catch(() => {})
-        .finally(() => appWindow.show());
-      return;
-    }
-
-    void (async () => {
-      // Compact is always visible — popup auto-shows via RUNNING_TASK_CHANGED listener
-      // in PopupOverlayApp when overlayShowOnStart is configured.
-      const compact = await getOverlayCompact();
-      if (compact) {
-        // Set position before show so GTK compositor receives it on a realized window
-        const savedPos = config.get("overlayPosition_compact") as { x: number; y: number } | null;
-        if (savedPos && !(savedPos.x === -1 && savedPos.y === -1)) {
-          await compact.setPosition(new PhysicalPosition(savedPos.x, savedPos.y));
-        } else {
-          await positionNearTaskbar(compact, { width: 52, height: 52 });
-        }
-        await compact.show();
-      }
-
-      if (config.get("showWelcomeMessage")) {
-        const cp = await getCommandPalette();
-        if (cp) {
-          // CP aberto no startup — posiciona antes de mostrar para evitar race
-          await showCommandPalette();
-        } else {
-          // Sem CP: mostra a janela principal diretamente
-          await showMainWindow();
-        }
-      } else {
-        await showMainWindow();
-      }
-    })();
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Sincronização diária (Sheets + Clockify) — ativada se qualquer integração estiver no modo "daily"
-  useEffect(() => {
-    if (!config.isLoaded) return;
-
-    const sheetsDaily =
-      config.get("integrationGoogleSheetsAutoSync") && config.get("sheetsAutoSyncMode") === "daily";
-    const clockifyDaily =
-      config.get("clockifyAutoSync") && config.get("clockifyAutoSyncMode") === "daily";
-
-    if (!sheetsDaily && !clockifyDaily) return;
-
-    async function triggerSync(endDateISO: string) {
-      const results = await runDaily(endDateISO);
-      const totalCount = results.reduce((s, r) => s + r.count, 0);
-      const errors = results.filter((r) => r.error);
-      const warnings = results.flatMap((r) => (r.warning ? [r.warning] : []));
-
-      if (errors.length > 0) {
-        for (const e of errors) await showToast("error", e.error!.message);
-        return;
-      }
-
-      if (totalCount > 0 && warnings.length === 0) {
-        await showToast("success", `${totalCount} tarefa(s) enviada(s) automaticamente`);
-      } else if (totalCount > 0 && warnings.length > 0) {
-        await showToast("warning", `${totalCount} tarefa(s) enviada(s). ${warnings.join(" ")}`);
-      } else if (warnings.length > 0) {
-        for (const w of warnings) await showToast("warning", w);
-      }
-    }
-
-    // Determina o trigger prioritário (Sheets define o ritmo se ambos ativos)
-    const sheetsTrigger = config.get("sheetsAutoSyncTrigger");
-    const clockifyTrigger = config.get("clockifyAutoSyncTrigger");
-    const trigger = sheetsDaily ? sheetsTrigger : clockifyTrigger;
-
-    if (trigger === "on-open") {
-      void triggerSync(addDaysISO(todayISO(), -1));
-      return;
-    }
-
-    if (trigger === "fixed-time") {
-      const timeStr = sheetsDaily
-        ? config.get("sheetsAutoSyncTime")
-        : config.get("clockifyAutoSyncTime");
-      const [hh, mm] = timeStr.split(":").map(Number);
-      let fired = false;
-
-      const interval = setInterval(() => {
-        if (fired) return;
-        const now = new Date();
-        if (now.getHours() === hh && now.getMinutes() === mm) {
-          fired = true;
-          void triggerSync(todayISO());
-        }
-      }, 30_000);
-
-      return () => clearInterval(interval);
-    }
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Atalho de teclado: mostra command palette com posicionamento correto.
-  // O hide já é feito pelo Rust (shortcuts.rs) — este evento só é emitido quando CP está oculto.
-  useEffect(() => {
-    const unlisten = listen("shortcut:show-command-palette", () => {
-      void showCommandPalette();
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]);
-
-  // Navigate when command palette selects a page
-  useEffect(() => {
-    const unlisten = listen<CommandPaletteNavigatePayload>(
-      OVERLAY_EVENTS.COMMAND_PALETTE_NAVIGATE,
-      async ({ payload }) => {
-        await showMainWindow(true);
-        setPage(payload.page as Page);
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Navigate to planning when triggered from overlay
-  useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, async () => {
-      await showMainWindow(true);
-      setPage("planning");
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Navigate to tasks when overlay requests task edit focus.
-  useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_FOCUS_TASK_EDIT, async () => {
-      ignoreBlurRef.current = true;
-      setTimeout(() => {
-        ignoreBlurRef.current = false;
-      }, 600);
-      setPage("tasks");
-      setFocusTaskEdit(true);
-      await showMainWindow(true);
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Exibe a janela quando o tray solicita
-  useEffect(() => {
-    const unlisten = appWindow.listen("tray:show-main", async () => {
-      ignoreBlurRef.current = true;
-      setTimeout(() => {
-        ignoreBlurRef.current = false;
-      }, 600);
-      await showMainWindow(true);
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Navega para Settings quando acionado pelo toast de atualização
-  useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.NAVIGATE_SETTINGS, () => {
-      setPage("settings");
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, []);
-
-  // Verifica atualizações silenciosamente ao abrir (delay de 10s)
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        const update = await invoke<UpdateInfo | null>("check_for_update");
-        if (update) {
-          await showToast(
-            "update",
-            `DeskClock ${update.version} disponível`,
-            8000,
-            "Ver",
-            OVERLAY_EVENTS.NAVIGATE_SETTINGS
-          );
-        }
-      } catch {
-        // falha silenciosa — não incomodar o usuário por problema de rede
-      }
-    }, 10_000);
-    return () => clearTimeout(timer);
-  }, []);
+  useAppearanceSync(config);
+  useGlobalShortcuts(config);
+  const { showMainWindow, showCommandPalette } = useStartupWindow(config, ignoreBlurRef);
+  useDailySyncScheduler(config, runDaily);
+  useUpdateNotifier();
+  useCommandPaletteRouter({
+    config,
+    setPage,
+    setFocusTaskEdit,
+    ignoreBlurRef,
+    showMainWindow,
+    showCommandPalette,
+  });
 
   if (config.isLoaded && !config.loadError && !setupDone) {
     return <SetupModal config={config} onComplete={() => setSetupDone(true)} />;
