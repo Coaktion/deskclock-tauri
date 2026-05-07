@@ -3,7 +3,7 @@ import type { Task } from "@domain/entities/Task";
 import type { AppConfig } from "@shared/types/appConfig";
 import type { IClockifyConfigPort } from "@domain/integrations/IClockifyConfigPort";
 import type { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
-import type { ClockifyTimeEntryPayload } from "@infra/integrations/clockify/types";
+import type { ClockifyTimeEntryPayload } from "@shared/types/clockify";
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
 
 function makeConfig(overrides: Partial<AppConfig> = {}): IClockifyConfigPort {

@@ -5,7 +5,7 @@ import type {
   ClockifyHydratedTag,
   ClockifyTimeEntryFull,
   ClockifyTimeEntryPayload,
-} from "@infra/integrations/clockify/types";
+} from "@shared/types/clockify";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useClockifyEntries";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import type {
   ClockifyHydratedProject,
   ClockifyHydratedTag,
   ClockifyTimeEntryFull,
   ClockifyTimeEntryPayload,
-} from "@infra/integrations/clockify/types";
+} from "@shared/types/clockify";
 import { startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
@@ -28,6 +28,7 @@ export function useClockifyEntries({
   range,
   rangeValid,
 }: UseClockifyEntriesOptions) {
+  const { createClockifyApi } = useIntegrations();
   const [entries, setEntries] = useState<ClockifyTimeEntryFull[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshSignal, setRefreshSignal] = useState(0);
@@ -38,7 +39,7 @@ export function useClockifyEntries({
 
   useEffect(() => {
     if (!apiKey || !workspaceId || !userId || !rangeValid) return;
-    const client = new ClockifyClient(apiKey);
+    const client = createClockifyApi(apiKey);
     setLoading(true);
     client
       .listTimeEntries(workspaceId, userId, startOfDayISO(range.start), endOfDayISO(range.end))
@@ -47,11 +48,11 @@ export function useClockifyEntries({
         void showToast("error", err instanceof Error ? err.message : "Erro ao carregar apontamentos.");
       })
       .finally(() => setLoading(false));
-  }, [apiKey, workspaceId, userId, range.start, range.end, rangeValid, refreshSignal]);
+  }, [apiKey, workspaceId, userId, range.start, range.end, rangeValid, refreshSignal, createClockifyApi]);
 
   useEffect(() => {
     if (!apiKey || !workspaceId) return;
-    const client = new ClockifyClient(apiKey);
+    const client = createClockifyApi(apiKey);
     Promise.all([client.listProjects(workspaceId), client.listTags(workspaceId)])
       .then(([ps, ts]) => {
         setClockifyProjects(
@@ -71,10 +72,10 @@ export function useClockifyEntries({
           err instanceof Error ? err.message : "Erro ao carregar projetos/tags."
         );
       });
-  }, [apiKey, workspaceId]);
+  }, [apiKey, workspaceId, createClockifyApi]);
 
   async function handleSaveEdit(entryId: string, payload: ClockifyTimeEntryPayload) {
-    const client = new ClockifyClient(apiKey);
+    const client = createClockifyApi(apiKey);
     try {
       await client.updateTimeEntry(workspaceId, entryId, payload);
       await showToast("success", "Apontamento atualizado.");
@@ -86,7 +87,7 @@ export function useClockifyEntries({
   }
 
   async function handleCreate(payload: ClockifyTimeEntryPayload) {
-    const client = new ClockifyClient(apiKey);
+    const client = createClockifyApi(apiKey);
     try {
       await client.createTimeEntry(workspaceId, payload);
       await showToast("success", "Apontamento criado.");
@@ -98,7 +99,7 @@ export function useClockifyEntries({
   }
 
   async function handleDelete(entryId: string) {
-    const client = new ClockifyClient(apiKey);
+    const client = createClockifyApi(apiKey);
     try {
       await client.deleteTimeEntry(workspaceId, entryId);
       await showToast("success", "Apontamento excluído.");

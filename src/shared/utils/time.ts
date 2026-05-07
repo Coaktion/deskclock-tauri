@@ -147,3 +147,14 @@ export function computeEndHHMM(start: string, durationSeconds: number): string {
   const endMins = ((totalMins % 1440) + 1440) % 1440;
   return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
 }
+
+/** Formata timestamp ISO de último envio para exibição "DD/MM às HH:MM" */
+export function formatLastSync(ts: string): string {
+  if (!ts) return "Nunca";
+  const d = new Date(ts);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month} às ${h}:${m}`;
+}

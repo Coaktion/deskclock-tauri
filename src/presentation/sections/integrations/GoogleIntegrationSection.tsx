@@ -18,10 +18,9 @@ import type { Project } from "@domain/entities/Project";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
-import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
-import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSender";
 import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
@@ -31,8 +30,8 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
-import { groupTasks } from "@domain/utils/groupTasks";
-import { addDaysISO, endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
+import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
+import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
   ArrowRight,
@@ -148,15 +147,6 @@ function ColumnMappingEditor({
 
 /* ── Sub-seção Google Sheets ── */
 
-export function formatLastSync(ts: string): string {
-  if (!ts) return "Nunca";
-  const d = new Date(ts);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${day}/${month} às ${h}:${m}`;
-}
 
 function SheetsSection({
   disabled,
@@ -169,6 +159,7 @@ function SheetsSection({
 }) {
   const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetName, setSheetName] = useState("DeskClock");
   const [columnMapping, setColumnMapping] = useState<SheetColumnMapping>(DEFAULT_COLUMN_MAPPING);
@@ -213,49 +204,41 @@ function SheetsSection({
     }
     setSyncing(true);
     try {
-      const lastTs = config.get("sheetsDailySyncLastTimestamp");
-      const lastDateISO = lastTs
-        ? new Date(lastTs).toLocaleDateString("sv-SE")
-        : addDaysISO(todayISO(), -7);
-      const startDateISO = addDaysISO(lastDateISO, 1);
-      const endDateISO = todayISO();
+      const result = await runDailyTemplate(
+        {
+          integrationName: "Google Sheets",
+          integrationLabel: "Google Sheets",
+          logKey: "google_sheets",
+          taskRepo,
+          logRepo: taskLogRepo,
+          timestampPort: {
+            get: () => config.get("sheetsDailySyncLastTimestamp"),
+            set: (iso) => config.set("sheetsDailySyncLastTimestamp", iso),
+          },
+          validate: () => true, // preserva comportamento atual; ver findings.md
+          createSender: () =>
+            factories.createSheetsTaskSender({ spreadsheetId: spreadsheet, projects, categories }),
+        },
+        todayISO()
+      );
 
-      if (startDateISO > endDateISO) {
-        await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
+      if (result.error) {
+        await showToast("error", result.error.message);
         return;
       }
 
-      const rangeStartISO = startOfDayISO(startDateISO);
-      const rangeEndISO = endOfDayISO(endDateISO);
-
-      const [tasks, sentIdsArr] = await Promise.all([
-        taskRepo.findByDateRange(rangeStartISO, rangeEndISO),
-        taskLogRepo.findSentIds("google_sheets", rangeStartISO, rangeEndISO),
-      ]);
-      const completed = tasks.filter((t) => t.status === "completed");
-      const sentIds = new Set(sentIdsArr);
-      const groups = groupTasks(completed).filter((g) => !g.tasks.every((t) => sentIds.has(t.id)));
-
-      const nowIso = new Date().toISOString();
-      if (groups.length === 0) {
+      if (result.count === 0) {
+        // UI seta timestamp em empty (divergente das strategies — ver findings.md)
+        const nowIso = new Date().toISOString();
         await config.set("sheetsDailySyncLastTimestamp", nowIso);
         setLastSyncTs(nowIso);
         await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
         return;
       }
 
-      const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
-      const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
-      const sender = new GoogleSheetsTaskSender(config, spreadsheet, projects, categories);
-      await sender.send(tasksToSend);
-      await taskLogRepo.markSent(allIds, "google_sheets");
-      await config.set("sheetsDailySyncLastTimestamp", nowIso);
-      setLastSyncTs(nowIso);
-      await showToast("success", `${groups.length} grupo(s) enviado(s) para o Sheets.`);
-    } catch (err) {
-      const msg =
-        typeof err === "string" ? err : err instanceof Error ? err.message : "Erro ao sincronizar.";
-      await showToast("error", msg);
+      // template já atualizou timestamp via timestampPort.set
+      setLastSyncTs(config.get("sheetsDailySyncLastTimestamp"));
+      await showToast("success", `${result.count} grupo(s) enviado(s) para o Sheets.`);
     } finally {
       setSyncing(false);
     }
@@ -474,14 +457,15 @@ function CalendarSection({
 }) {
   const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const [showImportModal, setShowImportModal] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
 
   const calendarImporter = useMemo(
-    () => (config.isLoaded ? new GoogleCalendarImporter(config) : null),
-    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
+    () => (config.isLoaded ? factories.createCalendarImporter() : null),
+    [config.isLoaded, factories]
   );
 
   const { fromISO, toISO, weekLabel } = useMemo(() => {

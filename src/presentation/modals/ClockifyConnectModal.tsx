@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, ExternalLink, Loader2, KeyRound } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { ClockifyAuthError } from "@infra/integrations/clockify/errors";
 
 interface ClockifyConnectModalProps {
@@ -11,6 +11,7 @@ interface ClockifyConnectModalProps {
 
 export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectModalProps) {
   const config = useAppConfig();
+  const factories = useIntegrations();
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,7 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
     setError(null);
 
     try {
-      const client = new ClockifyClient(key);
+      const client = factories.createClockifyApi(key);
       const user = await client.getUser();
       await config.set("clockifyApiKey", key);
       await config.set("clockifyUserEmail", user.email);

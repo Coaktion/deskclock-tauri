@@ -1,12 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-import {
-  taskRepo as defaultTaskRepo,
-  plannedTaskRepo as defaultPlannedTaskRepo,
-  categoryRepo as defaultCategoryRepo,
-  projectRepo as defaultProjectRepo,
-  exportProfileRepo as defaultExportProfileRepo,
-  taskLogRepo as defaultTaskLogRepo,
-} from "./repositories";
+import { createContext, useContext, useMemo, useRef, type ReactNode } from "react";
+import { TaskRepository } from "@infra/database/TaskRepository";
+import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { CategoryRepository } from "@infra/database/CategoryRepository";
+import { ProjectRepository } from "@infra/database/ProjectRepository";
+import { ExportProfileRepository } from "@infra/database/ExportProfileRepository";
+import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
@@ -23,15 +21,6 @@ export interface Repositories {
   taskLogRepo: ITaskIntegrationLogRepository;
 }
 
-const defaultRepositories: Repositories = {
-  taskRepo: defaultTaskRepo,
-  plannedTaskRepo: defaultPlannedTaskRepo,
-  categoryRepo: defaultCategoryRepo,
-  projectRepo: defaultProjectRepo,
-  exportProfileRepo: defaultExportProfileRepo,
-  taskLogRepo: defaultTaskLogRepo,
-};
-
 const RepositoriesContext = createContext<Repositories | null>(null);
 
 export function RepositoriesProvider({
@@ -41,7 +30,21 @@ export function RepositoriesProvider({
   children: ReactNode;
   value?: Partial<Repositories>;
 }) {
-  const repos = useMemo<Repositories>(() => ({ ...defaultRepositories, ...value }), [value]);
+  const defaultsRef = useRef<Repositories>();
+  if (!defaultsRef.current) {
+    defaultsRef.current = {
+      taskRepo: new TaskRepository(),
+      plannedTaskRepo: new PlannedTaskRepository(),
+      categoryRepo: new CategoryRepository(),
+      projectRepo: new ProjectRepository(),
+      exportProfileRepo: new ExportProfileRepository(),
+      taskLogRepo: new TaskIntegrationLogRepository(),
+    };
+  }
+  const repos = useMemo<Repositories>(
+    () => ({ ...defaultsRef.current!, ...value }),
+    [value]
+  );
   return <RepositoriesContext.Provider value={repos}>{children}</RepositoriesContext.Provider>;
 }
 
