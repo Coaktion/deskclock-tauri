@@ -179,11 +179,11 @@ select {
   color: var(--tw-gray-600);
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 4px 6px;
   cursor: pointer;
   transition: color 0.15s;
   text-shadow: none;
-  margin-right: auto;
+  margin-right: 4px;
 }
 
 .deskclock-tour .driver-tour-skip-btn:hover {
