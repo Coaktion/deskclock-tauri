@@ -32,6 +32,13 @@ export function TourProvider({
         prevBtnText: "← Anterior",
         doneBtnText: "Concluir",
         steps,
+        onPopoverRender: (popover) => {
+          const skipBtn = document.createElement("button");
+          skipBtn.textContent = "Pular tour";
+          skipBtn.className = "driver-tour-skip-btn";
+          skipBtn.addEventListener("click", () => driverObj.destroy());
+          popover.footer.prepend(skipBtn);
+        },
         onDestroyStarted: () => {
           const seen = config.get("toursSeen");
           if (!seen.includes(tourId)) {

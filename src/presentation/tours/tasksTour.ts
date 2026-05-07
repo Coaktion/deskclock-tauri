@@ -16,7 +16,7 @@ export const tasksTourSteps: DriveStep[] = [
     popover: {
       title: "Caixa de tarefa",
       description:
-        "Digite o nome do que vai fazer e pressione Enter (ou clique no botão verde) para iniciar. Você pode adicionar projeto, categoria e indicar se é billable antes de começar.",
+        "Digite o nome do que vai fazer e pressione Enter (ou clique no botão play) para iniciar. Você pode adicionar projeto, categoria e indicar se é billable antes de começar.",
       side: "bottom",
       align: "start",
     },

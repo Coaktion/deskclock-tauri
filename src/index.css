@@ -158,6 +158,10 @@ select {
   letter-spacing: 0.05em;
 }
 
+.deskclock-tour .driver-popover-footer button {
+  text-shadow: none;
+}
+
 .deskclock-tour .driver-popover-navigation-btns button {
   font-size: 0.75rem;
   border-radius: 6px;
@@ -167,6 +171,23 @@ select {
   color: var(--tw-gray-400);
   cursor: pointer;
   transition: all 0.15s;
+  text-shadow: none;
+}
+
+.deskclock-tour .driver-tour-skip-btn {
+  font-size: 0.6875rem;
+  color: var(--tw-gray-600);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color 0.15s;
+  text-shadow: none;
+  margin-right: auto;
+}
+
+.deskclock-tour .driver-tour-skip-btn:hover {
+  color: var(--tw-gray-400);
 }
 
 .deskclock-tour .driver-popover-next-btn,
