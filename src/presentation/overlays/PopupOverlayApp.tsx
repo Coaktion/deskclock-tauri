@@ -122,8 +122,10 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
       async ({ payload }) => {
         setRunningTask(payload.task);
-        if (payload.plannedTaskId !== undefined) {
-          activePlannedTaskId.current = payload.plannedTaskId;
+        // Não sobrescreve quando o evento vem do RunningTaskContext (source "main"),
+        // pois esse echo não carrega plannedTaskId e zeraria a referência.
+        if (payload.source !== "main") {
+          activePlannedTaskId.current = payload.plannedTaskId ?? null;
         }
         if (payload.task) {
           if (config.get("overlayShowOnStart")) {
