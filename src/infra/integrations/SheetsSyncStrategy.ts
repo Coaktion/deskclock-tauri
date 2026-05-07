@@ -7,8 +7,7 @@ import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncSt
 import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 import type { ISheetsConfigPort } from "@domain/integrations/ISheetsConfigPort";
 import { validateTaskForSheets, formatMissingFields } from "@domain/integrations/taskValidation";
-import { groupTasks } from "@domain/utils/groupTasks";
-import { startOfDayISO, endOfDayISO, addDaysISO, todayISO } from "@shared/utils/time";
+import { runDailyTemplate } from "./runDailyTemplate";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 
 export class SheetsSyncStrategy implements ISyncStrategy {
@@ -70,58 +69,32 @@ export class SheetsSyncStrategy implements ISyncStrategy {
   }
 
   async runDaily(endDateISO: string): Promise<AutoSyncResult> {
-    const range = this.calcRange(endDateISO);
-    if (!range) return { integration: this.integrationName, count: 0 };
-    try {
-      const spreadsheetId = this.config.get("integrationGoogleSheetsSpreadsheetId");
-      const [tasks, projects, categories] = await Promise.all([
-        this.taskRepo.findByDateRange(range.start, range.end),
-        this.projectRepo.findAll(),
-        this.categoryRepo.findAll(),
-      ]);
-      const allCompleted = tasks.filter((t) => t.status === "completed");
-      const completed = allCompleted.filter((t) => validateTaskForSheets(t).ok);
-      const invalidCount = allCompleted.length - completed.length;
-      const invalidWarning =
-        invalidCount > 0
-          ? `${invalidCount} tarefa(s) ignorada(s) no envio diário ao Google Sheets: dados incompletos.`
-          : undefined;
-
-      if (completed.length === 0)
-        return { integration: this.integrationName, count: 0, warning: invalidWarning };
-
-      const sentIds = new Set(
-        await this.logRepo.findSentIds("google_sheets", range.start, range.end)
-      );
-      const groups = groupTasks(completed).filter(
-        (g) => !g.tasks.every((t) => sentIds.has(t.id))
-      );
-      if (groups.length === 0)
-        return { integration: this.integrationName, count: 0, warning: invalidWarning };
-
-      const tasksToSend = groups.map((g) => ({ ...g.tasks[0], durationSeconds: g.totalSeconds }));
-      const allIds = groups.flatMap((g) => g.tasks.map((t) => t.id));
-      const sender = new GoogleSheetsTaskSender(this.config, spreadsheetId, projects, categories);
-      await sender.send(tasksToSend);
-      await this.logRepo.markSent(allIds, "google_sheets");
-      await this.config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
-      return { integration: this.integrationName, count: groups.length, warning: invalidWarning };
-    } catch (err) {
-      return {
-        integration: this.integrationName,
-        count: 0,
-        error: err instanceof Error ? err : new Error(String(err)),
-      };
-    }
-  }
-
-  private calcRange(endDateISO: string): { start: string; end: string } | null {
-    const lastTimestamp = this.config.get("sheetsDailySyncLastTimestamp");
-    const lastDateISO = lastTimestamp
-      ? new Date(lastTimestamp).toLocaleDateString("sv-SE")
-      : addDaysISO(todayISO(), -7);
-    const startDateISO = addDaysISO(lastDateISO, 1);
-    if (startDateISO > endDateISO) return null;
-    return { start: startOfDayISO(startDateISO), end: endOfDayISO(endDateISO) };
+    return runDailyTemplate(
+      {
+        integrationName: this.integrationName,
+        integrationLabel: "Google Sheets",
+        logKey: "google_sheets",
+        taskRepo: this.taskRepo,
+        logRepo: this.logRepo,
+        timestampPort: {
+          get: () => this.config.get("sheetsDailySyncLastTimestamp"),
+          set: (iso) => this.config.set("sheetsDailySyncLastTimestamp", iso),
+        },
+        validate: (t) => validateTaskForSheets(t).ok,
+        createSender: async () => {
+          const [projects, categories] = await Promise.all([
+            this.projectRepo.findAll(),
+            this.categoryRepo.findAll(),
+          ]);
+          return new GoogleSheetsTaskSender(
+            this.config,
+            this.config.get("integrationGoogleSheetsSpreadsheetId"),
+            projects,
+            categories
+          );
+        },
+      },
+      endDateISO
+    );
   }
 }
