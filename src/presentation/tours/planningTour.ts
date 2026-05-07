@@ -6,7 +6,7 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Visão semanal",
       description:
-        "Navegue entre semanas com as setas. O contador à direita mostra quantas tarefas já foram concluídas na semana.",
+        "Navegue entre semanas com as setas. O contador à direita mostra quantas tarefas já foram concluídas na semana. Use o botão 'Selecionar tarefas' para selecionar múltiplas e excluí-las em massa.",
       side: "bottom",
       align: "start",
     },

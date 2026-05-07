@@ -289,7 +289,8 @@ export function WeekPlanningView() {
       </div>
 
       {/* ── Day filter pills ─────────────────────────────────────────────────── */}
-      <div data-tour="planning-day-filter" className="flex gap-1.5 px-4 py-2.5 border-b border-gray-800 overflow-x-auto">
+      <div data-tour="planning-day-filter" className="border-b border-gray-800">
+      <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
         <button
           onClick={() => setDayFilter("all")}
           className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
@@ -322,6 +323,7 @@ export function WeekPlanningView() {
             </button>
           );
         })}
+      </div>
       </div>
 
       {/* ── Form ─────────────────────────────────────────────────────────────── */}
