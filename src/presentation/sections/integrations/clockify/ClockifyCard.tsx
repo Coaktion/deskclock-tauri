@@ -1,0 +1,117 @@
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useCategories } from "@presentation/hooks/useCategories";
+import { useProjects } from "@presentation/hooks/useProjects";
+import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
+import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
+import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
+import { Loader2, LogIn, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { StatusBadge } from "../shared";
+import { ClockifyConnectedSections } from "./ClockifyConnectedSections";
+import { ClockifyLogo } from "./ClockifyLogo";
+
+export function ClockifyIntegrationCard() {
+  const config = useAppConfig();
+  const { projects, reload: reloadProjects } = useProjects();
+  const { categories, reload: reloadCategories } = useCategories();
+  const [connected, setConnected] = useState(false);
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showEntriesModal, setShowEntriesModal] = useState(false);
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    setConnected(!!config.get("clockifyApiKey"));
+    setEmail(config.get("clockifyUserEmail"));
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleConnected() {
+    setConnected(true);
+    setEmail(config.get("clockifyUserEmail"));
+    setShowConnectModal(false);
+  }
+
+  async function handleDisconnect() {
+    setLoading(true);
+    await config.set("clockifyApiKey", "");
+    await config.set("clockifyUserEmail", "");
+    await config.set("clockifyUserId", "");
+    await config.set("clockifyActiveWorkspaceId", "");
+    await config.set("clockifyActiveWorkspaceName", "");
+    await config.set("clockifyWorkspaceCache", []);
+    setConnected(false);
+    setEmail("");
+    setLoading(false);
+  }
+
+  return (
+    <>
+      <div className="rounded-xl border border-gray-800 bg-gray-900/50">
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden">
+          <div className="mt-0.5 shrink-0">
+            <ClockifyLogo size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-100">Clockify</h2>
+              <StatusBadge connected={connected} email={email} />
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Registre entradas de tempo diretamente no Clockify.
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center gap-2">
+            {connected ? (
+              <button
+                onClick={handleDisconnect}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded transition-colors"
+              >
+                {loading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                Desconectar
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowConnectModal(true)}
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
+              >
+                <LogIn size={12} />
+                Conectar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {connected && (
+          <ClockifyConnectedSections
+            projects={projects}
+            categories={categories}
+            reloadProjects={reloadProjects}
+            reloadCategories={reloadCategories}
+            onShowSendModal={() => setShowSendModal(true)}
+            onShowEntriesModal={() => setShowEntriesModal(true)}
+          />
+        )}
+      </div>
+
+      {showConnectModal && (
+        <ClockifyConnectModal
+          onConnected={handleConnected}
+          onClose={() => setShowConnectModal(false)}
+        />
+      )}
+
+      {showSendModal && (
+        <ClockifySendModal
+          projects={projects}
+          categories={categories}
+          onClose={() => setShowSendModal(false)}
+        />
+      )}
+
+      {showEntriesModal && <ClockifyEntriesModal onClose={() => setShowEntriesModal(false)} />}
+    </>
+  );
+}

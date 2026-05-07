@@ -31,7 +31,7 @@ import {
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
-import { todayISO } from "@shared/utils/time";
+import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
   ArrowRight,
@@ -147,15 +147,6 @@ function ColumnMappingEditor({
 
 /* ── Sub-seção Google Sheets ── */
 
-export function formatLastSync(ts: string): string {
-  if (!ts) return "Nunca";
-  const d = new Date(ts);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  return `${day}/${month} às ${h}:${m}`;
-}
 
 function SheetsSection({
   disabled,
