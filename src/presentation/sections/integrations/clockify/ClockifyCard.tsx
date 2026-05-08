@@ -1,6 +1,7 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useTour } from "@presentation/hooks/useTour";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
 import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
@@ -20,12 +21,20 @@ export function ClockifyIntegrationCard() {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showEntriesModal, setShowEntriesModal] = useState(false);
+  const { startTour, hasSeenTour } = useTour("clockify-detail");
 
   useEffect(() => {
     if (!config.isLoaded) return;
     setConnected(!!config.get("clockifyApiKey"));
     setEmail(config.get("clockifyUserEmail"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleConnected() {
     setConnected(true);
@@ -49,7 +58,7 @@ export function ClockifyIntegrationCard() {
   return (
     <>
       <div className="rounded-xl border border-gray-800 bg-gray-900/50">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden">
+        <div data-tour="clockify-header" className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden">
           <div className="mt-0.5 shrink-0">
             <ClockifyLogo size={20} />
           </div>
@@ -63,6 +72,13 @@ export function ClockifyIntegrationCard() {
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-2">
+            <button
+              onClick={() => startTour()}
+              title="Ver tour da integração"
+              className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+            >
+              ?
+            </button>
             {connected ? (
               <button
                 onClick={handleDisconnect}

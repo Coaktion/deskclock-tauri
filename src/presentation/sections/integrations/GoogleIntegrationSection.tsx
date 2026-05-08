@@ -50,6 +50,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTour } from "@presentation/hooks/useTour";
 import { IntegrationTile, Row, StatusBadge, SubSection, Toggle } from "./shared";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
@@ -273,7 +274,7 @@ function SheetsSection({
         </Row>
 
         {/* Mapeamento de colunas */}
-        <div className="py-2.5 border-b border-gray-800">
+        <div data-tour="google-sheets-columns" className="py-2.5 border-b border-gray-800">
           <button
             onClick={() => setColsOpen((v) => !v)}
             className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100 w-full text-left"
@@ -313,6 +314,7 @@ function SheetsSection({
         </Row>
 
         {/* Sincronização automática */}
+        <div data-tour="google-sheets-autosync">
         <Row label="Sincronização automática">
           <Toggle
             checked={autoSync}
@@ -422,6 +424,8 @@ function SheetsSection({
             )}
           </div>
         )}
+
+        </div>{/* /google-sheets-autosync */}
 
         {/* Envio manual */}
         <div className="pt-2.5">
@@ -561,12 +565,20 @@ export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page)
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { startTour, hasSeenTour } = useTour("google-detail");
 
   useEffect(() => {
     if (!config.isLoaded) return;
     setConnected(!!config.get("googleRefreshToken"));
     setEmail(config.get("googleUserEmail"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleConnect() {
     setLoading(true);
@@ -594,7 +606,7 @@ export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page)
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
       {/* Header do card */}
-      <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
+      <div data-tour="google-header" className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
         <div className="mt-0.5 shrink-0">
           {/* Ícone Google simplificado */}
           <svg
@@ -633,6 +645,13 @@ export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page)
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {error && <span className="text-xs text-red-400">{error}</span>}
+          <button
+            onClick={() => startTour()}
+            title="Ver tour da integração"
+            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+          >
+            ?
+          </button>
           {connected ? (
             <button
               onClick={handleDisconnect}
@@ -655,12 +674,16 @@ export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page)
       </div>
 
       {/* Sub-seções */}
-      <SubSection icon={<TableProperties size={15} />} title="Google Sheets">
-        <SheetsSection disabled={!connected} projects={projects} categories={categories} />
-      </SubSection>
-      <SubSection icon={<Calendar size={15} />} title="Google Calendar">
-        <CalendarSection disabled={!connected} onNavigate={onNavigate} />
-      </SubSection>
+      <div data-tour="google-sheets-section">
+        <SubSection icon={<TableProperties size={15} />} title="Google Sheets">
+          <SheetsSection disabled={!connected} projects={projects} categories={categories} />
+        </SubSection>
+      </div>
+      <div data-tour="google-calendar-section">
+        <SubSection icon={<Calendar size={15} />} title="Google Calendar">
+          <CalendarSection disabled={!connected} onNavigate={onNavigate} />
+        </SubSection>
+      </div>
     </div>
   );
 }

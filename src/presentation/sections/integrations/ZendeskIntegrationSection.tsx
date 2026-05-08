@@ -3,6 +3,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useTour } from "@presentation/hooks/useTour";
 import { startZendeskOAuth } from "@infra/integrations/zendesk/ZendeskOAuth";
 import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenManager";
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
@@ -55,6 +56,7 @@ export function ZendeskIntegrationCard() {
   const [error, setError] = useState<string | null>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importedCount, setImportedCount] = useState<number | null>(null);
+  const { startTour, hasSeenTour } = useTour("zendesk-detail");
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -64,6 +66,13 @@ export function ZendeskIntegrationCard() {
     setClientId(config.get("zendeskClientId"));
     setClientSecret(config.get("zendeskClientSecret"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleConnect() {
     if (!subdomain.trim()) {
@@ -108,7 +117,7 @@ export function ZendeskIntegrationCard() {
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
       {/* Header do card */}
-      <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
+      <div data-tour="zendesk-header" className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
         <div className="mt-0.5 shrink-0">
           <ZendeskLogoSmall size={20} />
         </div>
@@ -123,6 +132,13 @@ export function ZendeskIntegrationCard() {
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {error && <span className="text-xs text-red-400 max-w-[180px] text-right">{error}</span>}
+          <button
+            onClick={() => startTour()}
+            title="Ver tour da integração"
+            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+          >
+            ?
+          </button>
           {connected ? (
             <button
               onClick={handleDisconnect}
@@ -145,6 +161,7 @@ export function ZendeskIntegrationCard() {
       </div>
 
       {/* Credenciais OAuth */}
+      <div data-tour="zendesk-credentials">
       <SubSection icon={<Key size={15} />} title="Credenciais OAuth" defaultOpen={!connected}>
         {!connected && (
           <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 px-4 py-3 space-y-2 mb-1">
@@ -204,6 +221,7 @@ export function ZendeskIntegrationCard() {
           />
         </Row>
       </SubSection>
+      </div>{/* /zendesk-credentials */}
 
       {/* Importar tickets */}
       {connected && (
