@@ -21,7 +21,7 @@ describe("ConfigContext", () => {
   });
 
   it("retorna defaults antes do load completar", () => {
-    const repo = makeRepo({ get: vi.fn(() => new Promise(() => {})) });
+    const repo = makeRepo({ get: vi.fn(() => new Promise(() => {})) as unknown as IConfigRepository["get"] });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ConfigProvider repository={repo}>{children}</ConfigProvider>
     );

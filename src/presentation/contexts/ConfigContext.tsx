@@ -83,7 +83,7 @@ export function ConfigProvider({
   children: React.ReactNode;
   repository?: IConfigRepository;
 }) {
-  const repoRef = useRef<IConfigRepository>();
+  const repoRef = useRef<IConfigRepository | undefined>(undefined);
   if (!repoRef.current) repoRef.current = repository ?? new ConfigRepository();
 
   const [isLoaded, setIsLoaded] = useState(false);

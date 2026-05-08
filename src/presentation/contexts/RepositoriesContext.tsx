@@ -30,7 +30,7 @@ export function RepositoriesProvider({
   children: ReactNode;
   value?: Partial<Repositories>;
 }) {
-  const defaultsRef = useRef<Repositories>();
+  const defaultsRef = useRef<Repositories | undefined>(undefined);
   if (!defaultsRef.current) {
     defaultsRef.current = {
       taskRepo: new TaskRepository(),
