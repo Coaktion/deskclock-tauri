@@ -225,6 +225,7 @@ export function RetroactivePage() {
           value={selectedDate}
           onChange={setSelectedDate}
           className="text-sm font-medium text-gray-200"
+          maxDate={new Date()}
         />
         <button
           onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))}

@@ -9,6 +9,7 @@ interface DatePickerInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  maxDate?: Date;
 }
 
 function isoToDate(iso: string): Date | undefined {
@@ -37,6 +38,7 @@ export function DatePickerInput({
   onChange,
   placeholder = "DD/MM/AAAA",
   className = "",
+  maxDate,
 }: DatePickerInputProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -120,6 +122,8 @@ export function DatePickerInput({
               onSelect={handleSelect}
               locale={ptBR}
               defaultMonth={isoToDate(value) ?? new Date()}
+              disabled={maxDate ? { after: maxDate } : undefined}
+              endMonth={maxDate}
               classNames={{
                 root: "text-sm",
                 month_caption: "text-gray-200 font-medium text-sm mb-1",
