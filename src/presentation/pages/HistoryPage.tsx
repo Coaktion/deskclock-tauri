@@ -171,6 +171,8 @@ export function HistoryPage() {
 
   function handleQuick(quick: QuickFilter) {
     setQuick(quick);
+    if (quick === "custom") setAdvancedOpen(true);
+    else setAdvancedOpen(false);
     void search({ ...filters, quick });
   }
 
@@ -324,7 +326,7 @@ export function HistoryPage() {
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSearch();
           }}
-          placeholder="Buscar por tarefa, projeto, categoria…"
+          placeholder="Buscar por nome…"
           className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
         />
       </div>
