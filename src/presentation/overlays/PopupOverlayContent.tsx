@@ -10,7 +10,7 @@ import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import type { CommandPaletteNavigatePayload } from "@shared/types/overlayEvents";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { formatHHMMSS, todayISO } from "@shared/utils/time";
+import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
 import {
   ArrowRight,
@@ -73,13 +73,6 @@ function fmtTime(iso: string): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-function timeToISO(timeStr: string, refISO: string): string {
-  const [hh, mm] = timeStr.split(":").map(Number);
-  const d = new Date(refISO);
-  d.setHours(hh ?? 0, mm ?? 0, 0, 0);
-  return d.toISOString();
-}
-
 // ─── Execution section (running mode) ────────────────────────────────────────
 
 interface ExecSectionProps {
@@ -139,12 +132,8 @@ function ExecSection({
 
   async function saveStartTime() {
     setEditingStartTime(false);
-    try {
-      const newISO = timeToISO(startTimeValue, task.startTime);
-      if (newISO !== task.startTime) await onUpdateTask({ startTime: newISO });
-    } catch {
-      /* discard invalid */
-    }
+    const newISO = parseStartTimeInput(startTimeValue, task.startTime);
+    if (newISO && newISO !== task.startTime) await onUpdateTask({ startTime: newISO });
   }
 
   // ── project ───────────────────────────────────────────────────────────────

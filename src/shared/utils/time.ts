@@ -149,6 +149,16 @@ export function computeEndHHMM(start: string, durationSeconds: number): string {
 }
 
 /** Formata timestamp ISO de último envio para exibição "DD/MM às HH:MM" */
+// Interpreta "HH:MM" como horário local do dia de refISO, clampando para now se futuro.
+// Retorna null se o input for inválido.
+export function parseStartTimeInput(timeStr: string, refISO: string): string | null {
+  const [hh, mm] = timeStr.split(":").map(Number);
+  if (isNaN(hh) || isNaN(mm)) return null;
+  const base = new Date(refISO);
+  base.setHours(hh, mm, 0, 0);
+  return (base > new Date() ? new Date() : base).toISOString();
+}
+
 export function formatLastSync(ts: string): string {
   if (!ts) return "Nunca";
   const d = new Date(ts);

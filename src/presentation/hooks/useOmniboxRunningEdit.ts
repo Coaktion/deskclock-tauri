@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { parseStartTimeInput } from "@shared/utils/time";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -104,12 +105,9 @@ export function useOmniboxRunningEdit({
   async function handleStartTimeCommit() {
     setEditingStartTime(false);
     if (!runningTask) return;
-    const [hh, mm] = startTimeInput.split(":").map(Number);
-    if (isNaN(hh) || isNaN(mm)) return;
-    const base = new Date(runningTask.startTime);
-    base.setHours(hh, mm, 0, 0);
-    if (base > new Date()) return;
-    await updateActiveTask({ startTime: base.toISOString() });
+    const newISO = parseStartTimeInput(startTimeInput, runningTask.startTime);
+    if (!newISO) return;
+    await updateActiveTask({ startTime: newISO });
   }
 
   async function handleProjectSelect(projectId: string) {

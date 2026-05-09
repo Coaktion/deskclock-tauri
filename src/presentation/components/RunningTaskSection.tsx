@@ -17,7 +17,7 @@ import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { RunningTaskEditForm } from "./RunningTaskEditForm";
 import { Autocomplete } from "./Autocomplete";
-import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
+import { formatHHMMSS, formatTimeOfDay, parseStartTimeInput } from "@shared/utils/time";
 
 interface RunningTaskSectionProps {
   projects: Project[];
@@ -132,14 +132,9 @@ export function RunningTaskSection({
   async function handleStartTimeCommit() {
     setEditingStartTime(false);
     if (!runningTask) return;
-    const [hh, mm] = startTimeInput.split(":").map(Number);
-    if (isNaN(hh) || isNaN(mm)) return;
-    // Constrói o novo startTime no dia atual (lógica de fuso local)
-    const base = new Date(runningTask.startTime);
-    base.setHours(hh, mm, 0, 0);
-    // Não permite hora de início no futuro
-    if (base > new Date()) return;
-    await updateActiveTask({ startTime: base.toISOString() });
+    const newISO = parseStartTimeInput(startTimeInput, runningTask.startTime);
+    if (!newISO) return;
+    await updateActiveTask({ startTime: newISO });
   }
 
   return (
