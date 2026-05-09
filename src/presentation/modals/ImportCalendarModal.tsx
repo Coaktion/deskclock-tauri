@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ChevronRight,
   Repeat2,
+  AlertTriangle,
 } from "lucide-react";
 import type { CalendarEvent } from "@domain/integrations/ICalendarImporter";
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
@@ -36,7 +37,7 @@ interface EventEditState {
 }
 
 function defaultEditState(event: CalendarEvent): EventEditState {
-  const hasRecurring = !!event.suggestedRecurringDays?.length;
+  const hasRecurring = !!event.suggestedRecurringDays?.length || !!event.recurringEventId;
   return {
     projectId: null,
     projectName: "",
@@ -158,6 +159,8 @@ interface EventRowProps {
   editState: EventEditState;
   projects: Project[];
   categories: Category[];
+  isDeduped: boolean;
+  isDuplicateOfExisting: boolean;
   onToggleSelect: () => void;
   onEditChange: (s: EventEditState) => void;
 }
@@ -168,6 +171,8 @@ function EventRow({
   editState,
   projects,
   categories,
+  isDeduped,
+  isDuplicateOfExisting,
   onToggleSelect,
   onEditChange,
 }: EventRowProps) {
@@ -178,7 +183,7 @@ function EventRow({
 
   return (
     <div
-      className="border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors"
+      className={`border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors ${isDeduped ? "opacity-60" : ""}`}
       onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
     >
       <div className="flex items-start gap-2 px-4 py-2.5">
@@ -195,6 +200,23 @@ function EventRow({
             {event.recurringEventId && (
               <span title="Evento recorrente">
                 <Repeat2 size={11} className="text-blue-400 shrink-0" />
+              </span>
+            )}
+            {isDeduped && (
+              <span
+                title="Mesma série já incluída — não criará tarefa separada"
+                className="px-1 py-0.5 text-[10px] leading-none rounded bg-gray-700 text-gray-400 shrink-0"
+              >
+                série
+              </span>
+            )}
+            {isDuplicateOfExisting && (
+              <span
+                title="Já existe uma tarefa planejada com este nome"
+                className="flex items-center gap-0.5 px-1 py-0.5 text-[10px] leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
+              >
+                <AlertTriangle size={9} />
+                já existe
               </span>
             )}
           </div>
@@ -261,6 +283,7 @@ export function ImportCalendarModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editMap, setEditMap] = useState<Map<string, EventEditState>>(new Map());
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -269,11 +292,17 @@ export function ImportCalendarModal({
   useEffect(() => {
     setLoading(true);
     setError(null);
-    importer
-      .getEvents(fromISO, toISO)
-      .then((evts) => {
+    Promise.all([importer.getEvents(fromISO, toISO), repo.findForWeek(fromISO, toISO)])
+      .then(([evts, existingTasks]) => {
+        const names = new Set(existingTasks.map((t) => t.name.toLowerCase().trim()));
+        setExistingNames(names);
+
         setEvents(evts);
-        setSelected(new Set(evts.map((e) => e.id)));
+        const duplicateIds = new Set(
+          evts.filter((e) => names.has(e.title.toLowerCase().trim())).map((e) => e.id)
+        );
+        setSelected(new Set(evts.filter((e) => !duplicateIds.has(e.id)).map((e) => e.id)));
+
         const map = new Map<string, EventEditState>();
         evts.forEach((e) => map.set(e.id, defaultEditState(e)));
         setEditMap(map);
@@ -284,6 +313,27 @@ export function ImportCalendarModal({
 
   const grouped = useMemo(() => groupByDate(events), [events]);
   const sortedDates = useMemo(() => [...grouped.keys()].sort(), [grouped]);
+
+  // IDs de eventos que serão ignorados na importação por serem instâncias redundantes
+  // de uma série recorrente já representada por outra instância selecionada.
+  const dedupedEventIds = useMemo(() => {
+    const seenSeriesIds = new Set<string>();
+    const duped = new Set<string>();
+    for (const e of events) {
+      if (!selected.has(e.id)) continue;
+      const edit = editMap.get(e.id);
+      if (edit?.scheduleType === "recurring" && e.recurringEventId) {
+        if (seenSeriesIds.has(e.recurringEventId)) {
+          duped.add(e.id);
+        } else {
+          seenSeriesIds.add(e.recurringEventId);
+        }
+      }
+    }
+    return duped;
+  }, [events, selected, editMap]);
+
+  const effectiveTaskCount = selected.size - dedupedEventIds.size;
 
   function toggleAll() {
     setSelected(selected.size === events.length ? new Set() : new Set(events.map((e) => e.id)));
@@ -326,7 +376,7 @@ export function ImportCalendarModal({
 
   async function handleImport() {
     const inputs: ImportEventInput[] = events
-      .filter((e) => selected.has(e.id))
+      .filter((e) => selected.has(e.id) && !dedupedEventIds.has(e.id))
       .map((e) => {
         const edit = editMap.get(e.id)!;
         return {
@@ -466,6 +516,8 @@ export function ImportCalendarModal({
                           editState={editMap.get(event.id) ?? defaultEditState(event)}
                           projects={projects}
                           categories={categories}
+                          isDeduped={dedupedEventIds.has(event.id)}
+                          isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
                           onToggleSelect={() => toggleEvent(event.id)}
                           onEditChange={(s) => updateEdit(event.id, s)}
                         />
@@ -507,13 +559,17 @@ export function ImportCalendarModal({
               </button>
               <button
                 onClick={handleImport}
-                disabled={importing || selected.size === 0}
+                disabled={importing || effectiveTaskCount === 0}
                 className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 {importing ? (
                   <>
                     <Loader2 size={12} className="animate-spin" />
                     Importando…
+                  </>
+                ) : effectiveTaskCount < selected.size ? (
+                  <>
+                    Importar {selected.size} evento(s) → {effectiveTaskCount} tarefa(s)
                   </>
                 ) : (
                   <>Importar selecionados ({selected.size})</>
