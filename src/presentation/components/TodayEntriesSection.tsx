@@ -5,6 +5,7 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
+import { EditGroupModal } from "@presentation/modals/EditGroupModal";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
@@ -31,6 +32,7 @@ export function TodayEntriesSection({
   const { taskRepo, taskLogRepo } = useRepositories();
   const { startTask, runningTask } = useRunningTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingGroup, setEditingGroup] = useState<TaskGroup | null>(null);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -65,6 +67,15 @@ export function TodayEntriesSection({
     reload();
   }
 
+  async function handleSaveGroup(
+    group: TaskGroup,
+    updates: { name: string | null; projectId: string | null; categoryId: string | null; billable: boolean }
+  ) {
+    const nowISO = new Date().toISOString();
+    await Promise.all(group.tasks.map((t) => updateTask(taskRepo, t.id, updates, nowISO)));
+    reload();
+  }
+
   return (
     <section>
       <div className="flex items-center justify-between mb-2">
@@ -90,6 +101,7 @@ export function TodayEntriesSection({
               onEdit={setEditingTask}
               onDelete={handleDelete}
               onMerge={handleMerge}
+              onEditGroup={setEditingGroup}
               onToggleBillable={handleToggleBillable}
             />
           ))}
@@ -103,6 +115,16 @@ export function TodayEntriesSection({
           categories={categories}
           onSave={reload}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {editingGroup && (
+        <EditGroupModal
+          group={editingGroup}
+          projects={projects}
+          categories={categories}
+          onSave={(updates) => handleSaveGroup(editingGroup, updates)}
+          onClose={() => setEditingGroup(null)}
         />
       )}
     </section>

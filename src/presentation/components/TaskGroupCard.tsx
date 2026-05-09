@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Merge, CheckCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, Merge, CheckCheck, Edit2 } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -21,6 +21,7 @@ interface TaskGroupCardProps {
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
   onMerge: (group: TaskGroup) => void;
+  onEditGroup?: (group: TaskGroup) => void;
   onToggleBillable: (task: Task) => void;
 }
 
@@ -37,6 +38,7 @@ export function TaskGroupCard({
   onEdit,
   onDelete,
   onMerge,
+  onEditGroup,
   onToggleBillable,
 }: TaskGroupCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -132,16 +134,28 @@ export function TaskGroupCard({
           </span>
         )}
         {isGroup && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMerge(group);
-            }}
-            title="Unificar"
-            className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0"
-          >
-            <Merge size={14} />
-          </button>
+          <>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditGroup?.(group);
+              }}
+              title="Editar grupo"
+              className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0 cursor-pointer"
+            >
+              <Edit2 size={14} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMerge(group);
+              }}
+              title="Unificar"
+              className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0 cursor-pointer"
+            >
+              <Merge size={14} />
+            </button>
+          </>
         )}
       </div>
 
