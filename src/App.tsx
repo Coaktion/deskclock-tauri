@@ -208,7 +208,7 @@ function AppInner() {
 
   useAppearanceSync(config);
   useGlobalShortcuts(config);
-  const { showMainWindow, showCommandPalette } = useStartupWindow(config, ignoreBlurRef);
+  const { showMainWindow, showCommandPalette } = useStartupWindow(config, ignoreBlurRef, isPinnedRef);
   useDailySyncScheduler(config, runDaily);
   useUpdateNotifier();
   useCommandPaletteRouter({

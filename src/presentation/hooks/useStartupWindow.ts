@@ -15,7 +15,11 @@ async function getCommandPalette() {
   return WebviewWindow.getByLabel("command-palette");
 }
 
-export function useStartupWindow(config: ConfigContextValue, ignoreBlurRef: RefObject<boolean>) {
+export function useStartupWindow(
+  config: ConfigContextValue,
+  ignoreBlurRef: RefObject<boolean>,
+  isPinnedRef: RefObject<boolean>,
+) {
   const showMainWindow = useCallback(
     async (focusToo = false) => {
       const saved = config.get("mainWindowPosition");
@@ -42,11 +46,27 @@ export function useStartupWindow(config: ConfigContextValue, ignoreBlurRef: RefO
   useEffect(() => {
     const unlisten = appWindow.listen("tauri://blur", () => {
       if (ignoreBlurRef.current) return;
+      if (isPinnedRef.current) return;
       if (!config.get("closeOnFocusLoss")) return;
       appWindow.hide();
     });
+
+    // Cliques ou teclas dentro da webview podem causar blur falso (foco DOM cai
+    // no body após re-render ou submit de formulário via Enter). Suprimir o blur
+    // por 300 ms após qualquer interação interna.
+    function suppressBlur() {
+      ignoreBlurRef.current = true;
+      setTimeout(() => {
+        ignoreBlurRef.current = false;
+      }, 300);
+    }
+    document.addEventListener("pointerdown", suppressBlur);
+    document.addEventListener("keydown", suppressBlur);
+
     return () => {
       unlisten.then((fn) => fn());
+      document.removeEventListener("pointerdown", suppressBlur);
+      document.removeEventListener("keydown", suppressBlur);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
