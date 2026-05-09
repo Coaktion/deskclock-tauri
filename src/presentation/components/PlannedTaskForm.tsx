@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { todayISO } from "@shared/utils/time";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { ToggleBillable } from "@presentation/components/ToggleBillable";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { ScheduleType } from "@domain/entities/PlannedTask";
@@ -132,7 +133,7 @@ export function PlannedTaskForm({
               }
             }}
             placeholder="Nova tarefa planejada"
-            className="w-full bg-transparent text-sm text-gray-100 placeholder-gray-500 focus:outline-none"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -163,10 +164,13 @@ export function PlannedTaskForm({
                 if (!v) set("categoryId", null);
               }}
               onSelect={(o) => {
-                set("categoryId", o.id);
-                set("categoryName", o.name);
                 const cat = categories.find((c) => c.id === o.id);
-                if (cat) set("billable", cat.defaultBillable);
+                setForm((prev) => ({
+                  ...prev,
+                  categoryId: o.id,
+                  categoryName: o.name,
+                  ...(cat ? { billable: cat.defaultBillable } : {}),
+                }));
               }}
               onEnter={() => void handleSubmit()}
               options={categories}
@@ -174,6 +178,7 @@ export function PlannedTaskForm({
               className=""
             />
           </div>
+          <ToggleBillable value={form.billable} onChange={(v) => set("billable", v)} />
           <button
             type="submit"
             disabled={!form.name.trim() || submitting}
