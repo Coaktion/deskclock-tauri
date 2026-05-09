@@ -111,7 +111,7 @@ export function useRetroactiveForm({
     const et = overrideEndHHMM ?? (endTime || prevEnd.current);
     const startISO = buildISO(selectedDate, st);
     let endISO = buildISO(selectedDate, et);
-    if (new Date(endISO) <= new Date(startISO)) {
+    if (new Date(endISO) < new Date(startISO)) {
       endISO = buildISO(addDaysISO(selectedDate, 1), et);
     }
     const durationSeconds = Math.round(

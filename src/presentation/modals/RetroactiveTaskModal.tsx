@@ -62,7 +62,7 @@ export function RetroactiveTaskModal({
     if (mode === "endtime") {
       endISO = buildISO(startDate, endTime);
       // Se hora fim <= hora início, assume dia seguinte
-      if (new Date(endISO) <= new Date(startISO)) {
+      if (new Date(endISO) < new Date(startISO)) {
         endISO = buildISO(addDaysISO(startDate, 1), endTime);
       }
       durationSeconds = Math.round(

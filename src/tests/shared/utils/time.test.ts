@@ -62,6 +62,8 @@ describe("computeDurationHHMM", () => {
     expect(computeDurationHHMM("23:00", "01:00")).toBe("02:00"));
   it("trata overnight cruzando meia-noite", () =>
     expect(computeDurationHHMM("22:30", "00:30")).toBe("02:00"));
+  it("retorna 00:00 quando início igual a fim", () =>
+    expect(computeDurationHHMM("10:00", "10:00")).toBe("00:00"));
   it("não retorna NaN:NaN para entrada inválida", () =>
     expect(computeDurationHHMM("", "")).toBe("00:01"));
 });
