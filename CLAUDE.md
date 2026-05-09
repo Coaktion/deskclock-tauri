@@ -12,7 +12,7 @@
 
 **Princípios de design:**
 - Cadastros devem exigir o mínimo de cliques possível.
-- Edições sempre em modais (exceto planejamento e lançamento retroativo, que são inline).
+- Edições sempre em modais.
 - Exclusões sem confirmação — a ação é imediata.
 - Overlays arrastáveis com persistência de posição.
 - Atalhos globais para operações frequentes.
@@ -51,7 +51,7 @@ src/
 ├── presentation/     # React UI
 │   ├── pages/        # Tasks, Planning, History, Retroactive, Data, Settings
 │   ├── components/   # Componentes reutilizáveis (Autocomplete, DatePickerInput…)
-│   ├── overlays/     # WelcomeOverlay, PlanningOverlay, CompactOverlay, ExecutionOverlay
+│   ├── overlays/     # CompactOverlay, PopupFlyout, CommandPaletteApp, Toast
 │   ├── modals/       # Modais de edição (EditTaskModal, ExportModal…)
 │   └── hooks/        # Custom hooks
 ├── shared/           # Types, utils, constants
@@ -151,7 +151,7 @@ src/
 - **Estado idle** (sem tarefa em execução): ícone do app + badge com contador de tarefas planejadas pendentes.
 - **Estado running**: timer `MM:SS` pulsante substituindo o ícone; anel com glow animado no estilo da cor de status.
 - **Estado paused**: indicador visual de pausa.
-- **Clique:** abre o Popup Flyout. Se não há tarefa e não há planejadas, inicia nova tarefa em branco.
+- **Clique:** abre o Popup Flyout.
 - **Grip bar** para arraste, com snap-to-grid opcional.
 
 #### 5.1.2 Popup Flyout (Overlay de execução)
@@ -185,21 +185,15 @@ src/
 - Horas billable hoje | Horas non-billable hoje | Total semana com dias (ex: "15:00 2d").
 
 #### Seção 4 — Entradas de hoje
-- **Header:** Título "Entradas de Hoje" + botão "Modo de envio" + total de horas hoje.
+- **Header:** Título "Entradas de Hoje" + total de horas hoje.
 - **Lista de tarefas registradas hoje:**
   - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.
-  - **Botões por card:** Play (inicia nova tarefa com mesmos dados) | Edit (modal completo) | Delete (sem confirmação).
+  - **Botões por card:** Play (inicia nova execução com os mesmos dados, se não houver tarefa em andamento) | Edit (modal completo) | Delete (sem confirmação).
 - **Agrupamento:** Tarefas com mesmo Nome + Projeto + Categoria são agrupadas visualmente.
   - Grupo exibe duração total.
   - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação.
   - Edit no grupo → altera todas as tarefas do grupo.
   - Expandir grupo → editar/excluir tarefa individual.
-
-#### Modo de envio
-- Ativado por botão no header de "Entradas de Hoje".
-- Cada tarefa ganha checkbox de seleção.
-- **Botões:** Selecionar todas | Desmarcar todas | Enviar selecionadas | Cancelar modo.
-- Enviar → usa integração configurada (Google Sheets ou outra futura).
 
 ---
 
@@ -217,7 +211,7 @@ src/
   - `period`: Data início + Data fim. Aparece durante todo o período.
 - **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa.
 - **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
-- **Edição:** Inline. Salva ao perder foco se houve alteração.
+- **Edição:** abre modal completo.
 - **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação).
 - **Importar Google Agenda:** Botão visível quando Google conectado. Modal com eventos agrupados por dia (accordion), seleção por dia, editor inline por evento (projeto, categoria, recorrência). Filtra `workingLocation`, `outOfOffice` e `focusTime`.
 
@@ -291,11 +285,9 @@ src/
 #### Overlay
 | Configuração | Tipo | Descrição |
 |---|---|---|
-| Sempre visível | toggle | Overlay permanece visível após concluir tarefa, mostrando tarefas planejadas |
 | Mostrar ao iniciar tarefa | toggle | Execution Overlay aparece ao iniciar tarefa |
 | Opacidade em repouso | slider (%) | Opacidade do overlay quando não está em interação |
 | Snap to grid | toggle | Encaixa overlay em grade ao soltar arraste |
-| Mostrar indicador visual da grade | toggle | Exibe grid visual ao arrastar overlay |
 
 #### Acessibilidade
 | Configuração | Tipo | Status | Descrição |
@@ -318,6 +310,7 @@ src/
 |---|---|
 | ID da Planilha | text input |
 | Sincronização automática | toggle (envia tarefa ao concluir) |
+| Envio manual | botão na tela de Integrações para enviar tarefas selecionadas sob demanda |
 | Autorização | botão OAuth |
 
 **Google Agenda:**
@@ -351,7 +344,7 @@ src/
 
 - **Acesso:** Ícone `FileClock` na sidebar.
 - **Navegação de data:** Setas ← → e DatePickerInput. Não é possível avançar além de hoje.
-- **Formulário inline (sem modal):** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração.
+- **Formulário de criação inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração. Criação sem modal; edição de registros existentes abre `EditTaskModal`.
 - **Modo de duração:** Toggle "Hora fim" / "Duração". Na duração, aceita `HH:MM:SS`, `MM:SS` ou inteiro (minutos).
 - **Overnight:** Se hora fim < hora início, considera-se que a tarefa cruzou meia-noite — end é atribuído ao dia seguinte.
 - **Cadeia de horários:** Após adicionar uma tarefa, o campo "Início" da próxima é automaticamente preenchido com o fim da tarefa recém-criada.
@@ -366,7 +359,7 @@ src/
 
 ### 6.1 Tarefa em execução
 - Apenas uma tarefa pode estar em execução por vez.
-- Iniciar nova tarefa para automaticamente a tarefa atual (registra end_time e calcula duração).
+- Não é possível iniciar nova tarefa enquanto houver uma em execução — é necessário parar a atual primeiro.
 - Timer começa imediatamente ao clicar "Iniciar", sem exigir dados.
 - Pausar preserva a duração acumulada. Retomar continua de onde parou.
 
@@ -637,7 +630,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-05-05 (guardrails arquiteturais adicionados após análise SOLID/DRY)*
+*Última atualização: 2026-05-09 (comportamentos removidos/alterados: modo de envio, edição inline de planejadas, tarefa em branco ao clicar overlay, configs "sempre visível" e "indicador de grade")*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

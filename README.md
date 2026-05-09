@@ -8,7 +8,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Timer ao vivo com play, pausa e stop
 - Edição de hora de início com recálculo automático do timer
 - Cancelamento imediato de tarefa sem confirmação
-- Inicia nova tarefa automaticamente parando a tarefa atual
+- Apenas uma tarefa em execução por vez — é necessário parar a atual para iniciar outra
 - Confirmação de conclusão ao parar (Concluída / Pendente)
 - Totalizadores diários e semanais (billable / non-billable)
 
@@ -51,7 +51,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Destino: salvar arquivo, copiar para área de transferência
 
 ### Integrações
-- **Google Sheets:** envio manual (modo de envio) ou automático ao concluir tarefa; duração como formato de hora nativo da planilha
+- **Google Sheets:** envio manual pela tela de Integrações ou automático ao concluir tarefa; duração como formato de hora nativo da planilha
 - **Google Calendar:** importação de eventos como tarefas planejadas (ver seção acima)
 - Conexão OAuth única para Sheets + Calendar
 - **Clockify:** envio de time-entries via API Key; importação de projetos/tags como entidades do DeskClock; mapeamento por workspace; tags padrão; auto-sync por tarefa ou diário; **modal "Gerenciar apontamentos" com CRUD direto sobre as time entries do Clockify** (criar, editar inline, excluir; filtros por período e por tags padrão)
