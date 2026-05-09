@@ -9,7 +9,7 @@ export function useTour(tourId: string): {
   const { startTour: startTourCtx } = useTourContext();
   const config = useAppConfig();
 
-  const hasSeenTour = config.get("toursSeen").includes(tourId);
+  const hasSeenTour = !config.isLoaded || config.get("toursSeen").includes(tourId);
 
   const startTour = useCallback(() => {
     startTourCtx(tourId);

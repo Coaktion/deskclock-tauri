@@ -28,7 +28,7 @@ export function IntegrationsPage({ onNavigate }: { onNavigate: (page: Page) => v
       const t = setTimeout(() => startTour(), 400);
       return () => clearTimeout(t);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSeenTour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const backButton = (
     <button

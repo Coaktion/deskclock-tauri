@@ -207,7 +207,7 @@ export function RetroactivePage() {
       const t = setTimeout(() => startTour(), 400);
       return () => clearTimeout(t);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hasSeenTour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalSeconds = tasks.reduce((acc, t) => acc + (t.durationSeconds ?? 0), 0);
 
