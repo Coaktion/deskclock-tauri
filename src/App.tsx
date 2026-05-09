@@ -136,7 +136,7 @@ function MainContent({
       }
       const elapsed = effectiveDuration(runningTask, new Date().toISOString());
       invoke("update_tray_tooltip", {
-        text: `DeskClock — ${name} (executando) — ${formatHHMMSS(elapsed)}`,
+        text: `${formatHHMMSS(elapsed)} — ${name}`,
       }).catch(() => {});
     }, 1000);
     return () => clearInterval(interval);
