@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
@@ -131,12 +132,16 @@ function PopupOverlayAppInner() {
           if (config.get("overlayShowOnStart")) {
             const isVis = await appWindow.isVisible();
             if (!isVis) {
-              await positionPopupNearCompact(appWindow, {
-                width: POPUP_W,
-                height: POPUP_H_ESTIMATE,
-              });
-              await appWindow.show();
-              await appWindow.setFocus();
+              const mainWin = await WebviewWindow.getByLabel("main");
+              const mainIsVisible = mainWin ? await mainWin.isVisible() : false;
+              if (!mainIsVisible) {
+                await positionPopupNearCompact(appWindow, {
+                  width: POPUP_W,
+                  height: POPUP_H_ESTIMATE,
+                });
+                await appWindow.show();
+                await appWindow.setFocus();
+              }
             }
           }
         } else {
@@ -286,6 +291,7 @@ function PopupOverlayAppInner() {
       await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
         task: updated,
         source: "overlay",
+        plannedTaskId: activePlannedTaskId.current,
       } satisfies RunningTaskChangedPayload);
     },
     [taskRepo, runningTask]
