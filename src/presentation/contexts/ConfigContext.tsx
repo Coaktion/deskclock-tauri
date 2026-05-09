@@ -93,13 +93,12 @@ export function ConfigProvider({
   useEffect(() => {
     async function load() {
       try {
+        const loaded = await repoRef.current!.loadAll();
         const keys = Object.keys(DEFAULTS) as ConfigKey[];
-        await Promise.all(
-          keys.map(async (key) => {
-            const val = await repoRef.current!.get(key, DEFAULTS[key]);
-            (cache.current as unknown as Record<string, unknown>)[key] = val;
-          })
-        );
+        for (const key of keys) {
+          (cache.current as unknown as Record<string, unknown>)[key] =
+            key in loaded ? loaded[key] : DEFAULTS[key];
+        }
       } catch (e) {
         setLoadError(e instanceof Error ? e.message : String(e));
       } finally {
