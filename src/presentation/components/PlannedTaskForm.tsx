@@ -86,9 +86,17 @@ export function PlannedTaskForm({
     });
   }
 
+  function isScheduleValid() {
+    if (form.scheduleType === "period")
+      return !!form.periodStart && !!form.periodEnd && form.periodEnd >= form.periodStart;
+    if (form.scheduleType === "recurring") return form.recurringDays.length > 0;
+    return true;
+  }
+
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!form.name.trim()) return;
+    if (!isScheduleValid()) return;
     setSubmitting(true);
     try {
       await onSubmit({
@@ -181,7 +189,7 @@ export function PlannedTaskForm({
           <ToggleBillable value={form.billable} onChange={(v) => set("billable", v)} />
           <button
             type="submit"
-            disabled={!form.name.trim() || submitting}
+            disabled={!form.name.trim() || !isScheduleValid() || submitting}
             className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
           >
             <Plus size={12} />
