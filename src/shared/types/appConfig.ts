@@ -33,6 +33,7 @@ export interface AppConfig {
   // Overlay
   overlayAlwaysVisible: boolean;
   overlayShowOnStart: boolean;
+  overlaySize: "big" | "small";
   overlayOpacity: number;
   overlaySnapToGrid: boolean;
   overlayPosition_execution: OverlayPosition;

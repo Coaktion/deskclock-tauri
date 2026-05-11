@@ -29,11 +29,22 @@ async function getPopup() {
   return WebviewWindow.getByLabel("overlay-popup");
 }
 
+// Dimensões visuais do overlay (usadas para clamping de tela e restore de posição).
+const OVERLAY_VISUAL = {
+  big: { width: 78, height: 52 },
+  small: { width: 68, height: 44 },
+} as const;
+
+// Dimensões de janela para setMinSize/setMaxSize (apenas a altura varia entre tamanhos;
+// a largura é gerenciada pelo GTK/WebView e pode ser maior que o conteúdo visual).
+const OVERLAY_WINDOW_HEIGHT = { big: 52, small: 44 } as const;
+
 function CompactOverlayAppInner() {
   const config = useAppConfig();
   const { taskRepo } = useRepositories();
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
+  const [overlaySize, setOverlaySize] = useState<"big" | "small">("big");
   const [snapToGrid, setSnapToGrid] = useState(false);
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -55,10 +66,7 @@ function CompactOverlayAppInner() {
     }
   }, []);
 
-  useOverlayDrag("overlayPosition_compact", snapToGrid, config, handlePositionChange, {
-    width: 78,
-    height: 52,
-  });
+  useOverlayDrag("overlayPosition_compact", snapToGrid, config, handlePositionChange, OVERLAY_VISUAL[overlaySize]);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -66,9 +74,12 @@ function CompactOverlayAppInner() {
     applyTheme(config.get("theme") as Theme);
     setOverlayOpacity(config.get("overlayOpacity") as number);
     setSnapToGrid(!!config.get("overlaySnapToGrid"));
-    void appWindow.setMinSize(new LogicalSize(52, 52));
-    void appWindow.setMaxSize(new LogicalSize(52, 52));
-    void restoreOverlayPosition("overlayPosition_compact", config, { width: 52, height: 52 });
+    const size = (config.get("overlaySize") as "big" | "small") ?? "big";
+    setOverlaySize(size);
+    const h = OVERLAY_WINDOW_HEIGHT[size];
+    void appWindow.setMinSize(new LogicalSize(52, h));
+    void appWindow.setMaxSize(new LogicalSize(52, h));
+    void restoreOverlayPosition("overlayPosition_compact", config, OVERLAY_VISUAL[size]);
     // Load initial running task — RUNNING_TASK_CHANGED is only emitted on mutations,
     // not on startup, so we query the DB directly.
     void getActiveTasks(taskRepo).then((tasks) => {
@@ -85,6 +96,13 @@ function CompactOverlayAppInner() {
         else if (payload.key === "overlaySnapToGrid") setSnapToGrid(!!payload.value);
         else if (payload.key === "fontSize") applyFontSize(payload.value as string);
         else if (payload.key === "theme") applyTheme(payload.value as Theme);
+        else if (payload.key === "overlaySize") {
+          const size = payload.value as "big" | "small";
+          setOverlaySize(size);
+          const h = OVERLAY_WINDOW_HEIGHT[size];
+          void appWindow.setMinSize(new LogicalSize(52, h));
+          void appWindow.setMaxSize(new LogicalSize(52, h));
+        }
       }
     );
     return () => {
@@ -153,7 +171,7 @@ function CompactOverlayAppInner() {
 
   return (
     <div
-      className="w-screen h-screen m-auto relative overflow-hidden"
+      className="w-screen h-screen relative"
       style={{ opacity, transition: "opacity 0.2s ease" }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -161,6 +179,7 @@ function CompactOverlayAppInner() {
       <CompactOverlayContent
         runningTask={runningTask}
         isPopupOpen={isPopupOpen}
+        overlaySize={overlaySize}
         onMouseDown={handleMouseDown}
         onTogglePopup={handleTogglePopup}
       />

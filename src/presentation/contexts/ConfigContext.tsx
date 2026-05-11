@@ -23,6 +23,7 @@ const DEFAULTS: AppConfig = {
   shortcutCommandPalette: "CmdOrCtrl+K",
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
+  overlaySize: "big" as const,
   overlayOpacity: 100,
   overlaySnapToGrid: false,
   overlayPosition_execution: { x: -1, y: -1 },
