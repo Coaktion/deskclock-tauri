@@ -30,6 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sincronizar CHANGELOG com o branch principal
+        run: git fetch origin main && git checkout origin/main -- CHANGELOG.md
+
       # ── Dependências do sistema (Linux) ────────────────────────────────
       - name: Instalar dependências do sistema (Linux)
         if: matrix.platform == 'ubuntu-22.04'
