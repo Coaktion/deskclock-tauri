@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Repeat2,
   AlertTriangle,
-  Info,
 } from "lucide-react";
 import type { CalendarEvent } from "@domain/integrations/ICalendarImporter";
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
@@ -25,7 +24,10 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { parseCalendarMetadata, findByNameCaseInsensitive } from "@shared/utils/calendarMetadata";
+import {
+  parseCalendarMetadata,
+  findByNameCaseInsensitive,
+} from "@shared/utils/calendarMetadata";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -355,7 +357,15 @@ export function ImportCalendarModal({
         evts.forEach((e) => map.set(e.id, defaultEditState(e, projects, categories)));
         setEditMap(map);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Erro ao buscar eventos."))
+      .catch((err) => {
+        const msg =
+          err instanceof Error
+            ? err.message || err.toString()
+            : typeof err === "string"
+              ? err
+              : JSON.stringify(err);
+        setError(msg || "Erro ao buscar eventos do Google Agenda.");
+      })
       .finally(() => setLoading(false));
   }, [fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -465,7 +475,13 @@ export function ImportCalendarModal({
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao importar eventos.");
+      const msg =
+        err instanceof Error
+          ? err.message || err.toString()
+          : typeof err === "string"
+            ? err
+            : JSON.stringify(err);
+      setError(msg || "Erro ao importar eventos.");
       setImporting(false);
     }
   }
@@ -579,19 +595,7 @@ export function ImportCalendarModal({
 
         {/* Corpo */}
         <div className="flex-1 overflow-y-auto">
-          {/* Dica de pré-mapeamento */}
-          <div className="flex items-start gap-2 mx-4 mt-3 mb-1 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
-            <Info size={13} className="text-blue-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-blue-300 leading-relaxed">
-              Dica: adicione na descrição do evento para pré-preencher projeto e categoria:
-              <br />
-              <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
-              <br />
-              <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
-            </p>
-          </div>
-
-          {loading && (
+            {loading && (
             <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
               <Loader2 size={16} className="animate-spin" />
               <span className="text-sm">Buscando eventos…</span>

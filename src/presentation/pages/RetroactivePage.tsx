@@ -336,6 +336,7 @@ export function RetroactivePage() {
           <p className="px-5 pt-2.5 pb-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">
             Planejadas para este dia
           </p>
+          <div className="max-h-36 overflow-y-auto">
           {plannedTasks.map((task) => {
             const projectName = projects.find((p) => p.id === task.projectId)?.name;
             const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
@@ -377,6 +378,7 @@ export function RetroactivePage() {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
@@ -453,9 +455,10 @@ export function RetroactivePage() {
               }
             }}
             placeholder="HH:MM"
-            title="Duração — editar atualiza hora fim"
+            title="Aceita: 1:30, 90, 1h, 1h 30m"
             className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
           />
+          <span className="text-xs text-gray-600 shrink-0">1:30, 90, 1h…</span>
           <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
           <input
             type="time"
@@ -500,11 +503,6 @@ export function RetroactivePage() {
             Adicionar
           </button>
         </div>
-
-        <p className="text-xs text-gray-600">
-          Duração aceita:{" "}
-          <span className="text-gray-500">1:30, 90, 1h, 1h 30m, 1h 30min, 1h 30</span>
-        </p>
 
         {form.error && <p className="text-xs text-red-400">{form.error}</p>}
       </div>

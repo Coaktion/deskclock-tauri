@@ -41,6 +41,7 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  Info,
   Loader2,
   LogIn,
   LogOut,
@@ -504,6 +505,16 @@ function CalendarSection({
           <CalendarDays size={13} />
           Importar eventos
         </button>
+      </div>
+      <div className="flex items-start gap-2 mb-2 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
+        <Info size={12} className="text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-blue-300 leading-relaxed">
+          Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
+          <br />
+          <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
+          {"  "}
+          <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
+        </p>
       </div>
 
       {importedCount !== null && (
