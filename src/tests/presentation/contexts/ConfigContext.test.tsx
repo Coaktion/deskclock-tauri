@@ -34,9 +34,7 @@ describe("ConfigContext", () => {
 
   it("marca isLoaded após carregar e retorna valor do repo", async () => {
     const repo = makeRepo({
-      get: vi.fn((key, defaultValue) =>
-        Promise.resolve(key === "fontSize" ? "G" : defaultValue)
-      ),
+      loadAll: vi.fn(() => Promise.resolve({ fontSize: "G" })),
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ConfigProvider repository={repo}>{children}</ConfigProvider>
@@ -66,7 +64,7 @@ describe("ConfigContext", () => {
 
   it("popula loadError se o repo rejeitar", async () => {
     const repo = makeRepo({
-      get: vi.fn(() => Promise.reject(new Error("db offline"))),
+      loadAll: vi.fn(() => Promise.reject(new Error("db offline"))),
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ConfigProvider repository={repo}>{children}</ConfigProvider>
