@@ -7,6 +7,7 @@ import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigConte
 function makeRepo(overrides: Partial<IConfigRepository> = {}): IConfigRepository {
   return {
     get: vi.fn((_key, defaultValue) => Promise.resolve(defaultValue)),
+    loadAll: vi.fn(() => Promise.resolve({})),
     set: vi.fn(() => Promise.resolve()),
     delete: vi.fn(() => Promise.resolve()),
     ...overrides,
