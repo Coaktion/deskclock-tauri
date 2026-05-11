@@ -15,6 +15,8 @@ interface CreatePlannedTaskInput {
   periodEnd?: string | null;
   actions?: PlannedTaskAction[];
   sortOrder?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 export async function createPlannedTask(
@@ -37,6 +39,8 @@ export async function createPlannedTask(
     actions: input.actions ?? [],
     sortOrder: input.sortOrder ?? 0,
     createdAt: nowISO,
+    startTime: input.startTime,
+    endTime: input.endTime,
   };
   await repo.save(task);
   return task;

@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Repeat2,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import type { CalendarEvent } from "@domain/integrations/ICalendarImporter";
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
@@ -21,8 +22,10 @@ import {
   type ImportEventInput,
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { parseCalendarMetadata, findByNameCaseInsensitive } from "@shared/utils/calendarMetadata";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -36,13 +39,20 @@ interface EventEditState {
   expanded: boolean;
 }
 
-function defaultEditState(event: CalendarEvent): EventEditState {
+function defaultEditState(
+  event: CalendarEvent,
+  projects: Project[],
+  categories: Category[]
+): EventEditState {
   const hasRecurring = !!event.suggestedRecurringDays?.length || !!event.recurringEventId;
+  const meta = parseCalendarMetadata(event.description);
+  const matchedProject = findByNameCaseInsensitive(meta.projectName, projects);
+  const matchedCategory = findByNameCaseInsensitive(meta.categoryName, categories);
   return {
-    projectId: null,
-    projectName: "",
-    categoryId: null,
-    categoryName: "",
+    projectId: matchedProject?.id ?? null,
+    projectName: matchedProject?.name ?? "",
+    categoryId: matchedCategory?.id ?? null,
+    categoryName: matchedCategory?.name ?? "",
     scheduleType: hasRecurring ? "recurring" : "specific_date",
     recurringDays: event.suggestedRecurringDays ?? [],
     expanded: false,
@@ -57,6 +67,41 @@ function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
     map.set(evt.date, list);
   }
   return map;
+}
+
+function getMondayISO(dateISO: string): string {
+  const d = new Date(dateISO + "T12:00:00");
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  const fmt2 = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
+}
+
+function groupByWeek(dates: string[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const date of dates) {
+    const key = getMondayISO(date);
+    const list = map.get(key) ?? [];
+    list.push(date);
+    map.set(key, list);
+  }
+  return map;
+}
+
+function weekRangeLabel(mondayISO: string): string {
+  const monday = new Date(mondayISO + "T12:00:00");
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${fmt(monday)} a ${fmt(sunday)}`;
+}
+
+function daysBetween(a: string, b: string): number {
+  return Math.round(
+    (new Date(b + "T12:00:00").getTime() - new Date(a + "T12:00:00").getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
 }
 
 /* ── Editor inline por evento ── */
@@ -259,9 +304,8 @@ function EventRow({
 interface ImportCalendarModalProps {
   importer: ICalendarImporter;
   repo: IPlannedTaskRepository;
-  fromISO: string;
-  toISO: string;
-  weekLabel: string;
+  defaultFromISO: string;
+  defaultToISO: string;
   projects: Project[];
   categories: Category[];
   onImported: (count: number) => void;
@@ -271,18 +315,20 @@ interface ImportCalendarModalProps {
 export function ImportCalendarModal({
   importer,
   repo,
-  fromISO,
-  toISO,
-  weekLabel,
+  defaultFromISO,
+  defaultToISO,
   projects,
   categories,
   onImported,
   onClose,
 }: ImportCalendarModalProps) {
+  const [fromDate, setFromDate] = useState(defaultFromISO.slice(0, 10));
+  const [toDate, setToDate] = useState(defaultToISO.slice(0, 10));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editMap, setEditMap] = useState<Map<string, EventEditState>>(new Map());
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const [collapsedWeeks, setCollapsedWeeks] = useState<Set<string>>(new Set());
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -292,30 +338,39 @@ export function ImportCalendarModal({
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setCollapsedDays(new Set());
+    setCollapsedWeeks(new Set());
+    const fromISO = new Date(fromDate + "T00:00:00").toISOString();
+    const toISO = new Date(toDate + "T23:59:59").toISOString();
     Promise.all([importer.getEvents(fromISO, toISO), repo.findForWeek(fromISO, toISO)])
       .then(([evts, existingTasks]) => {
         const names = new Set(existingTasks.map((t) => t.name.toLowerCase().trim()));
         setExistingNames(names);
-
         setEvents(evts);
         const duplicateIds = new Set(
           evts.filter((e) => names.has(e.title.toLowerCase().trim())).map((e) => e.id)
         );
         setSelected(new Set(evts.filter((e) => !duplicateIds.has(e.id)).map((e) => e.id)));
-
         const map = new Map<string, EventEditState>();
-        evts.forEach((e) => map.set(e.id, defaultEditState(e)));
+        evts.forEach((e) => map.set(e.id, defaultEditState(e, projects, categories)));
         setEditMap(map);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Erro ao buscar eventos."))
       .finally(() => setLoading(false));
-  }, [fromISO, toISO]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const grouped = useMemo(() => groupByDate(events), [events]);
   const sortedDates = useMemo(() => [...grouped.keys()].sort(), [grouped]);
+  const isMultiWeek = useMemo(() => daysBetween(fromDate, toDate) >= 7, [fromDate, toDate]);
+  const groupedByWeek = useMemo(
+    () => (isMultiWeek ? groupByWeek(sortedDates) : null),
+    [isMultiWeek, sortedDates]
+  );
+  const sortedWeeks = useMemo(
+    () => (groupedByWeek ? [...groupedByWeek.keys()].sort() : null),
+    [groupedByWeek]
+  );
 
-  // IDs de eventos que serão ignorados na importação por serem instâncias redundantes
-  // de uma série recorrente já representada por outra instância selecionada.
   const dedupedEventIds = useMemo(() => {
     const seenSeriesIds = new Set<string>();
     const duped = new Set<string>();
@@ -370,6 +425,15 @@ export function ImportCalendarModal({
     });
   }
 
+  function toggleWeekCollapse(weekKey: string) {
+    setCollapsedWeeks((prev) => {
+      const next = new Set(prev);
+      if (next.has(weekKey)) next.delete(weekKey);
+      else next.add(weekKey);
+      return next;
+    });
+  }
+
   function updateEdit(id: string, state: EventEditState) {
     setEditMap((prev) => new Map(prev).set(id, state));
   }
@@ -392,7 +456,12 @@ export function ImportCalendarModal({
 
     setImporting(true);
     try {
-      const count = await importCalendarEvents(repo, inputs, new Date().toISOString(), addOpenUrlAction);
+      const count = await importCalendarEvents(
+        repo,
+        inputs,
+        new Date().toISOString(),
+        addOpenUrlAction
+      );
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {
@@ -403,23 +472,125 @@ export function ImportCalendarModal({
 
   const allSelected = events.length > 0 && selected.size === events.length;
 
+  function renderDayGroup(date: string) {
+    const dayEvents = grouped.get(date)!;
+    const isCollapsed = collapsedDays.has(date);
+    const allDaySelected = dayEvents.every((e) => selected.has(e.id));
+    const someDaySelected = !allDaySelected && dayEvents.some((e) => selected.has(e.id));
+
+    const [year, month, day] = date.split("-").map(Number);
+    const d = new Date(year, month - 1, day);
+    const dayLabel = d.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "2-digit",
+      month: "2-digit",
+    });
+
+    return (
+      <div key={date} className="border-b border-gray-800 last:border-0">
+        <div
+          className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 cursor-pointer hover:bg-gray-800 transition-colors select-none"
+          onClick={() => toggleDayCollapse(date)}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleDayEvents(date);
+            }}
+            className="shrink-0 text-gray-400 hover:text-gray-200"
+          >
+            {allDaySelected ? (
+              <CheckSquare size={13} />
+            ) : someDaySelected ? (
+              <Square size={13} className="opacity-50" />
+            ) : (
+              <Square size={13} />
+            )}
+          </button>
+          <span className="text-xs font-medium text-gray-300 capitalize flex-1">{dayLabel}</span>
+          <span className="text-xs text-gray-600 mr-1">
+            {dayEvents.filter((e) => selected.has(e.id)).length}/{dayEvents.length}
+          </span>
+          {isCollapsed ? (
+            <ChevronRight size={13} className="text-gray-500" />
+          ) : (
+            <ChevronDown size={13} className="text-gray-500" />
+          )}
+        </div>
+
+        {!isCollapsed &&
+          dayEvents.map((event) => (
+            <EventRow
+              key={event.id}
+              event={event}
+              selected={selected.has(event.id)}
+              editState={editMap.get(event.id) ?? defaultEditState(event, projects, categories)}
+              projects={projects}
+              categories={categories}
+              isDeduped={dedupedEventIds.has(event.id)}
+              isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
+              onToggleSelect={() => toggleEvent(event.id)}
+              onEditChange={(s) => updateEdit(event.id, s)}
+            />
+          ))}
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
       <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 shrink-0">
-          <Calendar size={16} className="text-blue-400" />
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-gray-100">Importar do Google Calendar</h2>
-            <p className="text-xs text-gray-500">{weekLabel}</p>
+        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <Calendar size={16} className="text-blue-400 shrink-0" />
+            <h2 className="text-sm font-semibold text-gray-100 flex-1">
+              Importar do Google Calendar
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-1 text-gray-500 hover:text-gray-300 rounded-lg"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="shrink-0">De</span>
+            <DatePickerInput
+              value={fromDate}
+              onChange={(d) => {
+                setFromDate(d);
+                if (d > toDate) setToDate(d);
+              }}
+              className="flex-1"
+            />
+            <span className="shrink-0">até</span>
+            <DatePickerInput
+              value={toDate}
+              onChange={(d) => {
+                setToDate(d);
+                if (d < fromDate) setFromDate(d);
+              }}
+              className="flex-1"
+            />
+          </div>
         </div>
 
         {/* Corpo */}
         <div className="flex-1 overflow-y-auto">
+          {/* Dica de pré-mapeamento */}
+          <div className="flex items-start gap-2 mx-4 mt-3 mb-1 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
+            <Info size={13} className="text-blue-400 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-blue-300 leading-relaxed">
+              Dica: adicione na descrição do evento para pré-preencher projeto e categoria:
+              <br />
+              <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
+              <br />
+              <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
+            </p>
+          </div>
+
           {loading && (
             <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
               <Loader2 size={16} className="animate-spin" />
@@ -436,7 +607,7 @@ export function ImportCalendarModal({
 
           {!loading && !error && events.length === 0 && (
             <p className="text-sm text-gray-500 text-center py-12">
-              Nenhum evento encontrado nesta semana.
+              Nenhum evento encontrado neste período.
             </p>
           )}
 
@@ -454,77 +625,44 @@ export function ImportCalendarModal({
                 </button>
               </div>
 
-              {/* Grupos por dia (accordion) */}
-              {sortedDates.map((date) => {
-                const dayEvents = grouped.get(date)!;
-                const isCollapsed = collapsedDays.has(date);
-                const allDaySelected = dayEvents.every((e) => selected.has(e.id));
-                const someDaySelected =
-                  !allDaySelected && dayEvents.some((e) => selected.has(e.id));
+              {/* Grupos: multi-semana (2 níveis) ou por dia (1 nível) */}
+              {isMultiWeek && sortedWeeks
+                ? sortedWeeks.map((weekKey) => {
+                    const weekDates = groupedByWeek!.get(weekKey)!.sort();
+                    const isWeekCollapsed = collapsedWeeks.has(weekKey);
+                    const weekEventCount = weekDates.reduce(
+                      (acc, d) => acc + (grouped.get(d)?.length ?? 0),
+                      0
+                    );
+                    const weekSelectedCount = weekDates.reduce(
+                      (acc, d) =>
+                        acc + (grouped.get(d)?.filter((e) => selected.has(e.id)).length ?? 0),
+                      0
+                    );
 
-                const [year, month, day] = date.split("-").map(Number);
-                const d = new Date(year, month - 1, day);
-                const dayLabel = d.toLocaleDateString("pt-BR", {
-                  weekday: "long",
-                  day: "2-digit",
-                  month: "2-digit",
-                });
-
-                return (
-                  <div key={date} className="border-b border-gray-800 last:border-0">
-                    {/* Header do dia (clicável para colapsar) */}
-                    <div
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 cursor-pointer hover:bg-gray-800 transition-colors select-none"
-                      onClick={() => toggleDayCollapse(date)}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleDayEvents(date);
-                        }}
-                        className="shrink-0 text-gray-400 hover:text-gray-200"
-                      >
-                        {allDaySelected ? (
-                          <CheckSquare size={13} />
-                        ) : someDaySelected ? (
-                          <Square size={13} className="opacity-50" />
-                        ) : (
-                          <Square size={13} />
-                        )}
-                      </button>
-                      <span className="text-xs font-medium text-gray-300 capitalize flex-1">
-                        {dayLabel}
-                      </span>
-                      <span className="text-xs text-gray-600 mr-1">
-                        {dayEvents.filter((e) => selected.has(e.id)).length}/{dayEvents.length}
-                      </span>
-                      {isCollapsed ? (
-                        <ChevronRight size={13} className="text-gray-500" />
-                      ) : (
-                        <ChevronDown size={13} className="text-gray-500" />
-                      )}
-                    </div>
-
-                    {/* Eventos do dia */}
-                    {!isCollapsed &&
-                      dayEvents.map((event) => (
-                        <EventRow
-                          key={event.id}
-                          event={event}
-                          selected={selected.has(event.id)}
-                          editState={editMap.get(event.id) ?? defaultEditState(event)}
-                          projects={projects}
-                          categories={categories}
-                          isDeduped={dedupedEventIds.has(event.id)}
-                          isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
-                          onToggleSelect={() => toggleEvent(event.id)}
-                          onEditChange={(s) => updateEdit(event.id, s)}
-                        />
-                      ))}
-                  </div>
-                );
-              })}
+                    return (
+                      <div key={weekKey} className="border-b border-gray-700 last:border-0">
+                        <div
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-800 cursor-pointer hover:bg-gray-700/80 transition-colors select-none"
+                          onClick={() => toggleWeekCollapse(weekKey)}
+                        >
+                          <span className="text-xs font-semibold text-gray-200 flex-1">
+                            Semana de {weekRangeLabel(weekKey)}
+                          </span>
+                          <span className="text-xs text-gray-500 mr-1">
+                            {weekSelectedCount}/{weekEventCount}
+                          </span>
+                          {isWeekCollapsed ? (
+                            <ChevronRight size={13} className="text-gray-500" />
+                          ) : (
+                            <ChevronDown size={13} className="text-gray-500" />
+                          )}
+                        </div>
+                        {!isWeekCollapsed && weekDates.map((date) => renderDayGroup(date))}
+                      </div>
+                    );
+                  })
+                : sortedDates.map((date) => renderDayGroup(date))}
             </>
           )}
         </div>

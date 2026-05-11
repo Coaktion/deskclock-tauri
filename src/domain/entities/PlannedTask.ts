@@ -22,4 +22,8 @@ export interface PlannedTask {
   actions: PlannedTaskAction[];
   sortOrder: number;
   createdAt: string;
+  /** Horário de início "HH:MM" — preenchido quando importado do Google Agenda */
+  startTime?: string;
+  /** Horário de fim "HH:MM" — preenchido quando importado do Google Agenda */
+  endTime?: string;
 }

@@ -472,7 +472,7 @@ function CalendarSection({
     [config.isLoaded, factories]
   );
 
-  const { fromISO, toISO, weekLabel } = useMemo(() => {
+  const { defaultFromISO, defaultToISO } = useMemo(() => {
     const today = new Date();
     const dow = today.getDay();
     const diffToMon = dow === 0 ? -6 : 1 - dow;
@@ -482,12 +482,9 @@ function CalendarSection({
     sun.setDate(mon.getDate() + 6);
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const fmtLabel = (d: Date) =>
-      `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
     return {
-      fromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
-      toISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
-      weekLabel: `${fmtLabel(mon)} — ${fmtLabel(sun)}/${sun.getFullYear()}`,
+      defaultFromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
+      defaultToISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
     };
   }, []);
 
@@ -495,7 +492,7 @@ function CalendarSection({
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
       <div className="py-2.5 flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          Importe eventos da semana atual como tarefas planejadas.
+          Importe eventos do Google Agenda como tarefas planejadas.
         </p>
         <button
           onClick={() => {
@@ -505,7 +502,7 @@ function CalendarSection({
           className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0 ml-3 border border-gray-700"
         >
           <CalendarDays size={13} />
-          Importar semana atual
+          Importar eventos
         </button>
       </div>
 
@@ -539,9 +536,8 @@ function CalendarSection({
         <ImportCalendarModal
           importer={calendarImporter}
           repo={plannedTaskRepo}
-          fromISO={fromISO}
-          toISO={toISO}
-          weekLabel={weekLabel}
+          defaultFromISO={defaultFromISO}
+          defaultToISO={defaultToISO}
           projects={projects}
           categories={categories}
           onImported={(count) => {

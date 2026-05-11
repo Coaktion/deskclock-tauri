@@ -19,6 +19,7 @@ interface GoogleConferenceEntryPoint {
 interface GoogleEvent {
   id: string;
   summary?: string;
+  description?: string;
   start: GoogleEventDateTime;
   end: GoogleEventDateTime;
   status?: string;
@@ -159,6 +160,7 @@ export class GoogleCalendarImporter implements ICalendarImporter {
         recurringEventId: event.recurringEventId,
         htmlLink: event.htmlLink,
         conferenceLink,
+        description: event.description,
       };
     }
 
@@ -180,6 +182,7 @@ export class GoogleCalendarImporter implements ICalendarImporter {
       recurringEventId: event.recurringEventId,
       htmlLink: event.htmlLink,
       conferenceLink,
+      description: event.description,
     };
   }
 }

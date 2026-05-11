@@ -1,4 +1,5 @@
 import type { Category } from "@domain/entities/Category";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -156,6 +157,30 @@ export function useRetroactiveForm({
     await onTaskAdded();
   }
 
+  function prefill(task: PlannedTask) {
+    setName(task.name);
+    const project = projects.find((p) => p.id === task.projectId);
+    const category = categories.find((c) => c.id === task.categoryId);
+    setProjectName(project?.name ?? "");
+    setSelectedProjectId(task.projectId);
+    setCategoryName(category?.name ?? "");
+    setSelectedCategoryId(task.categoryId);
+    setBillable(task.billable);
+    nameRef.current?.focus();
+  }
+
+  function advanceChainStart(newStartHHMM: string) {
+    const durSecs = parseDurationInput(durationInput) ?? DEFAULT_DURATION_SECS;
+    const newEnd = computeEndHHMM(newStartHHMM, durSecs);
+    const h = Math.floor(durSecs / 3600);
+    const m = Math.floor((durSecs % 3600) / 60);
+    setStartTime(newStartHHMM);
+    setEndTime(newEnd);
+    prevStart.current = newStartHHMM;
+    prevEnd.current = newEnd;
+    setDurationInput(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  }
+
   return {
     nameRef,
     prevStart,
@@ -182,5 +207,7 @@ export function useRetroactiveForm({
     handleEndCommit,
     commitDuration,
     handleAdd,
+    prefill,
+    advanceChainStart,
   };
 }

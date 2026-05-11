@@ -41,6 +41,8 @@ export async function importCalendarEvents(
           addOpenUrlAction && (event.conferenceLink ?? event.htmlLink)
             ? [{ type: "open_url", value: (event.conferenceLink ?? event.htmlLink)! }]
             : [],
+        startTime: event.startTime,
+        endTime: event.endTime,
       },
       nowISO
     );
