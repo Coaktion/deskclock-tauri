@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.1...v1.5.0) (2026-05-11)
+
+
+### Features
+
+* **tour:** tour interativo de onboarding nas telas de Tarefas, Planejamento, Retroativo e Integrações
+* **planejamento:** editor de ações, campo cobrável e validação de agendamento disponíveis ao criar tarefa planejada
+* **tarefas:** edição em grupo nas tarefas agrupadas de hoje
+* **calendar:** importação do Google Agenda com detecção e prevenção de duplicatas
+
+
+### Bug Fixes
+
+* **overlay:** popup não abre automaticamente quando a janela principal já está visível
+* **overlay:** dados da tarefa planejada preservados ao parar via popup
+* **janela:** janela principal não fecha ao interagir internamente com o pin ativo
+* **retroativo:** tarefa com início e fim iguais não avança para o dia seguinte
+* **retroativo:** seleção de datas futuras bloqueada no calendário
+* **histórico:** comportamento dos filtros avançados e placeholder de busca corrigidos
+* **bandeja:** timer exibido antes do nome no tooltip do ícone
+* **tour:** tour não reaparece após já ter sido concluído
+
+
+### Performance Improvements
+
+* inicialização mais rápida com carregamento em lote dos dados do banco
+
 ### [1.4.1](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.0...v1.4.1) (2026-05-05)
 
 
