@@ -6,7 +6,8 @@ import type {
   ClockifyTimeEntry,
   ClockifyTimeEntryFull,
   ClockifyTimeEntryPayload,
-} from "./types";
+} from "@shared/types/clockify";
+import type { IClockifyApi } from "@domain/integrations/IClockifyApi";
 import {
   ClockifyAuthError,
   ClockifyNetworkError,
@@ -18,7 +19,7 @@ const BASE_URL = "https://api.clockify.me/api/v1";
 const PAGE_SIZE = 200;
 const TIME_ENTRIES_PAGE_SIZE = 1000;
 
-export class ClockifyClient {
+export class ClockifyClient implements IClockifyApi {
   constructor(private readonly apiKey: string) {}
 
   private headers(): Record<string, string> {

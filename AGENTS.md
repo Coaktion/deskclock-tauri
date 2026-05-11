@@ -1,7 +1,24 @@
+# DeskClock — Instruções para agentes de IA
+
+**Fonte da verdade:** [`CLAUDE.md`](./CLAUDE.md). Leia o arquivo completo antes de qualquer mudança. Em particular, **§9 (Guardrails arquiteturais)** lista regras invioláveis para evitar que novas contribuições reintroduzam os antipatterns mapeados na análise SOLID/DRY de 2026-05-05.
+
+Resumo do que `CLAUDE.md` cobre:
+
+- Visão e princípios de produto (§1, §5)
+- Stack e arquitetura Clean (§2, §3)
+- Modelo de dados e regras de negócio (§4, §6)
+- Workflow de desenvolvimento, testes, branches, commits (§7)
+- Convenções de código e design system (§8)
+- **Guardrails arquiteturais — regras invioláveis por camada, limites de tamanho, checagem anti-DRY, roteiro para nova integração (§9)**
+
+Antes de implementar qualquer feature ou refactor, valide o plano contra §9.
+
+---
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **deskclock-tauri** (1863 symbols, 5223 relationships, 144 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **deskclock-tauri** (3716 symbols, 8030 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

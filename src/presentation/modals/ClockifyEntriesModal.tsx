@@ -1,27 +1,24 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { X, RefreshCw, Loader2, Pencil, Trash2, DollarSign, Plus } from "lucide-react";
-import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
 import type {
   ClockifyHydratedProject,
   ClockifyHydratedTag,
   ClockifyTimeEntryFull,
   ClockifyTimeEntryPayload,
-} from "@infra/integrations/clockify/types";
+} from "@shared/types/clockify";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useClockifyEntries";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import {
   todayISO,
   addDaysISO,
-  startOfDayISO,
-  endOfDayISO,
   startOfMonthISO,
   formatHistoryDayHeader,
   formatHHMM,
   formatDurationCompact,
 } from "@shared/utils/time";
-import { showToast } from "@shared/utils/toast";
 
 type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
 
@@ -35,10 +32,6 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
 
 interface ClockifyEntriesModalProps {
   onClose: () => void;
-}
-
-function projectDisplayName(p: { name: string; clientName?: string | null }): string {
-  return p.clientName ? `${p.clientName} - ${p.name}` : p.name;
 }
 
 function toLocalDate(iso: string): string {
@@ -105,16 +98,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   const [quick, setQuick] = useState<QuickFilter>("today");
   const [customStart, setCustomStart] = useState(todayISO());
   const [customEnd, setCustomEnd] = useState(todayISO());
-  const [entries, setEntries] = useState<ClockifyTimeEntryFull[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [refreshSignal, setRefreshSignal] = useState(0);
-
   const [onlyDefaultTags, setOnlyDefaultTags] = useState(defaultTagIds.length > 0);
-
-  const [clockifyProjects, setClockifyProjects] = useState<ClockifyHydratedProject[]>([]);
-  const [clockifyTags, setClockifyTags] = useState<ClockifyHydratedTag[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
 
   // ESC fecha
   useEffect(() => {
@@ -139,75 +123,20 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
 
   const rangeValid = !!range.start && !!range.end && range.start <= range.end;
 
-  // Fetch de entries quando o range muda
-  useEffect(() => {
-    if (!apiKey || !workspaceId || !userId || !rangeValid) return;
-    const client = new ClockifyClient(apiKey);
-    setLoading(true);
-    client
-      .listTimeEntries(workspaceId, userId, startOfDayISO(range.start), endOfDayISO(range.end))
-      .then(setEntries)
-      .catch((err) => {
-        showToast("error", err instanceof Error ? err.message : "Erro ao carregar apontamentos.");
-      })
-      .finally(() => setLoading(false));
-  }, [apiKey, workspaceId, userId, range.start, range.end, rangeValid, refreshSignal]);
-
-  // Cache de projetos/tags Clockify para os formulários (1x ao abrir, refetch ao trocar workspace)
-  useEffect(() => {
-    if (!apiKey || !workspaceId) return;
-    const client = new ClockifyClient(apiKey);
-    Promise.all([client.listProjects(workspaceId), client.listTags(workspaceId)])
-      .then(([ps, ts]) => {
-        setClockifyProjects(
-          [...ps].sort((a, b) =>
-            projectDisplayName(a).localeCompare(projectDisplayName(b), "pt-BR", { sensitivity: "base" })
-          )
-        );
-        setClockifyTags(
-          [...ts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-        );
-      })
-      .catch((err) => {
-        showToast("error", err instanceof Error ? err.message : "Erro ao carregar projetos/tags.");
-      });
-  }, [apiKey, workspaceId]);
-
-  async function handleSaveEdit(entryId: string, payload: ClockifyTimeEntryPayload) {
-    const client = new ClockifyClient(apiKey);
-    try {
-      await client.updateTimeEntry(workspaceId, entryId, payload);
-      await showToast("success", "Apontamento atualizado.");
-      setEditingId(null);
-      setRefreshSignal((n) => n + 1);
-    } catch (err) {
-      await showToast("error", err instanceof Error ? err.message : "Erro ao salvar.");
-    }
-  }
-
-  async function handleCreate(payload: ClockifyTimeEntryPayload) {
-    const client = new ClockifyClient(apiKey);
-    try {
-      await client.createTimeEntry(workspaceId, payload);
-      await showToast("success", "Apontamento criado.");
-      setCreateOpen(false);
-      setRefreshSignal((n) => n + 1);
-    } catch (err) {
-      await showToast("error", err instanceof Error ? err.message : "Erro ao criar.");
-    }
-  }
-
-  async function handleDelete(entryId: string) {
-    const client = new ClockifyClient(apiKey);
-    try {
-      await client.deleteTimeEntry(workspaceId, entryId);
-      await showToast("success", "Apontamento excluído.");
-      if (editingId === entryId) setEditingId(null);
-      setRefreshSignal((n) => n + 1);
-    } catch (err) {
-      await showToast("error", err instanceof Error ? err.message : "Erro ao excluir.");
-    }
-  }
+  const {
+    entries,
+    loading,
+    clockifyProjects,
+    clockifyTags,
+    editingId,
+    setEditingId,
+    createOpen,
+    setCreateOpen,
+    refresh,
+    handleSaveEdit,
+    handleCreate,
+    handleDelete,
+  } = useClockifyEntries({ apiKey, workspaceId, userId, range, rangeValid });
 
   // Defaults para o form de criação: agora arredondado pra baixo, +1h pro fim,
   // tags padrão pré-selecionadas (mesmas usadas no envio automático)
@@ -280,7 +209,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
-              onClick={() => setRefreshSignal((n) => n + 1)}
+              onClick={refresh}
               disabled={loading}
               title="Recarregar"
               className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"

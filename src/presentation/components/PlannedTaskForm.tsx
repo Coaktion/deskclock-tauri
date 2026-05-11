@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
-import { Plus } from "lucide-react";
+import { Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
 import { todayISO } from "@shared/utils/time";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { ToggleBillable } from "@presentation/components/ToggleBillable";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { ScheduleType } from "@domain/entities/PlannedTask";
+import type { PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 
 interface FormState {
   name: string;
@@ -19,6 +20,7 @@ interface FormState {
   recurringDays: number[];
   periodStart: string;
   periodEnd: string;
+  actions: PlannedTaskAction[];
 }
 
 const INITIAL: FormState = {
@@ -33,6 +35,7 @@ const INITIAL: FormState = {
   recurringDays: [],
   periodStart: "",
   periodEnd: "",
+  actions: [],
 };
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -58,6 +61,7 @@ interface PlannedTaskFormProps {
     recurringDays: number[] | null;
     periodStart: string | null;
     periodEnd: string | null;
+    actions: PlannedTaskAction[];
   }) => Promise<void>;
 }
 
@@ -70,6 +74,8 @@ export function PlannedTaskForm({
 }: PlannedTaskFormProps) {
   const [form, setForm] = useState<FormState>({ ...INITIAL, scheduleDate: defaultDate });
   const [submitting, setSubmitting] = useState(false);
+  const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
+  const [newActionValue, setNewActionValue] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -85,9 +91,24 @@ export function PlannedTaskForm({
     });
   }
 
+  function handleAddAction() {
+    const value = newActionValue.trim();
+    if (!value) return;
+    set("actions", [...form.actions, { type: newActionType, value }]);
+    setNewActionValue("");
+  }
+
+  function isScheduleValid() {
+    if (form.scheduleType === "period")
+      return !!form.periodStart && !!form.periodEnd && form.periodEnd >= form.periodStart;
+    if (form.scheduleType === "recurring") return form.recurringDays.length > 0;
+    return true;
+  }
+
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();
     if (!form.name.trim()) return;
+    if (!isScheduleValid()) return;
     setSubmitting(true);
     try {
       await onSubmit({
@@ -100,6 +121,7 @@ export function PlannedTaskForm({
         recurringDays: form.scheduleType === "recurring" ? form.recurringDays : null,
         periodStart: form.scheduleType === "period" ? form.periodStart || null : null,
         periodEnd: form.scheduleType === "period" ? form.periodEnd || null : null,
+        actions: form.actions,
       });
       setForm((prev) => ({
         ...INITIAL,
@@ -132,7 +154,7 @@ export function PlannedTaskForm({
               }
             }}
             placeholder="Nova tarefa planejada"
-            className="w-full bg-transparent text-sm text-gray-100 placeholder-gray-500 focus:outline-none"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -163,10 +185,13 @@ export function PlannedTaskForm({
                 if (!v) set("categoryId", null);
               }}
               onSelect={(o) => {
-                set("categoryId", o.id);
-                set("categoryName", o.name);
                 const cat = categories.find((c) => c.id === o.id);
-                if (cat) set("billable", cat.defaultBillable);
+                setForm((prev) => ({
+                  ...prev,
+                  categoryId: o.id,
+                  categoryName: o.name,
+                  ...(cat ? { billable: cat.defaultBillable } : {}),
+                }));
               }}
               onEnter={() => void handleSubmit()}
               options={categories}
@@ -174,14 +199,75 @@ export function PlannedTaskForm({
               className=""
             />
           </div>
+          <ToggleBillable value={form.billable} onChange={(v) => set("billable", v)} />
           <button
             type="submit"
-            disabled={!form.name.trim() || submitting}
+            disabled={!form.name.trim() || !isScheduleValid() || submitting}
             className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
           >
             <Plus size={12} />
             Adicionar
           </button>
+        </div>
+
+        {/* Actions section */}
+        <div className="border-t border-gray-800/60 px-3 py-2.5 flex flex-col gap-2">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ações ao iniciar</p>
+
+          {form.actions.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {form.actions.map((action, i) => (
+                <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg">
+                  <span className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}>
+                    {action.type === "open_url" ? <ExternalLink size={13} /> : <FolderOpen size={13} />}
+                  </span>
+                  <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
+                    {action.value}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => set("actions", form.actions.filter((_, j) => j !== i))}
+                    className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                    title="Remover"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex gap-2">
+            <select
+              value={newActionType}
+              onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
+              className="px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
+            >
+              <option value="open_url">URL</option>
+              <option value="open_file">Arquivo</option>
+            </select>
+            <input
+              type="text"
+              value={newActionValue}
+              onChange={(e) => setNewActionValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddAction();
+                }
+              }}
+              placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
+              className="flex-1 px-2.5 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+            <button
+              type="button"
+              onClick={handleAddAction}
+              disabled={!newActionValue.trim()}
+              className="px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg transition-colors"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
         </div>
 
         {/* Schedule type section */}

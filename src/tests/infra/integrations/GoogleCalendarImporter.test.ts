@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { AppConfig, ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { AppConfig } from "@shared/types/appConfig";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 
 // Mock do GoogleTokenManager para isolar da rede
 vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
@@ -13,10 +14,8 @@ vi.stubGlobal("fetch", mockFetch);
 
 const { GoogleCalendarImporter } = await import("@infra/integrations/GoogleCalendarImporter");
 
-function makeConfig(): ConfigContextValue {
+function makeConfig(): IGoogleAuthPort {
   return {
-    isLoaded: true,
-    loadError: null,
     get: vi.fn(<K extends keyof AppConfig>(_key: K) => "" as AppConfig[K]),
     set: vi.fn(),
   };

@@ -74,12 +74,15 @@ jobs:
         run: |
           const fs = require('fs');
           const version = process.env.TAG.replace(/^v/, '');
+          const escapedVersion = version.replace(/\./g, '\\.');
+          const versionHeader = new RegExp(`^#{2,3} \\[${escapedVersion}\\]`);
+          const nextHeader = /^#{2,3} \[/;
           const lines = fs.readFileSync('CHANGELOG.md', 'utf8').split('\n');
           let inSection = false;
           const notes = [];
           for (const line of lines) {
-            if (line.startsWith(`## [${version}]`)) { inSection = true; continue; }
-            if (inSection && line.startsWith('## [')) break;
+            if (versionHeader.test(line)) { inSection = true; continue; }
+            if (inSection && nextHeader.test(line)) break;
             if (inSection) notes.push(line);
           }
           const trimmed = notes.join('\n').trim();

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
 import { emit } from "@tauri-apps/api/event";
@@ -7,18 +7,18 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
-import { GoogleCalendarImporter } from "@infra/integrations/GoogleCalendarImporter";
-import { PlannedTaskRepository } from "@infra/database/PlannedTaskRepository";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useTour } from "@presentation/hooks/useTour";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { executeActions } from "@shared/utils/actions";
+import { executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
-const plannedRepo = new PlannedTaskRepository();
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -73,6 +73,7 @@ function isTaskOnDate(task: PlannedTask, dateISO: string): boolean {
 type DayFilter = "all" | string;
 
 export function WeekPlanningView() {
+  const { plannedTaskRepo } = useRepositories();
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [showImportModal, setShowImportModal] = useState(false);
@@ -83,6 +84,7 @@ export function WeekPlanningView() {
   const today = todayISO();
 
   const config = useAppConfig();
+  const factories = useIntegrations();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
@@ -92,8 +94,8 @@ export function WeekPlanningView() {
   const calendarConnected = config.isLoaded && !!config.get("googleRefreshToken");
 
   const calendarImporter = useMemo(
-    () => (config.isLoaded ? new GoogleCalendarImporter(config) : null),
-    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
+    () => (config.isLoaded ? factories.createCalendarImporter() : null),
+    [config.isLoaded, factories]
   );
 
   const calendarFromISO = new Date(start + "T00:00:00").toISOString();
@@ -151,7 +153,7 @@ export function WeekPlanningView() {
 
   async function handleBulkDelete() {
     for (const id of selectedIds) {
-      await deletePlannedTask(plannedRepo, id);
+      await deletePlannedTask(plannedTaskRepo, id);
     }
     await reload();
     await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
@@ -165,6 +167,15 @@ export function WeekPlanningView() {
       emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
     }
   }
+
+  const { startTour, hasSeenTour } = useTour("planning");
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredDays = dayFilter === "all" ? visibleDays : [dayFilter];
 
@@ -192,7 +203,7 @@ export function WeekPlanningView() {
   return (
     <div className="flex flex-col">
       {/* ── Header: week selector + completed count ─────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
+      <div data-tour="planning-header" className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
         <button
           onClick={() => {
             setWeekOffset((o) => o - 1);
@@ -265,13 +276,21 @@ export function WeekPlanningView() {
               <span className="text-xs text-gray-400 whitespace-nowrap">
                 {completedCount} de {totalCount} concluídas
               </span>
+              <button
+                onClick={() => startTour()}
+                title="Ver tour da página"
+                className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+              >
+                ?
+              </button>
             </>
           )}
         </div>
       </div>
 
       {/* ── Day filter pills ─────────────────────────────────────────────────── */}
-      <div className="flex gap-1.5 px-4 py-2.5 border-b border-gray-800 overflow-x-auto">
+      <div data-tour="planning-day-filter" className="border-b border-gray-800">
+      <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
         <button
           onClick={() => setDayFilter("all")}
           className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
@@ -305,8 +324,10 @@ export function WeekPlanningView() {
           );
         })}
       </div>
+      </div>
 
       {/* ── Form ─────────────────────────────────────────────────────────────── */}
+      <div data-tour="planning-form">
       <PlannedTaskForm
         key={dayFilter !== "all" ? dayFilter : start}
         projects={projects}
@@ -315,12 +336,13 @@ export function WeekPlanningView() {
         defaultDate={dayFilter !== "all" ? dayFilter : today}
         onSubmit={create}
       />
+      </div>
 
       {/* ── Google Calendar import modal ─────────────────────────────────────── */}
       {showImportModal && calendarImporter && (
         <ImportCalendarModal
           importer={calendarImporter}
-          repo={plannedRepo}
+          repo={plannedTaskRepo}
           fromISO={calendarFromISO}
           toISO={calendarToISO}
           weekLabel={label}
@@ -332,6 +354,7 @@ export function WeekPlanningView() {
       )}
 
       {/* ── Task list grouped by day ──────────────────────────────────────────── */}
+      <div data-tour="planning-task-list">
       {filteredDays.map((day) => {
         const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
         if (dayTasks.length === 0 && dayFilter !== "all") return null;
@@ -396,6 +419,7 @@ export function WeekPlanningView() {
           </div>
         );
       })}
+      </div>
     </div>
   );
 }

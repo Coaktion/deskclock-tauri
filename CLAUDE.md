@@ -12,7 +12,7 @@
 
 **Princípios de design:**
 - Cadastros devem exigir o mínimo de cliques possível.
-- Edições sempre em modais (exceto planejamento e lançamento retroativo, que são inline).
+- Edições sempre em modais.
 - Exclusões sem confirmação — a ação é imediata.
 - Overlays arrastáveis com persistência de posição.
 - Atalhos globais para operações frequentes.
@@ -51,7 +51,7 @@ src/
 ├── presentation/     # React UI
 │   ├── pages/        # Tasks, Planning, History, Retroactive, Data, Settings
 │   ├── components/   # Componentes reutilizáveis (Autocomplete, DatePickerInput…)
-│   ├── overlays/     # WelcomeOverlay, PlanningOverlay, CompactOverlay, ExecutionOverlay
+│   ├── overlays/     # CompactOverlay, PopupFlyout, CommandPaletteApp, Toast
 │   ├── modals/       # Modais de edição (EditTaskModal, ExportModal…)
 │   └── hooks/        # Custom hooks
 ├── shared/           # Types, utils, constants
@@ -151,7 +151,7 @@ src/
 - **Estado idle** (sem tarefa em execução): ícone do app + badge com contador de tarefas planejadas pendentes.
 - **Estado running**: timer `MM:SS` pulsante substituindo o ícone; anel com glow animado no estilo da cor de status.
 - **Estado paused**: indicador visual de pausa.
-- **Clique:** abre o Popup Flyout. Se não há tarefa e não há planejadas, inicia nova tarefa em branco.
+- **Clique:** abre o Popup Flyout.
 - **Grip bar** para arraste, com snap-to-grid opcional.
 
 #### 5.1.2 Popup Flyout (Overlay de execução)
@@ -185,21 +185,15 @@ src/
 - Horas billable hoje | Horas non-billable hoje | Total semana com dias (ex: "15:00 2d").
 
 #### Seção 4 — Entradas de hoje
-- **Header:** Título "Entradas de Hoje" + botão "Modo de envio" + total de horas hoje.
+- **Header:** Título "Entradas de Hoje" + total de horas hoje.
 - **Lista de tarefas registradas hoje:**
   - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.
-  - **Botões por card:** Play (inicia nova tarefa com mesmos dados) | Edit (modal completo) | Delete (sem confirmação).
+  - **Botões por card:** Play (inicia nova execução com os mesmos dados, se não houver tarefa em andamento) | Edit (modal completo) | Delete (sem confirmação).
 - **Agrupamento:** Tarefas com mesmo Nome + Projeto + Categoria são agrupadas visualmente.
   - Grupo exibe duração total.
   - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação.
   - Edit no grupo → altera todas as tarefas do grupo.
   - Expandir grupo → editar/excluir tarefa individual.
-
-#### Modo de envio
-- Ativado por botão no header de "Entradas de Hoje".
-- Cada tarefa ganha checkbox de seleção.
-- **Botões:** Selecionar todas | Desmarcar todas | Enviar selecionadas | Cancelar modo.
-- Enviar → usa integração configurada (Google Sheets ou outra futura).
 
 ---
 
@@ -217,7 +211,7 @@ src/
   - `period`: Data início + Data fim. Aparece durante todo o período.
 - **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa.
 - **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
-- **Edição:** Inline. Salva ao perder foco se houve alteração.
+- **Edição:** abre modal completo.
 - **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação).
 - **Importar Google Agenda:** Botão visível quando Google conectado. Modal com eventos agrupados por dia (accordion), seleção por dia, editor inline por evento (projeto, categoria, recorrência). Filtra `workingLocation`, `outOfOffice` e `focusTime`.
 
@@ -291,11 +285,9 @@ src/
 #### Overlay
 | Configuração | Tipo | Descrição |
 |---|---|---|
-| Sempre visível | toggle | Overlay permanece visível após concluir tarefa, mostrando tarefas planejadas |
 | Mostrar ao iniciar tarefa | toggle | Execution Overlay aparece ao iniciar tarefa |
 | Opacidade em repouso | slider (%) | Opacidade do overlay quando não está em interação |
 | Snap to grid | toggle | Encaixa overlay em grade ao soltar arraste |
-| Mostrar indicador visual da grade | toggle | Exibe grid visual ao arrastar overlay |
 
 #### Acessibilidade
 | Configuração | Tipo | Status | Descrição |
@@ -318,6 +310,7 @@ src/
 |---|---|
 | ID da Planilha | text input |
 | Sincronização automática | toggle (envia tarefa ao concluir) |
+| Envio manual | botão na tela de Integrações para enviar tarefas selecionadas sob demanda |
 | Autorização | botão OAuth |
 
 **Google Agenda:**
@@ -351,7 +344,7 @@ src/
 
 - **Acesso:** Ícone `FileClock` na sidebar.
 - **Navegação de data:** Setas ← → e DatePickerInput. Não é possível avançar além de hoje.
-- **Formulário inline (sem modal):** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração.
+- **Formulário de criação inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração. Criação sem modal; edição de registros existentes abre `EditTaskModal`.
 - **Modo de duração:** Toggle "Hora fim" / "Duração". Na duração, aceita `HH:MM:SS`, `MM:SS` ou inteiro (minutos).
 - **Overnight:** Se hora fim < hora início, considera-se que a tarefa cruzou meia-noite — end é atribuído ao dia seguinte.
 - **Cadeia de horários:** Após adicionar uma tarefa, o campo "Início" da próxima é automaticamente preenchido com o fim da tarefa recém-criada.
@@ -366,7 +359,7 @@ src/
 
 ### 6.1 Tarefa em execução
 - Apenas uma tarefa pode estar em execução por vez.
-- Iniciar nova tarefa para automaticamente a tarefa atual (registra end_time e calcula duração).
+- Não é possível iniciar nova tarefa enquanto houver uma em execução — é necessário parar a atual primeiro.
 - Timer começa imediatamente ao clicar "Iniciar", sem exigir dados.
 - Pausar preserva a duração acumulada. Retomar continua de onde parou.
 
@@ -561,12 +554,88 @@ Pare e pergunte se:
 
 ---
 
-*Última atualização: 28/04/2026*
+## 9. GUARDRAILS ARQUITETURAIS (obrigatório para qualquer agente de IA)
+
+> Este projeto passou por análise SOLID/DRY completa em 2026-05-05. As regras abaixo existem para impedir que novas contribuições reintroduzam os antipatterns mapeados. **Violar uma regra exige justificativa explícita ao usuário antes do código rodar.**
+
+### 9.1 Antes de tocar código
+
+- [ ] **Rodou `gitnexus_impact` no símbolo a ser modificado.** Reportar blast radius ao usuário antes de editar.
+- [ ] **Identificou em qual camada está mexendo** (`domain/`, `infra/`, `presentation/`, `shared/`) e revisou as regras da camada (§3).
+- [ ] **Procurou primeiro abstração existente** em `domain/repositories/` ou `domain/integrations/` antes de instanciar classe concreta.
+
+### 9.2 Regras invioláveis por camada
+
+#### `domain/`
+- ❌ **Nunca** importar de `infra/` ou `presentation/`.
+- ❌ **Nunca** importar `@tauri-apps/*`, `react`, ou qualquer SDK externo.
+- ✅ Apenas tipos puros, interfaces (`I*Repository`, `I*Sender`, `I*Importer`, `ISyncStrategy`), entidades e use cases.
+
+#### `infra/`
+- ❌ **Nunca** importar de `presentation/`.
+- ❌ **Nunca** depender de `ConfigContextValue` diretamente. Se precisa ler config, declare uma porta estreita (ex.: `ISheetsConfigPort`, `IClockifyConfigPort`) em `domain/integrations/` listando só as chaves usadas. A UI implementa a porta via adaptador. Esta regra existe porque hoje 10 arquivos de `infra/` dependem de uma interface com 65 chaves heterogêneas.
+- ✅ Toda classe pública implementa uma interface declarada em `domain/`.
+
+#### `presentation/`
+- ❌ **Nunca** instanciar classes concretas de `infra/` em componentes/hooks/modais. Se aparecer `new GoogleSheetsTaskSender(...)`, `new ClockifyClient(...)`, `new GoogleCalendarImporter(...)`, `new AutoSyncRunner([new XSyncStrategy(...)])` em código novo de `presentation/`, **pare e injete via Provider/context**.
+- ❌ **Nunca** adicionar `new XxxRepository()` ou `new XxxAdapter()` no nível de módulo. Composition root vai num Provider com prop `value?` injetável.
+- ❌ **Nunca** usar `await import("@infra/...")` dinâmico para "esconder" dependência. Se está fazendo isso, é sinal de que falta abstração.
+- ❌ **Nunca** suprimir `react-hooks/exhaustive-deps` sem comentário explicando por quê. Hoje há 30+ supressões — não adicione mais.
+
+#### `shared/`
+- ✅ Apenas utils puros, tipos, constantes. Sem side-effects, sem I/O, sem estado.
+- ❌ Não use como "lugar onde colocar quando não sei onde vai" — se é regra de negócio, é `domain/`.
+
+### 9.3 Limites de tamanho (orientações, não regras absolutas)
+
+| Tipo | Verde | Amarelo (revisar) | Vermelho (split obrigatório) |
+|---|---|---|---|
+| Componente React | < 200 linhas | 200–350 | > 350 |
+| Hook customizado | < 80 linhas | 80–150 | > 150 |
+| Use case | < 50 linhas | 50–100 | > 100 |
+| `useEffect` por componente | ≤ 4 | 5–8 | > 8 (hooks focados) |
+| `useState` por componente | ≤ 8 | 9–15 | > 15 (extrair `useReducer` ou hook próprio) |
+
+Quando atingir vermelho: **não adicionar mais features ao símbolo. Refatorar primeiro, feature depois.**
+
+### 9.4 Antes de duplicar lógica — checagem obrigatória
+
+Se você está prestes a:
+
+- **Copiar lógica de uma SyncStrategy** → use `BaseSyncStrategy`/template existente (a ser introduzido pelo item 2 do refactor).
+- **Copiar UI de seleção de tarefas (toggleGroup, toggleDay, selKey, hasSentSelected)** → use `<TaskSendModal>`/`useTaskSendSelection` (item 1 do refactor).
+- **Copiar UI de auto-sync (Modo / Gatilho / Horário / Último envio)** → use `<AutoSyncControls integrationKey="...">`.
+- **Copiar lógica de import de catálogo (fetch → find/create → mapping → persist)** → use helper `runIntegrationImport(...)`.
+
+Se a abstração ainda não existe (porque o item de refactor está pending), **pare e pergunte** se vale criá-la agora vs esperar o refactor agendado.
+
+### 9.5 Adicionando uma nova integração externa (Toggl, Jira, Linear…)
+
+Roteiro obrigatório:
+1. Criar interface em `domain/integrations/` (ex.: `ITogglApi`, `ITogglConfigPort`).
+2. Implementar adaptador em `infra/integrations/toggl/` que `implements` a interface.
+3. Se sincroniza tarefas: criar `TogglSyncStrategy implements ISyncStrategy`.
+4. Registrar a strategy no Provider central de auto-sync (não em `App.tsx` nem em `usePostStopLogic` — esses dois lugares hoje têm cópias hardcoded; novo trabalho deve usar o ponto único).
+5. UI consome via hook injetado, **nunca** `new TogglClient()` direto em componente.
+6. Adicionar testes em `tests/infra/integrations/toggl/` espelhando a estrutura dos existentes.
+
+### 9.6 Adicionando configuração ao usuário
+
+- ✅ Ao adicionar uma chave em `AppConfig`, considere se cabe numa porta estreita já existente. Se a chave só interessa a uma integração, **declare a porta** em `domain/integrations/` e atualize só os consumidores reais.
+- ❌ Não acoplar `ConfigContextValue` ao infra. Se precisa de uma chave dela em `infra/`, passe-a como argumento ou via porta — não receba `ConfigContextValue` inteiro.
+
+### 9.7 Quando o refactor SOLID está em curso
+
+Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). Antes de tocar um símbolo listado lá, **verificar se o item está em andamento** — pode haver branch ativa. Se sim, coordenar com o usuário em vez de criar conflito.
+
+---
+
+*Última atualização: 2026-05-09 (comportamentos removidos/alterados: modo de envio, edição inline de planejadas, tarefa em branco ao clicar overlay, configs "sempre visível" e "indicador de grade")*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **deskclock-tauri** (1863 symbols, 5223 relationships, 144 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **deskclock-tauri** (3716 symbols, 8030 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -578,44 +647,12 @@ This project is indexed by GitNexus as **deskclock-tauri** (1863 symbols, 5223 r
 - When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
 - When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
 
-## When Debugging
-
-1. `gitnexus_query({query: "<error or symptom>"})` — find execution flows related to the issue
-2. `gitnexus_context({name: "<suspect function>"})` — see all callers, callees, and process participation
-3. `READ gitnexus://repo/deskclock-tauri/process/{processName}` — trace the full execution flow step by step
-4. For regressions: `gitnexus_detect_changes({scope: "compare", base_ref: "main"})` — see what your branch changed
-
-## When Refactoring
-
-- **Renaming**: MUST use `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` first. Review the preview — graph edits are safe, text_search edits need manual review. Then run with `dry_run: false`.
-- **Extracting/Splitting**: MUST run `gitnexus_context({name: "target"})` to see all incoming/outgoing refs, then `gitnexus_impact({target: "target", direction: "upstream"})` to find all external callers before moving code.
-- After any refactor: run `gitnexus_detect_changes({scope: "all"})` to verify only expected files changed.
-
 ## Never Do
 
 - NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
 - NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
 - NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
-
-## Tools Quick Reference
-
-| Tool | When to use | Command |
-|------|-------------|---------|
-| `query` | Find code by concept | `gitnexus_query({query: "auth validation"})` |
-| `context` | 360-degree view of one symbol | `gitnexus_context({name: "validateUser"})` |
-| `impact` | Blast radius before editing | `gitnexus_impact({target: "X", direction: "upstream"})` |
-| `detect_changes` | Pre-commit scope check | `gitnexus_detect_changes({scope: "staged"})` |
-| `rename` | Safe multi-file rename | `gitnexus_rename({symbol_name: "old", new_name: "new", dry_run: true})` |
-| `cypher` | Custom graph queries | `gitnexus_cypher({query: "MATCH ..."})` |
-
-## Impact Risk Levels
-
-| Depth | Meaning | Action |
-|-------|---------|--------|
-| d=1 | WILL BREAK — direct callers/importers | MUST update these |
-| d=2 | LIKELY AFFECTED — indirect deps | Should test |
-| d=3 | MAY NEED TESTING — transitive | Test if critical path |
 
 ## Resources
 
@@ -625,32 +662,6 @@ This project is indexed by GitNexus as **deskclock-tauri** (1863 symbols, 5223 r
 | `gitnexus://repo/deskclock-tauri/clusters` | All functional areas |
 | `gitnexus://repo/deskclock-tauri/processes` | All execution flows |
 | `gitnexus://repo/deskclock-tauri/process/{name}` | Step-by-step execution trace |
-
-## Self-Check Before Finishing
-
-Before completing any code modification task, verify:
-1. `gitnexus_impact` was run for all modified symbols
-2. No HIGH/CRITICAL risk warnings were ignored
-3. `gitnexus_detect_changes()` confirms changes match expected scope
-4. All d=1 (WILL BREAK) dependents were updated
-
-## Keeping the Index Fresh
-
-After committing code changes, the GitNexus index becomes stale. Re-run analyze to update it:
-
-```bash
-npx gitnexus analyze
-```
-
-If the index previously included embeddings, preserve them by adding `--embeddings`:
-
-```bash
-npx gitnexus analyze --embeddings
-```
-
-To check whether embeddings exist, inspect `.gitnexus/meta.json` — the `stats.embeddings` field shows the count (0 means no embeddings). **Running analyze without `--embeddings` will delete any previously generated embeddings.**
-
-> Claude Code users: A PostToolUse hook handles this automatically after `git commit` and `git merge`.
 
 ## CLI
 

@@ -32,6 +32,9 @@ importers:
       '@tauri-apps/plugin-sql':
         specifier: ^2
         version: 2.4.0
+      driver.js:
+        specifier: ^1.4.0
+        version: 1.4.0
       lucide-react:
         specifier: ^0.511.0
         version: 0.511.0(react@19.2.4)
@@ -1427,6 +1430,9 @@ packages:
   dotgitignore@2.1.0:
     resolution: {integrity: sha512-sCm11ak2oY6DglEPpCB8TixLjWAxd3kJTs6UIcSasNYxXdFPV+YKlye92c8H4kKFqV5qYMIh7d+cYecEg0dIkA==}
     engines: {node: '>=6'}
+
+  driver.js@1.4.0:
+    resolution: {integrity: sha512-Gm64jm6PmcU+si21sQhBrTAM1JvUrR0QhNmjkprNLxohOBzul9+pNHXgQaT9lW84gwg9GMLB3NZGuGolsz5uew==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -4334,6 +4340,8 @@ snapshots:
     dependencies:
       find-up: 3.0.0
       minimatch: 3.1.5
+
+  driver.js@1.4.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

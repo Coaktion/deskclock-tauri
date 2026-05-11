@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import type { TaskGroup } from "@shared/utils/groupTasks";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { getWeekTotal } from "@domain/usecases/tasks/GetWeekTotal";
-import { groupTasks } from "@shared/utils/groupTasks";
+import { groupTasks } from "@domain/utils/groupTasks";
 import { todayISO, weekBoundsISO } from "@shared/utils/time";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
-
-const repo = new TaskRepository();
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 
 interface TaskTotals {
   billableSeconds: number;
@@ -17,6 +15,7 @@ interface TaskTotals {
 }
 
 export function useTasks() {
+  const { taskRepo } = useRepositories();
   const { reloadSignal } = useRunningTask();
   const [today, setToday] = useState(todayISO);
   const [groups, setGroups] = useState<TaskGroup[]>([]);
@@ -39,8 +38,8 @@ export function useTasks() {
   const load = useCallback(async () => {
     const { start, end } = weekBoundsISO();
     const [tasks, weekData] = await Promise.all([
-      getTasksForDate(repo, todayISO()),
-      getWeekTotal(repo, start, end),
+      getTasksForDate(taskRepo, todayISO()),
+      getWeekTotal(taskRepo, start, end),
     ]);
 
     const completed = tasks.filter((t) => t.status === "completed");
@@ -59,7 +58,7 @@ export function useTasks() {
       weekSeconds: weekData.totalSeconds,
       weekDays: weekData.daysWorked,
     });
-  }, []);
+  }, [taskRepo]);
 
   useEffect(() => {
     load();

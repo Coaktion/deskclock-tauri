@@ -1,6 +1,9 @@
 import type { Task } from "@domain/entities/Task";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import {
+  RepositoriesProvider,
+  useRepositories,
+} from "@presentation/contexts/RepositoriesContext";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
@@ -21,7 +24,6 @@ import { restoreOverlayPosition, useOverlayDrag } from "./useOverlayDrag";
 
 const appWindow = getCurrentWindow();
 
-const taskRepo = new TaskRepository();
 
 async function getPopup() {
   return WebviewWindow.getByLabel("overlay-popup");
@@ -29,6 +31,7 @@ async function getPopup() {
 
 function CompactOverlayAppInner() {
   const config = useAppConfig();
+  const { taskRepo } = useRepositories();
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [snapToGrid, setSnapToGrid] = useState(false);
@@ -168,7 +171,9 @@ function CompactOverlayAppInner() {
 export function CompactOverlayApp() {
   return (
     <ConfigProvider>
-      <CompactOverlayAppInner />
+      <RepositoriesProvider>
+        <CompactOverlayAppInner />
+      </RepositoriesProvider>
     </ConfigProvider>
   );
 }

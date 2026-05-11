@@ -135,7 +135,7 @@ export function computeDurationHHMM(start: string, end: string): string {
   const [eh, em] = end.split(":").map(Number);
   if ([sh, sm, eh, em].some((v) => !isFinite(v))) return "00:01";
   let diff = eh * 60 + em - (sh * 60 + sm);
-  if (diff <= 0) diff += 1440;
+  if (diff < 0) diff += 1440;
   return `${String(Math.floor(diff / 60)).padStart(2, "0")}:${String(diff % 60).padStart(2, "0")}`;
 }
 
@@ -146,4 +146,25 @@ export function computeEndHHMM(start: string, durationSeconds: number): string {
   const totalMins = sh * 60 + sm + Math.round(durationSeconds / 60);
   const endMins = ((totalMins % 1440) + 1440) % 1440;
   return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
+}
+
+/** Formata timestamp ISO de último envio para exibição "DD/MM às HH:MM" */
+// Interpreta "HH:MM" como horário local do dia de refISO, clampando para now se futuro.
+// Retorna null se o input for inválido.
+export function parseStartTimeInput(timeStr: string, refISO: string): string | null {
+  const [hh, mm] = timeStr.split(":").map(Number);
+  if (isNaN(hh) || isNaN(mm)) return null;
+  const base = new Date(refISO);
+  base.setHours(hh, mm, 0, 0);
+  return (base > new Date() ? new Date() : base).toISOString();
+}
+
+export function formatLastSync(ts: string): string {
+  if (!ts) return "Nunca";
+  const d = new Date(ts);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${day}/${month} às ${h}:${m}`;
 }

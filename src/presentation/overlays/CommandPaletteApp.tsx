@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { emit } from "@tauri-apps/api/event";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
+import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
 import { CommandPalette } from "@presentation/components/CommandPalette";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
@@ -96,7 +97,9 @@ function CommandPaletteAppInner() {
 export function CommandPaletteApp() {
   return (
     <ConfigProvider>
-      <CommandPaletteAppInner />
+      <RepositoriesProvider>
+        <CommandPaletteAppInner />
+      </RepositoriesProvider>
     </ConfigProvider>
   );
 }

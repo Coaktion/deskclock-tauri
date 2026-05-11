@@ -2,19 +2,17 @@ import { useEffect, useState } from "react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { TaskGroup } from "@shared/utils/groupTasks";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import { TaskRepository } from "@infra/database/TaskRepository";
-import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
+import { EditGroupModal } from "@presentation/modals/EditGroupModal";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
 
-const repo = new TaskRepository();
-const logRepo = new TaskIntegrationLogRepository();
 
 interface TodayEntriesSectionProps {
   groups: TaskGroup[];
@@ -31,17 +29,19 @@ export function TodayEntriesSection({
   reload,
   totalSeconds,
 }: TodayEntriesSectionProps) {
+  const { taskRepo, taskLogRepo } = useRepositories();
   const { startTask, runningTask } = useRunningTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingGroup, setEditingGroup] = useState<TaskGroup | null>(null);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const today = todayISO();
-    logRepo
+    taskLogRepo
       .findSentIds("google_sheets", startOfDayISO(today), endOfDayISO(today))
       .then((ids) => setSentIds(new Set(ids)))
       .catch(() => {});
-  }, [groups]);
+  }, [taskLogRepo, groups]);
 
   async function handlePlay(task: Task) {
     await startTask({
@@ -53,17 +53,26 @@ export function TodayEntriesSection({
   }
 
   async function handleDelete(task: Task) {
-    await deleteTask(repo, task.id);
+    await deleteTask(taskRepo, task.id);
     reload();
   }
 
   async function handleToggleBillable(task: Task) {
-    await updateTask(repo, task.id, { billable: !task.billable }, new Date().toISOString());
+    await updateTask(taskRepo, task.id, { billable: !task.billable }, new Date().toISOString());
     reload();
   }
 
   async function handleMerge(group: TaskGroup) {
-    await mergeTaskGroup(repo, group.tasks, new Date().toISOString());
+    await mergeTaskGroup(taskRepo, group.tasks, new Date().toISOString());
+    reload();
+  }
+
+  async function handleSaveGroup(
+    group: TaskGroup,
+    updates: { name: string | null; projectId: string | null; categoryId: string | null; billable: boolean }
+  ) {
+    const nowISO = new Date().toISOString();
+    await Promise.all(group.tasks.map((t) => updateTask(taskRepo, t.id, updates, nowISO)));
     reload();
   }
 
@@ -92,6 +101,7 @@ export function TodayEntriesSection({
               onEdit={setEditingTask}
               onDelete={handleDelete}
               onMerge={handleMerge}
+              onEditGroup={setEditingGroup}
               onToggleBillable={handleToggleBillable}
             />
           ))}
@@ -105,6 +115,16 @@ export function TodayEntriesSection({
           categories={categories}
           onSave={reload}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {editingGroup && (
+        <EditGroupModal
+          group={editingGroup}
+          projects={projects}
+          categories={categories}
+          onSave={(updates) => handleSaveGroup(editingGroup, updates)}
+          onClose={() => setEditingGroup(null)}
         />
       )}
     </section>

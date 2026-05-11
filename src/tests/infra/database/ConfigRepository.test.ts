@@ -108,6 +108,44 @@ describe("ConfigRepository", () => {
     });
   });
 
+  describe("loadAll", () => {
+    it("retorna objeto vazio quando banco não tem registros (instalação nova)", async () => {
+      mockDb.select.mockResolvedValue([]);
+      const repo = new ConfigRepository();
+      const result = await repo.loadAll();
+      expect(result).toEqual({});
+    });
+
+    it("retorna todos os pares chave-valor parseados", async () => {
+      mockDb.select.mockResolvedValue([
+        { key: "theme", value: JSON.stringify("escuro") },
+        { key: "overlayOpacity", value: JSON.stringify(80) },
+        { key: "liveTrayTimer", value: JSON.stringify(true) },
+      ]);
+      const repo = new ConfigRepository();
+      const result = await repo.loadAll();
+      expect(result).toEqual({ theme: "escuro", overlayOpacity: 80, liveTrayTimer: true });
+    });
+
+    it("ignora chaves com JSON inválido e retorna as demais", async () => {
+      mockDb.select.mockResolvedValue([
+        { key: "theme", value: JSON.stringify("azul") },
+        { key: "corrompida", value: "não é json" },
+      ]);
+      const repo = new ConfigRepository();
+      const result = await repo.loadAll();
+      expect(result).toEqual({ theme: "azul" });
+      expect("corrompida" in result).toBe(false);
+    });
+
+    it("consulta todas as linhas sem filtro por chave", async () => {
+      mockDb.select.mockResolvedValue([]);
+      const repo = new ConfigRepository();
+      await repo.loadAll();
+      expect(mockDb.select).toHaveBeenCalledWith("SELECT key, value FROM config");
+    });
+  });
+
   describe("delete", () => {
     it("executa DELETE com a chave correta", async () => {
       const repo = new ConfigRepository();

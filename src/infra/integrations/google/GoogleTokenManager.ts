@@ -1,4 +1,4 @@
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const CLIENT_ID = import.meta.env.GCP_CLIENT_ID as string;
@@ -9,7 +9,7 @@ const CLIENT_SECRET = import.meta.env.GCP_CLIENT_SECRET as string;
  * leitura, persistência no Config e refresh automático.
  */
 export class GoogleTokenManager {
-  constructor(private config: ConfigContextValue) {}
+  constructor(private config: IGoogleAuthPort) {}
 
   isConnected(): boolean {
     return !!this.config.get("googleRefreshToken");

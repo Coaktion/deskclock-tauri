@@ -1,4 +1,4 @@
-import { Play, GripVertical } from "lucide-react";
+import { Play } from "lucide-react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -59,11 +59,16 @@ export function PlannedTasksSection({
                 <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
               )}
 
-              {/* Drag handle (visual only) */}
-              <GripVertical
-                size={12}
-                className="shrink-0 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab"
-              />
+              {/* Play button */}
+              {!playDisabled && (
+                <button
+                  onClick={() => onPlay(task)}
+                  className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
+                  title="Iniciar"
+                >
+                  <Play size={11} />
+                </button>
+              )}
 
               {/* Color dot */}
               <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${dotColor}`} />
@@ -79,17 +84,6 @@ export function PlannedTasksSection({
                   </p>
                 )}
               </div>
-
-              {/* Play button */}
-              {!playDisabled && (
-                <button
-                  onClick={() => onPlay(task)}
-                  className="shrink-0 ml-1 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                  title="Iniciar"
-                >
-                  <Play size={11} />
-                </button>
-              )}
             </div>
           );
         })}

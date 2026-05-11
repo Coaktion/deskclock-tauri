@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { AppConfig, ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { AppConfig } from "@shared/types/appConfig";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 
 // Stub de env antes do import do módulo (constantes capturadas no load-time)
 vi.stubEnv("GCP_CLIENT_ID", "test-client-id");
@@ -10,7 +11,7 @@ vi.stubGlobal("fetch", mockFetch);
 
 const { GoogleTokenManager } = await import("@infra/integrations/google/GoogleTokenManager");
 
-function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
+function makeConfig(overrides: Partial<AppConfig> = {}): IGoogleAuthPort {
   const store: Partial<AppConfig> = {
     googleRefreshToken: "refresh-token",
     googleAccessToken: "access-token",
@@ -19,8 +20,6 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
     ...overrides,
   };
   return {
-    isLoaded: true,
-    loadError: null,
     get: vi.fn(<K extends keyof AppConfig>(key: K) => store[key] as AppConfig[K]),
     set: vi.fn(async <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
       (store as Record<string, unknown>)[key as string] = value;

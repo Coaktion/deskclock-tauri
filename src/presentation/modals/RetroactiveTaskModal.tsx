@@ -4,11 +4,10 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { todayISO, parseDurationInput, addDaysISO } from "@shared/utils/time";
 
-const repo = new TaskRepository();
 
 type DurationMode = "endtime" | "duration";
 
@@ -37,6 +36,7 @@ export function RetroactiveTaskModal({
   onSave,
   onClose,
 }: RetroactiveTaskModalProps) {
+  const { taskRepo } = useRepositories();
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
@@ -62,7 +62,7 @@ export function RetroactiveTaskModal({
     if (mode === "endtime") {
       endISO = buildISO(startDate, endTime);
       // Se hora fim <= hora início, assume dia seguinte
-      if (new Date(endISO) <= new Date(startISO)) {
+      if (new Date(endISO) < new Date(startISO)) {
         endISO = buildISO(addDaysISO(startDate, 1), endTime);
       }
       durationSeconds = Math.round(
@@ -87,7 +87,7 @@ export function RetroactiveTaskModal({
 
     setSaving(true);
     await createRetroactiveTask(
-      repo,
+      taskRepo,
       {
         name: name.trim() || null,
         projectId: pId,

@@ -1,16 +1,17 @@
 import type { Task } from "@domain/entities/Task";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { IClockifyConfigPort } from "@domain/integrations/IClockifyConfigPort";
 import { validateTaskForClockify } from "@domain/integrations/taskValidation";
+import type { IClockifyApi } from "@domain/integrations/IClockifyApi";
 import { ClockifyClient } from "./clockify/ClockifyClient";
 
 export class ClockifyTaskSender implements ITaskSender {
   readonly integrationName = "Clockify";
-  private client: ClockifyClient;
+  private client: IClockifyApi;
 
   constructor(
-    private config: ConfigContextValue,
-    client?: ClockifyClient
+    private config: IClockifyConfigPort,
+    client?: IClockifyApi
   ) {
     this.client = client ?? new ClockifyClient(config.get("clockifyApiKey"));
   }

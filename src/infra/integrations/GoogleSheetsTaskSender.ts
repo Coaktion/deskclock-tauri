@@ -2,7 +2,8 @@ import type { Task } from "@domain/entities/Task";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
+import type { ISheetsConfigPort } from "@domain/integrations/ISheetsConfigPort";
 import type { TaskField } from "@shared/types/sheetsConfig";
 import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { GoogleTokenManager } from "./google/GoogleTokenManager";
@@ -14,7 +15,7 @@ export class GoogleSheetsTaskSender implements ITaskSender {
   private tokenManager: GoogleTokenManager;
 
   constructor(
-    private config: ConfigContextValue,
+    private config: ISheetsConfigPort & IGoogleAuthPort,
     private spreadsheetId: string,
     private projects: Project[],
     private categories: Category[]

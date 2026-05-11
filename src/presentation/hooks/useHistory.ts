@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import type { Task } from "@domain/entities/Task";
-import { TaskRepository } from "@infra/database/TaskRepository";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { getHistoryTotals, type HistoryTotals } from "@domain/usecases/tasks/GetHistoryTotals";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
@@ -13,7 +13,6 @@ import {
 } from "@shared/utils/time";
 import type { UUID } from "@shared/types";
 
-const repo = new TaskRepository();
 
 export type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
 
@@ -85,6 +84,7 @@ const INITIAL_FILTERS: HistoryFilters = {
 };
 
 export function useHistory() {
+  const { taskRepo } = useRepositories();
   const [filters, setFilters] = useState<HistoryFilters>(INITIAL_FILTERS);
   const [groups, setGroups] = useState<DayGroup[]>([]);
   const [totals, setTotals] = useState<HistoryTotals>({
@@ -95,20 +95,23 @@ export function useHistory() {
   });
   const [searched, setSearched] = useState(false);
 
-  const search = useCallback(async (f: HistoryFilters) => {
-    const { start, end } = quickToRange(f.quick, f.startDate, f.endDate);
-    const tasks = await searchTasks(repo, {
-      startISO: startOfDayISO(start),
-      endISO: endOfDayISO(end),
-      name: f.name || undefined,
-      projectId: f.projectId ?? undefined,
-      categoryId: f.categoryId ?? undefined,
-      billable: f.billable === "all" ? undefined : f.billable === "yes",
-    });
-    setGroups(groupByDay(tasks));
-    setTotals(getHistoryTotals(tasks));
-    setSearched(true);
-  }, []);
+  const search = useCallback(
+    async (f: HistoryFilters) => {
+      const { start, end } = quickToRange(f.quick, f.startDate, f.endDate);
+      const tasks = await searchTasks(taskRepo, {
+        startISO: startOfDayISO(start),
+        endISO: endOfDayISO(end),
+        name: f.name || undefined,
+        projectId: f.projectId ?? undefined,
+        categoryId: f.categoryId ?? undefined,
+        billable: f.billable === "all" ? undefined : f.billable === "yes",
+      });
+      setGroups(groupByDay(tasks));
+      setTotals(getHistoryTotals(tasks));
+      setSearched(true);
+    },
+    [taskRepo]
+  );
 
   const updateFilter = useCallback(
     <K extends keyof HistoryFilters>(key: K, value: HistoryFilters[K]) => {
@@ -123,9 +126,8 @@ export function useHistory() {
 
   const remove = useCallback(
     async (id: UUID) => {
-      // Captura a tarefa antes do await — garante dados corretos independente de timing
       const task = groups.flatMap((g) => g.tasks).find((t) => t.id === id);
-      await deleteTask(repo, id);
+      await deleteTask(taskRepo, id);
       setGroups((prev) =>
         prev
           .map((g) => {
@@ -150,7 +152,7 @@ export function useHistory() {
         }));
       }
     },
-    [groups]
+    [taskRepo, groups]
   );
 
   const reload = useCallback(() => search(filters), [search, filters]);

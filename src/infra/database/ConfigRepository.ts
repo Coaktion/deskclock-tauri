@@ -18,6 +18,20 @@ export class ConfigRepository implements IConfigRepository {
     }
   }
 
+  async loadAll(): Promise<Record<string, unknown>> {
+    const db = await getDb();
+    const rows = await db.select<ConfigRow[]>("SELECT key, value FROM config");
+    const result: Record<string, unknown> = {};
+    for (const row of rows) {
+      try {
+        result[row.key] = JSON.parse(row.value);
+      } catch {
+        // valor corrompido — ConfigProvider usará o default para esta chave
+      }
+    }
+    return result;
+  }
+
   async set<T>(key: string, value: T): Promise<void> {
     const db = await getDb();
     await db.execute(

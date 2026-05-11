@@ -1,10 +1,10 @@
 import type { ITicketImporter, ZendeskTicket } from "@domain/integrations/ITicketImporter";
-import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
+import type { IZendeskAuthPort } from "@domain/integrations/IZendeskAuthPort";
 import { ZendeskTokenManager } from "./zendesk/ZendeskTokenManager";
 import { ZendeskClient } from "./zendesk/ZendeskClient";
 
 export class ZendeskTicketImporter implements ITicketImporter {
-  constructor(private config: ConfigContextValue) {}
+  constructor(private config: IZendeskAuthPort) {}
 
   async getTickets(): Promise<ZendeskTicket[]> {
     const subdomain = this.config.get("zendeskSubdomain");
