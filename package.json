@@ -15,7 +15,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
-    "post-release": "echo '\n✅ Release gerado. Execute /release-changelog no Claude Code para reescrever o CHANGELOG antes de fazer push da tag.'",
+    "post-release": "bash scripts/post-release.sh",
     "release:major": "standard-version --release-as major && pnpm post-release",
     "release:minor": "standard-version --release-as minor && pnpm post-release",
     "release:patch": "standard-version --release-as patch && pnpm post-release"
