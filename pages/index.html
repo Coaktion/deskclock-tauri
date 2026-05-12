@@ -561,9 +561,13 @@
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></svg>
     Atalhos de teclado
   </a>
+  <a class="sidebar-link" onclick="show('deeplinks')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+    Deep links
+  </a>
 
   <div class="sidebar-footer">
-    v1.4.2 · DeskClock
+    v1.6.0 · DeskClock
   </div>
 </nav>
 
@@ -889,6 +893,32 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       <div class="callout-body"><strong>Dica: tarefa overnight</strong>Se o horário de fim for menor que o de início, o app entende que a tarefa cruzou a meia-noite e atribui o fim ao dia seguinte automaticamente.</div>
     </div>
+
+    <h2>
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/></svg>
+      Sugestões do planejamento
+    </h2>
+
+    <p>Quando há tarefas planejadas para o dia selecionado, elas aparecem em um painel acima do formulário como sugestões de lançamento. O comportamento varia conforme a tarefa tenha ou não horário definido:</p>
+
+    <table class="data-table">
+      <thead><tr><th>Situação</th><th>Botão Play faz</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Tarefa com horário</strong><br><span style="font-size:11px;color:var(--text-dim)">Importada do Google Agenda com início e fim</span></td>
+          <td>Cria o registro diretamente (sem preencher o formulário) e marca a tarefa como concluída no dia.</td>
+        </tr>
+        <tr>
+          <td><strong>Tarefa sem horário</strong><br><span style="font-size:11px;color:var(--text-dim)">Criada manualmente sem horário fixo</span></td>
+          <td>Pré-preenche o formulário com nome, projeto e categoria. Você informa os horários e clica em Adicionar.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Cadeia automática:</strong> ao lançar uma sugestão com horário diretamente, o campo Início do formulário avança para o fim dessa tarefa, mantendo a sequência.</div>
+    </div>
   </section>
 
   <!-- ──────────────────── PLANNING ──────────────────── -->
@@ -959,7 +989,7 @@
       Ações por tarefa
     </h2>
 
-    <p>Cada tarefa planejada pode ter ações que são executadas automaticamente ao clicar em Play:</p>
+    <p>Cada tarefa planejada pode ter ações executadas automaticamente ao clicar em Play. Elas podem ser configuradas tanto no formulário de criação quanto no modal de edição:</p>
 
     <table class="data-table">
       <thead><tr><th>Tipo de ação</th><th>O que faz</th></tr></thead>
@@ -968,6 +998,8 @@
         <tr><td><strong>Abrir arquivo</strong></td><td>Abre o arquivo ou pasta no explorador do sistema operacional.</td></tr>
       </tbody>
     </table>
+
+    <p>Uma tarefa pode ter múltiplas ações. Elas são executadas em sequência na ordem em que aparecem.</p>
 
     <h2>
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1247,7 +1279,15 @@
       </div>
     </div>
 
-    <p>Após conectar o Google, o botão "Importar do Google Agenda" aparece na tela de Planejamento. Eventos são exibidos agrupados por dia em um accordion, permitindo selecionar quais importar e configurar projeto, categoria e recorrência para cada um.</p>
+    <p>Após conectar o Google, o botão "Importar do Google Agenda" aparece na tela de Planejamento. Você escolhe o período desejado (não necessariamente a semana atual) e os eventos são exibidos em um accordion de dois níveis — semana e dia — permitindo selecionar quais importar e configurar projeto, categoria e recorrência para cada um.</p>
+
+    <h3>Pré-mapeamento automático</h3>
+    <p>Se a descrição do evento no Google Agenda contiver as linhas <code>Projeto: Nome do Projeto</code> ou <code>Categoria: Nome da Categoria</code> (sem distinção de maiúsculas), o DeskClock preenche os campos automaticamente ao importar. Isso elimina o mapeamento manual para eventos recorrentes.</p>
+
+    <div class="callout success">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="callout-body"><strong>Horários preservados:</strong> ao importar, o início e fim do evento são salvos na tarefa planejada. Na tela de Lançamento manual, tarefas com horário definido podem ser lançadas com um clique, sem precisar preencher o formulário.</div>
+    </div>
   </section>
 
   <!-- ──────────────────── CLOCKIFY ──────────────────── -->
@@ -1519,6 +1559,7 @@
       <thead><tr><th>Configuração</th><th>Descrição</th></tr></thead>
       <tbody>
         <tr><td><strong>Mostrar ao iniciar tarefa</strong></td><td>O Execution Overlay aparece automaticamente ao iniciar uma nova tarefa.</td></tr>
+        <tr><td><strong>Tamanho do overlay</strong></td><td>Alterna entre Grande (78×52 px) e Pequeno (68×44 px). O redimensionamento ocorre em tempo real sem reiniciar o app.</td></tr>
         <tr><td><strong>Opacidade em repouso</strong></td><td>Slider de 0–100%. Controla a opacidade do overlay quando não há interação sobre ele.</td></tr>
         <tr><td><strong>Snap to grid</strong></td><td>Encaixa o overlay em uma grade ao soltar o arraste, facilitando o posicionamento.</td></tr>
       </tbody>
@@ -1647,6 +1688,97 @@
     <div class="callout warning">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
       <div class="callout-body"><strong>Atenção:</strong> atalhos globais podem conflitar com outros aplicativos. Se um atalho não funcionar, verifique se outro app está usando a mesma combinação.</div>
+    </div>
+  </section>
+
+  <!-- ──────────────────── DEEP LINKS ──────────────────── -->
+  <section id="deeplinks" class="section">
+    <div class="page-header">
+      <div class="page-header-eyebrow">Automação</div>
+      <h1>Deep links</h1>
+      <p>O DeskClock registra o esquema <code>deskclock://</code> no sistema operacional, permitindo abrir telas e disparar ações diretamente de outros apps, scripts ou links no navegador.</p>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Como usar:</strong> abra qualquer URL <code>deskclock://</code> no navegador, em um script de shell ou como hiperlink em outro aplicativo. O DeskClock deve estar em execução. Se a janela estiver oculta, ela será trazida para frente automaticamente.</div>
+    </div>
+
+    <h2>
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+      Navegar para uma tela
+    </h2>
+
+    <p>Abre o DeskClock e navega diretamente para a tela indicada.</p>
+
+    <table class="data-table">
+      <thead><tr><th>URL</th><th>Destino</th></tr></thead>
+      <tbody>
+        <tr><td><code>deskclock://navigate/tasks</code></td><td>Tarefas</td></tr>
+        <tr><td><code>deskclock://navigate/retroactive</code></td><td>Lançamento manual</td></tr>
+        <tr><td><code>deskclock://navigate/planning</code></td><td>Planejamento</td></tr>
+        <tr><td><code>deskclock://navigate/history</code></td><td>Histórico</td></tr>
+        <tr><td><code>deskclock://navigate/data</code></td><td>Dados</td></tr>
+        <tr><td><code>deskclock://navigate/integrations</code></td><td>Integrações</td></tr>
+        <tr><td><code>deskclock://navigate/settings</code></td><td>Configurações</td></tr>
+      </tbody>
+    </table>
+
+    <h2>
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Iniciar uma tarefa
+    </h2>
+
+    <p>Inicia o timer imediatamente com os parâmetros fornecidos na URL. Todos os campos são opcionais — omitir um parâmetro inicia a tarefa sem aquele dado.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
+        <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
+        <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
+        <tr><td><code>billable</code></td><td><code>true</code> / <code>false</code></td><td>Indica se é billable. Padrão: <code>true</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>Exemplos</h3>
+    <div class="callout info" style="flex-direction:column;gap:6px;">
+      <code style="font-size:12px;color:var(--accent-light);">deskclock://task/start</code>
+      <div class="callout-body" style="font-size:12px;">Inicia um timer em branco.</div>
+    </div>
+    <div class="callout info" style="flex-direction:column;gap:6px;margin-top:8px;">
+      <code style="font-size:12px;color:var(--accent-light);">deskclock://task/start?name=Reunião%20de%20equipe&project=Interno&category=Reuniões&billable=false</code>
+      <div class="callout-body" style="font-size:12px;">Inicia a tarefa "Reunião de equipe" no projeto "Interno", categoria "Reuniões", non-billable.</div>
+    </div>
+
+    <h2>
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+      Pré-preencher lançamento manual
+    </h2>
+
+    <p>Abre a tela de Lançamento manual e preenche o formulário com os dados da URL. Todos os campos são opcionais.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Parâmetro</th><th>Formato</th><th>Descrição</th></tr></thead>
+      <tbody>
+        <tr><td><code>date</code></td><td><code>AAAA-MM-DD</code></td><td>Data do lançamento. Padrão: data atual</td></tr>
+        <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
+        <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
+        <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
+        <tr><td><code>start</code></td><td><code>HH:MM</code></td><td>Horário de início</td></tr>
+        <tr><td><code>end</code></td><td><code>HH:MM</code></td><td>Horário de fim</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Exemplo</h3>
+    <div class="callout info" style="flex-direction:column;gap:6px;">
+      <code style="font-size:12px;color:var(--accent-light);">deskclock://retroactive?date=2026-05-12&name=Code%20review&project=Backend&start=09:00&end=10:30</code>
+      <div class="callout-body" style="font-size:12px;">Abre o lançamento manual para 12/05/2026, pré-preenchido com "Code review", projeto "Backend", das 09:00 às 10:30.</div>
+    </div>
+
+    <div class="callout warning" style="margin-top:16px;">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Nomes exatos:</strong> os campos <code>project</code> e <code>category</code> precisam corresponder exatamente ao nome cadastrado no DeskClock (incluindo acentos e capitalização). Se não houver correspondência, o campo é ignorado.</div>
     </div>
   </section>
 
