@@ -41,9 +41,9 @@ export function SettingsPage() {
           <h1 className="text-xl font-semibold text-gray-100">Configurações</h1>
           <button
             onClick={() => void openInBrowser(MANUAL_URL)}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20 hover:border-blue-500/50 hover:text-blue-300 transition-colors cursor-pointer"
           >
-            <BookOpen size={13} />
+            <BookOpen size={15} />
             Manual
           </button>
         </div>
