@@ -12,6 +12,9 @@ export const OVERLAY_EVENTS = {
   PLANNED_TASKS_CHANGED: "planned-tasks-changed",
   COMMAND_PALETTE_NAVIGATE: "command-palette:navigate",
   COMMAND_PALETTE_START_TASK: "command-palette:start-task",
+  DEEPLINK_NAVIGATE: "deeplink:navigate",
+  DEEPLINK_START_TASK: "deeplink:start-task",
+  DEEPLINK_RETROACTIVE_PREFILL: "deeplink:retroactive-prefill",
   OVERLAY_POPUP_CLOSED: "overlay-popup:closed",
 } as const;
 

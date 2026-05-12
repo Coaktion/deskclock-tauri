@@ -28,6 +28,8 @@ tauri-plugin-dialog = "2"
 tauri-plugin-log = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-updater = "2"
+tauri-plugin-deep-link = "2"
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 tokio-util = "0.7"

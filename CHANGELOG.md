@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.1...v1.6.0) (2026-05-12)
+
+
+### Features
+
+* **calendar:** importação por período personalizado com pré-mapeamento de projeto e categoria; eventos importados ficam disponíveis para lançamento retroativo direto pela tela de retroativo
+* **overlay:** nova opção de tamanho para o overlay compacto; badge de planejadas pendentes ajustado
+
+
+### Bug Fixes
+
+* **calendar:** paginação corrigida na busca de eventos — agendas com mais de 250 eventos agora carregam completamente
+* **windows:** overlays mantidos acima da barra de tarefas após pressionar Win+D
+
 ## [1.5.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.1...v1.5.0) (2026-05-11)
 
 
