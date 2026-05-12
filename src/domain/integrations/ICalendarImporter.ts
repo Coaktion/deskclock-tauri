@@ -19,6 +19,8 @@ export interface CalendarEvent {
   htmlLink?: string;
   /** Link de videoconferência (Meet, Zoom, Teams…) — preferido ao htmlLink quando presente */
   conferenceLink?: string;
+  /** Descrição do evento — usada para pré-mapear Projeto/Categoria via metadados na descrição */
+  description?: string;
 }
 
 export interface ICalendarImporter {

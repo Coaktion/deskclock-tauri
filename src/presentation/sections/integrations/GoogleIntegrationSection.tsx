@@ -15,14 +15,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
+import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useTour } from "@presentation/hooks/useTour";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import {
@@ -30,7 +32,6 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
-import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
@@ -41,6 +42,7 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  Info,
   Loader2,
   LogIn,
   LogOut,
@@ -50,7 +52,6 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useTour } from "@presentation/hooks/useTour";
 import { IntegrationTile, Row, StatusBadge, SubSection, Toggle } from "./shared";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
@@ -472,7 +473,7 @@ function CalendarSection({
     [config.isLoaded, factories]
   );
 
-  const { fromISO, toISO, weekLabel } = useMemo(() => {
+  const { defaultFromISO, defaultToISO } = useMemo(() => {
     const today = new Date();
     const dow = today.getDay();
     const diffToMon = dow === 0 ? -6 : 1 - dow;
@@ -482,12 +483,9 @@ function CalendarSection({
     sun.setDate(mon.getDate() + 6);
     const fmt = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const fmtLabel = (d: Date) =>
-      `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
     return {
-      fromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
-      toISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
-      weekLabel: `${fmtLabel(mon)} — ${fmtLabel(sun)}/${sun.getFullYear()}`,
+      defaultFromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
+      defaultToISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
     };
   }, []);
 
@@ -495,7 +493,7 @@ function CalendarSection({
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
       <div className="py-2.5 flex items-center justify-between">
         <p className="text-xs text-gray-500">
-          Importe eventos da semana atual como tarefas planejadas.
+          Importe eventos do Google Agenda como tarefas planejadas.
         </p>
         <button
           onClick={() => {
@@ -505,8 +503,18 @@ function CalendarSection({
           className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0 ml-3 border border-gray-700"
         >
           <CalendarDays size={13} />
-          Importar semana atual
+          Importar eventos
         </button>
+      </div>
+      <div className="flex items-start gap-2 mb-2 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
+        <Info size={12} className="text-blue-400 shrink-0 mt-0.5" />
+        <p className="text-[11px] text-blue-300 leading-relaxed">
+          Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
+          <br />
+          <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
+          <br />
+          <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
+        </p>
       </div>
 
       {importedCount !== null && (
@@ -539,9 +547,8 @@ function CalendarSection({
         <ImportCalendarModal
           importer={calendarImporter}
           repo={plannedTaskRepo}
-          fromISO={fromISO}
-          toISO={toISO}
-          weekLabel={weekLabel}
+          defaultFromISO={defaultFromISO}
+          defaultToISO={defaultToISO}
           projects={projects}
           categories={categories}
           onImported={(count) => {

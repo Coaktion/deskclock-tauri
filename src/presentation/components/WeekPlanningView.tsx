@@ -343,9 +343,8 @@ export function WeekPlanningView() {
         <ImportCalendarModal
           importer={calendarImporter}
           repo={plannedTaskRepo}
-          fromISO={calendarFromISO}
-          toISO={calendarToISO}
-          weekLabel={label}
+          defaultFromISO={calendarFromISO}
+          defaultToISO={calendarToISO}
           projects={projects}
           categories={categories}
           onImported={handleImported}
