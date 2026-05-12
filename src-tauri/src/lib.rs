@@ -20,28 +20,73 @@ use tauri_plugin_autostart::MacosLauncher;
 #[cfg(target_os = "windows")]
 static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
 
-/// Callback invocado pelo sistema quando qualquer janela torna-se foreground
-/// (EVENT_SYSTEM_FOREGROUND). Re-afirma HWND_TOPMOST para os overlays via
-/// SetWindowPos síncrono — sem polling, sem SWP_ASYNCWINDOWPOS.
+// ID único para o timer de re-afirmação pós-Win+D.
 #[cfg(target_os = "windows")]
-unsafe extern "system" fn win_event_proc(
-    _hook: windows::Win32::UI::Accessibility::HWINEVENTHOOK,
-    _event: u32,
+const TIMER_ID_TOPMOST: usize = 1001;
+
+/// Chamado pelo timer 100 ms após detectar Win+D / "Mostrar Área de Trabalho".
+/// A barra de tarefas reasserta HWND_TOPMOST depois do EVENT_SYSTEM_FOREGROUND,
+/// então re-afirmamos os overlays com um pequeno atraso para ganhar o race condition.
+#[cfg(target_os = "windows")]
+unsafe extern "system" fn timer_topmost_proc(
     _hwnd: windows::Win32::Foundation::HWND,
-    _id_object: i32,
-    _id_child: i32,
-    _id_event_thread: u32,
-    _dwms_event_time: u32,
+    _msg: u32,
+    _id: usize,
+    _time: u32,
 ) {
     use windows::Win32::UI::WindowsAndMessaging::{
-        SetWindowPos, HWND_TOPMOST, SWP_NOMOVE, SWP_NOACTIVATE, SWP_NOSIZE,
+        KillTimer, SetWindowPos, HWND_TOPMOST, SWP_NOMOVE, SWP_NOACTIVATE, SWP_NOSIZE,
     };
+    let _ = KillTimer(None, TIMER_ID_TOPMOST);
     let Some(handle) = APP_HANDLE.get() else { return };
     for label in ["overlay-compact", "overlay-popup", "toast", "command-palette"] {
         let Some(w) = handle.get_webview_window(label) else { continue };
         if !w.is_visible().unwrap_or(false) { continue; }
         let Ok(hwnd) = w.hwnd() else { continue };
         let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+}
+
+/// Callback invocado pelo sistema quando qualquer janela torna-se foreground
+/// (EVENT_SYSTEM_FOREGROUND). Re-afirma HWND_TOPMOST para os overlays via
+/// SetWindowPos síncrono. Quando o foreground é a área de trabalho (Win+D ou
+/// botão "Mostrar Área de Trabalho"), agenda um timer de 100 ms para re-afirmar
+/// depois que a taskbar terminar de reassertar sua própria posição TOPMOST.
+#[cfg(target_os = "windows")]
+unsafe extern "system" fn win_event_proc(
+    _hook: windows::Win32::UI::Accessibility::HWINEVENTHOOK,
+    _event: u32,
+    hwnd: windows::Win32::Foundation::HWND,
+    _id_object: i32,
+    _id_child: i32,
+    _id_event_thread: u32,
+    _dwms_event_time: u32,
+) {
+    use windows::Win32::UI::WindowsAndMessaging::{
+        GetClassNameW, SetTimer, SetWindowPos,
+        HWND_TOPMOST, SWP_NOMOVE, SWP_NOACTIVATE, SWP_NOSIZE,
+    };
+    let Some(handle) = APP_HANDLE.get() else { return };
+    for label in ["overlay-compact", "overlay-popup", "toast", "command-palette"] {
+        let Some(w) = handle.get_webview_window(label) else { continue };
+        if !w.is_visible().unwrap_or(false) { continue; }
+        let Ok(wnd) = w.hwnd() else { continue };
+        let _ = SetWindowPos(wnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    // Detecta Win+D / "Mostrar Área de Trabalho": o foreground passa a ser
+    // WorkerW (desktop com ícones) ou Progman (shell do Windows).
+    // A taskbar reasserta HWND_TOPMOST após este callback, por isso agendamos
+    // um timer para ganhar o race condition com um atraso de 100 ms.
+    if !hwnd.is_invalid() {
+        let mut class_buf = [0u16; 64];
+        let len = GetClassNameW(hwnd, &mut class_buf);
+        if len > 0 {
+            let class_name = String::from_utf16_lossy(&class_buf[..len as usize]);
+            if matches!(class_name.as_str(), "WorkerW" | "Progman") {
+                SetTimer(None, TIMER_ID_TOPMOST, 100, Some(timer_topmost_proc));
+            }
+        }
     }
 }
 
@@ -74,9 +119,11 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
             if hook.0.is_null() { return; }
             let _hook = hook; // mantém o hook vivo; drop chama UnhookWinEvent automaticamente
             let mut msg = MSG::default();
-            // Loop de mensagens necessário para que WINEVENT_OUTOFCONTEXT
-            // entregue os callbacks nesta thread
-            while GetMessageW(&mut msg, None, 0, 0).as_bool() {}
+            // DispatchMessageW é necessário para que WM_TIMER (usado pelo timer
+            // de re-afirmação pós-Win+D) seja entregue ao timer_topmost_proc.
+            while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+                windows::Win32::UI::WindowsAndMessaging::DispatchMessageW(&msg);
+            }
         });
     }
     #[cfg(not(target_os = "windows"))]

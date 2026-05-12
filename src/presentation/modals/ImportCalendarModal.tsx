@@ -1,28 +1,32 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  X,
-  Loader2,
-  Calendar,
-  AlertCircle,
-  CheckSquare,
-  Square,
-  ChevronDown,
-  ChevronRight,
-  Repeat2,
-  AlertTriangle,
-} from "lucide-react";
-import type { CalendarEvent } from "@domain/integrations/ICalendarImporter";
-import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
-import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
-import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { Project } from "@domain/entities/Project";
+import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICalendarImporter";
+import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import {
   importCalendarEvents,
   type ImportEventInput,
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { emit } from "@tauri-apps/api/event";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import {
+  findByNameCaseInsensitive,
+  parseCalendarMetadata,
+} from "@shared/utils/calendarMetadata";
+import { emit } from "@tauri-apps/api/event";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Calendar,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Repeat2,
+  Square,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -36,13 +40,20 @@ interface EventEditState {
   expanded: boolean;
 }
 
-function defaultEditState(event: CalendarEvent): EventEditState {
+function defaultEditState(
+  event: CalendarEvent,
+  projects: Project[],
+  categories: Category[]
+): EventEditState {
   const hasRecurring = !!event.suggestedRecurringDays?.length || !!event.recurringEventId;
+  const meta = parseCalendarMetadata(event.description);
+  const matchedProject = findByNameCaseInsensitive(meta.projectName, projects);
+  const matchedCategory = findByNameCaseInsensitive(meta.categoryName, categories);
   return {
-    projectId: null,
-    projectName: "",
-    categoryId: null,
-    categoryName: "",
+    projectId: matchedProject?.id ?? null,
+    projectName: matchedProject?.name ?? "",
+    categoryId: matchedCategory?.id ?? null,
+    categoryName: matchedCategory?.name ?? "",
     scheduleType: hasRecurring ? "recurring" : "specific_date",
     recurringDays: event.suggestedRecurringDays ?? [],
     expanded: false,
@@ -57,6 +68,41 @@ function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
     map.set(evt.date, list);
   }
   return map;
+}
+
+function getMondayISO(dateISO: string): string {
+  const d = new Date(dateISO + "T12:00:00");
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  const fmt2 = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
+}
+
+function getWeekDays(mondayISO: string): string[] {
+  const fmt2 = (n: number) => String(n).padStart(2, "0");
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(mondayISO + "T12:00:00");
+    d.setDate(d.getDate() + i);
+    return `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
+  });
+}
+
+function weekRangeLabel(mondayISO: string): string {
+  const monday = new Date(mondayISO + "T12:00:00");
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${fmt(monday)} – ${fmt(sunday)}`;
+}
+
+function weekRangeLabelLong(mondayISO: string): string {
+  const monday = new Date(mondayISO + "T12:00:00");
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = (d: Date) =>
+    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
+  return `${fmt(monday)} a ${fmt(sunday)}`;
 }
 
 /* ── Editor inline por evento ── */
@@ -79,7 +125,6 @@ function EventEditor({ event, state, projects, categories, onChange }: EventEdit
 
   return (
     <div className="mt-1 mx-4 mb-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-      {/* Projeto */}
       <Autocomplete
         value={state.projectName}
         onChange={(v) => onChange({ ...state, projectName: v, projectId: null })}
@@ -87,7 +132,6 @@ function EventEditor({ event, state, projects, categories, onChange }: EventEdit
         options={projects}
         placeholder="Projeto"
       />
-      {/* Categoria */}
       <Autocomplete
         value={state.categoryName}
         onChange={(v) => onChange({ ...state, categoryName: v, categoryId: null })}
@@ -96,7 +140,6 @@ function EventEditor({ event, state, projects, categories, onChange }: EventEdit
         placeholder="Categoria"
       />
 
-      {/* Tipo de agendamento */}
       <div className="flex items-center gap-2">
         <span className="text-xs text-gray-500 shrink-0">Agendamento:</span>
         <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-0.5">
@@ -128,7 +171,6 @@ function EventEditor({ event, state, projects, categories, onChange }: EventEdit
         </div>
       </div>
 
-      {/* Seletor de dias da semana */}
       {state.scheduleType === "recurring" && (
         <div className="flex items-center gap-1">
           <span className="text-xs text-gray-500 shrink-0 mr-1">Dias:</span>
@@ -204,10 +246,10 @@ function EventRow({
             )}
             {isDeduped && (
               <span
-                title="Mesma série já incluída — não criará tarefa separada"
+                title="Mesma tarefa recorrente já incluída — não criará tarefa separada"
                 className="px-1 py-0.5 text-[10px] leading-none rounded bg-gray-700 text-gray-400 shrink-0"
               >
-                série
+                recorrente
               </span>
             )}
             {isDuplicateOfExisting && (
@@ -259,9 +301,8 @@ function EventRow({
 interface ImportCalendarModalProps {
   importer: ICalendarImporter;
   repo: IPlannedTaskRepository;
-  fromISO: string;
-  toISO: string;
-  weekLabel: string;
+  defaultFromISO: string;
+  defaultToISO: string;
   projects: Project[];
   categories: Category[];
   onImported: (count: number) => void;
@@ -271,18 +312,19 @@ interface ImportCalendarModalProps {
 export function ImportCalendarModal({
   importer,
   repo,
-  fromISO,
-  toISO,
-  weekLabel,
+  defaultFromISO,
+  defaultToISO,
   projects,
   categories,
   onImported,
   onClose,
 }: ImportCalendarModalProps) {
+  const [fromDate, setFromDate] = useState(defaultFromISO.slice(0, 10));
+  const [toDate, setToDate] = useState(defaultToISO.slice(0, 10));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editMap, setEditMap] = useState<Map<string, EventEditState>>(new Map());
-  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -292,30 +334,55 @@ export function ImportCalendarModal({
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setSelectedWeek(null);
+    const fromISO = new Date(fromDate + "T00:00:00").toISOString();
+    const toISO = new Date(toDate + "T23:59:59").toISOString();
     Promise.all([importer.getEvents(fromISO, toISO), repo.findForWeek(fromISO, toISO)])
       .then(([evts, existingTasks]) => {
         const names = new Set(existingTasks.map((t) => t.name.toLowerCase().trim()));
         setExistingNames(names);
-
         setEvents(evts);
         const duplicateIds = new Set(
           evts.filter((e) => names.has(e.title.toLowerCase().trim())).map((e) => e.id)
         );
         setSelected(new Set(evts.filter((e) => !duplicateIds.has(e.id)).map((e) => e.id)));
-
         const map = new Map<string, EventEditState>();
-        evts.forEach((e) => map.set(e.id, defaultEditState(e)));
+        evts.forEach((e) => map.set(e.id, defaultEditState(e, projects, categories)));
         setEditMap(map);
+        if (evts.length > 0) {
+          const firstDate = [...evts].sort((a, b) => a.date.localeCompare(b.date))[0].date;
+          setSelectedWeek(getMondayISO(firstDate));
+        }
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Erro ao buscar eventos."))
+      .catch((err) => {
+        const msg =
+          err instanceof Error
+            ? err.message || err.toString()
+            : typeof err === "string"
+              ? err
+              : JSON.stringify(err);
+        setError(msg || "Erro ao buscar eventos do Google Agenda.");
+      })
       .finally(() => setLoading(false));
-  }, [fromISO, toISO]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const grouped = useMemo(() => groupByDate(events), [events]);
-  const sortedDates = useMemo(() => [...grouped.keys()].sort(), [grouped]);
 
-  // IDs de eventos que serão ignorados na importação por serem instâncias redundantes
-  // de uma série recorrente já representada por outra instância selecionada.
+  const allWeekKeys = useMemo(() => {
+    const weeks = new Set(events.map((e) => getMondayISO(e.date)));
+    return [...weeks].sort();
+  }, [events]);
+
+  const selectedWeekDays = useMemo(() => {
+    if (!selectedWeek) return [];
+    return getWeekDays(selectedWeek).filter((d) => d >= fromDate && d <= toDate);
+  }, [selectedWeek, fromDate, toDate]);
+
+  const selectedWeekEvents = useMemo(() => {
+    if (!selectedWeek) return [];
+    return events.filter((e) => getMondayISO(e.date) === selectedWeek);
+  }, [events, selectedWeek]);
+
   const dedupedEventIds = useMemo(() => {
     const seenSeriesIds = new Set<string>();
     const duped = new Set<string>();
@@ -334,10 +401,6 @@ export function ImportCalendarModal({
   }, [events, selected, editMap]);
 
   const effectiveTaskCount = selected.size - dedupedEventIds.size;
-
-  function toggleAll() {
-    setSelected(selected.size === events.length ? new Set() : new Set(events.map((e) => e.id)));
-  }
 
   function toggleEvent(id: string) {
     setSelected((prev) => {
@@ -361,11 +424,14 @@ export function ImportCalendarModal({
     });
   }
 
-  function toggleDayCollapse(date: string) {
-    setCollapsedDays((prev) => {
+  function toggleWeekEvents() {
+    const allWeekSelected = selectedWeekEvents.every((e) => selected.has(e.id));
+    setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(date)) next.delete(date);
-      else next.add(date);
+      selectedWeekEvents.forEach((e) => {
+        if (allWeekSelected) next.delete(e.id);
+        else next.add(e.id);
+      });
       return next;
     });
   }
@@ -392,142 +458,232 @@ export function ImportCalendarModal({
 
     setImporting(true);
     try {
-      const count = await importCalendarEvents(repo, inputs, new Date().toISOString(), addOpenUrlAction);
+      const count = await importCalendarEvents(
+        repo,
+        inputs,
+        new Date().toISOString(),
+        addOpenUrlAction
+      );
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao importar eventos.");
+      const msg =
+        err instanceof Error
+          ? err.message || err.toString()
+          : typeof err === "string"
+            ? err
+            : JSON.stringify(err);
+      setError(msg || "Erro ao importar eventos.");
       setImporting(false);
     }
   }
 
-  const allSelected = events.length > 0 && selected.size === events.length;
+  function renderDayGroup(date: string) {
+    const dayEvents = grouped.get(date) ?? [];
+    const hasEvents = dayEvents.length > 0;
+    const allDaySelected = hasEvents && dayEvents.every((e) => selected.has(e.id));
+    const someDaySelected = !allDaySelected && dayEvents.some((e) => selected.has(e.id));
+
+    const [year, month, day] = date.split("-").map(Number);
+    const d = new Date(year, month - 1, day);
+    const dayOfWeek = d.toLocaleDateString("pt-BR", { weekday: "long" });
+    const dayShort = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+
+    return (
+      <div key={date} className="border-b border-gray-800 last:border-0">
+        <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/40">
+          {hasEvents ? (
+            <button
+              type="button"
+              onClick={() => toggleDayEvents(date)}
+              className="shrink-0 text-gray-400 hover:text-gray-200"
+            >
+              {allDaySelected ? (
+                <CheckSquare size={13} />
+              ) : someDaySelected ? (
+                <Square size={13} className="opacity-50" />
+              ) : (
+                <Square size={13} />
+              )}
+            </button>
+          ) : (
+            <div className="w-[13px] shrink-0" />
+          )}
+          <span className="text-xs font-semibold text-gray-300 capitalize flex-1">
+            {dayOfWeek}
+            <span className="ml-1.5 font-normal text-gray-500">{dayShort}</span>
+          </span>
+          {hasEvents && (
+            <span className="text-xs text-gray-600">
+              {dayEvents.filter((e) => selected.has(e.id)).length}/{dayEvents.length}
+            </span>
+          )}
+        </div>
+
+        {hasEvents
+          ? dayEvents.map((event) => (
+              <EventRow
+                key={event.id}
+                event={event}
+                selected={selected.has(event.id)}
+                editState={editMap.get(event.id) ?? defaultEditState(event, projects, categories)}
+                projects={projects}
+                categories={categories}
+                isDeduped={dedupedEventIds.has(event.id)}
+                isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
+                onToggleSelect={() => toggleEvent(event.id)}
+                onEditChange={(s) => updateEdit(event.id, s)}
+              />
+            ))
+          : (
+            <p className="text-xs text-gray-700 italic px-4 py-2">Nenhum evento neste dia</p>
+          )}
+      </div>
+    );
+  }
+
+  const allWeekSelected =
+    selectedWeekEvents.length > 0 && selectedWeekEvents.every((e) => selected.has(e.id));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]">
+      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
+
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 shrink-0">
-          <Calendar size={16} className="text-blue-400" />
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-gray-100">Importar do Google Calendar</h2>
-            <p className="text-xs text-gray-500">{weekLabel}</p>
+        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <Calendar size={16} className="text-blue-400 shrink-0" />
+            <h2 className="text-sm font-semibold text-gray-100 flex-1">
+              Importar do Google Calendar
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-1 text-gray-500 hover:text-gray-300 rounded-lg"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <span className="shrink-0">De</span>
+            <DatePickerInput
+              value={fromDate}
+              onChange={(d) => {
+                setFromDate(d);
+                if (d > toDate) setToDate(d);
+              }}
+              className="flex-1"
+            />
+            <span className="shrink-0">até</span>
+            <DatePickerInput
+              value={toDate}
+              onChange={(d) => {
+                setToDate(d);
+                if (d < fromDate) setFromDate(d);
+              }}
+              className="flex-1"
+            />
+          </div>
         </div>
 
         {/* Corpo */}
-        <div className="flex-1 overflow-y-auto">
-          {loading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Buscando eventos…</span>
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-              <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-300">{error}</p>
-            </div>
-          )}
-
-          {!loading && !error && events.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-12">
-              Nenhum evento encontrado nesta semana.
-            </p>
-          )}
-
-          {!loading && !error && events.length > 0 && (
-            <>
-              {/* Selecionar todos */}
-              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
-                <button
-                  onClick={toggleAll}
-                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-200"
-                >
-                  {allSelected ? <CheckSquare size={13} /> : <Square size={13} />}
-                  {allSelected ? "Desmarcar todos" : "Selecionar todos"}
-                  <span className="text-gray-600">({events.length})</span>
-                </button>
+        {loading || error || events.length === 0 ? (
+          <div className="flex-1 overflow-y-auto">
+            {loading && (
+              <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
+                <Loader2 size={16} className="animate-spin" />
+                <span className="text-sm">Buscando eventos…</span>
               </div>
+            )}
+            {!loading && error && (
+              <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
+                <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-red-300">{error}</p>
+              </div>
+            )}
+            {!loading && !error && (
+              <p className="text-sm text-gray-500 text-center py-12">
+                Nenhum evento encontrado neste período.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-1 overflow-hidden">
 
-              {/* Grupos por dia (accordion) */}
-              {sortedDates.map((date) => {
-                const dayEvents = grouped.get(date)!;
-                const isCollapsed = collapsedDays.has(date);
-                const allDaySelected = dayEvents.every((e) => selected.has(e.id));
-                const someDaySelected =
-                  !allDaySelected && dayEvents.some((e) => selected.has(e.id));
-
-                const [year, month, day] = date.split("-").map(Number);
-                const d = new Date(year, month - 1, day);
-                const dayLabel = d.toLocaleDateString("pt-BR", {
-                  weekday: "long",
-                  day: "2-digit",
-                  month: "2-digit",
-                });
-
+            {/* Sidebar — lista de semanas */}
+            <div className="w-48 shrink-0 border-r border-gray-800 overflow-y-auto bg-gray-900/50 flex flex-col">
+              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 border-b border-gray-800">
+                Semanas
+              </div>
+              {allWeekKeys.map((weekKey) => {
+                const count = events.filter((e) => getMondayISO(e.date) === weekKey).length;
+                const selCount = events.filter(
+                  (e) => getMondayISO(e.date) === weekKey && selected.has(e.id)
+                ).length;
+                const isActive = selectedWeek === weekKey;
                 return (
-                  <div key={date} className="border-b border-gray-800 last:border-0">
-                    {/* Header do dia (clicável para colapsar) */}
-                    <div
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-800/50 cursor-pointer hover:bg-gray-800 transition-colors select-none"
-                      onClick={() => toggleDayCollapse(date)}
-                    >
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleDayEvents(date);
-                        }}
-                        className="shrink-0 text-gray-400 hover:text-gray-200"
+                  <button
+                    key={weekKey}
+                    onClick={() => setSelectedWeek(weekKey)}
+                    className={`w-full text-left flex items-start gap-2 px-3 py-2.5 transition-colors border-l-2 ${
+                      isActive
+                        ? "bg-gray-800 border-blue-500"
+                        : "border-transparent hover:bg-gray-800/50"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`text-xs font-medium truncate ${isActive ? "text-gray-100" : "text-gray-400"}`}
                       >
-                        {allDaySelected ? (
-                          <CheckSquare size={13} />
-                        ) : someDaySelected ? (
-                          <Square size={13} className="opacity-50" />
-                        ) : (
-                          <Square size={13} />
-                        )}
-                      </button>
-                      <span className="text-xs font-medium text-gray-300 capitalize flex-1">
-                        {dayLabel}
+                        {weekRangeLabel(weekKey)}
+                      </div>
+                      <div className="text-[10px] text-gray-600 mt-0.5">seg a dom</div>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                          isActive ? "bg-blue-900/50 text-blue-400" : "bg-gray-800 text-gray-600"
+                        }`}
+                      >
+                        {count} ev.
                       </span>
-                      <span className="text-xs text-gray-600 mr-1">
-                        {dayEvents.filter((e) => selected.has(e.id)).length}/{dayEvents.length}
-                      </span>
-                      {isCollapsed ? (
-                        <ChevronRight size={13} className="text-gray-500" />
-                      ) : (
-                        <ChevronDown size={13} className="text-gray-500" />
+                      {selCount > 0 && (
+                        <span className="text-[10px] text-green-500">{selCount} ✓</span>
                       )}
                     </div>
-
-                    {/* Eventos do dia */}
-                    {!isCollapsed &&
-                      dayEvents.map((event) => (
-                        <EventRow
-                          key={event.id}
-                          event={event}
-                          selected={selected.has(event.id)}
-                          editState={editMap.get(event.id) ?? defaultEditState(event)}
-                          projects={projects}
-                          categories={categories}
-                          isDeduped={dedupedEventIds.has(event.id)}
-                          isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
-                          onToggleSelect={() => toggleEvent(event.id)}
-                          onEditChange={(s) => updateEdit(event.id, s)}
-                        />
-                      ))}
-                  </div>
+                  </button>
                 );
               })}
-            </>
-          )}
-        </div>
+            </div>
+
+            {/* Painel — dias e eventos da semana selecionada */}
+            <div className="flex-1 overflow-y-auto flex flex-col">
+              {selectedWeek ? (
+                <>
+                  <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 backdrop-blur-sm border-b border-gray-800 shrink-0">
+                    <span className="text-xs font-semibold text-gray-200 flex-1 capitalize">
+                      {weekRangeLabelLong(selectedWeek)}
+                    </span>
+                    <button
+                      onClick={toggleWeekEvents}
+                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors shrink-0"
+                    >
+                      {allWeekSelected ? "Desmarcar todos" : "Selecionar todos"}
+                    </button>
+                  </div>
+                  {selectedWeekDays.map((date) => renderDayGroup(date))}
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center text-gray-600">
+                    <Calendar size={28} className="mx-auto mb-2 opacity-30" />
+                    <p className="text-xs">Selecione uma semana</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
 
         {/* Footer */}
         {!loading && !error && events.length > 0 && (
@@ -578,6 +734,7 @@ export function ImportCalendarModal({
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

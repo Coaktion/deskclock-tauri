@@ -7,6 +7,7 @@ import { ListTodo } from "lucide-react";
 interface CompactOverlayContentProps {
   runningTask: Task | null;
   isPopupOpen: boolean;
+  overlaySize: "big" | "small";
   onMouseDown: () => void;
   onTogglePopup: () => void;
 }
@@ -14,6 +15,7 @@ interface CompactOverlayContentProps {
 export function CompactOverlayContent({
   runningTask,
   isPopupOpen,
+  overlaySize,
   onMouseDown,
   onTogglePopup,
 }: CompactOverlayContentProps) {
@@ -36,21 +38,31 @@ export function CompactOverlayContent({
 
   const timerColor = isPaused ? "text-amber-400" : "text-blue-400";
 
+  const isSmall = overlaySize === "small";
+  const maxW = isSmall ? "max-w-[68px]" : "max-w-[78px]";
+  const maxH = isSmall ? "max-h-[44px]" : "max-h-[52px]";
+  const rounded = isSmall ? "rounded-[6px]" : "rounded-xl";
+  const roundedTop = isSmall ? "rounded-t-[6px]" : "rounded-t-xl";
+  const roundedBottom = isSmall ? "rounded-b-[6px]" : "rounded-b-xl";
+  const timerSize = isSmall ? "text-[12px]" : "text-[14px]";
+
   return (
+    // inset-0 + m-auto centraliza dentro da janela (que no GTK pode ser 136px+).
+    // max-w/max-h limitam a área visível ao tamanho correto.
+    // Sem overflow-hidden para que o badge possa transbordar.
     <div
       data-tauri-drag-region
-      className={`flex flex-col w-full h-full max-w-[78px] max-h-[52px] m-auto absolute inset-0 cursor-move bg-gray-900 border rounded-xl shadow-xl transition-colors duration-200 ${borderClass} overflow-hidden`}
+      className={`flex flex-col w-full h-full ${maxW} ${maxH} m-auto absolute inset-0 cursor-move bg-gray-900 border shadow-xl transition-colors duration-200 ${rounded} ${borderClass}`}
       title={hasTask ? "Ver tarefa em execução" : "Ver tarefas planejadas"}
     >
-      {/* Central button */}
       <button
         onMouseDown={onMouseDown}
         onClick={onTogglePopup}
-        className="flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer"
+        className={`flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
       >
         {hasTask ? (
           <span
-            className={`font-mono text-[14px] font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
+            className={`font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
           >
             {formatHHMMSS(seconds)}
           </span>
@@ -59,10 +71,9 @@ export function CompactOverlayContent({
         )}
       </button>
 
-      {/* Grip dots */}
       <div
         data-tauri-drag-region
-        className="p-1 gap-0.5 pointer-events-none flex flex-col items-center justify-center bg-gray-800"
+        className={`p-1 gap-0.5 pointer-events-none flex flex-col items-center justify-center bg-gray-800 ${roundedBottom}`}
       >
         <div className="flex gap-0.5">
           <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
@@ -80,9 +91,8 @@ export function CompactOverlayContent({
         </div>
       </div>
 
-      {/* Pending badge — idle only */}
       {!hasTask && pendingCount > 0 && (
-        <span className="absolute top-0 right-0 min-w-[16px] h-4 px-[3px] bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none z-10 leading-none">
+        <span className="absolute -top-[2px] -right-[4px] aspect-square min-h-[16px] px-[3px] bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none z-10 leading-none">
           {pendingCount > 9 ? "9+" : pendingCount}
         </span>
       )}

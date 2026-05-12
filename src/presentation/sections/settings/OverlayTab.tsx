@@ -9,12 +9,14 @@ export function OverlayTab() {
   const config = useAppConfig();
 
   const [overlayOpacity, setOverlayOpacity] = useState(100);
+  const [overlaySize, setOverlaySize] = useState<"big" | "small">("big");
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [displayServer, setDisplayServer] = useState("");
 
   useEffect(() => {
     if (!config.isLoaded) return;
     setOverlayOpacity(config.get("overlayOpacity"));
+    setOverlaySize((config.get("overlaySize") as "big" | "small") ?? "big");
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -33,13 +35,49 @@ export function OverlayTab() {
     } satisfies OverlayConfigChangedPayload);
   }
 
+  async function handleSize(value: "big" | "small") {
+    setOverlaySize(value);
+    await config.set("overlaySize", value);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "overlaySize",
+      value,
+    } satisfies OverlayConfigChangedPayload);
+  }
+
   async function handleSnapToGrid(value: boolean) {
     setOverlaySnapToGrid(value);
     await config.set("overlaySnapToGrid", value);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "overlaySnapToGrid",
+      value,
+    } satisfies OverlayConfigChangedPayload);
   }
 
   return (
     <SettingsCard>
+      <CardRow>
+        <div className="flex flex-1 items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-gray-200">Tamanho</p>
+            <p className="text-xs text-gray-400">Tamanho visual do overlay compacto</p>
+          </div>
+          <div className="flex rounded-lg overflow-hidden border border-gray-700 shrink-0">
+            {(["big", "small"] as const).map((size) => (
+              <button
+                key={size}
+                onClick={() => handleSize(size)}
+                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                  overlaySize === size
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {size === "big" ? "Grande" : "Pequeno"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardRow>
       <CardRow>
         <SliderRow
           label="Opacidade em repouso"

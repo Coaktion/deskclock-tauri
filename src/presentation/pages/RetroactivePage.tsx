@@ -1,17 +1,20 @@
 import type { Category } from "@domain/entities/Category";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
+import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
+import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useTour } from "@presentation/hooks/useTour";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
+import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
-import { ChevronLeft, ChevronRight, DollarSign, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 
@@ -51,6 +54,13 @@ function formatDateHeader(dateISO: string): string {
 function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function buildLocalISO(dateISO: string, hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(dateISO + "T00:00:00");
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
 }
 
 function formatTimeRange(startISO: string, endISO: string | null): string {
@@ -142,13 +152,14 @@ function TaskRow({
 }
 
 export function RetroactivePage() {
-  const { taskRepo } = useRepositories();
+  const { taskRepo, plannedTaskRepo } = useRepositories();
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
 
   const [selectedDate, setSelectedDate] = useState(today);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [plannedTasks, setPlannedTasks] = useState<PlannedTask[]>([]);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -162,6 +173,11 @@ export function RetroactivePage() {
     setTasks([...completed].sort((a, b) => b.startTime.localeCompare(a.startTime)));
   }, [taskRepo, selectedDate]);
 
+  const loadPlannedTasks = useCallback(async () => {
+    const all = await plannedTaskRepo.findForDate(selectedDate);
+    setPlannedTasks(all.filter((t) => !t.completedDates.includes(selectedDate)));
+  }, [plannedTaskRepo, selectedDate]);
+
   const form = useRetroactiveForm({
     selectedDate,
     projects,
@@ -170,12 +186,40 @@ export function RetroactivePage() {
   });
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    void loadTasks();
+    void loadPlannedTasks();
+  }, [loadTasks, loadPlannedTasks]);
 
   async function handleDelete(id: string) {
     await deleteTask(taskRepo, id);
     await loadTasks();
+  }
+
+  async function handleDirectLaunch(task: PlannedTask) {
+    const startISO = buildLocalISO(selectedDate, task.startTime!);
+    let endISO = buildLocalISO(selectedDate, task.endTime!);
+    if (new Date(endISO) <= new Date(startISO)) {
+      endISO = buildLocalISO(addDaysISO(selectedDate, 1), task.endTime!);
+    }
+    const durationSeconds = Math.round(
+      (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
+    );
+    await createRetroactiveTask(
+      taskRepo,
+      {
+        name: task.name || null,
+        projectId: task.projectId,
+        categoryId: task.categoryId,
+        billable: task.billable,
+        startTime: startISO,
+        endTime: endISO,
+        durationSeconds,
+      },
+      new Date().toISOString()
+    );
+    await completePlannedTask(plannedTaskRepo, task.id, selectedDate);
+    form.advanceChainStart(task.endTime!);
+    await Promise.all([loadTasks(), loadPlannedTasks()]);
   }
 
   function toggleSelectTask(id: string) {
@@ -286,6 +330,58 @@ export function RetroactivePage() {
         </button>
       </div>
 
+      {/* Tarefas planejadas para o dia — sugestões para lançamento */}
+      {plannedTasks.length > 0 && (
+        <div className="border-b border-gray-800 shrink-0">
+          <p className="px-5 pt-2.5 pb-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+            Planejadas para este dia
+          </p>
+          <div className="max-h-36 overflow-y-auto">
+          {plannedTasks.map((task) => {
+            const projectName = projects.find((p) => p.id === task.projectId)?.name;
+            const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+            const hasTime = !!(task.startTime && task.endTime);
+            return (
+              <div
+                key={task.id}
+                className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
+              >
+                <button
+                  onClick={() =>
+                    hasTime ? void handleDirectLaunch(task) : form.prefill(task)
+                  }
+                  title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
+                  className={`shrink-0 p-1 rounded-lg transition-colors ${
+                    hasTime
+                      ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                      : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+                  }`}
+                >
+                  <Play size={12} />
+                </button>
+                <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
+                {hasTime && (
+                  <span className="text-xs text-gray-500 font-mono shrink-0">
+                    {task.startTime}–{task.endTime}
+                  </span>
+                )}
+                {projectName && (
+                  <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                    {projectName}
+                  </span>
+                )}
+                {categoryName && (
+                  <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                    {categoryName}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+          </div>
+        </div>
+      )}
+
       {/* Formulário inline */}
       <div data-tour="retroactive-form" className="px-5 py-4 border-b border-gray-800 space-y-3">
         <input
@@ -359,9 +455,10 @@ export function RetroactivePage() {
               }
             }}
             placeholder="HH:MM"
-            title="Duração — editar atualiza hora fim"
+            title="Aceita: 1:30, 90, 1h, 1h 30m"
             className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
           />
+          <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30, 15...</span>
           <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
           <input
             type="time"
@@ -406,11 +503,6 @@ export function RetroactivePage() {
             Adicionar
           </button>
         </div>
-
-        <p className="text-xs text-gray-600">
-          Duração aceita:{" "}
-          <span className="text-gray-500">1:30, 90, 1h, 1h 30m, 1h 30min, 1h 30</span>
-        </p>
 
         {form.error && <p className="text-xs text-red-400">{form.error}</p>}
       </div>

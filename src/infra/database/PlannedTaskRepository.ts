@@ -18,6 +18,8 @@ interface PlannedTaskRow {
   actions: string;
   sort_order: number;
   created_at: string;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 function rowToTask(r: PlannedTaskRow): PlannedTask {
@@ -36,6 +38,8 @@ function rowToTask(r: PlannedTaskRow): PlannedTask {
     actions: JSON.parse(r.actions) as PlannedTaskAction[],
     sortOrder: r.sort_order,
     createdAt: r.created_at,
+    startTime: r.start_time ?? undefined,
+    endTime: r.end_time ?? undefined,
   };
 }
 
@@ -46,8 +50,8 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
       `INSERT INTO planned_tasks
         (id, name, project_id, category_id, billable, schedule_type,
          schedule_date, recurring_days, period_start, period_end,
-         completed_dates, actions, sort_order, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+         completed_dates, actions, sort_order, created_at, start_time, end_time)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
         task.id,
         task.name,
@@ -63,6 +67,8 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
         JSON.stringify(task.actions),
         task.sortOrder,
         task.createdAt,
+        task.startTime ?? null,
+        task.endTime ?? null,
       ]
     );
   }
@@ -74,8 +80,8 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
         name=$1, project_id=$2, category_id=$3, billable=$4,
         schedule_type=$5, schedule_date=$6, recurring_days=$7,
         period_start=$8, period_end=$9, completed_dates=$10,
-        actions=$11, sort_order=$12
-       WHERE id=$13`,
+        actions=$11, sort_order=$12, start_time=$13, end_time=$14
+       WHERE id=$15`,
       [
         task.name,
         task.projectId,
@@ -89,6 +95,8 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
         JSON.stringify(task.completedDates),
         JSON.stringify(task.actions),
         task.sortOrder,
+        task.startTime ?? null,
+        task.endTime ?? null,
         task.id,
       ]
     );
