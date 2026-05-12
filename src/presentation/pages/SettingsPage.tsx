@@ -6,6 +6,10 @@ import { AparenciaTab } from "@presentation/sections/settings/AparenciaTab";
 import { OverlayTab } from "@presentation/sections/settings/OverlayTab";
 import { ApiTab } from "@presentation/sections/settings/ApiTab";
 import { AtualizacoesTab } from "@presentation/sections/settings/AtualizacoesTab";
+import { openInBrowser } from "@shared/utils/shell";
+import { BookOpen } from "lucide-react";
+
+const MANUAL_URL = "https://coaktion.github.io/deskclock-tauri";
 
 type SettingsTab = "geral" | "atalhos" | "aparencia" | "overlay" | "api" | "atualizacoes";
 
@@ -33,7 +37,16 @@ export function SettingsPage() {
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-xl mx-auto px-6 py-8">
-        <h1 className="text-xl font-semibold text-gray-100 mb-6">Configurações</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-semibold text-gray-100">Configurações</h1>
+          <button
+            onClick={() => void openInBrowser(MANUAL_URL)}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            <BookOpen size={13} />
+            Manual
+          </button>
+        </div>
 
         <div className="flex gap-1.5 flex-wrap mb-6">
           {SETTINGS_TABS.map((tab) => (
