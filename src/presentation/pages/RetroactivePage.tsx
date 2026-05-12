@@ -14,8 +14,11 @@ import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 
 
 const DAY_NAMES_PT = [
@@ -189,6 +192,36 @@ export function RetroactivePage() {
     void loadTasks();
     void loadPlannedTasks();
   }, [loadTasks, loadPlannedTasks]);
+
+  useEffect(() => {
+    type Prefill = {
+      date?: string | null;
+      name?: string | null;
+      projectName?: string | null;
+      categoryName?: string | null;
+      start?: string | null;
+      end?: string | null;
+    };
+
+    function applyPrefill(p: Prefill) {
+      if (p.date) setSelectedDate(p.date);
+      if (p.name != null) form.setName(p.name);
+      if (p.projectName != null) form.setProjectName(p.projectName);
+      if (p.categoryName != null) form.setCategoryName(p.categoryName);
+      if (p.start) form.handleStartChange(p.start);
+      if (p.end) form.handleEndChange(p.end);
+    }
+
+    const unlisten = listen<Prefill>(OVERLAY_EVENTS.DEEPLINK_RETROACTIVE_PREFILL, ({ payload }) => {
+      applyPrefill(payload);
+    });
+
+    invoke<Prefill | null>("get_pending_retroactive_prefill").then((p) => {
+      if (p) applyPrefill(p);
+    });
+
+    return () => { unlisten.then((fn) => fn()); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete(id: string) {
     await deleteTask(taskRepo, id);

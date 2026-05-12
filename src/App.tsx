@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
@@ -18,14 +18,19 @@ import { DataPage } from "@presentation/pages/DataPage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { IntegrationsPage } from "@presentation/pages/IntegrationsPage";
-import { OVERLAY_EVENTS, type CommandPaletteStartTaskPayload } from "@shared/types/overlayEvents";
+import {
+  OVERLAY_EVENTS,
+  type CommandPaletteStartTaskPayload,
+} from "@shared/types/overlayEvents";
 import { SetupModal } from "@presentation/modals/SetupModal";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
 import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
+import { useDeepLink } from "@presentation/hooks/useDeepLink";
 import { TourProvider } from "@presentation/contexts/TourContext";
 
 function PageContent({
@@ -76,6 +81,7 @@ function MainContent({
   onFocusTaskEditHandled: () => void;
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
+  const { projectRepo, categoryRepo } = useRepositories();
   const config = useAppConfig();
 
   // Ctrl+1–7 navigates directly
@@ -114,6 +120,55 @@ function MainContent({
       unlisten.then((fn) => fn());
     };
   }, [startTask]);
+
+  // Deep link: task/start — resolve nomes para IDs e inicia a tarefa
+  const handleDeepLinkStart = useCallback(
+    async (params: {
+      name?: string | null;
+      projectName?: string | null;
+      categoryName?: string | null;
+      billable: boolean;
+    }) => {
+      const [projects, categories] = await Promise.all([
+        projectRepo.findAll(),
+        categoryRepo.findAll(),
+      ]);
+      const projectId =
+        params.projectName
+          ? (projects.find((p) => p.name === params.projectName)?.id ?? null)
+          : null;
+      const categoryId =
+        params.categoryName
+          ? (categories.find((c) => c.name === params.categoryName)?.id ?? null)
+          : null;
+      await startTask({ name: params.name ?? null, projectId, categoryId, billable: params.billable });
+      setPage("tasks");
+    },
+    [projectRepo, categoryRepo, startTask, setPage]
+  );
+
+  useEffect(() => {
+    const unlisten = listen<{
+      name?: string | null;
+      projectName?: string | null;
+      categoryName?: string | null;
+      billable: boolean;
+    }>(OVERLAY_EVENTS.DEEPLINK_START_TASK, async ({ payload }) => {
+      await handleDeepLinkStart(payload);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [handleDeepLinkStart]);
+
+  useEffect(() => {
+    invoke<{ name?: string | null; projectName?: string | null; categoryName?: string | null; billable: boolean } | null>(
+      "get_pending_start_task"
+    ).then(async (params) => {
+      if (!params) return;
+      await handleDeepLinkStart(params);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live tray timer — atualiza tooltip do ícone da bandeja a cada segundo
   useEffect(() => {
@@ -219,6 +274,7 @@ function AppInner() {
     showMainWindow,
     showCommandPalette,
   });
+  useDeepLink(setPage);
 
   if (config.isLoaded && !config.loadError && !setupDone) {
     return <SetupModal config={config} onComplete={() => setSetupDone(true)} />;
