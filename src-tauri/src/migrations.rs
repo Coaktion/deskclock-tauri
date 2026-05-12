@@ -44,5 +44,11 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/007_task_integration_log.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "planned_tasks_times",
+            sql: include_str!("../migrations/008_planned_tasks_times.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
