@@ -32,6 +32,7 @@ interface GoogleEvent {
 
 interface GoogleEventsResponse {
   items?: GoogleEvent[];
+  nextPageToken?: string;
   error?: { message: string };
 }
 
@@ -45,34 +46,43 @@ export class GoogleCalendarImporter implements ICalendarImporter {
   async getEvents(fromISO: string, toISO: string): Promise<CalendarEvent[]> {
     const token = await this.tokenManager.getValidAccessToken();
 
-    const params = new URLSearchParams({
-      timeMin: fromISO,
-      timeMax: toISO,
-      singleEvents: "true",
-      orderBy: "startTime",
-      maxResults: "250",
-    });
-
-    const res = await fetch(`${CALENDAR_API}?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const body: GoogleEventsResponse = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      throw new Error(
-        body?.error?.message ?? `Erro HTTP ${res.status} ao buscar eventos do Google Calendar.`
-      );
-    }
-
     const IGNORED_TYPES = new Set(["workingLocation", "outOfOffice", "focusTime"]);
-    const rawEvents = (body.items ?? []).filter(
-      (e) =>
-        e.status !== "cancelled" &&
-        (e.summary ?? "").trim() !== "" &&
-        !IGNORED_TYPES.has(e.eventType ?? "")
-    );
+    const allRaw: GoogleEvent[] = [];
+    let pageToken: string | undefined;
 
+    do {
+      const params = new URLSearchParams({
+        timeMin: fromISO,
+        timeMax: toISO,
+        singleEvents: "true",
+        orderBy: "startTime",
+        maxResults: "2500",
+      });
+      if (pageToken) params.set("pageToken", pageToken);
+
+      const res = await fetch(`${CALENDAR_API}?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const body: GoogleEventsResponse = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(
+          body?.error?.message ?? `Erro HTTP ${res.status} ao buscar eventos do Google Calendar.`
+        );
+      }
+
+      const page = (body.items ?? []).filter(
+        (e) =>
+          e.status !== "cancelled" &&
+          (e.summary ?? "").trim() !== "" &&
+          !IGNORED_TYPES.has(e.eventType ?? "")
+      );
+      allRaw.push(...page);
+      pageToken = body.nextPageToken;
+    } while (pageToken);
+
+    const rawEvents = allRaw;
     const mapped = rawEvents.map((e) => this.mapEvent(e));
 
     // Enriquecer com RRULE dos eventos base (batch paralelo)
