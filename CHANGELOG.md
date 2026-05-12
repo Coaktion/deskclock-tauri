@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.7.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.6.0...v1.7.0) (2026-05-12)
+
+
+### Features
+
+* suporte a deep links `deskclock://` para abrir o app a partir de outros aplicativos ou scripts
+
 ## [1.6.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.1...v1.6.0) (2026-05-12)
 
 
