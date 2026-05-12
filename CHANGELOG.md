@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.1...v1.6.0) (2026-05-12)
+
+
+### Features
+
+* add Integrations tour (5 steps) ([ec7cade](https://github.com/EduardoMeira/deskclock-tauri/commit/ec7cadedbf345dc6933e1ccb63df6e16f241479b))
+* add interactive tour system with Driver.js (Tasks screen) ([0657f4d](https://github.com/EduardoMeira/deskclock-tauri/commit/0657f4d2a278ba8ffb3c265fe0c4dbb90ab6d553))
+* add Planning tour (4 steps) ([b2a3a45](https://github.com/EduardoMeira/deskclock-tauri/commit/b2a3a45502b7f95f8c2c6b05f9e2ac8410be5d1d))
+* add Retroactive tour (4 steps) ([62b1aaa](https://github.com/EduardoMeira/deskclock-tauri/commit/62b1aaa29785058a171d1b579cb58caf3d5e1aea))
+* **calendar:** import por período livre, pré-mapeamento e lançamento retroativo via planejadas ([6ebdcba](https://github.com/EduardoMeira/deskclock-tauri/commit/6ebdcbadc91447146895c19223b2352a26be8c62))
+* retroactive tour — add duration field step (natural language formats) ([0de91c8](https://github.com/EduardoMeira/deskclock-tauri/commit/0de91c800aea136282e380a2a965551f539439d1))
+
+
+### Bug Fixes
+
+* adds loadAll on the return from the makeRepo factory ([e5c7d31](https://github.com/EduardoMeira/deskclock-tauri/commit/e5c7d31df0d24b2935dc45cf26f2314fa15d65bb))
+* **calendar:** mover dica de metadados para o acordeão de integração e corrigir tratamento de erro ([614d922](https://github.com/EduardoMeira/deskclock-tauri/commit/614d9228f76bdbe7d4abd3c7fd91f1470769bdbe))
+* **overlay:** preserva plannedTaskId ao parar tarefa via popup ([01e4f26](https://github.com/EduardoMeira/deskclock-tauri/commit/01e4f26bfc6814a3e528bb4d5a71582172a7a9d4))
+* planning tour — expand step 1 text, fix day filter overflow clipping ([91f8b36](https://github.com/EduardoMeira/deskclock-tauri/commit/91f8b36c36086c9b9cd9c2c2b8bd134277b1f973))
+* tour — add padding and margin-right to skip button ([91ba900](https://github.com/EduardoMeira/deskclock-tauri/commit/91ba900b17d027244f31c4003d2a18f9baa0b200))
+* tour — remove text-shadow, fix omnibox step text, add skip button ([4b7a461](https://github.com/EduardoMeira/deskclock-tauri/commit/4b7a461d74ed0c415b339ae43e9fcafb75fccb75))
+
 ## [1.5.0](https://github.com/EduardoMeira/deskclock-tauri/compare/v1.4.1...v1.5.0) (2026-05-11)
 
 
