@@ -5,7 +5,7 @@ allowed-tools: Bash(git log:*), Bash(git describe:*), Bash(git diff:*), Read, Ed
 
 ## Template de referência
 
-!`cat docs/changelog-template.md`
+!`cat .claude/changelog-template.md`
 
 ## Versão gerada pelo standard-version
 
