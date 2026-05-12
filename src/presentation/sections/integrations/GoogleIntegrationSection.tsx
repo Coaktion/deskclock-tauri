@@ -15,14 +15,16 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
+import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useTour } from "@presentation/hooks/useTour";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import {
@@ -30,7 +32,6 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
-import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
@@ -51,7 +52,6 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useTour } from "@presentation/hooks/useTour";
 import { IntegrationTile, Row, StatusBadge, SubSection, Toggle } from "./shared";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
@@ -512,7 +512,7 @@ function CalendarSection({
           Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
           <br />
           <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
-          {"  "}
+          <br />
           <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
         </p>
       </div>

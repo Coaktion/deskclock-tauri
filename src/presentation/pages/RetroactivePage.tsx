@@ -5,13 +5,13 @@ import type { Task } from "@domain/entities/Task";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useTour } from "@presentation/hooks/useTour";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
+import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
@@ -458,7 +458,7 @@ export function RetroactivePage() {
             title="Aceita: 1:30, 90, 1h, 1h 30m"
             className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
           />
-          <span className="text-xs text-gray-600 shrink-0">1:30, 90, 1h…</span>
+          <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30, 15...</span>
           <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
           <input
             type="time"
