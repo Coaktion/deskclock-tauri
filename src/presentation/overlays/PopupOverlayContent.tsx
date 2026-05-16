@@ -1,7 +1,9 @@
 import type { Category } from "@domain/entities/Category";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
+import { executeActions } from "@domain/utils/actions";
+import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
@@ -14,10 +16,13 @@ import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time"
 import { emit } from "@tauri-apps/api/event";
 import {
   ArrowRight,
+  ArrowUpRight,
   CalendarDays,
   CheckCircle2,
   Clock,
   DollarSign,
+  FolderOpen,
+  Globe,
   Pause,
   Pen,
   Play,
@@ -39,9 +44,24 @@ const MAX_ROWS = 4;
 
 // Running state layout (execution section fills popup body)
 const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
+const ACTIONS_SECTION_H = 48; // section label + one row of action chips
+
+function actionLabel(action: PlannedTaskAction): string {
+  if (action.type === "open_url") {
+    try {
+      const normalized = action.value.startsWith("http") ? action.value : `https://${action.value}`;
+      return new URL(normalized).hostname.replace(/^www\./, "");
+    } catch {
+      return action.value;
+    }
+  }
+  const parts = action.value.replace(/\\/g, "/").split("/");
+  return parts[parts.length - 1] || action.value;
+}
 
 interface PopupOverlayContentProps {
   runningTask: Task | null;
+  activePlannedTaskActions: PlannedTaskAction[];
   onClose: () => void;
   onNavigatePlanning: () => void;
   onResize: (width: number, height: number) => void;
@@ -81,6 +101,7 @@ interface ExecSectionProps {
   categoryName?: string;
   projects: Project[];
   categories: Category[];
+  actions: PlannedTaskAction[];
   onUpdateTask: (input: {
     name?: string | null;
     projectId?: string | null;
@@ -100,6 +121,7 @@ function ExecSection({
   categoryName,
   projects,
   categories,
+  actions,
   onUpdateTask,
   onPause,
   onResume,
@@ -362,6 +384,34 @@ function ExecSection({
         )}
       </div>
 
+      {/* Actions section */}
+      {actions.length > 0 && (
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mb-1.5">
+            Ações
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {actions.map((action, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() =>
+                  void executeActions([action], {
+                    openUrl: openInBrowser,
+                    openPath: openInFileManager,
+                  })
+                }
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-lg border border-blue-500/25 bg-blue-500/[0.06] text-blue-400 hover:border-blue-500/50 hover:bg-blue-500/[0.12] hover:text-blue-300 transition-colors"
+              >
+                {action.type === "open_url" ? <Globe size={10} /> : <FolderOpen size={10} />}
+                {actionLabel(action)}
+                <ArrowUpRight size={9} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Divider */}
       <div className="border-t border-gray-800 mt-auto" />
 
@@ -433,6 +483,7 @@ function ExecSection({
 
 export function PopupOverlayContent({
   runningTask,
+  activePlannedTaskActions,
   onClose,
   onNavigatePlanning,
   onResize,
@@ -453,16 +504,17 @@ export function PopupOverlayContent({
 
   const projectName = projects.find((p) => p.id === runningTask?.projectId)?.name;
   const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
+  const hasActions = activePlannedTaskActions.length > 0;
 
   // Resize based on state
   useEffect(() => {
     if (runningTask) {
-      onResize(POPUP_W, HEADER_H + EXEC_H + FOOTER_H);
+      onResize(POPUP_W, HEADER_H + EXEC_H + (hasActions ? ACTIONS_SECTION_H : 0) + FOOTER_H);
     } else {
       const taskAreaH = pending.length === 0 ? EMPTY_H : Math.min(pending.length, MAX_ROWS) * ROW_H;
       onResize(POPUP_W, HEADER_H + NEW_TASK_H + SECTION_H + taskAreaH + FOOTER_H);
     }
-  }, [pending.length, !!runningTask, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pending.length, !!runningTask, hasActions, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePlay(task: PlannedTask) {
     await onPlay(task);
@@ -511,6 +563,7 @@ export function PopupOverlayContent({
           categoryName={categoryName}
           projects={projects}
           categories={categories}
+          actions={activePlannedTaskActions}
           onUpdateTask={onUpdateTask}
           onPause={onPause}
           onResume={onResume}

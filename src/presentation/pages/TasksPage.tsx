@@ -12,8 +12,6 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTasks } from "@presentation/hooks/useTasks";
 import { useEffect } from "react";
-import { executeActions } from "@domain/utils/actions";
-import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { todayISO } from "@shared/utils/time";
 
 interface TasksPageProps {
@@ -53,7 +51,6 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
 
   async function handlePlayPlanned(task: PlannedTask) {
     if (runningTask) return;
-    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await startTask({
       name: task.name,
       projectId: task.projectId,

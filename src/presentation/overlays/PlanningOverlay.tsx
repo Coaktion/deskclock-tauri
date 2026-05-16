@@ -3,8 +3,6 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { todayISO } from "@shared/utils/time";
-import { executeActions } from "@domain/utils/actions";
-import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
 interface PlanningOverlayProps {
@@ -29,8 +27,8 @@ export function PlanningOverlay({ onMinimize, onClose, onNavigatePlanning }: Pla
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      plannedTaskId: task.id,
     });
-    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await reload();
     onClose();
   }
