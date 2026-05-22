@@ -39,7 +39,7 @@ export interface RunningTaskContextValue {
   startTask: (input: StartInput) => Promise<void>;
   pauseTask: () => Promise<void>;
   resumeTask: () => Promise<void>;
-  stopTask: (completed: boolean) => Promise<void>;
+  stopTask: (completed: boolean, endTimeISO?: string) => Promise<void>;
   cancelTask: () => Promise<void>;
   updateActiveTask: (input: UpdateInput) => Promise<void>;
 }
@@ -129,9 +129,10 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   }, [taskRepo, runningTask]);
 
   const stopTask = useCallback(
-    async (completed: boolean) => {
+    async (completed: boolean, endTimeISO?: string) => {
       if (!runningTask) return;
-      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
+      const nowISO = new Date().toISOString();
+      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, endTimeISO ?? nowISO, nowISO);
       const plannedId = activePlannedTaskId;
       setRunningTask(null);
       setActivePlannedTaskId(null);
