@@ -92,7 +92,7 @@ function TicketEditor({ state, projects, categories, onChange }: TicketEditorPro
       <div className="flex items-center justify-between py-0.5">
         <span className="text-xs text-gray-400 flex items-center gap-1">
           <ExternalLink size={11} />
-          Abrir ticket ao iniciar
+          Adicionar automaticamente uma ação de abrir o ticket
         </span>
         <button
           onClick={() => onChange({ ...state, addOpenUrlAction: !state.addOpenUrlAction })}
