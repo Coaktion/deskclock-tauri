@@ -16,6 +16,7 @@ import { emit } from "@tauri-apps/api/event";
 import {
   ArrowRight,
   CalendarDays,
+  Check,
   CheckCircle2,
   Clock,
   DollarSign,
@@ -517,7 +518,7 @@ export function PopupOverlayContent({
   onUpdateTask,
 }: PopupOverlayContentProps) {
   const today = todayISO();
-  const { tasks, reload } = usePlannedTasksForDate(today);
+  const { tasks, reload, complete } = usePlannedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
@@ -662,7 +663,15 @@ export function PopupOverlayContent({
                       )}
                     </div>
                     <button
+                      onClick={() => void complete(task.id, today)}
+                      title="Concluir"
+                      className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
+                    >
+                      <Check size={11} />
+                    </button>
+                    <button
                       onClick={() => handlePlay(task)}
+                      title="Iniciar"
                       className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
                     >
                       <Play size={11} fill="currentColor" />

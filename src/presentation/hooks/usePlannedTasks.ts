@@ -119,7 +119,10 @@ export function usePlannedTasksForDate(dateISO: string) {
     (repo: IPlannedTaskRepository) => getPlannedTasksForDate(repo, dateISO),
     [dateISO]
   );
-  const base = usePlannedTasksBase(loadFn);
+  const onMutate = useCallback(() => {
+    emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+  }, []);
+  const base = usePlannedTasksBase(loadFn, onMutate);
   const { reload } = base;
 
   // Recarrega quando outra janela muta tarefas planejadas
