@@ -144,6 +144,16 @@ export function usePlannedTasksForWeek(startISO: string, endISO: string) {
   const onMutate = useCallback(() => {
     emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
   }, []);
+  const base = usePlannedTasksBase(loadFn, onMutate);
+  const { reload } = base;
 
-  return usePlannedTasksBase(loadFn, onMutate);
+  // Recarrega quando outra janela muta tarefas planejadas (ex: popup flyout)
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => reload());
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [reload]);
+
+  return base;
 }
