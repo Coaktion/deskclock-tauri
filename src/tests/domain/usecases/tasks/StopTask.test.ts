@@ -84,6 +84,25 @@ describe("stopTask", () => {
     expect(result.durationSeconds).toBe(300);
   });
 
+  it("usa endTimeISO fornecido para endTime e cálculo de duração", async () => {
+    const task = makeTask({ durationSeconds: 0, startTime: "2026-04-08T09:00:00.000Z" });
+    const repo: ITaskRepository = {
+      save: vi.fn(),
+      update: vi.fn(async () => undefined),
+      findById: vi.fn(async () => task),
+      findByStatus: vi.fn(async () => []),
+      findByDateRange: vi.fn(async () => []),
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    };
+    const customEnd = "2026-04-08T09:30:00.000Z"; // 30 min depois do start
+    const realNow = "2026-04-08T11:00:00.000Z"; // 2h depois — usuário esqueceu de parar
+    const result = await stopTask(repo, "t1", customEnd, realNow);
+    expect(result.endTime).toBe(customEnd);
+    expect(result.durationSeconds).toBe(1800); // 30 min
+    expect(result.updatedAt).toBe(realNow);
+  });
+
   it("lança DomainError se task já está completed", async () => {
     const task = makeTask({ status: "completed" });
     const repo: ITaskRepository = {

@@ -156,8 +156,9 @@ src/
 
 #### 5.1.2 Popup Flyout (Overlay de execução)
 - **Aparece ao clicar** no Compact Overlay — flyout acoplado, não janela separada.
-- **Estado idle:** lista de tarefas planejadas para hoje + botão "Nova tarefa". Botões: `Ir para planejamento` | `Fechar`.
+- **Estado idle:** lista de tarefas planejadas para hoje + botão "Nova tarefa". Cada linha tem botões `Concluir` (✓) e `Iniciar` (▶) — concluir marca a tarefa como concluída no dia atual sem precisar abrir o planejamento, útil para corrigir tarefas que pararam com "Pendente" mas estavam de fato finalizadas. Botões do header: `Ir para planejamento` | `Fechar`.
 - **Estado running/paused:** nome da tarefa, timer ao vivo, borda lateral colorida (billable/non-billable). Controles: Play/Pause, Stop (com confirmação Concluída/Pendente), Cancelar, Fechar.
+- **Confirmação de Stop:** ao clicar em Parar, abre um painel inline com input `HH:MM` da hora de término (preenchido com a hora atual) e botões `Concluída` / `Pendente`. Se o usuário não tocar no campo, o término é gravado como agora. Se backdatear, a hora informada vira o `endTime` e a `durationSeconds` é recalculada — atendendo ao caso "esqueci de parar o timer". Validação inline rejeita horas anteriores ao `startTime`.
 - **Edição inline por campo:** clique em nome, projeto ou categoria abre edição in-place sem modal.
 - **Hora de início** editável — recalcula o timer ao alterar.
 - **Seção "Ações"** (quando a tarefa em execução tiver ações configuradas): chips clicáveis que disparam cada ação sob demanda — não há mais execução automática ao iniciar.

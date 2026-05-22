@@ -247,9 +247,10 @@ function PopupOverlayAppInner() {
   }, [taskRepo, runningTask]);
 
   const handleStop = useCallback(
-    async (completed: boolean) => {
+    async (completed: boolean, endTimeISO?: string) => {
       if (!runningTask) return;
-      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
+      const nowISO = new Date().toISOString();
+      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, endTimeISO ?? nowISO, nowISO);
       const plannedTaskId = activePlannedTaskId.current;
       activePlannedTaskId.current = null;
       setActivePlannedTaskActions([]);

@@ -9,7 +9,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Edição de hora de início com recálculo automático do timer
 - Cancelamento imediato de tarefa sem confirmação
 - Apenas uma tarefa em execução por vez — é necessário parar a atual para iniciar outra
-- Confirmação de conclusão ao parar (Concluída / Pendente)
+- Confirmação de conclusão ao parar (Concluída / Pendente), com hora de término editável inline para corrigir timers esquecidos
 - Totalizadores diários e semanais (billable / non-billable)
 
 ### Lançamento retroativo
