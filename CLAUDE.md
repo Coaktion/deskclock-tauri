@@ -160,6 +160,7 @@ src/
 - **Estado running/paused:** nome da tarefa, timer ao vivo, borda lateral colorida (billable/non-billable). Controles: Play/Pause, Stop (com confirmação Concluída/Pendente), Cancelar, Fechar.
 - **Edição inline por campo:** clique em nome, projeto ou categoria abre edição in-place sem modal.
 - **Hora de início** editável — recalcula o timer ao alterar.
+- **Seção "Ações"** (quando a tarefa em execução tiver ações configuradas): chips clicáveis que disparam cada ação sob demanda — não há mais execução automática ao iniciar.
 
 ---
 
@@ -177,7 +178,7 @@ src/
 
 #### Seção 2 — Tarefas planejadas para hoje
 - Lista compacta: Nome + botão Play.
-- Play inicia execução com dados da tarefa planejada preenchidos. Executa ações configuradas.
+- Play inicia execução com dados da tarefa planejada preenchidos. As ações configuradas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução (ver §6.5).
 
 > **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
 
@@ -209,7 +210,7 @@ src/
   - `specific_date`: Dia único. Campo data com botão atalho "Hoje".
   - `recurring`: Seleção de dias da semana. Sem data de término. Aparece até ser excluída.
   - `period`: Data início + Data fim. Aparece durante todo o período.
-- **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa.
+- **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa. As ações não são disparadas automaticamente ao iniciar — ficam acessíveis como chips no Popup Flyout durante a execução (ver §6.5).
 - **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
 - **Edição:** abre modal completo.
 - **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação).
@@ -381,7 +382,8 @@ src/
 - Permite texto livre se nenhum resultado — não cria projeto/categoria automaticamente.
 
 ### 6.5 Ações de tarefa planejada
-- Ao iniciar uma tarefa planejada via Play, todas as ações configuradas são executadas em sequência.
+- Ao iniciar uma tarefa planejada via Play, as ações configuradas **não são executadas automaticamente**. Elas aparecem como chips clicáveis na seção "Ações" do Popup Flyout enquanto a tarefa estiver em execução, permitindo que o usuário dispare cada uma sob demanda (e mais de uma vez, se quiser).
+- Cada chip mostra um ícone (globo para URL, pasta para arquivo) e um rótulo curto (hostname para URLs, nome do arquivo para caminhos).
 - `open_url`: Abre URL no navegador padrão. Auto-prepend `https://` se não contiver `http://` ou `https://`.
 - `open_file`: Abre arquivo/pasta no explorador de arquivos do SO.
 

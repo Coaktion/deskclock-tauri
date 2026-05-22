@@ -1,37 +1,36 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
-import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
-import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
-import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
-import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
-import { formatHHMMSS } from "@shared/utils/time";
-import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
-import { invoke } from "@tauri-apps/api/core";
 import { Sidebar, type Page } from "@presentation/components/Sidebar";
 import { TitleBar } from "@presentation/components/TitleBar";
-import { TasksPage } from "@presentation/pages/TasksPage";
-import { PlanningPage } from "@presentation/pages/PlanningPage";
-import { HistoryPage } from "@presentation/pages/HistoryPage";
+import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
+import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
+import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
+import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
+import { TourProvider } from "@presentation/contexts/TourContext";
+import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
+import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
+import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
+import { useDeepLink } from "@presentation/hooks/useDeepLink";
+import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
+import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
+import { SetupModal } from "@presentation/modals/SetupModal";
 import { DataPage } from "@presentation/pages/DataPage";
-import { SettingsPage } from "@presentation/pages/SettingsPage";
-import { RetroactivePage } from "@presentation/pages/RetroactivePage";
+import { HistoryPage } from "@presentation/pages/HistoryPage";
 import { IntegrationsPage } from "@presentation/pages/IntegrationsPage";
+import { PlanningPage } from "@presentation/pages/PlanningPage";
+import { RetroactivePage } from "@presentation/pages/RetroactivePage";
+import { SettingsPage } from "@presentation/pages/SettingsPage";
+import { TasksPage } from "@presentation/pages/TasksPage";
 import {
   OVERLAY_EVENTS,
   type CommandPaletteStartTaskPayload,
 } from "@shared/types/overlayEvents";
-import { SetupModal } from "@presentation/modals/SetupModal";
-import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
-import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
-import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
-import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
-import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
-import { useDeepLink } from "@presentation/hooks/useDeepLink";
-import { TourProvider } from "@presentation/contexts/TourContext";
+import { formatHHMMSS } from "@shared/utils/time";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 function PageContent({
   page,

@@ -35,6 +35,7 @@ interface UpdateInput {
 export interface RunningTaskContextValue {
   runningTask: Task | null;
   reloadSignal: number;
+  activePlannedTaskId: string | null;
   startTask: (input: StartInput) => Promise<void>;
   pauseTask: () => Promise<void>;
   resumeTask: () => Promise<void>;
@@ -165,6 +166,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       value={{
         runningTask,
         reloadSignal,
+        activePlannedTaskId,
         startTask,
         pauseTask,
         resumeTask,

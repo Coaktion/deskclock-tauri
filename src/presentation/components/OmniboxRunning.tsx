@@ -2,6 +2,8 @@ import { ArrowRight, CheckCircle2, Clock, Pause, Pen, Play, X } from "lucide-rea
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
+import { ActionChip } from "./ActionChip";
 import { Autocomplete } from "./Autocomplete";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 import type { OmniboxRunningEditState } from "@presentation/hooks/useOmniboxRunningEdit";
@@ -13,6 +15,7 @@ interface OmniboxRunningProps extends OmniboxRunningEditState {
   seconds: number;
   cancelTask: () => Promise<void>;
   containerRef: React.RefObject<HTMLDivElement | null>;
+  actions: PlannedTaskAction[];
 }
 
 export function OmniboxRunning({
@@ -22,6 +25,7 @@ export function OmniboxRunning({
   seconds,
   cancelTask,
   containerRef,
+  actions,
   confirmingStop,
   setConfirmingStop,
   editingRunningChip,
@@ -292,6 +296,18 @@ export function OmniboxRunning({
           )}
         </div>
       </div>
+
+      {/* Actions section */}
+      {actions.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap px-4 pb-3 pt-2 border-t border-emerald-500/20">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 shrink-0">
+            Ações
+          </span>
+          {actions.map((action, i) => (
+            <ActionChip key={i} action={action} />
+          ))}
+        </div>
+      )}
 
       {/* Fill required form */}
       {fillingRequired && (

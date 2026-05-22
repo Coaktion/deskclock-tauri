@@ -14,8 +14,6 @@ import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useTour } from "@presentation/hooks/useTour";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { executeActions } from "@domain/utils/actions";
-import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
@@ -126,7 +124,6 @@ export function WeekPlanningView() {
 
   async function handlePlay(task: PlannedTask) {
     if (runningTask) return;
-    await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
     await startTask({
       name: task.name,
       projectId: task.projectId,

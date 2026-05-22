@@ -29,8 +29,16 @@ export function Omnibox({
   focusTaskEdit,
   onFocusTaskEditHandled,
 }: OmniboxProps) {
-  const { runningTask, startTask, pauseTask, resumeTask, stopTask, cancelTask, updateActiveTask } =
-    useRunningTask();
+  const {
+    runningTask,
+    activePlannedTaskId,
+    startTask,
+    pauseTask,
+    resumeTask,
+    stopTask,
+    cancelTask,
+    updateActiveTask,
+  } = useRunningTask();
   const seconds = useTaskTimer(runningTask);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +83,8 @@ export function Omnibox({
   }, [handleOutsideClick]);
 
   if (runningTask) {
+    const runningActions =
+      plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
     return (
       <OmniboxRunning
         {...edit}
@@ -84,6 +94,7 @@ export function Omnibox({
         seconds={seconds}
         cancelTask={cancelTask}
         containerRef={containerRef}
+        actions={runningActions}
       />
     );
   }
