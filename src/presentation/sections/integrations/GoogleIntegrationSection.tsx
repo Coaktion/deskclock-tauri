@@ -18,6 +18,7 @@ import type { Project } from "@domain/entities/Project";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
+import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
@@ -217,7 +218,7 @@ function SheetsSection({
             get: () => config.get("sheetsDailySyncLastTimestamp"),
             set: (iso) => config.set("sheetsDailySyncLastTimestamp", iso),
           },
-          validate: () => true, // preserva comportamento atual; ver findings.md
+          validate: (t) => validateTaskForSheets(t).ok,
           createSender: () =>
             factories.createSheetsTaskSender({ spreadsheetId: spreadsheet, projects, categories }),
         },
@@ -230,17 +231,22 @@ function SheetsSection({
       }
 
       if (result.count === 0) {
-        // UI seta timestamp em empty (divergente das strategies — ver findings.md)
-        const nowIso = new Date().toISOString();
-        await config.set("sheetsDailySyncLastTimestamp", nowIso);
-        setLastSyncTs(nowIso);
-        await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
+        if (result.warning) {
+          await showToast("warning", result.warning, 6000);
+        } else {
+          await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
+        }
         return;
       }
 
       // template já atualizou timestamp via timestampPort.set
       setLastSyncTs(config.get("sheetsDailySyncLastTimestamp"));
-      await showToast("success", `${result.count} grupo(s) enviado(s) para o Sheets.`);
+      const successMsg = `${result.count} tarefa(s) enviada(s) para o Sheets.`;
+      if (result.warning) {
+        await showToast("warning", `${successMsg} ${result.warning}`, 6000);
+      } else {
+        await showToast("success", successMsg);
+      }
     } finally {
       setSyncing(false);
     }
