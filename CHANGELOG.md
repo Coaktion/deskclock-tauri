@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.8.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.4.1...v1.8.0) (2026-05-26)
+
+
+### Features
+
+* **integrações:** nova barra lateral direita com atalhos para as integrações conectadas (Sheets, Google Agenda, Clockify) — passe o cursor sobre um ícone para abrir o envio ou importação direto, sem precisar entrar na tela de Integrações
+* **planejamento:** botão "Concluir" disponível direto no popup do overlay para tarefas planejadas do dia
+* **popup:** ao parar uma tarefa pelo popup, agora é possível ajustar a hora de término — útil quando você esqueceu de parar o timer no momento certo
+* **planejamento:** ações de tarefas planejadas (URLs e arquivos) agora aparecem como chips clicáveis no popup durante a execução, em vez de serem disparadas automaticamente ao iniciar
+
+
+### Bug Fixes
+
+* **sheets:** sincronização diária reescrita para rodar de forma confiável após inicialização e em horários agendados
+* **sheets:** envio manual fica bloqueado enquanto a sincronização automática diária está rodando, evitando envios duplicados
+* **sheets:** avisos de validação de tarefas aparecem ao fazer envio manual, indicando o que precisa ser corrigido
+* **sheets:** o dia atual passa a ser incluído no intervalo da sincronização diária
+* **overlay:** janela de notificação volta a respeitar o "sempre no topo" ao aparecer
+* **planejamento:** a tela reflete imediatamente mudanças feitas em outras janelas, sem precisar recarregar
+
 ## [1.7.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.6.0...v1.7.0) (2026-05-12)
 
 
