@@ -3,22 +3,60 @@ import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncSt
 
 export type { AutoSyncResult };
 
+type Listener = () => void;
+
 export class AutoSyncRunner {
+  private inFlight = new Map<string, number>();
+  private listeners = new Set<Listener>();
+  private version = 0;
+
   constructor(private strategies: ISyncStrategy[]) {}
 
+  getVersion(): number {
+    return this.version;
+  }
+
   async runPerTask(task: Task): Promise<AutoSyncResult[]> {
-    return Promise.all(
-      this.strategies
-        .filter((s) => s.isPerTaskEnabled())
-        .map((s) => s.runPerTask(task))
-    );
+    const active = this.strategies.filter((s) => s.isPerTaskEnabled());
+    return this.withTracking(active, (s) => s.runPerTask(task));
   }
 
   async runDaily(endDateISO: string): Promise<AutoSyncResult[]> {
-    return Promise.all(
-      this.strategies
-        .filter((s) => s.isDailyEnabled())
-        .map((s) => s.runDaily(endDateISO))
-    );
+    const active = this.strategies.filter((s) => s.isDailyEnabled());
+    return this.withTracking(active, (s) => s.runDaily(endDateISO));
+  }
+
+  isSyncing(integrationName?: string): boolean {
+    if (integrationName) return (this.inFlight.get(integrationName) ?? 0) > 0;
+    return this.inFlight.size > 0;
+  }
+
+  subscribe(listener: Listener): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private async withTracking(
+    active: ISyncStrategy[],
+    run: (s: ISyncStrategy) => Promise<AutoSyncResult>
+  ): Promise<AutoSyncResult[]> {
+    const names = active.map((s) => s.integrationName);
+    this.adjust(names, 1);
+    try {
+      return await Promise.all(active.map(run));
+    } finally {
+      this.adjust(names, -1);
+    }
+  }
+
+  private adjust(names: string[], delta: 1 | -1): void {
+    if (names.length === 0) return;
+    for (const n of names) {
+      const v = (this.inFlight.get(n) ?? 0) + delta;
+      if (v <= 0) this.inFlight.delete(n);
+      else this.inFlight.set(n, v);
+    }
+    this.version++;
+    for (const l of this.listeners) l();
   }
 }
