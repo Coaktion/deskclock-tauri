@@ -703,7 +703,9 @@ export function ImportCalendarModal({
                   }`}
                 />
               </div>
-              <span className="text-xs text-gray-400">Abrir URL do evento ao iniciar tarefa</span>
+              <span className="text-xs text-gray-400">
+                Adicionar automaticamente uma ação de abrir URL do evento
+              </span>
             </label>
 
             <div className="flex items-center justify-between">

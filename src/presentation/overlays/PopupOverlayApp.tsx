@@ -22,13 +22,11 @@ import {
   type OverlayConfigChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
-import { executeActions } from "@domain/utils/actions";
-import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 import { applyFontSize } from "@shared/utils/fontSize";
 import { applyTheme } from "@shared/utils/theme";
 import { positionPopupNearCompact } from "@shared/utils/windowPosition";
 import type { Theme } from "@shared/utils/theme";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { PopupOverlayContent } from "./PopupOverlayContent";
 
 const POPUP_W = 288;
@@ -46,6 +44,7 @@ function PopupOverlayAppInner() {
   const isProgrammaticResizeRef = useRef(false);
   const isStartingTaskRef = useRef(false);
   const activePlannedTaskId = useRef<string | null>(null);
+  const [activePlannedTaskActions, setActivePlannedTaskActions] = useState<PlannedTaskAction[]>([]);
 
   // Programmatic resize with min/max locking to prevent manual resize
   const programmaticSetSize = useCallback(async (width: number, height: number) => {
@@ -123,6 +122,7 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
       async ({ payload }) => {
         setRunningTask(payload.task);
+        if (!payload.task) setActivePlannedTaskActions([]);
         // Não sobrescreve quando o evento vem do RunningTaskContext (source "main"),
         // pois esse echo não carrega plannedTaskId e zeraria a referência.
         if (payload.source !== "main") {
@@ -214,7 +214,7 @@ function PopupOverlayAppInner() {
   const handlePlay = useCallback(
     async (task: PlannedTask) => {
       if (runningTask) return;
-      await executeActions(task.actions, { openUrl: openInBrowser, openPath: openInFileManager });
+      setActivePlannedTaskActions(task.actions);
       await handleStartTask({
         name: task.name,
         projectId: task.projectId,
@@ -247,11 +247,13 @@ function PopupOverlayAppInner() {
   }, [taskRepo, runningTask]);
 
   const handleStop = useCallback(
-    async (completed: boolean) => {
+    async (completed: boolean, endTimeISO?: string) => {
       if (!runningTask) return;
-      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, new Date().toISOString());
+      const nowISO = new Date().toISOString();
+      const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, endTimeISO ?? nowISO, nowISO);
       const plannedTaskId = activePlannedTaskId.current;
       activePlannedTaskId.current = null;
+      setActivePlannedTaskActions([]);
       setRunningTask(null);
       await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
         task: null,
@@ -270,6 +272,7 @@ function PopupOverlayAppInner() {
     if (!runningTask) return;
     await cancelTaskUC(taskRepo, runningTask.id);
     activePlannedTaskId.current = null;
+    setActivePlannedTaskActions([]);
     setRunningTask(null);
     await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
       task: null,
@@ -317,6 +320,7 @@ function PopupOverlayAppInner() {
     >
       <PopupOverlayContent
         runningTask={runningTask}
+        activePlannedTaskActions={activePlannedTaskActions}
         onClose={handleClose}
         onNavigatePlanning={handleNavigatePlanning}
         onResize={programmaticSetSize}

@@ -1,8 +1,18 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { useAppConfig } from "./ConfigContext";
 import { useRepositories } from "./RepositoriesContext";
 import { AutoSyncRunner } from "@infra/integrations/AutoSyncRunner";
-import { SheetsSyncStrategy } from "@infra/integrations/SheetsSyncStrategy";
+import {
+  SheetsSyncStrategy,
+  SHEETS_INTEGRATION_NAME,
+} from "@infra/integrations/SheetsSyncStrategy";
 import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { Task } from "@domain/entities/Task";
@@ -10,28 +20,46 @@ import type { Task } from "@domain/entities/Task";
 export interface AutoSyncApi {
   runPerTask(task: Task): Promise<AutoSyncResult[]>;
   runDaily(endDateISO: string): Promise<AutoSyncResult[]>;
+  isSyncing(integrationName?: string): boolean;
 }
 
 const AutoSyncContext = createContext<AutoSyncApi | null>(null);
 
+export { SHEETS_INTEGRATION_NAME };
+
 export function AutoSyncProvider({
   children,
   value,
-}: { children: ReactNode; value?: AutoSyncApi }) {
+}: {
+  children: ReactNode;
+  value?: AutoSyncApi;
+}) {
   const config = useAppConfig();
   const { taskRepo, projectRepo, categoryRepo, taskLogRepo } = useRepositories();
 
-  const defaults = useMemo<AutoSyncApi>(() => {
+  const runner = useMemo(() => {
     const strategies: ISyncStrategy[] = [
       new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
       new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
     ];
-    const runner = new AutoSyncRunner(strategies);
-    return {
+    return new AutoSyncRunner(strategies);
+  }, [config, taskRepo, projectRepo, categoryRepo, taskLogRepo]);
+
+  const subscribe = useCallback((cb: () => void) => runner.subscribe(cb), [runner]);
+  const getSnapshot = useCallback(() => runner.getVersion(), [runner]);
+  const version = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  const defaults = useMemo<AutoSyncApi>(
+    () => ({
       runPerTask: (t) => runner.runPerTask(t),
       runDaily: (d) => runner.runDaily(d),
-    };
-  }, [config, taskRepo, projectRepo, categoryRepo, taskLogRepo]);
+      isSyncing: (name?: string) => {
+        void version;
+        return runner.isSyncing(name);
+      },
+    }),
+    [runner, version]
+  );
 
   const api = useMemo(() => value ?? defaults, [defaults, value]);
   return <AutoSyncContext.Provider value={api}>{children}</AutoSyncContext.Provider>;

@@ -13,6 +13,7 @@ export interface SuggestionItem {
   categoryId: string | null;
   categoryName?: string;
   isPlanned: boolean;
+  plannedTaskId: string | null;
 }
 
 export function useOmniboxSuggestions(
@@ -34,6 +35,7 @@ export function useOmniboxSuggestions(
       categoryId: t.categoryId,
       categoryName: categories.find((c) => c.id === t.categoryId)?.name,
       isPlanned: true,
+      plannedTaskId: t.id,
     }));
 
     const seen = new Set<string>();
@@ -51,6 +53,7 @@ export function useOmniboxSuggestions(
           categoryId: t.categoryId,
           categoryName: categories.find((c) => c.id === t.categoryId)?.name,
           isPlanned: false,
+          plannedTaskId: null,
         });
       }
     }

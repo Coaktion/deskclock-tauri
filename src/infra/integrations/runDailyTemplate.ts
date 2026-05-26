@@ -25,10 +25,9 @@ export function calcDailyRange(
   lastTimestamp: string,
   endDateISO: string
 ): { start: string; end: string } | null {
-  const lastDateISO = lastTimestamp
+  const startDateISO = lastTimestamp
     ? new Date(lastTimestamp).toLocaleDateString("sv-SE")
     : addDaysISO(todayISO(), -7);
-  const startDateISO = addDaysISO(lastDateISO, 1);
   if (startDateISO > endDateISO) return null;
   return { start: startOfDayISO(startDateISO), end: endOfDayISO(endDateISO) };
 }

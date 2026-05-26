@@ -798,7 +798,7 @@
       </div>
     </div>
 
-    <p>Ao clicar em Play em uma tarefa planejada, o timer inicia já com nome, projeto e categoria preenchidos. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas são executadas automaticamente neste momento.</p>
+    <p>Ao clicar em Play em uma tarefa planejada, o timer inicia já com nome, projeto e categoria preenchidos. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução — você dispara cada uma sob demanda, quando precisar.</p>
 
     <h2 id="totalizadores">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -1048,17 +1048,17 @@
       Ações por tarefa
     </h2>
 
-    <p>Cada tarefa planejada pode ter ações executadas automaticamente ao clicar em Play. Elas podem ser configuradas tanto no formulário de criação quanto no modal de edição:</p>
+    <p>Cada tarefa planejada pode ter ações associadas a ela, configuradas no formulário de criação ou no modal de edição. Após iniciar a tarefa pelo Play, as ações aparecem como chips clicáveis na seção "Ações" do Popup Flyout — você dispara cada uma quando quiser, quantas vezes quiser. Elas não são executadas automaticamente ao iniciar.</p>
 
     <table class="data-table">
       <thead><tr><th>Tipo de ação</th><th>O que faz</th></tr></thead>
       <tbody>
-        <tr><td><strong>Abrir URL</strong></td><td>Abre o endereço no navegador padrão. O prefixo <code>https://</code> é adicionado automaticamente se ausente.</td></tr>
-        <tr><td><strong>Abrir arquivo</strong></td><td>Abre o arquivo ou pasta no explorador do sistema operacional.</td></tr>
+        <tr><td><strong>Abrir URL</strong></td><td>Ao clicar no chip, abre o endereço no navegador padrão. O prefixo <code>https://</code> é adicionado automaticamente se ausente. O rótulo do chip é o hostname (sem <code>www.</code>).</td></tr>
+        <tr><td><strong>Abrir arquivo</strong></td><td>Ao clicar no chip, abre o arquivo ou pasta no explorador do sistema operacional. O rótulo do chip é o nome do arquivo.</td></tr>
       </tbody>
     </table>
 
-    <p>Uma tarefa pode ter múltiplas ações. Elas são executadas em sequência na ordem em que aparecem.</p>
+    <p>Uma tarefa pode ter múltiplas ações. Cada uma vira um chip independente no Popup Flyout, na ordem em que foi configurada.</p>
 
     <h2 id="concluir-pendente">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1587,6 +1587,7 @@
       <li>Controles: Play/Pausa, Parar (com escolha Concluída/Pendente), Cancelar, Fechar.</li>
       <li>Edição inline por campo: clique em nome, projeto ou categoria para editar sem abrir modal.</li>
       <li>Hora de início editável — o timer é recalculado ao alterar.</li>
+      <li>Seção "Ações" (quando a tarefa em execução tiver ações configuradas): chips clicáveis para abrir cada URL ou arquivo associado, disparados sob demanda.</li>
     </ul>
 
     <h2 id="command-palette">

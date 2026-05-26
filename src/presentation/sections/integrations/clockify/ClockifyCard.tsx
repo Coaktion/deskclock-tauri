@@ -1,10 +1,9 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTour } from "@presentation/hooks/useTour";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
-import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
-import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { Loader2, LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { StatusBadge } from "../shared";
@@ -19,9 +18,8 @@ export function ClockifyIntegrationCard() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
-  const [showSendModal, setShowSendModal] = useState(false);
-  const [showEntriesModal, setShowEntriesModal] = useState(false);
   const { startTour, hasSeenTour } = useTour("clockify-detail");
+  const { openModal } = useIntegrationsUi();
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -58,7 +56,10 @@ export function ClockifyIntegrationCard() {
   return (
     <>
       <div className="rounded-xl border border-gray-800 bg-gray-900/50">
-        <div data-tour="clockify-header" className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden">
+        <div
+          data-tour="clockify-header"
+          className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden"
+        >
           <div className="mt-0.5 shrink-0">
             <ClockifyLogo size={20} />
           </div>
@@ -106,8 +107,8 @@ export function ClockifyIntegrationCard() {
             categories={categories}
             reloadProjects={reloadProjects}
             reloadCategories={reloadCategories}
-            onShowSendModal={() => setShowSendModal(true)}
-            onShowEntriesModal={() => setShowEntriesModal(true)}
+            onShowSendModal={() => openModal("clockify-send")}
+            onShowEntriesModal={() => openModal("clockify-entries")}
           />
         )}
       </div>
@@ -118,16 +119,6 @@ export function ClockifyIntegrationCard() {
           onClose={() => setShowConnectModal(false)}
         />
       )}
-
-      {showSendModal && (
-        <ClockifySendModal
-          projects={projects}
-          categories={categories}
-          onClose={() => setShowSendModal(false)}
-        />
-      )}
-
-      {showEntriesModal && <ClockifyEntriesModal onClose={() => setShowEntriesModal(false)} />}
     </>
   );
 }

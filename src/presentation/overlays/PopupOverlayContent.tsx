@@ -1,7 +1,8 @@
 import type { Category } from "@domain/entities/Category";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
+import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
@@ -15,6 +16,7 @@ import { emit } from "@tauri-apps/api/event";
 import {
   ArrowRight,
   CalendarDays,
+  Check,
   CheckCircle2,
   Clock,
   DollarSign,
@@ -39,9 +41,13 @@ const MAX_ROWS = 4;
 
 // Running state layout (execution section fills popup body)
 const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
+const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
+const ACTIONS_SECTION_H = 48; // section label + one row of action chips
+
 
 interface PopupOverlayContentProps {
   runningTask: Task | null;
+  activePlannedTaskActions: PlannedTaskAction[];
   onClose: () => void;
   onNavigatePlanning: () => void;
   onResize: (width: number, height: number) => void;
@@ -55,7 +61,7 @@ interface PopupOverlayContentProps {
   onPlay: (task: PlannedTask) => Promise<void>;
   onPause: () => Promise<void>;
   onResume: () => Promise<void>;
-  onStop: (completed: boolean) => Promise<void>;
+  onStop: (completed: boolean, endTimeISO?: string) => Promise<void>;
   onCancel: () => Promise<void>;
   onUpdateTask: (input: {
     name?: string | null;
@@ -81,6 +87,9 @@ interface ExecSectionProps {
   categoryName?: string;
   projects: Project[];
   categories: Category[];
+  actions: PlannedTaskAction[];
+  confirmingStop: boolean;
+  setConfirmingStop: (v: boolean) => void;
   onUpdateTask: (input: {
     name?: string | null;
     projectId?: string | null;
@@ -90,7 +99,7 @@ interface ExecSectionProps {
   }) => Promise<void>;
   onPause: () => Promise<void>;
   onResume: () => Promise<void>;
-  onStop: (completed: boolean) => Promise<void>;
+  onStop: (completed: boolean, endTimeISO?: string) => Promise<void>;
   onCancel: () => Promise<void>;
 }
 
@@ -100,6 +109,9 @@ function ExecSection({
   categoryName,
   projects,
   categories,
+  actions,
+  confirmingStop,
+  setConfirmingStop,
   onUpdateTask,
   onPause,
   onResume,
@@ -108,7 +120,28 @@ function ExecSection({
 }: ExecSectionProps) {
   const seconds = useTaskTimer(task);
   const isRunning = task.status === "running";
-  const [confirmingStop, setConfirmingStop] = useState(false);
+  const [endTimeInput, setEndTimeInput] = useState("");
+  const [endTimeTouched, setEndTimeTouched] = useState(false);
+
+  function openConfirmStop() {
+    const now = new Date();
+    setEndTimeInput(
+      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+    );
+    setEndTimeTouched(false);
+    setConfirmingStop(true);
+  }
+
+  function resolveEndTimeISO(): { iso: string | undefined; error: string | null } {
+    if (!endTimeTouched) return { iso: undefined, error: null };
+    const parsed = parseStartTimeInput(endTimeInput, task.startTime);
+    if (!parsed) return { iso: undefined, error: "Hora inválida" };
+    if (new Date(parsed).getTime() < new Date(task.startTime).getTime())
+      return { iso: undefined, error: "Após o início" };
+    return { iso: parsed, error: null };
+  }
+
+  const endTimeResolved = resolveEndTimeISO();
 
   // ── name ──────────────────────────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
@@ -362,38 +395,77 @@ function ExecSection({
         )}
       </div>
 
+      {/* Actions section */}
+      {actions.length > 0 && (
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mb-1.5">
+            Ações
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {actions.map((action, i) => (
+              <ActionChip key={i} action={action} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Divider */}
       <div className="border-t border-gray-800 mt-auto" />
 
       {/* Controls */}
       {confirmingStop ? (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] text-gray-400">Concluída?</span>
-          <button
-            onClick={() => {
-              setConfirmingStop(false);
-              void onStop(true);
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] bg-green-700/80 hover:bg-green-600 text-white rounded-lg transition-colors"
-          >
-            <CheckCircle2 size={10} /> Sim
-          </button>
-          <button
-            onClick={() => {
-              setConfirmingStop(false);
-              void onStop(false);
-            }}
-            className="flex items-center gap-1 px-2 py-1 text-[11px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
-          >
-            <Clock size={10} /> Não
-          </button>
-          <button
-            onClick={() => setConfirmingStop(false)}
-            className="ml-auto p-1 text-gray-500 hover:text-blue-400 rounded-lg transition-colors"
-            title="Retomar"
-          >
-            <Play size={11} />
-          </button>
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-400">Encerrar às</span>
+            <div className="flex items-center gap-1.5 flex-1">
+              <Clock size={11} className="text-gray-500 shrink-0" />
+              <input
+                type="time"
+                value={endTimeInput}
+                onChange={(e) => {
+                  setEndTimeInput(e.target.value);
+                  setEndTimeTouched(true);
+                }}
+                className={`flex-1 bg-transparent border-b focus:outline-none text-[12px] text-gray-200 ${
+                  endTimeResolved.error
+                    ? "border-red-500 focus:border-red-400"
+                    : "border-gray-600 focus:border-blue-500"
+                }`}
+              />
+            </div>
+            <button
+              onClick={() => setConfirmingStop(false)}
+              className="p-1 text-gray-500 hover:text-blue-400 rounded-lg transition-colors"
+              title="Retomar"
+            >
+              <Play size={11} />
+            </button>
+          </div>
+          {endTimeResolved.error && (
+            <span className="text-[10px] text-red-400">{endTimeResolved.error}</span>
+          )}
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={!!endTimeResolved.error}
+              onClick={() => {
+                setConfirmingStop(false);
+                void onStop(true, endTimeResolved.iso);
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] bg-green-700/80 hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            >
+              <CheckCircle2 size={10} /> Concluída
+            </button>
+            <button
+              disabled={!!endTimeResolved.error}
+              onClick={() => {
+                setConfirmingStop(false);
+                void onStop(false, endTimeResolved.iso);
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-[11px] bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-gray-200 rounded-lg transition-colors"
+            >
+              <Clock size={10} /> Pendente
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center gap-1.5">
@@ -412,7 +484,7 @@ function ExecSection({
             )}
           </button>
           <button
-            onClick={() => setConfirmingStop(true)}
+            onClick={openConfirmStop}
             className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <Square size={11} /> Parar
@@ -433,6 +505,7 @@ function ExecSection({
 
 export function PopupOverlayContent({
   runningTask,
+  activePlannedTaskActions,
   onClose,
   onNavigatePlanning,
   onResize,
@@ -445,7 +518,7 @@ export function PopupOverlayContent({
   onUpdateTask,
 }: PopupOverlayContentProps) {
   const today = todayISO();
-  const { tasks, reload } = usePlannedTasksForDate(today);
+  const { tasks, reload, complete } = usePlannedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
@@ -453,16 +526,24 @@ export function PopupOverlayContent({
 
   const projectName = projects.find((p) => p.id === runningTask?.projectId)?.name;
   const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
+  const hasActions = activePlannedTaskActions.length > 0;
+  const [confirmingStop, setConfirmingStop] = useState(false);
+
+  // Reset confirm state whenever the running task changes (started/stopped).
+  useEffect(() => {
+    if (!runningTask) setConfirmingStop(false);
+  }, [runningTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resize based on state
   useEffect(() => {
     if (runningTask) {
-      onResize(POPUP_W, HEADER_H + EXEC_H + FOOTER_H);
+      const execH = confirmingStop ? EXEC_H_CONFIRMING : EXEC_H;
+      onResize(POPUP_W, HEADER_H + execH + (hasActions ? ACTIONS_SECTION_H : 0) + FOOTER_H);
     } else {
       const taskAreaH = pending.length === 0 ? EMPTY_H : Math.min(pending.length, MAX_ROWS) * ROW_H;
       onResize(POPUP_W, HEADER_H + NEW_TASK_H + SECTION_H + taskAreaH + FOOTER_H);
     }
-  }, [pending.length, !!runningTask, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pending.length, !!runningTask, hasActions, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePlay(task: PlannedTask) {
     await onPlay(task);
@@ -511,6 +592,9 @@ export function PopupOverlayContent({
           categoryName={categoryName}
           projects={projects}
           categories={categories}
+          actions={activePlannedTaskActions}
+          confirmingStop={confirmingStop}
+          setConfirmingStop={setConfirmingStop}
           onUpdateTask={onUpdateTask}
           onPause={onPause}
           onResume={onResume}
@@ -579,7 +663,15 @@ export function PopupOverlayContent({
                       )}
                     </div>
                     <button
+                      onClick={() => void complete(task.id, today)}
+                      title="Concluir"
+                      className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
+                    >
+                      <Check size={11} />
+                    </button>
+                    <button
                       onClick={() => handlePlay(task)}
+                      title="Iniciar"
                       className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
                     >
                       <Play size={11} fill="currentColor" />

@@ -13,6 +13,7 @@ export interface DraftState {
   categoryName: string;
   categoryId: string | null;
   billable: boolean;
+  plannedTaskId: string | null;
 }
 
 const INITIAL_DRAFT: DraftState = {
@@ -22,6 +23,7 @@ const INITIAL_DRAFT: DraftState = {
   categoryName: "",
   categoryId: null,
   billable: true,
+  plannedTaskId: null,
 };
 
 interface UseOmniboxDraftParams {
@@ -62,6 +64,7 @@ export function useOmniboxDraft({
       projectId: draft.projectId,
       categoryId: draft.categoryId,
       billable: draft.billable,
+      plannedTaskId: draft.plannedTaskId,
     });
     setDraft(INITIAL_DRAFT);
     setShowSuggestions(false);
@@ -76,6 +79,7 @@ export function useOmniboxDraft({
       categoryName: s.categoryName ?? "",
       categoryId: s.categoryId,
       billable: s.billable,
+      plannedTaskId: s.plannedTaskId,
     });
     setShowSuggestions(false);
     inputRef.current?.focus();
