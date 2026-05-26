@@ -1,4 +1,3 @@
-import { type Page } from "@presentation/components/Sidebar";
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTour } from "@presentation/hooks/useTour";
@@ -19,7 +18,7 @@ import {
 
 type IntegrationDetail = "google" | "clockify" | "zendesk" | null;
 
-export function IntegrationsPage({ onNavigate }: { onNavigate: (page: Page) => void }) {
+export function IntegrationsPage() {
   const [detail, setDetail] = useState<IntegrationDetail>(null);
   const { startTour, hasSeenTour } = useTour("integrations");
 
@@ -45,7 +44,7 @@ export function IntegrationsPage({ onNavigate }: { onNavigate: (page: Page) => v
       <div className="h-full overflow-y-auto">
         <div className="p-6 max-w-2xl mx-auto">
           {backButton}
-          {detail === "google" && <GoogleIntegrationCard onNavigate={onNavigate} />}
+          {detail === "google" && <GoogleIntegrationCard />}
           {detail === "clockify" && <ClockifyIntegrationCard />}
           {detail === "zendesk" && <ZendeskIntegrationCard />}
         </div>
