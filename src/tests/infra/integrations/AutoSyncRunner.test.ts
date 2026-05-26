@@ -98,6 +98,110 @@ describe("AutoSyncRunner", () => {
     expect(results[0].count).toBe(5);
   });
 
+  it("isSyncing fica true durante runDaily e volta a false depois", async () => {
+    let resolveRun: (v: AutoSyncResult) => void = () => {};
+    const pending = new Promise<AutoSyncResult>((r) => (resolveRun = r));
+    const strat: ISyncStrategy = {
+      integrationName: "Google Sheets",
+      isPerTaskEnabled: () => false,
+      isDailyEnabled: () => true,
+      runPerTask: vi.fn(),
+      runDaily: vi.fn().mockReturnValue(pending),
+    };
+    const runner = new AutoSyncRunner([strat]);
+
+    const promise = runner.runDaily("2026-05-04");
+    expect(runner.isSyncing("Google Sheets")).toBe(true);
+    expect(runner.isSyncing()).toBe(true);
+
+    resolveRun({ integration: "Google Sheets", count: 0 });
+    await promise;
+    expect(runner.isSyncing("Google Sheets")).toBe(false);
+    expect(runner.isSyncing()).toBe(false);
+  });
+
+  it("isSyncing usa refcount para chamadas concorrentes na mesma integração", async () => {
+    let resolveA: (v: AutoSyncResult) => void = () => {};
+    let resolveB: (v: AutoSyncResult) => void = () => {};
+    const pendA = new Promise<AutoSyncResult>((r) => (resolveA = r));
+    const pendB = new Promise<AutoSyncResult>((r) => (resolveB = r));
+    const runPerTask = vi.fn().mockReturnValueOnce(pendA).mockReturnValueOnce(pendB);
+    const strat: ISyncStrategy = {
+      integrationName: "Google Sheets",
+      isPerTaskEnabled: () => true,
+      isDailyEnabled: () => false,
+      runPerTask,
+      runDaily: vi.fn(),
+    };
+    const runner = new AutoSyncRunner([strat]);
+    const task = makeTask();
+
+    const p1 = runner.runPerTask(task);
+    const p2 = runner.runPerTask(task);
+    expect(runner.isSyncing("Google Sheets")).toBe(true);
+
+    resolveA({ integration: "Google Sheets", count: 1 });
+    await p1;
+    expect(runner.isSyncing("Google Sheets")).toBe(true);
+
+    resolveB({ integration: "Google Sheets", count: 1 });
+    await p2;
+    expect(runner.isSyncing("Google Sheets")).toBe(false);
+  });
+
+  it("isSyncing só conta estratégias habilitadas para o modo invocado", async () => {
+    let resolveSheets: (v: AutoSyncResult) => void = () => {};
+    const pending = new Promise<AutoSyncResult>((r) => (resolveSheets = r));
+    const sheets: ISyncStrategy = {
+      integrationName: "Google Sheets",
+      isPerTaskEnabled: () => false,
+      isDailyEnabled: () => true,
+      runPerTask: vi.fn(),
+      runDaily: vi.fn().mockReturnValue(pending),
+    };
+    const clockify = makeStrategy(
+      "Clockify",
+      false,
+      false,
+      { integration: "Clockify", count: 0 },
+      { integration: "Clockify", count: 0 }
+    );
+    const runner = new AutoSyncRunner([sheets, clockify]);
+
+    const promise = runner.runDaily("2026-05-04");
+    expect(runner.isSyncing("Google Sheets")).toBe(true);
+    expect(runner.isSyncing("Clockify")).toBe(false);
+
+    resolveSheets({ integration: "Google Sheets", count: 0 });
+    await promise;
+  });
+
+  it("subscribe notifica em cada mudança de estado e devolve unsubscribe", async () => {
+    let resolveRun: (v: AutoSyncResult) => void = () => {};
+    const pending = new Promise<AutoSyncResult>((r) => (resolveRun = r));
+    const strat: ISyncStrategy = {
+      integrationName: "Google Sheets",
+      isPerTaskEnabled: () => false,
+      isDailyEnabled: () => true,
+      runPerTask: vi.fn(),
+      runDaily: vi.fn().mockReturnValue(pending),
+    };
+    const runner = new AutoSyncRunner([strat]);
+    const listener = vi.fn();
+    const unsubscribe = runner.subscribe(listener);
+
+    const promise = runner.runDaily("2026-05-04");
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    resolveRun({ integration: "Google Sheets", count: 0 });
+    await promise;
+    expect(listener).toHaveBeenCalledTimes(2);
+
+    unsubscribe();
+    await runner.runDaily("2026-05-04");
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
   it("runPerTask agrega resultados de múltiplas estratégias habilitadas", async () => {
     const stratA = makeStrategy(
       "A",

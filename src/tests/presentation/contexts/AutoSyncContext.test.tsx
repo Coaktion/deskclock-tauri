@@ -4,17 +4,23 @@ import type { ReactNode } from "react";
 import type { AutoSyncApi } from "@presentation/contexts/AutoSyncContext";
 import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
 
-vi.mock("@infra/integrations/AutoSyncRunner", () => ({
-  AutoSyncRunner: vi.fn(() => ({
-    runPerTask: vi.fn().mockResolvedValue([]),
-    runDaily: vi.fn().mockResolvedValue([]),
+vi.mock("@infra/integrations/SheetsSyncStrategy", () => ({
+  SheetsSyncStrategy: vi.fn(() => ({
+    integrationName: "Google Sheets",
+    isPerTaskEnabled: () => false,
+    isDailyEnabled: () => false,
+    runPerTask: vi.fn(),
+    runDaily: vi.fn(),
   })),
 }));
-vi.mock("@infra/integrations/SheetsSyncStrategy", () => ({
-  SheetsSyncStrategy: vi.fn(() => ({})),
-}));
 vi.mock("@infra/integrations/ClockifySyncStrategy", () => ({
-  ClockifySyncStrategy: vi.fn(() => ({})),
+  ClockifySyncStrategy: vi.fn(() => ({
+    integrationName: "Clockify",
+    isPerTaskEnabled: () => false,
+    isDailyEnabled: () => false,
+    runPerTask: vi.fn(),
+    runDaily: vi.fn(),
+  })),
 }));
 vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({
@@ -47,6 +53,7 @@ describe("AutoSyncContext", () => {
     const mockApi: AutoSyncApi = {
       runPerTask: vi.fn().mockResolvedValue([]),
       runDaily: vi.fn().mockResolvedValue([]),
+      isSyncing: vi.fn().mockReturnValue(false),
     };
     const customWrapper = ({ children }: { children: ReactNode }) => (
       <AutoSyncProvider value={mockApi}>{children}</AutoSyncProvider>
@@ -56,10 +63,9 @@ describe("AutoSyncContext", () => {
     expect(result.current).toBe(mockApi);
   });
 
-  it("defaults instanciam AutoSyncRunner com as strategies", async () => {
-    const { AutoSyncRunner } = await import("@infra/integrations/AutoSyncRunner");
-    renderHook(() => useAutoSync(), { wrapper });
-
-    expect(AutoSyncRunner).toHaveBeenCalled();
+  it("expõe isSyncing como false por padrão", () => {
+    const { result } = renderHook(() => useAutoSync(), { wrapper });
+    expect(result.current.isSyncing()).toBe(false);
+    expect(result.current.isSyncing("Google Sheets")).toBe(false);
   });
 });

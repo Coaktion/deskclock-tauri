@@ -10,8 +10,10 @@ import { validateTaskForSheets, formatMissingFields } from "@domain/integrations
 import { runDailyTemplate } from "./runDailyTemplate";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 
+export const SHEETS_INTEGRATION_NAME = "Google Sheets";
+
 export class SheetsSyncStrategy implements ISyncStrategy {
-  readonly integrationName = "Google Sheets";
+  readonly integrationName = SHEETS_INTEGRATION_NAME;
 
   constructor(
     private config: ISheetsConfigPort & IGoogleAuthPort,

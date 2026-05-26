@@ -77,23 +77,25 @@ describe("calcDailyRange", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  it("timestamp vazio → start = startOfDay(today-6), end = endOfDay(endDateISO)", () => {
-    // sem timestamp: lastDateISO = today-7; startDateISO = lastDateISO+1 = today-6
+  it("timestamp vazio → start = startOfDay(today-7), end = endOfDay(endDateISO)", () => {
     const result = calcDailyRange("", TODAY);
     expect(result).not.toBeNull();
-    expect(result!.start).toBe(startOfDayISO(addDaysISO(TODAY, -6)));
+    expect(result!.start).toBe(startOfDayISO(addDaysISO(TODAY, -7)));
     expect(result!.end).toBe(endOfDayISO(TODAY));
   });
 
-  it("timestamp = ontem → start = startOfDay(hoje)", () => {
+  it("timestamp = ontem → start = startOfDay(ontem)", () => {
     const result = calcDailyRange("2026-05-05T10:00:00.000Z", TODAY);
+    expect(result).not.toBeNull();
+    expect(result!.start).toBe(startOfDayISO("2026-05-05"));
+    expect(result!.end).toBe(endOfDayISO(TODAY));
+  });
+
+  it("timestamp = hoje → range cobre hoje (dedup via log)", () => {
+    const result = calcDailyRange("2026-05-06T10:00:00.000Z", TODAY);
     expect(result).not.toBeNull();
     expect(result!.start).toBe(startOfDayISO(TODAY));
     expect(result!.end).toBe(endOfDayISO(TODAY));
-  });
-
-  it("timestamp = hoje → null (startDateISO > endDateISO)", () => {
-    expect(calcDailyRange("2026-05-06T10:00:00.000Z", TODAY)).toBeNull();
   });
 
   it("timestamp = futuro → null", () => {

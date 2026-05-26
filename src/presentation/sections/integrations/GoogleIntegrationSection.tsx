@@ -18,8 +18,10 @@ import type { Project } from "@domain/entities/Project";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
+import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useAutoSync, SHEETS_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -149,7 +151,6 @@ function ColumnMappingEditor({
 
 /* ── Sub-seção Google Sheets ── */
 
-
 function SheetsSection({
   disabled,
   projects,
@@ -162,6 +163,8 @@ function SheetsSection({
   const { taskRepo, taskLogRepo } = useRepositories();
   const config = useAppConfig();
   const factories = useIntegrations();
+  const { isSyncing } = useAutoSync();
+  const autoSyncing = isSyncing(SHEETS_INTEGRATION_NAME);
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetName, setSheetName] = useState("DeskClock");
   const [columnMapping, setColumnMapping] = useState<SheetColumnMapping>(DEFAULT_COLUMN_MAPPING);
@@ -217,7 +220,7 @@ function SheetsSection({
             get: () => config.get("sheetsDailySyncLastTimestamp"),
             set: (iso) => config.set("sheetsDailySyncLastTimestamp", iso),
           },
-          validate: () => true, // preserva comportamento atual; ver findings.md
+          validate: (t) => validateTaskForSheets(t).ok,
           createSender: () =>
             factories.createSheetsTaskSender({ spreadsheetId: spreadsheet, projects, categories }),
         },
@@ -230,17 +233,22 @@ function SheetsSection({
       }
 
       if (result.count === 0) {
-        // UI seta timestamp em empty (divergente das strategies — ver findings.md)
-        const nowIso = new Date().toISOString();
-        await config.set("sheetsDailySyncLastTimestamp", nowIso);
-        setLastSyncTs(nowIso);
-        await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
+        if (result.warning) {
+          await showToast("warning", result.warning, 6000);
+        } else {
+          await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
+        }
         return;
       }
 
       // template já atualizou timestamp via timestampPort.set
       setLastSyncTs(config.get("sheetsDailySyncLastTimestamp"));
-      await showToast("success", `${result.count} grupo(s) enviado(s) para o Sheets.`);
+      const successMsg = `${result.count} tarefa(s) enviada(s) para o Sheets.`;
+      if (result.warning) {
+        await showToast("warning", `${successMsg} ${result.warning}`, 6000);
+      } else {
+        await showToast("success", successMsg);
+      }
     } finally {
       setSyncing(false);
     }
@@ -316,126 +324,133 @@ function SheetsSection({
 
         {/* Sincronização automática */}
         <div data-tour="google-sheets-autosync">
-        <Row label="Sincronização automática">
-          <Toggle
-            checked={autoSync}
-            onChange={async (v) => {
-              setAutoSync(v);
-              await config.set("integrationGoogleSheetsAutoSync", v);
-            }}
-          />
-        </Row>
+          <Row label="Sincronização automática">
+            <Toggle
+              checked={autoSync}
+              onChange={async (v) => {
+                setAutoSync(v);
+                await config.set("integrationGoogleSheetsAutoSync", v);
+              }}
+            />
+          </Row>
 
-        {autoSync && (
-          <div className="pl-4 border-l border-gray-800 ml-1 mb-1">
-            {/* Modo */}
-            <div className="py-2.5 border-b border-gray-800">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Modo</span>
-                <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
-                  {(["per-task", "daily"] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={async () => {
-                        setSyncMode(m);
-                        await config.set("sheetsAutoSyncMode", m);
-                      }}
-                      className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                        syncMode === m
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-400 hover:text-gray-200"
-                      }`}
-                    >
-                      {m === "per-task" ? "Por tarefa" : "Diário"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <p className="text-xs text-gray-500 mt-1.5">
-                {syncMode === "per-task"
-                  ? "Envia cada tarefa automaticamente ao ser concluída, em tempo real."
-                  : "Agrupa e envia de uma vez, cobrindo fins de semana e dias perdidos."}
-              </p>
-            </div>
-
-            {syncMode === "daily" && (
-              <>
-                {/* Gatilho */}
-                <div className="py-2.5 border-b border-gray-800">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-300">Gatilho</span>
-                    <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
-                      {(["on-open", "fixed-time"] as const).map((t) => (
-                        <button
-                          key={t}
-                          onClick={async () => {
-                            setSyncTrigger(t);
-                            await config.set("sheetsAutoSyncTrigger", t);
-                          }}
-                          className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                            syncTrigger === t
-                              ? "bg-blue-600 text-white"
-                              : "text-gray-400 hover:text-gray-200"
-                          }`}
-                        >
-                          {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
-                        </button>
-                      ))}
-                    </div>
+          {autoSync && (
+            <div className="pl-4 border-l border-gray-800 ml-1 mb-1">
+              {/* Modo */}
+              <div className="py-2.5 border-b border-gray-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300">Modo</span>
+                  <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+                    {(["per-task", "daily"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={async () => {
+                          setSyncMode(m);
+                          await config.set("sheetsAutoSyncMode", m);
+                        }}
+                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                          syncMode === m
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        {m === "per-task" ? "Por tarefa" : "Diário"}
+                      </button>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1.5">
-                    {syncTrigger === "on-open"
-                      ? "Envia ao abrir o app as tarefas de ontem para trás, desde o último envio automático."
-                      : "Envia no horário definido as tarefas do dia corrente e dias anteriores não sincronizados."}
-                  </p>
                 </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {syncMode === "per-task"
+                    ? "Envia cada tarefa automaticamente ao ser concluída, em tempo real."
+                    : "Agrupa e envia de uma vez, cobrindo fins de semana e dias perdidos."}
+                </p>
+              </div>
 
-                {syncTrigger === "fixed-time" && (
-                  <Row label="Horário">
-                    <input
-                      type="time"
-                      value={syncTime}
-                      onChange={(e) => setSyncTime(e.target.value)}
-                      onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
-                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
-                    />
-                  </Row>
-                )}
+              {syncMode === "daily" && (
+                <>
+                  {/* Gatilho */}
+                  <div className="py-2.5 border-b border-gray-800">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-300">Gatilho</span>
+                      <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+                        {(["on-open", "fixed-time"] as const).map((t) => (
+                          <button
+                            key={t}
+                            onClick={async () => {
+                              setSyncTrigger(t);
+                              await config.set("sheetsAutoSyncTrigger", t);
+                            }}
+                            className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                              syncTrigger === t
+                                ? "bg-blue-600 text-white"
+                                : "text-gray-400 hover:text-gray-200"
+                            }`}
+                          >
+                            {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      {syncTrigger === "on-open"
+                        ? "Envia ao abrir o app as tarefas de ontem para trás, desde o último envio automático."
+                        : "Envia no horário definido as tarefas do dia corrente e dias anteriores não sincronizados."}
+                    </p>
+                  </div>
 
-                {/* Último envio + Sincronizar agora */}
-                <div className="py-2.5 flex items-center justify-between gap-3">
-                  <span className="text-xs text-gray-500 shrink-0">
-                    Último envio:{" "}
-                    <span className="text-gray-300">{formatLastSync(lastSyncTs)}</span>
-                  </span>
-                  <button
-                    onClick={handleSyncNow}
-                    disabled={syncing}
-                    className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-2.5 py-1.5 rounded transition-colors shrink-0"
-                  >
-                    {syncing ? (
-                      <Loader2 size={11} className="animate-spin" />
-                    ) : (
-                      <RefreshCw size={11} />
-                    )}
-                    {syncing ? "Sincronizando…" : "Sincronizar agora"}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                  {syncTrigger === "fixed-time" && (
+                    <Row label="Horário">
+                      <input
+                        type="time"
+                        value={syncTime}
+                        onChange={(e) => setSyncTime(e.target.value)}
+                        onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
+                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                      />
+                    </Row>
+                  )}
 
-        </div>{/* /google-sheets-autosync */}
+                  {/* Último envio + Sincronizar agora */}
+                  <div className="py-2.5 flex items-center justify-between gap-3">
+                    <span className="text-xs text-gray-500 shrink-0">
+                      Último envio:{" "}
+                      <span className="text-gray-300">{formatLastSync(lastSyncTs)}</span>
+                    </span>
+                    <button
+                      onClick={handleSyncNow}
+                      disabled={syncing || autoSyncing}
+                      title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
+                      className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-2.5 py-1.5 rounded transition-colors shrink-0"
+                    >
+                      {syncing || autoSyncing ? (
+                        <Loader2 size={11} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={11} />
+                      )}
+                      {autoSyncing
+                        ? "Sincronização automática…"
+                        : syncing
+                          ? "Sincronizando…"
+                          : "Sincronizar agora"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        {/* /google-sheets-autosync */}
 
         {/* Envio manual */}
         <div className="pt-2.5">
           <button
             onClick={() => setShowSendModal(true)}
-            className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
+            disabled={autoSyncing}
+            title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
+            className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
           >
-            <Send size={12} />
-            Enviar tarefas manualmente…
+            {autoSyncing ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            {autoSyncing ? "Sincronização automática em andamento…" : "Enviar tarefas manualmente…"}
           </button>
         </div>
       </div>
@@ -613,7 +628,10 @@ export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page)
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
       {/* Header do card */}
-      <div data-tour="google-header" className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
+      <div
+        data-tour="google-header"
+        className="flex items-start gap-3 px-4 py-3 border-b border-gray-800"
+      >
         <div className="mt-0.5 shrink-0">
           {/* Ícone Google simplificado */}
           <svg
@@ -699,8 +717,7 @@ export function GoogleTile({ onClick }: { onClick: () => void }) {
   const config = useAppConfig();
   const connected = config.isLoaded && !!config.get("googleRefreshToken");
   const email = config.isLoaded ? config.get("googleUserEmail") : "";
-  const sheetsConfigured =
-    config.isLoaded && !!config.get("integrationGoogleSheetsSpreadsheetId");
+  const sheetsConfigured = config.isLoaded && !!config.get("integrationGoogleSheetsSpreadsheetId");
 
   return (
     <IntegrationTile

@@ -49,6 +49,7 @@ export interface AppConfig {
   sheetsAutoSyncMode: "per-task" | "daily";
   sheetsAutoSyncTrigger: "fixed-time" | "on-open";
   sheetsAutoSyncTime: string;
+  sheetsAutoSyncLastFiredDate: string;
   sheetsDailySyncLastTimestamp: string;
   // Tokens Google OAuth
   googleAccessToken: string;
@@ -87,6 +88,7 @@ export interface AppConfig {
   clockifyAutoSyncMode: "per-task" | "daily";
   clockifyAutoSyncTrigger: "on-open" | "fixed-time";
   clockifyAutoSyncTime: string;
+  clockifyAutoSyncLastFiredDate: string;
   clockifyDailySyncLastTimestamp: string;
   clockifyWorkspaceCache: ClockifyWorkspaceRef[];
   // Tours

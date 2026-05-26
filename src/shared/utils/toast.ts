@@ -16,6 +16,8 @@ export async function showToast(
   const win = await WebviewWindow.getByLabel("toast");
   if (!win) return;
   await win.show();
+  // Reasserta always-on-top: em alguns WMs (Linux/WSL2) o hint é perdido após hide()
+  await win.setAlwaysOnTop(true);
   // Pequeno delay para garantir que a janela está pronta para receber eventos
   await new Promise((r) => setTimeout(r, 50));
   await emit(OVERLAY_EVENTS.TOAST_MESSAGE, {
