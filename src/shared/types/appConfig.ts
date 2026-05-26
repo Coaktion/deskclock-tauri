@@ -20,6 +20,7 @@ export interface AppConfig {
   liveTrayTimer: boolean;
   closeOnFocusLoss: boolean;
   discardTasksUnderOneMinute: boolean;
+  showIntegrationsRail: boolean;
   // Acessibilidade
   fontSize: "P" | "M" | "G" | "GG";
   theme: "azul" | "verde" | "escuro" | "claro";

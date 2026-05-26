@@ -19,16 +19,14 @@ import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { validateTaskForSheets } from "@domain/integrations/taskValidation";
-import { type Page } from "@presentation/components/Sidebar";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useAutoSync, SHEETS_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTour } from "@presentation/hooks/useTour";
-import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
-import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import {
   DEFAULT_COLUMN_MAPPING,
   type SheetColumn,
@@ -37,10 +35,8 @@ import {
 import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
-  ArrowRight,
   Calendar,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   GripVertical,
@@ -51,9 +47,8 @@ import {
   RefreshCw,
   Send,
   TableProperties,
-  X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { IntegrationTile, Row, StatusBadge, SubSection, Toggle } from "./shared";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
@@ -175,8 +170,8 @@ function SheetsSection({
   const [syncTime, setSyncTime] = useState("18:00");
   const [lastSyncTs, setLastSyncTs] = useState("");
   const [colsOpen, setColsOpen] = useState(false);
-  const [showSendModal, setShowSendModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const { openModal } = useIntegrationsUi();
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -444,7 +439,7 @@ function SheetsSection({
         {/* Envio manual */}
         <div className="pt-2.5">
           <button
-            onClick={() => setShowSendModal(true)}
+            onClick={() => openModal("sheets-send")}
             disabled={autoSyncing}
             title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
             className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
@@ -454,55 +449,14 @@ function SheetsSection({
           </button>
         </div>
       </div>
-
-      {showSendModal && (
-        <SheetsSendModal
-          projects={projects}
-          categories={categories}
-          onClose={() => setShowSendModal(false)}
-        />
-      )}
     </>
   );
 }
 
 /* ── Sub-seção Google Calendar ── */
 
-function CalendarSection({
-  disabled,
-  onNavigate,
-}: {
-  disabled: boolean;
-  onNavigate: (page: Page) => void;
-}) {
-  const { plannedTaskRepo } = useRepositories();
-  const config = useAppConfig();
-  const factories = useIntegrations();
-  const { projects } = useProjects();
-  const { categories } = useCategories();
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importedCount, setImportedCount] = useState<number | null>(null);
-
-  const calendarImporter = useMemo(
-    () => (config.isLoaded ? factories.createCalendarImporter() : null),
-    [config.isLoaded, factories]
-  );
-
-  const { defaultFromISO, defaultToISO } = useMemo(() => {
-    const today = new Date();
-    const dow = today.getDay();
-    const diffToMon = dow === 0 ? -6 : 1 - dow;
-    const mon = new Date(today);
-    mon.setDate(today.getDate() + diffToMon);
-    const sun = new Date(mon);
-    sun.setDate(mon.getDate() + 6);
-    const fmt = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    return {
-      defaultFromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
-      defaultToISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
-    };
-  }, []);
+function CalendarSection({ disabled }: { disabled: boolean }) {
+  const { openModal } = useIntegrationsUi();
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
@@ -511,10 +465,7 @@ function CalendarSection({
           Importe eventos do Google Agenda como tarefas planejadas.
         </p>
         <button
-          onClick={() => {
-            setImportedCount(null);
-            setShowImportModal(true);
-          }}
+          onClick={() => openModal("calendar-import")}
           className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0 ml-3 border border-gray-700"
         >
           <CalendarDays size={13} />
@@ -531,55 +482,13 @@ function CalendarSection({
           <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
         </p>
       </div>
-
-      {importedCount !== null && (
-        <div className="mb-2 flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <CheckCircle2 size={14} className="text-green-400 shrink-0" />
-          <span className="text-xs text-green-300 flex-1">
-            {importedCount} evento{importedCount !== 1 ? "s" : ""} importado
-            {importedCount !== 1 ? "s" : ""}.
-          </span>
-          <button
-            onClick={() => {
-              setImportedCount(null);
-              onNavigate("planning");
-            }}
-            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Ver planejamento
-            <ArrowRight size={11} />
-          </button>
-          <button
-            onClick={() => setImportedCount(null)}
-            className="text-gray-600 hover:text-gray-400 transition-colors ml-1"
-          >
-            <X size={12} />
-          </button>
-        </div>
-      )}
-
-      {showImportModal && calendarImporter && (
-        <ImportCalendarModal
-          importer={calendarImporter}
-          repo={plannedTaskRepo}
-          defaultFromISO={defaultFromISO}
-          defaultToISO={defaultToISO}
-          projects={projects}
-          categories={categories}
-          onImported={(count) => {
-            setShowImportModal(false);
-            setImportedCount(count);
-          }}
-          onClose={() => setShowImportModal(false)}
-        />
-      )}
     </div>
   );
 }
 
 /* ── Card Google (unificado) ── */
 
-export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page) => void }) {
+export function GoogleIntegrationCard() {
   const config = useAppConfig();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -706,7 +615,7 @@ export function GoogleIntegrationCard({ onNavigate }: { onNavigate: (page: Page)
       </div>
       <div data-tour="google-calendar-section">
         <SubSection icon={<Calendar size={15} />} title="Google Calendar">
-          <CalendarSection disabled={!connected} onNavigate={onNavigate} />
+          <CalendarSection disabled={!connected} />
         </SubSection>
       </div>
     </div>

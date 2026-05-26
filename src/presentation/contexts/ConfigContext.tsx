@@ -2,7 +2,12 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
-import type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition } from "@shared/types/appConfig";
+import type {
+  AppConfig,
+  ConfigContextValue,
+  ConfigKey,
+  OverlayPosition,
+} from "@shared/types/appConfig";
 
 export type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition };
 
@@ -14,6 +19,7 @@ const DEFAULTS: AppConfig = {
   liveTrayTimer: false,
   closeOnFocusLoss: false,
   discardTasksUnderOneMinute: false,
+  showIntegrationsRail: true,
   fontSize: "M" as const,
   theme: "azul" as const,
   shortcutToggleTask: "",

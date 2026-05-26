@@ -14,6 +14,7 @@ export function GeralTab() {
   const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [closeOnFocusLoss, setCloseOnFocusLoss] = useState(false);
   const [discardTasksUnderOneMinute, setDiscardTasksUnderOneMinute] = useState(false);
+  const [showIntegrationsRail, setShowIntegrationsRail] = useState(true);
   const [roundingEnabled, setRoundingEnabled] = useState(false);
   const [roundingSlots, setRoundingSlots] = useState<RoundingSlot[]>([15, 30, 45, 60]);
   const [roundingTolerance, setRoundingTolerance] = useState(0);
@@ -28,6 +29,7 @@ export function GeralTab() {
     setLiveTrayTimer(config.get("liveTrayTimer"));
     setCloseOnFocusLoss(config.get("closeOnFocusLoss"));
     setDiscardTasksUnderOneMinute(config.get("discardTasksUnderOneMinute"));
+    setShowIntegrationsRail(config.get("showIntegrationsRail"));
     setRoundingEnabled(config.get("roundingEnabled"));
     setRoundingSlots(config.get("roundingSlots"));
     setRoundingTolerance(config.get("roundingTolerance"));
@@ -44,7 +46,8 @@ export function GeralTab() {
       | "showWelcomeMessage"
       | "liveTrayTimer"
       | "closeOnFocusLoss"
-      | "discardTasksUnderOneMinute",
+      | "discardTasksUnderOneMinute"
+      | "showIntegrationsRail",
     setter: (v: boolean) => void,
     value: boolean
   ) {
@@ -141,6 +144,14 @@ export function GeralTab() {
             description="Oculta a janela automaticamente ao clicar fora dela. Use o pin na barra de título para fixá-la temporariamente."
             value={closeOnFocusLoss}
             onChange={(v) => handleToggle("closeOnFocusLoss", setCloseOnFocusLoss, v)}
+          />
+        </CardRow>
+        <CardRow>
+          <ToggleRow
+            label="Mostrar rail de integrações"
+            description="Exibe uma coluna estreita à direita com atalhos para as integrações conectadas (Sheets, Agenda, Clockify)."
+            value={showIntegrationsRail}
+            onChange={(v) => handleToggle("showIntegrationsRail", setShowIntegrationsRail, v)}
           />
         </CardRow>
         <CardRow>
