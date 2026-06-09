@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.1](https://github.com/Coaktion/deskclock-tauri/compare/v1.4.1...v1.8.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* **Clockify:** importação de projetos agora preserva o nome do cliente, evitando que projetos de clientes diferentes com o mesmo nome sejam mesclados em um só
+
 ## [1.8.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.4.1...v1.8.0) (2026-05-26)
 
 
