@@ -208,6 +208,81 @@ describe("runDailyTemplate", () => {
     expect(tsSet).toHaveBeenCalledWith(NOW_ISO);
   });
 
+  it("mesma chave nome|projeto|categoria em dias diferentes → não funde: envia um registro por dia, cada um com sua data e duração", async () => {
+    // Datas construídas em horário local para o teste não depender do fuso da máquina
+    const yesterdayStart = new Date(2026, 4, 5, 9, 0).toISOString();
+    const todayStart = new Date(2026, 4, 6, 9, 0).toISOString();
+    const tasks = [
+      makeTask({ id: "t1", name: "Daily", startTime: yesterdayStart, durationSeconds: 1800 }),
+      makeTask({ id: "t2", name: "Daily", startTime: todayStart, durationSeconds: 2700 }),
+    ];
+    const sender = makeSender();
+    const deps = makeDeps({
+      taskRepo: makeTaskRepo(tasks),
+      logRepo: makeLogRepo([]),
+      createSender: () => sender,
+      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+    });
+    const result = await runDailyTemplate(deps, TODAY);
+    expect(result.count).toBe(2);
+
+    const sentTasks: Task[] = (sender.send as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(sentTasks).toHaveLength(2);
+    const sentYesterday = sentTasks.find((t) => t.startTime === yesterdayStart);
+    const sentToday = sentTasks.find((t) => t.startTime === todayStart);
+    expect(sentYesterday!.durationSeconds).toBe(1800);
+    expect(sentToday!.durationSeconds).toBe(2700);
+  });
+
+  it("tarefa de ontem já enviada + nova de hoje com mesma chave → envia só a de hoje, sem somar a de ontem", async () => {
+    const yesterdayStart = new Date(2026, 4, 5, 9, 0).toISOString();
+    const todayStart = new Date(2026, 4, 6, 9, 0).toISOString();
+    const tasks = [
+      makeTask({ id: "t1", name: "Daily", startTime: yesterdayStart, durationSeconds: 1800 }),
+      makeTask({ id: "t2", name: "Daily", startTime: todayStart, durationSeconds: 2700 }),
+    ];
+    const logRepo = makeLogRepo(["t1"]);
+    const sender = makeSender();
+    const deps = makeDeps({
+      taskRepo: makeTaskRepo(tasks),
+      logRepo,
+      createSender: () => sender,
+      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+    });
+    const result = await runDailyTemplate(deps, TODAY);
+    expect(result.count).toBe(1);
+
+    const sentTasks: Task[] = (sender.send as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(sentTasks).toHaveLength(1);
+    expect(sentTasks[0].startTime).toBe(todayStart);
+    expect(sentTasks[0].durationSeconds).toBe(2700);
+    expect(logRepo.markSent as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(["t2"], "test_key");
+  });
+
+  it("grupo parcialmente enviado no mesmo dia → reenvia apenas a duração das tarefas não enviadas", async () => {
+    const morning = new Date(2026, 4, 6, 9, 0).toISOString();
+    const afternoon = new Date(2026, 4, 6, 14, 0).toISOString();
+    const tasks = [
+      makeTask({ id: "t1", name: "A", startTime: morning, durationSeconds: 1800 }),
+      makeTask({ id: "t2", name: "A", startTime: afternoon, durationSeconds: 2700 }),
+    ];
+    const logRepo = makeLogRepo(["t1"]);
+    const sender = makeSender();
+    const deps = makeDeps({
+      taskRepo: makeTaskRepo(tasks),
+      logRepo,
+      createSender: () => sender,
+      timestampPort: { get: () => "2026-05-06T10:00:00.000Z", set: vi.fn() },
+    });
+    const result = await runDailyTemplate(deps, TODAY);
+    expect(result.count).toBe(1);
+
+    const sentTasks: Task[] = (sender.send as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(sentTasks).toHaveLength(1);
+    expect(sentTasks[0].durationSeconds).toBe(2700);
+    expect(logRepo.markSent as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(["t2"], "test_key");
+  });
+
   it("sender lança erro → {count: 0, error}; markSent NÃO chamado; timestamp NÃO atualizado", async () => {
     const task = makeTask();
     const logRepo = makeLogRepo([]);

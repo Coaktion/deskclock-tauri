@@ -39,6 +39,15 @@ export function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Data local (AAAA-MM-DD) de um timestamp ISO — a data de referência de uma tarefa é a data local do startTime (§6.6) */
+export function localDateISO(isoString: string): string {
+  const d = new Date(isoString);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function weekBoundsISO(): { start: string; end: string } {
   const today = new Date();
   const dow = today.getDay(); // 0=Sun
