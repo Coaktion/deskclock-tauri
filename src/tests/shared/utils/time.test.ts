@@ -6,7 +6,21 @@ import {
   parseDurationInput,
   computeDurationHHMM,
   computeEndHHMM,
+  localDateISO,
 } from "@shared/utils/time";
+
+describe("localDateISO", () => {
+  // Datas construídas em horário local para o teste não depender do fuso da máquina
+  it("retorna a data local do timestamp", () => {
+    expect(localDateISO(new Date(2026, 4, 6, 12, 0).toISOString())).toBe("2026-05-06");
+  });
+  it("madrugada local permanece no mesmo dia local", () => {
+    expect(localDateISO(new Date(2026, 4, 6, 0, 30).toISOString())).toBe("2026-05-06");
+  });
+  it("fim do dia local permanece no mesmo dia local", () => {
+    expect(localDateISO(new Date(2026, 4, 6, 23, 30).toISOString())).toBe("2026-05-06");
+  });
+});
 
 describe("formatHHMMSS", () => {
   it("formata zero segundos", () => expect(formatHHMMSS(0)).toBe("00:00:00"));
