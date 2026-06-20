@@ -73,6 +73,16 @@ export async function positionPopupNearCompact(
   setTimeout(() => popup.setPosition(pos).catch(() => {}), 150);
 }
 
+/** Returns true if the given physical point lies within some connected monitor. */
+export async function isPointOnScreen(x: number, y: number): Promise<boolean> {
+  try {
+    const monitor = await monitorFromPoint(x, y);
+    return monitor != null;
+  } catch {
+    return false;
+  }
+}
+
 export async function positionNearTaskbar(
   win: Window | WebviewWindow,
   fallback?: { width: number; height: number }
