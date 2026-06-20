@@ -4,10 +4,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
-import {
-  RepositoriesProvider,
-  useRepositories,
-} from "@presentation/contexts/RepositoriesContext";
+import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
@@ -122,11 +119,15 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
       async ({ payload }) => {
         setRunningTask(payload.task);
-        if (!payload.task) setActivePlannedTaskActions([]);
-        // Não sobrescreve quando o evento vem do RunningTaskContext (source "main"),
-        // pois esse echo não carrega plannedTaskId e zeraria a referência.
-        if (payload.source !== "main") {
-          activePlannedTaskId.current = payload.plannedTaskId ?? null;
+        // Atualiza a referência apenas quando o evento carrega plannedTaskId
+        // explicitamente (start na janela principal ou no overlay). Eventos sem o
+        // campo (pause/resume/update) não devem zerar a referência. Ao parar
+        // (task = null), limpa tudo.
+        if (!payload.task) {
+          setActivePlannedTaskActions([]);
+          activePlannedTaskId.current = null;
+        } else if (payload.plannedTaskId !== undefined) {
+          activePlannedTaskId.current = payload.plannedTaskId;
         }
         if (payload.task) {
           if (config.get("overlayShowOnStart")) {

@@ -20,7 +20,6 @@ import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 
-
 const DAY_NAMES_PT = [
   "domingo",
   "segunda-feira",
@@ -185,7 +184,9 @@ export function RetroactivePage() {
     selectedDate,
     projects,
     categories,
-    onTaskAdded: loadTasks,
+    onTaskAdded: async () => {
+      await Promise.all([loadTasks(), loadPlannedTasks()]);
+    },
   });
 
   useEffect(() => {
@@ -220,7 +221,9 @@ export function RetroactivePage() {
       if (p) applyPrefill(p);
     });
 
-    return () => { unlisten.then((fn) => fn()); };
+    return () => {
+      unlisten.then((fn) => fn());
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDelete(id: string) {
@@ -291,7 +294,10 @@ export function RetroactivePage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div data-tour="retroactive-header" className="px-5 py-3 border-b border-gray-800 flex items-center gap-3">
+      <div
+        data-tour="retroactive-header"
+        className="px-5 py-3 border-b border-gray-800 flex items-center gap-3"
+      >
         <button
           onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))}
           className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors"
@@ -312,8 +318,8 @@ export function RetroactivePage() {
           <ChevronRight size={16} />
         </button>
         <span className="flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
-        {tasks.length > 0 && (
-          selectMode ? (
+        {tasks.length > 0 &&
+          (selectMode ? (
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
@@ -352,8 +358,7 @@ export function RetroactivePage() {
                 Selecionar tarefas
               </button>
             </div>
-          )
-        )}
+          ))}
         <button
           onClick={() => startTour()}
           title="Ver tour da página"
@@ -370,47 +375,45 @@ export function RetroactivePage() {
             Planejadas para este dia
           </p>
           <div className="max-h-36 overflow-y-auto">
-          {plannedTasks.map((task) => {
-            const projectName = projects.find((p) => p.id === task.projectId)?.name;
-            const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-            const hasTime = !!(task.startTime && task.endTime);
-            return (
-              <div
-                key={task.id}
-                className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
-              >
-                <button
-                  onClick={() =>
-                    hasTime ? void handleDirectLaunch(task) : form.prefill(task)
-                  }
-                  title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                  className={`shrink-0 p-1 rounded-lg transition-colors ${
-                    hasTime
-                      ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                      : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-                  }`}
+            {plannedTasks.map((task) => {
+              const projectName = projects.find((p) => p.id === task.projectId)?.name;
+              const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+              const hasTime = !!(task.startTime && task.endTime);
+              return (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
                 >
-                  <Play size={12} />
-                </button>
-                <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
-                {hasTime && (
-                  <span className="text-xs text-gray-500 font-mono shrink-0">
-                    {task.startTime}–{task.endTime}
-                  </span>
-                )}
-                {projectName && (
-                  <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                    {projectName}
-                  </span>
-                )}
-                {categoryName && (
-                  <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                    {categoryName}
-                  </span>
-                )}
-              </div>
-            );
-          })}
+                  <button
+                    onClick={() => (hasTime ? void handleDirectLaunch(task) : form.prefill(task))}
+                    title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
+                    className={`shrink-0 p-1 rounded-lg transition-colors ${
+                      hasTime
+                        ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+                    }`}
+                  >
+                    <Play size={12} />
+                  </button>
+                  <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
+                  {hasTime && (
+                    <span className="text-xs text-gray-500 font-mono shrink-0">
+                      {task.startTime}–{task.endTime}
+                    </span>
+                  )}
+                  {projectName && (
+                    <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                      {projectName}
+                    </span>
+                  )}
+                  {categoryName && (
+                    <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                      {categoryName}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -542,25 +545,25 @@ export function RetroactivePage() {
 
       {/* Lista de tarefas */}
       <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
-      <div className="flex-1 overflow-y-auto pr-2">
-        {tasks.length === 0 ? (
-          <p className="text-center text-gray-600 text-sm py-10">Nenhuma entrada para este dia</p>
-        ) : (
-          tasks.map((t) => (
-            <TaskRow
-              key={t.id}
-              task={t}
-              projects={projects}
-              categories={categories}
-              onEdit={setEditingTask}
-              onDelete={handleDelete}
-              selectMode={selectMode}
-              selected={selectedIds.has(t.id)}
-              onToggleSelect={toggleSelectTask}
-            />
-          ))
-        )}
-      </div>
+        <div className="flex-1 overflow-y-auto pr-2">
+          {tasks.length === 0 ? (
+            <p className="text-center text-gray-600 text-sm py-10">Nenhuma entrada para este dia</p>
+          ) : (
+            tasks.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                projects={projects}
+                categories={categories}
+                onEdit={setEditingTask}
+                onDelete={handleDelete}
+                selectMode={selectMode}
+                selected={selectedIds.has(t.id)}
+                onToggleSelect={toggleSelectTask}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {editingTask && (

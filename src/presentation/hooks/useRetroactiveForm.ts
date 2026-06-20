@@ -2,6 +2,7 @@ import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
+import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import {
   addDaysISO,
@@ -44,7 +45,7 @@ export function useRetroactiveForm({
   categories,
   onTaskAdded,
 }: UseRetroactiveFormOptions) {
-  const { taskRepo } = useRepositories();
+  const { taskRepo, plannedTaskRepo } = useRepositories();
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
@@ -60,6 +61,12 @@ export function useRetroactiveForm({
   const nameRef = useRef<HTMLInputElement>(null);
   const prevStart = useRef(startTime);
   const prevEnd = useRef(endTime);
+  // Vínculo com a tarefa planejada que originou o prefill. Consumido (e zerado)
+  // ao adicionar, para marcá-la como concluída sem vazar para a próxima da cadeia.
+  // A data do prefill é guardada para não marcar a planejada no dia errado caso
+  // o usuário troque a data antes de adicionar.
+  const prefilledPlannedTaskId = useRef<string | null>(null);
+  const prefilledDate = useRef<string | null>(null);
 
   function handleStartChange(val: string) {
     setStartTime(val);
@@ -140,6 +147,15 @@ export function useRetroactiveForm({
       },
       new Date().toISOString()
     );
+
+    // Se a tarefa veio de uma planejada (prefill) e a data não mudou, marca-a
+    // como concluída no dia. O vínculo é sempre zerado após a tentativa para não
+    // vazar para a próxima tarefa da cadeia.
+    if (prefilledPlannedTaskId.current && prefilledDate.current === selectedDate) {
+      await completePlannedTask(plannedTaskRepo, prefilledPlannedTaskId.current, selectedDate);
+    }
+    prefilledPlannedTaskId.current = null;
+    prefilledDate.current = null;
     setSaving(false);
 
     // Encadeia: próximo início = fim anterior, mantém mesma duração
@@ -158,6 +174,8 @@ export function useRetroactiveForm({
   }
 
   function prefill(task: PlannedTask) {
+    prefilledPlannedTaskId.current = task.id;
+    prefilledDate.current = selectedDate;
     setName(task.name);
     const project = projects.find((p) => p.id === task.projectId);
     const category = categories.find((c) => c.id === task.categoryId);
