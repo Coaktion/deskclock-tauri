@@ -5,10 +5,7 @@ import { getProjectColor } from "@shared/utils/projectColor";
 import { formatDurationCompact } from "@shared/utils/time";
 import { Play } from "lucide-react";
 
-// Layout da seção (exportado para o cálculo de altura do popup no componente pai).
-export const COMPLETED_SECTION_H = 28;
-export const COMPLETED_ROW_H = 40;
-export const MAX_COMPLETED_ROWS = 3;
+const COMPLETED_ROW_H = 40;
 
 interface CompletedTasksSectionProps {
   groups: TaskGroup[];
@@ -19,6 +16,11 @@ interface CompletedTasksSectionProps {
   onRepeat: (group: TaskGroup) => void;
 }
 
+/**
+ * Conteúdo da aba "Executadas": resumo do total do dia + lista rolável de tarefas
+ * concluídas, agrupadas por nome+projeto+categoria. Preenche a altura do container
+ * pai (h-full) — o popup define uma área fixa e a lista rola internamente.
+ */
 export function CompletedTasksSection({
   groups,
   totalSeconds,
@@ -26,25 +28,26 @@ export function CompletedTasksSection({
   categories,
   onRepeat,
 }: CompletedTasksSectionProps) {
-  const listH = Math.min(groups.length, MAX_COMPLETED_ROWS) * COMPLETED_ROW_H;
+  if (groups.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <p className="text-center text-gray-600 text-[11px]">Nenhuma tarefa executada hoje</p>
+      </div>
+    );
+  }
 
   return (
-    <>
-      {/* Divisória + header da seção */}
-      <div
-        className="flex items-center px-3 border-t border-gray-700/60 border-b border-gray-800 shrink-0"
-        style={{ height: COMPLETED_SECTION_H }}
-      >
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-          Executadas · {groups.length}
-        </span>
-        <span className="ml-auto text-[10px] tabular-nums text-gray-600 font-mono">
+    <div className="h-full flex flex-col">
+      {/* Resumo do total do dia */}
+      <div className="flex items-center px-3 py-1 border-b border-gray-800/70 shrink-0">
+        <span className="text-[10px] text-gray-500">Total do dia</span>
+        <span className="ml-auto text-[10px] tabular-nums text-gray-400 font-mono">
           {formatDurationCompact(totalSeconds)}
         </span>
       </div>
 
       {/* Lista agrupada */}
-      <div className="overflow-y-auto shrink-0" style={{ height: listH }}>
+      <div className="flex-1 overflow-y-auto">
         {groups.map((group) => {
           const first = group.tasks[0];
           const project = projects.find((p) => p.id === first.projectId);
@@ -88,6 +91,6 @@ export function CompletedTasksSection({
           );
         })}
       </div>
-    </>
+    </div>
   );
 }
