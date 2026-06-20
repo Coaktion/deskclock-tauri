@@ -2,11 +2,19 @@ import type { Category } from "@domain/entities/Category";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
+import {
+  CompletedTasksSection,
+  COMPLETED_SECTION_H,
+  COMPLETED_ROW_H,
+  MAX_COMPLETED_ROWS,
+} from "@presentation/overlays/CompletedTasksSection";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import type { CommandPaletteNavigatePayload } from "@shared/types/overlayEvents";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -43,7 +51,6 @@ const MAX_ROWS = 4;
 const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
 const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
 const ACTIONS_SECTION_H = 48; // section label + one row of action chips
-
 
 interface PopupOverlayContentProps {
   runningTask: Task | null;
@@ -126,7 +133,7 @@ function ExecSection({
   function openConfirmStop() {
     const now = new Date();
     setEndTimeInput(
-      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
     );
     setEndTimeTouched(false);
     setConfirmingStop(true);
@@ -519,10 +526,13 @@ export function PopupOverlayContent({
 }: PopupOverlayContentProps) {
   const today = todayISO();
   const { tasks, reload, complete } = usePlannedTasksForDate(today);
+  const { groups: completedGroups, totalSeconds: completedTotalSeconds } =
+    useCompletedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
   const completedCount = tasks.length - pending.length;
+  const plannedAreaH = pending.length === 0 ? EMPTY_H : Math.min(pending.length, MAX_ROWS) * ROW_H;
 
   const projectName = projects.find((p) => p.id === runningTask?.projectId)?.name;
   const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
@@ -540,14 +550,31 @@ export function PopupOverlayContent({
       const execH = confirmingStop ? EXEC_H_CONFIRMING : EXEC_H;
       onResize(POPUP_W, HEADER_H + execH + (hasActions ? ACTIONS_SECTION_H : 0) + FOOTER_H);
     } else {
-      const taskAreaH = pending.length === 0 ? EMPTY_H : Math.min(pending.length, MAX_ROWS) * ROW_H;
-      onResize(POPUP_W, HEADER_H + NEW_TASK_H + SECTION_H + taskAreaH + FOOTER_H);
+      const completedAreaH =
+        completedGroups.length === 0
+          ? 0
+          : COMPLETED_SECTION_H +
+            Math.min(completedGroups.length, MAX_COMPLETED_ROWS) * COMPLETED_ROW_H;
+      onResize(
+        POPUP_W,
+        HEADER_H + NEW_TASK_H + SECTION_H + plannedAreaH + completedAreaH + FOOTER_H
+      );
     }
-  }, [pending.length, !!runningTask, hasActions, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pending.length, completedGroups.length, !!runningTask, hasActions, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePlay(task: PlannedTask) {
     await onPlay(task);
     await reload();
+  }
+
+  async function handleRepeat(group: TaskGroup) {
+    const t = group.tasks[0];
+    await onStartTask({
+      name: t.name,
+      projectId: t.projectId,
+      categoryId: t.categoryId,
+      billable: t.billable,
+    });
   }
 
   async function handleOpenApp() {
@@ -632,7 +659,7 @@ export function PopupOverlayContent({
           </div>
 
           {/* Task list */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="overflow-y-auto shrink-0" style={{ height: plannedAreaH }}>
             {pending.length === 0 ? (
               <p className="text-center text-gray-600 text-[11px] py-4">Nenhuma tarefa pendente</p>
             ) : (
@@ -681,6 +708,17 @@ export function PopupOverlayContent({
               })
             )}
           </div>
+
+          {/* Executadas hoje (agrupadas) */}
+          {completedGroups.length > 0 && (
+            <CompletedTasksSection
+              groups={completedGroups}
+              totalSeconds={completedTotalSeconds}
+              projects={projects}
+              categories={categories}
+              onRepeat={handleRepeat}
+            />
+          )}
         </>
       )}
 
