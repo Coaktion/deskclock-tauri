@@ -1,9 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { Task } from "@domain/entities/Task";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { getHistoryTotals, type HistoryTotals } from "@domain/usecases/tasks/GetHistoryTotals";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
+import { listen } from "@tauri-apps/api/event";
 import {
   todayISO,
   addDaysISO,
@@ -12,7 +15,6 @@ import {
   endOfDayISO,
 } from "@shared/utils/time";
 import type { UUID } from "@shared/types";
-
 
 export type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
 
@@ -128,6 +130,7 @@ export function useHistory() {
     async (id: UUID) => {
       const task = groups.flatMap((g) => g.tasks).find((t) => t.id === id);
       await deleteTask(taskRepo, id);
+      void notifyTasksChanged();
       setGroups((prev) =>
         prev
           .map((g) => {
@@ -156,6 +159,16 @@ export function useHistory() {
   );
 
   const reload = useCallback(() => search(filters), [search, filters]);
+
+  // Recarrega a busca atual quando tarefas mudam em qualquer janela
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.TASKS_CHANGED, () => {
+      if (searched) void reload();
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [searched, reload]);
 
   return { filters, groups, totals, searched, search, updateFilter, setQuick, remove, reload };
 }

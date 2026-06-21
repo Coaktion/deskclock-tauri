@@ -14,6 +14,7 @@ import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -228,6 +229,7 @@ export function RetroactivePage() {
 
   async function handleDelete(id: string) {
     await deleteTask(taskRepo, id);
+    void notifyTasksChanged();
     await loadTasks();
   }
 
@@ -254,6 +256,7 @@ export function RetroactivePage() {
       new Date().toISOString()
     );
     await completePlannedTask(plannedTaskRepo, task.id, selectedDate);
+    void notifyTasksChanged();
     form.advanceChainStart(task.endTime!);
     await Promise.all([loadTasks(), loadPlannedTasks()]);
   }
@@ -276,6 +279,7 @@ export function RetroactivePage() {
     for (const id of selectedIds) {
       await deleteTask(taskRepo, id);
     }
+    void notifyTasksChanged();
     await loadTasks();
     exitSelectMode();
   }

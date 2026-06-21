@@ -30,6 +30,7 @@ export function useCompletedTasksForDate(dateISO: string) {
     const unlistens = [
       listen(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, () => void reload()),
       listen(OVERLAY_EVENTS.TASK_STOPPED, () => void reload()),
+      listen(OVERLAY_EVENTS.TASKS_CHANGED, () => void reload()),
     ];
     return () => {
       unlistens.forEach((u) => u.then((fn) => fn()));

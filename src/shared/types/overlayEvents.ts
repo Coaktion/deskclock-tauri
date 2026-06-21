@@ -10,6 +10,7 @@ export const OVERLAY_EVENTS = {
   TOAST_MESSAGE: "toast-message",
   NAVIGATE_SETTINGS: "navigate-settings",
   PLANNED_TASKS_CHANGED: "planned-tasks-changed",
+  TASKS_CHANGED: "tasks-changed",
   COMMAND_PALETTE_NAVIGATE: "command-palette:navigate",
   COMMAND_PALETTE_START_TASK: "command-palette:start-task",
   DEEPLINK_NAVIGATE: "deeplink:navigate",

@@ -3,6 +3,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import {
   addDaysISO,
@@ -156,6 +157,7 @@ export function useRetroactiveForm({
     }
     prefilledPlannedTaskId.current = null;
     prefilledDate.current = null;
+    void notifyTasksChanged();
     setSaving(false);
 
     // Encadeia: próximo início = fim anterior, mantém mesma duração
