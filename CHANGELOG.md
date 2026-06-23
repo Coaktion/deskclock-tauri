@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.3](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.2...v1.8.3) (2026-06-23)
+
+
+### Features
+
+* **overlay:** as tarefas do popup agora ficam organizadas em abas com altura fixa, facilitando a navegação quando há muitos itens
+* **overlay:** o popup passa a exibir também as tarefas já executadas no dia, não só as planejadas
+* as alterações em registros de tarefa são refletidas imediatamente nas demais janelas abertas, sem precisar recarregar
+
+
+### Bug Fixes
+
+* **janela:** "Abrir App" reabre a janela principal no estado em que estava, em vez de voltar sempre para a primeira tela
+* **overlay:** o overlay compacto volta a aparecer corretamente ao iniciar o app
+* **planejamento:** ao iniciar uma tarefa planejada pelo Play, ela é marcada como concluída no dia automaticamente
+
 ### [1.8.2](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.1...v1.8.2) (2026-06-10)
 
 
