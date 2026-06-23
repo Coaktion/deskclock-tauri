@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.3](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.2...v1.8.3) (2026-06-23)
+
+
+### Features
+
+* **overlay:** dividir tarefas do popup idle em abas com altura fixa ([0761978](https://github.com/Coaktion/deskclock-tauri/commit/0761978aa8bae243c6eef77781a64a6144d1863c))
+* **overlay:** exibir tarefas executadas no estado idle do popup ([d4d4dda](https://github.com/Coaktion/deskclock-tauri/commit/d4d4dda2bd90a848b3d2ad155b568a32143eff0f))
+* **tasks:** sincronizar registros de tarefa entre janelas via TASKS_CHANGED ([0f1b4c0](https://github.com/Coaktion/deskclock-tauri/commit/0f1b4c05ab53b8813e93cf31f4ec76ac85db0fd3))
+
+
+### Bug Fixes
+
+* makes "Abrir App" open main window at the current state and not directly on the first page ([32c9f2a](https://github.com/Coaktion/deskclock-tauri/commit/32c9f2ae598fa601033ede3222777214a39c742d))
+* **overlay:** garantir exibição do compact overlay na inicialização ([e8a31bb](https://github.com/Coaktion/deskclock-tauri/commit/e8a31bb3e6193b38643229b8c75d8a09acf596fc))
+* **planned-tasks:** marcar tarefa planejada como concluída ao lançá-la ([a1d9b89](https://github.com/Coaktion/deskclock-tauri/commit/a1d9b89cc0fcd8977a9a0758a10fa9f4a83ec836))
+
 ### [1.8.2](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.1...v1.8.2) (2026-06-10)
 
 
