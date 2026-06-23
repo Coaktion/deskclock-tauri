@@ -2,7 +2,11 @@ import { useCallback, useEffect, type RefObject } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
+import {
+  positionNearTaskbar,
+  centerOnWorkArea,
+  isPointOnScreen,
+} from "@shared/utils/windowPosition";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 
 const appWindow = getCurrentWindow();
@@ -18,7 +22,7 @@ async function getCommandPalette() {
 export function useStartupWindow(
   config: ConfigContextValue,
   ignoreBlurRef: RefObject<boolean>,
-  isPinnedRef: RefObject<boolean>,
+  isPinnedRef: RefObject<boolean>
 ) {
   const showMainWindow = useCallback(
     async (focusToo = false) => {
@@ -95,6 +99,30 @@ export function useStartupWindow(
         .finally(() => appWindow.show());
       return;
     }
+    // Overlay compact é always-on-top e deve aparecer mesmo antes de o setup ser
+    // concluído. O show() roda sempre (mesmo se o posicionamento falhar) e a
+    // posição salva é validada contra os monitores conectados — assim o overlay
+    // nunca fica fora da tela quando um monitor externo é desconectado.
+    if (config.get("overlayAlwaysVisible")) {
+      void (async () => {
+        const compact = await getOverlayCompact();
+        if (!compact) return;
+        try {
+          const savedPos = config.get("overlayPosition_compact") as { x: number; y: number } | null;
+          const hasSaved = savedPos !== null && !(savedPos.x === -1 && savedPos.y === -1);
+          if (hasSaved && (await isPointOnScreen(savedPos!.x, savedPos!.y))) {
+            await compact.setPosition(new PhysicalPosition(savedPos!.x, savedPos!.y));
+          } else {
+            await positionNearTaskbar(compact, { width: 52, height: 52 });
+          }
+        } catch {
+          // Posicionamento é best-effort — nunca deve impedir a exibição.
+        } finally {
+          await compact.show().catch(() => {});
+        }
+      })();
+    }
+
     if (!config.get("setupCompleted")) {
       positionNearTaskbar(appWindow, { width: 800, height: 620 })
         .catch(() => {})
@@ -102,29 +130,18 @@ export function useStartupWindow(
       return;
     }
 
-    void (async () => {
-      const compact = await getOverlayCompact();
-      if (compact) {
-        const savedPos = config.get("overlayPosition_compact") as { x: number; y: number } | null;
-        if (savedPos && !(savedPos.x === -1 && savedPos.y === -1)) {
-          await compact.setPosition(new PhysicalPosition(savedPos.x, savedPos.y));
-        } else {
-          await positionNearTaskbar(compact, { width: 52, height: 52 });
-        }
-        await compact.show();
-      }
-
-      if (config.get("showWelcomeMessage")) {
+    if (config.get("showWelcomeMessage")) {
+      void (async () => {
         const cp = await getCommandPalette();
         if (cp) {
           await showCommandPalette();
         } else {
           await showMainWindow();
         }
-      } else {
-        await showMainWindow();
-      }
-    })();
+      })();
+    } else {
+      void showMainWindow();
+    }
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { showMainWindow, showCommandPalette };

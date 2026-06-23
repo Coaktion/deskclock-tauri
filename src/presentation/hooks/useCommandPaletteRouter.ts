@@ -51,6 +51,16 @@ export function useCommandPaletteRouter({
     };
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Mostra a janela principal no estado atual, sem trocar de página
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.OVERLAY_OPEN_APP, async () => {
+      await showMainWindow(true);
+    });
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Navega para planejamento quando acionado pelo overlay
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, async () => {

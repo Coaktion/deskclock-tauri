@@ -2,13 +2,15 @@ import type { Category } from "@domain/entities/Category";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
+import type { TaskGroup } from "@domain/utils/groupTasks";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
-import type { CommandPaletteNavigatePayload } from "@shared/types/overlayEvents";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
@@ -34,16 +36,14 @@ const FOOTER_H = 34;
 
 // Idle state layout
 const NEW_TASK_H = 45;
-const SECTION_H = 28;
+const TABS_H = 32;
+const CONTENT_H = 188; // área da aba ativa (altura fixa; a lista rola internamente)
 const ROW_H = 44;
-const EMPTY_H = 52;
-const MAX_ROWS = 4;
 
 // Running state layout (execution section fills popup body)
 const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
 const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
 const ACTIONS_SECTION_H = 48; // section label + one row of action chips
-
 
 interface PopupOverlayContentProps {
   runningTask: Task | null;
@@ -126,7 +126,7 @@ function ExecSection({
   function openConfirmStop() {
     const now = new Date();
     setEndTimeInput(
-      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
     );
     setEndTimeTouched(false);
     setConfirmingStop(true);
@@ -519,10 +519,12 @@ export function PopupOverlayContent({
 }: PopupOverlayContentProps) {
   const today = todayISO();
   const { tasks, reload, complete } = usePlannedTasksForDate(today);
+  const { groups: completedGroups, totalSeconds: completedTotalSeconds } =
+    useCompletedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
-  const completedCount = tasks.length - pending.length;
+  const [activeTab, setActiveTab] = useState<"planned" | "completed">("planned");
 
   const projectName = projects.find((p) => p.id === runningTask?.projectId)?.name;
   const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
@@ -540,20 +542,29 @@ export function PopupOverlayContent({
       const execH = confirmingStop ? EXEC_H_CONFIRMING : EXEC_H;
       onResize(POPUP_W, HEADER_H + execH + (hasActions ? ACTIONS_SECTION_H : 0) + FOOTER_H);
     } else {
-      const taskAreaH = pending.length === 0 ? EMPTY_H : Math.min(pending.length, MAX_ROWS) * ROW_H;
-      onResize(POPUP_W, HEADER_H + NEW_TASK_H + SECTION_H + taskAreaH + FOOTER_H);
+      // Altura fixa: abas + área de conteúdo com scroll interno, independente do
+      // tamanho das listas (resolve o crescimento do popup em listas grandes).
+      onResize(POPUP_W, HEADER_H + NEW_TASK_H + TABS_H + CONTENT_H + FOOTER_H);
     }
-  }, [pending.length, !!runningTask, hasActions, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [!!runningTask, hasActions, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePlay(task: PlannedTask) {
     await onPlay(task);
     await reload();
   }
 
+  async function handleRepeat(group: TaskGroup) {
+    const t = group.tasks[0];
+    await onStartTask({
+      name: t.name,
+      projectId: t.projectId,
+      categoryId: t.categoryId,
+      billable: t.billable,
+    });
+  }
+
   async function handleOpenApp() {
-    await emit(OVERLAY_EVENTS.COMMAND_PALETTE_NAVIGATE, {
-      page: "tasks",
-    } satisfies CommandPaletteNavigatePayload);
+    await emit(OVERLAY_EVENTS.OVERLAY_OPEN_APP);
   }
 
   return (
@@ -616,69 +627,92 @@ export function PopupOverlayContent({
             </button>
           </div>
 
-          {/* Section header */}
-          <div
-            className="flex items-center px-3 border-b border-gray-800 shrink-0"
-            style={{ height: SECTION_H }}
-          >
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-              Planejadas · {tasks.length}
-            </span>
-            {tasks.length > 0 && (
-              <span className="ml-auto text-[10px] tabular-nums text-gray-600">
-                {completedCount}/{tasks.length}
-              </span>
-            )}
+          {/* Tab bar */}
+          <div className="flex border-b border-gray-800 shrink-0" style={{ height: TABS_H }}>
+            <button
+              onClick={() => setActiveTab("planned")}
+              className={`flex-1 text-[11px] font-medium border-b-2 transition-colors ${
+                activeTab === "planned"
+                  ? "text-gray-200 border-blue-500"
+                  : "text-gray-500 border-transparent hover:text-gray-300"
+              }`}
+            >
+              Planejadas · {pending.length}
+            </button>
+            <button
+              onClick={() => setActiveTab("completed")}
+              className={`flex-1 text-[11px] font-medium border-b-2 transition-colors ${
+                activeTab === "completed"
+                  ? "text-gray-200 border-blue-500"
+                  : "text-gray-500 border-transparent hover:text-gray-300"
+              }`}
+            >
+              Executadas · {completedGroups.length}
+            </button>
           </div>
 
-          {/* Task list */}
-          <div className="flex-1 overflow-y-auto">
-            {pending.length === 0 ? (
-              <p className="text-center text-gray-600 text-[11px] py-4">Nenhuma tarefa pendente</p>
-            ) : (
-              pending.map((task) => {
-                const project = projects.find((p) => p.id === task.projectId);
-                const category = categories.find((c) => c.id === task.categoryId);
-                const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-                const railColor = getProjectColor(task.projectId);
-
-                return (
-                  <div
-                    key={task.id}
-                    className="relative flex items-center gap-2 px-3 border-b border-gray-800/70 hover:bg-gray-800/40 transition-colors"
-                    style={{ height: ROW_H }}
-                  >
-                    <span
-                      className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full"
-                      style={{ backgroundColor: railColor }}
-                    />
-                    <div className="flex-1 min-w-0 pl-1.5">
-                      <p className="text-[12px] font-medium text-gray-200 truncate leading-tight">
-                        {task.name}
-                      </p>
-                      {subtitle && (
-                        <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
-                          {subtitle}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => void complete(task.id, today)}
-                      title="Concluir"
-                      className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
-                    >
-                      <Check size={11} />
-                    </button>
-                    <button
-                      onClick={() => handlePlay(task)}
-                      title="Iniciar"
-                      className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
-                    >
-                      <Play size={11} fill="currentColor" />
-                    </button>
+          {/* Conteúdo da aba ativa (altura fixa, scroll interno) */}
+          <div className="shrink-0" style={{ height: CONTENT_H }}>
+            {activeTab === "planned" ? (
+              <div className="h-full overflow-y-auto">
+                {pending.length === 0 ? (
+                  <div className="h-full flex items-center justify-center">
+                    <p className="text-center text-gray-600 text-[11px]">Nenhuma tarefa pendente</p>
                   </div>
-                );
-              })
+                ) : (
+                  pending.map((task) => {
+                    const project = projects.find((p) => p.id === task.projectId);
+                    const category = categories.find((c) => c.id === task.categoryId);
+                    const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+                    const railColor = getProjectColor(task.projectId);
+
+                    return (
+                      <div
+                        key={task.id}
+                        className="relative flex items-center gap-2 px-3 border-b border-gray-800/70 hover:bg-gray-800/40 transition-colors"
+                        style={{ height: ROW_H }}
+                      >
+                        <span
+                          className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full"
+                          style={{ backgroundColor: railColor }}
+                        />
+                        <div className="flex-1 min-w-0 pl-1.5">
+                          <p className="text-[12px] font-medium text-gray-200 truncate leading-tight">
+                            {task.name}
+                          </p>
+                          {subtitle && (
+                            <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
+                              {subtitle}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => void complete(task.id, today)}
+                          title="Concluir"
+                          className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
+                        >
+                          <Check size={11} />
+                        </button>
+                        <button
+                          onClick={() => handlePlay(task)}
+                          title="Iniciar"
+                          className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
+                        >
+                          <Play size={11} fill="currentColor" />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <CompletedTasksSection
+                groups={completedGroups}
+                totalSeconds={completedTotalSeconds}
+                projects={projects}
+                categories={categories}
+                onRepeat={handleRepeat}
+              />
             )}
           </div>
         </>

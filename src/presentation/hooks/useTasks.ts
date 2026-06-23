@@ -4,8 +4,10 @@ import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { getWeekTotal } from "@domain/usecases/tasks/GetWeekTotal";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { todayISO, weekBoundsISO } from "@shared/utils/time";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { listen } from "@tauri-apps/api/event";
 
 interface TaskTotals {
   billableSeconds: number;
@@ -63,6 +65,14 @@ export function useTasks() {
   useEffect(() => {
     load();
   }, [load, reloadSignal, today]);
+
+  // Recarrega quando tarefas mudam em qualquer janela (delete/edit/merge/etc.)
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.TASKS_CHANGED, () => load());
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [load]);
 
   return { groups, totals, reload: load };
 }

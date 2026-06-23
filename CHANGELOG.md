@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.8.2](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.1...v1.8.2) (2026-06-10)
+
+
+### Bug Fixes
+
+* **integrações:** envio diário automático não mescla mais tarefas de dias diferentes com o mesmo nome — cada dia gera seu próprio registro, com a data e a duração corretas (vale para Google Sheets e Clockify)
+* **integrações:** durações já enviadas não são somadas de novo nos envios diários seguintes, o que inflava o total na planilha
+* **sheets:** célula de duração não fica mais exibindo número decimal (ex.: 0,0417 em vez de 1:00:00) quando a formatação falha — o app tenta aplicar o formato novamente
+
+### [1.8.1](https://github.com/Coaktion/deskclock-tauri/compare/v1.4.1...v1.8.1) (2026-06-09)
+
+
+### Bug Fixes
+
+* **Clockify:** importação de projetos agora preserva o nome do cliente, evitando que projetos de clientes diferentes com o mesmo nome sejam mesclados em um só
+
 ## [1.8.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.4.1...v1.8.0) (2026-05-26)
 
 

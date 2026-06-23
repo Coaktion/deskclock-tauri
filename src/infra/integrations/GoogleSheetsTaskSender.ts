@@ -89,36 +89,49 @@ export class GoogleSheetsTaskSender implements ITaskSender {
       );
     }
 
-    // Aplica formato de duração [h]:mm:ss na coluna de duração das linhas recém-escritas
+    // Aplica formato de duração [h]:mm:ss na coluna de duração das linhas recém-escritas.
+    // Falha não derruba o envio (dados já foram escritos), mas sem o formato a célula
+    // exibe a fração de dia crua (ex: 0,0416...) — por isso re-tenta uma vez e loga.
     const durationColIndex = enabledCols.findIndex((c) => c.field === "duration");
     if (sheetId !== -1 && durationColIndex !== -1) {
-      await fetch(`${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}:batchUpdate`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requests: [
-            {
-              repeatCell: {
-                range: {
-                  sheetId,
-                  startRowIndex: nextRow - 1,
-                  endRowIndex: nextRow + rows.length - 1,
-                  startColumnIndex: durationColIndex,
-                  endColumnIndex: durationColIndex + 1,
-                },
-                cell: {
-                  userEnteredFormat: {
-                    numberFormat: { type: "TIME", pattern: "[h]:mm:ss" },
+      const applyFormat = () =>
+        fetch(`${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}:batchUpdate`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requests: [
+              {
+                repeatCell: {
+                  range: {
+                    sheetId,
+                    startRowIndex: nextRow - 1,
+                    endRowIndex: nextRow + rows.length - 1,
+                    startColumnIndex: durationColIndex,
+                    endColumnIndex: durationColIndex + 1,
                   },
+                  cell: {
+                    userEnteredFormat: {
+                      numberFormat: { type: "TIME", pattern: "[h]:mm:ss" },
+                    },
+                  },
+                  fields: "userEnteredFormat.numberFormat",
                 },
-                fields: "userEnteredFormat.numberFormat",
               },
-            },
-          ],
-        }),
-      }).catch(() => {
-        // Falha silenciosa: dados já foram escritos; formato é cosmético
-      });
+            ],
+          }),
+        });
+      try {
+        let fmtRes = await applyFormat();
+        if (!fmtRes.ok) fmtRes = await applyFormat();
+        if (!fmtRes.ok) {
+          const fmtBody = await fmtRes.json().catch(() => ({}));
+          console.warn(
+            `[Sheets] Falha ao aplicar formato de duração (HTTP ${fmtRes.status}): ${fmtBody?.error?.message ?? ""}`
+          );
+        }
+      } catch (err) {
+        console.warn("[Sheets] Falha ao aplicar formato de duração:", err);
+      }
     }
   }
 
@@ -130,7 +143,12 @@ export class GoogleSheetsTaskSender implements ITaskSender {
     const metaUrl = `${SHEETS_API}/${encodeURIComponent(this.spreadsheetId)}?fields=sheets.properties`;
     const metaRes = await fetch(metaUrl, { headers: { Authorization: `Bearer ${token}` } });
 
-    if (!metaRes.ok) return -1;
+    if (!metaRes.ok) {
+      console.warn(
+        `[Sheets] Falha ao ler metadados da planilha (HTTP ${metaRes.status}); formato de duração não será aplicado.`
+      );
+      return -1;
+    }
 
     const meta = await metaRes.json();
     const sheets: { properties: { title: string; sheetId: number } }[] = meta.sheets ?? [];

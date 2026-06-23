@@ -4,7 +4,7 @@ import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIn
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import type { AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import { groupTasks } from "@domain/utils/groupTasks";
-import { addDaysISO, todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
+import { addDaysISO, todayISO, startOfDayISO, endOfDayISO, localDateISO } from "@shared/utils/time";
 
 export interface DailyTemplateDeps {
   integrationName: string;
@@ -53,10 +53,21 @@ export async function runDailyTemplate(
     const sentIds = new Set(
       await deps.logRepo.findSentIds(deps.logKey, range.start, range.end)
     );
-    const groups = groupTasks(valid).filter(
-      (g) => !g.tasks.every((t) => sentIds.has(t.id))
-    );
-    if (groups.length === 0) return { integration: deps.integrationName, count: 0, warning };
+    // Exclui já enviadas ANTES de agrupar: um grupo parcialmente enviado re-somaria
+    // durações que já estão na planilha (double-count).
+    const unsent = valid.filter((t) => !sentIds.has(t.id));
+    if (unsent.length === 0) return { integration: deps.integrationName, count: 0, warning };
+
+    // Agrupa por dia local (§6.6) antes da chave nome|projeto|categoria — o range pode
+    // cobrir mais de um dia e tarefas de dias distintos não podem se fundir num registro só.
+    const byDay = new Map<string, Task[]>();
+    for (const t of unsent) {
+      const day = localDateISO(t.startTime);
+      const list = byDay.get(day);
+      if (list) list.push(t);
+      else byDay.set(day, [t]);
+    }
+    const groups = [...byDay.values()].flatMap((dayTasks) => groupTasks(dayTasks));
 
     const tasksToSend = groups.map((g) => ({
       ...g.tasks[0],

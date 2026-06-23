@@ -8,7 +8,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
-
+import { notifyTasksChanged } from "@shared/utils/taskSync";
 
 interface EditTaskModalProps {
   task: Task;
@@ -100,6 +100,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
       },
       new Date().toISOString()
     );
+    void notifyTasksChanged();
     setSaving(false);
     onSave();
     onClose();

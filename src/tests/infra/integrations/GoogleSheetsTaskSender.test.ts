@@ -197,3 +197,89 @@ describe("GoogleSheetsTaskSender — taskToRow", () => {
     expect(row[4]).toBeCloseTo(3600 / 86400);
   });
 });
+
+describe("GoogleSheetsTaskSender — send (formato de duração)", () => {
+  type FetchResponse = { ok: boolean; status: number; json: () => Promise<unknown> };
+
+  function res(ok: boolean, body: unknown, status = ok ? 200 : 400): FetchResponse {
+    return { ok, status, json: async () => body };
+  }
+
+  /**
+   * Mocka a sequência de chamadas do send():
+   * 1. GET metadados  2. GET coluna A  3. PUT escrita  4+. POST batchUpdate (formato)
+   */
+  function stubFetch(opts: {
+    metaOk?: boolean;
+    formatResults?: Array<{ ok: boolean } | "reject">;
+  }) {
+    const formatCalls: number[] = [];
+    let formatIdx = 0;
+    const fetchMock = vi.fn(async (url: string, init?: { method?: string }) => {
+      if (url.includes("?fields=sheets.properties")) {
+        if (opts.metaOk === false) return res(false, {}, 500);
+        return res(true, { sheets: [{ properties: { title: "DeskClock", sheetId: 42 } }] });
+      }
+      if (url.includes(":batchUpdate")) {
+        formatCalls.push(Date.now());
+        const result = opts.formatResults?.[formatIdx++] ?? { ok: true };
+        if (result === "reject") throw new Error("network down");
+        return res(result.ok, result.ok ? {} : { error: { message: "boom" } });
+      }
+      if (init?.method === "PUT") return res(true, { updatedRows: 1 });
+      // GET coluna A
+      return res(true, { values: [["header"]] });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return { fetchMock, formatCalls };
+  }
+
+  function makeSender() {
+    return new GoogleSheetsTaskSender(makeConfig(), "sheet-id", projects, categories);
+  }
+
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    // Restaura apenas o spy de console.warn — restoreAllMocks() desfaria o mock de módulo do GoogleTokenManager
+    (console.warn as Partial<ReturnType<typeof vi.fn>>).mockRestore?.();
+  });
+
+  it("aplica o formato de duração uma vez no caminho feliz", async () => {
+    const { formatCalls } = stubFetch({});
+    await makeSender().send([makeTask()]);
+    expect(formatCalls).toHaveLength(1);
+  });
+
+  it("re-tenta o formato uma vez quando a primeira tentativa retorna erro HTTP", async () => {
+    const { formatCalls } = stubFetch({ formatResults: [{ ok: false }, { ok: true }] });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await makeSender().send([makeTask()]);
+    expect(formatCalls).toHaveLength(2);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("duas falhas de formato → send resolve mesmo assim e loga warning", async () => {
+    const { formatCalls } = stubFetch({ formatResults: [{ ok: false }, { ok: false }] });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(makeSender().send([makeTask()])).resolves.toBeUndefined();
+    expect(formatCalls).toHaveLength(2);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("falha de rede no formato não derruba o envio e loga warning", async () => {
+    stubFetch({ formatResults: ["reject", "reject"] });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(makeSender().send([makeTask()])).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("metadados indisponíveis → escrita acontece, formato é pulado e warning é logado", async () => {
+    const { fetchMock, formatCalls } = stubFetch({ metaOk: false });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(makeSender().send([makeTask()])).resolves.toBeUndefined();
+    const putCalls = fetchMock.mock.calls.filter((c) => c[1]?.method === "PUT");
+    expect(putCalls.length).toBeGreaterThan(0);
+    expect(formatCalls).toHaveLength(0);
+    expect(warn).toHaveBeenCalled();
+  });
+});

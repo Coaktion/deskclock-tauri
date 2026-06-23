@@ -141,19 +141,20 @@ export function ClockifyMappingsSection({
               .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
           ),
         buildMapping: async (cp): Promise<ClockifyProjectMapping | null> => {
-          let proj = await projectRepo.findByName(cp.name);
+          const displayName = projectDisplayName(cp);
+          let proj = await projectRepo.findByName(displayName);
           if (!proj) {
             try {
-              proj = await createProjectUC(projectRepo, cp.name);
+              proj = await createProjectUC(projectRepo, displayName);
             } catch {
-              proj = await projectRepo.findByName(cp.name);
+              proj = await projectRepo.findByName(displayName);
             }
           }
           if (!proj) return null;
           return {
             deskclockProjectId: proj.id,
             clockifyProjectId: cp.id,
-            clockifyProjectName: projectDisplayName(cp),
+            clockifyProjectName: displayName,
             workspaceId,
           };
         },

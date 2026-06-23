@@ -46,12 +46,12 @@ export interface RunningTaskContextValue {
 
 export const RunningTaskContext = createContext<RunningTaskContextValue | null>(null);
 
-
-async function notifyOverlay(task: Task | null) {
-  await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
-    task,
-    source: "main",
-  } satisfies RunningTaskChangedPayload);
+// plannedTaskId omitido (undefined) significa "não altere a referência do overlay" —
+// usado por pause/resume/stop/cancel, que não mudam a tarefa planejada de origem.
+async function notifyOverlay(task: Task | null, plannedTaskId?: string | null) {
+  const payload: RunningTaskChangedPayload = { task, source: "main" };
+  if (plannedTaskId !== undefined) payload.plannedTaskId = plannedTaskId;
+  await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, payload);
 }
 
 interface RunningTaskProviderProps {
@@ -106,7 +106,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         setRunningTask(task);
         setActivePlannedTaskId(input.plannedTaskId ?? null);
         triggerReload();
-        await notifyOverlay(task);
+        await notifyOverlay(task, input.plannedTaskId ?? null);
       } finally {
         isStartingTaskRef.current = false;
       }
@@ -157,9 +157,9 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       if (!runningTask) return;
       const updated = await updateTaskUC(taskRepo, runningTask.id, input, new Date().toISOString());
       setRunningTask(updated);
-      await notifyOverlay(updated);
+      await notifyOverlay(updated, activePlannedTaskId);
     },
-    [taskRepo, runningTask]
+    [taskRepo, runningTask, activePlannedTaskId]
   );
 
   return (

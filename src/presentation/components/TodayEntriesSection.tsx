@@ -12,7 +12,7 @@ import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
-
+import { notifyTasksChanged } from "@shared/utils/taskSync";
 
 interface TodayEntriesSectionProps {
   groups: TaskGroup[];
@@ -54,25 +54,34 @@ export function TodayEntriesSection({
 
   async function handleDelete(task: Task) {
     await deleteTask(taskRepo, task.id);
+    void notifyTasksChanged();
     reload();
   }
 
   async function handleToggleBillable(task: Task) {
     await updateTask(taskRepo, task.id, { billable: !task.billable }, new Date().toISOString());
+    void notifyTasksChanged();
     reload();
   }
 
   async function handleMerge(group: TaskGroup) {
     await mergeTaskGroup(taskRepo, group.tasks, new Date().toISOString());
+    void notifyTasksChanged();
     reload();
   }
 
   async function handleSaveGroup(
     group: TaskGroup,
-    updates: { name: string | null; projectId: string | null; categoryId: string | null; billable: boolean }
+    updates: {
+      name: string | null;
+      projectId: string | null;
+      categoryId: string | null;
+      billable: boolean;
+    }
   ) {
     const nowISO = new Date().toISOString();
     await Promise.all(group.tasks.map((t) => updateTask(taskRepo, t.id, updates, nowISO)));
+    void notifyTasksChanged();
     reload();
   }
 
