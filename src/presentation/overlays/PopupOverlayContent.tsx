@@ -11,7 +11,6 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
-import type { CommandPaletteNavigatePayload } from "@shared/types/overlayEvents";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
@@ -565,9 +564,7 @@ export function PopupOverlayContent({
   }
 
   async function handleOpenApp() {
-    await emit(OVERLAY_EVENTS.COMMAND_PALETTE_NAVIGATE, {
-      page: "tasks",
-    } satisfies CommandPaletteNavigatePayload);
+    await emit(OVERLAY_EVENTS.OVERLAY_OPEN_APP);
   }
 
   return (
