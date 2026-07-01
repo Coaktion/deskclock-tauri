@@ -25,6 +25,8 @@ import { positionPopupNearCompact } from "@shared/utils/windowPosition";
 import type { Theme } from "@shared/utils/theme";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { PopupOverlayContent } from "./PopupOverlayContent";
+import { MeetingPromptView } from "./MeetingPromptView";
+import { useMeetingPrompt } from "./useMeetingPrompt";
 
 const POPUP_W = 288;
 const POPUP_H_ESTIMATE = 380;
@@ -42,6 +44,11 @@ function PopupOverlayAppInner() {
   const isStartingTaskRef = useRef(false);
   const activePlannedTaskId = useRef<string | null>(null);
   const [activePlannedTaskActions, setActivePlannedTaskActions] = useState<PlannedTaskAction[]>([]);
+  const {
+    prompt: meetingPrompt,
+    respond: respondMeetingPrompt,
+    activeRef: meetingPromptActiveRef,
+  } = useMeetingPrompt({ width: POPUP_W, height: POPUP_H_ESTIMATE });
 
   // Programmatic resize with min/max locking to prevent manual resize
   const programmaticSetSize = useCallback(async (width: number, height: number) => {
@@ -166,26 +173,29 @@ function PopupOverlayAppInner() {
     };
   }, [config]);
 
-  // Close on blur (focus moved away from this popup)
+  // Close on blur (focus moved away from this popup). Enquanto um prompt de
+  // reunião está ativo, ignora o blur — o prompt não deve sumir sem resposta.
   useEffect(() => {
     const unlisten = appWindow.listen("tauri://blur", async () => {
+      if (meetingPromptActiveRef.current) return;
       await emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {});
       await appWindow.hide();
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [meetingPromptActiveRef]);
 
-  // ESC closes popup
+  // ESC closes popup — desativado enquanto um prompt de reunião aguarda resposta.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
+      if (meetingPromptActiveRef.current) return;
       void emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {}).then(() => appWindow.hide());
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [meetingPromptActiveRef]);
 
   const handleStartTask = useCallback(
     async (input: {
@@ -319,20 +329,24 @@ function PopupOverlayAppInner() {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <PopupOverlayContent
-        runningTask={runningTask}
-        activePlannedTaskActions={activePlannedTaskActions}
-        onClose={handleClose}
-        onNavigatePlanning={handleNavigatePlanning}
-        onResize={programmaticSetSize}
-        onStartTask={handleStartTask}
-        onPlay={handlePlay}
-        onPause={handlePause}
-        onResume={handleResume}
-        onStop={handleStop}
-        onCancel={handleCancel}
-        onUpdateTask={handleUpdate}
-      />
+      {meetingPrompt ? (
+        <MeetingPromptView prompt={meetingPrompt} onRespond={respondMeetingPrompt} />
+      ) : (
+        <PopupOverlayContent
+          runningTask={runningTask}
+          activePlannedTaskActions={activePlannedTaskActions}
+          onClose={handleClose}
+          onNavigatePlanning={handleNavigatePlanning}
+          onResize={programmaticSetSize}
+          onStartTask={handleStartTask}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onResume={handleResume}
+          onStop={handleStop}
+          onCancel={handleCancel}
+          onUpdateTask={handleUpdate}
+        />
+      )}
     </div>
   );
 }

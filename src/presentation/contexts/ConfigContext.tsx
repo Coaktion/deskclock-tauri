@@ -46,6 +46,7 @@ const DEFAULTS: AppConfig = {
   sheetsAutoSyncTime: "18:00",
   sheetsAutoSyncLastFiredDate: "",
   sheetsDailySyncLastTimestamp: "",
+  calendarAutoTrackingEnabled: false,
   googleAccessToken: "",
   googleRefreshToken: "",
   googleTokenExpiry: 0,

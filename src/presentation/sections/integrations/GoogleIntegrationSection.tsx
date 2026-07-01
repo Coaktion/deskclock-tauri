@@ -457,6 +457,13 @@ function SheetsSection({
 
 function CalendarSection({ disabled }: { disabled: boolean }) {
   const { openModal } = useIntegrationsUi();
+  const config = useAppConfig();
+  const [autoTracking, setAutoTracking] = useState(false);
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    setAutoTracking(config.get("calendarAutoTrackingEnabled"));
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
@@ -471,6 +478,22 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
           <CalendarDays size={13} />
           Importar eventos
         </button>
+      </div>
+      <div className="border-t border-gray-800">
+        <Row label="Rastrear reuniões automaticamente">
+          <Toggle
+            checked={autoTracking}
+            onChange={async (v) => {
+              setAutoTracking(v);
+              await config.set("calendarAutoTrackingEnabled", v);
+            }}
+          />
+        </Row>
+        <p className="text-[11px] text-gray-500 leading-relaxed pb-2.5">
+          Ao abrir o app e a cada 30 minutos, busca os eventos do dia e pergunta, no horário de
+          início, se deseja iniciar cada reunião. Ao fim do evento, pergunta se ainda está em
+          andamento.
+        </p>
       </div>
       <div className="flex items-start gap-2 mb-2 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
         <Info size={12} className="text-blue-400 shrink-0 mt-0.5" />
