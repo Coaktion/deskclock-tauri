@@ -50,6 +50,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IntegrationTile, Row, StatusBadge, SubSection, Toggle } from "./shared";
+import { emit } from "@tauri-apps/api/event";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
 export const ALL_GOOGLE_SCOPES = [
@@ -459,11 +461,20 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
   const { openModal } = useIntegrationsUi();
   const config = useAppConfig();
   const [autoTracking, setAutoTracking] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!config.isLoaded) return;
     setAutoTracking(config.get("calendarAutoTrackingEnabled"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSearchNow() {
+    setSearching(true);
+    await emit(OVERLAY_EVENTS.MEETING_TRACKER_SYNC_NOW, {});
+    // O resultado chega via toast disparado pelo useMeetingTracker; liberamos o
+    // botão após um curto intervalo para evitar cliques repetidos.
+    setTimeout(() => setSearching(false), 2500);
+  }
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
@@ -494,6 +505,18 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
           início, se deseja iniciar cada reunião. Ao fim do evento, pergunta se ainda está em
           andamento.
         </p>
+        {autoTracking && (
+          <div className="pb-2.5">
+            <button
+              onClick={handleSearchNow}
+              disabled={searching}
+              className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors border border-gray-700"
+            >
+              <RefreshCw size={12} className={searching ? "animate-spin" : ""} />
+              {searching ? "Buscando…" : "Buscar eventos agora"}
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex items-start gap-2 mb-2 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
         <Info size={12} className="text-blue-400 shrink-0 mt-0.5" />

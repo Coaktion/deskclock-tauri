@@ -17,6 +17,11 @@ export interface MeetingPromptOptions {
    * meio de uma reunião ainda oferece o início.
    */
   startPromptGraceMs?: number;
+  /**
+   * Intervalo (ms) para re-perguntar o início após "Adiar" (ou se ignorado),
+   * enquanto dentro da janela do evento. Se omitido, o prompt de início é único.
+   */
+  startRepromptMs?: number;
   /** Intervalo (ms) para re-perguntar se a reunião ainda está em andamento. Padrão: 15 min. */
   endRepromptMs?: number;
 }
@@ -29,8 +34,9 @@ const DEFAULT_END_REPROMPT_MS = 15 * 60 * 1000;
  * iniciar/parar tarefa, persistir estado) fica na camada de apresentação.
  *
  * Regras:
- * - **Início**: uma única vez, quando `now` está dentro da janela do evento e a
- *   reunião ainda não foi iniciada nem dispensada.
+ * - **Início**: dentro da janela do evento, enquanto a reunião não foi iniciada
+ *   nem dispensada. Sem `startRepromptMs` é único; com ele, re-pergunta nessa
+ *   cadência (ex.: "Adiar por 5 min"). "Dispensar" grava `startDismissed` e encerra.
  * - **Fim**: quando a reunião foi iniciada como tarefa e o horário de término já
  *   passou; re-pergunta a cada `endRepromptMs` enquanto não for encerrada.
  */
@@ -61,8 +67,14 @@ export function computeMeetingPromptActions(
       continue;
     }
 
-    // Prompt de início: único, dentro da janela do evento (com antecedência opcional).
-    if (m.startDismissed || m.startPromptedAt !== null) continue;
+    // Prompt de início: dentro da janela do evento (com antecedência opcional).
+    // "Dispensar" (startDismissed) encerra de vez; "Adiar" reapresenta após startRepromptMs.
+    if (m.startDismissed) continue;
+    const promptedTooRecently =
+      m.startPromptedAt !== null &&
+      (options.startRepromptMs === undefined ||
+        now - new Date(m.startPromptedAt).getTime() < options.startRepromptMs);
+    if (promptedTooRecently) continue;
     const startLeadMs = options.startLeadMs ?? 0;
     const withinWindow =
       now >= start - startLeadMs &&

@@ -13,10 +13,10 @@ import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useTour } from "@presentation/hooks/useTour";
+import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -88,6 +88,7 @@ export function WeekPlanningView() {
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
   const { startTask, runningTask } = useRunningTask();
+  const { titles: trackedTitles, today: trackedToday } = useTrackedMeetingTitles();
 
   const calendarConnected = config.isLoaded && !!config.get("googleRefreshToken");
 
@@ -200,7 +201,10 @@ export function WeekPlanningView() {
   return (
     <div className="flex flex-col">
       {/* ── Header: week selector + completed count ─────────────────────────── */}
-      <div data-tour="planning-header" className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
+      <div
+        data-tour="planning-header"
+        className="flex items-center gap-2 px-4 py-3 border-b border-gray-800"
+      >
         <button
           onClick={() => {
             setWeekOffset((o) => o - 1);
@@ -287,52 +291,52 @@ export function WeekPlanningView() {
 
       {/* ── Day filter pills ─────────────────────────────────────────────────── */}
       <div data-tour="planning-day-filter" className="border-b border-gray-800">
-      <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
-        <button
-          onClick={() => setDayFilter("all")}
-          className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
-            dayFilter === "all"
-              ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-              : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-          }`}
-        >
-          Todos
-        </button>
-        {visibleDays.map((day) => {
-          const isToday = day === today;
-          const dow = new Date(day + "T12:00:00Z").getUTCDay();
-          return (
-            <button
-              key={day}
-              onClick={() => setDayFilter((prev) => (prev === day ? "all" : day))}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap relative ${
-                dayFilter === day
-                  ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                  : isToday
-                    ? "bg-transparent border-blue-500/20 text-gray-300 hover:border-blue-500/40"
-                    : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-              }`}
-            >
-              {DAY_SHORT[dow]}
-              {isToday && (
-                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+        <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
+          <button
+            onClick={() => setDayFilter("all")}
+            className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
+              dayFilter === "all"
+                ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+                : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
+            }`}
+          >
+            Todos
+          </button>
+          {visibleDays.map((day) => {
+            const isToday = day === today;
+            const dow = new Date(day + "T12:00:00Z").getUTCDay();
+            return (
+              <button
+                key={day}
+                onClick={() => setDayFilter((prev) => (prev === day ? "all" : day))}
+                className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap relative ${
+                  dayFilter === day
+                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+                    : isToday
+                      ? "bg-transparent border-blue-500/20 text-gray-300 hover:border-blue-500/40"
+                      : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
+                }`}
+              >
+                {DAY_SHORT[dow]}
+                {isToday && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ── Form ─────────────────────────────────────────────────────────────── */}
       <div data-tour="planning-form">
-      <PlannedTaskForm
-        key={dayFilter !== "all" ? dayFilter : start}
-        projects={projects}
-        categories={categories}
-        showDateFields={true}
-        defaultDate={dayFilter !== "all" ? dayFilter : today}
-        onSubmit={create}
-      />
+        <PlannedTaskForm
+          key={dayFilter !== "all" ? dayFilter : start}
+          projects={projects}
+          categories={categories}
+          showDateFields={true}
+          defaultDate={dayFilter !== "all" ? dayFilter : today}
+          onSubmit={create}
+        />
       </div>
 
       {/* ── Google Calendar import modal ─────────────────────────────────────── */}
@@ -351,70 +355,73 @@ export function WeekPlanningView() {
 
       {/* ── Task list grouped by day ──────────────────────────────────────────── */}
       <div data-tour="planning-task-list">
-      {filteredDays.map((day) => {
-        const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
-        if (dayTasks.length === 0 && dayFilter !== "all") return null;
+        {filteredDays.map((day) => {
+          const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
+          if (dayTasks.length === 0 && dayFilter !== "all") return null;
 
-        const dayDate = new Date(day + "T12:00:00Z");
-        const isToday = day === today;
-        const dayLabel = `${DAY_SHORT[dayDate.getUTCDay()]}, ${String(dayDate.getUTCDate()).padStart(2, "0")}/${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}`;
-        const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
+          const dayDate = new Date(day + "T12:00:00Z");
+          const isToday = day === today;
+          const dayLabel = `${DAY_SHORT[dayDate.getUTCDay()]}, ${String(dayDate.getUTCDate()).padStart(2, "0")}/${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}`;
+          const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
 
-        return (
-          <div key={day}>
-            <div
-              className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
-            >
-              <span
-                className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
+          return (
+            <div key={day}>
+              <div
+                className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
               >
-                {dayLabel}
-                {isToday && (
-                  <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>
-                )}
-              </span>
-              <div className="ml-auto flex items-center gap-2">
-                {selectMode && dayTasks.length > 0 && (
-                  <button
-                    onClick={() => toggleSelectAllForDay(day)}
-                    className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
-                  >
-                    {dayTasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
-                  </button>
-                )}
-                {dayTasks.length > 0 && (
-                  <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
-                    {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
-                  </span>
-                )}
+                <span
+                  className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
+                >
+                  {dayLabel}
+                  {isToday && (
+                    <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>
+                  )}
+                </span>
+                <div className="ml-auto flex items-center gap-2">
+                  {selectMode && dayTasks.length > 0 && (
+                    <button
+                      onClick={() => toggleSelectAllForDay(day)}
+                      className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      {dayTasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
+                    </button>
+                  )}
+                  {dayTasks.length > 0 && (
+                    <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
+                      {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
+                    </span>
+                  )}
+                </div>
               </div>
+              {dayTasks.length === 0 ? (
+                <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
+              ) : (
+                dayTasks.map((task) => (
+                  <PlannedTaskItem
+                    key={task.id}
+                    task={task}
+                    dateISO={day}
+                    projects={projects}
+                    categories={categories}
+                    playDisabled={!!runningTask}
+                    tracked={
+                      day === trackedToday && trackedTitles.has(task.name.toLowerCase().trim())
+                    }
+                    onPlay={handlePlay}
+                    onUpdate={update}
+                    onComplete={complete}
+                    onUncomplete={uncomplete}
+                    onDuplicate={duplicate}
+                    onDelete={remove}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(task.id)}
+                    onToggleSelect={toggleSelectTask}
+                  />
+                ))
+              )}
             </div>
-            {dayTasks.length === 0 ? (
-              <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
-            ) : (
-              dayTasks.map((task) => (
-                <PlannedTaskItem
-                  key={task.id}
-                  task={task}
-                  dateISO={day}
-                  projects={projects}
-                  categories={categories}
-                  playDisabled={!!runningTask}
-                  onPlay={handlePlay}
-                  onUpdate={update}
-                  onComplete={complete}
-                  onUncomplete={uncomplete}
-                  onDuplicate={duplicate}
-                  onDelete={remove}
-                  selectMode={selectMode}
-                  selected={selectedIds.has(task.id)}
-                  onToggleSelect={toggleSelectTask}
-                />
-              ))
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
       </div>
     </div>
   );

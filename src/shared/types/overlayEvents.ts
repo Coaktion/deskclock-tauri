@@ -20,6 +20,7 @@ export const OVERLAY_EVENTS = {
   OVERLAY_POPUP_CLOSED: "overlay-popup:closed",
   MEETING_PROMPT: "meeting-prompt",
   MEETING_PROMPT_RESPONSE: "meeting-prompt:response",
+  MEETING_TRACKER_SYNC_NOW: "meeting-tracker:sync-now",
 } as const;
 
 export interface CommandPaletteNavigatePayload {
@@ -67,13 +68,13 @@ export interface MeetingPromptPayload {
 
 /**
  * overlay-popup → main: resposta do usuário ao prompt.
- * - kind "start": action "start" (iniciar) | "dismiss" (agora não)
+ * - kind "start": action "start" (iniciar) | "snooze" (adiar 5 min) | "dismiss" (não perguntar mais hoje)
  * - kind "end":   action "stop" (encerrar)  | "still-going" (ainda em andamento)
  */
 export interface MeetingPromptResponsePayload {
   kind: MeetingPromptKind;
   calendarEventId: string;
-  action: "start" | "dismiss" | "stop" | "still-going";
+  action: "start" | "snooze" | "dismiss" | "stop" | "still-going";
 }
 
 export type ToastVariant = "success" | "error" | "info" | "update" | "warning";

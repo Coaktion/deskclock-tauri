@@ -17,6 +17,7 @@ import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time"
 import { emit } from "@tauri-apps/api/event";
 import {
   ArrowRight,
+  Bell,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -28,6 +29,7 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
 import { useEffect, useRef, useState } from "react";
 
 const POPUP_W = 288;
@@ -519,6 +521,7 @@ export function PopupOverlayContent({
 }: PopupOverlayContentProps) {
   const today = todayISO();
   const { tasks, reload, complete } = usePlannedTasksForDate(today);
+  const { titles: trackedTitles } = useTrackedMeetingTitles();
   const { groups: completedGroups, totalSeconds: completedTotalSeconds } =
     useCompletedTasksForDate(today);
   const { projects } = useProjects();
@@ -677,9 +680,19 @@ export function PopupOverlayContent({
                           style={{ backgroundColor: railColor }}
                         />
                         <div className="flex-1 min-w-0 pl-1.5">
-                          <p className="text-[12px] font-medium text-gray-200 truncate leading-tight">
-                            {task.name}
-                          </p>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <p className="text-[12px] font-medium text-gray-200 truncate leading-tight">
+                              {task.name}
+                            </p>
+                            {trackedTitles.has((task.name ?? "").toLowerCase().trim()) && (
+                              <span
+                                className="shrink-0 flex items-center text-blue-400/80"
+                                title="Rastreada — o app vai lembrar de iniciar esta reunião"
+                              >
+                                <Bell size={10} />
+                              </span>
+                            )}
+                          </div>
                           {subtitle && (
                             <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
                               {subtitle}
