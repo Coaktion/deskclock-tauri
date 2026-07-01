@@ -99,3 +99,12 @@ pub fn open_in_file_manager(path: String) -> Result<(), String> {
 pub fn save_file(path: String, content: Vec<u8>) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| e.to_string())
 }
+
+/// Registra no log da aplicação um erro reportado pelo frontend. O frontend não
+/// tem acesso ao target de arquivo do tauri-plugin-log; em builds de release este
+/// é o único caminho para persistir falhas (ex.: carga do banco/migrations) que
+/// de outra forma seriam invisíveis.
+#[tauri::command]
+pub fn log_frontend_error(context: String, message: String) {
+    log::error!("[frontend:{context}] {message}");
+}
