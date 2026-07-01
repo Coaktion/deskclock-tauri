@@ -37,10 +37,16 @@ export function MeetingPromptView({ prompt, onRespond }: MeetingPromptViewProps)
                 Iniciar
               </button>
               <button
-                onClick={() => onRespond("dismiss")}
+                onClick={() => onRespond("snooze")}
                 className="w-full px-3 py-2 text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 rounded transition-colors"
               >
-                Agora não
+                Adiar por 5 min
+              </button>
+              <button
+                onClick={() => onRespond("dismiss")}
+                className="w-full px-3 py-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Dispensar
               </button>
             </>
           ) : (

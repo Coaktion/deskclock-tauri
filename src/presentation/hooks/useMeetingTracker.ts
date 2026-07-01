@@ -13,12 +13,15 @@ import {
   type RunningTaskChangedPayload,
 } from "@shared/types/overlayEvents";
 import { endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
+import { showToast } from "@shared/utils/toast";
 
 const TICK_MS = 60_000;
 const SYNC_INTERVAL_MS = 30 * 60 * 1000;
 // Antecedência do prompt de início: aparece até 1 min antes do horário do evento
 // para o usuário entrar na reunião já com a tarefa rodando.
 const START_LEAD_MS = 60_000;
+// Cadência de re-pergunta do início após "Adiar por 5 min" (ou se ignorado).
+const START_REPROMPT_MS = 5 * 60 * 1000;
 // Atraso do primeiro tick para dar tempo de a janela overlay-popup (persistente,
 // criada oculta no startup) registrar o listener de MEETING_PROMPT antes de o
 // primeiro prompt ser emitido — evita perder o prompt logo na abertura do app.
@@ -56,7 +59,7 @@ export function useMeetingTracker() {
 
     async function runSync() {
       const today = todayISO();
-      const result = await syncTodayMeetings(
+      const result: Awaited<ReturnType<typeof syncTodayMeetings>> | null = await syncTodayMeetings(
         {
           importer: createCalendarImporter(),
           trackedRepo: trackedMeetingRepo,
@@ -75,12 +78,14 @@ export function useMeetingTracker() {
       if (result && result.plannedCreated > 0) {
         await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       }
+      return result;
     }
 
     async function runPromptCheck() {
       const meetings = await trackedMeetingRepo.listForDate(todayISO());
       const [action] = computeMeetingPromptActions(new Date().toISOString(), meetings, {
         startLeadMs: START_LEAD_MS,
+        startRepromptMs: START_REPROMPT_MS,
       });
       if (!action) return;
 
@@ -160,7 +165,24 @@ export function useMeetingTracker() {
         await stopRef.current(true);
         if (m) await trackedMeetingRepo.upsert({ ...m, ended: true });
       }
-      // "still-going": nada a fazer — lastEndPromptAt já foi marcado ao emitir.
+      // "snooze": nada a fazer — startPromptedAt já foi marcado ao emitir; o
+      // startRepromptMs reapresenta em 5 min. "still-going": idem para o fim.
+    }
+
+    // Busca manual disparada pelo botão "Buscar eventos agora" nas Configurações.
+    async function handleSyncNow() {
+      if (disposed || inFlight || !enabled()) return;
+      inFlight = true;
+      try {
+        lastSyncMs = Date.now();
+        const result = await runSync();
+        await runPromptCheck();
+        const tracked = result?.tracked ?? 0;
+        if (tracked > 0) await showToast("success", `${tracked} reunião(ões) rastreada(s)`);
+        else await showToast("info", "Nenhum evento novo na agenda de hoje");
+      } finally {
+        inFlight = false;
+      }
     }
 
     // Encerramento do rastreamento: qualquer caminho de parada (janela principal,
@@ -186,6 +208,10 @@ export function useMeetingTracker() {
       OVERLAY_EVENTS.RUNNING_TASK_CHANGED,
       ({ payload }) => void handleRunningTaskChanged(payload)
     );
+    const unlistenSyncNow = listen(
+      OVERLAY_EVENTS.MEETING_TRACKER_SYNC_NOW,
+      () => void handleSyncNow()
+    );
 
     const initialTimer = setTimeout(() => void tick(), INITIAL_TICK_DELAY_MS);
     const interval = setInterval(() => void tick(), TICK_MS);
@@ -196,6 +222,7 @@ export function useMeetingTracker() {
       clearInterval(interval);
       unlistenResponse.then((fn) => fn());
       unlistenRunningChanged.then((fn) => fn());
+      unlistenSyncNow.then((fn) => fn());
     };
     // createCalendarImporter e os repos vêm de Providers e são estáveis por sessão;
     // capturá-los uma vez no mount é seguro (§9.2).

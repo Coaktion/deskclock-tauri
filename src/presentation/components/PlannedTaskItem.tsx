@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play, Check, Copy, Trash2, RotateCcw, Pencil, Zap, RefreshCw } from "lucide-react";
+import { Play, Check, Copy, Trash2, RotateCcw, Pencil, Zap, RefreshCw, Bell } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -15,6 +15,8 @@ interface PlannedTaskItemProps {
   projects: Project[];
   categories: Category[];
   playDisabled?: boolean;
+  /** true quando o rastreamento automático está acompanhando esta reunião para notificar. */
+  tracked?: boolean;
   onPlay: (task: PlannedTask) => void;
   onUpdate: (
     id: string,
@@ -46,6 +48,7 @@ export function PlannedTaskItem({
   projects,
   categories,
   playDisabled = false,
+  tracked = false,
   onPlay,
   onUpdate,
   onComplete,
@@ -111,6 +114,14 @@ export function PlannedTaskItem({
                 <RefreshCw size={9} />
               </span>
             )}
+            {tracked && (
+              <span
+                className="shrink-0 flex items-center text-blue-400/80 leading-none"
+                title="Rastreada — o app vai lembrar de iniciar esta reunião"
+              >
+                <Bell size={10} />
+              </span>
+            )}
           </div>
           {(project || category || task.actions.length > 0) && (
             <p className="text-[11px] text-gray-500 truncate mt-0.5 flex items-center gap-1.5 leading-snug">
@@ -128,51 +139,53 @@ export function PlannedTaskItem({
           )}
         </div>
 
-        {!selectMode && <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          {!isCompleted && !playDisabled && (
+        {!selectMode && (
+          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            {!isCompleted && !playDisabled && (
+              <button
+                onClick={() => onPlay(task)}
+                title="Iniciar"
+                className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
+              >
+                <Play size={13} />
+              </button>
+            )}
+
             <button
-              onClick={() => onPlay(task)}
-              title="Iniciar"
-              className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
+              onClick={() => setShowModal(true)}
+              title="Editar"
+              className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
             >
-              <Play size={13} />
+              <Pencil size={13} />
             </button>
-          )}
 
-          <button
-            onClick={() => setShowModal(true)}
-            title="Editar"
-            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-          >
-            <Pencil size={13} />
-          </button>
+            <button
+              onClick={() =>
+                isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
+              }
+              title={isCompleted ? "Marcar como pendente" : "Concluir"}
+              className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+            >
+              {isCompleted ? <RotateCcw size={13} /> : <Check size={13} />}
+            </button>
 
-          <button
-            onClick={() =>
-              isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
-            }
-            title={isCompleted ? "Marcar como pendente" : "Concluir"}
-            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-          >
-            {isCompleted ? <RotateCcw size={13} /> : <Check size={13} />}
-          </button>
+            <button
+              onClick={() => onDuplicate(task.id)}
+              title="Duplicar"
+              className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <Copy size={13} />
+            </button>
 
-          <button
-            onClick={() => onDuplicate(task.id)}
-            title="Duplicar"
-            className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <Copy size={13} />
-          </button>
-
-          <button
-            onClick={() => onDelete(task.id)}
-            title="Excluir"
-            className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-          >
-            <Trash2 size={13} />
-          </button>
-        </div>}
+            <button
+              onClick={() => onDelete(task.id)}
+              title="Excluir"
+              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        )}
       </div>
 
       {showModal && !selectMode && (

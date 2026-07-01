@@ -73,10 +73,38 @@ describe("computeMeetingPromptActions", () => {
       expect(actions).toEqual([]);
     });
 
-    it("não pede início de novo se já foi perguntado (prompt único)", () => {
+    it("sem startRepromptMs, não pede início de novo se já foi perguntado (único)", () => {
       const actions = computeMeetingPromptActions("2026-07-01T10:05:00.000Z", [
         makeMeeting({ startPromptedAt: "2026-07-01T10:00:00.000Z" }),
       ]);
+      expect(actions).toEqual([]);
+    });
+
+    it("com startRepromptMs, NÃO re-pergunta antes da cadência (Adiar)", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:03:00.000Z",
+        [makeMeeting({ startPromptedAt: "2026-07-01T10:00:00.000Z" })],
+        { startRepromptMs: 5 * 60 * 1000 }
+      );
+      expect(actions).toEqual([]);
+    });
+
+    it("com startRepromptMs, re-pergunta o início após a cadência (Adiar 5 min)", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:05:00.000Z",
+        [makeMeeting({ startPromptedAt: "2026-07-01T10:00:00.000Z" })],
+        { startRepromptMs: 5 * 60 * 1000 }
+      );
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("start");
+    });
+
+    it("com startRepromptMs, 'Dispensar' (startDismissed) encerra mesmo com cadência", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:10:00.000Z",
+        [makeMeeting({ startPromptedAt: "2026-07-01T10:00:00.000Z", startDismissed: true })],
+        { startRepromptMs: 5 * 60 * 1000 }
+      );
       expect(actions).toEqual([]);
     });
 
