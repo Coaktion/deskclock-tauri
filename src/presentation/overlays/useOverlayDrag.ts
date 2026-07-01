@@ -1,6 +1,6 @@
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
-import { positionNearTaskbar } from "@shared/utils/windowPosition";
+import { isPointOnScreen, positionNearTaskbar } from "@shared/utils/windowPosition";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import {
   currentMonitor,
@@ -8,7 +8,7 @@ import {
   monitorFromPoint,
   primaryMonitor,
 } from "@tauri-apps/api/window";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 type PositionKey =
   | "overlayPosition_compact"
@@ -17,8 +17,8 @@ type PositionKey =
 
 const appWindow = getCurrentWindow();
 
-/** Restores the saved overlay position or falls back to positionNearTaskbar. */
-export async function restoreOverlayPosition(
+/** Restores the saved overlay position, validated against connected monitors, or falls back to positionNearTaskbar. */
+async function restorePosition(
   configKey: PositionKey,
   config: ConfigContextValue,
   fallbackSize: { width: number; height: number }
@@ -26,7 +26,8 @@ export async function restoreOverlayPosition(
   const saved = config.get(configKey) as { x: number; y: number };
   // Check for explicit save (default sentinel is {x:-1, y:-1}); allow negative coords for
   // multi-monitor setups or DPI-offset windows positioned near the left/top edge.
-  if (saved && !(saved.x === -1 && saved.y === -1)) {
+  const hasSaved = saved && !(saved.x === -1 && saved.y === -1);
+  if (hasSaved && (await isPointOnScreen(saved.x, saved.y).catch(() => false))) {
     const pos = new PhysicalPosition(saved.x, saved.y);
     await appWindow.setPosition(pos).catch(() => {});
     setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
@@ -35,7 +36,8 @@ export async function restoreOverlayPosition(
   }
 }
 
-/** Handles drag-to-move with snap-to-grid and position persistence. */
+/** Handles drag-to-move with snap-to-grid and position persistence. Returns a
+ * restore function the caller must invoke once on mount to apply the saved position. */
 export function useOverlayDrag(
   configKey: PositionKey,
   snapToGrid: boolean,
@@ -46,6 +48,23 @@ export function useOverlayDrag(
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef({ x: 0, y: 0 });
   const isProgrammaticMoveRef = useRef(false);
+
+  // Restore is programmatic, not a user drag — guard the move listener below so it
+  // doesn't persist the restored (or off-screen fallback) position back into config,
+  // which would permanently overwrite the user's real saved position.
+  const restore = useCallback(
+    async (fallbackSize: { width: number; height: number }) => {
+      isProgrammaticMoveRef.current = true;
+      try {
+        await restorePosition(configKey, config, fallbackSize);
+      } finally {
+        setTimeout(() => {
+          isProgrammaticMoveRef.current = false;
+        }, 500);
+      }
+    },
+    [config, configKey]
+  );
 
   useEffect(() => {
     const unlisten = appWindow.listen<{ x: number; y: number }>("tauri://move", ({ payload }) => {
@@ -99,4 +118,6 @@ export function useOverlayDrag(
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [config, configKey, snapToGrid, onPositionChange, overlaySize]);
+
+  return restore;
 }

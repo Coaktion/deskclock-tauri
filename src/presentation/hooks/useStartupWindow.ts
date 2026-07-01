@@ -2,11 +2,7 @@ import { useCallback, useEffect, type RefObject } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import {
-  positionNearTaskbar,
-  centerOnWorkArea,
-  isPointOnScreen,
-} from "@shared/utils/windowPosition";
+import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 
 const appWindow = getCurrentWindow();
@@ -100,26 +96,16 @@ export function useStartupWindow(
       return;
     }
     // Overlay compact é always-on-top e deve aparecer mesmo antes de o setup ser
-    // concluído. O show() roda sempre (mesmo se o posicionamento falhar) e a
-    // posição salva é validada contra os monitores conectados — assim o overlay
-    // nunca fica fora da tela quando um monitor externo é desconectado.
+    // concluído. Apenas exibe — o próprio overlay já se reposiciona na própria
+    // posição salva ao montar (ver useOverlayDrag.restore), validando contra os
+    // monitores conectados. Reposicionar por aqui também criaria uma segunda
+    // gravação concorrente e faria o listener de drag do overlay persistir essa
+    // reposição como se fosse um arraste do usuário, sobrescrevendo a posição real.
     if (config.get("overlayAlwaysVisible")) {
       void (async () => {
         const compact = await getOverlayCompact();
         if (!compact) return;
-        try {
-          const savedPos = config.get("overlayPosition_compact") as { x: number; y: number } | null;
-          const hasSaved = savedPos !== null && !(savedPos.x === -1 && savedPos.y === -1);
-          if (hasSaved && (await isPointOnScreen(savedPos!.x, savedPos!.y))) {
-            await compact.setPosition(new PhysicalPosition(savedPos!.x, savedPos!.y));
-          } else {
-            await positionNearTaskbar(compact, { width: 52, height: 52 });
-          }
-        } catch {
-          // Posicionamento é best-effort — nunca deve impedir a exibição.
-        } finally {
-          await compact.show().catch(() => {});
-        }
+        await compact.show().catch(() => {});
       })();
     }
 

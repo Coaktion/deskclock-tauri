@@ -20,7 +20,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CompactOverlayContent } from "./CompactOverlayContent";
-import { restoreOverlayPosition, useOverlayDrag } from "./useOverlayDrag";
+import { useOverlayDrag } from "./useOverlayDrag";
 
 const appWindow = getCurrentWindow();
 
@@ -66,7 +66,13 @@ function CompactOverlayAppInner() {
     }
   }, []);
 
-  useOverlayDrag("overlayPosition_compact", snapToGrid, config, handlePositionChange, OVERLAY_VISUAL[overlaySize]);
+  const restoreCompactPosition = useOverlayDrag(
+    "overlayPosition_compact",
+    snapToGrid,
+    config,
+    handlePositionChange,
+    OVERLAY_VISUAL[overlaySize]
+  );
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -79,7 +85,7 @@ function CompactOverlayAppInner() {
     const h = OVERLAY_WINDOW_HEIGHT[size];
     void appWindow.setMinSize(new LogicalSize(52, h));
     void appWindow.setMaxSize(new LogicalSize(52, h));
-    void restoreOverlayPosition("overlayPosition_compact", config, OVERLAY_VISUAL[size]);
+    void restoreCompactPosition(OVERLAY_VISUAL[size]);
     // Load initial running task — RUNNING_TASK_CHANGED is only emitted on mutations,
     // not on startup, so we query the DB directly.
     void getActiveTasks(taskRepo).then((tasks) => {
