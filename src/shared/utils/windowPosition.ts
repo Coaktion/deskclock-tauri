@@ -73,14 +73,28 @@ export async function positionPopupNearCompact(
   setTimeout(() => popup.setPosition(pos).catch(() => {}), 150);
 }
 
-/** Returns true if the given physical point lies within some connected monitor. */
-export async function isPointOnScreen(x: number, y: number): Promise<boolean> {
-  try {
-    const monitor = await monitorFromPoint(x, y);
-    return monitor != null;
-  } catch {
-    return false;
-  }
+export interface MonitorRect {
+  position: { x: number; y: number };
+  size: { width: number; height: number };
+}
+
+/**
+ * Encaixa a janela (canto superior-esquerdo `pos` + `winSize`) inteiramente dentro
+ * do retângulo do monitor. Puro — usado para trazer uma posição salva de volta à
+ * tela mais próxima sem resetá-la para o canto oposto quando ela cai fora
+ * (ex.: monitor externo desconectado).
+ */
+export function clampIntoMonitor(
+  monitor: MonitorRect,
+  pos: { x: number; y: number },
+  winSize: { width: number; height: number }
+): { x: number; y: number } {
+  const maxX = monitor.position.x + Math.max(0, monitor.size.width - winSize.width);
+  const maxY = monitor.position.y + Math.max(0, monitor.size.height - winSize.height);
+  return {
+    x: Math.max(monitor.position.x, Math.min(pos.x, maxX)),
+    y: Math.max(monitor.position.y, Math.min(pos.y, maxY)),
+  };
 }
 
 export async function positionNearTaskbar(
