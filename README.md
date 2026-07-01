@@ -32,7 +32,14 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Seleção por dia ou individual por evento
 - Editor inline por evento: projeto, categoria, tipo de agendamento
 - Detecção automática de recorrência via RRULE
-- Filtra automaticamente eventos de local de trabalho, ausência e foco
+- Filtra eventos de local de trabalho e ausência; blocos de foco (focus time) **são** importados, pois costumam representar tarefas reais
+
+### Rastreamento automático de reuniões
+- Ativável no card do Google (requer conta conectada): "Rastrear reuniões automaticamente"
+- Busca os eventos com horário do dia ao abrir o app e a cada 30 minutos, importando como planejadas (sem duplicar)
+- No horário de início (até 1 min antes), exibe aviso junto ao overlay para iniciar a tarefa — se houver tarefa em execução, ela é finalizada e a da reunião assume
+- Ao fim do evento, pergunta se ainda está em andamento; re-pergunta a cada 15 minutos até encerrar (nunca para sozinho)
+- Projeto e categoria pré-preenchidos a partir da descrição do evento (`Projeto:` / `Categoria:`)
 
 ### Histórico
 - Filtros rápidos: Hoje, 7 dias, 30 dias, Este mês
@@ -52,7 +59,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 
 ### Integrações
 - **Google Sheets:** envio manual pela tela de Integrações ou automático ao concluir tarefa; duração como formato de hora nativo da planilha
-- **Google Calendar:** importação de eventos como tarefas planejadas (ver seção acima)
+- **Google Calendar:** importação de eventos como tarefas planejadas + rastreamento automático de reuniões com avisos de início/fim (ver seções acima)
 - Conexão OAuth única para Sheets + Calendar
 - **Clockify:** envio de time-entries via API Key; importação de projetos/tags como entidades do DeskClock; mapeamento por workspace; tags padrão; auto-sync por tarefa ou diário; **modal "Gerenciar apontamentos" com CRUD direto sobre as time entries do Clockify** (criar, editar inline, excluir; filtros por período e por tags padrão)
 

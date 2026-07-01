@@ -614,7 +614,7 @@
   </a>
 
   <div class="sidebar-footer">
-    v1.7.0 · DeskClock
+    v1.9.0 · DeskClock
   </div>
 </nav>
 
@@ -1346,7 +1346,7 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Importar eventos</div>
-        <p>Importe eventos da semana atual como tarefas planejadas. Reuniões de foco, home office e ausências são filtradas — apenas eventos de trabalho real são importados.</p>
+        <p>Importe eventos da semana atual como tarefas planejadas. Home office e ausências são filtrados; blocos de foco (focus time) <strong>são</strong> importados, pois costumam representar tarefas reais que você vai executar.</p>
       </div>
     </div>
 
@@ -1358,6 +1358,18 @@
     <div class="callout success">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       <div class="callout-body"><strong>Horários preservados:</strong> ao importar, o início e fim do evento são salvos na tarefa planejada. Na tela de Lançamento manual, tarefas com horário definido podem ser lançadas com um clique, sem precisar preencher o formulário.</div>
+    </div>
+
+    <h3>Rastreamento automático de reuniões</h3>
+    <p>Ative <strong>"Rastrear reuniões automaticamente"</strong> no card do Google (requer conta conectada) para que o DeskClock acompanhe sua agenda sem intervenção. Ao abrir o app e a cada 30 minutos, ele busca os eventos com horário do dia, importa como tarefas planejadas (sem duplicar as já existentes) e, no horário de cada reunião, exibe um aviso junto ao overlay perguntando se deseja iniciar a tarefa.</p>
+    <ul>
+      <li><strong>Início:</strong> o aviso aparece até 1 minuto antes do horário do evento. Ao confirmar, a tarefa começa — se já houver uma tarefa em execução, ela é finalizada e a da reunião assume.</li>
+      <li><strong>Fim:</strong> ao chegar o horário de término, o app não para sozinho — pergunta se a reunião ainda está em andamento. Se estiver, ele volta a perguntar a cada 15 minutos até você encerrar.</li>
+      <li><strong>Projeto e categoria:</strong> preenchidos automaticamente a partir da descrição do evento (mesma convenção <code>Projeto:</code> / <code>Categoria:</code> do pré-mapeamento acima).</li>
+    </ul>
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body">O aviso surge em até ~1 minuto do horário-alvo (o app verifica a agenda periodicamente). Novos eventos criados durante o dia são captados na próxima busca (até 30 min) ou ao reabrir o app.</div>
     </div>
   </section>
 
