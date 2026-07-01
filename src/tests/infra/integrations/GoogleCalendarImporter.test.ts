@@ -157,10 +157,10 @@ describe("GoogleCalendarImporter", () => {
       expect(events).toHaveLength(0);
     });
 
-    it("filtra eventos do tipo focusTime", async () => {
+    it("preserva eventos do tipo focusTime (blocos de foco viram tarefas)", async () => {
       mockApiResponse([{ ...baseEvent, eventType: "focusTime" }]);
       const events = await importer.getEvents("2026-04-14T00:00:00Z", "2026-04-21T00:00:00Z");
-      expect(events).toHaveLength(0);
+      expect(events).toHaveLength(1);
     });
 
     it("preserva eventos com eventType desconhecido", async () => {

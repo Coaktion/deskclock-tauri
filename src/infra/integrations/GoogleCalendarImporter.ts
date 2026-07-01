@@ -46,7 +46,9 @@ export class GoogleCalendarImporter implements ICalendarImporter {
   async getEvents(fromISO: string, toISO: string): Promise<CalendarEvent[]> {
     const token = await this.tokenManager.getValidAccessToken();
 
-    const IGNORED_TYPES = new Set(["workingLocation", "outOfOffice", "focusTime"]);
+    // focusTime é intencionalmente NÃO ignorado: blocos de foco costumam representar
+    // tarefas reais que o usuário vai executar, então devem ser importados/rastreados.
+    const IGNORED_TYPES = new Set(["workingLocation", "outOfOffice"]);
     const allRaw: GoogleEvent[] = [];
     let pageToken: string | undefined;
 
