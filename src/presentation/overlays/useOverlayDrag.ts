@@ -1,6 +1,6 @@
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { snapPositionToGrid } from "@shared/utils/snapToGrid";
-import { isPointOnScreen, positionNearTaskbar } from "@shared/utils/windowPosition";
+import { clampIntoMonitor, positionNearTaskbar } from "@shared/utils/windowPosition";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import {
   currentMonitor,
@@ -17,23 +17,60 @@ type PositionKey =
 
 const appWindow = getCurrentWindow();
 
-/** Restores the saved overlay position, validated against connected monitors, or falls back to positionNearTaskbar. */
+/**
+ * Resolve para onde a janela deve ir dada a posição salva: mantém a posição se o
+ * CENTRO da janela cai em algum monitor; se cair fora de todos (ex.: monitor
+ * externo desconectado), encaixa na tela mais próxima em vez de resetar.
+ *
+ * Usar o centro — e não o canto superior-esquerdo — é essencial: uma janela sem
+ * moldura encostada na borda esquerda/inferior reporta o canto com coordenada
+ * levemente negativa (moldura invisível), o que fazia a checagem antiga rejeitar
+ * uma posição válida e cair no fallback do canto oposto.
+ */
+async function resolveVisiblePosition(
+  saved: { x: number; y: number },
+  fallbackSize: { width: number; height: number }
+): Promise<{ x: number; y: number }> {
+  const outer = await appWindow.outerSize().catch(() => null);
+  const w = outer && outer.width > 0 ? outer.width : fallbackSize.width;
+  const h = outer && outer.height > 0 ? outer.height : fallbackSize.height;
+
+  const cx = saved.x + Math.round(w / 2);
+  const cy = saved.y + Math.round(h / 2);
+  const onScreen = await monitorFromPoint(cx, cy).catch(() => null);
+  if (onScreen) return saved;
+
+  const mon =
+    (await currentMonitor().catch(() => null)) ?? (await primaryMonitor().catch(() => null));
+  if (!mon) return saved;
+  return clampIntoMonitor(
+    {
+      position: { x: mon.position.x, y: mon.position.y },
+      size: { width: mon.size.width, height: mon.size.height },
+    },
+    saved,
+    { width: w, height: h }
+  );
+}
+
+/** Restores the saved overlay position (clamping into the nearest monitor if off-screen),
+ * or falls back to positionNearTaskbar when there is no saved position yet. */
 async function restorePosition(
   configKey: PositionKey,
   config: ConfigContextValue,
   fallbackSize: { width: number; height: number }
 ) {
   const saved = config.get(configKey) as { x: number; y: number };
-  // Check for explicit save (default sentinel is {x:-1, y:-1}); allow negative coords for
-  // multi-monitor setups or DPI-offset windows positioned near the left/top edge.
+  // Sentinela padrão {x:-1, y:-1} = nunca posicionado → canto padrão perto da bandeja.
   const hasSaved = saved && !(saved.x === -1 && saved.y === -1);
-  if (hasSaved && (await isPointOnScreen(saved.x, saved.y).catch(() => false))) {
-    const pos = new PhysicalPosition(saved.x, saved.y);
-    await appWindow.setPosition(pos).catch(() => {});
-    setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
-  } else {
+  if (!hasSaved) {
     void positionNearTaskbar(appWindow, fallbackSize);
+    return;
   }
+  const target = await resolveVisiblePosition(saved, fallbackSize);
+  const pos = new PhysicalPosition(target.x, target.y);
+  await appWindow.setPosition(pos).catch(() => {});
+  setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
 }
 
 /** Handles drag-to-move with snap-to-grid and position persistence. Returns a
