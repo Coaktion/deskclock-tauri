@@ -15,6 +15,7 @@ import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRo
 import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
 import { useDeepLink } from "@presentation/hooks/useDeepLink";
 import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
+import { useMeetingTracker } from "@presentation/hooks/useMeetingTracker";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
@@ -80,6 +81,9 @@ function MainContent({
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const { projectRepo, categoryRepo } = useRepositories();
   const config = useAppConfig();
+
+  // Rastreamento automático de reuniões do Google Agenda (gated por config).
+  useMeetingTracker();
 
   // Ctrl+1–7 navigates directly
   useEffect(() => {

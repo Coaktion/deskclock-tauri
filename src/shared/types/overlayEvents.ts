@@ -18,6 +18,8 @@ export const OVERLAY_EVENTS = {
   DEEPLINK_START_TASK: "deeplink:start-task",
   DEEPLINK_RETROACTIVE_PREFILL: "deeplink:retroactive-prefill",
   OVERLAY_POPUP_CLOSED: "overlay-popup:closed",
+  MEETING_PROMPT: "meeting-prompt",
+  MEETING_PROMPT_RESPONSE: "meeting-prompt:response",
 } as const;
 
 export interface CommandPaletteNavigatePayload {
@@ -51,6 +53,27 @@ export interface TaskStoppedPayload {
   task: Task;
   completed: boolean;
   plannedTaskId?: string | null;
+}
+
+/** Tipo de prompt de reunião: início do evento ou fim (ainda em andamento?). */
+export type MeetingPromptKind = "start" | "end";
+
+/** main → overlay-popup: solicita exibição de um prompt de reunião. */
+export interface MeetingPromptPayload {
+  kind: MeetingPromptKind;
+  calendarEventId: string;
+  title: string;
+}
+
+/**
+ * overlay-popup → main: resposta do usuário ao prompt.
+ * - kind "start": action "start" (iniciar) | "dismiss" (agora não)
+ * - kind "end":   action "stop" (encerrar)  | "still-going" (ainda em andamento)
+ */
+export interface MeetingPromptResponsePayload {
+  kind: MeetingPromptKind;
+  calendarEventId: string;
+  action: "start" | "dismiss" | "stop" | "still-going";
 }
 
 export type ToastVariant = "success" | "error" | "info" | "update" | "warning";

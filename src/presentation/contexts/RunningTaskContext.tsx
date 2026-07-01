@@ -37,6 +37,13 @@ export interface RunningTaskContextValue {
   reloadSignal: number;
   activePlannedTaskId: string | null;
   startTask: (input: StartInput) => Promise<void>;
+  /**
+   * Encerra a tarefa atual (se houver, como concluída, aplicando as regras de
+   * pós-parada) e inicia uma nova. Usado pelo rastreamento de reuniões, onde a
+   * troca é intencional — diferente de startTask, que é no-op quando há tarefa
+   * em execução. Retorna a nova tarefa.
+   */
+  switchToTask: (input: StartInput) => Promise<Task | null>;
   pauseTask: () => Promise<void>;
   resumeTask: () => Promise<void>;
   stopTask: (completed: boolean, endTimeISO?: string) => Promise<void>;
@@ -114,6 +121,29 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     [taskRepo, runningTask, triggerReload]
   );
 
+  const switchToTask = useCallback(
+    async (input: StartInput): Promise<Task | null> => {
+      if (isStartingTaskRef.current) return null;
+      isStartingTaskRef.current = true;
+      try {
+        const nowISO = new Date().toISOString();
+        if (runningTask) {
+          const stopped = await stopTaskUC(taskRepo, runningTask.id, nowISO, nowISO);
+          await applyStopRules(stopped, activePlannedTaskId, true);
+        }
+        const task = await startTaskUC(taskRepo, input, nowISO);
+        setRunningTask(task);
+        setActivePlannedTaskId(input.plannedTaskId ?? null);
+        triggerReload();
+        await notifyOverlay(task, input.plannedTaskId ?? null);
+        return task;
+      } finally {
+        isStartingTaskRef.current = false;
+      }
+    },
+    [taskRepo, runningTask, activePlannedTaskId, triggerReload, applyStopRules]
+  );
+
   const pauseTask = useCallback(async () => {
     if (!runningTask) return;
     const updated = await pauseTaskUC(taskRepo, runningTask.id, new Date().toISOString());
@@ -169,6 +199,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         reloadSignal,
         activePlannedTaskId,
         startTask,
+        switchToTask,
         pauseTask,
         resumeTask,
         stopTask,
