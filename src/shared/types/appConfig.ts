@@ -52,6 +52,8 @@ export interface AppConfig {
   sheetsAutoSyncTime: string;
   sheetsAutoSyncLastFiredDate: string;
   sheetsDailySyncLastTimestamp: string;
+  // Google Agenda
+  calendarAutoTrackingEnabled: boolean;
   // Tokens Google OAuth
   googleAccessToken: string;
   googleRefreshToken: string;
