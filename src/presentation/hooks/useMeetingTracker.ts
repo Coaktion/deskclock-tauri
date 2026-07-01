@@ -16,6 +16,9 @@ import { endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
 
 const TICK_MS = 60_000;
 const SYNC_INTERVAL_MS = 30 * 60 * 1000;
+// Antecedência do prompt de início: aparece até 1 min antes do horário do evento
+// para o usuário entrar na reunião já com a tarefa rodando.
+const START_LEAD_MS = 60_000;
 // Atraso do primeiro tick para dar tempo de a janela overlay-popup (persistente,
 // criada oculta no startup) registrar o listener de MEETING_PROMPT antes de o
 // primeiro prompt ser emitido — evita perder o prompt logo na abertura do app.
@@ -30,7 +33,7 @@ const INITIAL_TICK_DELAY_MS = 4000;
 export function useMeetingTracker() {
   const config = useAppConfig();
   const { createCalendarImporter } = useIntegrations();
-  const { trackedMeetingRepo, plannedTaskRepo } = useRepositories();
+  const { trackedMeetingRepo, plannedTaskRepo, projectRepo, categoryRepo } = useRepositories();
   const { runningTask, switchToTask, stopTask } = useRunningTask();
 
   // Refs para uso dentro de intervalos/handlers sem stale closures.
@@ -53,11 +56,13 @@ export function useMeetingTracker() {
 
     async function runSync() {
       const today = todayISO();
-      await syncTodayMeetings(
+      const result = await syncTodayMeetings(
         {
           importer: createCalendarImporter(),
           trackedRepo: trackedMeetingRepo,
           plannedRepo: plannedTaskRepo,
+          projectRepo,
+          categoryRepo,
         },
         {
           todayISO: today,
@@ -65,12 +70,18 @@ export function useMeetingTracker() {
           toISO: endOfDayISO(today),
           nowISO: new Date().toISOString(),
         }
-      ).catch(() => {}); // busca é best-effort (rede/token)
+      ).catch(() => null); // busca é best-effort (rede/token)
+      // Novas planejadas criadas → avisa a UI para atualizar a lista ao vivo.
+      if (result && result.plannedCreated > 0) {
+        await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+      }
     }
 
     async function runPromptCheck() {
       const meetings = await trackedMeetingRepo.listForDate(todayISO());
-      const [action] = computeMeetingPromptActions(new Date().toISOString(), meetings);
+      const [action] = computeMeetingPromptActions(new Date().toISOString(), meetings, {
+        startLeadMs: START_LEAD_MS,
+      });
       if (!action) return;
 
       const m = action.meeting;

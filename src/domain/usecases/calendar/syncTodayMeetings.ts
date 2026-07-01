@@ -1,13 +1,25 @@
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
+import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import { importCalendarEvents } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
+import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { composeLocalISO, composeMeetingEndISO } from "./meetingTime";
 
 export interface SyncTodayMeetingsDeps {
   importer: ICalendarImporter;
   trackedRepo: ITrackedMeetingRepository;
   plannedRepo: IPlannedTaskRepository;
+  projectRepo: IProjectRepository;
+  categoryRepo: ICategoryRepository;
+}
+
+export interface SyncTodayMeetingsResult {
+  /** Quantos eventos novos foram rastreados. */
+  tracked: number;
+  /** Quantas PlannedTasks foram criadas (para o chamador emitir refresh da lista). */
+  plannedCreated: number;
 }
 
 export interface SyncTodayMeetingsRange {
@@ -28,19 +40,25 @@ export interface SyncTodayMeetingsRange {
  * 2. Cria PlannedTasks para eventos cujo nome ainda não está planejado (dedup por nome).
  * 3. Poda reuniões rastreadas de dias anteriores.
  *
- * Retorna quantos eventos novos foram rastreados.
+ * Projeto e categoria são pré-preenchidos a partir da descrição do evento
+ * (mesma convenção do modal manual: "Projeto:" / "Categoria:"), casando por nome
+ * contra os cadastros existentes.
+ *
+ * Retorna a contagem de eventos rastreados e de PlannedTasks criadas.
  */
 export async function syncTodayMeetings(
   deps: SyncTodayMeetingsDeps,
   range: SyncTodayMeetingsRange
-): Promise<number> {
-  const { importer, trackedRepo, plannedRepo } = deps;
+): Promise<SyncTodayMeetingsResult> {
+  const { importer, trackedRepo, plannedRepo, projectRepo, categoryRepo } = deps;
   const { todayISO, fromISO, toISO, nowISO } = range;
 
-  const [events, existing, plannedToday] = await Promise.all([
+  const [events, existing, plannedToday, projects, categories] = await Promise.all([
     importer.getEvents(fromISO, toISO),
     trackedRepo.listForDate(todayISO),
     plannedRepo.findForDate(todayISO),
+    projectRepo.findAll(),
+    categoryRepo.findAll(),
   ]);
 
   const existingIds = new Set(existing.map((m) => m.calendarEventId));
@@ -71,10 +89,11 @@ export async function syncTodayMeetings(
     const nameKey = e.title.toLowerCase().trim();
     if (!plannedNames.has(nameKey)) {
       plannedNames.add(nameKey);
+      const meta = parseCalendarMetadata(e.description);
       newPlannedInputs.push({
         event: e,
-        projectId: null,
-        categoryId: null,
+        projectId: findByNameCaseInsensitive(meta.projectName, projects)?.id ?? null,
+        categoryId: findByNameCaseInsensitive(meta.categoryName, categories)?.id ?? null,
         scheduleType: "specific_date",
         recurringDays: [],
       });
@@ -86,5 +105,5 @@ export async function syncTodayMeetings(
   }
 
   await trackedRepo.pruneBefore(todayISO);
-  return tracked;
+  return { tracked, plannedCreated: newPlannedInputs.length };
 }

@@ -7,6 +7,11 @@ export type MeetingPromptAction =
 
 export interface MeetingPromptOptions {
   /**
+   * Antecedência (ms) com que o prompt de início pode aparecer antes do horário
+   * do evento — permite entrar na reunião com a tarefa já rodando. Padrão: 0.
+   */
+  startLeadMs?: number;
+  /**
    * Janela (ms) após o início em que ainda faz sentido perguntar se quer iniciar.
    * Se omitido, usa o fim do evento (endISO) como limite — assim, abrir o app no
    * meio de uma reunião ainda oferece o início.
@@ -56,10 +61,11 @@ export function computeMeetingPromptActions(
       continue;
     }
 
-    // Prompt de início: único, dentro da janela do evento.
+    // Prompt de início: único, dentro da janela do evento (com antecedência opcional).
     if (m.startDismissed || m.startPromptedAt !== null) continue;
+    const startLeadMs = options.startLeadMs ?? 0;
     const withinWindow =
-      now >= start &&
+      now >= start - startLeadMs &&
       (options.startPromptGraceMs !== undefined
         ? now <= start + options.startPromptGraceMs
         : end === null || now <= end);

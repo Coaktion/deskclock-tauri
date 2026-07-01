@@ -44,6 +44,18 @@ describe("computeMeetingPromptActions", () => {
       expect(actions).toEqual([]);
     });
 
+    it("antecipa o prompt de início conforme startLeadMs", () => {
+      const opts = { startLeadMs: 60_000 };
+      // 1 min antes do início já dispara
+      expect(
+        computeMeetingPromptActions("2026-07-01T09:59:00.000Z", [makeMeeting()], opts)
+      ).toHaveLength(1);
+      // 2 min antes ainda não
+      expect(
+        computeMeetingPromptActions("2026-07-01T09:58:00.000Z", [makeMeeting()], opts)
+      ).toEqual([]);
+    });
+
     it("respeita startPromptGraceMs quando fornecido", () => {
       const opts = { startPromptGraceMs: 5 * 60 * 1000 };
       expect(
