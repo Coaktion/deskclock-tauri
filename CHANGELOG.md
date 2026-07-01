@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.9.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.2...v1.9.0) (2026-07-01)
+
+
+### Features
+
+* **Google Agenda:** rastreamento automático de reuniões. Com a conta conectada e a opção ligada no card do Google, o app busca os eventos com horário do dia (ao abrir e a cada 30 minutos), importa como tarefas planejadas e avisa junto ao overlay para iniciar cada reunião no horário — encerrando a tarefa anterior, se houver. Ao fim do evento, pergunta se ainda está em andamento, sem parar sozinho. Projeto e categoria são preenchidos a partir da descrição do evento
+* **Google Agenda:** blocos de foco (focus time) passam a ser importados como tarefas, tanto na importação manual quanto no rastreamento automático — antes eram ignorados
+
+
+### Bug Fixes
+
+* **overlay:** o overlay compacto volta a abrir na última posição definida por você — deixou de reaparecer numa posição padrão ao iniciar o app
+
 ### [1.8.3](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.2...v1.8.3) (2026-06-23)
 
 
