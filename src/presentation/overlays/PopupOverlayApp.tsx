@@ -35,7 +35,7 @@ const appWindow = getCurrentWindow();
 
 function PopupOverlayAppInner() {
   const config = useAppConfig();
-  const { taskRepo } = useRepositories();
+  const { taskRepo, plannedTaskRepo } = useRepositories();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
@@ -135,6 +135,15 @@ function PopupOverlayAppInner() {
           activePlannedTaskId.current = null;
         } else if (payload.plannedTaskId !== undefined) {
           activePlannedTaskId.current = payload.plannedTaskId;
+          // Carrega as ações da tarefa planejada de origem para exibir os chips.
+          // Vale para qualquer origem (janela principal, atalho ou aviso de reunião),
+          // não só o Play disparado a partir do próprio popup.
+          if (payload.plannedTaskId) {
+            const pt = await plannedTaskRepo.findById(payload.plannedTaskId).catch(() => null);
+            setActivePlannedTaskActions(pt?.actions ?? []);
+          } else {
+            setActivePlannedTaskActions([]);
+          }
         }
         if (payload.task) {
           if (config.get("overlayShowOnStart")) {
@@ -171,7 +180,7 @@ function PopupOverlayAppInner() {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [config]);
+  }, [config, plannedTaskRepo]);
 
   // Close on blur (focus moved away from this popup). Enquanto um prompt de
   // reunião está ativo, ignora o blur — o prompt não deve sumir sem resposta.
