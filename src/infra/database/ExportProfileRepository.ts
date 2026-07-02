@@ -26,7 +26,8 @@ function rowToProfile(r: ExportProfileRow): ExportProfile {
     id: r.id,
     name: r.name,
     isDefault: r.is_default === 1,
-    format: r.format as ExportFormat,
+    // Legacy profiles may hold the discontinued "xlsx" format; coerce to csv.
+    format: (r.format === "xlsx" ? "csv" : r.format) as ExportFormat,
     separator: r.separator as CsvSeparator,
     durationFormat: r.duration_format as DurationFormat,
     dateFormat: r.date_format as DateFormat,
