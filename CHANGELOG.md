@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.10.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.9.0...v1.10.0) (2026-07-02)
+
+
+### Features
+
+* **reuniões:** o rastreamento de reuniões agora permite adiar (soneca) o aviso, enviar reuniões manualmente para a integração e exibe um indicador visual das tarefas originadas de reuniões
+
+
+### Bug Fixes
+
+* **inicialização:** o app não falha mais quando várias janelas abrem ao mesmo tempo — conflitos de acesso ao banco de dados são reprocessados automaticamente
+* **overlay:** o overlay compacto volta a encostar corretamente nas bordas da tela ao ser restaurado
+* **overlay:** as ações de uma tarefa planejada aparecem no popup mesmo quando ela é iniciada automaticamente (por exemplo, ao começar uma reunião)
+* **segurança:** dependências atualizadas para corrigir alertas de vulnerabilidade; o formato de exportação XLSX, que dependia de uma biblioteca vulnerável e sem correção disponível, foi descontinuado — use CSV ou JSON
+
 ## [1.9.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.8.2...v1.9.0) (2026-07-01)
 
 
