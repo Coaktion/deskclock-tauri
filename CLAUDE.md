@@ -125,7 +125,7 @@ src/
 | id | UUID | PK |
 | name | string | Obrigatório |
 | is_default | boolean | Apenas um pode ser default |
-| format | enum | `csv` \| `xlsx` \| `json` |
+| format | enum | `csv` \| `json` |
 | separator | enum | `comma` \| `semicolon` (apenas CSV) |
 | duration_format | enum | `hh:mm:ss` \| `decimal` \| `minutes` |
 | date_format | enum | `iso` \| `dd/mm/yyyy` |
@@ -246,7 +246,7 @@ src/
 
 #### Configuração do perfil
 - **Período:** Hoje | Personalizado (início + fim).
-- **Formato:** CSV | XLSX | JSON.
+- **Formato:** CSV | JSON.
 - **Separador (CSV):** Vírgula | Ponto-e-vírgula.
 - **Formato de duração:** HH:MM:SS | Decimal | Minutos.
 - **Formato de data:** ISO (AAAA-MM-DD) | DD/MM/AAAA.

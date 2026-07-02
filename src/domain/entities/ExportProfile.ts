@@ -1,6 +1,6 @@
 import type { UUID } from "@shared/types";
 
-export type ExportFormat = "csv" | "xlsx" | "json";
+export type ExportFormat = "csv" | "json";
 export type CsvSeparator = "comma" | "semicolon";
 export type DurationFormat = "hh:mm:ss" | "decimal" | "minutes";
 export type DateFormat = "iso" | "dd/mm/yyyy";
