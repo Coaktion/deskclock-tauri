@@ -17,7 +17,6 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import * as XLSX from "xlsx";
 import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { buildExportRows, toCSV, toJSON } from "@domain/utils/exportFormatter";
@@ -152,7 +151,6 @@ function ProfileForm({ initial, onSave, onCancel }: ProfileFormProps) {
             className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
           >
             <option value="csv">CSV</option>
-            <option value="xlsx">XLSX</option>
             <option value="json">JSON</option>
           </select>
         </div>
@@ -334,13 +332,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
     try {
       const rows = buildExportRows(exportTasks, activeProfile, projects, categories);
 
-      if (activeProfile.format === "xlsx") {
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Tarefas");
-        const buf = XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
-        await saveToFile(new Uint8Array(buf), "export.xlsx", "xlsx", "Excel");
-      } else if (activeProfile.format === "json") {
+      if (activeProfile.format === "json") {
         const content = toJSON(rows);
         if (dest === "clipboard") {
           await navigator.clipboard.writeText(content);
@@ -524,7 +516,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
                   </button>
                   <button
                     onClick={() => void handleExport("clipboard")}
-                    disabled={exporting || activeProfile?.format === "xlsx"}
+                    disabled={exporting}
                     className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm rounded-lg transition-colors disabled:opacity-50 ${copied ? "bg-green-700 text-green-200" : "bg-gray-700 hover:bg-gray-600 text-gray-200"}`}
                   >
                     {copied ? (
