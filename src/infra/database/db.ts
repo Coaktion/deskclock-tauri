@@ -9,6 +9,20 @@ const DB_URL = import.meta.env.DEV ? "sqlite:deskclock-dev.db" : "sqlite:deskclo
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+// Encaminha uma mensagem ao log do backend (tauri-plugin-log). Best-effort: o
+// frontend não escreve no arquivo de log diretamente. Ver commands::log_frontend.
+async function logToBackend(
+  level: "warn" | "error",
+  context: string,
+  message: string
+): Promise<void> {
+  try {
+    await invoke("log_frontend", { level, context, message });
+  } catch {
+    // logging não pode mascarar nem interromper o fluxo de carga do banco.
+  }
+}
+
 // Race condition: quando várias janelas Tauri carregam o banco ao mesmo tempo no
 // boot, as chamadas concorrentes de Database.load() disputam o lock do SQLite e
 // podem ver o _sqlx_migrations em estado parcial. Ambos os sintomas (checksum e
@@ -22,19 +36,17 @@ async function loadWithRetry(retries = 8, delayMs = 150): Promise<Database> {
     } catch (err) {
       lastErr = err;
       if (i < retries - 1 && isRetriableDbLoadError(String(err))) {
+        // Logar o retry torna visível uma corrida que se recupera — que de outra
+        // forma não deixaria rastro algum no log.
+        await logToBackend("warn", "db-load", `tentativa ${i + 1}/${retries} falhou: ${err}`);
         await sleep(delayMs * (i + 1));
         continue;
       }
       break;
     }
   }
-  // Persistir a falha final. Em build de release este é o único registro visível:
-  // o tauri-plugin-log só escreve em arquivo pelo lado Rust.
-  try {
-    await invoke("log_frontend_error", { context: "db-load", message: String(lastErr) });
-  } catch {
-    // logging é best-effort — não mascarar o erro original de carga do banco.
-  }
+  // Falha final: em release este é o único registro visível da falha de carga.
+  await logToBackend("error", "db-load", `carga do banco falhou: ${lastErr}`);
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 

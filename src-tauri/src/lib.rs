@@ -55,7 +55,7 @@ fn get_pending_retroactive_prefill(
 use tauri::{Emitter, Manager};
 use commands::{
     check_for_update, download_and_install_update, get_bearer_json, get_display_server,
-    get_local_api_status, get_platform, log_frontend_error, open_in_browser, open_in_file_manager,
+    get_local_api_status, get_platform, log_frontend, open_in_browser, open_in_file_manager,
     post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
     update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
@@ -318,18 +318,31 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            // Log habilitado também em release (nível Warn) — os targets padrão do
-            // plugin incluem o LogDir, então falhas de produção (ex.: carga do banco/
-            // migrations) passam a ser persistidas em arquivo em vez de invisíveis.
+            // Log habilitado também em release. Targets explícitos (Stdout + LogDir)
+            // para não depender do default do plugin — garante que sempre há arquivo.
+            // Nível Info em release para que boot saudável, retries recuperados e
+            // falhas de carga do banco/migrations fiquem persistidos em arquivo em vez
+            // de invisíveis (ver commands::log_frontend e db.ts).
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
                     .level(if cfg!(debug_assertions) {
-                        log::LevelFilter::Info
+                        log::LevelFilter::Debug
                     } else {
-                        log::LevelFilter::Warn
+                        log::LevelFilter::Info
                     })
+                    .targets([
+                        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                        tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                            file_name: None,
+                        }),
+                    ])
                     .build(),
             )?;
+
+            // Marca de boot: garante ao menos uma linha por inicialização, confirmando
+            // que o pipeline de log está ativo e revelando o caminho do arquivo. Usa a
+            // versão do tauri.conf.json (package_info), não a do Cargo.toml (0.1.0).
+            log::info!("DeskClock {} iniciando", app.package_info().version);
 
             tray::setup_tray(app)?;
             keep_overlays_topmost(app.handle().clone());
@@ -394,7 +407,7 @@ pub fn run() {
             get_pending_deep_link_page,
             get_pending_start_task,
             get_pending_retroactive_prefill,
-            log_frontend_error,
+            log_frontend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
