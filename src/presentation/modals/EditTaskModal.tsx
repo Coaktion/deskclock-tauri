@@ -6,6 +6,7 @@ import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
@@ -50,13 +51,24 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
 
   // Data de início (local) como referência para construir os ISOs
   const [startDate, setStartDate] = useState(localDateISO(task.startTime));
-  const [startTime, setStartTime] = useState(isoToHHMM(task.startTime));
-  const [endTime, setEndTime] = useState(() => {
-    if (task.endTime) return isoToHHMM(task.endTime);
-    // fallback: start + duration
-    const endMs = new Date(task.startTime).getTime() + (task.durationSeconds ?? 0) * 1000;
-    return isoToHHMM(new Date(endMs).toISOString());
-  });
+
+  // Início, fim e duração são mantidos em sincronia pelo hook compartilhado.
+  const initialEnd = task.endTime
+    ? isoToHHMM(task.endTime)
+    : isoToHHMM(
+        new Date(new Date(task.startTime).getTime() + (task.durationSeconds ?? 0) * 1000).toISOString()
+      );
+  const {
+    startTime,
+    endTime,
+    durationInput,
+    setDurationInput,
+    handleStartChange,
+    handleStartCommit,
+    handleEndChange,
+    handleEndCommit,
+    commitDuration,
+  } = useDurationSync({ initialStart: isoToHHMM(task.startTime), initialEnd });
 
   const [saving, setSaving] = useState(false);
 
@@ -69,16 +81,17 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function handleSave() {
+  async function handleSave(endOverrideHHMM?: string) {
     if (saving) return;
     const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
     const cId = categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null;
 
     const startISO = buildISO(startDate, startTime);
-    let endISO = buildISO(startDate, endTime);
+    const et = endOverrideHHMM ?? endTime;
+    let endISO = buildISO(startDate, et);
     // Se hora fim for anterior à hora início, consideramos que passou da meia-noite
     if (new Date(endISO) < new Date(startISO)) {
-      endISO = buildISO(addDaysISO(startDate, 1), endTime);
+      endISO = buildISO(addDaysISO(startDate, 1), et);
     }
     const durationSeconds = Math.max(
       0,
@@ -107,7 +120,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
   }
 
   const enterSave = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.nativeEvent.isComposing) handleSave();
+    if (e.key === "Enter" && !e.nativeEvent.isComposing) void handleSave();
   };
 
   return (
@@ -186,7 +199,8 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             <input
               type="time"
               value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
+              onChange={(e) => handleStartChange(e.target.value)}
+              onBlur={(e) => handleStartCommit(e.target.value)}
               onKeyDown={enterSave}
               className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
             />
@@ -194,10 +208,32 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             <input
               type="time"
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              onChange={(e) => handleEndChange(e.target.value)}
+              onBlur={(e) => handleEndCommit(e.target.value)}
               onKeyDown={enterSave}
               className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
             />
+          </div>
+
+          {/* Duração — recalcula o fim ao editar (útil para "esqueci de parar o timer") */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 shrink-0">Duração</span>
+            <input
+              type="text"
+              value={durationInput}
+              onChange={(e) => setDurationInput(e.target.value)}
+              onBlur={commitDuration}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                  const newEnd = commitDuration();
+                  void handleSave(typeof newEnd === "string" ? newEnd : undefined);
+                }
+              }}
+              placeholder="HH:MM"
+              title="Aceita: 1:30, 90, 1h, 1h 30m"
+              className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            />
+            <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30…</span>
           </div>
         </div>
 
@@ -209,7 +245,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             Cancelar
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => void handleSave()}
             disabled={saving}
             className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50"
           >
