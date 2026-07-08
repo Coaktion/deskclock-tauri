@@ -1,4 +1,6 @@
-use crate::api::db::{new_uuid, now_iso_utc, task_record_to_dto, Db, PlannedTaskRecord, TaskRecord};
+use crate::api::db::{
+    new_uuid, now_iso_utc, task_record_to_dto, Db, PlannedTaskRecord, TaskRecord,
+};
 use crate::api::models::{
     CategoryDto, CreatePlannedTaskRequest, ErrorResponse, PlannedTaskActionDto,
     PlannedTaskCompleteRequest, PlannedTaskDto, ProjectDto, StartTaskRequest, StatusResponse,
@@ -374,9 +376,7 @@ pub async fn post_cancel(State(state): State<Arc<ApiState>>) -> ApiResult<Status
         (status = 200, description = "Lista de projetos", body = Vec<ProjectDto>)
     )
 )]
-pub async fn get_projects(
-    State(state): State<Arc<ApiState>>,
-) -> ApiResult<Json<Vec<ProjectDto>>> {
+pub async fn get_projects(State(state): State<Arc<ApiState>>) -> ApiResult<Json<Vec<ProjectDto>>> {
     let db = state.open_db()?;
     Ok(Json(db.list_projects()?))
 }
@@ -400,11 +400,7 @@ pub async fn get_categories(
 
 // ---------------- Helpers ----------------
 
-fn resolve_project(
-    db: &Db,
-    id: Option<String>,
-    name: Option<String>,
-) -> ApiResult<Option<String>> {
+fn resolve_project(db: &Db, id: Option<String>, name: Option<String>) -> ApiResult<Option<String>> {
     if let Some(id) = id {
         if db.find_project_name(&id)?.is_none() {
             return Err(ApiError::conflict(format!(
@@ -490,7 +486,11 @@ fn build_planned_task_dto(db: &Db, task: &PlannedTaskRecord) -> ApiResult<Planne
         Some(id) => db.find_category_name(id)?,
         None => None,
     };
-    Ok(planned_task_record_to_dto(task, project_name, category_name))
+    Ok(planned_task_record_to_dto(
+        task,
+        project_name,
+        category_name,
+    ))
 }
 
 // ================================================================
@@ -597,8 +597,7 @@ pub async fn post_planned_task(
         .as_ref()
         .map(|d| serde_json::to_string(d).unwrap_or_else(|_| "null".to_string()));
 
-    let actions_json =
-        serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
+    let actions_json = serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
 
     let now = now_iso_utc();
     let task = PlannedTaskRecord {
@@ -668,8 +667,7 @@ pub async fn put_planned_task(
         .as_ref()
         .map(|d| serde_json::to_string(d).unwrap_or_else(|_| "null".to_string()));
 
-    let actions_json =
-        serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
+    let actions_json = serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
 
     let updated = PlannedTaskRecord {
         id: existing.id.clone(),

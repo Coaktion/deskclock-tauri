@@ -6,12 +6,8 @@ use tauri::Emitter;
 #[tauri::command]
 pub fn start_oauth_server(app: tauri::AppHandle, port: Option<u16>) -> Result<u16, String> {
     let bind_addr = format!("127.0.0.1:{}", port.unwrap_or(0));
-    let listener =
-        std::net::TcpListener::bind(&bind_addr).map_err(|e| e.to_string())?;
-    let port = listener
-        .local_addr()
-        .map_err(|e| e.to_string())?
-        .port();
+    let listener = std::net::TcpListener::bind(&bind_addr).map_err(|e| e.to_string())?;
+    let port = listener.local_addr().map_err(|e| e.to_string())?.port();
 
     std::thread::spawn(move || {
         if let Ok((mut stream, _)) = listener.accept() {

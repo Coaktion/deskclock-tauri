@@ -87,7 +87,11 @@ fn resolve_db_path(app: &AppHandle) -> Result<PathBuf, String> {
         .app_config_dir()
         .or_else(|_| app.path().app_data_dir())
         .map_err(|e| format!("Não foi possível obter o diretório do app: {e}"))?;
-    let db_file = if cfg!(debug_assertions) { "deskclock-dev.db" } else { "deskclock.db" };
+    let db_file = if cfg!(debug_assertions) {
+        "deskclock-dev.db"
+    } else {
+        "deskclock.db"
+    };
     Ok(dir.join(db_file))
 }
 
@@ -143,8 +147,8 @@ pub async fn start(app: AppHandle, port: u16) -> Result<u16, String> {
     let cancel_child = cancel.clone();
 
     let join = tokio::spawn(async move {
-        let server = axum::serve(listener, router.into_make_service())
-            .with_graceful_shutdown(async move {
+        let server =
+            axum::serve(listener, router.into_make_service()).with_graceful_shutdown(async move {
                 cancel_child.cancelled().await;
             });
         if let Err(e) = server.await {
@@ -153,11 +157,7 @@ pub async fn start(app: AppHandle, port: u16) -> Result<u16, String> {
     });
 
     server_state.clear_error();
-    server_state.set_handle(RunningServer {
-        port,
-        cancel,
-        join,
-    });
+    server_state.set_handle(RunningServer { port, cancel, join });
     log::info!("API local escutando em http://127.0.0.1:{port}");
     Ok(port)
 }
