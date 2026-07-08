@@ -3,10 +3,10 @@ mod commands;
 mod migrations;
 mod tray;
 
+use std::collections::HashMap;
 #[cfg(target_os = "windows")]
 use std::sync::OnceLock;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
 
 // ── Estados pendentes de deep link ──────────────────────────────────────────
 
@@ -29,7 +29,9 @@ struct DeepLinkStartTaskParams {
 struct PendingStartTask(Mutex<Option<DeepLinkStartTaskParams>>);
 
 #[tauri::command]
-fn get_pending_start_task(state: tauri::State<PendingStartTask>) -> Option<DeepLinkStartTaskParams> {
+fn get_pending_start_task(
+    state: tauri::State<PendingStartTask>,
+) -> Option<DeepLinkStartTaskParams> {
     state.0.lock().unwrap().take()
 }
 
@@ -52,13 +54,13 @@ fn get_pending_retroactive_prefill(
 ) -> Option<DeepLinkRetroactivePrefill> {
     state.0.lock().unwrap().take()
 }
-use tauri::{Emitter, Manager};
 use commands::{
     check_for_update, download_and_install_update, get_bearer_json, get_display_server,
     get_local_api_status, get_platform, log_frontend, open_in_browser, open_in_file_manager,
     post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
     update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
+use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -82,15 +84,34 @@ unsafe extern "system" fn timer_topmost_proc(
     _time: u32,
 ) {
     use windows::Win32::UI::WindowsAndMessaging::{
-        KillTimer, SetWindowPos, HWND_TOPMOST, SWP_NOMOVE, SWP_NOACTIVATE, SWP_NOSIZE,
+        KillTimer, SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
     };
     let _ = KillTimer(None, TIMER_ID_TOPMOST);
-    let Some(handle) = APP_HANDLE.get() else { return };
-    for label in ["overlay-compact", "overlay-popup", "toast", "command-palette"] {
-        let Some(w) = handle.get_webview_window(label) else { continue };
-        if !w.is_visible().unwrap_or(false) { continue; }
+    let Some(handle) = APP_HANDLE.get() else {
+        return;
+    };
+    for label in [
+        "overlay-compact",
+        "overlay-popup",
+        "toast",
+        "command-palette",
+    ] {
+        let Some(w) = handle.get_webview_window(label) else {
+            continue;
+        };
+        if !w.is_visible().unwrap_or(false) {
+            continue;
+        }
         let Ok(hwnd) = w.hwnd() else { continue };
-        let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        let _ = SetWindowPos(
+            hwnd,
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        );
     }
 }
 
@@ -110,15 +131,33 @@ unsafe extern "system" fn win_event_proc(
     _dwms_event_time: u32,
 ) {
     use windows::Win32::UI::WindowsAndMessaging::{
-        GetClassNameW, SetTimer, SetWindowPos,
-        HWND_TOPMOST, SWP_NOMOVE, SWP_NOACTIVATE, SWP_NOSIZE,
+        GetClassNameW, SetTimer, SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
     };
-    let Some(handle) = APP_HANDLE.get() else { return };
-    for label in ["overlay-compact", "overlay-popup", "toast", "command-palette"] {
-        let Some(w) = handle.get_webview_window(label) else { continue };
-        if !w.is_visible().unwrap_or(false) { continue; }
+    let Some(handle) = APP_HANDLE.get() else {
+        return;
+    };
+    for label in [
+        "overlay-compact",
+        "overlay-popup",
+        "toast",
+        "command-palette",
+    ] {
+        let Some(w) = handle.get_webview_window(label) else {
+            continue;
+        };
+        if !w.is_visible().unwrap_or(false) {
+            continue;
+        }
         let Ok(wnd) = w.hwnd() else { continue };
-        let _ = SetWindowPos(wnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        let _ = SetWindowPos(
+            wnd,
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        );
     }
 
     // Detecta Win+D / "Mostrar Área de Trabalho": o foreground passa a ser
@@ -152,7 +191,7 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
         std::thread::spawn(|| unsafe {
             use windows::Win32::UI::Accessibility::SetWinEventHook;
             use windows::Win32::UI::WindowsAndMessaging::{
-                EVENT_SYSTEM_FOREGROUND, GetMessageW, MSG, WINEVENT_OUTOFCONTEXT,
+                GetMessageW, EVENT_SYSTEM_FOREGROUND, MSG, WINEVENT_OUTOFCONTEXT,
             };
             let hook = SetWinEventHook(
                 EVENT_SYSTEM_FOREGROUND,
@@ -163,7 +202,9 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
                 0,
                 WINEVENT_OUTOFCONTEXT,
             );
-            if hook.0.is_null() { return; }
+            if hook.0.is_null() {
+                return;
+            }
             let _hook = hook; // mantém o hook vivo; drop chama UnhookWinEvent automaticamente
             let mut msg = MSG::default();
             // DispatchMessageW é necessário para que WM_TIMER (usado pelo timer
@@ -175,7 +216,12 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
     }
     #[cfg(not(target_os = "windows"))]
     std::thread::spawn(move || loop {
-        for label in ["overlay-compact", "overlay-popup", "toast", "command-palette"] {
+        for label in [
+            "overlay-compact",
+            "overlay-popup",
+            "toast",
+            "command-palette",
+        ] {
             if let Some(w) = handle.get_webview_window(label) {
                 if w.is_visible().unwrap_or(false) {
                     w.set_always_on_top(true).ok();
@@ -255,7 +301,9 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
         return;
     };
 
-    let (path_part, query_part) = without_scheme.split_once('?').unwrap_or((without_scheme, ""));
+    let (path_part, query_part) = without_scheme
+        .split_once('?')
+        .unwrap_or((without_scheme, ""));
     let (action, sub_path) = path_part.split_once('/').unwrap_or((path_part, ""));
     let sub_path = sub_path.trim_end_matches('/');
     let params = parse_query(query_part);
@@ -393,14 +441,21 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![])))
+        .plugin(tauri_plugin_autostart::init(
+            MacosLauncher::LaunchAgent,
+            Some(vec![]),
+        ))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(
-                    if cfg!(debug_assertions) { "sqlite:deskclock-dev.db" } else { "sqlite:deskclock.db" },
+                    if cfg!(debug_assertions) {
+                        "sqlite:deskclock-dev.db"
+                    } else {
+                        "sqlite:deskclock.db"
+                    },
                     migrations::get_migrations(),
                 )
                 .build(),

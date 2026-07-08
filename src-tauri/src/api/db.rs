@@ -142,8 +142,7 @@ impl Db {
             let (is_billable, duration, start, status) = r?;
             let secs = match status.as_str() {
                 "running" => {
-                    (duration.unwrap_or(0)).max(0)
-                        + seconds_between(&start, &now_iso).max(0)
+                    (duration.unwrap_or(0)).max(0) + seconds_between(&start, &now_iso).max(0)
                 }
                 _ => duration.unwrap_or(0).max(0),
             };
@@ -201,9 +200,9 @@ impl Db {
     // ---------------- Categories ----------------
 
     pub fn list_categories(&self) -> rusqlite::Result<Vec<CategoryDto>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, name, default_billable FROM categories ORDER BY name ASC",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, default_billable FROM categories ORDER BY name ASC")?;
         let rows = stmt.query_map([], |r| {
             let billable: i64 = r.get(2)?;
             Ok(CategoryDto {
@@ -248,7 +247,11 @@ impl Db {
     }
 }
 
-pub fn task_record_to_dto(task: &TaskRecord, project_name: Option<String>, category_name: Option<String>) -> TaskDto {
+pub fn task_record_to_dto(
+    task: &TaskRecord,
+    project_name: Option<String>,
+    category_name: Option<String>,
+) -> TaskDto {
     let now_iso = now_iso_utc();
     let elapsed = match task.status.as_str() {
         "running" => {
@@ -315,8 +318,12 @@ pub fn effective_duration(task: &TaskRecord, now_iso: &str) -> i64 {
 }
 
 pub fn seconds_between(earlier_iso: &str, later_iso: &str) -> i64 {
-    let Ok(e) = DateTime::parse_from_rfc3339(earlier_iso) else { return 0 };
-    let Ok(l) = DateTime::parse_from_rfc3339(later_iso) else { return 0 };
+    let Ok(e) = DateTime::parse_from_rfc3339(earlier_iso) else {
+        return 0;
+    };
+    let Ok(l) = DateTime::parse_from_rfc3339(later_iso) else {
+        return 0;
+    };
     (l.timestamp() - e.timestamp()).max(0)
 }
 
@@ -333,7 +340,14 @@ pub fn new_uuid() -> String {
 fn today_local_bounds_iso() -> (String, String) {
     let now_local = Local::now();
     let start_local = Local
-        .with_ymd_and_hms(now_local.year_naive(), now_local.month_naive(), now_local.day_naive(), 0, 0, 0)
+        .with_ymd_and_hms(
+            now_local.year_naive(),
+            now_local.month_naive(),
+            now_local.day_naive(),
+            0,
+            0,
+            0,
+        )
         .single()
         .expect("valid local midnight");
     let end_local = start_local + chrono::Duration::days(1);
@@ -425,7 +439,10 @@ impl Db {
         rows.collect()
     }
 
-    pub fn list_planned_tasks_for_date(&self, date: &str) -> rusqlite::Result<Vec<PlannedTaskRecord>> {
+    pub fn list_planned_tasks_for_date(
+        &self,
+        date: &str,
+    ) -> rusqlite::Result<Vec<PlannedTaskRecord>> {
         let weekday = NaiveDate::parse_from_str(date, "%Y-%m-%d")
             .map(|d| {
                 use chrono::Datelike;

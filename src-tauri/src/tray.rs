@@ -6,7 +6,13 @@ use tauri::{
 
 pub fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, "show", "Mostrar", true, None::<&str>)?;
-    let toggle_task = MenuItem::with_id(app, "toggle-task", "Iniciar / Pausar tarefa", true, None::<&str>)?;
+    let toggle_task = MenuItem::with_id(
+        app,
+        "toggle-task",
+        "Iniciar / Pausar tarefa",
+        true,
+        None::<&str>,
+    )?;
     let stop_task = MenuItem::with_id(app, "stop-task", "Parar tarefa", true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Sair", true, None::<&str>)?;

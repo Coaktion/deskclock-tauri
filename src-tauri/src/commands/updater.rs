@@ -7,9 +7,7 @@ pub struct UpdateInfo {
 /// Verifica se há atualização disponível.
 /// Retorna Some(UpdateInfo) se sim, None se o app já está na versão mais recente.
 #[tauri::command]
-pub async fn check_for_update(
-    app: tauri::AppHandle,
-) -> Result<Option<UpdateInfo>, String> {
+pub async fn check_for_update(app: tauri::AppHandle) -> Result<Option<UpdateInfo>, String> {
     use std::time::Duration;
     use tauri_plugin_updater::UpdaterExt;
 
@@ -76,7 +74,10 @@ pub async fn download_and_install_update(app: tauri::AppHandle) -> Result<(), St
         .check()
         .await
         .map_err(|e| {
-            log::error!("[updater] erro ao verificar atualização antes do download: {:?}", e);
+            log::error!(
+                "[updater] erro ao verificar atualização antes do download: {:?}",
+                e
+            );
             e.to_string()
         })?
         .ok_or_else(|| {
