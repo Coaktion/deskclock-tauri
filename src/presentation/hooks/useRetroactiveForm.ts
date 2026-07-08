@@ -5,13 +5,8 @@ import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveT
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import {
-  addDaysISO,
-  computeDurationHHMM,
-  computeEndHHMM,
-  formatHHMM,
-  parseDurationInput,
-} from "@shared/utils/time";
+import { useDurationSync } from "@presentation/hooks/useDurationSync";
+import { addDaysISO, computeEndHHMM, parseDurationInput } from "@shared/utils/time";
 import { useRef, useState } from "react";
 
 const DEFAULT_DURATION_SECS = 3600;
@@ -53,66 +48,37 @@ export function useRetroactiveForm({
   const [billable, setBillable] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [startTime, setStartTime] = useState(nowHHMM);
-  const [endTime, setEndTime] = useState(() => computeEndHHMM(nowHHMM(), DEFAULT_DURATION_SECS));
-  const [durationInput, setDurationInput] = useState("01:00");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const initialStart = nowHHMM();
+  const {
+    startTime,
+    setStartTime,
+    endTime,
+    setEndTime,
+    durationInput,
+    setDurationInput,
+    prevStart,
+    prevEnd,
+    handleStartChange,
+    handleStartCommit,
+    handleEndChange,
+    handleEndCommit,
+    commitDuration,
+  } = useDurationSync({
+    initialStart,
+    initialEnd: computeEndHHMM(initialStart, DEFAULT_DURATION_SECS),
+    onChange: () => setError(""),
+  });
+
   const nameRef = useRef<HTMLInputElement>(null);
-  const prevStart = useRef(startTime);
-  const prevEnd = useRef(endTime);
   // Vínculo com a tarefa planejada que originou o prefill. Consumido (e zerado)
   // ao adicionar, para marcá-la como concluída sem vazar para a próxima da cadeia.
   // A data do prefill é guardada para não marcar a planejada no dia errado caso
   // o usuário troque a data antes de adicionar.
   const prefilledPlannedTaskId = useRef<string | null>(null);
   const prefilledDate = useRef<string | null>(null);
-
-  function handleStartChange(val: string) {
-    setStartTime(val);
-    if (val) {
-      prevStart.current = val;
-      setDurationInput(computeDurationHHMM(val, prevEnd.current));
-    }
-    setError("");
-  }
-
-  function handleStartCommit(val: string) {
-    if (!val) setStartTime(prevStart.current);
-  }
-
-  function handleEndChange(val: string) {
-    setEndTime(val);
-    if (val) {
-      prevEnd.current = val;
-      setDurationInput(computeDurationHHMM(prevStart.current, val));
-    }
-    setError("");
-  }
-
-  function handleEndCommit(val: string) {
-    if (!val) setEndTime(prevEnd.current);
-  }
-
-  // Retorna o novo horário de fim se válido, false se inválido/sem alteração
-  function commitDuration(): string | false {
-    const raw = durationInput.trim();
-    if (!raw) {
-      setDurationInput(computeDurationHHMM(prevStart.current, prevEnd.current));
-      return false;
-    }
-    const parsed = parseDurationInput(raw);
-    if (!parsed || parsed < 60) {
-      setDurationInput(computeDurationHHMM(prevStart.current, prevEnd.current));
-      return false;
-    }
-    const newEnd = computeEndHHMM(prevStart.current, parsed);
-    setEndTime(newEnd);
-    prevEnd.current = newEnd;
-    setDurationInput(formatHHMM(parsed));
-    return newEnd;
-  }
 
   async function handleAdd(overrideEndHHMM?: string) {
     setError("");
