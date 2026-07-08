@@ -320,16 +320,35 @@ pub fn run() {
         .setup(|app| {
             // Log habilitado também em release. Targets explícitos (Stdout + LogDir)
             // para não depender do default do plugin — garante que sempre há arquivo.
-            // Nível Info em release para que boot saudável, retries recuperados e
-            // falhas de carga do banco/migrations fiquem persistidos em arquivo em vez
-            // de invisíveis (ver commands::log_frontend e db.ts).
+            // Nível Info por padrão (dev e release) para que boot saudável, retries
+            // recuperados e falhas de carga do banco/migrations fiquem persistidos sem
+            // afogar o log com as queries SQL que o sqlx emite em Debug.
+            //
+            // Verbosidade completa (Debug + queries SQL) é opt-in e propositalmente
+            // obscura para não ser ativada por engano por um usuário final:
+            //  - dev: env var `DESKCLOCK_DEBUG=1` (ex.: `DESKCLOCK_DEBUG=1 pnpm tauri dev`);
+            //  - produção: argumento oculto `--dck-diagnostics`, que cabe no campo
+            //    "Destino" do atalho do Windows (`DeskClock.exe --dck-diagnostics`) ou
+            //    no `Exec=` do .desktop no Linux.
+            // O nível é fixado no boot, por isso o gatilho precisa estar disponível aqui.
+            let verbose = std::env::var_os("DESKCLOCK_DEBUG").is_some()
+                || std::env::args().any(|a| a == "--dck-diagnostics");
             app.handle().plugin(
                 tauri_plugin_log::Builder::default()
-                    .level(if cfg!(debug_assertions) {
+                    .level(if verbose {
                         log::LevelFilter::Debug
                     } else {
                         log::LevelFilter::Info
                     })
+                    // sqlx despeja toda query SQL — só quando explicitamente pedido.
+                    .level_for(
+                        "sqlx",
+                        if verbose {
+                            log::LevelFilter::Debug
+                        } else {
+                            log::LevelFilter::Warn
+                        },
+                    )
                     .targets([
                         tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                         tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
