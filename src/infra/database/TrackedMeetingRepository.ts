@@ -69,6 +69,13 @@ export class TrackedMeetingRepository implements ITrackedMeetingRepository {
     );
   }
 
+  async remove(calendarEventId: string): Promise<void> {
+    const db = await getDb();
+    await db.execute("DELETE FROM calendar_tracked_meetings WHERE calendar_event_id = $1", [
+      calendarEventId,
+    ]);
+  }
+
   async pruneBefore(dateISO: string): Promise<void> {
     const db = await getDb();
     await db.execute("DELETE FROM calendar_tracked_meetings WHERE date < $1", [dateISO]);

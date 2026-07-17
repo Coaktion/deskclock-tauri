@@ -101,6 +101,15 @@ describe("TrackedMeetingRepository", () => {
     expect(params[4]).toBeNull();
   });
 
+  it("remove exclui a reunião pelo calendarEventId", async () => {
+    const repo = new TrackedMeetingRepository();
+    await repo.remove("evt1");
+    expect(mockDb.execute).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE calendar_event_id = $1"),
+      ["evt1"]
+    );
+  });
+
   it("pruneBefore remove datas anteriores", async () => {
     const repo = new TrackedMeetingRepository();
     await repo.pruneBefore("2026-07-01");
