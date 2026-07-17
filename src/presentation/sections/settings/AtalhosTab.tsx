@@ -12,7 +12,7 @@ export function AtalhosTab() {
   const [shortcutStopTask, setShortcutStopTask] = useState("");
   const [shortcutToggleOverlay, setShortcutToggleOverlay] = useState("");
   const [shortcutToggleWindow, setShortcutToggleWindow] = useState("");
-  const [shortcutCommandPalette, setShortcutCommandPalette] = useState("CmdOrCtrl+K");
+  const [shortcutCommandPalette, setShortcutCommandPalette] = useState("");
   const [displayServer, setDisplayServer] = useState("");
   const [failedShortcuts, setFailedShortcuts] = useState<string[]>([]);
 
