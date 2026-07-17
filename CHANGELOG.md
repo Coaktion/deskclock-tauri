@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.11.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.10.0...v1.11.0) (2026-07-17)
+
+
+### Features
+
+* **edição de tarefa:** o modal de edição agora permite informar a duração diretamente, além dos horários de início e fim
+
+
+### Bug Fixes
+
+* **reuniões:** os avisos de início de reunião passam a respeitar remarcações — reuniões movidas de horário, movidas para outro dia ou canceladas deixam de disparar o aviso no horário antigo. A agenda passou a ser verificada a cada 2 minutos (antes, 30)
+* **atalhos:** o acesso rápido (Command Palette) deixa de vir com um atalho global padrão — defina o atalho que preferir em Configurações → Atalhos
+* **logs:** reduzido o excesso de registros de SQL no console; o modo detalhado agora é ativado apenas sob demanda
+
 ## [1.10.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.9.0...v1.10.0) (2026-07-02)
 
 
