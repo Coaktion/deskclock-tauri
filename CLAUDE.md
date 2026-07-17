@@ -280,7 +280,7 @@ src/
 |---|---|---|
 | Iniciar na inicialização do computador | toggle | Registra o app no startup do SO |
 | Timer ao vivo no ícone da bandeja | toggle | Mostra timer no system tray icon |
-| Abrir acesso rápido ao iniciar | toggle | Exibe o Command Palette ao abrir o app (padrão: ativo). Use Ctrl+K para abrí-lo a qualquer momento. |
+| Abrir acesso rápido ao iniciar | toggle | Exibe o Command Palette ao abrir o app (padrão: ativo). Sem atalho global padrão — configure um em Configurações → Atalhos, se desejar. |
 | Fechar ao perder foco | toggle | Janela principal fecha ao perder o foco (padrão: desativado); Pin/Unpin na title bar suspende temporariamente |
 | Descartar tarefas com menos de 1 minuto | toggle | Cancela automaticamente tarefas paradas em menos de 60 s (padrão: desativado) |
 

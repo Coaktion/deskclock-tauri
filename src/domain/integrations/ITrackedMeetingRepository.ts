@@ -10,6 +10,8 @@ export interface ITrackedMeetingRepository {
   listForDate(dateISO: string): Promise<TrackedMeeting[]>;
   /** Insere ou atualiza (por calendarEventId) uma reunião rastreada. */
   upsert(meeting: TrackedMeeting): Promise<void>;
+  /** Remove uma reunião rastreada pelo ID do evento (ex.: cancelada/movida de dia). */
+  remove(calendarEventId: string): Promise<void>;
   /** Remove reuniões anteriores à data informada (poda de dias passados). */
   pruneBefore(dateISO: string): Promise<void>;
 }

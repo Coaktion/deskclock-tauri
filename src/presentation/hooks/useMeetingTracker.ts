@@ -16,7 +16,10 @@ import { endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
 const TICK_MS = 60_000;
-const SYNC_INTERVAL_MS = 30 * 60 * 1000;
+// Intervalo de re-busca da agenda. Curto de propósito: a cada sync o
+// syncTodayMeetings reconcilia reuniões remarcadas/canceladas, então quanto
+// mais frequente, menor a janela em que um prompt dispara em horário obsoleto.
+const SYNC_INTERVAL_MS = 2 * 60 * 1000;
 // Antecedência do prompt de início: aparece até 1 min antes do horário do evento
 // para o usuário entrar na reunião já com a tarefa rodando.
 const START_LEAD_MS = 60_000;

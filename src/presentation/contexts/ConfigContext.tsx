@@ -26,7 +26,7 @@ const DEFAULTS: AppConfig = {
   shortcutStopTask: "",
   shortcutToggleOverlay: "",
   shortcutToggleWindow: "",
-  shortcutCommandPalette: "CmdOrCtrl+K",
+  shortcutCommandPalette: "",
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
   overlaySize: "big" as const,
