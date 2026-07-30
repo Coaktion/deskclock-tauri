@@ -163,29 +163,60 @@ padrão de fallback) foi considerada e **descartada** por ser mais complexa que 
 
 ### Fase 1 — Workspaces
 
-#### 1.0 Spike da migration — **BLOQUEANTE**
+#### 1.0 Spike da migration — ✅ **CONCLUÍDO em 2026-07-30**
 
-- Cópia do banco de desenvolvimento, migration candidata, verificação de que
-  `SELECT COUNT(*) FROM tasks WHERE project_id IS NOT NULL` não muda.
-- Ordem de preferência das técnicas:
-  a. `PRAGMA legacy_alter_table = ON` + `ALTER TABLE … RENAME TO` (o pragma é permitido dentro de
-     transação; com ele o `RENAME` não reescreve as cláusulas FK das outras tabelas).
-  b. `PRAGMA foreign_keys = OFF` fora da transação, se houver como rodar SQL fora do runner do sqlx.
-  c. Fallback: manter nome globalmente único e escopar apenas a exibição.
-- **Critério de saída:** migration que comprovadamente preserva `project_id` e `category_id` num
-  banco com dados. Sem isso, não seguir para 1.1.
+Executado contra dois bancos: um fixture sintético (500 tarefas, 60 planejadas, 20 projetos, 10
+categorias, todas com FK preenchida) e uma cópia do banco real (4 tarefas, 101 projetos, incluindo
+uma tarefa com `project_id` nulo). O harness replica a semântica do sqlx: conexão com
+`foreign_keys = ON` (default do `SqliteConnectOptions`) e uma transação por migration.
+
+**As duas técnicas preferidas do plano original foram refutadas:**
+
+| Técnica | Resultado |
+|---|---|
+| (a) `PRAGMA legacy_alter_table = ON` + `RENAME` | ❌ O pragma é aceito (lê `1` dentro e fora de transação), mas com `foreign_keys = ON` o `RENAME` reescreve as cláusulas `REFERENCES` das filhas mesmo assim: `tasks.project_id` passou a apontar para `projects_pre_011`. Só preserva as cláusulas se `foreign_keys = OFF` |
+| (b) `PRAGMA foreign_keys = OFF` | ❌ Confirmado no-op dentro de transação (lê `1` depois de `OFF`). Indisponível no runner do sqlx |
+| Ingênua (`CREATE` novo + `DROP` antigo) | ❌ **Roda sem erro nenhum** e zera `project_id` de 500 tarefas e 60 planejadas. O risco do plano está reproduzido |
+
+**Técnica adotada — reconstruir as quatro tabelas.** `projects`/`categories` são apenas
+**renomeadas** (rename não apaga dado; a reescrita das cláusulas FK é temporária e irrelevante) e
+em seguida `tasks`, `planned_tasks` e `export_profiles` são **reconstruídas** — nelas o `DROP` é
+seguro porque nenhuma tabela as referencia. A reconstrução reescreve as cláusulas `REFERENCES`
+apontando de volta para `projects`/`categories` novos.
+
+**Terceiro achado, não previsto no plano:** o SQLite proíbe
+`ALTER TABLE … ADD COLUMN workspace_id … REFERENCES workspaces(id) NOT NULL DEFAULT '<sentinela>'`
+("Cannot add a REFERENCES column with non-NULL default value"). O `ADD COLUMN` da §1.1 original é
+inexequível — daí `export_profiles` também precisar de reconstrução.
+
+**Critério de saída atendido** — 17 asserções verdes, incluindo: `foreign_key_check` vazio,
+`integrity_check ok`, as 500 tarefas e 60 planejadas resolvendo para **o mesmo** projeto e categoria
+por id (não só contagem igual), cláusulas `REFERENCES` no alvo certo, projeto criado *depois* da
+migration aceitando tarefa (o cenário que quebrou na técnica (a)), `UNIQUE(workspace_id, name)`
+aceitando nome repetido entre workspaces e rejeitando dentro do mesmo, `is_default` único por
+workspace, `ON DELETE SET NULL` preservado e as tabelas `_pre_011` intactas e não referenciadas.
+
+> **Custo assumido:** a 011 replica o schema de `tasks`/`planned_tasks`/`export_profiles` tal como
+> está após a 010. Alterar retroativamente qualquer migration anterior exige acompanhar este arquivo.
 
 #### 1.1 Migration `011_workspaces.sql` (version 11 em `src-tauri/src/migrations.rs`)
 
+Ordem exata validada pelo spike (o SQL candidato já passou nos dois bancos):
+
 ```
 workspaces(id PK, name UNIQUE, color, created_at)
-  → seed 'Padrão' com id sentinela fixo (constante compartilhada com o código)
-tasks / planned_tasks / export_profiles
-  → ADD COLUMN workspace_id NOT NULL DEFAULT '<sentinela>' REFERENCES workspaces(id)
+  → seed 'Padrão', id sentinela '00000000-0000-4000-8000-000000000001'
+    (constante compartilhada com o código)
 projects / categories
-  → rebuild conforme o spike, UNIQUE(workspace_id, name)
-  → cópia intacta preservada como projects_pre_011 / categories_pre_011
-export_profiles.is_default → único por workspace
+  → RENAME para projects_pre_011 / categories_pre_011  (sem DROP)
+  → CREATE novo com workspace_id NOT NULL REFERENCES workspaces(id)
+    e UNIQUE(workspace_id, name); INSERT … SELECT do _pre_011
+tasks / planned_tasks / export_profiles
+  → CREATE <tabela>_new replicando o schema pós-010 + workspace_id
+  → INSERT … SELECT, DROP da antiga (seguro: ninguém as referencia), RENAME
+  → recriar os índices, que somem junto com a tabela
+export_profiles.is_default
+  → CREATE UNIQUE INDEX … ON export_profiles(workspace_id) WHERE is_default = 1
 ```
 
 As tabelas `_pre_011` ficam no banco de propósito: são a única rota de rollback desta migration.
