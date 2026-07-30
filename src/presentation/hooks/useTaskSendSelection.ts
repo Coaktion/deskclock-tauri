@@ -10,6 +10,7 @@ import {
   startOfDayISO,
   endOfDayISO,
   startOfMonthISO,
+  localDateISO,
 } from "@shared/utils/time";
 
 export type QuickPeriod = "today" | "yesterday" | "week" | "month" | "custom";
@@ -17,11 +18,6 @@ export type QuickPeriod = "today" | "yesterday" | "week" | "month" | "custom";
 export interface DayGroup {
   date: string;
   groups: TaskGroup[];
-}
-
-export function toLocalDate(isoDateTime: string): string {
-  const d = new Date(isoDateTime);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function formatDayLabel(isoDate: string): string {
@@ -34,7 +30,7 @@ export function formatDayLabel(isoDate: string): string {
 export function groupTasksByDay(tasks: Task[]): DayGroup[] {
   const byDate = new Map<string, Task[]>();
   for (const task of tasks) {
-    const date = toLocalDate(task.startTime);
+    const date = localDateISO(task.startTime);
     const list = byDate.get(date) ?? [];
     list.push(task);
     byDate.set(date, list);
@@ -51,7 +47,7 @@ export function selKey(date: string, groupKey: string): string {
 export function quickToRange(
   quick: QuickPeriod,
   customStart: string,
-  customEnd: string,
+  customEnd: string
 ): { start: string; end: string } {
   const today = todayISO();
   switch (quick) {
@@ -98,7 +94,7 @@ export interface UseTaskSendSelectionResult {
 
 export function useTaskSendSelection(
   integrationId: string,
-  validateTask: (task: Task) => TaskValidationResult,
+  validateTask: (task: Task) => TaskValidationResult
 ): UseTaskSendSelectionResult {
   const { taskRepo, taskLogRepo } = useRepositories();
 
@@ -116,8 +112,12 @@ export function useTaskSendSelection(
 
   const customStartRef = useRef(customStart);
   const customEndRef = useRef(customEnd);
-  useEffect(() => { customStartRef.current = customStart; }, [customStart]);
-  useEffect(() => { customEndRef.current = customEnd; }, [customEnd]);
+  useEffect(() => {
+    customStartRef.current = customStart;
+  }, [customStart]);
+  useEffect(() => {
+    customEndRef.current = customEnd;
+  }, [customEnd]);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,7 +154,11 @@ export function useTaskSendSelection(
       } catch (err) {
         if (!cancelled) {
           const msg =
-            err instanceof Error ? err.message : typeof err === "string" ? err : "Erro ao carregar tarefas.";
+            err instanceof Error
+              ? err.message
+              : typeof err === "string"
+                ? err
+                : "Erro ao carregar tarefas.";
           setMessage({ text: msg, error: true });
         }
       } finally {
@@ -163,7 +167,9 @@ export function useTaskSendSelection(
     }
 
     void run();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // integrationId e validateTask são estáveis por contrato do chamador
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskRepo, taskLogRepo, quick, reloadKey]);

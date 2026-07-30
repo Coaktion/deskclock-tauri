@@ -13,10 +13,14 @@ import {
   ZendeskIntegrationCard,
   ZendeskTile,
 } from "@presentation/sections/integrations/ZendeskIntegrationSection";
+import {
+  MondayIntegrationCard,
+  MondayTile,
+} from "@presentation/sections/integrations/MondayIntegrationSection";
 
 /* ── Page ── */
 
-type IntegrationDetail = "google" | "clockify" | "zendesk" | null;
+type IntegrationDetail = "google" | "clockify" | "zendesk" | "monday" | null;
 
 export function IntegrationsPage() {
   const [detail, setDetail] = useState<IntegrationDetail>(null);
@@ -47,6 +51,7 @@ export function IntegrationsPage() {
           {detail === "google" && <GoogleIntegrationCard />}
           {detail === "clockify" && <ClockifyIntegrationCard />}
           {detail === "zendesk" && <ZendeskIntegrationCard />}
+          {detail === "monday" && <MondayIntegrationCard />}
         </div>
       </div>
     );
@@ -81,6 +86,9 @@ export function IntegrationsPage() {
           </div>
           <div data-tour="integrations-zendesk-tile">
             <ZendeskTile onClick={() => setDetail("zendesk")} />
+          </div>
+          <div data-tour="integrations-monday-tile">
+            <MondayTile onClick={() => setDetail("monday")} />
           </div>
         </div>
       </div>

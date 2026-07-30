@@ -1,10 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 export type IntegrationModal =
-  | "sheets-send"
-  | "calendar-import"
-  | "clockify-send"
-  | "clockify-entries";
+  "sheets-send" | "calendar-import" | "clockify-send" | "clockify-entries" | "monday-send";
 
 interface IntegrationsUiContextValue {
   modal: IntegrationModal | null;

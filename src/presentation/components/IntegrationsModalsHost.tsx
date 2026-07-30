@@ -8,6 +8,7 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
+import { MondaySendModal } from "@presentation/modals/MondaySendModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import { showToast } from "@shared/utils/toast";
 
@@ -50,6 +51,10 @@ export function IntegrationsModalsHost() {
 
   if (modal === "clockify-send") {
     return <ClockifySendModal projects={projects} categories={categories} onClose={closeModal} />;
+  }
+
+  if (modal === "monday-send") {
+    return <MondaySendModal projects={projects} categories={categories} onClose={closeModal} />;
   }
 
   if (modal === "clockify-entries") {

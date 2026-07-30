@@ -46,7 +46,18 @@ export interface TaskSendAdapter {
   onSendSuccess: (taskIds: string[]) => Promise<void>;
   /** Mensagem de erro quando sender é null. */
   notConfiguredMessage: string;
+  /**
+   * Envia as tarefas cruas em vez de um registro unificado por grupo. Para
+   * integrações idempotentes, que precisam de todos os ids do grupo para
+   * reencontrar o registro já criado no destino.
+   */
+  sendsRawTasks?: boolean;
+  /** Sobrescreve o aviso exibido quando há tarefas já enviadas na seleção. */
+  resendWarning?: string;
 }
+
+const DEFAULT_RESEND_WARNING =
+  "Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas.";
 
 interface GroupRowProps {
   group: TaskGroup;
@@ -161,10 +172,12 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
     sel.setMessage(null);
 
     const selectedGroups = sel.collectSelectedGroups();
-    const tasksToSend = selectedGroups.map((g) => ({
-      ...g.tasks[0],
-      durationSeconds: g.totalSeconds,
-    }));
+    const tasksToSend = adapter.sendsRawTasks
+      ? selectedGroups.flatMap((g) => g.tasks)
+      : selectedGroups.map((g) => ({
+          ...g.tasks[0],
+          durationSeconds: g.totalSeconds,
+        }));
     const allTaskIds = selectedGroups.flatMap((g) => g.tasks.map((t) => t.id));
 
     if (adapter.validateBeforeSend) {
@@ -357,7 +370,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
           <div className="mx-4 mb-2 flex items-start gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
             <AlertTriangle size={13} className="text-yellow-400 shrink-0 mt-0.5" />
             <p className="text-xs text-yellow-300">
-              Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas.
+              {adapter.resendWarning ?? DEFAULT_RESEND_WARNING}
             </p>
           </div>
         )}
@@ -416,4 +429,3 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
     </div>
   );
 }
-

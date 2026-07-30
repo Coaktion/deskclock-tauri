@@ -6,6 +6,7 @@ import { ProjectRepository } from "@infra/database/ProjectRepository";
 import { ExportProfileRepository } from "@infra/database/ExportProfileRepository";
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { TrackedMeetingRepository } from "@infra/database/TrackedMeetingRepository";
+import { MondayActivityItemRepository } from "@infra/database/MondayActivityItemRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
@@ -13,6 +14,7 @@ import type { IProjectRepository } from "@domain/repositories/IProjectRepository
 import type { IExportProfileRepository } from "@domain/repositories/IExportProfileRepository";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
+import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
 
 export interface Repositories {
   taskRepo: ITaskRepository;
@@ -22,6 +24,7 @@ export interface Repositories {
   exportProfileRepo: IExportProfileRepository;
   taskLogRepo: ITaskIntegrationLogRepository;
   trackedMeetingRepo: ITrackedMeetingRepository;
+  mondayActivityItemRepo: IMondayActivityItemRepository;
 }
 
 const RepositoriesContext = createContext<Repositories | null>(null);
@@ -43,6 +46,7 @@ export function RepositoriesProvider({
       exportProfileRepo: new ExportProfileRepository(),
       taskLogRepo: new TaskIntegrationLogRepository(),
       trackedMeetingRepo: new TrackedMeetingRepository(),
+      mondayActivityItemRepo: new MondayActivityItemRepository(),
     };
   }
   const repos = useMemo<Repositories>(() => ({ ...defaultsRef.current!, ...value }), [value]);

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   validateTaskForSheets,
   validateTaskForClockify,
+  validateTaskForMonday,
   formatMissingFields,
 } from "@domain/integrations/taskValidation";
 import type { Task } from "@domain/entities/Task";
@@ -69,6 +70,25 @@ describe("validateTaskForClockify", () => {
 
   it("acusa ambos quando faltam", () => {
     const r = validateTaskForClockify(makeTask({ name: "", projectId: null }));
+    expect(r).toEqual({ ok: false, missing: ["nome", "projeto"] });
+  });
+});
+
+describe("validateTaskForMonday", () => {
+  it("retorna ok com nome e projeto, mesmo sem categoria", () => {
+    expect(validateTaskForMonday(makeTask({ categoryId: null })).ok).toBe(true);
+  });
+
+  it("exige projeto — é ele que resolve o board de destino", () => {
+    expect(validateTaskForMonday(makeTask({ projectId: null })).missing).toEqual(["projeto"]);
+  });
+
+  it("exige nome", () => {
+    expect(validateTaskForMonday(makeTask({ name: "   " })).missing).toEqual(["nome"]);
+  });
+
+  it("acusa ambos quando faltam", () => {
+    const r = validateTaskForMonday(makeTask({ name: null, projectId: null }));
     expect(r).toEqual({ ok: false, missing: ["nome", "projeto"] });
   });
 });

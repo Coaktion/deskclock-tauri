@@ -14,6 +14,7 @@ import {
   SHEETS_INTEGRATION_NAME,
 } from "@infra/integrations/SheetsSyncStrategy";
 import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
+import { MondaySyncStrategy } from "@infra/integrations/MondaySyncStrategy";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { Task } from "@domain/entities/Task";
 
@@ -35,15 +36,17 @@ export function AutoSyncProvider({
   value?: AutoSyncApi;
 }) {
   const config = useAppConfig();
-  const { taskRepo, projectRepo, categoryRepo, taskLogRepo } = useRepositories();
+  const { taskRepo, projectRepo, categoryRepo, taskLogRepo, mondayActivityItemRepo } =
+    useRepositories();
 
   const runner = useMemo(() => {
     const strategies: ISyncStrategy[] = [
       new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
       new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
+      new MondaySyncStrategy(config, taskRepo, taskLogRepo, mondayActivityItemRepo),
     ];
     return new AutoSyncRunner(strategies);
-  }, [config, taskRepo, projectRepo, categoryRepo, taskLogRepo]);
+  }, [config, taskRepo, projectRepo, categoryRepo, taskLogRepo, mondayActivityItemRepo]);
 
   const subscribe = useCallback((cb: () => void) => runner.subscribe(cb), [runner]);
   const getSnapshot = useCallback(() => runner.getVersion(), [runner]);

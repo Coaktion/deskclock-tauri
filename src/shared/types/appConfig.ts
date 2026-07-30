@@ -5,6 +5,11 @@ import type {
   ClockifyProjectMapping,
   ClockifyCategoryMapping,
 } from "@shared/types/clockifyConfig";
+import type {
+  MondayWorkspaceRef,
+  MondayProjectMapping,
+  MondayCategoryMapping,
+} from "@shared/types/mondayConfig";
 
 export interface OverlayPosition {
   x: number;
@@ -94,6 +99,24 @@ export interface AppConfig {
   clockifyAutoSyncLastFiredDate: string;
   clockifyDailySyncLastTimestamp: string;
   clockifyWorkspaceCache: ClockifyWorkspaceRef[];
+  // Monday
+  mondayApiKey: string;
+  mondayUserId: string;
+  mondayUserName: string;
+  mondayUserEmail: string;
+  mondayActiveWorkspaceId: string;
+  mondayActiveWorkspaceName: string;
+  mondayWorkspaceCache: MondayWorkspaceRef[];
+  /** Pasta "Projetos" escolhida; vazio = sem filtro de pasta (fallback por nome). */
+  mondayProjectsFolderId: string;
+  mondayProjectMapping: MondayProjectMapping[];
+  mondayCategoryMapping: MondayCategoryMapping[];
+  mondayAutoSync: boolean;
+  mondayAutoSyncMode: "per-task" | "daily";
+  mondayAutoSyncTrigger: "on-open" | "fixed-time";
+  mondayAutoSyncTime: string;
+  mondayAutoSyncLastFiredDate: string;
+  mondayDailySyncLastTimestamp: string;
   // Tours
   toursSeen: string[];
 }
