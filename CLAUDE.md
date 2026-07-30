@@ -494,53 +494,50 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 
 ## Fonte da verdade visual
 
-- **Design system:** `.claude/design-system/`
-- **Tokens CSS:** `.claude/design-system/colors_and_type.css` — tokens importados em `src/index.css`
-- **UI de referência:** `.claude/design-system/ui_kits/deskclock/index.html` — abrir no navegador para comparação visual
-- **Mapa de componentes:** `.claude/migration/component-map.md`
-- **Mapa de tokens:** `.claude/migration/token-map.md`
-- **Critérios de aceitação:** `.claude/migration/acceptance.md`
+> **Corrigido em 2026-07-30.** Esta seção apontava para seis artefatos de uma migração de design
+> system que **não existem no repositório**: `.claude/design-system/` (inteiro), `component-map.md`,
+> `token-map.md`, `acceptance.md`, `findings.md` e `MIGRATION_GUIDE.md`. As regras que dependiam
+> deles ficavam inexequíveis e travavam agentes na primeira mudança visual. Abaixo está o que
+> existe de fato.
+
+- **Tokens de cor:** vêm do **Tailwind v4** (`@import "tailwindcss"` em `src/index.css`), que expõe
+  a paleta inteira como CSS custom properties `--color-<slot>-<peso>` (26 slots: `blue`, `rose`,
+  `teal`, `violet`, `amber`…). **Não há um `tokens.css` no projeto** — a paleta é a do Tailwind.
+- **Overrides de tema:** `src/index.css` remapeia famílias por tema (`[data-theme="verde"]` troca
+  `blue` por `green`; `[data-theme="escuro"]` troca `gray` por `zinc`; `[data-theme="claro"]`
+  inverte a escala de `gray`). Por isso `blue`, `green`, `gray` e `zinc` são **reservados** e não
+  devem ser usados para colorir entidades.
+- **Escala tipográfica:** `--app-font-size` em `:root`, controlada pela configuração de
+  acessibilidade.
+- **Paleta de cores de entidade:** `src/domain/utils/workspaceColor.ts` define a lista curada de
+  slots usada para colorir workspaces, junto com a justificativa de cada exclusão.
 
 ## Regras obrigatórias
 
-1. **Zero hardcode visual.** Nunca crie cores, tamanhos, raios, sombras ou tipografias com valores literais. Use sempre variáveis CSS de `tokens.css`. Se precisar de um valor que não existe, pare e pergunte — não invente um novo.
+1. **Zero hardcode visual.** Nunca crie cores, tamanhos, raios, sombras ou tipografias com valores
+   literais. Use sempre as custom properties do Tailwind (`var(--color-teal-500)`) ou as declaradas
+   em `src/index.css`. Se precisar de um valor que não existe na paleta do Tailwind, pare e
+   pergunte — não invente um novo.
 
-2. **Mapa antes de código.** Ao tocar qualquer componente, consulte `component-map.md` primeiro para confirmar qual arquivo corresponde a qual bloco do design. Se não estiver no mapa, pare e peça para adicionar.
+2. **Um componente por conversa.** Não refatore múltiplas telas/componentes na mesma mudança.
+   Escopo pequeno é verificável.
 
-3. **Um componente por conversa.** Não refatore múltiplas telas/componentes na mesma mudança. Escopo pequeno é verificável.
+3. **Ambiguidade pausa o trabalho.** Se encontrar conflito entre design e código existente (ex:
+   props diferentes, dados diferentes, lógica conflitante), PARE e pergunte. Não adivinhe.
 
-4. **Screenshot diff é obrigatório.** Nenhuma mudança visual é "pronta" sem comparação screenshot do resultado vs. referência do design system.
-
-5. **Ambiguidade pausa o trabalho.** Se encontrar conflito entre design e código existente (ex: props diferentes, dados diferentes, lógica conflitante), PARE e pergunte. Não adivinhe.
-
-6. **Mudanças fora do escopo são rejeitadas.** Não "melhore" partes do código que não foram pedidas, mesmo que pareçam problemas óbvios. Documente em `.claude/migration/findings.md` e continue.
-
-7. **Ordem de migração é fixa.** Siga a ordem de Fase 0 → 7 do `MIGRATION_GUIDE.md`. Não pule fases.
-
-## Workflow padrão por tarefa
-
-Antes de qualquer mudança:
-- [ ] Ler o README do design system
-- [ ] Ler `component-map.md` para o componente em questão
-- [ ] Confirmar props preservadas e escopo
-- [ ] Rodar a tela atual e tirar screenshot "antes"
-
-Ao terminar:
-- [ ] Tirar screenshot "depois"
-- [ ] Comparar com referência do design system
-- [ ] Preencher checklist de `acceptance.md` para o componente
-- [ ] Listar no resumo do PR: (a) arquivos tocados, (b) checklist preenchido, (c) screenshot diff
+4. **Mudanças fora do escopo são rejeitadas.** Não "melhore" partes do código que não foram
+   pedidas, mesmo que pareçam problemas óbvios. Registre a observação no resumo da entrega e
+   continue.
 
 ## Critérios de "pronto" (universal)
 
 Todo PR visual deve passar em:
 
-- [ ] Zero valores hex/rgb fora de `tokens.css`
-- [ ] Zero valores de espaçamento literal (px) fora de tokens
+- [ ] Zero valores hex/rgb/oklch literais fora de `src/index.css`
+- [ ] Zero valores de espaçamento literal (px) fora das escalas do Tailwind
 - [ ] Testes existentes passam
 - [ ] Sem console warnings novos
-- [ ] Screenshot diff anexado com < 2% de pixels divergentes (ou justificativa)
-- [ ] Checklist de aceitação preenchido
+- [ ] Comportamento verificado nos quatro temas (Azul, Verde, Escuro, Claro)
 
 ## Tom e linguagem
 
@@ -552,11 +549,10 @@ Todo PR visual deve passar em:
 ## Quando pedir ajuda humana
 
 Pare e pergunte se:
-- Correspondência de componente não está no mapa
-- Token novo parece necessário
+- A paleta do Tailwind não cobre o que a tela precisa e um token novo parece necessário
 - Props antigas conflitam com estrutura nova
 - Comportamento interativo ambíguo (ex: hover em mobile?)
-- Mais de 3 divergências remanescentes após tentativa de fidelidade
+- Uma seção desta especificação aponta para um arquivo que não existe no repositório
 
 ---
 
