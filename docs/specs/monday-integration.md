@@ -146,16 +146,22 @@ apontamento.
 - A fusão de grupos **apaga** item no board (`delete_item`). Valide com dados descartáveis antes de
   rodar contra o workspace de produção.
 
-## Governança do token (obrigatório antes do merge)
+## Governança do token
 
 `mondayApiKey` é um **token pessoal de produção do Monday**, sem expiração e com escopo de conta
 inteira — lê e escreve em todo board visível ao usuário, um blast radius maior que o do
 `clockifyApiKey`. Ele é persistido em texto plano na tabela `config` do SQLite local, seguindo o
 padrão já aceito para o Clockify.
 
-- [ ] Registrar a entrada em `Coaktion/security-inventory` (dono, sistema, escopo, cadência de
-      rotação, local de armazenamento, blast radius) e citar a referência aqui e no corpo do PR.
-- [ ] Follow-up (fora desta entrega): migrar segredos de integração para o keychain do SO.
+**Resolvido em 2026-07-30: não há registro a fazer, e isto não bloqueia o merge.** O
+`Coaktion/security-inventory` cataloga credenciais de sistemas da empresa — as que têm dono
+organizacional, cadência de rotação definida e blast radius compartilhado. O `mondayApiKey` do
+DeskClock não é isso: cada usuário gera o próprio token na sua conta do Monday e ele nunca sai da
+máquina dele (tabela `config` do SQLite local, mesmo tratamento do `clockifyApiKey`). Não existe
+credencial única a inventariar, e o escopo de qualquer token é o do próprio usuário que o criou.
+
+- [ ] Follow-up (fora desta entrega): migrar segredos de integração para o keychain do SO — vale
+      para `mondayApiKey`, `clockifyApiKey` e os tokens do Google.
 
 ## Limitações conhecidas
 
