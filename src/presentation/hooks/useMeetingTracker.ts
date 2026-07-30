@@ -3,6 +3,7 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { computeMeetingPromptActions } from "@domain/usecases/calendar/computeMeetingPromptActions";
 import { syncTodayMeetings } from "@domain/usecases/calendar/syncTodayMeetings";
@@ -40,6 +41,7 @@ export function useMeetingTracker() {
   const config = useAppConfig();
   const { createCalendarImporter } = useIntegrations();
   const { trackedMeetingRepo, plannedTaskRepo, projectRepo, categoryRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const { runningTask, switchToTask, stopTask } = useRunningTask();
 
   // Refs para uso dentro de intervalos/handlers sem stale closures.
@@ -75,6 +77,7 @@ export function useMeetingTracker() {
           fromISO: startOfDayISO(today),
           toISO: endOfDayISO(today),
           nowISO: new Date().toISOString(),
+          workspaceId,
         }
       ).catch(() => null); // busca é best-effort (rede/token)
       // Novas planejadas criadas → avisa a UI para atualizar a lista ao vivo.

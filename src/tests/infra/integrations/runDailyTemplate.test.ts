@@ -16,6 +16,7 @@ const NOW_ISO = "2026-05-06T15:00:00.000Z";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Tarefa teste",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -134,9 +135,9 @@ describe("runDailyTemplate", () => {
   });
 
   it("algumas inválidas → warning com count exato; só válidas enviadas", async () => {
-    const valid = makeTask({ id: "t1", name: "ok" });
-    const invalid1 = makeTask({ id: "t2", name: "bad1" });
-    const invalid2 = makeTask({ id: "t3", name: "bad2" });
+    const valid = makeTask({ id: "t1", workspaceId: "ws-1", name: "ok" });
+    const invalid1 = makeTask({ id: "t2", workspaceId: "ws-1", name: "bad1" });
+    const invalid2 = makeTask({ id: "t3", workspaceId: "ws-1", name: "bad2" });
     const logRepo = makeLogRepo([]);
     const sender = makeSender();
     const deps = makeDeps({
@@ -173,11 +174,46 @@ describe("runDailyTemplate", () => {
 
   it("caso feliz: 3 grupos / 5 tasks → count=3; sender com 3 tasks; markSent com 5 ids; timestamp atualizado", async () => {
     const tasks = [
-      makeTask({ id: "t1", name: "A", projectId: "p1", categoryId: "c1", durationSeconds: 1000 }),
-      makeTask({ id: "t2", name: "A", projectId: "p1", categoryId: "c1", durationSeconds: 500 }),
-      makeTask({ id: "t3", name: "B", projectId: "p1", categoryId: "c1", durationSeconds: 1800 }),
-      makeTask({ id: "t4", name: "B", projectId: "p1", categoryId: "c1", durationSeconds: 600 }),
-      makeTask({ id: "t5", name: "C", projectId: "p2", categoryId: "c1", durationSeconds: 900 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "A",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 1000,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "A",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 500,
+      }),
+      makeTask({
+        id: "t3",
+        workspaceId: "ws-1",
+        name: "B",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t4",
+        workspaceId: "ws-1",
+        name: "B",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 600,
+      }),
+      makeTask({
+        id: "t5",
+        workspaceId: "ws-1",
+        name: "C",
+        projectId: "p2",
+        categoryId: "c1",
+        durationSeconds: 900,
+      }),
     ];
     const logRepo = makeLogRepo([]);
     const sender = makeSender();
@@ -213,8 +249,20 @@ describe("runDailyTemplate", () => {
     const yesterdayStart = new Date(2026, 4, 5, 9, 0).toISOString();
     const todayStart = new Date(2026, 4, 6, 9, 0).toISOString();
     const tasks = [
-      makeTask({ id: "t1", name: "Daily", startTime: yesterdayStart, durationSeconds: 1800 }),
-      makeTask({ id: "t2", name: "Daily", startTime: todayStart, durationSeconds: 2700 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: yesterdayStart,
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: todayStart,
+        durationSeconds: 2700,
+      }),
     ];
     const sender = makeSender();
     const deps = makeDeps({
@@ -238,8 +286,20 @@ describe("runDailyTemplate", () => {
     const yesterdayStart = new Date(2026, 4, 5, 9, 0).toISOString();
     const todayStart = new Date(2026, 4, 6, 9, 0).toISOString();
     const tasks = [
-      makeTask({ id: "t1", name: "Daily", startTime: yesterdayStart, durationSeconds: 1800 }),
-      makeTask({ id: "t2", name: "Daily", startTime: todayStart, durationSeconds: 2700 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: yesterdayStart,
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: todayStart,
+        durationSeconds: 2700,
+      }),
     ];
     const logRepo = makeLogRepo(["t1"]);
     const sender = makeSender();
@@ -263,8 +323,20 @@ describe("runDailyTemplate", () => {
     const morning = new Date(2026, 4, 6, 9, 0).toISOString();
     const afternoon = new Date(2026, 4, 6, 14, 0).toISOString();
     const tasks = [
-      makeTask({ id: "t1", name: "A", startTime: morning, durationSeconds: 1800 }),
-      makeTask({ id: "t2", name: "A", startTime: afternoon, durationSeconds: 2700 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "A",
+        startTime: morning,
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "A",
+        startTime: afternoon,
+        durationSeconds: 2700,
+      }),
     ];
     const logRepo = makeLogRepo(["t1"]);
     const sender = makeSender();
@@ -286,7 +358,10 @@ describe("runDailyTemplate", () => {
   it("sender lança erro → {count: 0, error}; markSent NÃO chamado; timestamp NÃO atualizado", async () => {
     const task = makeTask();
     const logRepo = makeLogRepo([]);
-    const sender = { integrationName: "TestInteg", send: vi.fn().mockRejectedValue(new Error("network failure")) };
+    const sender = {
+      integrationName: "TestInteg",
+      send: vi.fn().mockRejectedValue(new Error("network failure")),
+    };
     const tsSet = vi.fn();
     const deps = makeDeps({
       taskRepo: makeTaskRepo([task]),
@@ -302,7 +377,10 @@ describe("runDailyTemplate", () => {
   });
 
   it("validate: () => true (cenário UI) → zero invalids, warning undefined, flow normal", async () => {
-    const tasks = [makeTask({ id: "t1" }), makeTask({ id: "t2", name: "outra" })];
+    const tasks = [
+      makeTask({ id: "t1" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", name: "outra" }),
+    ];
     const logRepo = makeLogRepo([]);
     const sender = makeSender();
     const deps = makeDeps({

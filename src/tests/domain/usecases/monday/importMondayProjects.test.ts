@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { importMondayProjects } from "@domain/usecases/monday/importMondayProjects";
 import type { IMondayApi } from "@domain/integrations/IMondayApi";
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
+import type { Project } from "@domain/entities/Project";
 import type { MondayBoardRef, MondayBoardSchema } from "@shared/types/monday";
 
 const WORKSPACE_ID = "15505674";
@@ -51,11 +52,16 @@ function makeApi(boards: MondayBoardRef[], schemas: Record<string, MondayBoardSc
   };
 }
 
+const DESKCLOCK_WS = "ws-1";
+
 function makeProjectRepo(existing: { id: string; name: string }[] = []): IProjectRepository {
-  const store = [...existing];
+  const store: Project[] = existing.map((p) => ({ ...p, workspaceId: DESKCLOCK_WS }));
   return {
     findAll: vi.fn(async () => store),
-    findByName: vi.fn(async (name: string) => store.find((p) => p.name === name) ?? null),
+    findByName: vi.fn(
+      async (name: string, workspaceId: string) =>
+        store.find((p) => p.name === name && p.workspaceId === workspaceId) ?? null
+    ),
     save: vi.fn(async (project) => {
       store.push(project);
     }),
@@ -77,6 +83,7 @@ describe("importMondayProjects", () => {
       api,
       projectRepo,
       workspaceId: WORKSPACE_ID,
+      deskclockWorkspaceId: DESKCLOCK_WS,
       folderId: FOLDER_ID,
     });
 
@@ -104,7 +111,12 @@ describe("importMondayProjects", () => {
       { id: "p-existente", name: "[BR] Cliente Produto 01-999" },
     ]);
 
-    const result = await importMondayProjects({ api, projectRepo, workspaceId: WORKSPACE_ID });
+    const result = await importMondayProjects({
+      api,
+      projectRepo,
+      workspaceId: WORKSPACE_ID,
+      deskclockWorkspaceId: DESKCLOCK_WS,
+    });
 
     expect(result.mappings[0].deskclockProjectId).toBe("p-existente");
     expect(projectRepo.save).not.toHaveBeenCalled();
@@ -124,6 +136,7 @@ describe("importMondayProjects", () => {
       api,
       projectRepo: makeProjectRepo(),
       workspaceId: WORKSPACE_ID,
+      deskclockWorkspaceId: DESKCLOCK_WS,
       folderId: FOLDER_ID,
     });
 
@@ -142,6 +155,7 @@ describe("importMondayProjects", () => {
       api,
       projectRepo: makeProjectRepo(),
       workspaceId: WORKSPACE_ID,
+      deskclockWorkspaceId: DESKCLOCK_WS,
     });
 
     expect(result.mappings).toHaveLength(1);
@@ -159,6 +173,7 @@ describe("importMondayProjects", () => {
       api,
       projectRepo: makeProjectRepo(),
       workspaceId: WORKSPACE_ID,
+      deskclockWorkspaceId: DESKCLOCK_WS,
     });
 
     expect(result.mappings).toHaveLength(1);
@@ -176,6 +191,7 @@ describe("importMondayProjects", () => {
       api,
       projectRepo: makeProjectRepo(),
       workspaceId: WORKSPACE_ID,
+      deskclockWorkspaceId: DESKCLOCK_WS,
       onProgress,
     });
 

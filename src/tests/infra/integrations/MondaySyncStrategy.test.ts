@@ -60,6 +60,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Daily",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -145,7 +146,7 @@ describe("MondaySyncStrategy", () => {
       const { taskRepo, logRepo, itemRepo } = makeDeps([
         task,
         makeTask({ id: "t2", durationSeconds: 1800 }),
-        makeTask({ id: "t3", name: "Outra tarefa", durationSeconds: 3600 }),
+        makeTask({ id: "t3", workspaceId: "ws-1", name: "Outra tarefa", durationSeconds: 3600 }),
       ]);
       const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
 
@@ -161,7 +162,7 @@ describe("MondaySyncStrategy", () => {
       const task = makeTask({ id: "t1" });
       const { taskRepo, logRepo, itemRepo } = makeDeps([
         task,
-        makeTask({ id: "outro-projeto", projectId: "proj-2" }),
+        makeTask({ id: "outro-projeto", workspaceId: "ws-1", projectId: "proj-2" }),
       ]);
       const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
 

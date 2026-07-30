@@ -5,6 +5,7 @@ import type { UUID } from "@shared/types";
 
 interface PlannedTaskRow {
   id: string;
+  workspace_id: string;
   name: string;
   project_id: string | null;
   category_id: string | null;
@@ -25,6 +26,7 @@ interface PlannedTaskRow {
 function rowToTask(r: PlannedTaskRow): PlannedTask {
   return {
     id: r.id,
+    workspaceId: r.workspace_id,
     name: r.name,
     projectId: r.project_id,
     categoryId: r.category_id,
@@ -48,12 +50,13 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
     const db = await getDb();
     await db.execute(
       `INSERT INTO planned_tasks
-        (id, name, project_id, category_id, billable, schedule_type,
+        (id, workspace_id, name, project_id, category_id, billable, schedule_type,
          schedule_date, recurring_days, period_start, period_end,
          completed_dates, actions, sort_order, created_at, start_time, end_time)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
       [
         task.id,
+        task.workspaceId,
         task.name,
         task.projectId,
         task.categoryId,
@@ -110,17 +113,29 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
     return rows[0] ? rowToTask(rows[0]) : null;
   }
 
-  async findForDate(dateISO: string): Promise<PlannedTask[]> {
+  async findForDate(dateISO: string, workspaceId?: UUID): Promise<PlannedTask[]> {
     const db = await getDb();
-    // Traz todas e filtra em JS para lidar com recurring e period
-    const rows = await db.select<PlannedTaskRow[]>(
-      `SELECT * FROM planned_tasks
-       WHERE schedule_type = 'specific_date' AND schedule_date = $1
-          OR schedule_type = 'recurring'
-          OR (schedule_type = 'period' AND period_start <= $1 AND (period_end IS NULL OR period_end >= $1))
-       ORDER BY sort_order ASC, created_at ASC`,
-      [dateISO]
-    );
+    // Traz todas e filtra em JS para lidar com recurring e period.
+    // O parêntese em volta do OR é obrigatório: sem ele o AND do workspace só
+    // se aplicaria ao último ramo e vazaria planejadas de outros workspaces.
+    const rows = workspaceId
+      ? await db.select<PlannedTaskRow[]>(
+          `SELECT * FROM planned_tasks
+           WHERE workspace_id = $2
+             AND ((schedule_type = 'specific_date' AND schedule_date = $1)
+               OR schedule_type = 'recurring'
+               OR (schedule_type = 'period' AND period_start <= $1 AND (period_end IS NULL OR period_end >= $1)))
+           ORDER BY sort_order ASC, created_at ASC`,
+          [dateISO, workspaceId]
+        )
+      : await db.select<PlannedTaskRow[]>(
+          `SELECT * FROM planned_tasks
+           WHERE (schedule_type = 'specific_date' AND schedule_date = $1)
+              OR schedule_type = 'recurring'
+              OR (schedule_type = 'period' AND period_start <= $1 AND (period_end IS NULL OR period_end >= $1))
+           ORDER BY sort_order ASC, created_at ASC`,
+          [dateISO]
+        );
     const dayOfWeek = new Date(dateISO + "T12:00:00Z").getUTCDay();
     return rows.map(rowToTask).filter((t) => {
       if (t.scheduleType === "recurring") {
@@ -130,16 +145,26 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
     });
   }
 
-  async findForWeek(startISO: string, endISO: string): Promise<PlannedTask[]> {
+  async findForWeek(startISO: string, endISO: string, workspaceId?: UUID): Promise<PlannedTask[]> {
     const db = await getDb();
-    const rows = await db.select<PlannedTaskRow[]>(
-      `SELECT * FROM planned_tasks
-       WHERE (schedule_type = 'specific_date' AND schedule_date >= $1 AND schedule_date <= $2)
-          OR schedule_type = 'recurring'
-          OR (schedule_type = 'period' AND period_start <= $2 AND (period_end IS NULL OR period_end >= $1))
-       ORDER BY sort_order ASC, created_at ASC`,
-      [startISO, endISO]
-    );
+    const rows = workspaceId
+      ? await db.select<PlannedTaskRow[]>(
+          `SELECT * FROM planned_tasks
+           WHERE workspace_id = $3
+             AND ((schedule_type = 'specific_date' AND schedule_date >= $1 AND schedule_date <= $2)
+               OR schedule_type = 'recurring'
+               OR (schedule_type = 'period' AND period_start <= $2 AND (period_end IS NULL OR period_end >= $1)))
+           ORDER BY sort_order ASC, created_at ASC`,
+          [startISO, endISO, workspaceId]
+        )
+      : await db.select<PlannedTaskRow[]>(
+          `SELECT * FROM planned_tasks
+           WHERE (schedule_type = 'specific_date' AND schedule_date >= $1 AND schedule_date <= $2)
+              OR schedule_type = 'recurring'
+              OR (schedule_type = 'period' AND period_start <= $2 AND (period_end IS NULL OR period_end >= $1))
+           ORDER BY sort_order ASC, created_at ASC`,
+          [startISO, endISO]
+        );
     return rows.map(rowToTask);
   }
 

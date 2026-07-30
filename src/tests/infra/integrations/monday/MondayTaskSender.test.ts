@@ -108,6 +108,7 @@ function makeItemRepo(seed: MondayActivityItemRecord[] = []): IMondayActivityIte
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Testes para extrair dados",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -221,7 +222,10 @@ describe("MondayTaskSender", () => {
       const client = makeClient();
       const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
 
-      await sender.send([makeTask({ id: "a" }), makeTask({ id: "b", name: "Outra tarefa" })]);
+      await sender.send([
+        makeTask({ id: "a" }),
+        makeTask({ id: "b", workspaceId: "ws-1", name: "Outra tarefa" }),
+      ]);
 
       expect(client.createItem).toHaveBeenCalledTimes(2);
     });
@@ -329,9 +333,9 @@ describe("MondayTaskSender", () => {
       const itemRepo = makeItemRepo();
       const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
 
-      await sender.send([makeTask({ id: "t1", name: "Nome antigo" })]);
+      await sender.send([makeTask({ id: "t1", workspaceId: "ws-1", name: "Nome antigo" })]);
       vi.mocked(client.createItem).mockClear();
-      await sender.send([makeTask({ id: "t1", name: "Nome novo" })]);
+      await sender.send([makeTask({ id: "t1", workspaceId: "ws-1", name: "Nome novo" })]);
 
       expect(client.createItem).not.toHaveBeenCalled();
       expect(client.changeColumnValues).toHaveBeenCalledWith(
@@ -393,16 +397,16 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
 
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A", durationSeconds: 3600 }),
-        makeTask({ id: "t2", name: "Tarefa B", durationSeconds: 1800 }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 3600 }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa B", durationSeconds: 1800 }),
       ]);
       expect(client.createItem).toHaveBeenCalledTimes(2);
       vi.mocked(client.createItem).mockClear();
 
       // o usuário corrige o nome de t2 para bater com t1: um grupo de 1,5h
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A", durationSeconds: 3600 }),
-        makeTask({ id: "t2", name: "Tarefa A", durationSeconds: 1800 }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 3600 }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 1800 }),
       ]);
 
       expect(client.createItem).not.toHaveBeenCalled();
@@ -421,18 +425,18 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
 
       // item-1 = grupo "Tarefa A" com t1; item-2 = grupo "Tarefa X" com t2 e t9
-      await sender.send([makeTask({ id: "t1", name: "Tarefa A" })]);
+      await sender.send([makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" })]);
       await sender.send([
-        makeTask({ id: "t2", name: "Tarefa X" }),
-        makeTask({ id: "t9", name: "Tarefa X" }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa X" }),
+        makeTask({ id: "t9", workspaceId: "ws-1", name: "Tarefa X" }),
       ]);
       vi.mocked(client.createItem).mockClear();
 
       // o usuário renomeia t2 para "Tarefa A"; o envio por tarefa manda só esse grupo,
       // então t9 não está em escopo e item-2 ainda a representa
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A" }),
-        makeTask({ id: "t2", name: "Tarefa A" }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A" }),
       ]);
 
       expect(client.deleteItem).not.toHaveBeenCalled();
@@ -445,15 +449,15 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
 
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A" }),
-        makeTask({ id: "t2", name: "Tarefa B" }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa B" }),
       ]);
       vi.mocked(client.deleteItem).mockRejectedValueOnce(new MondayNotFoundError("Item not found"));
 
       await expect(
         sender.send([
-          makeTask({ id: "t1", name: "Tarefa A" }),
-          makeTask({ id: "t2", name: "Tarefa A" }),
+          makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
+          makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A" }),
         ])
       ).resolves.toBeUndefined();
 
@@ -466,8 +470,8 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
 
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A" }),
-        makeTask({ id: "t2", name: "Tarefa B" }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa B" }),
       ]);
       vi.mocked(client.deleteItem).mockRejectedValueOnce(
         new MondayValidationError("sem permissão")
@@ -475,8 +479,8 @@ describe("MondayTaskSender", () => {
 
       await expect(
         sender.send([
-          makeTask({ id: "t1", name: "Tarefa A" }),
-          makeTask({ id: "t2", name: "Tarefa A" }),
+          makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
+          makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A" }),
         ])
       ).rejects.toBeInstanceOf(MondayValidationError);
       expect(itemRepo.deleteItem).not.toHaveBeenCalled();
@@ -489,16 +493,26 @@ describe("MondayTaskSender", () => {
 
       // item-1 nasce com t1+t2 sob o nome "Tarefa B"
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa B" }),
-        makeTask({ id: "t2", name: "Tarefa B" }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa B" }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa B" }),
       ]);
       vi.mocked(client.createItem).mockClear();
       vi.mocked(client.changeColumnValues).mockClear();
 
       // t1 vira "Tarefa A"; o grupo A (interseção) é processado antes do grupo B (exato)
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A", startTime: "2026-07-30T09:00:00.000Z" }),
-        makeTask({ id: "t2", name: "Tarefa B", startTime: "2026-07-30T17:00:00.000Z" }),
+        makeTask({
+          id: "t1",
+          workspaceId: "ws-1",
+          name: "Tarefa A",
+          startTime: "2026-07-30T09:00:00.000Z",
+        }),
+        makeTask({
+          id: "t2",
+          workspaceId: "ws-1",
+          name: "Tarefa B",
+          startTime: "2026-07-30T17:00:00.000Z",
+        }),
       ]);
 
       // item-1 fica com quem o tem por assinatura exata; o outro grupo ganha item novo
@@ -516,15 +530,15 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
 
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A", durationSeconds: 3600 }),
-        makeTask({ id: "t2", name: "Tarefa A", durationSeconds: 1800 }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 3600 }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 1800 }),
       ]);
       expect(client.createItem).toHaveBeenCalledTimes(1);
       vi.mocked(client.createItem).mockClear();
 
       await sender.send([
-        makeTask({ id: "t1", name: "Tarefa A", durationSeconds: 3600 }),
-        makeTask({ id: "t2", name: "Tarefa B", durationSeconds: 1800 }),
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 3600 }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa B", durationSeconds: 1800 }),
       ]);
 
       // um grupo herda o item existente, o outro ganha um item novo — nenhum órfão
@@ -537,8 +551,8 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
 
       await sender.send([
-        makeTask({ id: "t1", billable: true, durationSeconds: 3600 }),
-        makeTask({ id: "t2", billable: false, durationSeconds: 1800 }),
+        makeTask({ id: "t1", workspaceId: "ws-1", billable: true, durationSeconds: 3600 }),
+        makeTask({ id: "t2", workspaceId: "ws-1", billable: false, durationSeconds: 1800 }),
       ]);
 
       expect(client.createItem).toHaveBeenCalledTimes(2);
@@ -555,11 +569,13 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
       const billableTask = makeTask({
         id: "t1",
+        workspaceId: "ws-1",
         billable: true,
         startTime: "2026-07-30T12:00:00.000Z",
       });
       const otherTask = makeTask({
         id: "t2",
+        workspaceId: "ws-1",
         billable: false,
         startTime: "2026-07-30T14:00:00.000Z",
       });
@@ -621,7 +637,10 @@ describe("MondayTaskSender", () => {
       const client = makeClient();
       const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
 
-      await sender.send([makeTask(), makeTask({ id: "t2", projectId: "proj-sem-board" })]);
+      await sender.send([
+        makeTask(),
+        makeTask({ id: "t2", workspaceId: "ws-1", projectId: "proj-sem-board" }),
+      ]);
 
       expect(client.createItem).toHaveBeenCalledTimes(1);
     });

@@ -5,6 +5,7 @@ import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveT
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { addDaysISO, computeEndHHMM, parseDurationInput } from "@shared/utils/time";
 import { useRef, useState } from "react";
@@ -42,6 +43,7 @@ export function useRetroactiveForm({
   onTaskAdded,
 }: UseRetroactiveFormOptions) {
   const { taskRepo, plannedTaskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
@@ -104,6 +106,7 @@ export function useRetroactiveForm({
     await createRetroactiveTask(
       taskRepo,
       {
+        workspaceId,
         name: name.trim() || null,
         projectId: pId,
         categoryId: cId,

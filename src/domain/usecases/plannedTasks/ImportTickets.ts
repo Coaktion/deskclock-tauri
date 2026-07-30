@@ -16,7 +16,8 @@ export interface ImportTicketInput {
 export async function importTickets(
   repo: IPlannedTaskRepository,
   inputs: ImportTicketInput[],
-  nowISO: string
+  nowISO: string,
+  workspaceId: string
 ): Promise<number> {
   if (inputs.length === 0) return 0;
 
@@ -26,6 +27,7 @@ export async function importTickets(
     await createPlannedTask(
       repo,
       {
+        workspaceId,
         name: input.name,
         projectId: input.projectId,
         categoryId: input.categoryId,

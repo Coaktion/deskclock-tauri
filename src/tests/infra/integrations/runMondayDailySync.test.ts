@@ -16,6 +16,7 @@ const NOW_ISO = "2026-07-30T18:00:00.000Z";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Reunião de alinhamento",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -112,7 +113,7 @@ describe("runMondayDailySync", () => {
 
   it("avisa sobre tarefas inválidas e não as envia", async () => {
     const { deps, sender } = makeDeps(
-      [makeTask({ id: "a" }), makeTask({ id: "b", projectId: null })],
+      [makeTask({ id: "a" }), makeTask({ id: "b", workspaceId: "ws-1", projectId: null })],
       { validate: (t) => t.projectId != null }
     );
 
@@ -124,7 +125,10 @@ describe("runMondayDailySync", () => {
 
   it("não marca como enviada a tarefa que o validate rejeitou", async () => {
     const { deps, logRepo } = makeDeps(
-      [makeTask({ id: "a" }), makeTask({ id: "sem-board", projectId: "proj-nao-mapeado" })],
+      [
+        makeTask({ id: "a" }),
+        makeTask({ id: "sem-board", workspaceId: "ws-1", projectId: "proj-nao-mapeado" }),
+      ],
       { validate: (t) => t.projectId === "proj-1" }
     );
 

@@ -7,6 +7,7 @@ import type { Task } from "@domain/entities/Task";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     projectId: null,
     categoryId: null,

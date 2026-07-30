@@ -17,7 +17,7 @@ function makeRepo(overrides: Partial<ICategoryRepository> = {}): ICategoryReposi
 describe("bulkImportCategories", () => {
   it("linhas sem prefixo criam categorias billable", async () => {
     const repo = makeRepo();
-    await bulkImportCategories(repo, "Desenvolvimento\nSuporte");
+    await bulkImportCategories(repo, "Desenvolvimento\nSuporte", "ws-1");
     const calls = (repo.save as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls[0][0].defaultBillable).toBe(true);
     expect(calls[1][0].defaultBillable).toBe(true);
@@ -25,7 +25,7 @@ describe("bulkImportCategories", () => {
 
   it("linhas com prefixo ! criam categorias non-billable", async () => {
     const repo = makeRepo();
-    await bulkImportCategories(repo, "!Reuniões\n!Treinamento");
+    await bulkImportCategories(repo, "!Reuniões\n!Treinamento", "ws-1");
     const calls = (repo.save as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls[0][0].name).toBe("Reuniões");
     expect(calls[0][0].defaultBillable).toBe(false);
@@ -35,7 +35,7 @@ describe("bulkImportCategories", () => {
 
   it("linhas mistas respeitam o prefixo individualmente", async () => {
     const repo = makeRepo();
-    const result = await bulkImportCategories(repo, "Dev\n!Reuniões\nSuporte");
+    const result = await bulkImportCategories(repo, "Dev\n!Reuniões\nSuporte", "ws-1");
     expect(result.created).toBe(3);
     const calls = (repo.save as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls[0][0].defaultBillable).toBe(true);
@@ -45,16 +45,21 @@ describe("bulkImportCategories", () => {
 
   it("ignora linhas vazias", async () => {
     const repo = makeRepo();
-    const result = await bulkImportCategories(repo, "Dev\n\n  \n!Reuniões");
+    const result = await bulkImportCategories(repo, "Dev\n\n  \n!Reuniões", "ws-1");
     expect(result.created).toBe(2);
   });
 
   it("reporta duplicatas em skipped", async () => {
-    const existing: Category = { id: "x", name: "Existente", defaultBillable: true };
+    const existing: Category = {
+      id: "x",
+      workspaceId: "ws-1",
+      name: "Existente",
+      defaultBillable: true,
+    };
     const repo = makeRepo({
       findByName: vi.fn(async (n) => (n === "Existente" ? existing : null)),
     });
-    const result = await bulkImportCategories(repo, "Novo\nExistente");
+    const result = await bulkImportCategories(repo, "Novo\nExistente", "ws-1");
     expect(result.created).toBe(1);
     expect(result.skipped).toContain("Existente");
   });

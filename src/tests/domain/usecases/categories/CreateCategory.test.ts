@@ -18,7 +18,7 @@ function makeRepo(overrides: Partial<ICategoryRepository> = {}): ICategoryReposi
 describe("createCategory", () => {
   it("cria uma categoria billable", async () => {
     const repo = makeRepo();
-    const result = await createCategory(repo, "Desenvolvimento", true);
+    const result = await createCategory(repo, "Desenvolvimento", true, "ws-1");
     expect(result.name).toBe("Desenvolvimento");
     expect(result.defaultBillable).toBe(true);
     expect(result.id).toBeTruthy();
@@ -27,25 +27,32 @@ describe("createCategory", () => {
 
   it("cria uma categoria non-billable", async () => {
     const repo = makeRepo();
-    const result = await createCategory(repo, "Reuniões", false);
+    const result = await createCategory(repo, "Reuniões", false, "ws-1");
     expect(result.defaultBillable).toBe(false);
   });
 
   it("faz trim no nome antes de salvar", async () => {
     const repo = makeRepo();
-    const result = await createCategory(repo, "  Dev  ", true);
+    const result = await createCategory(repo, "  Dev  ", true, "ws-1");
     expect(result.name).toBe("Dev");
   });
 
   it("lança DomainError se o nome estiver vazio", async () => {
     const repo = makeRepo();
-    await expect(createCategory(repo, "", true)).rejects.toThrow(DomainError);
-    await expect(createCategory(repo, "   ", true)).rejects.toThrow(DomainError);
+    await expect(createCategory(repo, "", true, "ws-1")).rejects.toThrow(DomainError);
+    await expect(createCategory(repo, "   ", true, "ws-1")).rejects.toThrow(DomainError);
   });
 
   it("lança DuplicateNameError se o nome já existir", async () => {
-    const existing: Category = { id: "abc", name: "Existente", defaultBillable: true };
+    const existing: Category = {
+      id: "abc",
+      workspaceId: "ws-1",
+      name: "Existente",
+      defaultBillable: true,
+    };
     const repo = makeRepo({ findByName: vi.fn(async () => existing) });
-    await expect(createCategory(repo, "Existente", true)).rejects.toThrow(DuplicateNameError);
+    await expect(createCategory(repo, "Existente", true, "ws-1")).rejects.toThrow(
+      DuplicateNameError
+    );
   });
 });

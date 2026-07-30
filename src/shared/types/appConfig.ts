@@ -117,6 +117,9 @@ export interface AppConfig {
   mondayAutoSyncTime: string;
   mondayAutoSyncLastFiredDate: string;
   mondayDailySyncLastTimestamp: string;
+  // Workspaces
+  /** Workspace ativo na UI. Vazio = cai no workspace "Padrão" da migration 011. */
+  activeWorkspaceId: string;
   // Tours
   toursSeen: string[];
 }

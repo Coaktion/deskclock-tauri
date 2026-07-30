@@ -18,6 +18,7 @@ function makeRepo(tasks: Task[]): ITaskRepository {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Dev",
     projectId: "p1",
     categoryId: "c1",
@@ -59,7 +60,10 @@ describe("searchTasks", () => {
   });
 
   it("filtra por nome (case insensitive, parcial)", async () => {
-    const tasks = [makeTask({ name: "Dev frontend" }), makeTask({ id: "t2", name: "Reunião" })];
+    const tasks = [
+      makeTask({ name: "Dev frontend" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", name: "Reunião" }),
+    ];
     const repo = makeRepo(tasks);
     const result = await searchTasks(repo, {
       startISO: "2026-04-08T00:00:00.000Z",
@@ -71,7 +75,10 @@ describe("searchTasks", () => {
   });
 
   it("filtra por projectId", async () => {
-    const tasks = [makeTask({ projectId: "p1" }), makeTask({ id: "t2", projectId: "p2" })];
+    const tasks = [
+      makeTask({ projectId: "p1" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", projectId: "p2" }),
+    ];
     const repo = makeRepo(tasks);
     const result = await searchTasks(repo, {
       startISO: "2026-04-08T00:00:00.000Z",
@@ -83,7 +90,10 @@ describe("searchTasks", () => {
   });
 
   it("filtra por categoryId", async () => {
-    const tasks = [makeTask({ categoryId: "c1" }), makeTask({ id: "t2", categoryId: "c2" })];
+    const tasks = [
+      makeTask({ categoryId: "c1" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", categoryId: "c2" }),
+    ];
     const repo = makeRepo(tasks);
     const result = await searchTasks(repo, {
       startISO: "2026-04-08T00:00:00.000Z",
@@ -94,7 +104,10 @@ describe("searchTasks", () => {
   });
 
   it("filtra billable=true", async () => {
-    const tasks = [makeTask({ billable: true }), makeTask({ id: "t2", billable: false })];
+    const tasks = [
+      makeTask({ billable: true }),
+      makeTask({ id: "t2", workspaceId: "ws-1", billable: false }),
+    ];
     const repo = makeRepo(tasks);
     const result = await searchTasks(repo, {
       startISO: "2026-04-08T00:00:00.000Z",
@@ -106,7 +119,10 @@ describe("searchTasks", () => {
   });
 
   it("filtra billable=false", async () => {
-    const tasks = [makeTask({ billable: true }), makeTask({ id: "t2", billable: false })];
+    const tasks = [
+      makeTask({ billable: true }),
+      makeTask({ id: "t2", workspaceId: "ws-1", billable: false }),
+    ];
     const repo = makeRepo(tasks);
     const result = await searchTasks(repo, {
       startISO: "2026-04-08T00:00:00.000Z",
@@ -120,8 +136,14 @@ describe("searchTasks", () => {
   it("combina múltiplos filtros", async () => {
     const tasks = [
       makeTask({ name: "Dev", projectId: "p1", billable: true }),
-      makeTask({ id: "t2", name: "Dev", projectId: "p2", billable: true }),
-      makeTask({ id: "t3", name: "Reunião", projectId: "p1", billable: false }),
+      makeTask({ id: "t2", workspaceId: "ws-1", name: "Dev", projectId: "p2", billable: true }),
+      makeTask({
+        id: "t3",
+        workspaceId: "ws-1",
+        name: "Reunião",
+        projectId: "p1",
+        billable: false,
+      }),
     ];
     const repo = makeRepo(tasks);
     const result = await searchTasks(repo, {

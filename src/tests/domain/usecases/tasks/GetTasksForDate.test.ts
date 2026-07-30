@@ -25,6 +25,7 @@ describe("getTasksForDate", () => {
     const tasks = [
       {
         id: "t1",
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,

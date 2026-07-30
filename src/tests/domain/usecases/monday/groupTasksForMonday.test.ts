@@ -5,6 +5,7 @@ import type { Task } from "@domain/entities/Task";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Tarefa",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -43,9 +44,9 @@ describe("groupTasksForMonday", () => {
   it("separa nomes, projetos e categorias distintos", () => {
     const groups = groupTasksForMonday([
       makeTask({ id: "a" }),
-      makeTask({ id: "b", name: "Outra" }),
-      makeTask({ id: "c", projectId: "proj-2" }),
-      makeTask({ id: "d", categoryId: "cat-2" }),
+      makeTask({ id: "b", workspaceId: "ws-1", name: "Outra" }),
+      makeTask({ id: "c", workspaceId: "ws-1", projectId: "proj-2" }),
+      makeTask({ id: "d", workspaceId: "ws-1", categoryId: "cat-2" }),
     ]);
 
     expect(groups).toHaveLength(4);
@@ -53,8 +54,8 @@ describe("groupTasksForMonday", () => {
 
   it("separa billable de non-billable — Billing type é uma coluna só por item", () => {
     const groups = groupTasksForMonday([
-      makeTask({ id: "a", billable: true, durationSeconds: 3600 }),
-      makeTask({ id: "b", billable: false, durationSeconds: 1800 }),
+      makeTask({ id: "a", workspaceId: "ws-1", billable: true, durationSeconds: 3600 }),
+      makeTask({ id: "b", workspaceId: "ws-1", billable: false, durationSeconds: 1800 }),
     ]);
 
     expect(groups).toHaveLength(2);

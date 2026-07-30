@@ -35,6 +35,7 @@ function makeTaskRepo(overrides: Partial<ITaskRepository> = {}): ITaskRepository
 function makePlannedTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Reunião",
     projectId: "p1",
     categoryId: "c1",
@@ -78,6 +79,7 @@ describe("startPlannedTask", () => {
     const plannedRepo = makePlannedRepo({ findById: vi.fn(async () => planned) });
     const runningTask = {
       id: "old",
+      workspaceId: "ws-1",
       name: null,
       projectId: null,
       categoryId: null,

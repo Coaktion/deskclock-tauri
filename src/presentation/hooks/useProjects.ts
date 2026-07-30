@@ -6,19 +6,20 @@ import { createProject } from "@domain/usecases/projects/CreateProject";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { deleteProject } from "@domain/usecases/projects/DeleteProject";
 import { updateProject } from "@domain/usecases/projects/UpdateProject";
-
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 
 export function useProjects() {
   const { projectRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getProjects(projectRepo);
+    const data = await getProjects(projectRepo, workspaceId);
     setProjects(data);
     setLoading(false);
-  }, [projectRepo]);
+  }, [projectRepo, workspaceId]);
 
   useEffect(() => {
     load();
@@ -26,27 +27,27 @@ export function useProjects() {
 
   const handleCreate = useCallback(
     async (name: string) => {
-      await createProject(projectRepo, name);
+      await createProject(projectRepo, name, workspaceId);
       await load();
     },
-    [projectRepo, load]
+    [projectRepo, load, workspaceId]
   );
 
   const handleBulkImport = useCallback(
     async (rawText: string) => {
-      const result = await bulkImportProjects(projectRepo, rawText);
+      const result = await bulkImportProjects(projectRepo, rawText, workspaceId);
       await load();
       return result;
     },
-    [projectRepo, load]
+    [projectRepo, load, workspaceId]
   );
 
   const handleUpdate = useCallback(
     async (id: string, name: string) => {
-      await updateProject(projectRepo, id, name);
+      await updateProject(projectRepo, id, name, workspaceId);
       await load();
     },
-    [projectRepo, load]
+    [projectRepo, load, workspaceId]
   );
 
   const handleDelete = useCallback(

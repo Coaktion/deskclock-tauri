@@ -5,6 +5,7 @@ import type { Task } from "@domain/entities/Task";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Task A",
     projectId: "p1",
     categoryId: "c1",
@@ -32,15 +33,18 @@ describe("groupTasks", () => {
   });
 
   it("separa tarefas com nomes diferentes", () => {
-    const tasks = [makeTask({ id: "t1", name: "Task A" }), makeTask({ id: "t2", name: "Task B" })];
+    const tasks = [
+      makeTask({ id: "t1", workspaceId: "ws-1", name: "Task A" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", name: "Task B" }),
+    ];
     const groups = groupTasks(tasks);
     expect(groups).toHaveLength(2);
   });
 
   it("separa tarefas com projetos diferentes", () => {
     const tasks = [
-      makeTask({ id: "t1", projectId: "p1" }),
-      makeTask({ id: "t2", projectId: "p2" }),
+      makeTask({ id: "t1", workspaceId: "ws-1", projectId: "p1" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", projectId: "p2" }),
     ];
     const groups = groupTasks(tasks);
     expect(groups).toHaveLength(2);
@@ -48,8 +52,8 @@ describe("groupTasks", () => {
 
   it("separa tarefas com categorias diferentes", () => {
     const tasks = [
-      makeTask({ id: "t1", categoryId: "c1" }),
-      makeTask({ id: "t2", categoryId: "c2" }),
+      makeTask({ id: "t1", workspaceId: "ws-1", categoryId: "c1" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", categoryId: "c2" }),
     ];
     const groups = groupTasks(tasks);
     expect(groups).toHaveLength(2);
@@ -57,8 +61,8 @@ describe("groupTasks", () => {
 
   it("trata null como valor de agrupamento válido", () => {
     const tasks = [
-      makeTask({ id: "t1", name: null, projectId: null, categoryId: null }),
-      makeTask({ id: "t2", name: null, projectId: null, categoryId: null }),
+      makeTask({ id: "t1", workspaceId: "ws-1", name: null, projectId: null, categoryId: null }),
+      makeTask({ id: "t2", workspaceId: "ws-1", name: null, projectId: null, categoryId: null }),
     ];
     const groups = groupTasks(tasks);
     expect(groups).toHaveLength(1);

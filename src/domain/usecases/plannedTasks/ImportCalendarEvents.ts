@@ -20,6 +20,7 @@ export async function importCalendarEvents(
   repo: IPlannedTaskRepository,
   inputs: ImportEventInput[],
   nowISO: string,
+  workspaceId: string,
   addOpenUrlAction = false
 ): Promise<number> {
   if (inputs.length === 0) return 0;
@@ -30,6 +31,7 @@ export async function importCalendarEvents(
     await createPlannedTask(
       repo,
       {
+        workspaceId,
         name: event.title,
         projectId,
         categoryId,

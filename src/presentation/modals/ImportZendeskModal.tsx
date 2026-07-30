@@ -19,6 +19,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { todayISO } from "@shared/utils/time";
 
 const STATUS_LABELS: Record<ZendeskTicket["status"], string> = {
@@ -237,6 +238,7 @@ export function ImportZendeskModal({
   onImported,
   onClose,
 }: ImportZendeskModalProps) {
+  const workspaceId = useActiveWorkspaceId();
   const [tickets, setTickets] = useState<ZendeskTicket[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editMap, setEditMap] = useState<Map<number, TicketEditState>>(new Map());
@@ -297,7 +299,7 @@ export function ImportZendeskModal({
 
     setImporting(true);
     try {
-      const count = await importTickets(repo, inputs, new Date().toISOString());
+      const count = await importTickets(repo, inputs, new Date().toISOString(), workspaceId);
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {

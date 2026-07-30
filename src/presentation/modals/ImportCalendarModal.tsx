@@ -9,10 +9,7 @@ import {
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import {
-  findByNameCaseInsensitive,
-  parseCalendarMetadata,
-} from "@shared/utils/calendarMetadata";
+import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { emit } from "@tauri-apps/api/event";
 import {
   AlertCircle,
@@ -27,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -100,8 +98,7 @@ function weekRangeLabelLong(mondayISO: string): string {
   const monday = new Date(mondayISO + "T12:00:00");
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
   return `${fmt(monday)} a ${fmt(sunday)}`;
 }
 
@@ -319,6 +316,7 @@ export function ImportCalendarModal({
   onImported,
   onClose,
 }: ImportCalendarModalProps) {
+  const workspaceId = useActiveWorkspaceId();
   const [fromDate, setFromDate] = useState(defaultFromISO.slice(0, 10));
   const [toDate, setToDate] = useState(defaultToISO.slice(0, 10));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -462,6 +460,7 @@ export function ImportCalendarModal({
         repo,
         inputs,
         new Date().toISOString(),
+        workspaceId,
         addOpenUrlAction
       );
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
@@ -520,24 +519,24 @@ export function ImportCalendarModal({
           )}
         </div>
 
-        {hasEvents
-          ? dayEvents.map((event) => (
-              <EventRow
-                key={event.id}
-                event={event}
-                selected={selected.has(event.id)}
-                editState={editMap.get(event.id) ?? defaultEditState(event, projects, categories)}
-                projects={projects}
-                categories={categories}
-                isDeduped={dedupedEventIds.has(event.id)}
-                isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
-                onToggleSelect={() => toggleEvent(event.id)}
-                onEditChange={(s) => updateEdit(event.id, s)}
-              />
-            ))
-          : (
-            <p className="text-xs text-gray-700 italic px-4 py-2">Nenhum evento neste dia</p>
-          )}
+        {hasEvents ? (
+          dayEvents.map((event) => (
+            <EventRow
+              key={event.id}
+              event={event}
+              selected={selected.has(event.id)}
+              editState={editMap.get(event.id) ?? defaultEditState(event, projects, categories)}
+              projects={projects}
+              categories={categories}
+              isDeduped={dedupedEventIds.has(event.id)}
+              isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
+              onToggleSelect={() => toggleEvent(event.id)}
+              onEditChange={(s) => updateEdit(event.id, s)}
+            />
+          ))
+        ) : (
+          <p className="text-xs text-gray-700 italic px-4 py-2">Nenhum evento neste dia</p>
+        )}
       </div>
     );
   }
@@ -548,7 +547,6 @@ export function ImportCalendarModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
       <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-
         {/* Header */}
         <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
@@ -556,10 +554,7 @@ export function ImportCalendarModal({
             <h2 className="text-sm font-semibold text-gray-100 flex-1">
               Importar do Google Calendar
             </h2>
-            <button
-              onClick={onClose}
-              className="p-1 text-gray-500 hover:text-gray-300 rounded-lg"
-            >
+            <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
               <X size={16} />
             </button>
           </div>
@@ -608,7 +603,6 @@ export function ImportCalendarModal({
           </div>
         ) : (
           <div className="flex flex-1 overflow-hidden">
-
             {/* Sidebar — lista de semanas */}
             <div className="w-48 shrink-0 border-r border-gray-800 overflow-y-auto bg-gray-900/50 flex flex-col">
               <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 border-b border-gray-800">
@@ -681,7 +675,6 @@ export function ImportCalendarModal({
                 </div>
               )}
             </div>
-
           </div>
         )}
 
@@ -736,7 +729,6 @@ export function ImportCalendarModal({
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

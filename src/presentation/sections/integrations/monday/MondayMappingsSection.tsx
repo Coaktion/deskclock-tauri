@@ -5,6 +5,7 @@ import { parseStatusLabels } from "@domain/usecases/monday/resolveBoardActivitie
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import type { MondayCategoryMapping, MondayProjectMapping } from "@shared/types/mondayConfig";
 import { showToast } from "@shared/utils/toast";
 import { ChevronDown, ChevronRight, ListChecks, Loader2 } from "lucide-react";
@@ -27,6 +28,8 @@ export function MondayMappingsSection({
   reloadProjects: () => Promise<void>;
 }) {
   const { projectRepo } = useRepositories();
+  // Distinto do `workspaceId` desta tela, que é o workspace do **Monday**.
+  const deskclockWorkspaceId = useActiveWorkspaceId();
   const config = useAppConfig();
   const factories = useIntegrations();
   const [projectMapping, setProjectMapping] = useState<MondayProjectMapping[]>([]);
@@ -90,6 +93,7 @@ export function MondayMappingsSection({
         api: factories.createMondayApi(),
         projectRepo,
         workspaceId,
+        deskclockWorkspaceId,
         folderId: config.get("mondayProjectsFolderId"),
         onProgress: (done, total) => setProgress({ done, total }),
       });

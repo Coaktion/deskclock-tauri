@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { ExportProfile } from "@domain/entities/ExportProfile";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { getExportProfiles } from "@domain/usecases/exportProfiles/GetExportProfiles";
 import { createExportProfile } from "@domain/usecases/exportProfiles/CreateExportProfile";
 import { updateExportProfile } from "@domain/usecases/exportProfiles/UpdateExportProfile";
@@ -8,17 +9,17 @@ import { deleteExportProfile } from "@domain/usecases/exportProfiles/DeleteExpor
 import { setDefaultExportProfile } from "@domain/usecases/exportProfiles/SetDefaultExportProfile";
 import type { UUID } from "@shared/types";
 
-
-type CreateInput = Parameters<typeof createExportProfile>[1];
+type CreateInput = Omit<Parameters<typeof createExportProfile>[1], "workspaceId">;
 type UpdateInput = Parameters<typeof updateExportProfile>[2];
 
 export function useExportProfiles() {
   const { exportProfileRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [profiles, setProfiles] = useState<ExportProfile[]>([]);
 
   const load = useCallback(async () => {
-    setProfiles(await getExportProfiles(exportProfileRepo));
-  }, [exportProfileRepo]);
+    setProfiles(await getExportProfiles(exportProfileRepo, workspaceId));
+  }, [exportProfileRepo, workspaceId]);
 
   useEffect(() => {
     void load();
@@ -26,10 +27,10 @@ export function useExportProfiles() {
 
   const create = useCallback(
     async (input: CreateInput) => {
-      await createExportProfile(exportProfileRepo, input);
+      await createExportProfile(exportProfileRepo, { ...input, workspaceId });
       await load();
     },
-    [exportProfileRepo, load]
+    [exportProfileRepo, load, workspaceId]
   );
 
   const update = useCallback(

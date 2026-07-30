@@ -15,6 +15,7 @@ const { TaskRepository } = await import("@infra/database/TaskRepository");
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     project_id: null,
     category_id: null,
@@ -32,6 +33,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     projectId: null,
     categoryId: null,

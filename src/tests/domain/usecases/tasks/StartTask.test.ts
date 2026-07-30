@@ -21,7 +21,7 @@ const NOW = "2026-04-08T10:00:00.000Z";
 describe("startTask", () => {
   it("cria uma nova task com status running", async () => {
     const repo = makeRepo();
-    const task = await startTask(repo, { billable: true }, NOW);
+    const task = await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
     expect(task.status).toBe("running");
     expect(task.id).toBeTruthy();
     expect(repo.save).toHaveBeenCalledWith(task);
@@ -29,14 +29,18 @@ describe("startTask", () => {
 
   it("usa now como startTime quando não fornecido", async () => {
     const repo = makeRepo();
-    const task = await startTask(repo, { billable: true }, NOW);
+    const task = await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
     expect(task.startTime).toBe(NOW);
   });
 
   it("usa startTime customizado quando fornecido", async () => {
     const repo = makeRepo();
     const custom = "2026-04-08T08:00:00.000Z";
-    const task = await startTask(repo, { billable: true, startTime: custom }, NOW);
+    const task = await startTask(
+      repo,
+      { workspaceId: "ws-1", billable: true, startTime: custom },
+      NOW
+    );
     expect(task.startTime).toBe(custom);
   });
 
@@ -44,7 +48,7 @@ describe("startTask", () => {
     const repo = makeRepo();
     const task = await startTask(
       repo,
-      { name: "Dev", projectId: "p1", categoryId: "c1", billable: false },
+      { workspaceId: "ws-1", name: "Dev", projectId: "p1", categoryId: "c1", billable: false },
       NOW
     );
     expect(task.name).toBe("Dev");
@@ -55,13 +59,14 @@ describe("startTask", () => {
 
   it("durationSeconds inicial é 0", async () => {
     const repo = makeRepo();
-    const task = await startTask(repo, { billable: true }, NOW);
+    const task = await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
     expect(task.durationSeconds).toBe(0);
   });
 
   it("para task running existente antes de iniciar nova", async () => {
     const running: Task = {
       id: "old",
+      workspaceId: "ws-1",
       name: null,
       projectId: null,
       categoryId: null,
@@ -74,7 +79,7 @@ describe("startTask", () => {
       updatedAt: "2026-04-08T09:00:00.000Z",
     };
     const repo = makeRepo({ findByStatus: vi.fn(async () => [running]) });
-    await startTask(repo, { billable: true }, NOW);
+    await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
     expect(repo.update).toHaveBeenCalledWith(
       expect.objectContaining({ id: "old", status: "completed" })
     );
@@ -83,6 +88,7 @@ describe("startTask", () => {
   it("para task paused existente antes de iniciar nova", async () => {
     const paused: Task = {
       id: "old2",
+      workspaceId: "ws-1",
       name: null,
       projectId: null,
       categoryId: null,
@@ -95,7 +101,7 @@ describe("startTask", () => {
       updatedAt: "2026-04-08T09:30:00.000Z",
     };
     const repo = makeRepo({ findByStatus: vi.fn(async () => [paused]) });
-    await startTask(repo, { billable: true }, NOW);
+    await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
     expect(repo.update).toHaveBeenCalledWith(
       expect.objectContaining({ id: "old2", status: "completed" })
     );

@@ -1,9 +1,11 @@
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
 import { createProject } from "./CreateProject";
+import type { UUID } from "@shared/types";
 
 export async function bulkImportProjects(
   repository: IProjectRepository,
-  rawText: string
+  rawText: string,
+  workspaceId: UUID
 ): Promise<{ created: number; skipped: string[] }> {
   const lines = rawText
     .split("\n")
@@ -15,7 +17,7 @@ export async function bulkImportProjects(
 
   for (const line of lines) {
     try {
-      await createProject(repository, line);
+      await createProject(repository, line, workspaceId);
       created++;
     } catch {
       skipped.push(line);

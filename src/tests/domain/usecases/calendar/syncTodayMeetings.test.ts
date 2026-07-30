@@ -69,6 +69,7 @@ const RANGE = {
   fromISO: "2026-07-01T00:00:00.000Z",
   toISO: "2026-07-01T23:59:59.999Z",
   nowISO: "2026-07-01T08:00:00.000Z",
+  workspaceId: "ws-1",
 };
 
 describe("syncTodayMeetings", () => {

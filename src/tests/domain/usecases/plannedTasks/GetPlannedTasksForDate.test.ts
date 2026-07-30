@@ -21,6 +21,7 @@ function makeRepo(overrides: Partial<IPlannedTaskRepository> = {}): IPlannedTask
 function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Tarefa",
     projectId: null,
     categoryId: null,
@@ -43,7 +44,7 @@ describe("getPlannedTasksForDate", () => {
     const tasks = [makeTask()];
     const repo = makeRepo({ findForDate: vi.fn(async () => tasks) });
     const result = await getPlannedTasksForDate(repo, "2026-04-08");
-    expect(repo.findForDate).toHaveBeenCalledWith("2026-04-08");
+    expect(repo.findForDate).toHaveBeenCalledWith("2026-04-08", undefined);
     expect(result).toEqual(tasks);
   });
 

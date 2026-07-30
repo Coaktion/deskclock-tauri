@@ -8,7 +8,10 @@ import { resolveBoardActivitiesColumns } from "./resolveBoardActivitiesColumns";
 export interface ImportMondayProjectsInput {
   api: IMondayApi;
   projectRepo: IProjectRepository;
+  /** Workspace do **Monday** de onde os boards são lidos. */
   workspaceId: string;
+  /** Workspace do **DeskClock** que recebe os projetos importados. */
+  deskclockWorkspaceId: string;
   /** Pasta "Projetos"; vazio/ausente = sem filtro de pasta. */
   folderId?: string;
   onProgress?: (done: number, total: number) => void;
@@ -29,6 +32,7 @@ export async function importMondayProjects({
   api,
   projectRepo,
   workspaceId,
+  deskclockWorkspaceId,
   folderId,
   onProgress,
 }: ImportMondayProjectsInput): Promise<ImportMondayProjectsResult> {
@@ -60,9 +64,9 @@ export async function importMondayProjects({
     }
 
     const project =
-      (await projectRepo.findByName(board.name)) ??
-      (await createProject(projectRepo, board.name).catch(() =>
-        projectRepo.findByName(board.name)
+      (await projectRepo.findByName(board.name, deskclockWorkspaceId)) ??
+      (await createProject(projectRepo, board.name, deskclockWorkspaceId).catch(() =>
+        projectRepo.findByName(board.name, deskclockWorkspaceId)
       ));
     if (!project) {
       skipped.push({ boardName: board.name, reason: "Não foi possível criar o projeto." });

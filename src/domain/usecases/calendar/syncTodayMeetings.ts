@@ -32,6 +32,8 @@ export interface SyncTodayMeetingsRange {
   toISO: string;
   /** Momento atual (ISO) — usado como createdAt das PlannedTasks. */
   nowISO: string;
+  /** Workspace que recebe as planejadas criadas e cujo catálogo é consultado. */
+  workspaceId: string;
 }
 
 /**
@@ -56,14 +58,14 @@ export async function syncTodayMeetings(
   range: SyncTodayMeetingsRange
 ): Promise<SyncTodayMeetingsResult> {
   const { importer, trackedRepo, plannedRepo, projectRepo, categoryRepo } = deps;
-  const { todayISO, fromISO, toISO, nowISO } = range;
+  const { todayISO, fromISO, toISO, nowISO, workspaceId } = range;
 
   const [events, existing, plannedToday, projects, categories] = await Promise.all([
     importer.getEvents(fromISO, toISO),
     trackedRepo.listForDate(todayISO),
-    plannedRepo.findForDate(todayISO),
-    projectRepo.findAll(),
-    categoryRepo.findAll(),
+    plannedRepo.findForDate(todayISO, workspaceId),
+    projectRepo.findAll(workspaceId),
+    categoryRepo.findAll(workspaceId),
   ]);
 
   const existingIds = new Set(existing.map((m) => m.calendarEventId));
@@ -110,7 +112,7 @@ export async function syncTodayMeetings(
   }
 
   if (newPlannedInputs.length > 0) {
-    await importCalendarEvents(plannedRepo, newPlannedInputs, nowISO, true);
+    await importCalendarEvents(plannedRepo, newPlannedInputs, nowISO, workspaceId, true);
   }
 
   await trackedRepo.pruneBefore(todayISO);

@@ -1,9 +1,11 @@
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import { createCategory } from "./CreateCategory";
+import type { UUID } from "@shared/types";
 
 export async function bulkImportCategories(
   repository: ICategoryRepository,
-  rawText: string
+  rawText: string,
+  workspaceId: UUID
 ): Promise<{ created: number; skipped: string[] }> {
   const lines = rawText
     .split("\n")
@@ -17,7 +19,7 @@ export async function bulkImportCategories(
     const isBillable = !line.startsWith("!");
     const name = isBillable ? line : line.slice(1).trim();
     try {
-      await createCategory(repository, name, isBillable);
+      await createCategory(repository, name, isBillable, workspaceId);
       created++;
     } catch {
       skipped.push(line);

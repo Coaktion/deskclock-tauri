@@ -16,6 +16,8 @@ export async function mergeTaskGroup(
 
   const merged: Task = {
     id: generateUUID(),
+    // O grupo só existe dentro de um workspace, então herdar da primeira é seguro.
+    workspaceId: first.workspaceId,
     name: first.name,
     projectId: first.projectId,
     categoryId: first.categoryId,

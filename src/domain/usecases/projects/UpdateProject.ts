@@ -5,12 +5,13 @@ import type { UUID } from "@shared/types";
 export async function updateProject(
   repository: IProjectRepository,
   id: UUID,
-  name: string
+  name: string,
+  workspaceId: UUID
 ): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) throw new DomainError("O nome do projeto não pode ser vazio.");
 
-  const existing = await repository.findByName(trimmed);
+  const existing = await repository.findByName(trimmed, workspaceId);
   if (existing && existing.id !== id)
     throw new DuplicateNameError(`Projeto "${trimmed}" já existe.`);
 

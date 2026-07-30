@@ -25,6 +25,7 @@ describe("createPlannedTask", () => {
     const task = await createPlannedTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: "Reunião",
         scheduleType: "specific_date",
         scheduleDate: "2026-04-08",
@@ -43,7 +44,13 @@ describe("createPlannedTask", () => {
     const repo = makeRepo();
     const task = await createPlannedTask(
       repo,
-      { name: "Daily", scheduleType: "recurring", recurringDays: [1, 2, 3], billable: false },
+      {
+        workspaceId: "ws-1",
+        name: "Daily",
+        scheduleType: "recurring",
+        recurringDays: [1, 2, 3],
+        billable: false,
+      },
       NOW
     );
     expect(task.scheduleType).toBe("recurring");
@@ -56,6 +63,7 @@ describe("createPlannedTask", () => {
     const task = await createPlannedTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: "Sprint",
         scheduleType: "period",
         periodStart: "2026-04-07",
@@ -73,7 +81,13 @@ describe("createPlannedTask", () => {
     const repo = makeRepo();
     const task = await createPlannedTask(
       repo,
-      { name: "X", scheduleType: "specific_date", scheduleDate: "2026-04-08", billable: true },
+      {
+        workspaceId: "ws-1",
+        name: "X",
+        scheduleType: "specific_date",
+        scheduleDate: "2026-04-08",
+        billable: true,
+      },
       NOW
     );
     expect(task.completedDates).toEqual([]);
@@ -85,6 +99,7 @@ describe("createPlannedTask", () => {
     const task = await createPlannedTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: "X",
         scheduleType: "specific_date",
         scheduleDate: "2026-04-08",
@@ -101,7 +116,13 @@ describe("createPlannedTask", () => {
     const repo = makeRepo();
     const task = await createPlannedTask(
       repo,
-      { name: "X", scheduleType: "specific_date", scheduleDate: "2026-04-08", billable: true },
+      {
+        workspaceId: "ws-1",
+        name: "X",
+        scheduleType: "specific_date",
+        scheduleDate: "2026-04-08",
+        billable: true,
+      },
       NOW
     );
     expect(task.projectId).toBeNull();

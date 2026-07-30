@@ -5,6 +5,7 @@ import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { WorkspaceProvider, useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
@@ -36,6 +37,7 @@ const appWindow = getCurrentWindow();
 function PopupOverlayAppInner() {
   const config = useAppConfig();
   const { taskRepo, plannedTaskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
@@ -217,7 +219,11 @@ function PopupOverlayAppInner() {
       if (isStartingTaskRef.current) return;
       isStartingTaskRef.current = true;
       try {
-        const task = await startTaskUC(taskRepo, input, new Date().toISOString());
+        const task = await startTaskUC(
+          taskRepo,
+          { ...input, workspaceId },
+          new Date().toISOString()
+        );
         activePlannedTaskId.current = input.plannedTaskId ?? null;
         await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
           task,
@@ -228,7 +234,7 @@ function PopupOverlayAppInner() {
         isStartingTaskRef.current = false;
       }
     },
-    [taskRepo]
+    [taskRepo, workspaceId]
   );
 
   const handlePlay = useCallback(
@@ -364,7 +370,9 @@ export function PopupOverlayApp() {
   return (
     <ConfigProvider>
       <RepositoriesProvider>
-        <PopupOverlayAppInner />
+        <WorkspaceProvider>
+          <PopupOverlayAppInner />
+        </WorkspaceProvider>
       </RepositoriesProvider>
     </ConfigProvider>
   );

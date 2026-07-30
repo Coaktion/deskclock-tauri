@@ -3,6 +3,7 @@ import type { Task } from "@domain/entities/Task";
 import { generateUUID } from "@shared/utils/uuid";
 
 interface CreateRetroactiveInput {
+  workspaceId: string;
   name: string | null;
   projectId: string | null;
   categoryId: string | null;
@@ -19,6 +20,7 @@ export async function createRetroactiveTask(
 ): Promise<Task> {
   const task: Task = {
     id: generateUUID(),
+    workspaceId: input.workspaceId,
     name: input.name,
     projectId: input.projectId,
     categoryId: input.categoryId,

@@ -8,6 +8,7 @@ import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
@@ -156,6 +157,7 @@ function TaskRow({
 
 export function RetroactivePage() {
   const { taskRepo, plannedTaskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -245,6 +247,7 @@ export function RetroactivePage() {
     await createRetroactiveTask(
       taskRepo,
       {
+        workspaceId,
         name: task.name || null,
         projectId: task.projectId,
         categoryId: task.categoryId,

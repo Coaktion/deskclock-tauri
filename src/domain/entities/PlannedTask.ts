@@ -9,6 +9,7 @@ export interface PlannedTaskAction {
 
 export interface PlannedTask {
   id: UUID;
+  workspaceId: UUID;
   name: string;
   projectId: UUID | null;
   categoryId: UUID | null;

@@ -24,6 +24,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IClockifyConfigPort {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Tarefa teste",
     projectId: "proj-1",
     categoryId: null,
@@ -58,10 +59,7 @@ describe("ClockifyTaskSender", () => {
   it("filtra tarefas não concluídas", async () => {
     const config = makeConfig();
     const sender = new ClockifyTaskSender(config, client);
-    await sender.send([
-      makeTask({ status: "running" }),
-      makeTask({ status: "paused" }),
-    ]);
+    await sender.send([makeTask({ status: "running" }), makeTask({ status: "paused" })]);
     expect(client.createTimeEntry).not.toHaveBeenCalled();
   });
 

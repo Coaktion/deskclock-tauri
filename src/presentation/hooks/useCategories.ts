@@ -6,19 +6,20 @@ import { createCategory } from "@domain/usecases/categories/CreateCategory";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 import { deleteCategory } from "@domain/usecases/categories/DeleteCategory";
 import { updateCategory } from "@domain/usecases/categories/UpdateCategory";
-
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 
 export function useCategories() {
   const { categoryRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getCategories(categoryRepo);
+    const data = await getCategories(categoryRepo, workspaceId);
     setCategories(data);
     setLoading(false);
-  }, [categoryRepo]);
+  }, [categoryRepo, workspaceId]);
 
   useEffect(() => {
     load();
@@ -26,27 +27,27 @@ export function useCategories() {
 
   const handleCreate = useCallback(
     async (name: string, defaultBillable: boolean) => {
-      await createCategory(categoryRepo, name, defaultBillable);
+      await createCategory(categoryRepo, name, defaultBillable, workspaceId);
       await load();
     },
-    [categoryRepo, load]
+    [categoryRepo, load, workspaceId]
   );
 
   const handleBulkImport = useCallback(
     async (rawText: string) => {
-      const result = await bulkImportCategories(categoryRepo, rawText);
+      const result = await bulkImportCategories(categoryRepo, rawText, workspaceId);
       await load();
       return result;
     },
-    [categoryRepo, load]
+    [categoryRepo, load, workspaceId]
   );
 
   const handleUpdate = useCallback(
     async (id: string, name: string, defaultBillable: boolean) => {
-      await updateCategory(categoryRepo, id, name, defaultBillable);
+      await updateCategory(categoryRepo, id, name, defaultBillable, workspaceId);
       await load();
     },
-    [categoryRepo, load]
+    [categoryRepo, load, workspaceId]
   );
 
   const handleDelete = useCallback(

@@ -6,6 +6,7 @@ import type { Task } from "@domain/entities/Task";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     projectId: null,
     categoryId: null,
@@ -35,9 +36,9 @@ function makeRepo(tasks: Task[]): ITaskRepository {
 describe("getTodayTotals", () => {
   it("soma billable e non-billable separadamente", async () => {
     const tasks = [
-      makeTask({ id: "t1", billable: true, durationSeconds: 3600 }),
-      makeTask({ id: "t2", billable: false, durationSeconds: 1800 }),
-      makeTask({ id: "t3", billable: true, durationSeconds: 900 }),
+      makeTask({ id: "t1", workspaceId: "ws-1", billable: true, durationSeconds: 3600 }),
+      makeTask({ id: "t2", workspaceId: "ws-1", billable: false, durationSeconds: 1800 }),
+      makeTask({ id: "t3", workspaceId: "ws-1", billable: true, durationSeconds: 900 }),
     ];
     const repo = makeRepo(tasks);
     const result = await getTodayTotals(repo, "2026-04-08");
@@ -53,7 +54,9 @@ describe("getTodayTotals", () => {
   });
 
   it("usa durationSeconds nulo como 0", async () => {
-    const tasks = [makeTask({ id: "t1", billable: true, durationSeconds: null })];
+    const tasks = [
+      makeTask({ id: "t1", workspaceId: "ws-1", billable: true, durationSeconds: null }),
+    ];
     const repo = makeRepo(tasks);
     const result = await getTodayTotals(repo, "2026-04-08");
     expect(result.billableSeconds).toBe(0);

@@ -4,6 +4,7 @@ import type { Task, TaskStatus } from "@domain/entities/Task";
 
 interface TaskRow {
   id: string;
+  workspace_id: string;
   name: string | null;
   project_id: string | null;
   category_id: string | null;
@@ -19,6 +20,7 @@ interface TaskRow {
 function rowToTask(r: TaskRow): Task {
   return {
     id: r.id,
+    workspaceId: r.workspace_id,
     name: r.name,
     projectId: r.project_id,
     categoryId: r.category_id,
@@ -37,11 +39,12 @@ export class TaskRepository implements ITaskRepository {
     const db = await getDb();
     await db.execute(
       `INSERT INTO tasks
-        (id, name, project_id, category_id, billable, start_time, end_time,
+        (id, workspace_id, name, project_id, category_id, billable, start_time, end_time,
          duration_seconds, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         task.id,
+        task.workspaceId,
         task.name,
         task.projectId,
         task.categoryId,
@@ -94,12 +97,19 @@ export class TaskRepository implements ITaskRepository {
     return rows.map(rowToTask);
   }
 
-  async findByDateRange(startISO: string, endISO: string): Promise<Task[]> {
+  async findByDateRange(startISO: string, endISO: string, workspaceId?: string): Promise<Task[]> {
     const db = await getDb();
-    const rows = await db.select<TaskRow[]>(
-      "SELECT * FROM tasks WHERE start_time >= $1 AND start_time <= $2 ORDER BY start_time ASC",
-      [startISO, endISO]
-    );
+    const rows = workspaceId
+      ? await db.select<TaskRow[]>(
+          `SELECT * FROM tasks
+           WHERE start_time >= $1 AND start_time <= $2 AND workspace_id = $3
+           ORDER BY start_time ASC`,
+          [startISO, endISO, workspaceId]
+        )
+      : await db.select<TaskRow[]>(
+          "SELECT * FROM tasks WHERE start_time >= $1 AND start_time <= $2 ORDER BY start_time ASC",
+          [startISO, endISO]
+        );
     return rows.map(rowToTask);
   }
 

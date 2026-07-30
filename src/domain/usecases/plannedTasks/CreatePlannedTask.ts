@@ -4,6 +4,7 @@ import { generateUUID } from "@shared/utils/uuid";
 import type { UUID } from "@shared/types";
 
 interface CreatePlannedTaskInput {
+  workspaceId: UUID;
   name: string;
   projectId?: UUID | null;
   categoryId?: UUID | null;
@@ -26,6 +27,7 @@ export async function createPlannedTask(
 ): Promise<PlannedTask> {
   const task: PlannedTask = {
     id: generateUUID(),
+    workspaceId: input.workspaceId,
     name: input.name,
     projectId: input.projectId ?? null,
     categoryId: input.categoryId ?? null,

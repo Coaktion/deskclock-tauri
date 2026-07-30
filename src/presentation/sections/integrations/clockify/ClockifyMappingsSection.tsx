@@ -1,12 +1,10 @@
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import { showToast } from "@shared/utils/toast";
-import type {
-  ClockifyCategoryMapping,
-  ClockifyProjectMapping,
-} from "@shared/types/clockifyConfig";
+import type { ClockifyCategoryMapping, ClockifyProjectMapping } from "@shared/types/clockifyConfig";
 import { ChevronDown, ChevronRight, ListChecks, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProjectMappingRow } from "./ProjectMappingRow";
@@ -64,6 +62,8 @@ export function ClockifyMappingsSection({
   reloadCategories: () => Promise<void>;
 }) {
   const { projectRepo, categoryRepo } = useRepositories();
+  // Distinto do `workspaceId` desta tela, que é o workspace do **Clockify**.
+  const deskclockWorkspaceId = useActiveWorkspaceId();
   const config = useAppConfig();
   const factories = useIntegrations();
   const [clockifyProjects, setClockifyProjects] = useState<ClockifyRef[]>([]);
@@ -142,12 +142,12 @@ export function ClockifyMappingsSection({
           ),
         buildMapping: async (cp): Promise<ClockifyProjectMapping | null> => {
           const displayName = projectDisplayName(cp);
-          let proj = await projectRepo.findByName(displayName);
+          let proj = await projectRepo.findByName(displayName, deskclockWorkspaceId);
           if (!proj) {
             try {
-              proj = await createProjectUC(projectRepo, displayName);
+              proj = await createProjectUC(projectRepo, displayName, deskclockWorkspaceId);
             } catch {
-              proj = await projectRepo.findByName(displayName);
+              proj = await projectRepo.findByName(displayName, deskclockWorkspaceId);
             }
           }
           if (!proj) return null;
@@ -183,12 +183,12 @@ export function ClockifyMappingsSection({
         fetchItems: () => getClient().listTags(workspaceId),
         onFetched: (list) => setClockifyTags(list.map((t) => ({ id: t.id, name: t.name }))),
         buildMapping: async (tag): Promise<ClockifyCategoryMapping | null> => {
-          let cat = await categoryRepo.findByName(tag.name);
+          let cat = await categoryRepo.findByName(tag.name, deskclockWorkspaceId);
           if (!cat) {
             try {
-              cat = await createCategoryUC(categoryRepo, tag.name, true);
+              cat = await createCategoryUC(categoryRepo, tag.name, true, deskclockWorkspaceId);
             } catch {
-              cat = await categoryRepo.findByName(tag.name);
+              cat = await categoryRepo.findByName(tag.name, deskclockWorkspaceId);
             }
           }
           if (!cat) return null;
@@ -263,7 +263,9 @@ export function ClockifyMappingsSection({
         }}
         className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-800/30 transition-colors"
       >
-        <span className="text-gray-500"><ListChecks size={15} /></span>
+        <span className="text-gray-500">
+          <ListChecks size={15} />
+        </span>
         <span className="text-sm font-medium text-gray-200">Mapeamentos</span>
         <span className="ml-auto text-gray-600">
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

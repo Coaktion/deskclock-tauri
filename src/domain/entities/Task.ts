@@ -4,6 +4,7 @@ export type TaskStatus = "running" | "paused" | "completed";
 
 export interface Task {
   id: UUID;
+  workspaceId: UUID;
   name: string | null;
   projectId: UUID | null;
   categoryId: UUID | null;

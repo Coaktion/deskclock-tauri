@@ -18,7 +18,7 @@ function makeRepo(overrides: Partial<IProjectRepository> = {}): IProjectReposito
 describe("createProject", () => {
   it("cria um projeto com nome válido", async () => {
     const repo = makeRepo();
-    const result = await createProject(repo, "Meu Projeto");
+    const result = await createProject(repo, "Meu Projeto", "ws-1");
     expect(result.name).toBe("Meu Projeto");
     expect(result.id).toBeTruthy();
     expect(repo.save).toHaveBeenCalledWith(result);
@@ -26,19 +26,19 @@ describe("createProject", () => {
 
   it("faz trim no nome antes de salvar", async () => {
     const repo = makeRepo();
-    const result = await createProject(repo, "  Projeto  ");
+    const result = await createProject(repo, "  Projeto  ", "ws-1");
     expect(result.name).toBe("Projeto");
   });
 
   it("lança DomainError se o nome estiver vazio", async () => {
     const repo = makeRepo();
-    await expect(createProject(repo, "")).rejects.toThrow(DomainError);
-    await expect(createProject(repo, "   ")).rejects.toThrow(DomainError);
+    await expect(createProject(repo, "", "ws-1")).rejects.toThrow(DomainError);
+    await expect(createProject(repo, "   ", "ws-1")).rejects.toThrow(DomainError);
   });
 
   it("lança DuplicateNameError se o nome já existir", async () => {
-    const existing: Project = { id: "abc", name: "Existente" };
+    const existing: Project = { id: "abc", workspaceId: "ws-1", name: "Existente" };
     const repo = makeRepo({ findByName: vi.fn(async () => existing) });
-    await expect(createProject(repo, "Existente")).rejects.toThrow(DuplicateNameError);
+    await expect(createProject(repo, "Existente", "ws-1")).rejects.toThrow(DuplicateNameError);
   });
 });

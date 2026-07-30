@@ -8,6 +8,7 @@ import { IntegrationsUiProvider } from "@presentation/contexts/IntegrationsUiCon
 import { IntegrationsRail } from "@presentation/components/IntegrationsRail";
 import { IntegrationsModalsHost } from "@presentation/components/IntegrationsModalsHost";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { TourProvider } from "@presentation/contexts/TourContext";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
@@ -335,13 +336,15 @@ function App() {
   return (
     <ConfigProvider>
       <RepositoriesProvider>
-        <IntegrationsProvider>
-          <IntegrationsUiProvider>
-            <AutoSyncProvider>
-              <AppInner />
-            </AutoSyncProvider>
-          </IntegrationsUiProvider>
-        </IntegrationsProvider>
+        <WorkspaceProvider>
+          <IntegrationsProvider>
+            <IntegrationsUiProvider>
+              <AutoSyncProvider>
+                <AppInner />
+              </AutoSyncProvider>
+            </IntegrationsUiProvider>
+          </IntegrationsProvider>
+        </WorkspaceProvider>
       </RepositoriesProvider>
     </ConfigProvider>
   );

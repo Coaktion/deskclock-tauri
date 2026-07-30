@@ -4,6 +4,7 @@ import { generateUUID } from "@shared/utils/uuid";
 import { effectiveDuration } from "./_helpers";
 
 interface StartTaskInput {
+  workspaceId: string;
   name?: string | null;
   projectId?: string | null;
   categoryId?: string | null;
@@ -35,6 +36,7 @@ export async function startTask(
 
   const task: Task = {
     id: generateUUID(),
+    workspaceId: input.workspaceId,
     name: input.name ?? null,
     projectId: input.projectId ?? null,
     categoryId: input.categoryId ?? null,

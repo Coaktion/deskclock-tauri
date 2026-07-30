@@ -2,9 +2,9 @@ import { useState } from "react";
 import { ChevronRight, ChevronLeft, Clock } from "lucide-react";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
-
 
 const STEPS = ["Boas-vindas", "Projetos", "Categorias"] as const;
 
@@ -20,12 +20,14 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
   const [projectsText, setProjectsText] = useState("");
   const [categoriesText, setCategoriesText] = useState("");
   const [saving, setSaving] = useState(false);
+  const workspaceId = useActiveWorkspaceId();
 
   async function handleComplete() {
     setSaving(true);
     if (userName.trim()) await config.set("userName", userName.trim());
-    if (projectsText.trim()) await bulkImportProjects(projectRepo, projectsText);
-    if (categoriesText.trim()) await bulkImportCategories(categoryRepo, categoriesText);
+    if (projectsText.trim()) await bulkImportProjects(projectRepo, projectsText, workspaceId);
+    if (categoriesText.trim())
+      await bulkImportCategories(categoryRepo, categoriesText, workspaceId);
     await config.set("setupCompleted", true);
     onComplete();
   }

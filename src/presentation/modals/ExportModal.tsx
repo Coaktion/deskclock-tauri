@@ -37,7 +37,6 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { Task } from "@domain/entities/Task";
 
-
 type Tab = "export" | "profiles" | "edit-profile";
 type PeriodMode = "today" | "custom";
 
@@ -97,7 +96,7 @@ function SortableColumn({ col, idx, onToggle, onRename }: SortableColumnProps) {
 
 interface ProfileFormProps {
   initial: Partial<ExportProfile>;
-  onSave: (data: Omit<ExportProfile, "id">) => void;
+  onSave: (data: Omit<ExportProfile, "id" | "workspaceId">) => void;
   onCancel: () => void;
 }
 
@@ -356,7 +355,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
     }
   }
 
-  async function handleSaveProfile(data: Omit<ExportProfile, "id">) {
+  async function handleSaveProfile(data: Omit<ExportProfile, "id" | "workspaceId">) {
     if (editingProfile) await update(editingProfile.id, data);
     else await create(data);
     setEditingProfile(null);

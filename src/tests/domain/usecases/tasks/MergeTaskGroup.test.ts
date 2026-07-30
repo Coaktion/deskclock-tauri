@@ -8,6 +8,7 @@ const NOW = "2026-04-08T11:00:00.000Z";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Task A",
     projectId: "p1",
     categoryId: "c1",
@@ -89,8 +90,22 @@ describe("mergeTaskGroup", () => {
 
   it("novo registro herda name/projectId/categoryId/billable do primeiro", async () => {
     const tasks = [
-      makeTask({ id: "t1", name: "Task A", projectId: "p1", categoryId: "c1", billable: true }),
-      makeTask({ id: "t2", name: "Task A", projectId: "p1", categoryId: "c1", billable: true }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "Task A",
+        projectId: "p1",
+        categoryId: "c1",
+        billable: true,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "Task A",
+        projectId: "p1",
+        categoryId: "c1",
+        billable: true,
+      }),
     ];
     const repo: ITaskRepository = {
       save: vi.fn(async () => undefined),

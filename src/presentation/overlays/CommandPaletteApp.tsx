@@ -4,6 +4,7 @@ import { LogicalSize } from "@tauri-apps/api/dpi";
 import { emit } from "@tauri-apps/api/event";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
+import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { CommandPalette } from "@presentation/components/CommandPalette";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
@@ -98,7 +99,9 @@ export function CommandPaletteApp() {
   return (
     <ConfigProvider>
       <RepositoriesProvider>
-        <CommandPaletteAppInner />
+        <WorkspaceProvider>
+          <CommandPaletteAppInner />
+        </WorkspaceProvider>
       </RepositoriesProvider>
     </ConfigProvider>
   );

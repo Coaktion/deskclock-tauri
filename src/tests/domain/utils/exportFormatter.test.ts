@@ -16,6 +16,7 @@ import { DEFAULT_COLUMNS } from "@domain/entities/ExportProfile";
 function makeProfile(overrides: Partial<ExportProfile> = {}): ExportProfile {
   return {
     id: "p1",
+    workspaceId: "ws-1",
     name: "Padrão",
     isDefault: true,
     format: "csv",
@@ -30,6 +31,7 @@ function makeProfile(overrides: Partial<ExportProfile> = {}): ExportProfile {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Dev",
     projectId: "proj1",
     categoryId: "cat1",
@@ -44,8 +46,10 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
-const projects: Project[] = [{ id: "proj1", name: "Projeto A" }];
-const categories: Category[] = [{ id: "cat1", name: "Dev", defaultBillable: true }];
+const projects: Project[] = [{ id: "proj1", workspaceId: "ws-1", name: "Projeto A" }];
+const categories: Category[] = [
+  { id: "cat1", workspaceId: "ws-1", name: "Dev", defaultBillable: true },
+];
 
 describe("formatDuration", () => {
   it("formata hh:mm:ss", () => {

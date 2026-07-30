@@ -7,6 +7,7 @@ import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { usePostStopLogic } from "@presentation/hooks/usePostStopLogic";
 import { useOverlaySync } from "@presentation/hooks/useOverlaySync";
 import { useTraySync } from "@presentation/hooks/useTraySync";
@@ -68,6 +69,7 @@ interface RunningTaskProviderProps {
 
 export function RunningTaskProvider({ children, config }: RunningTaskProviderProps) {
   const { taskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
   const [activePlannedTaskId, setActivePlannedTaskId] = useState<string | null>(null);
@@ -109,7 +111,11 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       if (isStartingTaskRef.current) return;
       isStartingTaskRef.current = true;
       try {
-        const task = await startTaskUC(taskRepo, input, new Date().toISOString());
+        const task = await startTaskUC(
+          taskRepo,
+          { ...input, workspaceId },
+          new Date().toISOString()
+        );
         setRunningTask(task);
         setActivePlannedTaskId(input.plannedTaskId ?? null);
         triggerReload();
@@ -118,7 +124,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         isStartingTaskRef.current = false;
       }
     },
-    [taskRepo, runningTask, triggerReload]
+    [taskRepo, runningTask, triggerReload, workspaceId]
   );
 
   const switchToTask = useCallback(
@@ -131,7 +137,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
           const stopped = await stopTaskUC(taskRepo, runningTask.id, nowISO, nowISO);
           await applyStopRules(stopped, activePlannedTaskId, true);
         }
-        const task = await startTaskUC(taskRepo, input, nowISO);
+        const task = await startTaskUC(taskRepo, { ...input, workspaceId }, nowISO);
         setRunningTask(task);
         setActivePlannedTaskId(input.plannedTaskId ?? null);
         triggerReload();
@@ -141,7 +147,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
         isStartingTaskRef.current = false;
       }
     },
-    [taskRepo, runningTask, activePlannedTaskId, triggerReload, applyStopRules]
+    [taskRepo, runningTask, activePlannedTaskId, triggerReload, applyStopRules, workspaceId]
   );
 
   const pauseTask = useCallback(async () => {

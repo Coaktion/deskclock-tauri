@@ -16,7 +16,7 @@ function makeRepo(overrides: Partial<IProjectRepository> = {}): IProjectReposito
 describe("bulkImportProjects", () => {
   it("cria projetos a partir de linhas de texto", async () => {
     const repo = makeRepo();
-    const result = await bulkImportProjects(repo, "Alpha\nBeta\nGamma");
+    const result = await bulkImportProjects(repo, "Alpha\nBeta\nGamma", "ws-1");
     expect(result.created).toBe(3);
     expect(result.skipped).toHaveLength(0);
     expect(repo.save).toHaveBeenCalledTimes(3);
@@ -24,26 +24,26 @@ describe("bulkImportProjects", () => {
 
   it("ignora linhas vazias", async () => {
     const repo = makeRepo();
-    const result = await bulkImportProjects(repo, "Alpha\n\n  \nBeta");
+    const result = await bulkImportProjects(repo, "Alpha\n\n  \nBeta", "ws-1");
     expect(result.created).toBe(2);
   });
 
   it("reporta duplicatas em skipped sem interromper o import", async () => {
     const repo = makeRepo({
       findByName: vi.fn(async (name) => {
-        if (name === "Existente") return { id: "x", name: "Existente" };
+        if (name === "Existente") return { id: "x", workspaceId: "ws-1", name: "Existente" };
         return null;
       }),
       save: vi.fn(async () => {}),
     });
-    const result = await bulkImportProjects(repo, "Novo\nExistente\nOutro");
+    const result = await bulkImportProjects(repo, "Novo\nExistente\nOutro", "ws-1");
     expect(result.created).toBe(2);
     expect(result.skipped).toContain("Existente");
   });
 
   it("retorna created=0 e skipped vazio para texto vazio", async () => {
     const repo = makeRepo();
-    const result = await bulkImportProjects(repo, "");
+    const result = await bulkImportProjects(repo, "", "ws-1");
     expect(result.created).toBe(0);
     expect(result.skipped).toHaveLength(0);
   });

@@ -23,14 +23,18 @@ describe("CategoryRepository", () => {
 
   describe("findAll", () => {
     it("converte default_billable=1 para defaultBillable=true", async () => {
-      mockDb.select.mockResolvedValue([{ id: "1", name: "Dev", default_billable: 1 }]);
+      mockDb.select.mockResolvedValue([
+        { id: "1", workspace_id: "ws-1", name: "Dev", default_billable: 1 },
+      ]);
       const repo = new CategoryRepository();
       const result = await repo.findAll();
       expect(result[0].defaultBillable).toBe(true);
     });
 
     it("converte default_billable=0 para defaultBillable=false", async () => {
-      mockDb.select.mockResolvedValue([{ id: "2", name: "Reuniões", default_billable: 0 }]);
+      mockDb.select.mockResolvedValue([
+        { id: "2", workspace_id: "ws-1", name: "Reuniões", default_billable: 0 },
+      ]);
       const repo = new CategoryRepository();
       const result = await repo.findAll();
       expect(result[0].defaultBillable).toBe(false);
@@ -38,29 +42,41 @@ describe("CategoryRepository", () => {
 
     it("mapeia todos os campos corretamente", async () => {
       mockDb.select.mockResolvedValue([
-        { id: "1", name: "Dev", default_billable: 1 },
-        { id: "2", name: "Reuniões", default_billable: 0 },
+        { id: "1", workspace_id: "ws-1", name: "Dev", default_billable: 1 },
+        { id: "2", workspace_id: "ws-1", name: "Reuniões", default_billable: 0 },
       ]);
       const repo = new CategoryRepository();
       const result = await repo.findAll();
       expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ id: "1", name: "Dev", defaultBillable: true });
-      expect(result[1]).toEqual({ id: "2", name: "Reuniões", defaultBillable: false });
+      expect(result[0]).toEqual({
+        id: "1",
+        workspaceId: "ws-1",
+        name: "Dev",
+        defaultBillable: true,
+      });
+      expect(result[1]).toEqual({
+        id: "2",
+        workspaceId: "ws-1",
+        name: "Reuniões",
+        defaultBillable: false,
+      });
     });
   });
 
   describe("findByName", () => {
     it("retorna a categoria quando encontrada", async () => {
-      mockDb.select.mockResolvedValue([{ id: "1", name: "Dev", default_billable: 1 }]);
+      mockDb.select.mockResolvedValue([
+        { id: "1", workspace_id: "ws-1", name: "Dev", default_billable: 1 },
+      ]);
       const repo = new CategoryRepository();
-      const result = await repo.findByName("Dev");
-      expect(result).toEqual({ id: "1", name: "Dev", defaultBillable: true });
+      const result = await repo.findByName("Dev", "ws-1");
+      expect(result).toEqual({ id: "1", workspaceId: "ws-1", name: "Dev", defaultBillable: true });
     });
 
     it("retorna null quando não encontrada", async () => {
       mockDb.select.mockResolvedValue([]);
       const repo = new CategoryRepository();
-      const result = await repo.findByName("Inexistente");
+      const result = await repo.findByName("Inexistente", "ws-1");
       expect(result).toBeNull();
     });
   });
@@ -68,10 +84,16 @@ describe("CategoryRepository", () => {
   describe("save", () => {
     it("converte defaultBillable=true para 1 no SQL", async () => {
       const repo = new CategoryRepository();
-      const category: Category = { id: "uuid-1", name: "Dev", defaultBillable: true };
+      const category: Category = {
+        id: "uuid-1",
+        workspaceId: "ws-1",
+        name: "Dev",
+        defaultBillable: true,
+      };
       await repo.save(category);
       expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining("INSERT"), [
         "uuid-1",
+        "ws-1",
         "Dev",
         1,
       ]);
@@ -79,10 +101,16 @@ describe("CategoryRepository", () => {
 
     it("converte defaultBillable=false para 0 no SQL", async () => {
       const repo = new CategoryRepository();
-      const category: Category = { id: "uuid-2", name: "Reuniões", defaultBillable: false };
+      const category: Category = {
+        id: "uuid-2",
+        workspaceId: "ws-1",
+        name: "Reuniões",
+        defaultBillable: false,
+      };
       await repo.save(category);
       expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining("INSERT"), [
         "uuid-2",
+        "ws-1",
         "Reuniões",
         0,
       ]);

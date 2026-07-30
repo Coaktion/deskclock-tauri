@@ -15,6 +15,7 @@ const { PlannedTaskRepository } = await import("@infra/database/PlannedTaskRepos
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Reunião",
     project_id: null,
     category_id: null,
@@ -35,6 +36,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
 function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Reunião",
     projectId: null,
     categoryId: null,

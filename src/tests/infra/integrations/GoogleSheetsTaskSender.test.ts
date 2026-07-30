@@ -42,18 +42,19 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ISheetsConfigPort & IGo
 }
 
 const projects: Project[] = [
-  { id: "proj-1", name: "Projeto Alpha" },
-  { id: "proj-2", name: "Projeto Beta" },
+  { id: "proj-1", workspaceId: "ws-1", name: "Projeto Alpha" },
+  { id: "proj-2", workspaceId: "ws-1", name: "Projeto Beta" },
 ];
 
 const categories: Category[] = [
-  { id: "cat-1", name: "Desenvolvimento", defaultBillable: true },
-  { id: "cat-2", name: "Reuniões", defaultBillable: false },
+  { id: "cat-1", workspaceId: "ws-1", name: "Desenvolvimento", defaultBillable: true },
+  { id: "cat-2", workspaceId: "ws-1", name: "Reuniões", defaultBillable: false },
 ];
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
+    workspaceId: "ws-1",
     name: "Tarefa teste",
     projectId: "proj-1",
     categoryId: "cat-1",

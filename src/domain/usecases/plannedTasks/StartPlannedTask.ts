@@ -32,6 +32,8 @@ export async function startPlannedTask(
 
   const task: Task = {
     id: generateUUID(),
+    // A tarefa nasce no mesmo workspace da planejada que a originou.
+    workspaceId: planned.workspaceId,
     name: planned.name,
     projectId: planned.projectId,
     categoryId: planned.categoryId,
