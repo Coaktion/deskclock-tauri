@@ -28,8 +28,10 @@ CREATE TABLE workspaces (
   created_at TEXT NOT NULL
 );
 
+-- `color` guarda o NOME DE UM SLOT da paleta, nunca um valor de cor. 'amber' é
+-- o que `workspaceColorFor("Padrão")` devolve — as duas pontas precisam bater.
 INSERT INTO workspaces (id, name, color, created_at)
-VALUES ('00000000-0000-4000-8000-000000000001', 'Padrão', 'ws-slate', '1970-01-01T00:00:00.000Z');
+VALUES ('00000000-0000-4000-8000-000000000001', 'Padrão', 'amber', '1970-01-01T00:00:00.000Z');
 
 -- ------------------------------------------------------------------ projects
 ALTER TABLE projects RENAME TO projects_pre_011;
