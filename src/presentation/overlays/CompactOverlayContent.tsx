@@ -64,17 +64,16 @@ export function CompactOverlayContent({
         (showWorkspace ? ` — ${activeWorkspace!.name}` : "")
       }
     >
-      {/* z-20: a barra inferior tem fundo opaco e recortaria a faixa se ela
-          ficasse por baixo. Sendo translúcida e presa à borda esquerda, não
-          atrapalha o timer nem o grip, ambos centralizados. */}
-      {showWorkspace && (
-        <WorkspaceEdge color={activeWorkspace!.color} className={`${rounded} z-20`} />
-      )}
       <button
         onMouseDown={onMouseDown}
         onClick={onTogglePopup}
-        className={`flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
+        className={`relative flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
       >
+        {/* Dentro do botão: pinta acima do fundo dele e abaixo do timer, que é
+            irmão posterior. Fica fora da barra do grip de propósito. */}
+        {showWorkspace && (
+          <WorkspaceEdge color={activeWorkspace!.color} className={roundedTop} />
+        )}
         {hasTask ? (
           <span
             className={`font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}

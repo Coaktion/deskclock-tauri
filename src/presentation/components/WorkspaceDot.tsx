@@ -86,8 +86,9 @@ export function WorkspaceDot({ color, size = 8 }: { color: string; size?: number
  * Faixa de cor do workspace no compact overlay: começa na borda esquerda e se
  * dissolve no fundo antes de 25% da largura.
  *
- * Preenche o card inteiro em vez de ser um elemento próprio para não disputar
- * espaço num overlay de 68px — o conteúdo fica por cima, e a cor só sinaliza.
+ * Cobre só o botão do compact, não a barra do grip. Precisa de um ancestral
+ * posicionado (o botão tem `relative`) e deve vir antes do conteúdo, para
+ * pintar acima do fundo do botão e abaixo do timer.
  */
 export function WorkspaceEdge({ color, className = "" }: { color: string; className?: string }) {
   return (
