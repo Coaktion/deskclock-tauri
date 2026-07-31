@@ -4,7 +4,7 @@ import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { formatHHMMSS, todayISO } from "@shared/utils/time";
 import { ListTodo } from "lucide-react";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
-import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
+import { WorkspaceEdge } from "@presentation/components/WorkspaceDot";
 
 interface CompactOverlayContentProps {
   runningTask: Task | null;
@@ -64,10 +64,11 @@ export function CompactOverlayContent({
         (showWorkspace ? ` — ${activeWorkspace!.name}` : "")
       }
     >
+      {/* z-20: a barra inferior tem fundo opaco e recortaria a faixa se ela
+          ficasse por baixo. Sendo translúcida e presa à borda esquerda, não
+          atrapalha o timer nem o grip, ambos centralizados. */}
       {showWorkspace && (
-        <span className="absolute -top-1 -left-1 p-[2px] bg-gray-900 rounded-full pointer-events-none">
-          <WorkspaceDot color={activeWorkspace!.color} size={7} />
-        </span>
+        <WorkspaceEdge color={activeWorkspace!.color} className={`${rounded} z-20`} />
       )}
       <button
         onMouseDown={onMouseDown}

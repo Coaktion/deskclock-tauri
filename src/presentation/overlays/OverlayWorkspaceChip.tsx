@@ -9,13 +9,17 @@ interface OverlayWorkspaceChipProps {
   onStop: (completed: boolean) => Promise<void>;
 }
 
+/** Ancoragem dos menus, medida na janela do popup. */
+const MENU_POS = { top: "2rem", right: "4rem" } as const;
+
 /**
  * Workspace ativo no cabeçalho do popup, com troca no próprio overlay.
  *
- * O dropdown é posicionado em `absolute` de propósito: o popup tem alturas
- * fixas por estado (`EXEC_H`, `CONTENT_H`…) e redimensiona a janela do Tauri a
- * cada mudança. Um menu que ocupasse espaço no fluxo obrigaria a recalcular
- * todas elas.
+ * Os menus usam `position: fixed`, não `absolute`: o cabeçalho do popup tem
+ * `overflow-hidden` (para o arredondamento do topo), então um menu ancorado no
+ * chip seria recortado pelo pai. `fixed` tira o menu do fluxo e do clipping —
+ * o que também preserva as alturas fixas por estado do popup (`EXEC_H`,
+ * `CONTENT_H`…), que redimensionam a janela do Tauri a cada mudança.
  *
  * Some quando só existe um workspace, igual ao switcher da sidebar.
  */
@@ -75,7 +79,10 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-44 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl py-1">
+        <div
+          style={MENU_POS}
+          className="fixed z-50 w-44 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl py-1"
+        >
           {workspaces.map((w) => (
             <button
               key={w.id}
@@ -91,7 +98,10 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
       )}
 
       {pending && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-2">
+        <div
+          style={MENU_POS}
+          className="fixed z-50 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-2"
+        >
           <p className="text-[11px] text-gray-300 leading-snug mb-1.5">
             Parar a tarefa e trocar para <span className="text-gray-100">{pending.name}</span>?
           </p>
