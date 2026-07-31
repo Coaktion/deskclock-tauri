@@ -3,6 +3,14 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import {
+    bareInputClass,
+    boxClass,
+    fieldClass,
+    formColumnClass,
+    notchedBoxClass,
+    notchedLabelClass,
+} from "@presentation/components/fieldStyles";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { DollarSign } from "lucide-react";
 
@@ -12,32 +20,6 @@ interface RetroactiveEntryFormProps {
   categories: Category[];
   customFields: CustomField[];
 }
-
-const fieldClass =
-  "w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500";
-
-/**
- * Caixa que veste o visual de um input. Quando o campo divide a linha com um
- * botão ou com um texto auxiliar, é a caixa que desenha fundo, borda e raio — os
- * elementos internos ficam transparentes, e os dois passam a ler como um campo
- * só. `focus-within` reproduz no nível da caixa o realce que o input perdeu ao
- * abrir mão da própria borda.
- */
-const boxClass =
-  "bg-gray-800 border border-gray-700 rounded-lg focus-within:border-blue-500 transition-colors";
-
-/** Input sem casca: quem desenha é o `boxClass` em volta. */
-const bareInputClass =
-  "w-full px-2.5 py-1.5 text-sm bg-transparent border-none text-gray-100 placeholder-gray-500 focus:outline-none";
-
-/**
- * Rótulo encaixado na borda superior da caixa. O fundo do rótulo é o mesmo da
- * caixa, então ele apaga o trecho de borda que cobre. O `mt-1.5` compensa, no
- * fluxo, os 6px que o rótulo sobe.
- */
-const notchedBoxClass = "relative mt-1.5";
-const notchedLabelClass =
-  "absolute -top-2 left-1.5 px-1 bg-gray-800 text-xs text-gray-500 rounded-sm";
 
 /**
  * Coluna de entrada da tela de Lançamento Manual. Vive à esquerda, fixa e
@@ -55,10 +37,7 @@ export function RetroactiveEntryForm({
   customFields,
 }: RetroactiveEntryFormProps) {
   return (
-    <div
-      data-tour="retroactive-form"
-      className="w-64 shrink-0 border-r border-gray-800 bg-gray-900 overflow-y-auto p-2 space-y-3"
-    >
+    <div data-tour="retroactive-form" className={formColumnClass}>
       <input
         ref={form.nameRef}
         type="text"
@@ -67,7 +46,7 @@ export function RetroactiveEntryForm({
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.nativeEvent.isComposing) void form.handleAdd();
         }}
-        placeholder="Nome da tarefa (opcional)"
+        placeholder="Nome da tarefa"
         className={fieldClass}
       />
 
@@ -114,6 +93,16 @@ export function RetroactiveEntryForm({
           <DollarSign size={14} />
         </button>
       </div>
+
+      <CustomFieldInputs
+        fields={customFields}
+        values={form.customValues}
+        onChange={form.setCustomValues}
+        onEnter={() => void form.handleAdd()}
+        compact
+        labelsAsPlaceholder
+        className="space-y-3"
+      />
 
       {/* O wrapper existe só para receber o `space-y-3` do pai. Sem ele, o
           `mt-1.5` da caixa cairia no mesmo elemento e *substituiria* a margem do
@@ -194,16 +183,6 @@ export function RetroactiveEntryForm({
           />
         </div>
       </div>
-
-      <CustomFieldInputs
-        fields={customFields}
-        values={form.customValues}
-        onChange={form.setCustomValues}
-        onEnter={() => void form.handleAdd()}
-        compact
-        labelsAsPlaceholder
-        className="space-y-3"
-      />
 
       {form.error && <p className="text-xs text-red-400">{form.error}</p>}
 

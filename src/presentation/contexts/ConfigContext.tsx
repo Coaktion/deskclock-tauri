@@ -62,7 +62,6 @@ const DEFAULTS: AppConfig = {
   localApiPort: 27420,
   dailyGoalHours: 8,
   weeklyGoalHours: 40,
-  showWeekend: true,
   roundingEnabled: false,
   roundingSlots: [15, 30, 45, 60],
   roundingTolerance: 0,

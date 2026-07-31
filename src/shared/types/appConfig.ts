@@ -78,7 +78,6 @@ export interface AppConfig {
   // Jornada
   dailyGoalHours: number;
   weeklyGoalHours: number;
-  showWeekend: boolean;
   // Arredondamento de duração
   roundingEnabled: boolean;
   roundingSlots: RoundingSlot[];

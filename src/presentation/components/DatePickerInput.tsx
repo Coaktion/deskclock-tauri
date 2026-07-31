@@ -10,6 +10,8 @@ interface DatePickerInputProps {
   placeholder?: string;
   className?: string;
   maxDate?: Date;
+  /** Marca o campo como inválido — quem valida é o formulário, não o picker. */
+  invalid?: boolean;
 }
 
 function isoToDate(iso: string): Date | undefined {
@@ -39,6 +41,7 @@ export function DatePickerInput({
   placeholder = "DD/MM/AAAA",
   className = "",
   maxDate,
+  invalid = false,
 }: DatePickerInputProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -106,7 +109,9 @@ export function DatePickerInput({
         value={formatDisplay(value)}
         placeholder={placeholder}
         onClick={handleOpen}
-        className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 cursor-pointer"
+        className={`w-full px-2.5 py-1.5 text-sm bg-gray-800 border rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none cursor-pointer transition-colors ${
+          invalid ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-blue-500"
+        }`}
       />
       {open &&
         createPortal(

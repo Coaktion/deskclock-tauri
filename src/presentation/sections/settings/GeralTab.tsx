@@ -20,7 +20,6 @@ export function GeralTab() {
   const [roundingTolerance, setRoundingTolerance] = useState(0);
   const [dailyGoalHours, setDailyGoalHours] = useState(8);
   const [weeklyGoalHours, setWeeklyGoalHours] = useState(40);
-  const [showWeekend, setShowWeekend] = useState(true);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -35,7 +34,6 @@ export function GeralTab() {
     setRoundingTolerance(config.get("roundingTolerance"));
     setDailyGoalHours(config.get("dailyGoalHours"));
     setWeeklyGoalHours(config.get("weeklyGoalHours"));
-    setShowWeekend(config.get("showWeekend"));
     isEnabled()
       .then(setStartOnBoot)
       .catch(() => {});
@@ -81,11 +79,6 @@ export function GeralTab() {
   async function handleRoundingTolerance(value: number) {
     setRoundingTolerance(value);
     await config.set("roundingTolerance", value);
-  }
-
-  async function handleShowWeekend(value: boolean) {
-    setShowWeekend(value);
-    await config.set("showWeekend", value);
   }
 
   async function handleUserNameBlur() {
@@ -249,14 +242,6 @@ export function GeralTab() {
               }}
             />
           </div>
-        </CardRow>
-        <CardRow>
-          <ToggleRow
-            label="Exibir fim de semana no planejamento"
-            description="Mostra sábado e domingo na visualização semanal"
-            value={showWeekend}
-            onChange={handleShowWeekend}
-          />
         </CardRow>
       </SettingsCard>
 

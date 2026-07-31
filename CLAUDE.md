@@ -223,9 +223,12 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 > **Decisão de produto:** A visão "Hoje" foi removida. A visão Semana já permite selecionar qualquer data (incluindo hoje) e é suficiente para todos os fluxos de planejamento.
 
-- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← →.
-- **Botões rápidos de dia:** Todos | Dom | Seg | Ter | Qua | Qui | Sex | Sáb. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
-- **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campo Data.
+- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← → + contador de concluídas.
+- **Layout em duas colunas:** formulário fixo à esquerda (`PlannedTaskForm`), semana à direita — o mesmo arranjo do Lançamento Manual (§5.8). As duas telas de entrada compartilham o vocabulário visual dos campos em `presentation/components/fieldStyles.ts`; **não duplicar essas classes**, ou um ajuste numa tela desalinha a outra em silêncio.
+- **Só dias úteis.** Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta — a antiga `showWeekend` foi removida. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia.
+- **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex, no topo da coluna da direita. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
+- **Barra de seleção:** "Selecionar tarefas" fica sobre a lista da semana, não no header, e só aparece havendo ao menos uma tarefa.
+- **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campos personalizados, agendamento e ações — empilhados na coluna.
 - **Atalho "Hoje":** No campo Data única, botão de atalho seleciona a data atual.
 - **Tipos de agendamento:**
   - `specific_date`: Dia único. Campo data com botão atalho "Hoje".

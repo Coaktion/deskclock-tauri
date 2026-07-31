@@ -1,15 +1,20 @@
-import { useState, useRef } from "react";
-import { Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
-import { todayISO } from "@shared/utils/time";
-import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { ToggleBillable } from "@presentation/components/ToggleBillable";
-import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { CustomValues } from "@domain/entities/CustomField";
+import type { PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { Project } from "@domain/entities/Project";
+import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import {
+    bareInputClass,
+    boxClass,
+    fieldClass,
+    formColumnClass,
+} from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { todayISO } from "@shared/utils/time";
+import { DollarSign, ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
+import { useRef, useState } from "react";
 
 interface FormState {
   name: string;
@@ -43,13 +48,28 @@ const INITIAL: FormState = {
   customValues: {},
 };
 
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+/**
+ * Só dias úteis — o fim de semana saiu do planejamento. O número é o dia da
+ * semana como o `Date` o entende (0=Dom … 6=Sáb) e **não** o índice do array:
+ * `recurringDays` já tem valores gravados nessa escala.
+ */
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+];
 
 const SCHEDULE_LABELS: Record<ScheduleType, string> = {
-  specific_date: "Data única",
+  specific_date: "Data",
   recurring: "Recorrente",
   period: "Período",
 };
+
+/** Título das seções que quebram a coluna em blocos (Ações, Agendamento). */
+const sectionLabelClass =
+  "text-[11px] font-medium text-gray-500 uppercase tracking-wide pt-1 border-t border-gray-800";
 
 interface PlannedTaskFormProps {
   projects: Project[];
@@ -71,6 +91,15 @@ interface PlannedTaskFormProps {
   }) => Promise<void>;
 }
 
+/**
+ * Coluna de criação da tela de Planejamento. Espelha a do Lançamento Manual —
+ * mesma largura, mesmo vocabulário de campo — porque as duas telas fazem a
+ * mesma coisa com dados quase iguais, e vê-las diferentes fazia parecer que
+ * funcionavam diferente.
+ *
+ * As seções de ações e de agendamento não têm equivalente no Manual e são o que
+ * espreme a coluna — os dias da recorrência são a linha mais apertada.
+ */
 export function PlannedTaskForm({
   projects,
   categories,
@@ -104,6 +133,15 @@ export function PlannedTaskForm({
     set("actions", [...form.actions, { type: newActionType, value }]);
     setNewActionValue("");
   }
+
+  // Só é "invertido" com as duas datas preenchidas: enquanto falta uma, o
+  // período está incompleto, não errado — e pintar de vermelho quem ainda está
+  // digitando acusa um erro que a pessoa não cometeu.
+  const isPeriodInverted =
+    form.scheduleType === "period" &&
+    !!form.periodStart &&
+    !!form.periodEnd &&
+    form.periodEnd < form.periodStart;
 
   function isScheduleValid() {
     if (form.scheduleType === "period")
@@ -146,248 +184,242 @@ export function PlannedTaskForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-b border-gray-800">
-      <div className="bg-gray-900/60 border border-gray-800 rounded-xl overflow-hidden">
-        {/* Name input: full width */}
-        <div className="px-3 py-2.5">
-          <input
-            ref={nameRef}
-            type="text"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void handleSubmit();
-              }
-            }}
-            placeholder="Nova tarefa planejada"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-          />
-        </div>
+    <form onSubmit={handleSubmit} data-tour="planning-form" className={formColumnClass}>
+      <input
+        ref={nameRef}
+        type="text"
+        value={form.name}
+        onChange={(e) => set("name", e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void handleSubmit();
+          }
+        }}
+        placeholder="Nome da tarefa"
+        className={fieldClass}
+      />
 
-        {/* Field row: Projeto + Categoria + Adicionar */}
-        <div className="flex items-center gap-2 px-3 pb-2.5 border-t border-gray-800/60 pt-2">
-          <div className="flex-1">
-            <Autocomplete
-              value={form.projectName}
-              onChange={(v) => {
-                set("projectName", v);
-                if (!v) set("projectId", null);
-              }}
-              onSelect={(o) => {
-                set("projectId", o.id);
-                set("projectName", o.name);
-              }}
-              onEnter={() => void handleSubmit()}
-              options={projects}
-              placeholder="Projeto"
-              className=""
-            />
+      <Autocomplete
+        value={form.projectName}
+        onChange={(v) => {
+          set("projectName", v);
+          if (!v) set("projectId", null);
+        }}
+        onSelect={(o) => {
+          set("projectId", o.id);
+          set("projectName", o.name);
+        }}
+        onEnter={() => void handleSubmit()}
+        options={projects}
+        placeholder="Projeto"
+      />
+
+      <div className={`${boxClass} flex items-center pr-2`}>
+        <Autocomplete
+          value={form.categoryName}
+          onChange={(v) => {
+            set("categoryName", v);
+            if (!v) set("categoryId", null);
+          }}
+          onSelect={(o) => {
+            const cat = categories.find((c) => c.id === o.id);
+            setForm((prev) => ({
+              ...prev,
+              categoryId: o.id,
+              categoryName: o.name,
+              ...(cat ? { billable: cat.defaultBillable } : {}),
+            }));
+          }}
+          onEnter={() => void handleSubmit()}
+          options={categories}
+          placeholder="Categoria"
+          className="flex-1"
+          inputClassName={bareInputClass}
+        />
+        <button
+          type="button"
+          onClick={() => set("billable", !form.billable)}
+          title={
+            form.billable
+              ? "Billable — clique para alternar"
+              : "Non-billable — clique para alternar"
+          }
+          className={`flex items-center gap-1 shrink-0 transition-colors ${
+            form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+          }`}
+        >
+          <DollarSign size={14} />
+        </button>
+      </div>
+
+      <CustomFieldInputs
+        fields={activeFields}
+        values={form.customValues}
+        onChange={(values) => set("customValues", values)}
+        onEnter={() => void handleSubmit()}
+        compact
+        labelsAsPlaceholder
+        className="space-y-3"
+      />
+
+      {/* ── Agendamento ─────────────────────────────────────────────────────── */}
+      {showDateFields && (
+        <>
+          <p className={sectionLabelClass}>Agendamento</p>
+
+          <div className="flex bg-gray-800 p-1 rounded-lg gap-1">
+            {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => set("scheduleType", type)}
+                className={`flex-1 py-1 text-[11px] rounded-md transition-colors ${
+                  form.scheduleType === type
+                    ? "bg-blue-500 text-white"
+                    : "bg-transparent text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {SCHEDULE_LABELS[type]}
+              </button>
+            ))}
           </div>
-          <div className="flex-1">
-            <Autocomplete
-              value={form.categoryName}
-              onChange={(v) => {
-                set("categoryName", v);
-                if (!v) set("categoryId", null);
-              }}
-              onSelect={(o) => {
-                const cat = categories.find((c) => c.id === o.id);
-                setForm((prev) => ({
-                  ...prev,
-                  categoryId: o.id,
-                  categoryName: o.name,
-                  ...(cat ? { billable: cat.defaultBillable } : {}),
-                }));
-              }}
-              onEnter={() => void handleSubmit()}
-              options={categories}
-              placeholder="Categoria"
-              className=""
-            />
-          </div>
-          <ToggleBillable value={form.billable} onChange={(v) => set("billable", v)} />
-          <button
-            type="submit"
-            disabled={!form.name.trim() || !isScheduleValid() || submitting}
-            className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
-          >
-            <Plus size={12} />
-            Adicionar
-          </button>
-        </div>
 
-        {activeFields.length > 0 && (
-          <div className="border-t border-gray-800/60 px-3 py-2.5">
-            <CustomFieldInputs
-              fields={activeFields}
-              values={form.customValues}
-              onChange={(values) => set("customValues", values)}
-              onEnter={() => void handleSubmit()}
-              compact
-            />
-          </div>
-        )}
-
-        {/* Actions section */}
-        <div className="border-t border-gray-800/60 px-3 py-2.5 flex flex-col gap-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-            Ações ao iniciar
-          </p>
-
-          {form.actions.length > 0 && (
-            <ul className="flex flex-col gap-1">
-              {form.actions.map((action, i) => (
-                <li
-                  key={i}
-                  className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg"
-                >
-                  <span
-                    className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
-                  >
-                    {action.type === "open_url" ? (
-                      <ExternalLink size={13} />
-                    ) : (
-                      <FolderOpen size={13} />
-                    )}
-                  </span>
-                  <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
-                    {action.value}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      set(
-                        "actions",
-                        form.actions.filter((_, j) => j !== i)
-                      )
-                    }
-                    className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
-                    title="Remover"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {form.scheduleType === "specific_date" && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => set("scheduleDate", todayISO())}
+                className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
+                  form.scheduleDate === todayISO()
+                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+                    : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
+                }`}
+              >
+                Hoje
+              </button>
+              <DatePickerInput
+                value={form.scheduleDate}
+                onChange={(v) => set("scheduleDate", v)}
+                className="flex-1"
+              />
+            </div>
           )}
 
-          <div className="flex gap-2">
-            <select
-              value={newActionType}
-              onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-              className="px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
-            >
-              <option value="open_url">URL</option>
-              <option value="open_file">Arquivo</option>
-            </select>
-            <input
-              type="text"
-              value={newActionValue}
-              onChange={(e) => setNewActionValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddAction();
-                }
-              }}
-              placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
-              className="flex-1 px-2.5 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-            <button
-              type="button"
-              onClick={handleAddAction}
-              disabled={!newActionValue.trim()}
-              className="px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg transition-colors"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Schedule type section */}
-        {showDateFields && (
-          <div className="border-t border-gray-800/60 px-3 py-2.5 flex flex-col gap-2">
-            {/* Type selector: solid bg wrapper, solid active */}
-            <div className="flex bg-gray-800 p-1 rounded-lg gap-1">
-              {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
+          {form.scheduleType === "recurring" && (
+            <div className="flex gap-1">
+              {WEEKDAYS.map(({ value, label }) => (
                 <button
-                  key={type}
+                  key={value}
                   type="button"
-                  onClick={() => set("scheduleType", type)}
-                  className={`flex-1 py-1 text-[11px] rounded-md transition-colors ${
-                    form.scheduleType === type
-                      ? "bg-blue-500 text-white"
-                      : "bg-transparent text-gray-400 hover:text-gray-200"
-                  }`}
-                >
-                  {SCHEDULE_LABELS[type]}
-                </button>
-              ))}
-            </div>
-
-            {/* specific_date */}
-            {form.scheduleType === "specific_date" && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => set("scheduleDate", todayISO())}
-                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
-                    form.scheduleDate === todayISO()
+                  onClick={() => toggleDay(value)}
+                  className={`flex-1 py-1.5 text-[11px] rounded-full border transition-colors ${
+                    form.recurringDays.includes(value)
                       ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
                       : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
                   }`}
                 >
-                  Hoje
+                  {label}
                 </button>
-                <DatePickerInput
-                  value={form.scheduleDate}
-                  onChange={(v) => set("scheduleDate", v)}
-                  className="flex-1"
-                />
-              </div>
-            )}
+              ))}
+            </div>
+          )}
 
-            {/* recurring */}
-            {form.scheduleType === "recurring" && (
-              <div className="flex gap-1">
-                {DAY_LABELS.map((label, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => toggleDay(idx)}
-                    className={`flex-1 py-1.5 text-[11px] rounded-full border transition-colors ${
-                      form.recurringDays.includes(idx)
-                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                        : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
+          {form.scheduleType === "period" && (
+            <div className="space-y-2">
+              <DatePickerInput
+                value={form.periodStart}
+                onChange={(v) => set("periodStart", v)}
+                className="w-full"
+              />
+              <DatePickerInput
+                value={form.periodEnd}
+                onChange={(v) => set("periodEnd", v)}
+                className="w-full"
+                invalid={isPeriodInverted}
+              />
+              {isPeriodInverted && (
+                <p className="text-xs text-red-400">O fim não pode ser antes do início.</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
-            {/* period */}
-            {form.scheduleType === "period" && (
-              <div className="flex items-center gap-2">
-                <DatePickerInput
-                  value={form.periodStart}
-                  onChange={(v) => set("periodStart", v)}
-                  className="flex-1"
-                />
-                <span className="text-gray-600 text-sm shrink-0">→</span>
-                <DatePickerInput
-                  value={form.periodEnd}
-                  onChange={(v) => set("periodEnd", v)}
-                  className="flex-1"
-                />
-              </div>
-            )}
-          </div>
-        )}
+      {/* ── Ações ao iniciar ────────────────────────────────────────────────── */}
+      <p className={sectionLabelClass}>Ações ao iniciar</p>
+
+      {form.actions.length > 0 && (
+        <ul className="flex flex-col gap-1">
+          {form.actions.map((action, i) => (
+            <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg">
+              <span
+                className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
+              >
+                {action.type === "open_url" ? <ExternalLink size={13} /> : <FolderOpen size={13} />}
+              </span>
+              <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
+                {action.value}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  set(
+                    "actions",
+                    form.actions.filter((_, j) => j !== i)
+                  )
+                }
+                className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                title="Remover"
+              >
+                <Trash2 size={13} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <select
+        value={newActionType}
+        onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
+        className="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
+      >
+        <option value="open_url">URL</option>
+        <option value="open_file">Arquivo</option>
+      </select>
+
+      <div className={`${boxClass} flex items-center pr-1`}>
+        <input
+          type="text"
+          value={newActionValue}
+          onChange={(e) => setNewActionValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleAddAction();
+            }
+          }}
+          placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
+          className={`${bareInputClass} text-xs`}
+        />
+        <button
+          type="button"
+          onClick={handleAddAction}
+          disabled={!newActionValue.trim()}
+          title="Adicionar ação"
+          className="shrink-0 p-1 text-gray-500 hover:text-gray-200 disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
+        >
+          <Plus size={14} />
+        </button>
       </div>
+
+      <button
+        type="submit"
+        disabled={!form.name.trim() || !isScheduleValid() || submitting}
+        className="w-full px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-sm transition-colors"
+      >
+        Adicionar
+      </button>
     </form>
   );
 }

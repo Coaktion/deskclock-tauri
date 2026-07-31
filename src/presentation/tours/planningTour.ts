@@ -6,7 +6,7 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Visão semanal",
       description:
-        "Navegue entre semanas com as setas. O contador à direita mostra quantas tarefas já foram concluídas na semana. Use o botão 'Selecionar tarefas' para selecionar múltiplas e excluí-las em massa.",
+        "Navegue entre semanas com as setas. O contador à direita mostra quantas tarefas já foram concluídas na semana.",
       side: "bottom",
       align: "start",
     },
@@ -27,7 +27,7 @@ export const planningTourSteps: DriveStep[] = [
       title: "Criar tarefa planejada",
       description:
         "Adicione tarefas com nome, projeto e categoria. Escolha entre data única, recorrente (dias da semana) ou período com início e fim.",
-      side: "bottom",
+      side: "right",
       align: "start",
     },
   },
@@ -36,8 +36,8 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Lista de tarefas",
       description:
-        "Cada tarefa pode ser iniciada, concluída, duplicada ou excluída. Tarefas recorrentes aparecem em todos os dias configurados.",
-      side: "top",
+        "Cada tarefa pode ser iniciada, concluída, duplicada ou excluída. Tarefas recorrentes aparecem em todos os dias configurados. Use 'Selecionar tarefas', acima da lista, para excluir várias de uma vez.",
+      side: "left",
       align: "start",
     },
   },

@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
-import { emit } from "@tauri-apps/api/event";
-import { useProjects } from "@presentation/hooks/useProjects";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
-import { useRunningTask } from "@presentation/hooks/useRunningTask";
-import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
-import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useCategories } from "@presentation/hooks/useCategories";
+import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
+import { useProjects } from "@presentation/hooks/useProjects";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTour } from "@presentation/hooks/useTour";
 import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
+import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
+import { emit } from "@tauri-apps/api/event";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -100,13 +100,13 @@ export function WeekPlanningView() {
   const calendarFromISO = new Date(start + "T00:00:00").toISOString();
   const calendarToISO = new Date(end + "T23:59:59").toISOString();
 
-  const showWeekend = config.isLoaded ? config.get("showWeekend") : true;
-  const visibleDays = showWeekend
-    ? days
-    : days.filter((d) => {
-        const dow = new Date(d + "T12:00:00Z").getUTCDay();
-        return dow !== 0 && dow !== 6;
-      });
+  // A semana é sempre útil: sábado e domingo saíram de vez, junto com a
+  // configuração que os ligava. Tarefas recorrentes gravadas no fim de semana
+  // continuam no banco, mas não têm mais dia onde aparecer.
+  const visibleDays = days.filter((d) => {
+    const dow = new Date(d + "T12:00:00Z").getUTCDay();
+    return dow !== 0 && dow !== 6;
+  });
 
   // Stats: total task-day pairs + completed ones for the visible week
   const { totalCount, completedCount } = useMemo(() => {
@@ -200,11 +200,11 @@ export function WeekPlanningView() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="h-full flex flex-col">
       {/* ── Header: week selector + completed count ─────────────────────────── */}
       <div
         data-tour="planning-header"
-        className="flex items-center gap-2 px-4 py-3 border-b border-gray-800"
+        className="flex items-center gap-2 px-5 py-3 border-b border-gray-800 h-[52px]"
       >
         <button
           onClick={() => {
@@ -239,190 +239,209 @@ export function WeekPlanningView() {
         )}
 
         <div className="ml-auto flex items-center gap-3 shrink-0">
-          {selectMode ? (
-            <>
-              <button
-                onClick={() => {
-                  const allSelected =
-                    allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
-                  setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
-                }}
-                className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
-              >
-                {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
-                  ? "Desmarcar todas"
-                  : "Selecionar todas"}
-              </button>
-              <button
-                onClick={() => void handleBulkDelete()}
-                disabled={selectedIds.size === 0}
-                className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
-                Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-              </button>
-              <button
-                onClick={exitSelectMode}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setSelectMode(true)}
-                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
-              >
-                Selecionar tarefas
-              </button>
-              <span className="text-xs text-gray-400 whitespace-nowrap">
-                {completedCount} de {totalCount} concluídas
-              </span>
-              <button
-                onClick={() => startTour()}
-                title="Ver tour da página"
-                className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
-              >
-                ?
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ── Day filter pills ─────────────────────────────────────────────────── */}
-      <div data-tour="planning-day-filter" className="border-b border-gray-800">
-        <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
+          <span className="text-xs text-gray-400 whitespace-nowrap">
+            {completedCount} de {totalCount} concluídas
+          </span>
           <button
-            onClick={() => setDayFilter("all")}
-            className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
-              dayFilter === "all"
-                ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-            }`}
+            onClick={() => startTour()}
+            title="Ver tour da página"
+            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
           >
-            Todos
+            ?
           </button>
-          {visibleDays.map((day) => {
-            const isToday = day === today;
-            const dow = new Date(day + "T12:00:00Z").getUTCDay();
-            return (
-              <button
-                key={day}
-                onClick={() => setDayFilter((prev) => (prev === day ? "all" : day))}
-                className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap relative ${
-                  dayFilter === day
-                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                    : isToday
-                      ? "bg-transparent border-blue-500/20 text-gray-300 hover:border-blue-500/40"
-                      : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-                }`}
-              >
-                {DAY_SHORT[dow]}
-                {isToday && (
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
 
-      {/* ── Form ─────────────────────────────────────────────────────────────── */}
-      <div data-tour="planning-form">
+      {/* Formulário à esquerda, semana à direita — mesmo arranjo do Lançamento
+          Manual, para as duas telas de entrada não parecerem coisas distintas. */}
+      <div className="flex-1 min-h-0 flex">
+        {/* A `key` remonta o formulário para ele reler o `defaultDate`. Os dois
+            ramos são prefixados de propósito: sem isso, "all" usa a data de
+            início da semana — que é a segunda-feira — e filtrar por segunda
+            gera a mesma chave, o formulário não remonta e o campo Data fica
+            preso no valor anterior. O bug só aparecia na segunda. */}
         <PlannedTaskForm
-          key={dayFilter !== "all" ? dayFilter : start}
+          key={dayFilter === "all" ? `week-${start}` : `day-${dayFilter}`}
           projects={projects}
           categories={categories}
           showDateFields={true}
           defaultDate={dayFilter !== "all" ? dayFilter : today}
           onSubmit={create}
         />
-      </div>
 
-      {/* ── Google Calendar import modal ─────────────────────────────────────── */}
-      {showImportModal && calendarImporter && (
-        <ImportCalendarModal
-          importer={calendarImporter}
-          repo={plannedTaskRepo}
-          defaultFromISO={calendarFromISO}
-          defaultToISO={calendarToISO}
-          projects={projects}
-          categories={categories}
-          onImported={handleImported}
-          onClose={() => setShowImportModal(false)}
-        />
-      )}
-
-      {/* ── Task list grouped by day ──────────────────────────────────────────── */}
-      <div data-tour="planning-task-list">
-        {filteredDays.map((day) => {
-          const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
-          if (dayTasks.length === 0 && dayFilter !== "all") return null;
-
-          const dayDate = new Date(day + "T12:00:00Z");
-          const isToday = day === today;
-          const dayLabel = `${DAY_SHORT[dayDate.getUTCDay()]}, ${String(dayDate.getUTCDate()).padStart(2, "0")}/${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}`;
-          const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
-
-          return (
-            <div key={day}>
-              <div
-                className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* ── Day filter pills ─────────────────────────────────────────────── */}
+          <div data-tour="planning-day-filter" className="border-b border-gray-800 shrink-0">
+            <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
+              <button
+                onClick={() => setDayFilter("all")}
+                className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
+                  dayFilter === "all"
+                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+                    : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
+                }`}
               >
-                <span
-                  className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
-                >
-                  {dayLabel}
-                  {isToday && (
-                    <span className="ml-1.5 normal-case font-medium text-blue-400/70">hoje</span>
-                  )}
-                </span>
-                <div className="ml-auto flex items-center gap-2">
-                  {selectMode && dayTasks.length > 0 && (
-                    <button
-                      onClick={() => toggleSelectAllForDay(day)}
-                      className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
-                    >
-                      {dayTasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
-                    </button>
-                  )}
-                  {dayTasks.length > 0 && (
-                    <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
-                      {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
-                    </span>
-                  )}
-                </div>
-              </div>
-              {dayTasks.length === 0 ? (
-                <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
+                Todos
+              </button>
+              {visibleDays.map((day) => {
+                const isToday = day === today;
+                const dow = new Date(day + "T12:00:00Z").getUTCDay();
+                return (
+                  <button
+                    key={day}
+                    onClick={() => setDayFilter((prev) => (prev === day ? "all" : day))}
+                    className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap relative ${
+                      dayFilter === day
+                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+                        : isToday
+                          ? "bg-transparent border-blue-500/20 text-gray-300 hover:border-blue-500/40"
+                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
+                    }`}
+                  >
+                    {DAY_SHORT[dow]}
+                    {isToday && (
+                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Barra de seleção: age sobre esta lista, e o header já disputava
+              espaço com a navegação de semana e o contador de concluídas. */}
+          {totalCount > 0 && (
+            <div className="shrink-0 flex items-center justify-end gap-3 px-4 py-2 border-b border-gray-800">
+              {selectMode ? (
+                <>
+                  <button
+                    onClick={() => {
+                      const allSelected =
+                        allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
+                      setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
+                    }}
+                    className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                  >
+                    {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
+                      ? "Desmarcar todas"
+                      : "Selecionar todas"}
+                  </button>
+                  <button
+                    onClick={() => void handleBulkDelete()}
+                    disabled={selectedIds.size === 0}
+                    className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                  </button>
+                  <button
+                    onClick={exitSelectMode}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </>
               ) : (
-                dayTasks.map((task) => (
-                  <PlannedTaskItem
-                    key={task.id}
-                    task={task}
-                    dateISO={day}
-                    projects={projects}
-                    categories={categories}
-                    playDisabled={!!runningTask}
-                    tracked={
-                      day === trackedToday && trackedTitles.has(task.name.toLowerCase().trim())
-                    }
-                    onPlay={handlePlay}
-                    onUpdate={update}
-                    onComplete={complete}
-                    onUncomplete={uncomplete}
-                    onDuplicate={duplicate}
-                    onDelete={remove}
-                    selectMode={selectMode}
-                    selected={selectedIds.has(task.id)}
-                    onToggleSelect={toggleSelectTask}
-                  />
-                ))
+                <button
+                  onClick={() => setSelectMode(true)}
+                  className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
+                >
+                  Selecionar tarefas
+                </button>
               )}
             </div>
-          );
-        })}
+          )}
+
+          {/* ── Google Calendar import modal ─────────────────────────────────────── */}
+          {showImportModal && calendarImporter && (
+            <ImportCalendarModal
+              importer={calendarImporter}
+              repo={plannedTaskRepo}
+              defaultFromISO={calendarFromISO}
+              defaultToISO={calendarToISO}
+              projects={projects}
+              categories={categories}
+              onImported={handleImported}
+              onClose={() => setShowImportModal(false)}
+            />
+          )}
+
+          {/* ── Task list grouped by day ────────────────────────────────────── */}
+          <div data-tour="planning-task-list" className="flex-1 min-h-0 overflow-y-auto">
+            {filteredDays.map((day) => {
+              const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
+              if (dayTasks.length === 0 && dayFilter !== "all") return null;
+
+              const dayDate = new Date(day + "T12:00:00Z");
+              const isToday = day === today;
+              const dayLabel = `${DAY_SHORT[dayDate.getUTCDay()]}, ${String(dayDate.getUTCDate()).padStart(2, "0")}/${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}`;
+              const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
+
+              return (
+                <div key={day}>
+                  <div
+                    className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
+                  >
+                    <span
+                      className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
+                    >
+                      {dayLabel}
+                      {isToday && (
+                        <span className="ml-1.5 normal-case font-medium text-blue-400/70">
+                          hoje
+                        </span>
+                      )}
+                    </span>
+                    <div className="ml-auto flex items-center gap-2">
+                      {selectMode && dayTasks.length > 0 && (
+                        <button
+                          onClick={() => toggleSelectAllForDay(day)}
+                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                        >
+                          {dayTasks.every((t) => selectedIds.has(t.id))
+                            ? "Desmarcar"
+                            : "Selecionar"}
+                        </button>
+                      )}
+                      {dayTasks.length > 0 && (
+                        <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
+                          {dayCompleted > 0
+                            ? `${dayCompleted}/${dayTasks.length}`
+                            : dayTasks.length}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {dayTasks.length === 0 ? (
+                    <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
+                  ) : (
+                    dayTasks.map((task) => (
+                      <PlannedTaskItem
+                        key={task.id}
+                        task={task}
+                        dateISO={day}
+                        projects={projects}
+                        categories={categories}
+                        playDisabled={!!runningTask}
+                        tracked={
+                          day === trackedToday && trackedTitles.has(task.name.toLowerCase().trim())
+                        }
+                        onPlay={handlePlay}
+                        onUpdate={update}
+                        onComplete={complete}
+                        onUncomplete={uncomplete}
+                        onDuplicate={duplicate}
+                        onDelete={remove}
+                        selectMode={selectMode}
+                        selected={selectedIds.has(task.id)}
+                        onToggleSelect={toggleSelectTask}
+                      />
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
