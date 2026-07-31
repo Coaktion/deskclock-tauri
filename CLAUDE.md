@@ -41,7 +41,7 @@
 ```
 src/
 ├── domain/           # Entidades, interfaces de repositório, casos de uso
-│   ├── entities/     # Task, Project, Category, ExportProfile, Config
+│   ├── entities/     # Task, PlannedTask, Project, Category, ExportProfile, Workspace
 │   ├── repositories/ # Interfaces (ports)
 │   └── usecases/     # Lógica de negócio pura
 ├── infra/            # Implementações concretas
@@ -73,6 +73,7 @@ src/
 | Campo | Tipo | Regras |
 |---|---|---|
 | id | UUID | PK, gerado automaticamente |
+| workspace_id | UUID | FK → Workspace, obrigatório |
 | name | string \| null | Exibir "(sem nome)" se vazio |
 | project_id | UUID \| null | FK → Project |
 | category_id | UUID \| null | FK → Category |
@@ -89,6 +90,7 @@ src/
 | Campo | Tipo | Regras |
 |---|---|---|
 | id | UUID | PK |
+| workspace_id | UUID | FK → Workspace, obrigatório |
 | name | string | Obrigatório |
 | project_id | UUID \| null | FK → Project |
 | category_id | UUID \| null | FK → Category |
@@ -108,14 +110,16 @@ src/
 | Campo | Tipo | Regras |
 |---|---|---|
 | id | UUID | PK |
-| name | string | Único, obrigatório |
+| workspace_id | UUID | FK → Workspace, obrigatório |
+| name | string | Único **por workspace** (`UNIQUE(workspace_id, name)`) |
 
 ### 4.4 Category
 
 | Campo | Tipo | Regras |
 |---|---|---|
 | id | UUID | PK |
-| name | string | Único, obrigatório |
+| workspace_id | UUID | FK → Workspace, obrigatório |
+| name | string | Único **por workspace** (`UNIQUE(workspace_id, name)`) |
 | default_billable | boolean | Padrão para novas tarefas com esta categoria |
 
 ### 4.5 ExportProfile
@@ -123,15 +127,29 @@ src/
 | Campo | Tipo | Regras |
 |---|---|---|
 | id | UUID | PK |
+| workspace_id | UUID | FK → Workspace, obrigatório |
 | name | string | Obrigatório |
-| is_default | boolean | Apenas um pode ser default |
+| is_default | boolean | Apenas um pode ser default **por workspace** (índice parcial) |
 | format | enum | `csv` \| `json` |
 | separator | enum | `comma` \| `semicolon` (apenas CSV) |
 | duration_format | enum | `hh:mm:ss` \| `decimal` \| `minutes` |
 | date_format | enum | `iso` \| `dd/mm/yyyy` |
 | columns | JSON | Array de `{ field, label, visible, order }` |
 
-### 4.6 Config (chave-valor)
+### 4.6 Workspace
+
+| Campo | Tipo | Regras |
+|---|---|---|
+| id | UUID | PK. O workspace "Padrão" tem id sentinela fixo, semeado pela migration 011 |
+| name | string | Único, obrigatório |
+| color | string | **Nome de um slot** da paleta (`teal`, `amber`…), nunca um valor de cor |
+| created_at | datetime | Auto |
+
+Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
+`ExportProfile`. **Custom fields, quando existirem, serão globais** — ver
+`docs/specs/workspaces-custom-fields.md`.
+
+### 4.7 Config (chave-valor)
 
 | Campo | Tipo |
 |---|---|
@@ -153,6 +171,7 @@ src/
 - **Estado paused**: indicador visual de pausa.
 - **Clique:** abre o Popup Flyout.
 - **Grip bar** para arraste, com snap-to-grid opcional.
+- **Workspace:** com mais de um workspace, a cor do ativo aparece como duas faixas nas bordas do botão, com o miolo aberto pelo fundo do ícone. Some quando só existe um.
 
 #### 5.1.2 Popup Flyout (Overlay de execução)
 - **Aparece ao clicar** no Compact Overlay — flyout acoplado, não janela separada.
@@ -162,6 +181,7 @@ src/
 - **Edição inline por campo:** clique em nome, projeto ou categoria abre edição in-place sem modal.
 - **Hora de início** editável — recalcula o timer ao alterar.
 - **Seção "Ações"** (quando a tarefa em execução tiver ações configuradas): chips clicáveis que disparam cada ação sob demanda — não há mais execução automática ao iniciar.
+- **Workspace:** chip no header com o workspace ativo e troca pelo próprio overlay, com a mesma guarda de "parar e trocar". Some com um único workspace.
 
 ---
 
@@ -270,6 +290,12 @@ src/
 #### Categorias
 - **Importação em massa:** Textarea, uma categoria por linha. Prefixo `!` = non-billable (ex: `!Reuniões`). Sem prefixo = billable.
 - **Lista:** Filtro por nome + adicionar individualmente (com toggle billable) + excluir sem confirmação.
+
+#### Workspaces
+- **Criar:** nome + seletor de cor. A cor sugerida é o primeiro slot ainda não usado da paleta e **não muda enquanto se digita** — só o seletor a altera.
+- **Editar:** nome e cor inline.
+- **Tornar ativo:** cada linha inativa tem a ação; havendo tarefa em execução, pergunta Concluída/Pendente antes de trocar.
+- **Excluir:** abre modal com o destino obrigatório dos dados (mover para outro workspace ou apagar). **Exceção deliberada** ao §1 "exclusões sem confirmação" — um workspace pode guardar meses de horas e não há desfazer. Excluir o último é bloqueado.
 
 ---
 
@@ -397,7 +423,15 @@ src/
 - Toda lógica de agrupamento por dia (histórico, lançamento retroativo) extrai a data no fuso local do usuário — nunca faz `.slice(0, 10)` direto no ISO UTC.
 - As funções `startOfDayISO(dateISO)` e `endOfDayISO(dateISO)` constroem limites UTC a partir do horário local: `new Date(dateISO + "T00:00:00").toISOString()`.
 
-### 6.7 Tarefas recorrentes
+### 6.7 Workspaces
+- Todo registro nasce no **workspace ativo**, lido do `WorkspaceContext`. Nenhum hook recebe workspace por parâmetro — é isso que mantém as assinaturas públicas estáveis.
+- `findAll(workspaceId?)` e afins tratam `undefined` como "todos os workspaces". Esse é o caminho das **integrações**, que são externas ao workspace e enxergam tudo. `useTaskSendSelection` depende disso de propósito.
+- `findByName(name, workspaceId)` exige o parâmetro: a unicidade de projeto e categoria é por workspace.
+- **Trocar de workspace com tarefa em execução é bloqueado** — a UI oferece "parar e trocar" reusando a pergunta Concluída/Pendente. A guarda vive em `useWorkspaceSwitchGuard`, não em `switchTo`, porque o `RunningTaskContext` já consome o `WorkspaceContext` e o caminho inverso fecharia um ciclo.
+- Cada janela tem seu próprio `WorkspaceProvider`; o evento `WORKSPACE_CHANGED` mantém todas em sincronia.
+- **Exclusão de workspace exige confirmação**, contrariando o §1. É a única exceção, e é deliberada.
+
+### 6.8 Tarefas recorrentes
 - Sem data de término — aparecem indefinidamente nos dias configurados.
 - Excluir remove a tarefa completamente de todos os dias futuros.
 - Concluir afeta apenas o dia atual (adiciona data ao `completed_dates`).
@@ -620,6 +654,10 @@ Roteiro obrigatório:
 4. Registrar a strategy no Provider central de auto-sync (não em `App.tsx` nem em `usePostStopLogic` — esses dois lugares hoje têm cópias hardcoded; novo trabalho deve usar o ponto único).
 5. UI consome via hook injetado, **nunca** `new TogglClient()` direto em componente.
 6. Adicionar testes em `tests/infra/integrations/toggl/` espelhando a estrutura dos existentes.
+7. **Não escopar as leituras por workspace.** Integrações são externas ao workspace e enxergam
+   tudo — chame `findAll()` / `findByDateRange(start, end)` sem o terceiro argumento. Se precisar
+   criar Projects a partir de um catálogo externo, aí sim o workspace de destino é obrigatório, e
+   ele vem do seletor da UI (ver `deskclockWorkspaceId` em `importMondayProjects`).
 
 ### 9.6 Adicionando configuração ao usuário
 
@@ -632,12 +670,12 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-05-09 (comportamentos removidos/alterados: modo de envio, edição inline de planejadas, tarefa em branco ao clicar overlay, configs "sempre visível" e "indicador de grade")*
+*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **deskclock-tauri** (5035 symbols, 11752 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **deskclock-tauri** (5244 symbols, 12397 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

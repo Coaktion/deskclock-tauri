@@ -68,6 +68,16 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Adição individual + exclusão sem confirmação
 - Prefixo `!` para marcar categoria como non-billable na importação
 
+### Workspaces
+- Separe contextos de trabalho: cada workspace tem seus próprios projetos, categorias, tarefas,
+  planejadas e perfis de exportação
+- Seletor na sidebar e nos overlays, com cor por workspace. **Some da tela enquanto existir só
+  um** — quem não usa workspaces não vê workspace nenhum
+- Trocar com uma tarefa em execução pergunta antes se ela ficou concluída ou pendente
+- Mover ou copiar tarefas entre workspaces, reaproveitando projeto e categoria de mesmo nome no
+  destino
+- As integrações continuam enxergando todos os workspaces
+
 ### Acesso rápido (Command Palette)
 - Painel de ações acessível via `Ctrl+K` ou ao abrir o app (configurável)
 - Atalhos numéricos `Ctrl+1–7` para navegar direto às telas

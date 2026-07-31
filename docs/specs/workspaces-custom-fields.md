@@ -6,7 +6,7 @@
 - **Coverage tier:** A (`domain/usecases/`, repositórios, migrations) / B–C (UI, sem testes de
   renderização — padrão do projeto, §7.6 do `CLAUDE.md`)
 - **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 e 1
-  concluídas em 2026-07-30; Fases 2 a 5 pendentes
+  concluídas e validadas no app (2026-07-30/31); Fases 2 a 5 pendentes
 
 > Este documento é a **ordem de trabalho** para a fase de Execute. Foi escrito para ser lido
 > por um agente sem acesso à conversa que o originou — todas as decisões e o porquê delas
@@ -29,6 +29,12 @@
 4. **`workspaceId` é ambíguo no código.** Em `importMondayProjects` e `ClockifyMappingsSection`
    ele designa o workspace do **Monday/Clockify**; o do DeskClock nesses arquivos chama-se
    `deskclockWorkspaceId`.
+5. **Cada janela do Tauri tem seu próprio `WorkspaceProvider`.** Qualquer estado novo que precise
+   ser igual entre janela principal e overlays tem de viajar por evento — ver `WORKSPACE_CHANGED`.
+   O sintoma de esquecer isso é o overlay operar no workspace anterior sem erro nenhum.
+6. **Escopo que para no repositório não é escopo.** O filtro de workspace existir em
+   `findByDateRange` não significa que a tela o use; três hooks de leitura de tarefas ficaram sem
+   passá-lo e mostravam dados de todos os workspaces. Ao escopar algo novo, siga até o hook.
 
 ---
 
@@ -274,9 +280,18 @@ Atingidos: `IProjectRepository`, `ICategoryRepository`, `ITaskRepository.findByD
 > durante execução, nenhuma tarefa é renderizada fora do seu workspace. Só o
 > `MoveToWorkspaceModal` carrega os dois catálogos, e carrega explicitamente.
 
+**Entregue além do previsto no plano** (pedidos do usuário durante o Execute):
+
+- Indicação e troca de workspace **nos overlays** — chip no header do popup e faixas de cor nas
+  bordas do botão do compact. Exigiu o evento `WORKSPACE_CHANGED`, porque cada janela tem seu
+  próprio provider.
+- **"Tornar ativo"** na aba Workspaces: a tela que cadastra workspaces também troca o ativo.
+- `useWorkspaceSwitchGuard`, com a guarda de tarefa em execução compartilhada pelos três pontos
+  de troca (sidebar, overlay, tela de Dados).
+
 ---
 
-### Fase 2 — Multi-select na tela de Dados
+### Fase 2 — Multi-select na tela de Dados ⬅️ **PRÓXIMA**
 
 1. `presentation/hooks/useMultiSelect.ts` — genérico por id. **Não copiar** a lógica de seleção
    de `useTaskSendSelection`, que é específica de tarefa (§9.4).
