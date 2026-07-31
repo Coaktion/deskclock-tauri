@@ -5,7 +5,8 @@
 - **Project classification:** Current (React 19, TS 5, Vitest 3, CLAUDE.md + CI presentes)
 - **Coverage tier:** A (`domain/usecases/`, repositórios, migrations) / B–C (UI, sem testes de
   renderização — padrão do projeto, §7.6 do `CLAUDE.md`)
-- **Estado do ritual SDD:** Brainstorm ✅ aprovado · Plan ✅ aprovado · **Execute ⏳ pendente**
+- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 e 1
+  concluídas em 2026-07-30; Fases 2 a 5 pendentes
 
 > Este documento é a **ordem de trabalho** para a fase de Execute. Foi escrito para ser lido
 > por um agente sem acesso à conversa que o originou — todas as decisões e o porquê delas
@@ -15,15 +16,19 @@
 
 ## Handoff — leia antes de tocar em qualquer coisa
 
-1. **A branch `feat/monday-integration` tem a integração Monday inteira sem um único commit.**
-   Dezenas de arquivos `??` no `git status`. Antes de qualquer coisa nova, executar a Fase 0.
-   Não existe ponto de retorno para esse trabalho hoje.
-2. **O índice do GitNexus está desatualizado** — `taskGroupKey` não é encontrado porque foi
-   extraído na branch não commitada. Rodar `npx gitnexus analyze` é pré-requisito da Fase 0;
-   sem isso o impact analysis obrigatório do `CLAUDE.md` devolve resultado falso.
-3. **A Fase 1.0 é um spike bloqueante.** Não escrever a migration `011` sem ele.
-4. Branch: seguir em `feat/monday-integration`. O nome ficou menor que o escopo; renomear com
-   trabalho não commitado dentro não compensa.
+> Os itens 1 a 3 originais (Monday sem commit, índice do GitNexus desatualizado, spike bloqueante)
+> foram resolvidos em 2026-07-30. O que segue valendo:
+
+1. **Branch:** seguir em `feat/monday-integration`. O nome ficou menor que o escopo.
+2. **A migration 011 já roda.** Ela renomeia `projects`/`categories` para `*_pre_011` e reconstrói
+   `tasks`/`planned_tasks`/`export_profiles`. As tabelas `_pre_011` ficam no banco de propósito:
+   são a única rota de rollback. Ver §1.0 para o porquê da técnica.
+3. **A paleta de cores vem do Tailwind v4**, que expõe 26 slots como CSS custom properties. Um
+   grep em `src/index.css` mostra só 4 porque ali ficam apenas os *overrides* de tema — não
+   conclua que a paleta é pequena.
+4. **`workspaceId` é ambíguo no código.** Em `importMondayProjects` e `ClockifyMappingsSection`
+   ele designa o workspace do **Monday/Clockify**; o do DeskClock nesses arquivos chama-se
+   `deskclockWorkspaceId`.
 
 ---
 
