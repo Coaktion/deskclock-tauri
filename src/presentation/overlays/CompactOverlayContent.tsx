@@ -52,6 +52,14 @@ export function CompactOverlayContent({
   const roundedBottom = isSmall ? "rounded-b-[6px]" : "rounded-b-xl";
   const timerSize = isSmall ? "text-[12px]" : "text-[14px]";
 
+  // Disco atrás do ícone/timer: é ele que abre o vazio entre as duas crescentes,
+  // dispensando uma camada de recorte. Só existe quando há cor para separar —
+  // sem crescentes, o disco seria invisível em repouso e ainda assim criaria um
+  // segundo blend no hover do botão.
+  const centerBackdrop = showWorkspace
+    ? "box-content p-1 rounded-full bg-gray-900 group-hover:bg-gray-800/60 transition-colors"
+    : "";
+
   return (
     // inset-0 + m-auto centraliza dentro da janela (que no GTK pode ser 136px+).
     // max-w/max-h limitam a área visível ao tamanho correto.
@@ -67,21 +75,21 @@ export function CompactOverlayContent({
       <button
         onMouseDown={onMouseDown}
         onClick={onTogglePopup}
-        className={`relative flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
+        className={`group relative flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
       >
-        {/* Dentro do botão: pinta acima do fundo dele e abaixo do timer, que é
-            irmão posterior. Fica fora da barra do grip de propósito. */}
-        {showWorkspace && (
-          <WorkspaceEdge color={activeWorkspace!.color} className={roundedTop} />
-        )}
+        {/* Só sobre o botão, nunca sobre a barra do grip. */}
+        {showWorkspace && <WorkspaceEdge color={activeWorkspace!.color} className={roundedTop} />}
         {hasTask ? (
           <span
-            className={`font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
+            className={`relative ${centerBackdrop} font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
           >
             {formatHHMMSS(seconds)}
           </span>
         ) : (
-          <ListTodo size={18} className="text-blue-400 pointer-events-none" />
+          <ListTodo
+            size={18}
+            className={`relative ${centerBackdrop} text-blue-400 pointer-events-none`}
+          />
         )}
       </button>
 

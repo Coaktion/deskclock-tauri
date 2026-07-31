@@ -6,6 +6,8 @@ interface SlotClasses {
   text: string;
   /** Origem do gradiente do compact overlay — ver `WorkspaceEdge`. */
   from: string;
+  /** Destino do mesmo gradiente, para a cor voltar na borda oposta. */
+  to: string;
 }
 
 /**
@@ -21,48 +23,56 @@ const CLASSES: Record<WorkspaceColor, SlotClasses> = {
     soft: "bg-rose-500/10 border-rose-500/40",
     text: "text-rose-400",
     from: "from-rose-500/50",
+    to: "to-rose-500/50",
   },
   orange: {
     dot: "bg-orange-500",
     soft: "bg-orange-500/10 border-orange-500/40",
     text: "text-orange-400",
     from: "from-orange-500/50",
+    to: "to-orange-500/50",
   },
   amber: {
     dot: "bg-amber-500",
     soft: "bg-amber-500/10 border-amber-500/40",
     text: "text-amber-400",
     from: "from-amber-500/50",
+    to: "to-amber-500/50",
   },
   lime: {
     dot: "bg-lime-500",
     soft: "bg-lime-500/10 border-lime-500/40",
     text: "text-lime-400",
     from: "from-lime-500/50",
+    to: "to-lime-500/50",
   },
   teal: {
     dot: "bg-teal-500",
     soft: "bg-teal-500/10 border-teal-500/40",
     text: "text-teal-400",
     from: "from-teal-500/50",
+    to: "to-teal-500/50",
   },
   cyan: {
     dot: "bg-cyan-500",
     soft: "bg-cyan-500/10 border-cyan-500/40",
     text: "text-cyan-400",
     from: "from-cyan-500/50",
+    to: "to-cyan-500/50",
   },
   violet: {
     dot: "bg-violet-500",
     soft: "bg-violet-500/10 border-violet-500/40",
     text: "text-violet-400",
     from: "from-violet-500/50",
+    to: "to-violet-500/50",
   },
   fuchsia: {
     dot: "bg-fuchsia-500",
     soft: "bg-fuchsia-500/10 border-fuchsia-500/40",
     text: "text-fuchsia-400",
     from: "from-fuchsia-500/50",
+    to: "to-fuchsia-500/50",
   },
 };
 
@@ -83,18 +93,24 @@ export function WorkspaceDot({ color, size = 8 }: { color: string; size?: number
 }
 
 /**
- * Faixa de cor do workspace no compact overlay: começa na borda esquerda e se
- * dissolve no fundo antes de 25% da largura.
+ * Cor do workspace nas duas bordas do botão do compact overlay, anulando-se no
+ * centro.
  *
- * Cobre só o botão do compact, não a barra do grip. Precisa de um ancestral
- * posicionado (o botão tem `relative`) e deve vir antes do conteúdo, para
- * pintar acima do fundo do botão e abaixo do timer.
+ * O vazio central não é recortado aqui: quem o abre é o próprio ícone/timer, que
+ * carrega o fundo do card num círculo (ver `CompactOverlayContent`). Isso evita
+ * uma terceira camada e faz o recorte acompanhar o hover do botão de graça.
+ *
+ * Precisa de um ancestral posicionado (o botão tem `relative`). O conteúdo do
+ * botão precisa ser posicionado também (`relative`), senão esta camada o cobre:
+ * no CSS, elementos posicionados pintam acima de conteúdo estático no fluxo,
+ * mesmo vindo antes no DOM.
  */
 export function WorkspaceEdge({ color, className = "" }: { color: string; className?: string }) {
+  const slot = workspaceClasses(color);
   return (
     <span
       aria-hidden
-      className={`absolute inset-0 pointer-events-none bg-gradient-to-r to-transparent to-25% ${workspaceClasses(color).from} ${className}`}
+      className={`absolute inset-0 pointer-events-none bg-gradient-to-r ${slot.from} via-transparent ${slot.to} ${className}`}
     />
   );
 }
