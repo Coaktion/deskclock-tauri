@@ -9,13 +9,15 @@ export interface SearchTasksFilters {
   projectId?: UUID | null;
   categoryId?: UUID | null;
   billable?: boolean;
+  /** Omitido = busca em todos os workspaces. */
+  workspaceId?: UUID;
 }
 
 export async function searchTasks(
   repo: ITaskRepository,
   filters: SearchTasksFilters
 ): Promise<Task[]> {
-  const tasks = await repo.findByDateRange(filters.startISO, filters.endISO);
+  const tasks = await repo.findByDateRange(filters.startISO, filters.endISO, filters.workspaceId);
 
   return tasks.filter((t) => {
     if (t.status !== "completed") return false;

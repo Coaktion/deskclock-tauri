@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { Task } from "@domain/entities/Task";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { getHistoryTotals, type HistoryTotals } from "@domain/usecases/tasks/GetHistoryTotals";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
@@ -87,6 +88,7 @@ const INITIAL_FILTERS: HistoryFilters = {
 
 export function useHistory() {
   const { taskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [filters, setFilters] = useState<HistoryFilters>(INITIAL_FILTERS);
   const [groups, setGroups] = useState<DayGroup[]>([]);
   const [totals, setTotals] = useState<HistoryTotals>({
@@ -107,12 +109,13 @@ export function useHistory() {
         projectId: f.projectId ?? undefined,
         categoryId: f.categoryId ?? undefined,
         billable: f.billable === "all" ? undefined : f.billable === "yes",
+        workspaceId,
       });
       setGroups(groupByDay(tasks));
       setTotals(getHistoryTotals(tasks));
       setSearched(true);
     },
-    [taskRepo]
+    [taskRepo, workspaceId]
   );
 
   const updateFilter = useCallback(

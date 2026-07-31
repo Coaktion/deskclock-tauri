@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, Pen, Plus, Trash2, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
-import { WORKSPACE_COLORS, workspaceColorFor } from "@domain/utils/workspaceColor";
+import { WORKSPACE_COLORS } from "@domain/utils/workspaceColor";
 import { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
@@ -30,8 +30,8 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
   const { workspaces, activeWorkspaceId, create, update, remove } = useWorkspaceAdmin();
 
   const [newName, setNewName] = useState("");
-  // Enquanto o usuário digita, a cor acompanha o hash do nome — mas uma escolha
-  // manual congela o valor, senão a seleção seria desfeita a cada tecla.
+  // A cor do formulário é fixa: existe um seletor logo abaixo, e um preview que
+  // muda a cada tecla faria a escolha do usuário parecer instável.
   const [newColor, setNewColor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,13 +41,19 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
 
   const [deleting, setDeleting] = useState<Workspace | null>(null);
 
-  const previewColor = newColor ?? workspaceColorFor(newName || "Novo workspace");
+  /** Primeiro slot ainda não usado — só muda quando a lista de workspaces muda. */
+  const suggestedColor = useMemo(() => {
+    const used = new Set(workspaces.map((w) => w.color));
+    return WORKSPACE_COLORS.find((c) => !used.has(c)) ?? WORKSPACE_COLORS[0];
+  }, [workspaces]);
+
+  const previewColor = newColor ?? suggestedColor;
 
   async function handleAdd() {
     if (!newName.trim()) return;
     setError(null);
     try {
-      await create(newName, newColor ?? undefined);
+      await create(newName, previewColor);
       setNewName("");
       setNewColor(null);
     } catch (e) {

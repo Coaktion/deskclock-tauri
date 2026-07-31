@@ -1,6 +1,7 @@
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { groupTasks, type TaskGroup } from "@domain/utils/groupTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useState } from "react";
@@ -12,15 +13,16 @@ import { useCallback, useEffect, useState } from "react";
  */
 export function useCompletedTasksForDate(dateISO: string) {
   const { taskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [groups, setGroups] = useState<TaskGroup[]>([]);
   const [totalSeconds, setTotalSeconds] = useState(0);
 
   const reload = useCallback(async () => {
-    const tasks = await getTasksForDate(taskRepo, dateISO);
+    const tasks = await getTasksForDate(taskRepo, dateISO, workspaceId);
     const completed = tasks.filter((t) => t.status === "completed");
     setGroups(groupTasks(completed));
     setTotalSeconds(completed.reduce((acc, t) => acc + (t.durationSeconds ?? 0), 0));
-  }, [taskRepo, dateISO]);
+  }, [taskRepo, dateISO, workspaceId]);
 
   useEffect(() => {
     void reload();

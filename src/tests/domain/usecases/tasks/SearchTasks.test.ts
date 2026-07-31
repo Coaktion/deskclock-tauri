@@ -43,7 +43,8 @@ describe("searchTasks", () => {
     });
     expect(repo.findByDateRange).toHaveBeenCalledWith(
       "2026-04-08T00:00:00.000Z",
-      "2026-04-08T23:59:59.999Z"
+      "2026-04-08T23:59:59.999Z",
+      undefined
     );
     expect(result).toHaveLength(2);
   });

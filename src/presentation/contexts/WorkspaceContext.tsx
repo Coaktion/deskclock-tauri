@@ -12,6 +12,8 @@ import { DEFAULT_WORKSPACE_ID } from "@domain/entities/Workspace";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { getWorkspaces } from "@domain/usecases/workspaces/GetWorkspaces";
+import { OVERLAY_EVENTS, type WorkspaceChangedPayload } from "@shared/types/overlayEvents";
+import { emit, listen } from "@tauri-apps/api/event";
 
 export interface WorkspaceContextValue {
   workspaces: Workspace[];
@@ -79,9 +81,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (id: string) => {
       setActiveWorkspaceId(id);
       await set("activeWorkspaceId", id);
+      // As outras janelas têm o próprio provider e não veem esta mudança de
+      // estado; sem o evento, o overlay seguiria criando tarefas no workspace
+      // anterior. `emit` chega também a esta janela — o listener abaixo é
+      // idempotente, então o eco é inofensivo.
+      await emit(OVERLAY_EVENTS.WORKSPACE_CHANGED, {
+        activeWorkspaceId: id,
+      } satisfies WorkspaceChangedPayload);
     },
     [set]
   );
+
+  // Espelha trocas e mudanças de cadastro feitas em qualquer janela.
+  useEffect(() => {
+    const unlisten = listen<WorkspaceChangedPayload>(OVERLAY_EVENTS.WORKSPACE_CHANGED, (event) => {
+      setActiveWorkspaceId(event.payload.activeWorkspaceId);
+      void reload();
+    });
+    return () => {
+      void unlisten.then((fn) => fn());
+    };
+  }, [reload]);
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({

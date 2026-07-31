@@ -21,6 +21,7 @@ export const OVERLAY_EVENTS = {
   MEETING_PROMPT: "meeting-prompt",
   MEETING_PROMPT_RESPONSE: "meeting-prompt:response",
   MEETING_TRACKER_SYNC_NOW: "meeting-tracker:sync-now",
+  WORKSPACE_CHANGED: "workspace-changed",
 } as const;
 
 export interface CommandPaletteNavigatePayload {
@@ -75,6 +76,15 @@ export interface MeetingPromptResponsePayload {
   kind: MeetingPromptKind;
   calendarEventId: string;
   action: "start" | "snooze" | "dismiss" | "stop" | "still-going";
+}
+
+/**
+ * Trocar de workspace ou mexer no cadastro em qualquer janela. Cada janela tem
+ * seu próprio `WorkspaceProvider`, então sem este evento o overlay continuaria
+ * mostrando o workspace antigo — e, pior, criando tarefas nele.
+ */
+export interface WorkspaceChangedPayload {
+  activeWorkspaceId: string;
 }
 
 export type ToastVariant = "success" | "error" | "info" | "update" | "warning";

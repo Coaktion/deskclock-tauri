@@ -17,7 +17,20 @@ describe("getTasksForDate", () => {
     await getTasksForDate(repo, "2026-04-08");
     expect(repo.findByDateRange).toHaveBeenCalledWith(
       startOfDayISO("2026-04-08"),
-      endOfDayISO("2026-04-08")
+      endOfDayISO("2026-04-08"),
+      undefined
+    );
+  });
+
+  it("encaminha o workspace ao repositório quando informado", async () => {
+    const repo = {
+      findByDateRange: vi.fn(async () => []),
+    } as unknown as ITaskRepository;
+    await getTasksForDate(repo, "2026-04-08", "ws-1");
+    expect(repo.findByDateRange).toHaveBeenCalledWith(
+      startOfDayISO("2026-04-08"),
+      endOfDayISO("2026-04-08"),
+      "ws-1"
     );
   });
 

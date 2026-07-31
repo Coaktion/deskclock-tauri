@@ -128,6 +128,8 @@ export function useTaskSendSelection(
       try {
         const { start, end } = quickToRange(quick, customStartRef.current, customEndRef.current);
         const [tasks, sentIdsArr] = await Promise.all([
+          // Sem filtro de workspace de propósito: as integrações são externas ao
+          // workspace e enxergam tudo (decisão registrada no spec, item 3).
           taskRepo.findByDateRange(startOfDayISO(start), endOfDayISO(end)),
           taskLogRepo.findSentIds(integrationId, startOfDayISO(start), endOfDayISO(end)),
         ]);

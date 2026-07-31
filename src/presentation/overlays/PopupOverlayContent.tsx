@@ -12,6 +12,7 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChip";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
@@ -577,10 +578,11 @@ export function PopupOverlayContent({
         className="flex items-center justify-between px-3 bg-gray-800 border-b border-gray-700 shrink-0 rounded-t-xl overflow-hidden"
         style={{ height: HEADER_H }}
       >
-        <span className="text-xs font-medium text-gray-300 select-none pointer-events-none">
+        <span className="text-xs font-medium text-gray-300 select-none pointer-events-none truncate">
           {runningTask ? "Em execução" : "Tarefas de Hoje"}
         </span>
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
+          <OverlayWorkspaceChip runningTask={runningTask} onStop={onStop} />
           <button
             onClick={onNavigatePlanning}
             title="Ir para planejamento"

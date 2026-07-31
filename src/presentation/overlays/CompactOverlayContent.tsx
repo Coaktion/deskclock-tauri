@@ -3,6 +3,8 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { formatHHMMSS, todayISO } from "@shared/utils/time";
 import { ListTodo } from "lucide-react";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
+import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
 
 interface CompactOverlayContentProps {
   runningTask: Task | null;
@@ -23,6 +25,10 @@ export function CompactOverlayContent({
   const { tasks } = usePlannedTasksForDate(today);
   const pendingCount = tasks.filter((t) => !t.completedDates.includes(today)).length;
   const seconds = useTaskTimer(runningTask);
+  const { workspaces, activeWorkspace } = useWorkspaces();
+  // Só sinaliza quando há mais de um workspace: com um só, a bolinha seria ruído
+  // permanente num overlay de 68px.
+  const showWorkspace = workspaces.length > 1 && !!activeWorkspace;
 
   const isRunning = runningTask?.status === "running";
   const isPaused = runningTask?.status === "paused";
@@ -53,8 +59,16 @@ export function CompactOverlayContent({
     <div
       data-tauri-drag-region
       className={`flex flex-col w-full h-full ${maxW} ${maxH} m-auto absolute inset-0 cursor-move bg-gray-900 border shadow-xl transition-colors duration-200 ${rounded} ${borderClass}`}
-      title={hasTask ? "Ver tarefa em execução" : "Ver tarefas planejadas"}
+      title={
+        (hasTask ? "Ver tarefa em execução" : "Ver tarefas planejadas") +
+        (showWorkspace ? ` — ${activeWorkspace!.name}` : "")
+      }
     >
+      {showWorkspace && (
+        <span className="absolute -top-1 -left-1 p-[2px] bg-gray-900 rounded-full pointer-events-none">
+          <WorkspaceDot color={activeWorkspace!.color} size={7} />
+        </span>
+      )}
       <button
         onMouseDown={onMouseDown}
         onClick={onTogglePopup}

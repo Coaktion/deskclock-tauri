@@ -7,6 +7,7 @@ import { todayISO, weekBoundsISO } from "@shared/utils/time";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { listen } from "@tauri-apps/api/event";
 
 interface TaskTotals {
@@ -18,6 +19,7 @@ interface TaskTotals {
 
 export function useTasks() {
   const { taskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const { reloadSignal } = useRunningTask();
   const [today, setToday] = useState(todayISO);
   const [groups, setGroups] = useState<TaskGroup[]>([]);
@@ -40,7 +42,7 @@ export function useTasks() {
   const load = useCallback(async () => {
     const { start, end } = weekBoundsISO();
     const [tasks, weekData] = await Promise.all([
-      getTasksForDate(taskRepo, todayISO()),
+      getTasksForDate(taskRepo, todayISO(), workspaceId),
       getWeekTotal(taskRepo, start, end),
     ]);
 
@@ -60,7 +62,7 @@ export function useTasks() {
       weekSeconds: weekData.totalSeconds,
       weekDays: weekData.daysWorked,
     });
-  }, [taskRepo]);
+  }, [taskRepo, workspaceId]);
 
   useEffect(() => {
     load();
