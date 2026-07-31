@@ -291,6 +291,12 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 - **Importação em massa:** Textarea, uma categoria por linha. Prefixo `!` = non-billable (ex: `!Reuniões`). Sem prefixo = billable.
 - **Lista:** Filtro por nome + adicionar individualmente (com toggle billable) + excluir sem confirmação.
 
+#### Seleção múltipla (Projetos e Categorias)
+- **Checkbox por linha.** Clicar em qualquer ponto da linha alterna a seleção; renomear e excluir param a propagação e continuam fazendo só o que prometem. Durante a edição inline a linha não alterna nada.
+- **"Selecionar todos"** no topo da lista, com estado indeterminado quando a seleção é parcial. O rótulo também é clicável.
+- **Exclusão em massa** sem confirmação (§1). O botão fica sempre no fluxo, invisível enquanto não há seleção — mostrar e esconder deslocaria a lista.
+- **A seleção é sempre a interseção com o que está visível.** Filtrar não deixa selecionado nada fora da tela: como não existe desfazer, o número na barra tem de ser exatamente o que será apagado. A regra vive em `useMultiSelect` (genérico por id) — **não** reaproveitar `useTaskSendSelection`, que é acoplado a `TaskGroup` e dia (§9.4).
+
 #### Workspaces
 - **Criar:** nome + seletor de cor. A cor sugerida é o primeiro slot ainda não usado da paleta e **não muda enquanto se digita** — só o seletor a altera.
 - **Editar:** nome e cor inline.
@@ -679,7 +685,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão; §7.6: hooks de presentation são testáveis com `renderHook`)*
+*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão; §5.6: seleção múltipla e exclusão em massa; §7.6: hooks de presentation são testáveis com `renderHook`)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
