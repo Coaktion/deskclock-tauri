@@ -161,7 +161,7 @@ padrão de fallback) foi considerada e **descartada** por ser mais complexa que 
 
 ---
 
-### Fase 1 — Workspaces
+### Fase 1 — Workspaces ✅ **CONCLUÍDA em 2026-07-30**
 
 #### 1.0 Spike da migration — ✅ **CONCLUÍDO em 2026-07-30**
 
@@ -227,7 +227,7 @@ As tabelas `_pre_011` ficam no banco de propósito: são a única rota de rollba
 |---|---|
 | `domain/entities/Workspace.ts` | `{ id, name, color, createdAt }` |
 | `domain/repositories/IWorkspaceRepository.ts` | `findAll`, `findById`, `save`, `update`, `delete` |
-| `domain/utils/workspaceColor.ts` | hash do nome → cor da paleta de tokens. **Zero hex literal** (regras obrigatórias do `CLAUDE.md`) |
+| `domain/utils/workspaceColor.ts` | hash do nome → **slot** da paleta do Tailwind v4 (26 disponíveis como CSS custom properties; 8 curados, excluindo os accents de tema e os neutros). Guarda nome de slot, nunca valor de cor. A tradução para classe fica em `presentation/components/WorkspaceDot.tsx`, num mapa escrito por extenso — `bg-${slot}-500` montado em runtime não geraria CSS |
 | `domain/usecases/workspaces/` | `CreateWorkspace`, `UpdateWorkspace`, `DeleteWorkspace(id, targetId)`, `GetWorkspaces` |
 | `domain/usecases/tasks/MoveTasksToWorkspace.ts` | move/copia + aplica reconciliação |
 | `domain/usecases/workspaces/reconcileCatalog.ts` | dado projeto/categoria de origem e o catálogo do destino, devolve `match` \| `create` \| `unset` |
@@ -251,11 +251,17 @@ Atingidos: `IProjectRepository`, `ICategoryRepository`, `ITaskRepository.findByD
   `usePlannedTasks`, `useExportProfiles`. Assinatura pública intacta.
 - **`components/WorkspaceSwitcher.tsx`** na `Sidebar`. Com um único workspace, some da tela —
   quem não usa workspaces não vê workspace nenhum.
-- **Guarda de tarefa em execução:** `switchTo()` consulta o `RunningTaskContext`; havendo tarefa,
-  abre o painel Concluída/Pendente já existente com a ação "Parar e trocar".
+- **Guarda de tarefa em execução:** havendo tarefa rodando, abre o painel Concluída/Pendente e só
+  então troca.
+  > **Desvio aplicado no Execute:** a guarda ficou no `WorkspaceSwitcher`, **não** dentro de
+  > `switchTo()`. O `RunningTaskContext` consome o `WorkspaceContext` para saber em que workspace
+  > criar a tarefa; fazer `switchTo()` consultar o `RunningTaskContext` fecharia um ciclo entre os
+  > dois providers. A sidebar está dentro de ambos, então decide sem acoplar nenhum dos dois.
 - **`modals/MoveToWorkspaceModal.tsx`** — destino + reconciliação de projeto e categoria
   (`match` / `criar lá com o mesmo nome` / `deixar vazio`). Custom fields passam intactos.
-  Modos mover e copiar. Pontos de entrada: `TaskCard`, `TaskGroupCard`, seleção do histórico.
+  Modos mover e copiar. Pontos de entrada: card de grupo em "Entradas de hoje" (`TaskGroupCard`,
+  que também cobre a tarefa única) e a seleção múltipla do histórico. Ambos só aparecem com mais
+  de um workspace.
 - **`modals/DeleteWorkspaceModal.tsx`** — destino dos dados.
 - **`DataPage`** ganha aba "Workspaces" (CRUD + preview da cor gerada enquanto digita).
 
@@ -391,8 +397,8 @@ Suítes que já estão modificadas na árvore e mudam de novo: `taskValidation.t
 
 | # | Fase | Depende de |
 |---|---|---|
-| 0 | Commitar o Monday-send atual | — |
-| 1 | Workspaces: schema, backfill, repos, seletor, escopo na UI, mover/copiar | — |
+| 0 | ✅ Commitar o Monday-send atual | — |
+| 1 | ✅ Workspaces: schema, backfill, repos, seletor, escopo na UI, mover/copiar | — |
 | 2 | Multi-select na tela de Dados | 1 |
 | 3 | Custom fields: EAV, CRUD, captura na tarefa, chave de agrupamento | 1 |
 | 4 | Monday: Project Stage vira custom field; board interno único | 3 |
