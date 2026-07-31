@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, CheckCircle2, Clock, Layers, X } from "lucide-react";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchGuard";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 
 /**
@@ -10,31 +11,27 @@ import { WorkspaceDot, workspaceClasses } from "@presentation/components/Workspa
  * Com um único workspace o componente **não renderiza nada** — quem não usa
  * workspaces não vê workspace nenhum.
  *
- * A guarda de tarefa em execução vive aqui, e não dentro de `switchTo`, porque
- * o `RunningTaskContext` já consome o `WorkspaceContext` para saber onde criar
- * a tarefa; fazer o caminho inverso fecharia um ciclo entre os dois providers.
- * A sidebar está dentro dos dois, então é o lugar natural para a decisão.
+ * A guarda de tarefa em execução está em `useWorkspaceSwitchGuard`, compartilhada
+ * com o chip do overlay e com a aba Workspaces da tela de Dados.
  */
 export function WorkspaceSwitcher() {
-  const { workspaces, activeWorkspaceId, activeWorkspace, switchTo } = useWorkspaces();
+  const { workspaces, activeWorkspaceId, activeWorkspace } = useWorkspaces();
   const { runningTask, stopTask } = useRunningTask();
+  const { pending, request, confirm, cancel } = useWorkspaceSwitchGuard({ runningTask, stopTask });
   const [open, setOpen] = useState(false);
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open && !pendingId) return;
+    if (!open && !pending) return;
+    function dismiss() {
+      setOpen(false);
+      cancel();
+    }
     function onDown(e: MouseEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setPendingId(null);
-      }
+      if (!rootRef.current?.contains(e.target as Node)) dismiss();
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setPendingId(null);
-      }
+      if (e.key === "Escape") dismiss();
     }
     window.addEventListener("mousedown", onDown);
     window.addEventListener("keydown", onKey);
@@ -42,43 +39,24 @@ export function WorkspaceSwitcher() {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, pendingId]);
+  }, [open, pending, cancel]);
 
   if (workspaces.length <= 1) return null;
 
   async function handlePick(id: string) {
-    if (id === activeWorkspaceId) {
-      setOpen(false);
-      return;
-    }
-    if (runningTask) {
-      // Trocar com tarefa rodando esconderia a tarefa da tela sem pará-la.
-      setPendingId(id);
-      setOpen(false);
-      return;
-    }
-    await switchTo(id);
+    await request(id);
     setOpen(false);
-  }
-
-  async function handleStopAndSwitch(completed: boolean) {
-    const id = pendingId;
-    if (!id) return;
-    setPendingId(null);
-    await stopTask(completed);
-    await switchTo(id);
   }
 
   const active = activeWorkspace;
   const classes = workspaceClasses(active?.color ?? "");
-  const pending = workspaces.find((w) => w.id === pendingId) ?? null;
 
   return (
     <div ref={rootRef} className="relative w-full px-1 mb-1">
       <button
         onClick={() => setOpen((v) => !v)}
         title={active ? `Workspace: ${active.name}` : "Workspace"}
-        className={`w-full flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg border transition-colors ${
+        className={`w-full flex flex-col items-center gap-2 py-2 px-1 rounded-lg border transition-colors ${
           open ? classes.soft : "border-transparent hover:bg-gray-800/60"
         }`}
       >
@@ -117,7 +95,7 @@ export function WorkspaceSwitcher() {
               <span className="text-gray-100 font-medium">{pending.name}</span>?
             </p>
             <button
-              onClick={() => setPendingId(null)}
+              onClick={cancel}
               className="p-0.5 text-gray-600 hover:text-gray-400 rounded shrink-0"
             >
               <X size={13} />
@@ -126,14 +104,14 @@ export function WorkspaceSwitcher() {
           <span className="block text-[10px] text-gray-500 mb-1.5">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => void handleStopAndSwitch(true)}
+              onClick={() => void confirm(true)}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
             >
               <CheckCircle2 size={12} />
               Concluída
             </button>
             <button
-              onClick={() => void handleStopAndSwitch(false)}
+              onClick={() => void confirm(false)}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
             >
               <Clock size={12} />

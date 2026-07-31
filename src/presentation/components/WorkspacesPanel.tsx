@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
-import { Check, Pen, Plus, Trash2, X } from "lucide-react";
+import { Check, CheckCircle2, Clock, Pen, Plus, Trash2, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import { WORKSPACE_COLORS } from "@domain/utils/workspaceColor";
 import { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
+import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchGuard";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
 
@@ -28,6 +30,8 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 
 export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
   const { workspaces, activeWorkspaceId, create, update, remove } = useWorkspaceAdmin();
+  const { runningTask, stopTask } = useRunningTask();
+  const { pending, request, confirm, cancel } = useWorkspaceSwitchGuard({ runningTask, stopTask });
 
   const [newName, setNewName] = useState("");
   // A cor do formulário é fixa: existe um seletor logo abaixo, e um preview que
@@ -145,9 +149,17 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                   <span className="flex-1 text-sm text-gray-200 truncate">{w.name}</span>
                 )}
 
-                {isActive && !isEditing && (
-                  <span className="text-[10px] uppercase tracking-wide text-gray-500">ativo</span>
-                )}
+                {!isEditing &&
+                  (isActive ? (
+                    <span className="text-[10px] uppercase tracking-wide text-gray-500">ativo</span>
+                  ) : (
+                    <button
+                      onClick={() => void request(w.id)}
+                      className="text-[10px] uppercase tracking-wide text-gray-500 hover:text-blue-400 transition-colors"
+                    >
+                      tornar ativo
+                    </button>
+                  ))}
 
                 {isEditing ? (
                   <>
@@ -196,6 +208,38 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
           );
         })}
       </div>
+
+      {pending && (
+        <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/5">
+          <p className="text-xs text-gray-300 leading-snug">
+            Há uma tarefa em execução. Parar e trocar para{" "}
+            <span className="text-gray-100 font-medium">{pending.name}</span>?
+          </p>
+          <span className="text-[10px] text-gray-500">Marcar a tarefa como:</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => void confirm(true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
+            >
+              <CheckCircle2 size={12} />
+              Concluída
+            </button>
+            <button
+              onClick={() => void confirm(false)}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+            >
+              <Clock size={12} />
+              Pendente
+            </button>
+            <button
+              onClick={cancel}
+              className="ml-auto p-1 text-gray-600 hover:text-gray-400 rounded-lg"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {deleting && (
         <DeleteWorkspaceModal

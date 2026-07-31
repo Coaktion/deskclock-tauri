@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, CheckCircle2, Clock } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
+import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchGuard";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
 
 interface OverlayWorkspaceChipProps {
@@ -24,48 +25,32 @@ const MENU_POS = { top: "2rem", right: "4rem" } as const;
  * Some quando só existe um workspace, igual ao switcher da sidebar.
  */
 export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceChipProps) {
-  const { workspaces, activeWorkspaceId, activeWorkspace, switchTo } = useWorkspaces();
+  const { workspaces, activeWorkspaceId, activeWorkspace } = useWorkspaces();
+  const { pending, request, confirm, cancel } = useWorkspaceSwitchGuard({
+    runningTask,
+    stopTask: onStop,
+  });
   const [open, setOpen] = useState(false);
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open && !pendingId) return;
+    if (!open && !pending) return;
     function onDown(e: MouseEvent) {
       if (!rootRef.current?.contains(e.target as Node)) {
         setOpen(false);
-        setPendingId(null);
+        cancel();
       }
     }
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
-  }, [open, pendingId]);
+  }, [open, pending, cancel]);
 
   if (workspaces.length <= 1 || !activeWorkspace) return null;
 
   async function handlePick(id: string) {
-    if (id === activeWorkspaceId) {
-      setOpen(false);
-      return;
-    }
-    if (runningTask) {
-      setPendingId(id);
-      setOpen(false);
-      return;
-    }
-    await switchTo(id);
+    await request(id);
     setOpen(false);
   }
-
-  async function handleStopAndSwitch(completed: boolean) {
-    const id = pendingId;
-    if (!id) return;
-    setPendingId(null);
-    await onStop(completed);
-    await switchTo(id);
-  }
-
-  const pending = workspaces.find((w) => w.id === pendingId) ?? null;
 
   return (
     <div ref={rootRef} className="relative">
@@ -107,21 +92,21 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
           </p>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => void handleStopAndSwitch(true)}
+              onClick={() => void confirm(true)}
               className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] bg-green-700 hover:bg-green-600 text-white rounded transition-colors"
             >
               <CheckCircle2 size={11} />
               Concluída
             </button>
             <button
-              onClick={() => void handleStopAndSwitch(false)}
+              onClick={() => void confirm(false)}
               className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
             >
               <Clock size={11} />
               Pendente
             </button>
             <button
-              onClick={() => setPendingId(null)}
+              onClick={cancel}
               className="ml-auto px-1 text-[11px] text-gray-500 hover:text-gray-300"
             >
               ✕
