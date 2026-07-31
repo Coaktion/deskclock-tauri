@@ -9,4 +9,5 @@ export interface IProjectRepository {
   save(project: Project): Promise<void>;
   update(id: UUID, name: string): Promise<void>;
   delete(id: UUID): Promise<void>;
+  deleteMany(ids: UUID[]): Promise<void>;
 }

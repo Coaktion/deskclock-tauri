@@ -5,6 +5,7 @@ import { getCategories } from "@domain/usecases/categories/GetCategories";
 import { createCategory } from "@domain/usecases/categories/CreateCategory";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 import { deleteCategory } from "@domain/usecases/categories/DeleteCategory";
+import { deleteCategories } from "@domain/usecases/categories/DeleteCategories";
 import { updateCategory } from "@domain/usecases/categories/UpdateCategory";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 
@@ -58,6 +59,14 @@ export function useCategories() {
     [categoryRepo, load]
   );
 
+  const handleDeleteMany = useCallback(
+    async (ids: string[]) => {
+      await deleteCategories(categoryRepo, ids);
+      await load();
+    },
+    [categoryRepo, load]
+  );
+
   return {
     categories,
     loading,
@@ -66,5 +75,8 @@ export function useCategories() {
     bulkImportCategories: handleBulkImport,
     updateCategory: handleUpdate,
     deleteCategory: handleDelete,
+    deleteCategories: handleDeleteMany,
   };
 }
+
+export type UseCategoriesResult = ReturnType<typeof useCategories>;

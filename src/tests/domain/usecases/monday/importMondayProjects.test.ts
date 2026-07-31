@@ -67,6 +67,7 @@ function makeProjectRepo(existing: { id: string; name: string }[] = []): IProjec
     }),
     update: vi.fn(),
     delete: vi.fn(),
+    deleteMany: vi.fn(),
   };
 }
 

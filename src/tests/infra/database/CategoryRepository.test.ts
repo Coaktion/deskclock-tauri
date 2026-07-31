@@ -124,4 +124,21 @@ describe("CategoryRepository", () => {
       expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining("DELETE"), ["uuid-1"]);
     });
   });
+
+  describe("deleteMany", () => {
+    it("executa DELETE com múltiplos ids", async () => {
+      const repo = new CategoryRepository();
+      await repo.deleteMany(["uuid-1", "uuid-2", "uuid-3"]);
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        "DELETE FROM categories WHERE id IN ($1, $2, $3)",
+        ["uuid-1", "uuid-2", "uuid-3"]
+      );
+    });
+
+    it("não executa nada quando lista vazia", async () => {
+      const repo = new CategoryRepository();
+      await repo.deleteMany([]);
+      expect(mockDb.execute).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -9,6 +9,7 @@ function makeRepo(overrides: Partial<IProjectRepository> = {}): IProjectReposito
     save: vi.fn(async () => undefined),
     update: vi.fn(async () => undefined),
     delete: vi.fn(async () => undefined),
+    deleteMany: vi.fn(async () => undefined),
     ...overrides,
   };
 }

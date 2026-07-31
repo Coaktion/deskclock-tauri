@@ -44,6 +44,7 @@ function makeDeps(overrides: Partial<MoveTasksDeps> = {}): MoveTasksDeps {
     save: vi.fn(async () => undefined),
     update: vi.fn(async () => undefined),
     delete: vi.fn(async () => undefined),
+    deleteMany: vi.fn(async () => undefined),
   };
   const categoryRepo: ICategoryRepository = {
     findAll: vi.fn(async () => []),
@@ -51,6 +52,7 @@ function makeDeps(overrides: Partial<MoveTasksDeps> = {}): MoveTasksDeps {
     save: vi.fn(async () => undefined),
     update: vi.fn(async () => undefined),
     delete: vi.fn(async () => undefined),
+    deleteMany: vi.fn(async () => undefined),
   };
   return { taskRepo, projectRepo, categoryRepo, ...overrides };
 }
@@ -173,6 +175,7 @@ describe("moveTasksToWorkspace", () => {
         }),
         update: vi.fn(async () => undefined),
         delete: vi.fn(async () => undefined),
+        deleteMany: vi.fn(async () => undefined),
       },
     });
 

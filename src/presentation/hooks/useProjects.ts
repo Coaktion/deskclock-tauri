@@ -5,6 +5,7 @@ import { getProjects } from "@domain/usecases/projects/GetProjects";
 import { createProject } from "@domain/usecases/projects/CreateProject";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { deleteProject } from "@domain/usecases/projects/DeleteProject";
+import { deleteProjects } from "@domain/usecases/projects/DeleteProjects";
 import { updateProject } from "@domain/usecases/projects/UpdateProject";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 
@@ -58,6 +59,14 @@ export function useProjects() {
     [projectRepo, load]
   );
 
+  const handleDeleteMany = useCallback(
+    async (ids: string[]) => {
+      await deleteProjects(projectRepo, ids);
+      await load();
+    },
+    [projectRepo, load]
+  );
+
   return {
     projects,
     loading,
@@ -66,5 +75,8 @@ export function useProjects() {
     bulkImportProjects: handleBulkImport,
     updateProject: handleUpdate,
     deleteProject: handleDelete,
+    deleteProjects: handleDeleteMany,
   };
 }
+
+export type UseProjectsResult = ReturnType<typeof useProjects>;

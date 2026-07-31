@@ -9,4 +9,5 @@ export interface ICategoryRepository {
   save(category: Category): Promise<void>;
   update(id: UUID, name: string, defaultBillable: boolean): Promise<void>;
   delete(id: UUID): Promise<void>;
+  deleteMany(ids: UUID[]): Promise<void>;
 }

@@ -1,23 +1,39 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Upload } from "lucide-react";
-import { useProjects } from "@presentation/hooks/useProjects";
+import type { UseProjectsResult } from "@presentation/hooks/useProjects";
+import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { SearchInput } from "./SearchInput";
 import { ProjectCard } from "./ProjectCard";
+import { SelectionBar } from "./SelectionBar";
 import { BulkImportModal } from "@presentation/modals/BulkImportModal";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
 
 interface ProjectsPanelProps {
   showTitle?: boolean;
+  /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
+  data: UseProjectsResult;
 }
 
-export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
-  const { projects, loading, createProject, bulkImportProjects, updateProject, deleteProject } =
-    useProjects();
+export function ProjectsPanel({ showTitle = true, data }: ProjectsPanelProps) {
+  const {
+    projects,
+    loading,
+    createProject,
+    bulkImportProjects,
+    updateProject,
+    deleteProject,
+    deleteProjects,
+  } = data;
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const filtered = projects.filter((p) => fuzzyMatch(search, p.name));
+  const filtered = useMemo(
+    () => projects.filter((p) => fuzzyMatch(search, p.name)),
+    [projects, search]
+  );
+  const visibleIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const selection = useMultiSelect(visibleIds);
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -26,6 +42,16 @@ export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
       setNewName("");
     } catch {
       // duplicata ou nome inválido — silencia
+    }
+  }
+
+  async function handleDeleteSelected() {
+    const ids = [...selection.selected];
+    try {
+      await deleteProjects(ids);
+      selection.unselect(ids);
+    } catch {
+      // Falha na exclusão: a seleção fica de pé para o usuário tentar de novo.
     }
   }
 
@@ -63,6 +89,15 @@ export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
         />
       </div>
 
+      {!loading && filtered.length > 0 && (
+        <SelectionBar
+          count={selection.count}
+          allSelected={selection.allSelected}
+          onToggleAll={selection.toggleAll}
+          onDelete={() => void handleDeleteSelected()}
+        />
+      )}
+
       <div className="flex flex-col">
         {loading ? (
           <p className="text-sm text-gray-500 py-4 text-center">Carregando...</p>
@@ -72,7 +107,14 @@ export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
           </p>
         ) : (
           filtered.map((p) => (
-            <ProjectCard key={p.id} project={p} onUpdate={updateProject} onDelete={deleteProject} />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              selected={selection.isSelected(p.id)}
+              onToggleSelect={selection.toggle}
+              onUpdate={updateProject}
+              onDelete={deleteProject}
+            />
           ))
         )}
       </div>

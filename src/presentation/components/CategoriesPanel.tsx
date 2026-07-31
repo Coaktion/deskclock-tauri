@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Upload } from "lucide-react";
-import { useCategories } from "@presentation/hooks/useCategories";
+import type { UseCategoriesResult } from "@presentation/hooks/useCategories";
+import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { SearchInput } from "./SearchInput";
 import { ToggleBillable } from "./ToggleBillable";
 import { CategoryCard } from "./CategoryCard";
+import { SelectionBar } from "./SelectionBar";
 import { BulkImportModal } from "@presentation/modals/BulkImportModal";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
 
 interface CategoriesPanelProps {
   showTitle?: boolean;
+  /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
+  data: UseCategoriesResult;
 }
 
-export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
+export function CategoriesPanel({ showTitle = true, data }: CategoriesPanelProps) {
   const {
     categories,
     loading,
@@ -19,13 +23,19 @@ export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
     bulkImportCategories,
     updateCategory,
     deleteCategory,
-  } = useCategories();
+    deleteCategories,
+  } = data;
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [newBillable, setNewBillable] = useState(true);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  const filtered = categories.filter((c) => fuzzyMatch(search, c.name));
+  const filtered = useMemo(
+    () => categories.filter((c) => fuzzyMatch(search, c.name)),
+    [categories, search]
+  );
+  const visibleIds = useMemo(() => filtered.map((c) => c.id), [filtered]);
+  const selection = useMultiSelect(visibleIds);
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -34,6 +44,16 @@ export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
       setNewName("");
     } catch {
       // duplicata ou nome inválido
+    }
+  }
+
+  async function handleDeleteSelected() {
+    const ids = [...selection.selected];
+    try {
+      await deleteCategories(ids);
+      selection.unselect(ids);
+    } catch {
+      // Falha na exclusão: a seleção fica de pé para o usuário tentar de novo.
     }
   }
 
@@ -72,6 +92,15 @@ export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
         <ToggleBillable value={newBillable} onChange={setNewBillable} />
       </div>
 
+      {!loading && filtered.length > 0 && (
+        <SelectionBar
+          count={selection.count}
+          allSelected={selection.allSelected}
+          onToggleAll={selection.toggleAll}
+          onDelete={() => void handleDeleteSelected()}
+        />
+      )}
+
       <div className="flex flex-col">
         {loading ? (
           <p className="text-sm text-gray-500 py-4 text-center">Carregando...</p>
@@ -84,6 +113,8 @@ export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
             <CategoryCard
               key={c.id}
               category={c}
+              selected={selection.isSelected(c.id)}
+              onToggleSelect={selection.toggle}
               onUpdate={updateCategory}
               onDelete={deleteCategory}
             />

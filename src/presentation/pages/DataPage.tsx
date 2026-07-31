@@ -10,13 +10,15 @@ type Section = "projetos" | "categorias" | "workspaces";
 
 export function DataPage() {
   const [section, setSection] = useState<Section>("projetos");
-  const { projects } = useProjects();
-  const { categories } = useCategories();
+  // Os hooks vivem aqui, não dentro dos painéis: duas instâncias teriam estados
+  // independentes e o contador da aba ficaria velho a cada exclusão.
+  const projectsData = useProjects();
+  const categoriesData = useCategories();
   const { workspaces } = useWorkspaces();
 
   const tabs: [Section, string, number][] = [
-    ["projetos", "Projetos", projects.length],
-    ["categorias", "Categorias", categories.length],
+    ["projetos", "Projetos", projectsData.projects.length],
+    ["categorias", "Categorias", categoriesData.categories.length],
     ["workspaces", "Workspaces", workspaces.length],
   ];
 
@@ -41,8 +43,8 @@ export function DataPage() {
           </button>
         ))}
       </div>
-      {section === "projetos" && <ProjectsPanel showTitle={false} />}
-      {section === "categorias" && <CategoriesPanel showTitle={false} />}
+      {section === "projetos" && <ProjectsPanel showTitle={false} data={projectsData} />}
+      {section === "categorias" && <CategoriesPanel showTitle={false} data={categoriesData} />}
       {section === "workspaces" && <WorkspacesPanel showTitle={false} />}
     </div>
   );

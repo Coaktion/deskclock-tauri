@@ -5,11 +5,19 @@ import type { UUID } from "@shared/types";
 
 interface CategoryCardProps {
   category: Category;
+  selected: boolean;
+  onToggleSelect: (id: UUID) => void;
   onUpdate: (id: UUID, name: string, defaultBillable: boolean) => Promise<void>;
   onDelete: (id: UUID) => void;
 }
 
-export function CategoryCard({ category, onUpdate, onDelete }: CategoryCardProps) {
+export function CategoryCard({
+  category,
+  selected,
+  onToggleSelect,
+  onUpdate,
+  onDelete,
+}: CategoryCardProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(category.name);
   const [editBillable, setEditBillable] = useState(category.defaultBillable);
@@ -43,7 +51,21 @@ export function CategoryCard({ category, onUpdate, onDelete }: CategoryCardProps
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors">
+    <div
+      onClick={editing ? undefined : () => onToggleSelect(category.id)}
+      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors ${
+        editing ? "" : "cursor-pointer"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect(category.id)}
+        onClick={(e) => e.stopPropagation()}
+        title="Selecionar categoria"
+        className="shrink-0 accent-blue-500 cursor-pointer"
+      />
+
       {editing ? (
         <>
           <input
@@ -89,14 +111,20 @@ export function CategoryCard({ category, onUpdate, onDelete }: CategoryCardProps
           </span>
           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
-              onClick={startEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                startEdit();
+              }}
               title="Editar categoria"
               className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
             >
               <Pencil size={13} />
             </button>
             <button
-              onClick={() => onDelete(category.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(category.id);
+              }}
               title="Excluir categoria"
               className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
             >

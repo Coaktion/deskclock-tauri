@@ -6,11 +6,19 @@ import { getProjectColor } from "@shared/utils/projectColor";
 
 interface ProjectCardProps {
   project: Project;
+  selected: boolean;
+  onToggleSelect: (id: UUID) => void;
   onUpdate: (id: UUID, name: string) => Promise<void>;
   onDelete: (id: UUID) => void;
 }
 
-export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
+export function ProjectCard({
+  project,
+  selected,
+  onToggleSelect,
+  onUpdate,
+  onDelete,
+}: ProjectCardProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(project.name);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +50,20 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors">
+    <div
+      onClick={editing ? undefined : () => onToggleSelect(project.id)}
+      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors ${
+        editing ? "" : "cursor-pointer"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect(project.id)}
+        onClick={(e) => e.stopPropagation()}
+        title="Selecionar projeto"
+        className="shrink-0 accent-blue-500 cursor-pointer"
+      />
       <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
 
       {editing ? (
@@ -69,14 +90,20 @@ export function ProjectCard({ project, onUpdate, onDelete }: ProjectCardProps) {
           <span className="flex-1 text-sm text-gray-100 truncate">{project.name}</span>
           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
-              onClick={startEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                startEdit();
+              }}
               title="Renomear projeto"
               className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
             >
               <Pencil size={13} />
             </button>
             <button
-              onClick={() => onDelete(project.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(project.id);
+              }}
               title="Excluir projeto"
               className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
             >

@@ -63,4 +63,11 @@ export class CategoryRepository implements ICategoryRepository {
     const db = await getDb();
     await db.execute("DELETE FROM categories WHERE id = $1", [id]);
   }
+
+  async deleteMany(ids: UUID[]): Promise<void> {
+    if (ids.length === 0) return;
+    const db = await getDb();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
+    await db.execute(`DELETE FROM categories WHERE id IN (${placeholders})`, ids);
+  }
 }

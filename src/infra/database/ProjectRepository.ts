@@ -54,4 +54,11 @@ export class ProjectRepository implements IProjectRepository {
     const db = await getDb();
     await db.execute("DELETE FROM projects WHERE id = $1", [id]);
   }
+
+  async deleteMany(ids: UUID[]): Promise<void> {
+    if (ids.length === 0) return;
+    const db = await getDb();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
+    await db.execute(`DELETE FROM projects WHERE id IN (${placeholders})`, ids);
+  }
 }
