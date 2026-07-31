@@ -6,6 +6,8 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { EditGroupModal } from "@presentation/modals/EditGroupModal";
+import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
@@ -33,6 +35,8 @@ export function TodayEntriesSection({
   const { startTask, runningTask } = useRunningTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingGroup, setEditingGroup] = useState<TaskGroup | null>(null);
+  const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
+  const { workspaces } = useWorkspaces();
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -111,10 +115,21 @@ export function TodayEntriesSection({
               onDelete={handleDelete}
               onMerge={handleMerge}
               onEditGroup={setEditingGroup}
+              onMoveToWorkspace={workspaces.length > 1 ? setMovingTasks : undefined}
               onToggleBillable={handleToggleBillable}
             />
           ))}
         </div>
+      )}
+
+      {movingTasks && (
+        <MoveToWorkspaceModal
+          tasks={movingTasks}
+          projects={projects}
+          categories={categories}
+          onMoved={reload}
+          onClose={() => setMovingTasks(null)}
+        />
       )}
 
       {editingTask && (

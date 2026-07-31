@@ -20,8 +20,8 @@ export interface WorkspaceContextValue {
   loading: boolean;
   /** Troca o workspace ativo e persiste a escolha. */
   switchTo: (id: string) => Promise<void>;
-  /** Recarrega a lista — chamada após CRUD de workspace. */
-  reload: () => Promise<void>;
+  /** Recarrega a lista e devolve o resultado — chamada após CRUD de workspace. */
+  reload: () => Promise<Workspace[]>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -90,9 +90,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       activeWorkspace: workspaces.find((w) => w.id === activeWorkspaceId) ?? null,
       loading,
       switchTo,
-      reload: async () => {
-        await reload();
-      },
+      reload,
     }),
     [workspaces, activeWorkspaceId, loading, switchTo, reload]
   );

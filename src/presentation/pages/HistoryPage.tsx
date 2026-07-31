@@ -7,6 +7,8 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
+import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { formatHHMMSS, formatHHMM, formatHistoryDayHeader } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import type { Task } from "@domain/entities/Task";
@@ -159,6 +161,8 @@ export function HistoryPage() {
   const [categoryName, setCategoryName] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
+  const { workspaces } = useWorkspaces();
 
   useEffect(() => {
     void search(filters);
@@ -402,6 +406,15 @@ export function HistoryPage() {
                     ? "Desmarcar todas"
                     : "Selecionar todas"}
                 </button>
+                {workspaces.length > 1 && (
+                  <button
+                    onClick={() => setMovingTasks(allTasks.filter((t) => selectedIds.has(t.id)))}
+                    disabled={selectedIds.size === 0}
+                    className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Mover para workspace
+                  </button>
+                )}
                 <button
                   onClick={() => void handleBulkDelete()}
                   disabled={selectedIds.size === 0}
@@ -542,6 +555,19 @@ export function HistoryPage() {
           projects={projects}
           categories={categories}
           onClose={() => setExportOpen(false)}
+        />
+      )}
+
+      {movingTasks && (
+        <MoveToWorkspaceModal
+          tasks={movingTasks}
+          projects={projects}
+          categories={categories}
+          onMoved={() => {
+            exitSelectMode();
+            void reload();
+          }}
+          onClose={() => setMovingTasks(null)}
         />
       )}
 

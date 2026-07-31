@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Merge, CheckCheck, Edit2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Merge, CheckCheck, Edit2, FolderInput } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -22,6 +22,8 @@ interface TaskGroupCardProps {
   onDelete: (task: Task) => void;
   onMerge: (group: TaskGroup) => void;
   onEditGroup?: (group: TaskGroup) => void;
+  /** Ausente = sem entrada de "mover para workspace" neste contexto. */
+  onMoveToWorkspace?: (tasks: Task[]) => void;
   onToggleBillable: (task: Task) => void;
 }
 
@@ -39,6 +41,7 @@ export function TaskGroupCard({
   onDelete,
   onMerge,
   onEditGroup,
+  onMoveToWorkspace,
   onToggleBillable,
 }: TaskGroupCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -132,6 +135,18 @@ export function TaskGroupCard({
           >
             <CheckCheck size={13} />
           </span>
+        )}
+        {onMoveToWorkspace && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMoveToWorkspace(tasks);
+            }}
+            title="Mover para workspace"
+            className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0 cursor-pointer"
+          >
+            <FolderInput size={14} />
+          </button>
         )}
         {isGroup && (
           <>

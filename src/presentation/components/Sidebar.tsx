@@ -9,15 +9,10 @@ import {
   Plug,
 } from "lucide-react";
 import { openInBrowser, getPlatform } from "@shared/utils/shell";
+import { WorkspaceSwitcher } from "@presentation/components/WorkspaceSwitcher";
 
 export type Page =
-  | "tasks"
-  | "data"
-  | "planning"
-  | "history"
-  | "retroactive"
-  | "integrations"
-  | "settings";
+  "tasks" | "data" | "planning" | "history" | "retroactive" | "integrations" | "settings";
 
 interface SidebarProps {
   current: Page;
@@ -49,6 +44,8 @@ async function openFeedback() {
 export function Sidebar({ current, onChange }: SidebarProps) {
   return (
     <nav className="w-[68px] shrink-0 h-full bg-gray-950 border-r border-gray-800 flex flex-col items-center py-3 z-30">
+      <WorkspaceSwitcher />
+
       <div className="flex flex-col items-center gap-0.5 flex-1 w-full px-1">
         {ITEMS.map(({ page, icon, label, short }) => (
           <button

@@ -1,24 +1,30 @@
 import { useState } from "react";
 import { ProjectsPanel } from "@presentation/components/ProjectsPanel";
 import { CategoriesPanel } from "@presentation/components/CategoriesPanel";
+import { WorkspacesPanel } from "@presentation/components/WorkspacesPanel";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
+
+type Section = "projetos" | "categorias" | "workspaces";
 
 export function DataPage() {
-  const [section, setSection] = useState<"projetos" | "categorias">("projetos");
+  const [section, setSection] = useState<Section>("projetos");
   const { projects } = useProjects();
   const { categories } = useCategories();
+  const { workspaces } = useWorkspaces();
+
+  const tabs: [Section, string, number][] = [
+    ["projetos", "Projetos", projects.length],
+    ["categorias", "Categorias", categories.length],
+    ["workspaces", "Workspaces", workspaces.length],
+  ];
 
   return (
     <div className="h-full overflow-y-auto p-5">
       <h1 className="text-lg font-semibold text-gray-100 mb-4">Dados</h1>
       <div className="flex gap-2 mb-5">
-        {(
-          [
-            ["projetos", "Projetos", projects.length],
-            ["categorias", "Categorias", categories.length],
-          ] as const
-        ).map(([key, label, count]) => (
+        {tabs.map(([key, label, count]) => (
           <button
             key={key}
             onClick={() => setSection(key)}
@@ -35,11 +41,9 @@ export function DataPage() {
           </button>
         ))}
       </div>
-      {section === "projetos" ? (
-        <ProjectsPanel showTitle={false} />
-      ) : (
-        <CategoriesPanel showTitle={false} />
-      )}
+      {section === "projetos" && <ProjectsPanel showTitle={false} />}
+      {section === "categorias" && <CategoriesPanel showTitle={false} />}
+      {section === "workspaces" && <WorkspacesPanel showTitle={false} />}
     </div>
   );
 }
