@@ -33,8 +33,21 @@
    ser igual entre janela principal e overlays tem de viajar por evento — ver `WORKSPACE_CHANGED`.
    O sintoma de esquecer isso é o overlay operar no workspace anterior sem erro nenhum.
 6. **Escopo que para no repositório não é escopo.** O filtro de workspace existir em
-   `findByDateRange` não significa que a tela o use; três hooks de leitura de tarefas ficaram sem
-   passá-lo e mostravam dados de todos os workspaces. Ao escopar algo novo, siga até o hook.
+   `findByDateRange` não significa que a tela o use. Isso já reincidiu **três vezes** e em três
+   formas diferentes, então desconfie por padrão:
+   - _omissão_ — `RetroactivePage` e `getWeekTotal` chamavam sem o argumento, que é o caminho
+     das integrações (§6.7) e devolve todos os workspaces;
+   - _sem gatilho_ — `useHistory` filtrava certo, mas a busca só roda quando o usuário a pede;
+     trocar de workspace não emite `TASKS_CHANGED` e a tela ficava com o resultado anterior;
+   - _closure velho_ — `useMeetingTracker` passava `workspaceId` dentro de um efeito montado uma
+     vez só, congelando o valor da montagem. Ali a saída é ref, como o hook já fazia.
+
+   Ao escopar algo novo, verifique os três: chega o argumento, algo dispara o recarregamento, e o
+   valor lido é o atual.
+7. **As duas telas de entrada são espelhadas.** Lançamento Manual e Planejamento usam formulário
+   em coluna à esquerda e lista à direita, com o vocabulário visual dos campos em
+   `presentation/components/fieldStyles.ts`. **Não duplicar essas classes** — mexer numa tela sem
+   a outra as desalinha em silêncio.
 
 ---
 
@@ -324,10 +337,17 @@ tarefa planejada já traga o Project Stage preenchido.
   `ICustomFieldValueRepository` previsto aqui não foi criado — os valores pertencem ao agregado
   `Task`/`PlannedTask` e são lidos e gravados pelos repositórios deles. Um segundo repositório
   teria de ser costurado em todo use case que cria ou edita tarefa, sem ganho.
-- `domain/usecases/customFields/` — CRUD + `serializeCustomValue` / `parseCustomValue` por tipo
-  (select = id da opção). **Correção sobre o previsto:** checkbox é `"1"` ou `""`, nunca `"0"`.
-  Como o valor entra na chave de agrupamento, gravar `"0"` faria a tarefa em que o usuário marcou
-  e desmarcou a caixa parar de agrupar com a tarefa em que ele nunca a tocou.
+- `domain/usecases/customFields/` — CRUD + `serializeCustomValue` e `formatCustomValue`.
+  O `parseCustomValue` previsto aqui **não existe**: nasceu sem chamador de produção e foi
+  removido junto com um `sanitizeCustomValues` igualmente morto. Se for recriar o sanitize,
+  saiba por que ele foi descartado: os formulários só recebem `activeFields`, então sanitizar na
+  gravação apagaria os valores de campos **arquivados** de uma tarefa antiga, em silêncio.
+- **Correção sobre o previsto:** checkbox é `"1"` ou `""`, nunca `"0"`. Como o valor entra na
+  chave de agrupamento, gravar `"0"` faria a tarefa em que o usuário marcou e desmarcou a caixa
+  parar de agrupar com a tarefa em que ele nunca a tocou.
+- **A normalização não pode rodar a cada tecla.** `serializeCustomValue` apara e colapsa espaços;
+  aplicá-la ao `value` de um input controlado engole a barra de espaço. `CustomFieldInputs` guarda
+  o texto cru em estado local (`useLocalText`) e só emite o valor serializado.
 - `Task` e `PlannedTask` ganham `customValues: Record<UUID, string>`. Os repositórios costuram
   numa segunda query pelos ids já carregados — **sem N+1**.
 
@@ -384,6 +404,17 @@ irrevisável. Os arquivos novos da fase estão todos em verde.
 - `domain/usecases/monday/groupTasksForMonday.ts` contém um byte NUL literal, o que faz o git
   tratar o arquivo como binário — nenhum diff dele é revisável. Também anterior à fase. Trocar
   por `\0` escapado num `fix:` separado.
+- **Tarefas recorrentes gravadas em sábado ou domingo ficaram órfãs.** O fim de semana saiu do
+  planejamento (e a config `showWeekend` foi removida) sem migrar `recurringDays`: os valores 0 e
+  6 continuam no banco e não têm mais dia onde aparecer. Ninguém avisa o usuário. Decidir entre
+  limpeza pontual, migration que empurra para segunda, ou nada.
+- **`WeekPlanningView.tsx:179`** tem um warning de `react-hooks/exhaustive-deps` anterior a tudo
+  isto (`filteredDays` recriado a cada render alimentando um `useMemo`). `eslint .` sai com 0
+  erros, mas `--max-warnings=0` falha por causa dele.
+- **Decisão pendente do usuário:** o botão de importar do Google Agenda só aparece com o Google
+  conectado e é a única porta do `ImportCalendarModal`. O usuário cogitou removê-lo achando que
+  estava sobrando. Nada foi feito — se for remover, saem botão, modal e o §5.3 do `CLAUDE.md`.
+- `useHistory.ts` tem uma cópia privada de `localDateISO`, que já existe em `shared/utils/time`.
 
 ---
 
@@ -455,8 +486,8 @@ Suítes que já estão modificadas na árvore e mudam de novo: `taskValidation.t
 |---|---|---|
 | 0 | ✅ Commitar o Monday-send atual | — |
 | 1 | ✅ Workspaces: schema, backfill, repos, seletor, escopo na UI, mover/copiar | — |
-| 2 | Multi-select na tela de Dados | 1 |
-| 3 | Custom fields: EAV, CRUD, captura na tarefa, chave de agrupamento | 1 |
+| 2 | ✅ Multi-select na tela de Dados | 1 |
+| 3 | ✅ Custom fields: EAV, CRUD, captura na tarefa, chave de agrupamento | 1 |
 | 4 | Monday: Project Stage vira custom field; board interno único | 3 |
 | 5 | `MondayImportModal` + `MondayEntriesModal` | 4 |
 
