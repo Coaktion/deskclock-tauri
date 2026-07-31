@@ -49,6 +49,7 @@ describe("getTasksForDate", () => {
         status: "completed" as const,
         createdAt: "2026-04-08T09:00:00.000Z",
         updatedAt: "2026-04-08T10:00:00.000Z",
+        customValues: {},
       },
     ];
     const repo: ITaskRepository = {

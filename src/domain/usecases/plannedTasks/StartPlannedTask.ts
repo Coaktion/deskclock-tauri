@@ -44,6 +44,7 @@ export async function startPlannedTask(
     status: "running",
     createdAt: nowISO,
     updatedAt: nowISO,
+    customValues: { ...planned.customValues },
   };
   await taskRepo.save(task);
   return task;

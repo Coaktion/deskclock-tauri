@@ -1,5 +1,6 @@
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { UUID } from "@shared/types";
 
 type UpdatePlannedTaskInput = Partial<{
@@ -14,6 +15,7 @@ type UpdatePlannedTaskInput = Partial<{
   periodEnd: string | null;
   actions: PlannedTaskAction[];
   sortOrder: number;
+  customValues: CustomValues;
 }>;
 
 export async function updatePlannedTask(

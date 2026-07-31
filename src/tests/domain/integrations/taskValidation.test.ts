@@ -21,6 +21,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-04-30T09:00:00Z",
     updatedAt: "2026-04-30T10:00:00Z",
+    customValues: {},
     ...overrides,
   };
 }

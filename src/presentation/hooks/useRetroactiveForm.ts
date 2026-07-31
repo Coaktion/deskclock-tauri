@@ -1,4 +1,5 @@
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
@@ -52,6 +53,9 @@ export function useRetroactiveForm({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // Persistem entre lançamentos da cadeia, como projeto e categoria: entradas
+  // consecutivas do mesmo dia costumam compartilhar o mesmo valor.
+  const [customValues, setCustomValues] = useState<CustomValues>({});
 
   const initialStart = nowHHMM();
   const {
@@ -114,6 +118,7 @@ export function useRetroactiveForm({
         startTime: startISO,
         endTime: endISO,
         durationSeconds,
+        customValues,
       },
       new Date().toISOString()
     );
@@ -155,6 +160,7 @@ export function useRetroactiveForm({
     setCategoryName(category?.name ?? "");
     setSelectedCategoryId(task.categoryId);
     setBillable(task.billable);
+    setCustomValues(task.customValues);
     nameRef.current?.focus();
   }
 
@@ -182,6 +188,8 @@ export function useRetroactiveForm({
     setCategoryName,
     billable,
     setBillable,
+    customValues,
+    setCustomValues,
     setSelectedProjectId,
     setSelectedCategoryId,
     startTime,

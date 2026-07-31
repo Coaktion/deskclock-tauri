@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { RunningTaskEditForm } from "./RunningTaskEditForm";
@@ -114,6 +115,7 @@ export function RunningTaskSection({
     projectId: string | null;
     categoryId: string | null;
     billable: boolean;
+    customValues: CustomValues;
   }) {
     await updateActiveTask(data);
     setEditing(false);

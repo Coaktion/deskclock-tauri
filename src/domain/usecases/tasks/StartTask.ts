@@ -1,5 +1,6 @@
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { generateUUID } from "@shared/utils/uuid";
 import { effectiveDuration } from "./_helpers";
 
@@ -10,6 +11,7 @@ interface StartTaskInput {
   categoryId?: string | null;
   billable: boolean;
   startTime?: string;
+  customValues?: CustomValues;
 }
 
 export async function startTask(
@@ -47,6 +49,7 @@ export async function startTask(
     status: "running",
     createdAt: nowISO,
     updatedAt: nowISO,
+    customValues: input.customValues ?? {},
   };
   await repo.save(task);
   return task;

@@ -4,9 +4,11 @@ import {
   formatDate,
   formatDateTime,
   buildExportRows,
+  customColumnField,
   toCSV,
   toJSON,
 } from "@domain/utils/exportFormatter";
+import type { CustomField } from "@domain/entities/CustomField";
 import type { ExportProfile } from "@domain/entities/ExportProfile";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
@@ -42,6 +44,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T10:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -172,6 +175,77 @@ describe("toCSV", () => {
 
   it("retorna string vazia para lista vazia", () => {
     expect(toCSV([], "comma")).toBe("");
+  });
+});
+
+describe("buildExportRows com colunas de campo personalizado", () => {
+  const stage: CustomField = {
+    id: "f-stage",
+    label: "Project Stage",
+    type: "select",
+    options: [
+      { id: "o1", label: "Discovery" },
+      { id: "o2", label: "Delivery" },
+    ],
+    sortOrder: 0,
+    archived: false,
+    createdAt: "2026-07-31T00:00:00.000Z",
+  };
+
+  function profileWith(fieldId: string, label: string): ExportProfile {
+    return makeProfile({
+      columns: [
+        ...DEFAULT_COLUMNS,
+        { field: customColumnField(fieldId), label, visible: true, order: 99 },
+      ],
+    });
+  }
+
+  it("resolve o valor da coluna pelo id do campo", () => {
+    const task = makeTask({ customValues: { "f-stage": "o2" } });
+    const rows = buildExportRows(
+      [task],
+      profileWith("f-stage", "Project Stage"),
+      projects,
+      categories,
+      [stage]
+    );
+    expect(rows[0]["Project Stage"]).toBe("Delivery");
+  });
+
+  it("mantém a coluna vazia quando o campo foi apagado, sem desalinhar o CSV", () => {
+    const task = makeTask({ customValues: { "f-stage": "o2" } });
+    const rows = buildExportRows(
+      [task],
+      profileWith("f-apagado", "Project Stage"),
+      projects,
+      categories,
+      [stage]
+    );
+    expect(rows[0]).toHaveProperty("Project Stage", "");
+  });
+
+  it("continua resolvendo campo arquivado — o histórico não muda", () => {
+    const task = makeTask({ customValues: { "f-stage": "o1" } });
+    const rows = buildExportRows(
+      [task],
+      profileWith("f-stage", "Project Stage"),
+      projects,
+      categories,
+      [{ ...stage, archived: true }]
+    );
+    expect(rows[0]["Project Stage"]).toBe("Discovery");
+  });
+
+  it("deixa vazio quando a tarefa não tem valor para o campo", () => {
+    const rows = buildExportRows(
+      [makeTask()],
+      profileWith("f-stage", "Project Stage"),
+      projects,
+      categories,
+      [stage]
+    );
+    expect(rows[0]["Project Stage"]).toBe("");
   });
 });
 

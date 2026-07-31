@@ -2,14 +2,18 @@ import { useState, useEffect } from "react";
 import { X, DollarSign } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 
 interface GroupUpdates {
   name: string | null;
   projectId: string | null;
   categoryId: string | null;
   billable: boolean;
+  customValues: CustomValues;
 }
 
 interface EditGroupModalProps {
@@ -20,7 +24,13 @@ interface EditGroupModalProps {
   onClose: () => void;
 }
 
-export function EditGroupModal({ group, projects, categories, onSave, onClose }: EditGroupModalProps) {
+export function EditGroupModal({
+  group,
+  projects,
+  categories,
+  onSave,
+  onClose,
+}: EditGroupModalProps) {
   const first = group.tasks[0];
   const [name, setName] = useState(first.name ?? "");
   const [projectName, setProjectName] = useState(
@@ -33,6 +43,9 @@ export function EditGroupModal({ group, projects, categories, onSave, onClose }:
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(first.projectId);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(first.categoryId);
   const [saving, setSaving] = useState(false);
+  const { activeFields } = useCustomFields();
+  // Todas as tarefas do grupo têm os mesmos valores — eles compõem a chave (§6.3).
+  const [customValues, setCustomValues] = useState<CustomValues>(first.customValues);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -47,7 +60,13 @@ export function EditGroupModal({ group, projects, categories, onSave, onClose }:
     const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
     const cId = categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null;
     setSaving(true);
-    await onSave({ name: name.trim() || null, projectId: pId, categoryId: cId, billable });
+    await onSave({
+      name: name.trim() || null,
+      projectId: pId,
+      categoryId: cId,
+      billable,
+      customValues,
+    });
     setSaving(false);
     onClose();
   }
@@ -112,7 +131,9 @@ export function EditGroupModal({ group, projects, categories, onSave, onClose }:
           <button
             type="button"
             onClick={() => setBillable((b) => !b)}
-            title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
+            title={
+              billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
+            }
             className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
               billable
                 ? "bg-green-900/40 border-green-700 text-green-400"
@@ -122,10 +143,20 @@ export function EditGroupModal({ group, projects, categories, onSave, onClose }:
             <DollarSign size={14} />
             {billable ? "Billable" : "Non-billable"}
           </button>
+
+          <CustomFieldInputs
+            fields={activeFields}
+            values={customValues}
+            onChange={setCustomValues}
+            onEnter={handleSave}
+          />
         </div>
 
         <div className="flex justify-end gap-2 mt-5">
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200"
+          >
             Cancelar
           </button>
           <button

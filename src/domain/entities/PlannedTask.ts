@@ -1,4 +1,5 @@
 import type { UUID } from "@shared/types";
+import type { CustomValues } from "@domain/entities/CustomField";
 
 export type ScheduleType = "specific_date" | "recurring" | "period";
 
@@ -23,6 +24,8 @@ export interface PlannedTask {
   actions: PlannedTaskAction[];
   sortOrder: number;
   createdAt: string;
+  /** Copiados para a Task ao dar Play — ver `StartPlannedTask`. */
+  customValues: CustomValues;
   /** Horário de início "HH:MM" — preenchido quando importado do Google Agenda */
   startTime?: string;
   /** Horário de fim "HH:MM" — preenchido quando importado do Google Agenda */

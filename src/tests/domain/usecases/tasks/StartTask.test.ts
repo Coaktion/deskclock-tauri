@@ -77,6 +77,7 @@ describe("startTask", () => {
       status: "running",
       createdAt: "2026-04-08T09:00:00.000Z",
       updatedAt: "2026-04-08T09:00:00.000Z",
+      customValues: {},
     };
     const repo = makeRepo({ findByStatus: vi.fn(async () => [running]) });
     await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
@@ -99,6 +100,7 @@ describe("startTask", () => {
       status: "paused",
       createdAt: "2026-04-08T09:00:00.000Z",
       updatedAt: "2026-04-08T09:30:00.000Z",
+      customValues: {},
     };
     const repo = makeRepo({ findByStatus: vi.fn(async () => [paused]) });
     await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);

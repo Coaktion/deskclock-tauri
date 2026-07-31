@@ -16,6 +16,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-07-30T12:00:00.000Z",
     updatedAt: "2026-07-30T13:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -78,5 +79,18 @@ describe("groupTasksForMonday", () => {
 
   it("retorna vazio sem tarefas", () => {
     expect(groupTasksForMonday([])).toEqual([]);
+  });
+});
+
+describe("groupTasksForMonday com campos personalizados", () => {
+  it("separa em itens distintos tarefas com Project Stage diferente", () => {
+    // Sem isto, as duas colapsariam num item só e o stage gravado dependeria de
+    // qual tarefa chegou primeiro — o defeito que motivou a Fase 3.
+    const groups = groupTasksForMonday([
+      makeTask({ id: "t1", customValues: { "f-stage": "o1" } }),
+      makeTask({ id: "t2", customValues: { "f-stage": "o2" } }),
+    ]);
+    expect(groups).toHaveLength(2);
+    expect(new Set(groups.map((g) => g.groupKey)).size).toBe(2);
   });
 });

@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { loadCustomValues, saveCustomValues } from "./customValues";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { UUID } from "@shared/types";
@@ -40,9 +41,39 @@ function rowToTask(r: PlannedTaskRow): PlannedTask {
     actions: JSON.parse(r.actions) as PlannedTaskAction[],
     sortOrder: r.sort_order,
     createdAt: r.created_at,
+    customValues: {},
     startTime: r.start_time ?? undefined,
     endTime: r.end_time ?? undefined,
   };
+}
+
+/** Uma query de valores para a leva inteira — ver `loadCustomValues`. */
+async function hydrate(
+  db: Awaited<ReturnType<typeof getDb>>,
+  rows: PlannedTaskRow[]
+): Promise<PlannedTask[]> {
+  const tasks = rows.map(rowToTask);
+  if (tasks.length === 0) return tasks;
+  const values = await loadCustomValues(
+    db,
+    "planned_task_custom_values",
+    "planned_task_id",
+    tasks.map((t) => t.id)
+  );
+  for (const task of tasks) {
+    task.customValues = values.get(task.id) ?? {};
+  }
+  return tasks;
+}
+
+function persistValues(db: Awaited<ReturnType<typeof getDb>>, task: PlannedTask): Promise<void> {
+  return saveCustomValues(
+    db,
+    "planned_task_custom_values",
+    "planned_task_id",
+    task.id,
+    task.customValues
+  );
 }
 
 export class PlannedTaskRepository implements IPlannedTaskRepository {
@@ -74,6 +105,7 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
         task.endTime ?? null,
       ]
     );
+    await persistValues(db, task);
   }
 
   async update(task: PlannedTask): Promise<void> {
@@ -103,6 +135,7 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
         task.id,
       ]
     );
+    await persistValues(db, task);
   }
 
   async findById(id: UUID): Promise<PlannedTask | null> {
@@ -110,7 +143,7 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
     const rows = await db.select<PlannedTaskRow[]>("SELECT * FROM planned_tasks WHERE id = $1", [
       id,
     ]);
-    return rows[0] ? rowToTask(rows[0]) : null;
+    return rows[0] ? (await hydrate(db, rows))[0] : null;
   }
 
   async findForDate(dateISO: string, workspaceId?: UUID): Promise<PlannedTask[]> {
@@ -137,7 +170,7 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
           [dateISO]
         );
     const dayOfWeek = new Date(dateISO + "T12:00:00Z").getUTCDay();
-    return rows.map(rowToTask).filter((t) => {
+    return (await hydrate(db, rows)).filter((t) => {
       if (t.scheduleType === "recurring") {
         return Array.isArray(t.recurringDays) && t.recurringDays.includes(dayOfWeek);
       }
@@ -165,7 +198,7 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
            ORDER BY sort_order ASC, created_at ASC`,
           [startISO, endISO]
         );
-    return rows.map(rowToTask);
+    return hydrate(db, rows);
   }
 
   async complete(id: UUID, dateISO: string): Promise<void> {

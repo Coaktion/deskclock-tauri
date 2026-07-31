@@ -3,8 +3,11 @@ import { X, Plus, ExternalLink, FolderOpen, Trash2, DollarSign } from "lucide-re
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { UUID } from "@shared/types";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { todayISO } from "@shared/utils/time";
 
@@ -19,6 +22,7 @@ export interface EditPlannedTaskInput {
   periodStart?: string | null;
   periodEnd?: string | null;
   actions?: PlannedTaskAction[];
+  customValues?: CustomValues;
 }
 
 interface EditPlannedTaskModalProps {
@@ -57,6 +61,8 @@ export function EditPlannedTaskModal({
   const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
   const [newActionValue, setNewActionValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const { activeFields } = useCustomFields();
+  const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
 
   // window listener cobre casos onde o foco está fora do backdrop (portais, body).
   // defaultPrevented = true significa que o Autocomplete consumiu o ESC para fechar o dropdown.
@@ -94,6 +100,7 @@ export function EditPlannedTaskModal({
         periodStart: scheduleType === "period" ? periodStart || null : null,
         periodEnd: scheduleType === "period" ? periodEnd || null : null,
         actions,
+        customValues,
       });
       onClose();
     } finally {
@@ -262,6 +269,18 @@ export function EditPlannedTaskModal({
               </div>
             )}
           </div>
+
+          {activeFields.length > 0 && (
+            <>
+              <div className="border-t border-gray-800" />
+              <CustomFieldInputs
+                fields={activeFields}
+                values={customValues}
+                onChange={setCustomValues}
+                onEnter={() => void handleSave()}
+              />
+            </>
+          )}
 
           <div className="border-t border-gray-800" />
 

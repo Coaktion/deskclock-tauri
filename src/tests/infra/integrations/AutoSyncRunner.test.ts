@@ -17,6 +17,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    customValues: {},
     ...overrides,
   };
 }

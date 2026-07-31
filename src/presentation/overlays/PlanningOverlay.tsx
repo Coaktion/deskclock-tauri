@@ -28,6 +28,7 @@ export function PlanningOverlay({ onMinimize, onClose, onNavigatePlanning }: Pla
       categoryId: task.categoryId,
       billable: task.billable,
       plannedTaskId: task.id,
+      customValues: task.customValues,
     });
     await reload();
     onClose();

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
@@ -14,6 +15,9 @@ export interface SuggestionItem {
   categoryName?: string;
   isPlanned: boolean;
   plannedTaskId: string | null;
+  /** Viaja junto porque entra na chave de agrupamento (§6.3): iniciar a partir
+   *  de uma sugestão sem ele criaria um grupo diferente do da tarefa de origem. */
+  customValues: CustomValues;
 }
 
 export function useOmniboxSuggestions(
@@ -36,6 +40,7 @@ export function useOmniboxSuggestions(
       categoryName: categories.find((c) => c.id === t.categoryId)?.name,
       isPlanned: true,
       plannedTaskId: t.id,
+      customValues: t.customValues,
     }));
 
     const seen = new Set<string>();
@@ -54,6 +59,7 @@ export function useOmniboxSuggestions(
           categoryName: categories.find((c) => c.id === t.categoryId)?.name,
           isPlanned: false,
           plannedTaskId: null,
+          customValues: t.customValues,
         });
       }
     }
@@ -63,8 +69,7 @@ export function useOmniboxSuggestions(
     return all
       .filter(
         (s) =>
-          s.name.toLowerCase().includes(q) ||
-          (s.projectName?.toLowerCase().includes(q) ?? false)
+          s.name.toLowerCase().includes(q) || (s.projectName?.toLowerCase().includes(q) ?? false)
       )
       .slice(0, 8);
   }, [plannedTasks, recentTasks, projects, categories, query]);

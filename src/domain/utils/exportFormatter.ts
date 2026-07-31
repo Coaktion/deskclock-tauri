@@ -7,6 +7,15 @@ import type {
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomField } from "@domain/entities/CustomField";
+import { formatCustomValue } from "@domain/usecases/customFields/customValueCodec";
+
+/** Prefixo que distingue uma coluna de campo personalizado dos campos de sistema. */
+export const CUSTOM_COLUMN_PREFIX = "custom:";
+
+export function customColumnField(fieldId: string): string {
+  return `${CUSTOM_COLUMN_PREFIX}${fieldId}`;
+}
 
 export function formatDuration(seconds: number, format: DurationFormat): string {
   const s = Math.max(0, Math.floor(seconds));
@@ -49,11 +58,13 @@ export function buildExportRows(
   tasks: Task[],
   profile: ExportProfile,
   projects: Project[],
-  categories: Category[]
+  categories: Category[],
+  customFields: CustomField[] = []
 ): ExportRow[] {
   const visibleCols = [...profile.columns]
     .filter((c) => c.visible)
     .sort((a, b) => a.order - b.order);
+  const fieldsById = new Map(customFields.map((f) => [f.id, f]));
 
   return tasks.map((task) => {
     const project = projects.find((p) => p.id === task.projectId);
@@ -61,6 +72,12 @@ export function buildExportRows(
     const row: ExportRow = {};
 
     for (const col of visibleCols) {
+      if (col.field.startsWith(CUSTOM_COLUMN_PREFIX)) {
+        const field = fieldsById.get(col.field.slice(CUSTOM_COLUMN_PREFIX.length));
+        // Campo apagado: coluna vazia em vez de sumir, para não desalinhar o CSV.
+        row[col.label] = field ? formatCustomValue(field, task.customValues[field.id] ?? "") : "";
+        continue;
+      }
       switch (col.field) {
         case "name":
           row[col.label] = task.name ?? "(sem nome)";

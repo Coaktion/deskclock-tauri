@@ -1,5 +1,6 @@
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { generateUUID } from "@shared/utils/uuid";
 
 interface CreateRetroactiveInput {
@@ -11,6 +12,7 @@ interface CreateRetroactiveInput {
   startTime: string;
   endTime: string;
   durationSeconds: number;
+  customValues?: CustomValues;
 }
 
 export async function createRetroactiveTask(
@@ -31,6 +33,7 @@ export async function createRetroactiveTask(
     status: "completed",
     createdAt: nowISO,
     updatedAt: nowISO,
+    customValues: input.customValues ?? {},
   };
   await repo.save(task);
   return task;

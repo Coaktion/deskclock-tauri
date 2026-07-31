@@ -5,7 +5,14 @@ import { DomainError } from "@shared/errors";
 type UpdateTaskInput = Partial<
   Pick<
     Task,
-    "name" | "projectId" | "categoryId" | "billable" | "startTime" | "endTime" | "durationSeconds"
+    | "name"
+    | "projectId"
+    | "categoryId"
+    | "billable"
+    | "startTime"
+    | "endTime"
+    | "durationSeconds"
+    | "customValues"
   >
 >;
 

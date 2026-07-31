@@ -3,7 +3,10 @@ import { DollarSign } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "./Autocomplete";
+import { CustomFieldInputs } from "./CustomFieldInputs";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 
 interface RunningTaskEditFormProps {
   task: Task;
@@ -15,6 +18,7 @@ interface RunningTaskEditFormProps {
     projectId: string | null;
     categoryId: string | null;
     billable: boolean;
+    customValues: CustomValues;
   }) => void;
   onCancel: () => void;
 }
@@ -37,11 +41,13 @@ export function RunningTaskEditForm({
   const [billable, setBillable] = useState(task.billable);
   const [projectId, setProjectId] = useState<string | null>(task.projectId);
   const [categoryId, setCategoryId] = useState<string | null>(task.categoryId);
+  const { activeFields } = useCustomFields();
+  const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
 
   function handleSave() {
     const pId = projects.find((p) => p.name === projectName)?.id ?? projectId ?? null;
     const cId = categories.find((c) => c.name === categoryName)?.id ?? categoryId ?? null;
-    onSave({ name: name.trim() || null, projectId: pId, categoryId: cId, billable });
+    onSave({ name: name.trim() || null, projectId: pId, categoryId: cId, billable, customValues });
   }
 
   function handleFormKeyDown(e: React.KeyboardEvent) {
@@ -107,6 +113,13 @@ export function RunningTaskEditForm({
         <DollarSign size={14} />
         {billable ? "Billable" : "Non-billable"}
       </button>
+      <CustomFieldInputs
+        fields={activeFields}
+        values={customValues}
+        onChange={setCustomValues}
+        onEnter={handleSave}
+        compact
+      />
       <div className="flex gap-2 pt-1">
         <button
           onClick={handleSave}

@@ -44,6 +44,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T10:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -121,6 +122,20 @@ describe("TaskRepository", () => {
       expect(mockDb.select).toHaveBeenCalledWith(expect.any(String), [start, end]);
       expect(result).toHaveLength(1);
     });
+
+    it("costura os valores personalizados numa segunda query, não uma por tarefa", async () => {
+      mockDb.select
+        .mockResolvedValueOnce([makeRow({ id: "t1" }), makeRow({ id: "t2" })])
+        .mockResolvedValueOnce([{ owner_id: "t2", field_id: "f-stage", value: "o1" }]);
+      const repo = new TaskRepository();
+      const result = await repo.findByDateRange(
+        "2026-04-08T00:00:00.000Z",
+        "2026-04-08T23:59:59.999Z"
+      );
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+      expect(result[0].customValues).toEqual({});
+      expect(result[1].customValues).toEqual({ "f-stage": "o1" });
+    });
   });
 
   describe("save", () => {
@@ -146,6 +161,15 @@ describe("TaskRepository", () => {
       await repo.save(makeTask({ billable: false }));
       const args = mockDb.execute.mock.calls[0][1] as unknown[];
       expect(args).toContain(0);
+    });
+
+    it("grava os valores personalizados junto com a tarefa", async () => {
+      const repo = new TaskRepository();
+      await repo.save(makeTask({ customValues: { "f-stage": "o1" } }));
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO task_custom_values"),
+        ["t1", "f-stage", "o1"]
+      );
     });
   });
 

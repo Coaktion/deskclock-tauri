@@ -5,22 +5,23 @@ import type { Task } from "@domain/entities/Task";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
-import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
+import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
 
 const DAY_NAMES_PT = [
   "domingo",
@@ -183,6 +184,7 @@ export function RetroactivePage() {
     setPlannedTasks(all.filter((t) => !t.completedDates.includes(selectedDate)));
   }, [plannedTaskRepo, selectedDate]);
 
+  const { activeFields } = useCustomFields();
   const form = useRetroactiveForm({
     selectedDate,
     projects,
@@ -314,7 +316,7 @@ export function RetroactivePage() {
         <DatePickerInput
           value={selectedDate}
           onChange={setSelectedDate}
-          className="text-sm font-medium text-gray-200"
+          className="text-sm font-medium text-gray-200 w-30"
           maxDate={new Date()}
         />
         <button
@@ -324,48 +326,12 @@ export function RetroactivePage() {
         >
           <ChevronRight size={16} />
         </button>
-        <span className="flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
-        {tasks.length > 0 &&
-          (selectMode ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  const allSelected = selectedIds.size >= tasks.length;
-                  setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
-                }}
-                className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
-              >
-                {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
-              </button>
-              <button
-                onClick={() => void handleBulkDelete()}
-                disabled={selectedIds.size === 0}
-                className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
-                Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-              </button>
-              <button
-                onClick={exitSelectMode}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {totalSeconds > 0 && (
-                <span className="text-xs text-gray-500 font-mono tabular-nums">
-                  {formatHHMMSS(totalSeconds)} total
-                </span>
-              )}
-              <button
-                onClick={() => setSelectMode(true)}
-                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
-              >
-                Selecionar tarefas
-              </button>
-            </div>
-          ))}
+        <span className="ml-7 flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
+        {totalSeconds > 0 && (
+          <span className="text-xs text-gray-500 font-mono tabular-nums">
+            {formatHHMMSS(totalSeconds)} total
+          </span>
+        )}
         <button
           onClick={() => startTour()}
           title="Ver tour da página"
@@ -375,201 +341,134 @@ export function RetroactivePage() {
         </button>
       </div>
 
-      {/* Tarefas planejadas para o dia — sugestões para lançamento */}
-      {plannedTasks.length > 0 && (
-        <div className="border-b border-gray-800 shrink-0">
-          <p className="px-5 pt-2.5 pb-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-            Planejadas para este dia
-          </p>
-          <div className="max-h-36 overflow-y-auto">
-            {plannedTasks.map((task) => {
-              const projectName = projects.find((p) => p.id === task.projectId)?.name;
-              const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-              const hasTime = !!(task.startTime && task.endTime);
-              return (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
-                >
-                  <button
-                    onClick={() => (hasTime ? void handleDirectLaunch(task) : form.prefill(task))}
-                    title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                    className={`shrink-0 p-1 rounded-lg transition-colors ${
-                      hasTime
-                        ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                        : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-                    }`}
-                  >
-                    <Play size={12} />
-                  </button>
-                  <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
-                  {hasTime && (
-                    <span className="text-xs text-gray-500 font-mono shrink-0">
-                      {task.startTime}–{task.endTime}
-                    </span>
-                  )}
-                  {projectName && (
-                    <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                      {projectName}
-                    </span>
-                  )}
-                  {categoryName && (
-                    <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                      {categoryName}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Formulário inline */}
-      <div data-tour="retroactive-form" className="px-5 py-4 border-b border-gray-800 space-y-3">
-        <input
-          ref={form.nameRef}
-          type="text"
-          value={form.name}
-          onChange={(e) => form.setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) void form.handleAdd();
-          }}
-          placeholder="Nome da tarefa (opcional)"
-          className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+      {/* Formulário à esquerda, dia à direita: com campos personalizados o
+          formulário cresce e, empilhado, empurrava a lista para fora da tela. */}
+      <div className="flex-1 min-h-0 flex">
+        <RetroactiveEntryForm
+          form={form}
+          projects={projects}
+          categories={categories}
+          customFields={activeFields}
         />
 
-        <div className="flex gap-2 items-center">
-          <Autocomplete
-            value={form.projectName}
-            onChange={form.setProjectName}
-            onSelect={(o) => form.setSelectedProjectId(o.id)}
-            onEnter={form.handleAdd}
-            options={projects}
-            placeholder="Projeto"
-            className="flex-1"
-          />
-          <Autocomplete
-            value={form.categoryName}
-            onChange={(v) => {
-              form.setCategoryName(v);
-              const cat = categories.find((c) => c.name === v);
-              if (cat) form.setBillable(cat.defaultBillable);
-            }}
-            onSelect={(o) => {
-              form.setSelectedCategoryId(o.id);
-              const cat = categories.find((c) => c.id === o.id);
-              if (cat) form.setBillable(cat.defaultBillable);
-            }}
-            onEnter={form.handleAdd}
-            options={categories}
-            placeholder="Categoria"
-            className="flex-1"
-          />
-          <button
-            type="button"
-            onClick={() => form.setBillable((b) => !b)}
-            title={
-              form.billable
-                ? "Billable — clique para alternar"
-                : "Non-billable — clique para alternar"
-            }
-            className={`flex items-center gap-1 shrink-0 transition-colors ${
-              form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
-            }`}
-          >
-            <DollarSign size={14} />
-          </button>
-        </div>
-
-        {/* Início, Fim, Duração */}
-        <div data-tour="retroactive-timeinputs" className="flex gap-2 items-center">
-          <span className="text-xs text-gray-500 shrink-0">Duração</span>
-          <input
-            data-tour="retroactive-duration"
-            type="text"
-            value={form.durationInput}
-            onChange={(e) => form.setDurationInput(e.target.value)}
-            onBlur={form.commitDuration}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const newEnd = form.commitDuration();
-                if (newEnd) void form.handleAdd(newEnd);
-              }
-            }}
-            placeholder="HH:MM"
-            title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
-          />
-          <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30, 15...</span>
-          <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
-          <input
-            type="time"
-            value={form.startTime}
-            onChange={(e) => form.handleStartChange(e.target.value)}
-            onBlur={(e) => form.handleStartCommit(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (!form.startTime) {
-                  form.handleStartCommit("");
-                  return;
-                }
-                void form.handleAdd();
-              }
-            }}
-            className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
-          />
-          <span className="text-xs text-gray-500 shrink-0">Fim</span>
-          <input
-            type="time"
-            value={form.endTime}
-            onChange={(e) => form.handleEndChange(e.target.value)}
-            onBlur={(e) => form.handleEndCommit(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.stopPropagation();
-                if (!form.endTime) {
-                  form.handleEndCommit("");
-                  return;
-                }
-                void form.handleAdd();
-              }
-            }}
-            className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
-          />
-
-          <button
-            onClick={() => void form.handleAdd()}
-            disabled={form.saving}
-            className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
-          >
-            Adicionar
-          </button>
-        </div>
-
-        {form.error && <p className="text-xs text-red-400">{form.error}</p>}
-      </div>
-
-      {/* Lista de tarefas */}
-      <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
-        <div className="flex-1 overflow-y-auto pr-2">
-          {tasks.length === 0 ? (
-            <p className="text-center text-gray-600 text-sm py-10">Nenhuma entrada para este dia</p>
-          ) : (
-            tasks.map((t) => (
-              <TaskRow
-                key={t.id}
-                task={t}
-                projects={projects}
-                categories={categories}
-                onEdit={setEditingTask}
-                onDelete={handleDelete}
-                selectMode={selectMode}
-                selected={selectedIds.has(t.id)}
-                onToggleSelect={toggleSelectTask}
-              />
-            ))
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* Tarefas planejadas para o dia — sugestões para lançamento */}
+          {plannedTasks.length > 0 && (
+            <div className="border-b border-gray-800 shrink-0">
+              <p className="px-5 pt-2.5 pb-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                Planejadas para este dia
+              </p>
+              <div className="max-h-36 overflow-y-auto">
+                {plannedTasks.map((task) => {
+                  const projectName = projects.find((p) => p.id === task.projectId)?.name;
+                  const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+                  const hasTime = !!(task.startTime && task.endTime);
+                  return (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
+                    >
+                      <button
+                        onClick={() =>
+                          hasTime ? void handleDirectLaunch(task) : form.prefill(task)
+                        }
+                        title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
+                        className={`shrink-0 p-1 rounded-lg transition-colors ${
+                          hasTime
+                            ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
+                            : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+                        }`}
+                      >
+                        <Play size={12} />
+                      </button>
+                      <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
+                      {hasTime && (
+                        <span className="text-xs text-gray-500 font-mono shrink-0">
+                          {task.startTime}–{task.endTime}
+                        </span>
+                      )}
+                      {projectName && (
+                        <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                          {projectName}
+                        </span>
+                      )}
+                      {categoryName && (
+                        <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                          {categoryName}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
+
+          {/* Lista de tarefas */}
+          <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
+            {/* Barra de seleção: mora aqui, e não no header, porque age sobre
+                esta lista — e o header já estava disputando espaço com a
+                navegação de data. Sem tarefas não há o que selecionar. */}
+            {tasks.length > 0 && (
+              <div className="shrink-0 flex items-center justify-end gap-3 px-5 py-2 border-b border-gray-800">
+                {selectMode ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        const allSelected = selectedIds.size >= tasks.length;
+                        setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
+                      }}
+                      className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
+                    </button>
+                    <button
+                      onClick={() => void handleBulkDelete()}
+                      disabled={selectedIds.size === 0}
+                      className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                    </button>
+                    <button
+                      onClick={exitSelectMode}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
+                  >
+                    Selecionar tarefas
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto pr-2">
+              {tasks.length === 0 ? (
+                <p className="text-center text-gray-600 text-sm py-10">
+                  Nenhuma entrada para este dia
+                </p>
+              ) : (
+                tasks.map((t) => (
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    projects={projects}
+                    categories={categories}
+                    onEdit={setEditingTask}
+                    onDelete={handleDelete}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(t.id)}
+                    onToggleSelect={toggleSelectTask}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

@@ -5,8 +5,8 @@
 - **Project classification:** Current (React 19, TS 5, Vitest 3, CLAUDE.md + CI presentes)
 - **Coverage tier:** A (`domain/usecases/`, repositórios, migrations) / B–C (UI, sem testes de
   renderização — padrão do projeto, §7.6 do `CLAUDE.md`)
-- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 e 1
-  concluídas e validadas no app (2026-07-30/31); Fases 2 a 5 pendentes
+- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 a 3
+  concluídas (0 e 1 validadas no app em 2026-07-30/31; 2 e 3 em 2026-07-31); Fases 4 e 5 pendentes
 
 > Este documento é a **ordem de trabalho** para a fase de Execute. Foi escrito para ser lido
 > por um agente sem acesso à conversa que o originou — todas as decisões e o porquê delas
@@ -291,7 +291,7 @@ Atingidos: `IProjectRepository`, `ICategoryRepository`, `ITaskRepository.findByD
 
 ---
 
-### Fase 2 — Multi-select na tela de Dados ⬅️ **PRÓXIMA**
+### Fase 2 — Multi-select na tela de Dados ✅ **CONCLUÍDA em 2026-07-31**
 
 1. `presentation/hooks/useMultiSelect.ts` — genérico por id. **Não copiar** a lógica de seleção
    de `useTaskSendSelection`, que é específica de tarefa (§9.4).
@@ -303,7 +303,7 @@ Atingidos: `IProjectRepository`, `ICategoryRepository`, `ITaskRepository.findByD
 
 ---
 
-### Fase 3 — Custom fields
+### Fase 3 — Custom fields ✅ **CONCLUÍDA em 2026-07-31**
 
 #### 3.1 Migration `012_custom_fields.sql` (version 12)
 
@@ -320,9 +320,14 @@ tarefa planejada já traga o Project Stage preenchido.
 #### 3.2 Domain
 
 - `domain/entities/CustomField.ts`
-- `domain/repositories/ICustomFieldRepository.ts` + `ICustomFieldValueRepository.ts`
+- `domain/repositories/ICustomFieldRepository.ts`. **Desvio deliberado:** o
+  `ICustomFieldValueRepository` previsto aqui não foi criado — os valores pertencem ao agregado
+  `Task`/`PlannedTask` e são lidos e gravados pelos repositórios deles. Um segundo repositório
+  teria de ser costurado em todo use case que cria ou edita tarefa, sem ganho.
 - `domain/usecases/customFields/` — CRUD + `serializeCustomValue` / `parseCustomValue` por tipo
-  (checkbox `"0"|"1"`, select = id da opção).
+  (select = id da opção). **Correção sobre o previsto:** checkbox é `"1"` ou `""`, nunca `"0"`.
+  Como o valor entra na chave de agrupamento, gravar `"0"` faria a tarefa em que o usuário marcou
+  e desmarcou a caixa parar de agrupar com a tarefa em que ele nunca a tocou.
 - `Task` e `PlannedTask` ganham `customValues: Record<UUID, string>`. Os repositórios costuram
   numa segunda query pelos ids já carregados — **sem N+1**.
 
@@ -341,13 +346,44 @@ gravado depende da ordem de chegada. Propaga para os 4 chamadores de `groupTasks
 #### 3.4 UI
 
 - `components/CustomFieldInputs.tsx` (renderiza por tipo), consumido por `EditTaskModal`,
-  `RunningTaskEditForm`, `RetroactivePage`, `PlannedTaskForm`, `EditGroupModal`.
+  `RunningTaskEditForm`, `RetroactivePage`, `PlannedTaskForm`, `EditGroupModal`. O tipo `select`
+  usa o `Autocomplete` com fuzzy search, como projeto e categoria: a lista de opções cresce e um
+  `<select>` nativo obrigaria a percorrê-la à mão.
 - CRUD dos campos numa aba "Campos personalizados" da `DataPage`.
 - `ExportProfile.columns` aceita `field: "custom:<id>"` — exportação sem os campos novos seria um
   buraco visível no dia seguinte.
 
 > `DataPage` chega a 4 abas (Projetos, Categorias, Workspaces, Campos). Ainda coerente, mas é o
 > limite antes de virar tela-gaveta.
+
+#### 3.5 Exceção registrada à §9.3 do `CLAUDE.md`
+
+Cinco símbolos já estavam em zona vermelha antes desta fase e ainda assim receberam código:
+
+| Arquivo | Antes | Depois | Limite |
+|---|---|---|---|
+| `presentation/modals/ExportModal.tsx` | 607 | 640 | 350 |
+| `presentation/pages/RetroactivePage.tsx` | 587 | 598 | 350 |
+| `presentation/components/PlannedTaskForm.tsx` | 357 | 377 | 350 |
+| `presentation/modals/EditPlannedTaskModal.tsx` | 351 | 370 | 350 |
+| `presentation/hooks/useRetroactiveForm.ts` | 202 | 210 | 150 |
+
+A regra manda refatorar antes de acrescentar feature. A exceção é deliberada: as adições são de
+6 a 20 linhas, todas mecânicas (passar `customValues` adiante), e um custom field capturado em
+quatro dos cinco formulários e ausente no quinto seria pior que qualquer um desses arquivos ser
+grande. **Refatorá-los é item próprio, fora desta fase** — o split de `ExportModal` e de
+`RetroactivePage` não tem relação com campos personalizados e misturá-lo aqui tornaria o diff
+irrevisável. Os arquivos novos da fase estão todos em verde.
+
+#### 3.6 Dívida deixada em aberto
+
+- `startPlannedTask` (`domain/usecases/plannedTasks/StartPlannedTask.ts`) **não tem chamador de
+  produção** — só testes. Os quatro Play reais montam o input à mão e chamam `startTask`. É
+  anterior a esta fase; a fase apenas passou a repassar `customValues` nesses quatro caminhos.
+  Decidir na Fase 4 se ele vira o caminho único ou se sai.
+- `domain/usecases/monday/groupTasksForMonday.ts` contém um byte NUL literal, o que faz o git
+  tratar o arquivo como binário — nenhum diff dele é revisável. Também anterior à fase. Trocar
+  por `\0` escapado num `fix:` separado.
 
 ---
 

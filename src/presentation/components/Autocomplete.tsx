@@ -7,6 +7,8 @@ interface Option {
 }
 
 interface AutocompleteProps {
+  /** Id do input interno, para associar um `<label htmlFor>` externo. */
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   onSelect?: (option: Option) => void;
@@ -14,11 +16,18 @@ interface AutocompleteProps {
   options: Option[];
   placeholder?: string;
   className?: string;
+  /**
+   * Substitui — não complementa — o visual do input. Existe para quem embute o
+   * autocomplete dentro de uma caixa que já desenha fundo, borda e raio, caso em
+   * que o input precisa ficar transparente para os dois parecerem um só campo.
+   */
+  inputClassName?: string;
   autoFocus?: boolean;
   dropUp?: boolean;
 }
 
 export function Autocomplete({
+  id,
   value,
   onChange,
   onSelect,
@@ -26,6 +35,7 @@ export function Autocomplete({
   options,
   placeholder = "",
   className = "",
+  inputClassName = "w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500",
   autoFocus = false,
   dropUp = false,
 }: AutocompleteProps) {
@@ -98,6 +108,7 @@ export function Autocomplete({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <input
+        id={id}
         type="text"
         value={value}
         onChange={(e) => {
@@ -109,7 +120,7 @@ export function Autocomplete({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+        className={inputClassName}
       />
       {open && filtered.length > 0 && (
         <ul

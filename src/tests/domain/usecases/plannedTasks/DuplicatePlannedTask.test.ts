@@ -35,6 +35,7 @@ function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
     actions: [{ type: "open_url", value: "https://example.com" }],
     sortOrder: 2,
     createdAt: "2026-04-08T09:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }

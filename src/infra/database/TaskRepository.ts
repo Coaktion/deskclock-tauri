@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { loadCustomValues, saveCustomValues } from "./customValues";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task, TaskStatus } from "@domain/entities/Task";
 
@@ -31,7 +32,24 @@ function rowToTask(r: TaskRow): Task {
     status: r.status as TaskStatus,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    customValues: {},
   };
+}
+
+/** Uma query de valores para a leva inteira — ver `loadCustomValues`. */
+async function hydrate(db: Awaited<ReturnType<typeof getDb>>, rows: TaskRow[]): Promise<Task[]> {
+  const tasks = rows.map(rowToTask);
+  if (tasks.length === 0) return tasks;
+  const values = await loadCustomValues(
+    db,
+    "task_custom_values",
+    "task_id",
+    tasks.map((t) => t.id)
+  );
+  for (const task of tasks) {
+    task.customValues = values.get(task.id) ?? {};
+  }
+  return tasks;
 }
 
 export class TaskRepository implements ITaskRepository {
@@ -57,6 +75,7 @@ export class TaskRepository implements ITaskRepository {
         task.updatedAt,
       ]
     );
+    await saveCustomValues(db, "task_custom_values", "task_id", task.id, task.customValues);
   }
 
   async update(task: Task): Promise<void> {
@@ -80,12 +99,13 @@ export class TaskRepository implements ITaskRepository {
         task.id,
       ]
     );
+    await saveCustomValues(db, "task_custom_values", "task_id", task.id, task.customValues);
   }
 
   async findById(id: string): Promise<Task | null> {
     const db = await getDb();
     const rows = await db.select<TaskRow[]>("SELECT * FROM tasks WHERE id = $1", [id]);
-    return rows[0] ? rowToTask(rows[0]) : null;
+    return rows[0] ? (await hydrate(db, rows))[0] : null;
   }
 
   async findByStatus(status: "running" | "paused"): Promise<Task[]> {
@@ -94,7 +114,7 @@ export class TaskRepository implements ITaskRepository {
       "SELECT * FROM tasks WHERE status = $1 ORDER BY start_time ASC",
       [status]
     );
-    return rows.map(rowToTask);
+    return hydrate(db, rows);
   }
 
   async findByDateRange(startISO: string, endISO: string, workspaceId?: string): Promise<Task[]> {
@@ -110,7 +130,7 @@ export class TaskRepository implements ITaskRepository {
           "SELECT * FROM tasks WHERE start_time >= $1 AND start_time <= $2 ORDER BY start_time ASC",
           [startISO, endISO]
         );
-    return rows.map(rowToTask);
+    return hydrate(db, rows);
   }
 
   async delete(id: string): Promise<void> {

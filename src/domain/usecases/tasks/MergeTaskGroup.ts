@@ -28,6 +28,9 @@ export async function mergeTaskGroup(
     status: "completed",
     createdAt: nowISO,
     updatedAt: nowISO,
+    // Os custom values compõem a chave do grupo, então todas as tarefas daqui
+    // têm exatamente os mesmos: herdar da primeira não escolhe nada.
+    customValues: { ...first.customValues },
   };
 
   await repo.save(merged);

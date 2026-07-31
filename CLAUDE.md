@@ -381,7 +381,9 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 - **Acesso:** Ícone `FileClock` na sidebar.
 - **Navegação de data:** Setas ← → e DatePickerInput. Não é possível avançar além de hoje.
-- **Formulário de criação inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração. Criação sem modal; edição de registros existentes abre `EditTaskModal`.
+- **Layout em duas colunas:** formulário fixo à esquerda (`RetroactiveEntryForm`, coluna estreita e rolável), lista do dia à direita. Empilhados, os campos personalizados faziam o formulário crescer sem limite e empurravam os apontamentos para fora da tela.
+- **Formulário de criação inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim, Duração e os campos personalizados ativos. Criação sem modal; edição de registros existentes abre `EditTaskModal`.
+- **Rótulos como placeholder:** nesta coluna os campos personalizados usam `labelsAsPlaceholder`, para não alternar entre rótulo-acima e placeholder a cada linha. O checkbox é a exceção — não há onde exibir placeholder, então o rótulo vai ao lado da caixa.
 - **Modo de duração:** Toggle "Hora fim" / "Duração". Na duração, aceita `HH:MM:SS`, `MM:SS` ou inteiro (minutos).
 - **Overnight:** Se hora fim < hora início, considera-se que a tarefa cruzou meia-noite — end é atribuído ao dia seguinte.
 - **Cadeia de horários:** Após adicionar uma tarefa, o campo "Início" da próxima é automaticamente preenchido com o fim da tarefa recém-criada.

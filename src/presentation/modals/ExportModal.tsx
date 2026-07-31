@@ -19,7 +19,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { buildExportRows, toCSV, toJSON } from "@domain/utils/exportFormatter";
+import { buildExportRows, customColumnField, toCSV, toJSON } from "@domain/utils/exportFormatter";
+import type { CustomField } from "@domain/entities/CustomField";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -94,13 +96,32 @@ function SortableColumn({ col, idx, onToggle, onRename }: SortableColumnProps) {
 
 // ─── Aba Configurar Perfil ────────────────────────────────────────────────────
 
+/**
+ * Garante uma coluna por campo personalizado ativo. As novas entram
+ * **invisíveis**: um campo criado depois do perfil não pode mudar em silêncio o
+ * formato de um CSV que alguém já consome.
+ */
+function withCustomColumns(columns: ExportColumn[], fields: CustomField[]): ExportColumn[] {
+  const existing = new Set(columns.map((c) => c.field));
+  const missing = fields
+    .filter((f) => !existing.has(customColumnField(f.id)))
+    .map((f, i) => ({
+      field: customColumnField(f.id),
+      label: f.label,
+      visible: false,
+      order: columns.length + i,
+    }));
+  return [...columns, ...missing];
+}
+
 interface ProfileFormProps {
   initial: Partial<ExportProfile>;
+  customFields: CustomField[];
   onSave: (data: Omit<ExportProfile, "id" | "workspaceId">) => void;
   onCancel: () => void;
 }
 
-function ProfileForm({ initial, onSave, onCancel }: ProfileFormProps) {
+function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormProps) {
   const [name, setName] = useState(initial.name ?? "");
   const [format, setFormat] = useState<ExportFormat>(initial.format ?? "csv");
   const [separator, setSeparator] = useState<CsvSeparator>(initial.separator ?? "comma");
@@ -109,7 +130,9 @@ function ProfileForm({ initial, onSave, onCancel }: ProfileFormProps) {
   );
   const [dateFormat, setDateFormat] = useState<DateFormat>(initial.dateFormat ?? "iso");
   const [isDefault, setIsDefault] = useState(initial.isDefault ?? false);
-  const [columns, setColumns] = useState<ExportColumn[]>(initial.columns ?? [...DEFAULT_COLUMNS]);
+  const [columns, setColumns] = useState<ExportColumn[]>(
+    withCustomColumns(initial.columns ?? [...DEFAULT_COLUMNS], customFields)
+  );
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -257,6 +280,11 @@ function ProfileForm({ initial, onSave, onCancel }: ProfileFormProps) {
 export function ExportModal({ projects, categories, onClose }: ExportModalProps) {
   const { taskRepo } = useRepositories();
   const { profiles, create, update, remove, setDefault } = useExportProfiles();
+  // `fields` (e não `activeFields`) na exportação: um campo arquivado ainda tem
+  // valores gravados no histórico e a coluna precisa continuar resolvendo.
+  // `loading` importa: `ProfileForm` lê os campos uma única vez, no inicializador
+  // do seu state. Montá-lo antes da carga salvaria o perfil sem as colunas custom.
+  const { fields: customFields, activeFields, loading: customFieldsLoading } = useCustomFields();
   const [tab, setTab] = useState<Tab>("export");
   const [editingProfile, setEditingProfile] = useState<ExportProfile | null>(null);
 
@@ -292,7 +320,8 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
     setLoaded(true);
   }
 
-  // Agrupa tarefas selecionadas (mesmo nome + projeto + categoria = um registro)
+  // Agrupa tarefas selecionadas
+  // (mesmo nome + projeto + categoria + valores personalizados = um registro)
   const exportTasks = useMemo(() => {
     const sel = tasks.filter((t) => selected.has(t.id));
     const groups = groupTasks(sel);
@@ -329,7 +358,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
     if (!activeProfile) return;
     setExporting(true);
     try {
-      const rows = buildExportRows(exportTasks, activeProfile, projects, categories);
+      const rows = buildExportRows(exportTasks, activeProfile, projects, categories, customFields);
 
       if (activeProfile.format === "json") {
         const content = toJSON(rows);
@@ -585,9 +614,10 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
           )}
 
           {/* ── Aba Configurar Perfil ── */}
-          {tab === "edit-profile" && (
+          {tab === "edit-profile" && !customFieldsLoading && (
             <ProfileForm
               initial={editingProfile ?? {}}
+              customFields={activeFields}
               onSave={(data) => void handleSaveProfile(data)}
               onCancel={() => setTab("profiles")}
             />

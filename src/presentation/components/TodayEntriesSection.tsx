@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
@@ -53,6 +54,7 @@ export function TodayEntriesSection({
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      customValues: task.customValues,
     });
   }
 
@@ -81,6 +83,7 @@ export function TodayEntriesSection({
       projectId: string | null;
       categoryId: string | null;
       billable: boolean;
+      customValues: CustomValues;
     }
   ) {
     const nowISO = new Date().toISOString();

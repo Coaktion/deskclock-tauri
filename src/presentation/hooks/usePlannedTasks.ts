@@ -14,6 +14,7 @@ import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlann
 import { uncompletePlannedTask } from "@domain/usecases/plannedTasks/UncompletePlannedTask";
 import { duplicatePlannedTask } from "@domain/usecases/plannedTasks/DuplicatePlannedTask";
 import type { ScheduleType, PlannedTaskAction } from "@domain/entities/PlannedTask";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { UUID } from "@shared/types";
 
 interface CreateInput {
@@ -27,6 +28,7 @@ interface CreateInput {
   periodStart?: string | null;
   periodEnd?: string | null;
   actions?: PlannedTaskAction[];
+  customValues?: CustomValues;
 }
 
 interface UpdateInput {
@@ -40,6 +42,7 @@ interface UpdateInput {
   periodStart?: string | null;
   periodEnd?: string | null;
   actions?: PlannedTaskAction[];
+  customValues?: CustomValues;
 }
 
 function usePlannedTasksBase(

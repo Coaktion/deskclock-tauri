@@ -131,6 +131,7 @@ export function WeekPlanningView() {
       categoryId: task.categoryId,
       billable: task.billable,
       plannedTaskId: task.id,
+      customValues: task.customValues,
     });
     await reload();
   }

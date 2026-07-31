@@ -7,6 +7,9 @@ import { ToggleBillable } from "@presentation/components/ToggleBillable";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { CustomValues } from "@domain/entities/CustomField";
+import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 
 interface FormState {
   name: string;
@@ -21,6 +24,7 @@ interface FormState {
   periodStart: string;
   periodEnd: string;
   actions: PlannedTaskAction[];
+  customValues: CustomValues;
 }
 
 const INITIAL: FormState = {
@@ -36,6 +40,7 @@ const INITIAL: FormState = {
   periodStart: "",
   periodEnd: "",
   actions: [],
+  customValues: {},
 };
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -62,6 +67,7 @@ interface PlannedTaskFormProps {
     periodStart: string | null;
     periodEnd: string | null;
     actions: PlannedTaskAction[];
+    customValues: CustomValues;
   }) => Promise<void>;
 }
 
@@ -73,6 +79,7 @@ export function PlannedTaskForm({
   onSubmit,
 }: PlannedTaskFormProps) {
   const [form, setForm] = useState<FormState>({ ...INITIAL, scheduleDate: defaultDate });
+  const { activeFields } = useCustomFields();
   const [submitting, setSubmitting] = useState(false);
   const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
   const [newActionValue, setNewActionValue] = useState("");
@@ -122,6 +129,7 @@ export function PlannedTaskForm({
         periodStart: form.scheduleType === "period" ? form.periodStart || null : null,
         periodEnd: form.scheduleType === "period" ? form.periodEnd || null : null,
         actions: form.actions,
+        customValues: form.customValues,
       });
       setForm((prev) => ({
         ...INITIAL,
@@ -210,23 +218,51 @@ export function PlannedTaskForm({
           </button>
         </div>
 
+        {activeFields.length > 0 && (
+          <div className="border-t border-gray-800/60 px-3 py-2.5">
+            <CustomFieldInputs
+              fields={activeFields}
+              values={form.customValues}
+              onChange={(values) => set("customValues", values)}
+              onEnter={() => void handleSubmit()}
+              compact
+            />
+          </div>
+        )}
+
         {/* Actions section */}
         <div className="border-t border-gray-800/60 px-3 py-2.5 flex flex-col gap-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ações ao iniciar</p>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            Ações ao iniciar
+          </p>
 
           {form.actions.length > 0 && (
             <ul className="flex flex-col gap-1">
               {form.actions.map((action, i) => (
-                <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg">
-                  <span className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}>
-                    {action.type === "open_url" ? <ExternalLink size={13} /> : <FolderOpen size={13} />}
+                <li
+                  key={i}
+                  className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg"
+                >
+                  <span
+                    className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
+                  >
+                    {action.type === "open_url" ? (
+                      <ExternalLink size={13} />
+                    ) : (
+                      <FolderOpen size={13} />
+                    )}
                   </span>
                   <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
                     {action.value}
                   </span>
                   <button
                     type="button"
-                    onClick={() => set("actions", form.actions.filter((_, j) => j !== i))}
+                    onClick={() =>
+                      set(
+                        "actions",
+                        form.actions.filter((_, j) => j !== i)
+                      )
+                    }
                     className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
                     title="Remover"
                   >

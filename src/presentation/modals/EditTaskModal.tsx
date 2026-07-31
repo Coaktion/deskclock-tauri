@@ -3,9 +3,12 @@ import { X, DollarSign } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
@@ -48,6 +51,8 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
   const [billable, setBillable] = useState(task.billable);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(task.projectId);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(task.categoryId);
+  const { activeFields } = useCustomFields();
+  const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
 
   // Data de início (local) como referência para construir os ISOs
   const [startDate, setStartDate] = useState(localDateISO(task.startTime));
@@ -56,7 +61,9 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
   const initialEnd = task.endTime
     ? isoToHHMM(task.endTime)
     : isoToHHMM(
-        new Date(new Date(task.startTime).getTime() + (task.durationSeconds ?? 0) * 1000).toISOString()
+        new Date(
+          new Date(task.startTime).getTime() + (task.durationSeconds ?? 0) * 1000
+        ).toISOString()
       );
   const {
     startTime,
@@ -110,6 +117,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
         startTime: startISO,
         endTime: endISO,
         durationSeconds,
+        customValues,
       },
       new Date().toISOString()
     );
@@ -235,6 +243,13 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             />
             <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30…</span>
           </div>
+
+          <CustomFieldInputs
+            fields={activeFields}
+            values={customValues}
+            onChange={setCustomValues}
+            onEnter={() => void handleSave()}
+          />
         </div>
 
         <div className="flex justify-end gap-2 mt-5">

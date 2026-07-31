@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
@@ -14,6 +15,9 @@ export interface DraftState {
   categoryId: string | null;
   billable: boolean;
   plannedTaskId: string | null;
+  /** O omnibox não edita campos personalizados, mas carrega os da sugestão
+   *  escolhida — descartá-los jogaria a tarefa em outro grupo (§6.3). */
+  customValues: CustomValues;
 }
 
 const INITIAL_DRAFT: DraftState = {
@@ -24,6 +28,7 @@ const INITIAL_DRAFT: DraftState = {
   categoryId: null,
   billable: true,
   plannedTaskId: null,
+  customValues: {},
 };
 
 interface UseOmniboxDraftParams {
@@ -65,6 +70,7 @@ export function useOmniboxDraft({
       categoryId: draft.categoryId,
       billable: draft.billable,
       plannedTaskId: draft.plannedTaskId,
+      customValues: draft.customValues,
     });
     setDraft(INITIAL_DRAFT);
     setShowSuggestions(false);
@@ -80,6 +86,7 @@ export function useOmniboxDraft({
       categoryId: s.categoryId,
       billable: s.billable,
       plannedTaskId: s.plannedTaskId,
+      customValues: s.customValues,
     });
     setShowSuggestions(false);
     inputRef.current?.focus();

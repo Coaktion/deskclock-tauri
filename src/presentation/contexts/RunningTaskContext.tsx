@@ -1,4 +1,5 @@
 import type { Task } from "@domain/entities/Task";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
 import { pauseTask as pauseTaskUC } from "@domain/usecases/tasks/PauseTask";
@@ -23,6 +24,10 @@ interface StartInput {
   billable: boolean;
   startTime?: string;
   plannedTaskId?: string | null;
+  /** Quem inicia a partir de uma tarefa existente (planejada, entrada de hoje,
+   *  sugestão do omnibox) precisa repassá-los: eles entram na chave de
+   *  agrupamento (§6.3) e omiti-los criaria um grupo à parte. */
+  customValues?: CustomValues;
 }
 
 interface UpdateInput {
@@ -31,6 +36,7 @@ interface UpdateInput {
   categoryId?: string | null;
   billable?: boolean;
   startTime?: string;
+  customValues?: CustomValues;
 }
 
 export interface RunningTaskContextValue {

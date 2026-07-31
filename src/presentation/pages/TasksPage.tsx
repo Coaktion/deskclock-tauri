@@ -57,6 +57,7 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
       categoryId: task.categoryId,
       billable: task.billable,
       plannedTaskId: task.id,
+      customValues: task.customValues,
     });
     await reloadPlanned();
   }

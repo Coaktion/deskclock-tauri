@@ -8,6 +8,7 @@ import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLog
 import { TrackedMeetingRepository } from "@infra/database/TrackedMeetingRepository";
 import { MondayActivityItemRepository } from "@infra/database/MondayActivityItemRepository";
 import { WorkspaceRepository } from "@infra/database/WorkspaceRepository";
+import { CustomFieldRepository } from "@infra/database/CustomFieldRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
@@ -18,6 +19,7 @@ import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMee
 import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
 import type { IWorkspaceDataPort } from "@domain/repositories/IWorkspaceDataPort";
+import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
 
 export interface Repositories {
   taskRepo: ITaskRepository;
@@ -30,6 +32,7 @@ export interface Repositories {
   mondayActivityItemRepo: IMondayActivityItemRepository;
   workspaceRepo: IWorkspaceRepository;
   workspaceDataPort: IWorkspaceDataPort;
+  customFieldRepo: ICustomFieldRepository;
 }
 
 const RepositoriesContext = createContext<Repositories | null>(null);
@@ -56,6 +59,7 @@ export function RepositoriesProvider({
       // A mesma instância serve as duas portas: o adaptador implementa ambas.
       workspaceRepo: workspaceRepo,
       workspaceDataPort: workspaceRepo,
+      customFieldRepo: new CustomFieldRepository(),
     };
   }
   const repos = useMemo<Repositories>(() => ({ ...defaultsRef.current!, ...value }), [value]);
