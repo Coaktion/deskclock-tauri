@@ -487,11 +487,20 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 - `infra/database/` — repositórios SQLite com `getDb()` mockado via `vi.mock`
 - `infra/integrations/google/` — funções utilitárias puras (ex: `parseRRuleDays`)
 - `shared/utils/` — funções utilitárias sem side-effects
+- `presentation/hooks/` — hooks cuja lógica decide dados, com `renderHook` (ex:
+  `useMultiSelect`, que define o que uma exclusão sem confirmação apaga)
+
+> **Corrigido em 2026-07-31.** Esta seção afirmava que `@testing-library/react` "não está
+> configurado". Ele está no `package.json` desde antes e já era usado em
+> `src/tests/presentation/contexts/ConfigContext.test.tsx` — a afirmação levava agentes a pular
+> teste de hook achando que a ferramenta não existia.
 
 **O que não testamos (e por quê):**
-- Componentes React — requereria `@testing-library/react`, não configurado
+- Renderização de componentes React — decisão de custo, não de ferramenta: a asserção é sobre
+  markup, que muda a cada ajuste visual. Se a lógica valer teste, ela sai do componente e vira
+  hook ou use case.
 - `GoogleCalendarImporter` / `GoogleSheetsTaskSender` — dependem de `fetch` externo
-- Contexts React (`RunningTaskContext`) — acoplados ao runtime Tauri e DOM
+- Contexts React acoplados ao runtime Tauri (`RunningTaskContext`)
 
 **Convenções:**
 - Arquivos espelham o source: `src/tests/domain/usecases/plannedTasks/CreatePlannedTask.test.ts`
@@ -670,7 +679,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão)*
+*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão; §7.6: hooks de presentation são testáveis com `renderHook`)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
