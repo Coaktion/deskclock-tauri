@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { Task } from "@domain/entities/Task";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
@@ -162,6 +162,20 @@ export function useHistory() {
   );
 
   const reload = useCallback(() => search(filters), [search, filters]);
+
+  // Trocar de workspace não emite TASKS_CHANGED — nenhuma tarefa mudou, mudou o
+  // recorte. Sem isto os resultados na tela continuam sendo os do workspace
+  // anterior, já que a busca só roda quando o usuário a dispara.
+  //
+  // O ref é o que permite declarar todas as dependências: `reload` muda a cada
+  // ajuste de filtro, e sem o guarda a busca dispararia a cada tecla digitada
+  // no campo Nome.
+  const lastWorkspaceId = useRef(workspaceId);
+  useEffect(() => {
+    if (lastWorkspaceId.current === workspaceId) return;
+    lastWorkspaceId.current = workspaceId;
+    if (searched) void reload();
+  }, [workspaceId, searched, reload]);
 
   // Recarrega a busca atual quando tarefas mudam em qualquer janela
   useEffect(() => {

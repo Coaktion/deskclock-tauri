@@ -3,8 +3,10 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
+import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
+import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -171,18 +173,20 @@ export function RetroactivePage() {
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
+  // Pelos use cases, e sempre com o workspace ativo. Ir direto ao repositório
+  // sem o terceiro argumento é o caminho das integrações (§6.7) e devolvia as
+  // tarefas de todos os workspaces — a tela não mudava nada ao trocar de um
+  // para outro. `workspaceId` nas dependências é o que faz a troca recarregar.
   const loadTasks = useCallback(async () => {
-    const startBound = new Date(selectedDate + "T00:00:00").toISOString();
-    const endBound = new Date(selectedDate + "T23:59:59.999").toISOString();
-    const all = await taskRepo.findByDateRange(startBound, endBound);
+    const all = await getTasksForDate(taskRepo, selectedDate, workspaceId);
     const completed = all.filter((t) => t.status === "completed");
     setTasks([...completed].sort((a, b) => b.startTime.localeCompare(a.startTime)));
-  }, [taskRepo, selectedDate]);
+  }, [taskRepo, selectedDate, workspaceId]);
 
   const loadPlannedTasks = useCallback(async () => {
-    const all = await plannedTaskRepo.findForDate(selectedDate);
+    const all = await getPlannedTasksForDate(plannedTaskRepo, selectedDate, workspaceId);
     setPlannedTasks(all.filter((t) => !t.completedDates.includes(selectedDate)));
-  }, [plannedTaskRepo, selectedDate]);
+  }, [plannedTaskRepo, selectedDate, workspaceId]);
 
   const { activeFields } = useCustomFields();
   const form = useRetroactiveForm({
