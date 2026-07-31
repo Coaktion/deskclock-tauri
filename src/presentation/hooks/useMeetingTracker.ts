@@ -51,6 +51,11 @@ export function useMeetingTracker() {
   switchRef.current = switchToTask;
   const stopRef = useRef(stopTask);
   stopRef.current = stopTask;
+  // O efeito abaixo roda uma vez e captura o closure; sem o ref, o workspace
+  // congelaria no que estava ativo na montagem e toda reunião rastreada depois
+  // de uma troca cairia no workspace errado.
+  const workspaceIdRef = useRef(workspaceId);
+  workspaceIdRef.current = workspaceId;
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -77,7 +82,7 @@ export function useMeetingTracker() {
           fromISO: startOfDayISO(today),
           toISO: endOfDayISO(today),
           nowISO: new Date().toISOString(),
-          workspaceId,
+          workspaceId: workspaceIdRef.current,
         }
       ).catch(() => null); // busca é best-effort (rede/token)
       // Novas planejadas criadas → avisa a UI para atualizar a lista ao vivo.
@@ -146,7 +151,12 @@ export function useMeetingTracker() {
       }
 
       // Copia projeto/categoria da PlannedTask de mesmo nome, se houver.
-      const planned = await plannedTaskRepo.findForDate(today);
+      // Escopado ao workspace ativo de propósito: a tarefa nasce nele, e
+      // projeto e categoria são únicos POR workspace (§4.3) — casar com uma
+      // planejada de outro workspace colaria nela um projectId que não existe
+      // no seu. Aqui `findForDate` sem workspace não é o caminho de integração
+      // do §6.7; é um vazamento entre workspaces.
+      const planned = await plannedTaskRepo.findForDate(today, workspaceIdRef.current);
       const match = planned.find(
         (p) => p.name.toLowerCase().trim() === m.title.toLowerCase().trim()
       );

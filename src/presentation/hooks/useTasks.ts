@@ -43,7 +43,7 @@ export function useTasks() {
     const { start, end } = weekBoundsISO();
     const [tasks, weekData] = await Promise.all([
       getTasksForDate(taskRepo, todayISO(), workspaceId),
-      getWeekTotal(taskRepo, start, end),
+      getWeekTotal(taskRepo, start, end, workspaceId),
     ]);
 
     const completed = tasks.filter((t) => t.status === "completed");

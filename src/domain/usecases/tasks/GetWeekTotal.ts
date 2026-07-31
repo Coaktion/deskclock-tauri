@@ -5,14 +5,17 @@ interface WeekTotal {
   daysWorked: number;
 }
 
+/** `workspaceId` omitido soma as tarefas de todos os workspaces. */
 export async function getWeekTotal(
   repo: ITaskRepository,
   weekStartDate: string,
-  weekEndDate: string
+  weekEndDate: string,
+  workspaceId?: string
 ): Promise<WeekTotal> {
   const tasks = await repo.findByDateRange(
     `${weekStartDate}T00:00:00.000Z`,
-    `${weekEndDate}T23:59:59.999Z`
+    `${weekEndDate}T23:59:59.999Z`,
+    workspaceId
   );
 
   let totalSeconds = 0;

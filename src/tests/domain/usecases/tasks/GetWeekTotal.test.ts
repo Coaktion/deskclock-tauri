@@ -55,6 +55,23 @@ describe("getWeekTotal", () => {
     expect(result.totalSeconds).toBe(0);
   });
 
+  it("repassa o workspace ao repositório", async () => {
+    // Sem o terceiro argumento o repositório soma TODOS os workspaces (§6.7) —
+    // era o que fazia o total da semana divergir dos totais do dia ao lado.
+    const findByDateRange = vi.fn(async () => []);
+    const repo: ITaskRepository = {
+      save: vi.fn(),
+      update: vi.fn(),
+      findById: vi.fn(async () => null),
+      findByStatus: vi.fn(async () => []),
+      findByDateRange,
+      delete: vi.fn(),
+      deleteMany: vi.fn(),
+    };
+    await getWeekTotal(repo, "2026-04-07", "2026-04-13", "ws-2");
+    expect(findByDateRange).toHaveBeenCalledWith(expect.any(String), expect.any(String), "ws-2");
+  });
+
   it("conta apenas dias com tarefas", async () => {
     const tasks = [
       makeTask({ id: "t1", startTime: "2026-04-07T09:00:00.000Z", durationSeconds: 1800 }),
