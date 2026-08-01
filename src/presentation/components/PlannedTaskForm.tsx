@@ -6,10 +6,10 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import {
-    bareInputClass,
-    boxClass,
-    fieldClass,
-    formColumnClass,
+  bareInputClass,
+  boxClass,
+  fieldClass,
+  formColumnClass,
 } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { todayISO } from "@shared/utils/time";
@@ -259,7 +259,6 @@ export function PlannedTaskForm({
         onChange={(values) => set("customValues", values)}
         onEnter={() => void handleSubmit()}
         compact
-        labelsAsPlaceholder
         className="space-y-3"
       />
 

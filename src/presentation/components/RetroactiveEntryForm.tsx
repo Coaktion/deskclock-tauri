@@ -4,12 +4,12 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import {
-    bareInputClass,
-    boxClass,
-    fieldClass,
-    formColumnClass,
-    notchedBoxClass,
-    notchedLabelClass,
+  bareInputClass,
+  boxClass,
+  fieldClass,
+  formColumnClass,
+  notchedBoxClass,
+  notchedLabelClass,
 } from "@presentation/components/fieldStyles";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { DollarSign } from "lucide-react";
@@ -100,7 +100,6 @@ export function RetroactiveEntryForm({
         onChange={form.setCustomValues}
         onEnter={() => void form.handleAdd()}
         compact
-        labelsAsPlaceholder
         className="space-y-3"
       />
 

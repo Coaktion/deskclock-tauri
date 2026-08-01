@@ -1,31 +1,23 @@
-import type { Category } from "@domain/entities/Category";
-import type { Project } from "@domain/entities/Project";
 import { Send } from "lucide-react";
 import { MondayAutoSyncSection } from "./MondayAutoSyncSection";
-import { MondayMappingsSection } from "./MondayMappingsSection";
+import { MondayImportSection } from "./MondayImportSection";
 import { MondayWorkspaceSection } from "./MondayWorkspaceSection";
 
 interface MondayConnectedSectionsProps {
-  projects: Project[];
-  categories: Category[];
   reloadProjects: () => Promise<void>;
+  reloadCategories: () => Promise<void>;
   onShowSendModal: () => void;
 }
 
 export function MondayConnectedSections({
-  projects,
-  categories,
   reloadProjects,
+  reloadCategories,
   onShowSendModal,
 }: MondayConnectedSectionsProps) {
   return (
     <>
       <MondayWorkspaceSection />
-      <MondayMappingsSection
-        projects={projects}
-        categories={categories}
-        reloadProjects={reloadProjects}
-      />
+      <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
       <MondayAutoSyncSection />
       <div className="border-t border-gray-800 px-4 py-3">
         <button

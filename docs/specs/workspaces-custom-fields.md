@@ -5,8 +5,8 @@
 - **Project classification:** Current (React 19, TS 5, Vitest 3, CLAUDE.md + CI presentes)
 - **Coverage tier:** A (`domain/usecases/`, repositórios, migrations) / B–C (UI, sem testes de
   renderização — padrão do projeto, §7.6 do `CLAUDE.md`)
-- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 a 3
-  concluídas (0 e 1 validadas no app em 2026-07-30/31; 2 e 3 em 2026-07-31); Fases 4 e 5 pendentes
+- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 a 4
+  concluídas (0 e 1 validadas no app em 2026-07-30/31; 2, 3 e 4 em 2026-07-31); Fase 5 pendente
 
 > Este documento é a **ordem de trabalho** para a fase de Execute. Foi escrito para ser lido
 > por um agente sem acesso à conversa que o originou — todas as decisões e o porquê delas
@@ -44,7 +44,11 @@
 
    Ao escopar algo novo, verifique os três: chega o argumento, algo dispara o recarregamento, e o
    valor lido é o atual.
-7. **As duas telas de entrada são espelhadas.** Lançamento Manual e Planejamento usam formulário
+7. **Project Stage e Activity Type não são atributos de categoria.** Desde a Fase 4 a etapa é o
+   campo personalizado apontado por `mondayProjectStageFieldId` — e o que a tarefa grava é o **id
+   da opção**, não o rótulo. O Activity Type é o **nome** da categoria, importado do board. Não
+   existe mais tabela de mapeamento para nenhum dos dois.
+8. **As duas telas de entrada são espelhadas.** Lançamento Manual e Planejamento usam formulário
    em coluna à esquerda e lista à direita, com o vocabulário visual dos campos em
    `presentation/components/fieldStyles.ts`. **Não duplicar essas classes** — mexer numa tela sem
    a outra as desalinha em silêncio.
@@ -400,7 +404,8 @@ irrevisável. Os arquivos novos da fase estão todos em verde.
 - `startPlannedTask` (`domain/usecases/plannedTasks/StartPlannedTask.ts`) **não tem chamador de
   produção** — só testes. Os quatro Play reais montam o input à mão e chamam `startTask`. É
   anterior a esta fase; a fase apenas passou a repassar `customValues` nesses quatro caminhos.
-  Decidir na Fase 4 se ele vira o caminho único ou se sai.
+  **A Fase 4 não decidiu** — nada nela tocou o Play de tarefa planejada. Segue em aberto para a
+  Fase 5 ou para um `refactor:` próprio.
 - `domain/usecases/monday/groupTasksForMonday.ts` contém um byte NUL literal, o que faz o git
   tratar o arquivo como binário — nenhum diff dele é revisável. Também anterior à fase. Trocar
   por `\0` escapado num `fix:` separado.
@@ -415,10 +420,15 @@ irrevisável. Os arquivos novos da fase estão todos em verde.
   conectado e é a única porta do `ImportCalendarModal`. O usuário cogitou removê-lo achando que
   estava sobrando. Nada foi feito — se for remover, saem botão, modal e o §5.3 do `CLAUDE.md`.
 - `useHistory.ts` tem uma cópia privada de `localDateISO`, que já existe em `shared/utils/time`.
+- **Os testes do Monday constroem sender e strategy à mão.** `MondayTaskSender.test.ts` repete o
+  construtor ~40 vezes e `MondaySyncStrategy.test.ts` 13 — cada repositório novo injetado vira 53
+  edições mecânicas (aconteceu duas vezes na Fase 4). A §7.6 pede factory por arquivo de teste:
+  falta um `makeSender(overrides)` / `makeStrategy(config, deps)`. Apontado pelo gate da Fase 4 e
+  adiado de propósito, para não misturar refactor de teste com o diff da feature.
 
 ---
 
-### Fase 4 — Monday adota o custom field
+### Fase 4 — Monday adota o custom field ✅ **CONCLUÍDA em 2026-07-31**
 
 1. **`MondayCategoryMapping.projectStageLabel` sai.** Sem back-compat: a integração não tem base
    instalada.
@@ -433,6 +443,100 @@ irrevisável. Os arquivos novos da fase estão todos em verde.
    coincidem e não existe segunda tabela de mapeamento.
 6. `MondayTaskSender` / `buildActivityColumnValues`: `projectStageLabel` passa a vir de
    `task.customValues[mondayProjectStageFieldId]`.
+
+#### 4.1 Desvios e detalhes que o plano não previa
+
+- **O sender precisa da definição do campo, não só do valor.** A tarefa grava o **id da opção**
+  (`serializeCustomValue`), e o Monday espera o **rótulo**. `MondayTaskSender` recebeu um
+  `ICustomFieldRepository` e traduz com `formatCustomValue`; a definição é lida uma vez por envio,
+  não por grupo. `MondaySyncStrategy` só repassa o repositório — o que fez o parâmetro subir até
+  `IntegrationsContext` e `AutoSyncContext`.
+- **Duas pastas não cabiam em `filterProjectBoards`.** Nasceu
+  `domain/usecases/monday/selectImportBoards.ts`. A parte não óbvia: sem pasta de clientes escolhida
+  **não há filtro de pasta nenhum**, então a pasta interna precisa ser excluída explicitamente — do
+  contrário todos os boards internos entram como projetos de cliente, exatamente o oposto da regra
+  de "um board interno só".
+- **O vínculo do campo aceita campo existente.** Além de criar a partir da coluna, o select lista os
+  campos do tipo `select`. E criar quando já existe um campo com o mesmo rótulo **vincula** o
+  existente em vez de estourar `DuplicateNameError`.
+- **`useCustomFields.createField` passou a devolver o campo criado.** Sem o id de volta não há como
+  gravar `mondayProjectStageFieldId` logo após criar.
+- **O valor antigo de `mondayProjectsFolderId` fica órfão na tabela `config`.** Sem base instalada,
+  não há o que migrar; a chave simplesmente deixa de ser lida.
+
+#### 4.2 Segunda rodada — o mapeamento de categoria também sai
+
+Pedidos do usuário depois de validar o import no app:
+
+- **`MondayCategoryMapping` foi excluído.** Agora que existe workspace, o Activity Type é importado
+  como Categoria e os dois casam **pelo nome**. `importMondayCategories` cria uma categoria por
+  rótulo; `default_billable` vem da pasta — cliente billable, board interno non-billable. Rótulo
+  presente nos dois lados fica billable (trabalho de cliente é o caso majoritário, e o padrão é só
+  um padrão). Categoria que já existe **não** é alterada: sobrescrever apagaria a escolha do
+  usuário.
+- **O sender só grava o Activity Type se o nome da categoria estiver entre os rótulos do board.**
+  `MondayProjectMapping` passou a cachear `activityTypeLabels`, `projectStageLabels` e
+  `projectStageTitle` no import. Sem essa guarda, uma categoria criada à mão viraria um rótulo
+  inexistente na coluna status e o Monday **recusaria a escrita inteira** — um envio correto cairia
+  por causa de uma categoria não relacionada. O sender recebeu `ICategoryRepository` (sem escopo de
+  workspace, §9.5).
+- **O cache dos rótulos matou uma chamada de API.** A seção de mapeamentos consultava
+  `getBoardSchema` do primeiro board mapeado para popular os selects; agora tudo vem do que o import
+  já gravou.
+- **`Mapeamentos` virou `Importação de dados`**, com seletor de **workspace de destino** (não troca
+  o ativo do app, então não esbarra na guarda de tarefa em execução) e três blocos com ação de
+  atualizar: Projetos, Categorias e Project Stage. O arquivo virou quatro: `MondayImportSection`
+  (casca), `MondayProjectsImport`, `MondayCategoriesImport` e `MondayProjectStageField`.
+- **Os boards recusados passaram a aparecer.** `skipped[].reason` já existia e era descartado: a
+  tela mostrava só "N boards fora do template" e não havia como saber qual coluna faltava.
+- **"Atualizar" no Project Stage faz união, nunca substituição.** `updateCustomField` casa as opções
+  pelo rótulo e preserva o id — que é o valor gravado nas tarefas.
+- **O catálogo do Monday virou cache em config.** Workspaces, pastas e boards eram buscados na API a
+  cada abertura da tela, sem indicação de carregamento — em conta grande a seção passava segundos
+  parecendo quebrada. `useMondayCatalog` hidrata do cache, só busca quando não há nada, e o botão de
+  atualizar que já existia passou a recarregar os três. Trocar o workspace do Monday limpa o cache,
+  porque pasta e board do anterior não valem mais.
+- **Vínculo de projeto sobrevive a apagar o projeto.** O mapeamento mora na config, não no banco:
+  apagar os projetos na tela de Dados deixava a lista de importação mostrando tudo como vinculado,
+  porque a linha caía no nome do board. `MondayProjectsImport` agora confere contra os projetos que
+  existem **no destino** e separa os vínculos órfãos num aviso.
+- **A guarda de rótulo vale para as duas colunas.** O gate do `@code-quality-reviewer` pegou que o
+  Project Stage tinha ficado sem ela: o campo personalizado é editável na tela de Dados e pode ser
+  vinculado a um campo que nunca veio do board, então a opção escolhida pode não existir na coluna.
+  Hoje `activityTypeLabel` **e** `projectStageLabel` são conferidos contra o cache do mapeamento.
+- **`parseStatusLabels` apara na origem.** Todo o lado DeskClock apara (`createCategory`,
+  `buildOptions`); sem o trim ali, um rótulo do Monday com espaço nas pontas viraria categoria
+  `"Development"` e ficaria `" Development "` no cache — e o casamento por nome falharia em silêncio,
+  sumindo com a coluna Activity Type de toda tarefa daquela categoria.
+- **Start Date e End Date só no create.** As duas colunas de data recebem o instante do envio, mas
+  ficam **fora** do `updateValues`: repetidas no update, o payload mudaria a cada execução, nenhum
+  grupo cairia mais no skip por "nada mudou" e o envio diário voltaria a chamar a API para tudo.
+  Os ids vêm por título, com o id do template (`date_mm33tthy`/`date_mm33zcmr`) como reserva — e o
+  id de reserva só é usado se a coluna **existir no schema**, porque mandar coluna inexistente faz
+  o Monday recusar a escrita inteira. O valor vai em **UTC**, que é como o Monday guarda `date`.
+- **O modal de edição adotou o `fieldStyles.ts`** e os campos personalizados subiram para antes de
+  data e horas. São agora **três** telas presas ao mesmo vocabulário visual — mexer numa sem as
+  outras desalinha em silêncio. Data e duração dividem uma linha, e o `DatePickerInput` ganhou uma
+  prop `label` opcional para vestir a mesma caixa de rótulo encaixado.
+- **Rótulo flutuante, só nos campos personalizados.** Eles são os únicos dinâmicos: "Project Stage"
+  não se explica pela posição no formulário como Nome e Projeto se explicam, então o rótulo precisa
+  sobreviver ao preenchimento. Começa como placeholder e sobe para a mesma posição do rótulo
+  encaixado dos campos de hora. Isso **matou os dois modos** que existiam (`labelsAsPlaceholder` vs
+  rótulo-acima) — um só desenho serve à coluna estreita e ao modal.
+  - Sem JavaScript: o estado vem de `:focus` e `:placeholder-shown` lidos com `group-*`. Por isso
+    todo controle leva `placeholder=" "` — sem placeholder, `:placeholder-shown` nunca casa.
+  - O grupo é **nomeado** (`group/cf`). `group-*` casa com qualquer ancestral que tenha `.group`:
+    um card acima usando `group` para hover faria todos os rótulos flutuarem juntos, sem erro
+    nenhum para avisar.
+  - As 18 regras foram conferidas no CSS emitido (`vite build`), não só no código: variante que o
+    scanner do Tailwind não enxerga não vira CSS e falha em silêncio.
+- **Campo novo dentro de JSON já gravado não ganha default.** O `DEFAULTS` do `ConfigContext`
+  completa **chaves** ausentes de `AppConfig`, mas não olha dentro do array de
+  `mondayProjectMapping`: os vínculos importados antes desta rodada voltaram sem
+  `activityTypeLabels`/`projectStageLabels`, e ler `.length` derrubou a página de integrações
+  inteira. `normalizeProjectMappings` normaliza na leitura (tela e sender). **"Sem base instalada"
+  vale para o esquema, não para a máquina de quem já usou a feature** — ao acrescentar campo em
+  qualquer config que seja JSON, normalize na leitura.
 
 ---
 
@@ -488,7 +592,7 @@ Suítes que já estão modificadas na árvore e mudam de novo: `taskValidation.t
 | 1 | ✅ Workspaces: schema, backfill, repos, seletor, escopo na UI, mover/copiar | — |
 | 2 | ✅ Multi-select na tela de Dados | 1 |
 | 3 | ✅ Custom fields: EAV, CRUD, captura na tarefa, chave de agrupamento | 1 |
-| 4 | Monday: Project Stage vira custom field; board interno único | 3 |
+| 4 | ✅ Monday: Project Stage vira custom field; board interno único | 3 |
 | 5 | `MondayImportModal` + `MondayEntriesModal` | 4 |
 
 Cada fase termina no gate obrigatório: `pnpm lint`, prettier, `@code-quality-reviewer` limpo,

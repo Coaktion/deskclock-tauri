@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildActivityColumnValues,
+  buildActivityDateColumns,
   secondsToDecimalHours,
   serializeNumber,
   serializePerson,
@@ -104,6 +105,24 @@ describe("buildActivityColumnValues", () => {
     });
 
     expect(Object.keys(values)).not.toContain("color_mm19zrwg");
+  });
+
+  it("grava Start Date e End Date com o instante do envio, em UTC", () => {
+    const values = buildActivityDateColumns(
+      { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
+      "2026-07-31T18:05:09.000Z"
+    );
+
+    // O Monday guarda a coluna `date` em UTC e exibe no fuso da conta; mandar a
+    // hora local deslocaria o horário exibido.
+    expect(values).toEqual({
+      date_mm33tthy: { date: "2026-07-31", time: "18:05:09" },
+      date_mm33zcmr: { date: "2026-07-31", time: "18:05:09" },
+    });
+  });
+
+  it("omite as datas quando o board não tem as colunas", () => {
+    expect(buildActivityDateColumns(COLUMNS, "2026-07-31T18:05:09.000Z")).toEqual({});
   });
 
   it("permite sobrescrever o status final", () => {

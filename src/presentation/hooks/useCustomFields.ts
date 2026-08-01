@@ -32,10 +32,12 @@ export function useCustomFields() {
     void load();
   }, [load]);
 
+  /** Devolve o campo criado: quem cria a partir de uma integração precisa do id. */
   const handleCreate = useCallback(
     async (input: CreateCustomFieldInput) => {
-      await createCustomField(customFieldRepo, input, new Date().toISOString());
+      const field = await createCustomField(customFieldRepo, input, new Date().toISOString());
       await load();
+      return field;
     },
     [customFieldRepo, load]
   );

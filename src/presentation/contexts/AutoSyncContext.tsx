@@ -36,17 +36,38 @@ export function AutoSyncProvider({
   value?: AutoSyncApi;
 }) {
   const config = useAppConfig();
-  const { taskRepo, projectRepo, categoryRepo, taskLogRepo, mondayActivityItemRepo } =
-    useRepositories();
+  const {
+    taskRepo,
+    projectRepo,
+    categoryRepo,
+    taskLogRepo,
+    mondayActivityItemRepo,
+    customFieldRepo,
+  } = useRepositories();
 
   const runner = useMemo(() => {
     const strategies: ISyncStrategy[] = [
       new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
       new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
-      new MondaySyncStrategy(config, taskRepo, taskLogRepo, mondayActivityItemRepo),
+      new MondaySyncStrategy(
+        config,
+        taskRepo,
+        taskLogRepo,
+        mondayActivityItemRepo,
+        customFieldRepo,
+        categoryRepo
+      ),
     ];
     return new AutoSyncRunner(strategies);
-  }, [config, taskRepo, projectRepo, categoryRepo, taskLogRepo, mondayActivityItemRepo]);
+  }, [
+    config,
+    taskRepo,
+    projectRepo,
+    categoryRepo,
+    taskLogRepo,
+    mondayActivityItemRepo,
+    customFieldRepo,
+  ]);
 
   const subscribe = useCallback((cb: () => void) => runner.subscribe(cb), [runner]);
   const getSnapshot = useCallback(() => runner.getVersion(), [runner]);

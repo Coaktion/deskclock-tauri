@@ -42,7 +42,7 @@ export function IntegrationsProvider({
   value?: Partial<IntegrationFactories>;
 }) {
   const config = useAppConfig();
-  const { mondayActivityItemRepo } = useRepositories();
+  const { mondayActivityItemRepo, customFieldRepo, categoryRepo } = useRepositories();
   const defaults = useMemo<IntegrationFactories>(
     () => ({
       createCalendarImporter: () => new GoogleCalendarImporter(config),
@@ -51,10 +51,11 @@ export function IntegrationsProvider({
         new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories),
       createClockifyTaskSender: () => new ClockifyTaskSender(config),
       createClockifyApi: (apiKey) => new ClockifyClient(apiKey ?? config.get("clockifyApiKey")),
-      createMondayTaskSender: () => new MondayTaskSender(config, mondayActivityItemRepo),
+      createMondayTaskSender: () =>
+        new MondayTaskSender(config, mondayActivityItemRepo, customFieldRepo, categoryRepo),
       createMondayApi: (apiKey) => new MondayClient(apiKey ?? config.get("mondayApiKey")),
     }),
-    [config, mondayActivityItemRepo]
+    [config, mondayActivityItemRepo, customFieldRepo, categoryRepo]
   );
   const factories = useMemo(() => ({ ...defaults, ...value }), [defaults, value]);
   return <IntegrationsContext.Provider value={factories}>{children}</IntegrationsContext.Provider>;

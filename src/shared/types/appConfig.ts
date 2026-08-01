@@ -5,11 +5,8 @@ import type {
   ClockifyProjectMapping,
   ClockifyCategoryMapping,
 } from "@shared/types/clockifyConfig";
-import type {
-  MondayWorkspaceRef,
-  MondayProjectMapping,
-  MondayCategoryMapping,
-} from "@shared/types/mondayConfig";
+import type { MondayWorkspaceRef, MondayProjectMapping } from "@shared/types/mondayConfig";
+import type { MondayBoardRef, MondayFolder } from "@shared/types/monday";
 
 export interface OverlayPosition {
   x: number;
@@ -105,11 +102,30 @@ export interface AppConfig {
   mondayUserEmail: string;
   mondayActiveWorkspaceId: string;
   mondayActiveWorkspaceName: string;
+  /**
+   * Catálogo do Monday cacheado: sem ele a tela de importação refazia três
+   * chamadas à API a cada abertura. Recarregado só pelo botão de atualizar ou
+   * quando o workspace do Monday muda.
+   */
   mondayWorkspaceCache: MondayWorkspaceRef[];
-  /** Pasta "Projetos" escolhida; vazio = sem filtro de pasta (fallback por nome). */
-  mondayProjectsFolderId: string;
+  mondayFolderCache: MondayFolder[];
+  mondayBoardCache: MondayBoardRef[];
+  /** Pasta dos boards de cliente; vazio = sem filtro de pasta (fallback por nome). */
+  mondayClientsFolderId: string;
+  /** Pasta dos boards internos; vazio = nenhum board interno é importado. */
+  mondayInternalFolderId: string;
+  /**
+   * Board interno **único** escolhido pelo usuário. Vira um Project como
+   * qualquer outro — a granularidade interna vem da categoria. Escolher outro
+   * substitui o anterior.
+   */
+  mondayInternalBoardId: string;
+  /**
+   * Campo personalizado que alimenta a coluna "Project Stage" da atividade.
+   * Vazio = a coluna não é preenchida.
+   */
+  mondayProjectStageFieldId: string;
   mondayProjectMapping: MondayProjectMapping[];
-  mondayCategoryMapping: MondayCategoryMapping[];
   mondayAutoSync: boolean;
   mondayAutoSyncMode: "per-task" | "daily";
   mondayAutoSyncTrigger: "on-open" | "fixed-time";

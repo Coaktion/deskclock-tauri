@@ -5,6 +5,8 @@ import type { IMondayConfigPort } from "@domain/integrations/IMondayConfigPort";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
+import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import type { MondayDailySyncDeps } from "@infra/integrations/runMondayDailySync";
 
 const sendMock = vi.fn(async (_tasks: Task[]) => {});
@@ -39,6 +41,9 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
         mondayBoardId: "b1",
         mondayBoardName: "Board",
         activitiesGroupId: "g1",
+        activityTypeLabels: ["Development"],
+        projectStageLabels: [],
+        projectStageTitle: "",
         columnIds: {
           reportedHours: "num",
           billingType: "billing",
@@ -76,6 +81,29 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
+/** A strategy só repassa os repositórios ao sender, que aqui está mockado. */
+function makeCategoryRepo(): ICategoryRepository {
+  return {
+    findAll: vi.fn(async () => []),
+    findByName: vi.fn(async () => null),
+    save: vi.fn(async () => {}),
+    update: vi.fn(async () => {}),
+    delete: vi.fn(async () => {}),
+    deleteMany: vi.fn(async () => {}),
+  };
+}
+
+function makeFieldRepo(): ICustomFieldRepository {
+  return {
+    findAll: vi.fn(async () => []),
+    findById: vi.fn(async () => null),
+    findByLabel: vi.fn(async () => null),
+    save: vi.fn(async () => {}),
+    update: vi.fn(async () => {}),
+    delete: vi.fn(async () => {}),
+  };
+}
+
 function makeDeps(sameDayTasks: Task[] = []) {
   const taskRepo = {
     findByDateRange: vi.fn(async () => sameDayTasks),
@@ -100,7 +128,14 @@ describe("MondaySyncStrategy", () => {
   describe("habilitação", () => {
     it("per-task só habilita com auto-sync, modo, token e workspace", () => {
       const { taskRepo, logRepo, itemRepo } = makeDeps();
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       expect(strategy.isPerTaskEnabled()).toBe(true);
       expect(strategy.isDailyEnabled()).toBe(false);
@@ -112,7 +147,9 @@ describe("MondaySyncStrategy", () => {
         makeConfig({ mondayApiKey: "" }),
         taskRepo,
         logRepo,
-        itemRepo
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
       );
       expect(strategy.isPerTaskEnabled()).toBe(false);
     });
@@ -123,7 +160,9 @@ describe("MondaySyncStrategy", () => {
         makeConfig({ mondayActiveWorkspaceId: "" }),
         taskRepo,
         logRepo,
-        itemRepo
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
       );
       expect(strategy.isPerTaskEnabled()).toBe(false);
     });
@@ -134,7 +173,9 @@ describe("MondaySyncStrategy", () => {
         makeConfig({ mondayAutoSyncMode: "daily" }),
         taskRepo,
         logRepo,
-        itemRepo
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
       );
       expect(strategy.isDailyEnabled()).toBe(true);
       expect(strategy.isPerTaskEnabled()).toBe(false);
@@ -149,7 +190,14 @@ describe("MondaySyncStrategy", () => {
         makeTask({ id: "t2", durationSeconds: 1800 }),
         makeTask({ id: "t3", workspaceId: "ws-1", name: "Outra tarefa", durationSeconds: 3600 }),
       ]);
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       const result = await strategy.runPerTask(task);
 
@@ -165,7 +213,14 @@ describe("MondaySyncStrategy", () => {
         task,
         makeTask({ id: "outro-projeto", workspaceId: "ws-1", projectId: "proj-2" }),
       ]);
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       await strategy.runPerTask(task);
 
@@ -175,7 +230,14 @@ describe("MondaySyncStrategy", () => {
     it("não duplica a própria tarefa quando o repositório já a devolve", async () => {
       const task = makeTask({ id: "t1", durationSeconds: 900 });
       const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       await strategy.runPerTask(task);
 
@@ -188,7 +250,14 @@ describe("MondaySyncStrategy", () => {
         task,
         makeTask({ id: "t2", durationSeconds: 1800, status: "running" }),
       ]);
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       await strategy.runPerTask(task);
 
@@ -201,7 +270,9 @@ describe("MondaySyncStrategy", () => {
         makeConfig({ mondayProjectMapping: [] }),
         taskRepo,
         logRepo,
-        itemRepo
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
       );
 
       const result = await strategy.runPerTask(makeTask());
@@ -214,7 +285,14 @@ describe("MondaySyncStrategy", () => {
 
     it("avisa sem enviar quando faltam dados na tarefa", async () => {
       const { taskRepo, logRepo, itemRepo } = makeDeps();
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       const result = await strategy.runPerTask(makeTask({ projectId: null }));
 
@@ -227,7 +305,14 @@ describe("MondaySyncStrategy", () => {
       sendMock.mockRejectedValueOnce(new Error("Monday fora do ar"));
       const task = makeTask();
       const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       const result = await strategy.runPerTask(task);
 
@@ -239,7 +324,14 @@ describe("MondaySyncStrategy", () => {
       const task = makeTask();
       const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
       const config = makeConfig();
-      const strategy = new MondaySyncStrategy(config, taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        config,
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       await strategy.runPerTask(task);
 
@@ -255,7 +347,14 @@ describe("MondaySyncStrategy", () => {
         mondayAutoSyncMode: "daily",
         mondayDailySyncLastTimestamp: "2026-07-29T00:00:00.000Z",
       });
-      const strategy = new MondaySyncStrategy(config, taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        config,
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       await strategy.runDaily("2026-07-30");
 
@@ -273,7 +372,14 @@ describe("MondaySyncStrategy", () => {
 
     it("o validate exige nome, projeto E board mapeado", async () => {
       const { taskRepo, logRepo, itemRepo } = makeDeps();
-      const strategy = new MondaySyncStrategy(makeConfig(), taskRepo, logRepo, itemRepo);
+      const strategy = new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
 
       await strategy.runDaily("2026-07-30");
       const { validate } = dailyMock.mock.calls[0][0];

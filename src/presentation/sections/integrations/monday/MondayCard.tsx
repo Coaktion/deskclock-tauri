@@ -11,8 +11,8 @@ import { MondayLogo } from "./MondayLogo";
 
 export function MondayIntegrationCard() {
   const config = useAppConfig();
-  const { projects, reload: reloadProjects } = useProjects();
-  const { categories } = useCategories();
+  const { reload: reloadProjects } = useProjects();
+  const { reload: reloadCategories } = useCategories();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,8 +41,12 @@ export function MondayIntegrationCard() {
     await config.set("mondayUserEmail", "");
     await config.set("mondayActiveWorkspaceId", "");
     await config.set("mondayActiveWorkspaceName", "");
-    await config.set("mondayProjectsFolderId", "");
+    await config.set("mondayClientsFolderId", "");
+    await config.set("mondayInternalFolderId", "");
+    await config.set("mondayInternalBoardId", "");
     await config.set("mondayWorkspaceCache", []);
+    await config.set("mondayFolderCache", []);
+    await config.set("mondayBoardCache", []);
     setConnected(false);
     setEmail("");
     setLoading(false);
@@ -88,9 +92,8 @@ export function MondayIntegrationCard() {
 
         {connected && (
           <MondayConnectedSections
-            projects={projects}
-            categories={categories}
             reloadProjects={reloadProjects}
+            reloadCategories={reloadCategories}
             onShowSendModal={() => openModal("monday-send")}
           />
         )}

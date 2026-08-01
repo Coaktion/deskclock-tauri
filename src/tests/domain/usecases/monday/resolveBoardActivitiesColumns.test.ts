@@ -29,7 +29,52 @@ function makeSchema(overrides: Partial<MondayBoardSchema> = {}): MondayBoardSche
   };
 }
 
+/** Colunas de data como o template as expõe, com título e id conhecidos. */
+const DATE_COLUMNS = [
+  { id: "date_mm33tthy", title: "Start Date", type: "date" },
+  { id: "date_mm33zcmr", title: "End Date", type: "date" },
+];
+
 describe("resolveBoardActivitiesColumns", () => {
+  it("resolve as colunas de data pelo título", () => {
+    const schema = makeSchema({ columns: [...makeSchema().columns, ...DATE_COLUMNS] });
+
+    const result = resolveBoardActivitiesColumns(schema);
+
+    expect(result).toMatchObject({
+      ok: true,
+      columnIds: { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
+    });
+  });
+
+  it("cai no id do template quando o título da coluna de data é outro", () => {
+    const schema = makeSchema({
+      columns: [
+        ...makeSchema().columns,
+        { id: "date_mm33tthy", title: "Início previsto", type: "date" },
+        { id: "date_mm33zcmr", title: "Término previsto", type: "date" },
+      ],
+    });
+
+    const result = resolveBoardActivitiesColumns(schema);
+
+    expect(result).toMatchObject({
+      ok: true,
+      columnIds: { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
+    });
+  });
+
+  it("omite as datas quando o board não tem as colunas", () => {
+    // O id do template nunca é assumido às cegas: mandar coluna inexistente faz
+    // o Monday recusar a escrita inteira.
+    const result = resolveBoardActivitiesColumns(makeSchema());
+
+    expect(result).toMatchObject({ ok: true });
+    if (!result.ok) return;
+    expect(result.columnIds.startDate).toBeUndefined();
+    expect(result.columnIds.endDate).toBeUndefined();
+  });
+
   it("resolve grupo e colunas pelos títulos", () => {
     const result = resolveBoardActivitiesColumns(makeSchema());
 

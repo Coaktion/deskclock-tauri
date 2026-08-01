@@ -6,19 +6,43 @@ import {
   MondayNetworkError,
 } from "@infra/integrations/monday/errors";
 import type { Task } from "@domain/entities/Task";
+import type { CustomField } from "@domain/entities/CustomField";
+import type { Category } from "@domain/entities/Category";
+import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import type { IMondayApi } from "@domain/integrations/IMondayApi";
 import type { IMondayConfigPort } from "@domain/integrations/IMondayConfigPort";
+import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
 import type {
   IMondayActivityItemRepository,
   MondayActivityItemRecord,
 } from "@domain/repositories/IMondayActivityItemRepository";
 import type { AppConfig } from "@shared/types/appConfig";
-import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
+import type { MondayActivityColumnIds, MondayProjectMapping } from "@shared/types/mondayConfig";
 
 const WORKSPACE_ID = "15505674";
 const BOARD_ID = "9001";
 const GROUP_ID = "group_mm2e2g9j";
 const USER_ID = "21181483";
+
+/** Rótulos da coluna Activity Type do board; a categoria casa com eles pelo nome. */
+const ACTIVITY_TYPE_LABELS = ["Development", "Meeting"];
+
+const STAGE_FIELD_ID = "field-stage";
+const STAGE_OPTION_ID = "opt-execucao";
+
+/** Campo personalizado que alimenta o Project Stage — semeado a partir do board. */
+const STAGE_FIELD: CustomField = {
+  id: STAGE_FIELD_ID,
+  label: "Project Stage",
+  type: "select",
+  options: [
+    { id: STAGE_OPTION_ID, label: "Execução" },
+    { id: "opt-discovery", label: "Discovery" },
+  ],
+  sortOrder: 0,
+  archived: false,
+  createdAt: "2026-07-30T12:00:00.000Z",
+};
 
 const COLUMN_IDS: MondayActivityColumnIds = {
   reportedHours: "numeric_mm33gj5m",
@@ -29,29 +53,28 @@ const COLUMN_IDS: MondayActivityColumnIds = {
   person: "person",
 };
 
+/** Só os boards com as colunas de data recebem Start/End Date. */
+const DATE_COLUMN_IDS = { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" };
+
+const MAPPING: MondayProjectMapping = {
+  deskclockProjectId: "proj-1",
+  mondayBoardId: BOARD_ID,
+  mondayBoardName: "[BR] Cliente Produto 01-999",
+  activitiesGroupId: GROUP_ID,
+  activityTypeLabels: ACTIVITY_TYPE_LABELS,
+  projectStageLabels: ["Execução", "Discovery"],
+  projectStageTitle: "Project Stage",
+  columnIds: COLUMN_IDS,
+  workspaceId: WORKSPACE_ID,
+};
+
 function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
   const values: Partial<AppConfig> = {
     mondayApiKey: "token",
     mondayUserId: USER_ID,
     mondayActiveWorkspaceId: WORKSPACE_ID,
-    mondayProjectMapping: [
-      {
-        deskclockProjectId: "proj-1",
-        mondayBoardId: BOARD_ID,
-        mondayBoardName: "[BR] Cliente Produto 01-999",
-        activitiesGroupId: GROUP_ID,
-        columnIds: COLUMN_IDS,
-        workspaceId: WORKSPACE_ID,
-      },
-    ],
-    mondayCategoryMapping: [
-      {
-        deskclockCategoryId: "cat-1",
-        activityTypeLabel: "Development",
-        projectStageLabel: "Execução",
-        workspaceId: WORKSPACE_ID,
-      },
-    ],
+    mondayProjectMapping: [MAPPING],
+    mondayProjectStageFieldId: STAGE_FIELD_ID,
     ...overrides,
   };
   return {
@@ -105,6 +128,31 @@ function makeItemRepo(seed: MondayActivityItemRecord[] = []): IMondayActivityIte
   };
 }
 
+/** A categoria vira Activity Type pelo nome — não há tabela de mapeamento. */
+function makeCategoryRepo(name = "Development"): ICategoryRepository {
+  const rows: Category[] = [{ id: "cat-1", workspaceId: "ws-1", name, defaultBillable: true }];
+  return {
+    findAll: vi.fn(async () => rows),
+    findByName: vi.fn(async (wanted: string) => rows.find((c) => c.name === wanted) ?? null),
+    save: vi.fn(async () => {}),
+    update: vi.fn(async () => {}),
+    delete: vi.fn(async () => {}),
+    deleteMany: vi.fn(async () => {}),
+  };
+}
+
+/** Só as definições: o valor gravado na tarefa é o id da opção, não o rótulo. */
+function makeFieldRepo(fields: CustomField[] = [STAGE_FIELD]): ICustomFieldRepository {
+  return {
+    findAll: vi.fn(async () => fields),
+    findById: vi.fn(async (id: string) => fields.find((f) => f.id === id) ?? null),
+    findByLabel: vi.fn(async (label: string) => fields.find((f) => f.label === label) ?? null),
+    save: vi.fn(async () => {}),
+    update: vi.fn(async () => {}),
+    delete: vi.fn(async () => {}),
+  };
+}
+
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
@@ -119,7 +167,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-07-30T12:00:00.000Z",
     updatedAt: "2026-07-30T13:50:00.000Z",
-    customValues: {},
+    customValues: { [STAGE_FIELD_ID]: STAGE_OPTION_ID },
     ...overrides,
   };
 }
@@ -134,6 +182,8 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(
         makeConfig({ mondayActiveWorkspaceId: "" }),
         makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
         makeClient()
       );
       await expect(sender.send([makeTask()])).rejects.toThrow(/workspace/i);
@@ -143,19 +193,33 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(
         makeConfig({ mondayUserId: "" }),
         makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
         makeClient()
       );
       await expect(sender.send([makeTask()])).rejects.toThrow(/Usuário do Monday/);
     });
 
     it("falha quando nenhuma tarefa concluída é válida", async () => {
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), makeClient());
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        makeClient()
+      );
       await expect(sender.send([makeTask({ projectId: null })])).rejects.toThrow(/nome e projeto/);
     });
 
     it("ignora tarefas ainda em execução", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ status: "running", endTime: null })]);
 
@@ -166,6 +230,8 @@ describe("MondayTaskSender", () => {
       const sender = new MondayTaskSender(
         makeConfig({ mondayProjectMapping: [] }),
         makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
         makeClient()
       );
       await expect(sender.send([makeTask()])).rejects.toThrow(/não estão mapeados/);
@@ -179,12 +245,21 @@ describe("MondayTaskSender", () => {
             mondayBoardId: BOARD_ID,
             mondayBoardName: "Board",
             activitiesGroupId: GROUP_ID,
+            activityTypeLabels: ACTIVITY_TYPE_LABELS,
+            projectStageLabels: ["Execução", "Discovery"],
+            projectStageTitle: "Project Stage",
             columnIds: COLUMN_IDS,
             workspaceId: "outro-ws",
           },
         ],
       });
-      const sender = new MondayTaskSender(config, makeItemRepo(), makeClient());
+      const sender = new MondayTaskSender(
+        config,
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        makeClient()
+      );
       await expect(sender.send([makeTask()])).rejects.toThrow(/não estão mapeados/);
     });
   });
@@ -193,7 +268,13 @@ describe("MondayTaskSender", () => {
     it("soma tarefas do mesmo grupo no mesmo dia num único item", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "a", durationSeconds: 3600 }),
@@ -209,7 +290,13 @@ describe("MondayTaskSender", () => {
 
     it("separa dias distintos em itens distintos", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "a", startTime: "2026-07-30T12:00:00.000Z" }),
@@ -221,7 +308,13 @@ describe("MondayTaskSender", () => {
 
     it("separa grupos distintos no mesmo dia", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "a" }),
@@ -236,7 +329,13 @@ describe("MondayTaskSender", () => {
     it("cria o item quando o grupo é novo e registra o rastreamento", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask()]);
 
@@ -264,7 +363,13 @@ describe("MondayTaskSender", () => {
 
     it("atualiza o item existente quando a duração do grupo mudou", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ durationSeconds: 3600 })]);
       vi.mocked(client.createItem).mockClear();
@@ -280,7 +385,13 @@ describe("MondayTaskSender", () => {
 
     it("atualiza o item quando só o billable mudou", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ billable: true })]);
       await sender.send([makeTask({ billable: false })]);
@@ -293,21 +404,24 @@ describe("MondayTaskSender", () => {
       );
     });
 
-    it("atualiza o item quando só o Activity Type mapeado mudou", async () => {
+    it("atualiza o item quando a categoria da tarefa foi renomeada", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      await new MondayTaskSender(makeConfig(), itemRepo, client).send([makeTask()]);
+      await new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask()]);
 
-      const remapped = makeConfig({
-        mondayCategoryMapping: [
-          {
-            deskclockCategoryId: "cat-1",
-            activityTypeLabel: "Meeting",
-            workspaceId: WORKSPACE_ID,
-          },
-        ],
-      });
-      await new MondayTaskSender(remapped, itemRepo, client).send([makeTask()]);
+      await new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo("Meeting"),
+        client
+      ).send([makeTask()]);
 
       expect(client.createItem).toHaveBeenCalledTimes(1);
       expect(client.changeColumnValues).toHaveBeenCalledWith(
@@ -319,7 +433,13 @@ describe("MondayTaskSender", () => {
 
     it("não chama a API quando nada mudou desde o último envio", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask()]);
       vi.mocked(client.createItem).mockClear();
@@ -332,7 +452,13 @@ describe("MondayTaskSender", () => {
     it("renomear a tarefa atualiza o mesmo item em vez de criar outro", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ id: "t1", workspaceId: "ws-1", name: "Nome antigo" })]);
       vi.mocked(client.createItem).mockClear();
@@ -349,7 +475,13 @@ describe("MondayTaskSender", () => {
 
     it("trocar a categoria atualiza o mesmo item", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ categoryId: "cat-1" })]);
       vi.mocked(client.createItem).mockClear();
@@ -362,7 +494,13 @@ describe("MondayTaskSender", () => {
     it("recria o item quando ele foi apagado no Monday", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ durationSeconds: 3600 })]);
       vi.mocked(client.changeColumnValues).mockRejectedValueOnce(
@@ -378,7 +516,13 @@ describe("MondayTaskSender", () => {
     it("não recria quando o erro do update não é 'não encontrado'", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ durationSeconds: 3600 })]);
       vi.mocked(client.changeColumnValues).mockRejectedValueOnce(
@@ -395,7 +539,13 @@ describe("MondayTaskSender", () => {
     it("fundir dois grupos apaga o item perdedor em vez de deixá-lo com horas órfãs", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 3600 }),
@@ -423,7 +573,13 @@ describe("MondayTaskSender", () => {
     it("não apaga item cujo grupo tem tarefa fora do envio", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       // item-1 = grupo "Tarefa A" com t1; item-2 = grupo "Tarefa X" com t2 e t9
       await sender.send([makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" })]);
@@ -447,7 +603,13 @@ describe("MondayTaskSender", () => {
     it("item órfão já apagado no Monday só limpa o rastreamento", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
@@ -468,7 +630,13 @@ describe("MondayTaskSender", () => {
     it("propaga erro que não seja 'não encontrado' ao apagar o órfão", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
@@ -490,7 +658,13 @@ describe("MondayTaskSender", () => {
     it("o match exato de assinatura vence a interseção, independente da ordem", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       // item-1 nasce com t1+t2 sob o nome "Tarefa B"
       await sender.send([
@@ -528,7 +702,13 @@ describe("MondayTaskSender", () => {
 
     it("dividir um grupo não faz dois grupos disputarem o mesmo item", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A", durationSeconds: 3600 }),
@@ -549,7 +729,13 @@ describe("MondayTaskSender", () => {
 
     it("separa billable de non-billable em itens distintos", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask({ id: "t1", workspaceId: "ws-1", billable: true, durationSeconds: 3600 }),
@@ -567,7 +753,13 @@ describe("MondayTaskSender", () => {
 
     it("o Billing type não depende da ordem em que as tarefas chegam", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
       const billableTask = makeTask({
         id: "t1",
         workspaceId: "ws-1",
@@ -585,7 +777,13 @@ describe("MondayTaskSender", () => {
       const first = vi.mocked(client.createItem).mock.calls.map((c) => c[3]);
       vi.mocked(client.createItem).mockClear();
 
-      const sender2 = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender2 = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
       await sender2.send([otherTask, billableTask]);
       const second = vi.mocked(client.createItem).mock.calls.map((c) => c[3]);
 
@@ -595,7 +793,13 @@ describe("MondayTaskSender", () => {
     it("propaga erro de rede na atualização em vez de recriar", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const sender = new MondayTaskSender(makeConfig(), itemRepo, client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ durationSeconds: 3600 })]);
       vi.mocked(client.changeColumnValues).mockRejectedValueOnce(new MondayNetworkError());
@@ -610,7 +814,13 @@ describe("MondayTaskSender", () => {
   describe("mapeamento de colunas", () => {
     it("grava Non Billable quando a tarefa não é faturável", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([makeTask({ billable: false })]);
 
@@ -619,11 +829,117 @@ describe("MondayTaskSender", () => {
       });
     });
 
-    it("omite Activity Type quando a categoria não está mapeada", async () => {
+    it("não quebra com mapeamento gravado antes do cache de rótulos", async () => {
+      const client = makeClient();
+      const legacy = makeConfig({
+        mondayProjectMapping: [
+          {
+            deskclockProjectId: "proj-1",
+            mondayBoardId: BOARD_ID,
+            mondayBoardName: "[BR] Cliente Produto 01-999",
+            activitiesGroupId: GROUP_ID,
+            columnIds: COLUMN_IDS,
+            workspaceId: WORKSPACE_ID,
+          } as MondayProjectMapping,
+        ],
+      });
+      const sender = new MondayTaskSender(
+        legacy,
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      // Sem rótulos conhecidos a coluna fica de fora: mandar um rótulo que o
+      // board não tem faria o Monday recusar a escrita inteira.
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.activityType
+      );
+    });
+
+    it("grava Start Date e End Date na criação e não as repete no update", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const config = makeConfig({
+        mondayProjectMapping: [{ ...MAPPING, columnIds: { ...COLUMN_IDS, ...DATE_COLUMN_IDS } }],
+      });
+
+      await new MondayTaskSender(
+        config,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask()]);
+
+      const created = vi.mocked(client.createItem).mock.calls[0][3];
+      expect(created[DATE_COLUMN_IDS.startDate]).toEqual(created[DATE_COLUMN_IDS.endDate]);
+      expect(created[DATE_COLUMN_IDS.startDate]).toMatchObject({
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        time: expect.stringMatching(/^\d{2}:\d{2}:\d{2}$/),
+      });
+
+      await new MondayTaskSender(
+        config,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask({ durationSeconds: 7200 })]);
+
+      // As datas marcam o nascimento do item: no update elas mudariam a cada
+      // execução e nenhum grupo cairia mais no skip por payload igual.
+      const updated = vi.mocked(client.changeColumnValues).mock.calls[0][2];
+      expect(updated).not.toHaveProperty(DATE_COLUMN_IDS.startDate);
+      expect(updated).not.toHaveProperty(DATE_COLUMN_IDS.endDate);
+    });
+
+    it("segue pulando a API quando nada mudou, apesar das datas", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const config = makeConfig({
+        mondayProjectMapping: [{ ...MAPPING, columnIds: { ...COLUMN_IDS, ...DATE_COLUMN_IDS } }],
+      });
+      const send = () =>
+        new MondayTaskSender(config, itemRepo, makeFieldRepo(), makeCategoryRepo(), client).send([
+          makeTask(),
+        ]);
+
+      await send();
+      vi.mocked(client.createItem).mockClear();
+      await send();
+
+      expect(client.createItem).not.toHaveBeenCalled();
+      expect(client.changeColumnValues).not.toHaveBeenCalled();
+    });
+
+    it("grava o nome da categoria como Activity Type", async () => {
       const client = makeClient();
       const sender = new MondayTaskSender(
-        makeConfig({ mondayCategoryMapping: [] }),
+        makeConfig(),
         makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo("Meeting"),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.activityType]: { label: "Meeting" },
+      });
+    });
+
+    it("omite Activity Type quando o nome da categoria não é rótulo do board", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo("Categoria só do DeskClock"),
         client
       );
 
@@ -631,12 +947,151 @@ describe("MondayTaskSender", () => {
 
       const columnValues = vi.mocked(client.createItem).mock.calls[0][3];
       expect(columnValues).not.toHaveProperty(COLUMN_IDS.activityType);
-      expect(columnValues).not.toHaveProperty(COLUMN_IDS.projectStage!);
+    });
+
+    it("grava no Project Stage o rótulo da opção escolhida na tarefa", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ customValues: { [STAGE_FIELD_ID]: "opt-discovery" } })]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.projectStage!]: { label: "Discovery" },
+      });
+    });
+
+    it("omite Project Stage quando o rótulo não existe na coluna do board", async () => {
+      const client = makeClient();
+      // O campo personalizado é editável na tela de Dados: a opção pode não vir
+      // do board, e um rótulo inexistente derruba a escrita inteira.
+      const fieldRepo = makeFieldRepo([
+        {
+          ...STAGE_FIELD,
+          options: [{ id: "opt-inventada", label: "Etapa que só existe no DeskClock" }],
+        },
+      ]);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        fieldRepo,
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ customValues: { [STAGE_FIELD_ID]: "opt-inventada" } })]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.projectStage!
+      );
+    });
+
+    it("omite Activity Type quando a tarefa não tem categoria", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ categoryId: null })]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.activityType
+      );
+    });
+
+    it("omite Project Stage quando a tarefa não preencheu o campo", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ customValues: {} })]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.projectStage!
+      );
+    });
+
+    it("omite Project Stage quando nenhum campo personalizado está vinculado", async () => {
+      const client = makeClient();
+      const fieldRepo = makeFieldRepo();
+      const sender = new MondayTaskSender(
+        makeConfig({ mondayProjectStageFieldId: "" }),
+        makeItemRepo(),
+        fieldRepo,
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(fieldRepo.findById).not.toHaveBeenCalled();
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.projectStage!
+      );
+    });
+
+    it("omite Project Stage quando o campo vinculado foi excluído", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo([]),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.projectStage!
+      );
+    });
+
+    it("cria itens distintos para tarefas iguais em etapas diferentes", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([
+        makeTask({ customValues: { [STAGE_FIELD_ID]: STAGE_OPTION_ID } }),
+        makeTask({ id: "t2", customValues: { [STAGE_FIELD_ID]: "opt-discovery" } }),
+      ]);
+
+      expect(client.createItem).toHaveBeenCalledTimes(2);
+      const stages = vi
+        .mocked(client.createItem)
+        .mock.calls.map((call) => call[3][COLUMN_IDS.projectStage!]);
+      expect(stages).toEqual([{ label: "Execução" }, { label: "Discovery" }]);
     });
 
     it("envia as tarefas mapeadas mesmo quando outras não têm board", async () => {
       const client = makeClient();
-      const sender = new MondayTaskSender(makeConfig(), makeItemRepo(), client);
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
 
       await sender.send([
         makeTask(),

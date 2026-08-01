@@ -7,6 +7,13 @@ import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import {
+  bareInputClass,
+  boxClass,
+  fieldClass,
+  notchedBoxClass,
+  notchedLabelClass,
+} from "@presentation/components/fieldStyles";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
@@ -141,8 +148,10 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
           </button>
         </div>
 
+        {/* Mesmo vocabulário visual do Lançamento Manual e do Planejamento
+            (`fieldStyles.ts`): campo comum desenha a própria casca, e quem divide
+            a linha com botão ou rótulo vive dentro de uma caixa. */}
         <div className="space-y-3">
-          {/* Nome */}
           <input
             type="text"
             value={name}
@@ -150,10 +159,9 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             onKeyDown={enterSave}
             placeholder="Nome (opcional)"
             autoFocus
-            className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className={fieldClass}
           />
 
-          {/* Projeto e categoria */}
           <div className="grid grid-cols-2 gap-2">
             <Autocomplete
               value={projectName}
@@ -163,93 +171,115 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
               options={projects}
               placeholder="Projeto"
             />
-            <Autocomplete
-              value={categoryName}
-              onChange={(v) => {
-                setCategoryName(v);
-                const cat = categories.find((c) => c.name === v);
-                if (cat) setBillable(cat.defaultBillable);
-              }}
-              onSelect={(o) => {
-                setSelectedCategoryId(o.id);
-                const cat = categories.find((c) => c.id === o.id);
-                if (cat) setBillable(cat.defaultBillable);
-              }}
-              onEnter={handleSave}
-              options={categories}
-              placeholder="Categoria"
-            />
-          </div>
-
-          {/* Billable */}
-          <button
-            type="button"
-            onClick={() => setBillable((b) => !b)}
-            title={
-              billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
-            }
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
-              billable
-                ? "bg-green-900/40 border-green-700 text-green-400"
-                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
-            }`}
-          >
-            <DollarSign size={14} />
-            {billable ? "Billable" : "Non-billable"}
-          </button>
-
-          {/* Data */}
-          <DatePickerInput value={startDate} onChange={setStartDate} className="w-full" />
-
-          {/* Hora início e hora fim na mesma linha */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 shrink-0">Início</span>
-            <input
-              type="time"
-              value={startTime}
-              onChange={(e) => handleStartChange(e.target.value)}
-              onBlur={(e) => handleStartCommit(e.target.value)}
-              onKeyDown={enterSave}
-              className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
-            />
-            <span className="text-xs text-gray-500 shrink-0">Fim</span>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => handleEndChange(e.target.value)}
-              onBlur={(e) => handleEndCommit(e.target.value)}
-              onKeyDown={enterSave}
-              className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          {/* Duração — recalcula o fim ao editar (útil para "esqueci de parar o timer") */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 shrink-0">Duração</span>
-            <input
-              type="text"
-              value={durationInput}
-              onChange={(e) => setDurationInput(e.target.value)}
-              onBlur={commitDuration}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                  const newEnd = commitDuration();
-                  void handleSave(typeof newEnd === "string" ? newEnd : undefined);
+            {/* Categoria e billable leem como um campo só, como nas duas telas de
+                entrada: a caixa desenha a borda e o toggle mora dentro dela. */}
+            <div className={`${boxClass} flex items-center pr-2`}>
+              <Autocomplete
+                value={categoryName}
+                onChange={(v) => {
+                  setCategoryName(v);
+                  const cat = categories.find((c) => c.name === v);
+                  if (cat) setBillable(cat.defaultBillable);
+                }}
+                onSelect={(o) => {
+                  setSelectedCategoryId(o.id);
+                  const cat = categories.find((c) => c.id === o.id);
+                  if (cat) setBillable(cat.defaultBillable);
+                }}
+                onEnter={handleSave}
+                options={categories}
+                placeholder="Categoria"
+                className="flex-1 min-w-0"
+                inputClassName={bareInputClass}
+              />
+              <button
+                type="button"
+                onClick={() => setBillable((b) => !b)}
+                title={
+                  billable
+                    ? "Billable — clique para alternar"
+                    : "Non-billable — clique para alternar"
                 }
-              }}
-              placeholder="HH:MM"
-              title="Aceita: 1:30, 90, 1h, 1h 30m"
-              className="w-24 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-            <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30…</span>
+                className={`flex items-center gap-1 shrink-0 transition-colors ${
+                  billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+                }`}
+              >
+                <DollarSign size={14} />
+              </button>
+            </div>
           </div>
 
+          {/* Antes da data e das horas: os campos personalizados descrevem *o que*
+              foi feito, e não *quando* — a mesma ordem das duas telas de entrada. */}
           <CustomFieldInputs
             fields={activeFields}
             values={customValues}
             onChange={setCustomValues}
             onEnter={() => void handleSave()}
           />
+
+          {/* Data e duração dividem a linha: são os dois campos que o usuário
+              costuma corrigir junto ("lancei no dia errado", "esqueci de parar"). */}
+          <div className="flex gap-2">
+            <DatePickerInput
+              label="Data"
+              value={startDate}
+              onChange={setStartDate}
+              className="flex-1"
+            />
+            <div className={`${boxClass} ${notchedBoxClass} w-32 shrink-0`}>
+              <label htmlFor="edit-task-duration" className={notchedLabelClass}>
+                Duração
+              </label>
+              <input
+                id="edit-task-duration"
+                type="text"
+                value={durationInput}
+                onChange={(e) => setDurationInput(e.target.value)}
+                onBlur={commitDuration}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                    const newEnd = commitDuration();
+                    void handleSave(typeof newEnd === "string" ? newEnd : undefined);
+                  }
+                }}
+                placeholder="1h30, 90, 1h…"
+                title="Aceita: 1:30, 90, 1h, 1h 30m"
+                className={`${bareInputClass} pt-3 placeholder-gray-600`}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
+              <label htmlFor="edit-task-start" className={notchedLabelClass}>
+                Início
+              </label>
+              <input
+                id="edit-task-start"
+                type="time"
+                value={startTime}
+                onChange={(e) => handleStartChange(e.target.value)}
+                onBlur={(e) => handleStartCommit(e.target.value)}
+                onKeyDown={enterSave}
+                className={`${bareInputClass} pt-3`}
+              />
+            </div>
+            <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
+              <label htmlFor="edit-task-end" className={notchedLabelClass}>
+                Fim
+              </label>
+              <input
+                id="edit-task-end"
+                type="time"
+                value={endTime}
+                onChange={(e) => handleEndChange(e.target.value)}
+                onBlur={(e) => handleEndCommit(e.target.value)}
+                onKeyDown={enterSave}
+                className={`${bareInputClass} pt-3`}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-5">

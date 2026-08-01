@@ -1,8 +1,8 @@
 /**
- * Vocabulário visual dos campos de formulário em coluna — hoje o Lançamento
- * Manual e o Planejamento. Fica num módulo só porque são duas telas que
- * precisam parecer a mesma coisa: com as classes copiadas, um ajuste em uma
- * delas desalinha a outra em silêncio.
+ * Vocabulário visual dos campos de formulário — o Lançamento Manual, o
+ * Planejamento e o modal de edição de tarefa. Fica num módulo só porque são
+ * telas que precisam parecer a mesma coisa: com as classes copiadas, um ajuste
+ * em uma delas desalinha as outras em silêncio.
  *
  * Nada aqui é valor literal — só classes do Tailwind (§8.4 do CLAUDE.md).
  */
@@ -38,6 +38,41 @@ export const bareInputClass =
 export const notchedBoxClass = "relative mt-1.5";
 export const notchedLabelClass =
   "absolute -top-2 left-1.5 px-1 bg-gray-800 text-xs text-gray-500 rounded-sm";
+
+/**
+ * Rótulo que começa **dentro** do campo, como placeholder, e sobe para a borda
+ * ao focar ou quando há valor — chegando exatamente na posição do
+ * `notchedLabelClass`, para não existirem dois desenhos de rótulo na mesma tela.
+ *
+ * Só os campos personalizados usam isto, e por um motivo específico: eles são
+ * dinâmicos. "Project Stage" e "Nº do chamado" não se explicam pela posição no
+ * formulário como Nome, Projeto e Categoria se explicam, então o rótulo precisa
+ * continuar visível **depois** de preenchido — o que um placeholder puro não faz.
+ *
+ * Implementação sem JavaScript: o estado vem do próprio input via `:focus` e
+ * `:placeholder-shown`, lidos do wrapper com `group-*`. Por isso o controle
+ * precisa de `placeholder=" "` — sem placeholder, `:placeholder-shown` nunca
+ * casa e o rótulo fica preso no alto.
+ *
+ * As variantes estão escritas por extenso de propósito: classe montada em
+ * runtime não é vista pelo scanner do Tailwind e não geraria CSS nenhum.
+ *
+ * O grupo é **nomeado** (`/cf`) porque `group-*` casa com qualquer ancestral que
+ * tenha `.group`: um card acima que use `group` para hover faria todos os
+ * rótulos flutuarem ao focar qualquer campo, sem erro nenhum para avisar.
+ */
+export const floatingFieldClass = "group/cf relative mt-1.5";
+export const floatingLabelClass = [
+  "pointer-events-none absolute left-2.5 top-1.5 text-sm text-gray-500 transition-all duration-150",
+  "group-focus-within/cf:-top-2 group-focus-within/cf:left-1.5 group-focus-within/cf:px-1",
+  "group-focus-within/cf:text-xs group-focus-within/cf:bg-gray-800 group-focus-within/cf:rounded-sm",
+  "group-has-[input:not(:placeholder-shown)]/cf:-top-2 group-has-[input:not(:placeholder-shown)]/cf:left-1.5",
+  "group-has-[input:not(:placeholder-shown)]/cf:px-1 group-has-[input:not(:placeholder-shown)]/cf:text-xs",
+  "group-has-[input:not(:placeholder-shown)]/cf:bg-gray-800 group-has-[input:not(:placeholder-shown)]/cf:rounded-sm",
+  "group-has-[textarea:not(:placeholder-shown)]/cf:-top-2 group-has-[textarea:not(:placeholder-shown)]/cf:left-1.5",
+  "group-has-[textarea:not(:placeholder-shown)]/cf:px-1 group-has-[textarea:not(:placeholder-shown)]/cf:text-xs",
+  "group-has-[textarea:not(:placeholder-shown)]/cf:bg-gray-800 group-has-[textarea:not(:placeholder-shown)]/cf:rounded-sm",
+].join(" ");
 
 /** Coluna de formulário: largura fixa à esquerda, com a lista da tela ao lado. */
 export const formColumnClass =

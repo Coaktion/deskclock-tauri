@@ -9,7 +9,23 @@ const TITLES = {
   billingType: ["billing type", "tipo de cobranca"],
   activityType: ["activity type", "tipo de atividade"],
   projectStage: ["project stage", "etapa do projeto"],
+  startDate: ["start date", "data de inicio"],
+  endDate: ["end date", "data de termino", "data de fim"],
   status: ["status"],
+} as const;
+
+/**
+ * Ids das colunas de data no template atual, usados quando o título não bate.
+ *
+ * Contraria o "nunca hardcodar id" do resto do arquivo, e é deliberado: o
+ * usuário pediu o preenchimento agora e todos os boards nascem do mesmo
+ * template. O id só é aceito se **existir no schema do board** — inventar uma
+ * coluna faria o Monday recusar a escrita inteira, do jeito que já aconteceu
+ * com rótulo inexistente.
+ */
+const TEMPLATE_DATE_COLUMN_IDS = {
+  startDate: "date_mm33tthy",
+  endDate: "date_mm33zcmr",
 } as const;
 
 export type ResolveActivitiesResult =
@@ -29,6 +45,16 @@ function findColumn(
   candidates: readonly string[]
 ): MondayColumn | undefined {
   return columns.find((c) => candidates.includes(normalize(c.title)));
+}
+
+/** Coluna de data pelo título; na falta dele, pelo id conhecido do template. */
+function findDateColumn(
+  columns: MondayColumn[],
+  titles: readonly string[],
+  slot: keyof typeof TEMPLATE_DATE_COLUMN_IDS
+): MondayColumn | undefined {
+  const id = TEMPLATE_DATE_COLUMN_IDS[slot];
+  return findColumn(columns, titles) ?? columns.find((c) => c.id === id);
 }
 
 /**
@@ -81,6 +107,8 @@ export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): Resolv
   }
 
   const projectStage = findColumn(schema.columns, TITLES.projectStage);
+  const startDate = findDateColumn(schema.columns, TITLES.startDate, "startDate");
+  const endDate = findDateColumn(schema.columns, TITLES.endDate, "endDate");
 
   return {
     ok: true,
@@ -90,18 +118,29 @@ export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): Resolv
       billingType: billingType.id,
       activityType: activityType.id,
       ...(projectStage ? { projectStage: projectStage.id } : {}),
+      ...(startDate ? { startDate: startDate.id } : {}),
+      ...(endDate ? { endDate: endDate.id } : {}),
       status: status.id,
       person: person.id,
     },
   };
 }
 
-/** Rótulos disponíveis numa coluna `status`/`color`, para popular dropdowns. */
+/**
+ * Rótulos disponíveis numa coluna `status`/`color`.
+ *
+ * Aparados na origem: do lado DeskClock todo mundo apara (`createCategory`,
+ * `buildOptions`), então um rótulo com espaço nas pontas viraria categoria
+ * `"Development"` e ficaria `" Development "` no cache do mapeamento — e o
+ * casamento por nome do envio falharia em silêncio.
+ */
 export function parseStatusLabels(column: MondayColumn | undefined): string[] {
   if (!column?.settingsStr) return [];
   try {
     const parsed = JSON.parse(column.settingsStr) as { labels?: Record<string, string> };
-    return Object.values(parsed.labels ?? {}).filter((l) => l.trim().length > 0);
+    return Object.values(parsed.labels ?? {})
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
   } catch {
     return [];
   }

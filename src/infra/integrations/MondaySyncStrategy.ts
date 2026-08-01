@@ -2,6 +2,8 @@ import type { Task } from "@domain/entities/Task";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
+import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { IMondayConfigPort } from "@domain/integrations/IMondayConfigPort";
 import { validateTaskForMonday, formatMissingFields } from "@domain/integrations/taskValidation";
@@ -18,7 +20,9 @@ export class MondaySyncStrategy implements ISyncStrategy {
     private config: IMondayConfigPort,
     private taskRepo: ITaskRepository,
     private logRepo: ITaskIntegrationLogRepository,
-    private itemRepo: IMondayActivityItemRepository
+    private itemRepo: IMondayActivityItemRepository,
+    private customFieldRepo: ICustomFieldRepository,
+    private categoryRepo: ICategoryRepository
   ) {}
 
   private isEnabled(mode: "per-task" | "daily"): boolean {
@@ -36,6 +40,16 @@ export class MondaySyncStrategy implements ISyncStrategy {
 
   isDailyEnabled(): boolean {
     return this.isEnabled("daily");
+  }
+
+  /** Ponto único de composição: cada repositório novo no sender para aqui. */
+  private createSender(): MondayTaskSender {
+    return new MondayTaskSender(
+      this.config,
+      this.itemRepo,
+      this.customFieldRepo,
+      this.categoryRepo
+    );
   }
 
   /** Projetos com board mapeado no workspace ativo — sem board não há onde criar a atividade. */
@@ -87,7 +101,7 @@ export class MondaySyncStrategy implements ISyncStrategy {
     }
     try {
       const group = await this.collectSameDayScope(task);
-      const sender = new MondayTaskSender(this.config, this.itemRepo);
+      const sender = this.createSender();
       await sender.send(group);
       await this.logRepo.markSent([task.id], MONDAY_LOG_KEY);
       await this.config.set("mondayDailySyncLastTimestamp", new Date().toISOString());
@@ -115,7 +129,7 @@ export class MondaySyncStrategy implements ISyncStrategy {
           set: (iso) => this.config.set("mondayDailySyncLastTimestamp", iso),
         },
         validate: (t: Task) => validateTaskForMonday(t).ok && mapped.has(t.projectId!),
-        createSender: () => new MondayTaskSender(this.config, this.itemRepo),
+        createSender: () => this.createSender(),
       },
       endDateISO
     );

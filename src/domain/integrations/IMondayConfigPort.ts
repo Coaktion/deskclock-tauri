@@ -5,7 +5,7 @@ export type MondayConfigKey =
   | "mondayUserId"
   | "mondayActiveWorkspaceId"
   | "mondayProjectMapping"
-  | "mondayCategoryMapping"
+  | "mondayProjectStageFieldId"
   | "mondayAutoSync"
   | "mondayAutoSyncMode"
   | "mondayDailySyncLastTimestamp";

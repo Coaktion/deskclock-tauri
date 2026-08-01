@@ -26,6 +26,15 @@ export function serializeStatus(label: string): { label: string } {
   return { label };
 }
 
+/**
+ * Serializador da coluna `date`, que o Monday guarda **em UTC** e exibe no fuso
+ * da conta. Mandar a hora local aqui deslocaria o horário exibido.
+ */
+export function serializeDate(iso: string): { date: string; time: string } {
+  const [date, rest] = new Date(iso).toISOString().split("T");
+  return { date, time: rest.slice(0, 8) };
+}
+
 /** Serializador da coluna `people`. */
 export function serializePerson(userId: string): {
   personsAndTeams: { id: number; kind: "person" }[];
@@ -63,4 +72,23 @@ export function buildActivityColumnValues(
   }
 
   return values;
+}
+
+/**
+ * Colunas Start Date e End Date, ambas com o instante do envio.
+ *
+ * Ficam fora de `buildActivityColumnValues` de propósito: só entram no **create**.
+ * No update elas mudariam a cada execução, o payload nunca bateria com o gravado
+ * e o envio diário voltaria a chamar a API para todo grupo, mesmo sem alteração
+ * nenhuma nas horas.
+ */
+export function buildActivityDateColumns(
+  columnIds: MondayActivityColumnIds,
+  nowISO: string
+): Record<string, unknown> {
+  const value = serializeDate(nowISO);
+  return {
+    ...(columnIds.startDate ? { [columnIds.startDate]: value } : {}),
+    ...(columnIds.endDate ? { [columnIds.endDate]: value } : {}),
+  };
 }

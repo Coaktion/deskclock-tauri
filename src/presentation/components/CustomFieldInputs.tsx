@@ -1,6 +1,11 @@
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import { serializeCustomValue } from "@domain/usecases/customFields/customValueCodec";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import {
+  fieldClass,
+  floatingFieldClass,
+  floatingLabelClass,
+} from "@presentation/components/fieldStyles";
 import { useEffect, useRef, useState } from "react";
 
 interface CustomFieldInputsProps {
@@ -12,13 +17,6 @@ interface CustomFieldInputsProps {
   /** `compact` encurta rótulos e alturas para caber em formulários inline. */
   compact?: boolean;
   /**
-   * Troca o rótulo acima do campo por um placeholder dentro dele, para
-   * uniformizar com nome/projeto/categoria em formulários de coluna estreita.
-   * O checkbox não tem onde exibir placeholder — nele o rótulo passa para o
-   * lado da caixa, no lugar do "Sim/Não".
-   */
-  labelsAsPlaceholder?: boolean;
-  /**
    * Substitui — não complementa — o espaçamento padrão entre os campos. Existe
    * para o formulário que os embute alinhar o ritmo vertical com os seus
    * próprios campos; somar as duas classes deixaria o resultado na mão da ordem
@@ -26,9 +24,6 @@ interface CustomFieldInputsProps {
    */
   className?: string;
 }
-
-const inputClass =
-  "w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500";
 
 /**
  * Renderiza os campos personalizados por tipo. Um só componente para os cinco
@@ -45,7 +40,6 @@ export function CustomFieldInputs({
   onChange,
   onEnter,
   compact = false,
-  labelsAsPlaceholder = false,
   className,
 }: CustomFieldInputsProps) {
   if (fields.length === 0) return null;
@@ -59,52 +53,56 @@ export function CustomFieldInputs({
       {fields.map((field) => {
         const value = values[field.id] ?? "";
         const inputId = `custom-field-${field.id}`;
-        const placeholder = labelsAsPlaceholder ? field.label : "";
-        return (
-          <div key={field.id} className="space-y-1">
-            {!labelsAsPlaceholder && (
-              <label htmlFor={inputId} className="block text-xs text-gray-500">
+
+        // O checkbox não tem onde flutuar rótulo: fica ao lado da caixa, no
+        // lugar do "Sim/Não" que a caixa marcada já comunica.
+        if (field.type === "checkbox") {
+          return (
+            <div key={field.id} className="flex items-center gap-2 py-1 text-sm text-gray-300">
+              <input
+                id={inputId}
+                type="checkbox"
+                checked={value === "1"}
+                onChange={(e) => commit(field, serializeCustomValue(field, e.target.checked))}
+                className="accent-blue-500 cursor-pointer"
+              />
+              <label htmlFor={inputId} className="cursor-pointer">
                 {field.label}
               </label>
-            )}
+            </div>
+          );
+        }
 
-            {(field.type === "text" || field.type === "multiline") && (
-              <TextCustomField
-                inputId={inputId}
-                field={field}
-                value={value}
-                onCommit={(serialized) => commit(field, serialized)}
-                onEnter={onEnter}
-                rows={compact ? 2 : 3}
-                placeholder={placeholder}
-              />
-            )}
-
-            {field.type === "select" && (
-              <SelectCustomField
-                inputId={inputId}
-                field={field}
-                value={value}
-                onCommit={(serialized) => commit(field, serialized)}
-                onEnter={onEnter}
-                placeholder={placeholder}
-              />
-            )}
-
-            {field.type === "checkbox" && (
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <input
-                  id={inputId}
-                  type="checkbox"
-                  checked={value === "1"}
-                  onChange={(e) => commit(field, serializeCustomValue(field, e.target.checked))}
-                  className="accent-blue-500 cursor-pointer"
+        return (
+          // O wrapper externo recebe o `space-y-*` do container: o `mt-1.5` da
+          // caixa flutuante cairia no mesmo elemento e *substituiria* a margem.
+          <div key={field.id}>
+            <div className={floatingFieldClass}>
+              {(field.type === "text" || field.type === "multiline") && (
+                <TextCustomField
+                  inputId={inputId}
+                  field={field}
+                  value={value}
+                  onCommit={(serialized) => commit(field, serialized)}
+                  onEnter={onEnter}
+                  rows={compact ? 2 : 3}
                 />
-                <label htmlFor={inputId} className="cursor-pointer">
-                  {labelsAsPlaceholder ? field.label : value === "1" ? "Sim" : "Não"}
-                </label>
-              </div>
-            )}
+              )}
+
+              {field.type === "select" && (
+                <SelectCustomField
+                  inputId={inputId}
+                  field={field}
+                  value={value}
+                  onCommit={(serialized) => commit(field, serialized)}
+                  onEnter={onEnter}
+                />
+              )}
+
+              <label htmlFor={inputId} className={floatingLabelClass}>
+                {field.label}
+              </label>
+            </div>
           </div>
         );
       })}
@@ -146,18 +144,9 @@ interface TextCustomFieldProps {
   onCommit: (serialized: string) => void;
   onEnter?: () => void;
   rows: number;
-  placeholder: string;
 }
 
-function TextCustomField({
-  inputId,
-  field,
-  value,
-  onCommit,
-  onEnter,
-  rows,
-  placeholder,
-}: TextCustomFieldProps) {
+function TextCustomField({ inputId, field, value, onCommit, onEnter, rows }: TextCustomFieldProps) {
   const { text, setText, markEmitted } = useLocalText(value, identity);
 
   function handle(raw: string) {
@@ -174,8 +163,11 @@ function TextCustomField({
         value={text}
         onChange={(e) => handle(e.target.value)}
         rows={rows}
-        placeholder={placeholder}
-        className={`${inputClass} resize-y`}
+        // Placeholder de um espaço: é o que faz `:placeholder-shown` valer e o
+        // rótulo flutuante saber que o campo está vazio. Quem "escreve" aqui é
+        // o próprio rótulo, em repouso.
+        placeholder=" "
+        className={`${fieldClass} resize-y`}
       />
     );
   }
@@ -189,8 +181,8 @@ function TextCustomField({
       onKeyDown={(e) => {
         if (e.key === "Enter" && !e.nativeEvent.isComposing) onEnter?.();
       }}
-      placeholder={placeholder}
-      className={inputClass}
+      placeholder=" "
+      className={fieldClass}
     />
   );
 }
@@ -205,7 +197,6 @@ interface SelectCustomFieldProps {
   value: string;
   onCommit: (serialized: string) => void;
   onEnter?: () => void;
-  placeholder: string;
 }
 
 /**
@@ -217,14 +208,7 @@ interface SelectCustomFieldProps {
  * rótulo visível é estado local daqui e só sai o id. Texto que não bate com
  * nenhuma opção limpa o valor — não existe "meio selecionado".
  */
-function SelectCustomField({
-  inputId,
-  field,
-  value,
-  onCommit,
-  onEnter,
-  placeholder,
-}: SelectCustomFieldProps) {
+function SelectCustomField({ inputId, field, value, onCommit, onEnter }: SelectCustomFieldProps) {
   const options = field.options.map((o) => ({ id: o.id, name: o.label }));
   const { text, setText, markEmitted } = useLocalText(value, (stored) => labelOf(field, stored));
 
@@ -248,7 +232,7 @@ function SelectCustomField({
       }}
       onEnter={onEnter}
       options={options}
-      placeholder={placeholder}
+      placeholder=" "
     />
   );
 }

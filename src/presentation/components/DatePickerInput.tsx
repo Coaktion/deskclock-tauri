@@ -3,6 +3,12 @@ import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "react-day-picker/locale";
 import "react-day-picker/style.css";
+import {
+  bareInputClass,
+  boxClass,
+  notchedBoxClass,
+  notchedLabelClass,
+} from "@presentation/components/fieldStyles";
 
 interface DatePickerInputProps {
   value: string; // ISO date YYYY-MM-DD ou ""
@@ -12,6 +18,11 @@ interface DatePickerInputProps {
   maxDate?: Date;
   /** Marca o campo como inválido — quem valida é o formulário, não o picker. */
   invalid?: boolean;
+  /**
+   * Rótulo encaixado na borda (`fieldStyles`). Com ele o campo passa a ler como
+   * os de hora e duração; sem ele, mantém a casca própria de antes.
+   */
+  label?: string;
 }
 
 function isoToDate(iso: string): Date | undefined {
@@ -42,6 +53,7 @@ export function DatePickerInput({
   className = "",
   maxDate,
   invalid = false,
+  label,
 }: DatePickerInputProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -100,7 +112,22 @@ export function DatePickerInput({
     }
   }
 
-  return (
+  const field = label ? (
+    <div
+      className={`${boxClass} ${notchedBoxClass} ${invalid ? "border-red-500!" : ""} ${className}`}
+    >
+      <span className={notchedLabelClass}>{label}</span>
+      <input
+        ref={inputRef}
+        type="text"
+        readOnly
+        value={formatDisplay(value)}
+        placeholder={placeholder}
+        onClick={handleOpen}
+        className={`${bareInputClass} pt-3 cursor-pointer`}
+      />
+    </div>
+  ) : (
     <div className={className}>
       <input
         ref={inputRef}
@@ -113,6 +140,12 @@ export function DatePickerInput({
           invalid ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-blue-500"
         }`}
       />
+    </div>
+  );
+
+  return (
+    <>
+      {field}
       {open &&
         createPortal(
           <div
@@ -153,6 +186,6 @@ export function DatePickerInput({
           </div>,
           document.body
         )}
-    </div>
+    </>
   );
 }
