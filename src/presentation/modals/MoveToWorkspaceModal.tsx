@@ -11,6 +11,7 @@ import { moveTasksToWorkspace } from "@domain/usecases/tasks/MoveTasksToWorkspac
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface MoveToWorkspaceModalProps {
   tasks: Task[];
@@ -113,13 +114,7 @@ export function MoveToWorkspaceModal({
   const sourceProjectName = projects.find((p) => p.id === first?.projectId)?.name ?? null;
   const sourceCategoryName = categories.find((c) => c.id === first?.categoryId)?.name ?? null;
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   useEffect(() => {
     if (!targetId) {

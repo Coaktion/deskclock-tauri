@@ -21,6 +21,7 @@ import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { todayISO } from "@shared/utils/time";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 const STATUS_LABELS: Record<ZendeskTicket["status"], string> = {
   new: "Novo",
@@ -245,6 +246,7 @@ export function ImportZendeskModal({
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEscapeToClose(onClose);
 
   useEffect(() => {
     setLoading(true);

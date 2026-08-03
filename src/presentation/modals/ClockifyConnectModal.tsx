@@ -3,6 +3,7 @@ import { X, ExternalLink, Loader2, KeyRound } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { ClockifyAuthError } from "@infra/integrations/clockify/errors";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface ClockifyConnectModalProps {
   onConnected: () => void;
@@ -15,6 +16,7 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEscapeToClose(onClose);
 
   async function handleConnect() {
     const key = apiKey.trim();
@@ -72,8 +74,12 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
                   <ExternalLink size={10} className="shrink-0" />
                 </a>
               </li>
-              <li>Role até a seção <strong className="text-gray-300">API</strong></li>
-              <li>Clique em <strong className="text-gray-300">Generate</strong> e copie a chave</li>
+              <li>
+                Role até a seção <strong className="text-gray-300">API</strong>
+              </li>
+              <li>
+                Clique em <strong className="text-gray-300">Generate</strong> e copie a chave
+              </li>
             </ol>
           </div>
 
@@ -82,7 +88,10 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
               API Key
             </label>
             <div className="relative">
-              <KeyRound size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+              <KeyRound
+                size={13}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+              />
               <input
                 id="clockify-api-key"
                 type="password"
@@ -96,9 +105,7 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
             </div>
           </div>
 
-          {error && (
-            <p className="text-xs text-red-400">{error}</p>
-          )}
+          {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
 
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-800">

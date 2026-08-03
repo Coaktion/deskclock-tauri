@@ -24,6 +24,7 @@ import {
 } from "@domain/usecases/tasks/SendTasks";
 import { formatDurationCompact, todayISO } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import {
   useTaskSendSelection,
   formatDayLabel,
@@ -166,6 +167,8 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
   const sel = useTaskSendSelection(adapter.integrationId, adapter.validateTask);
 
   const [sending, setSending] = useState(false);
+
+  useEscapeToClose(onClose);
 
   async function handleSend() {
     if (sel.selectedKeys.size === 0) return;

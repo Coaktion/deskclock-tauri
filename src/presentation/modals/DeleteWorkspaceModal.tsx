@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import type { WorkspaceDeletionTarget } from "@domain/usecases/workspaces/DeleteWorkspace";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface DeleteWorkspaceModalProps {
   workspace: Workspace;
@@ -28,13 +29,7 @@ export function DeleteWorkspaceModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   async function handleConfirm() {
     if (busy) return;

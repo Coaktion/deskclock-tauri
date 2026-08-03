@@ -38,6 +38,7 @@ import { DEFAULT_COLUMNS } from "@domain/entities/ExportProfile";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { Task } from "@domain/entities/Task";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 type Tab = "export" | "profiles" | "edit-profile";
 type PeriodMode = "today" | "custom";
@@ -285,6 +286,9 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
   // `loading` importa: `ProfileForm` lê os campos uma única vez, no inicializador
   // do seu state. Montá-lo antes da carga salvaria o perfil sem as colunas custom.
   const { fields: customFields, activeFields, loading: customFieldsLoading } = useCustomFields();
+
+  useEscapeToClose(onClose);
+
   const [tab, setTab] = useState<Tab>("export");
   const [editingProfile, setEditingProfile] = useState<ExportProfile | null>(null);
 

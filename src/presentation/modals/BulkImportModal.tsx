@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Upload } from "lucide-react";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface BulkImportModalProps {
   title: string;
@@ -11,6 +12,7 @@ interface BulkImportModalProps {
 export function BulkImportModal({ title, placeholder, onImport, onClose }: BulkImportModalProps) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  useEscapeToClose(onClose);
 
   async function handleImport() {
     if (!text.trim()) return;

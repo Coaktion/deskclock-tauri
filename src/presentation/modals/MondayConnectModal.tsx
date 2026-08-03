@@ -3,6 +3,7 @@ import { X, ExternalLink, Loader2, KeyRound } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { MondayAuthError } from "@infra/integrations/monday/errors";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface MondayConnectModalProps {
   onConnected: () => void;
@@ -15,6 +16,7 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
   const [apiKey, setApiKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEscapeToClose(onClose);
 
   async function handleConnect() {
     const key = apiKey.trim();

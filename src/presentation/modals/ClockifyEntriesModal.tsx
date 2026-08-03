@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { X, RefreshCw, Loader2, Pencil, Trash2, DollarSign, Plus } from "lucide-react";
 import type {
   ClockifyHydratedProject,
@@ -11,6 +11,7 @@ import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import {
   todayISO,
   addDaysISO,
@@ -58,7 +59,8 @@ function buildISO(dateISO: string, hhmm: string): string {
 function entryDurationSeconds(entry: ClockifyTimeEntryFull): number {
   if (!entry.timeInterval.end) return 0;
   return Math.round(
-    (new Date(entry.timeInterval.end).getTime() - new Date(entry.timeInterval.start).getTime()) / 1000
+    (new Date(entry.timeInterval.end).getTime() - new Date(entry.timeInterval.start).getTime()) /
+      1000
   );
 }
 
@@ -81,7 +83,8 @@ function groupByDay(entries: ClockifyTimeEntryFull[]): DayGroup[] {
     .map(([dateISO, list]) => ({
       dateISO,
       entries: list.sort(
-        (a, b) => new Date(b.timeInterval.start).getTime() - new Date(a.timeInterval.start).getTime()
+        (a, b) =>
+          new Date(b.timeInterval.start).getTime() - new Date(a.timeInterval.start).getTime()
       ),
       totalSeconds: list.reduce((s, e) => s + entryDurationSeconds(e), 0),
     }));
@@ -100,24 +103,22 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   const [customEnd, setCustomEnd] = useState(todayISO());
   const [onlyDefaultTags, setOnlyDefaultTags] = useState(defaultTagIds.length > 0);
 
-  // ESC fecha
-  useEffect(() => {
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   // Range derivado do filtro
   const range = useMemo(() => {
     const today = todayISO();
     switch (quick) {
-      case "today":  return { start: today, end: today };
-      case "7days":  return { start: addDaysISO(today, -6), end: today };
-      case "30days": return { start: addDaysISO(today, -29), end: today };
-      case "month":  return { start: startOfMonthISO(), end: today };
-      case "custom": return { start: customStart, end: customEnd };
+      case "today":
+        return { start: today, end: today };
+      case "7days":
+        return { start: addDaysISO(today, -6), end: today };
+      case "30days":
+        return { start: addDaysISO(today, -29), end: today };
+      case "month":
+        return { start: startOfMonthISO(), end: today };
+      case "custom":
+        return { start: customStart, end: customEnd };
     }
   }, [quick, customStart, customEnd]);
 
@@ -183,7 +184,8 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
           <p className="text-sm text-gray-200 mb-4">
-            Configure o Clockify (API Key + workspace) na tela de Integrações antes de abrir esta janela.
+            Configure o Clockify (API Key + workspace) na tela de Integrações antes de abrir esta
+            janela.
           </p>
           <button
             onClick={onClose}
@@ -246,17 +248,9 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
 
           {quick === "custom" && (
             <div className="flex items-center gap-2">
-              <DatePickerInput
-                value={customStart}
-                onChange={setCustomStart}
-                className="text-xs"
-              />
+              <DatePickerInput value={customStart} onChange={setCustomStart} className="text-xs" />
               <span className="text-xs text-gray-600">até</span>
-              <DatePickerInput
-                value={customEnd}
-                onChange={setCustomEnd}
-                className="text-xs"
-              />
+              <DatePickerInput value={customEnd} onChange={setCustomEnd} className="text-xs" />
             </div>
           )}
 
@@ -297,9 +291,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
           )}
 
           {!rangeValid && (
-            <p className="text-center text-gray-500 text-sm py-12">
-              Selecione um período válido.
-            </p>
+            <p className="text-center text-gray-500 text-sm py-12">Selecione um período válido.</p>
           )}
 
           {rangeValid && showLoading && (
@@ -586,15 +578,13 @@ function EntryForm({
           options={projectOptions}
           placeholder="Projeto *"
         />
-        <TagMultiSelect
-          allTags={clockifyTags}
-          selectedIds={tagIds}
-          onChange={setTagIds}
-        />
+        <TagMultiSelect allTags={clockifyTags} selectedIds={tagIds} onChange={setTagIds} />
         <button
           type="button"
           onClick={() => setBillable((b) => !b)}
-          title={billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"}
+          title={
+            billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
+          }
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
             billable
               ? "bg-green-900/40 border-green-700 text-green-400"

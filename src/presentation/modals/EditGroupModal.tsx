@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, DollarSign } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -7,6 +7,7 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface GroupUpdates {
   name: string | null;
@@ -47,13 +48,7 @@ export function EditGroupModal({
   // Todas as tarefas do grupo têm os mesmos valores — eles compõem a chave (§6.3).
   const [customValues, setCustomValues] = useState<CustomValues>(first.customValues);
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   async function handleSave() {
     if (saving) return;

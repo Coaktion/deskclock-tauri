@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Plus, ExternalLink, FolderOpen, Trash2, DollarSign } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
@@ -10,6 +10,7 @@ import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { todayISO } from "@shared/utils/time";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 export interface EditPlannedTaskInput {
   name?: string;
@@ -64,15 +65,7 @@ export function EditPlannedTaskModal({
   const { activeFields } = useCustomFields();
   const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
 
-  // window listener cobre casos onde o foco está fora do backdrop (portais, body).
-  // defaultPrevented = true significa que o Autocomplete consumiu o ESC para fechar o dropdown.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape" && !e.defaultPrevented) onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   function toggleDay(day: number) {
     setRecurringDays((prev) =>

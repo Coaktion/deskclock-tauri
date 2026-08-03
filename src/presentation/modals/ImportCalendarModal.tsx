@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -328,6 +329,7 @@ export function ImportCalendarModal({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
+  useEscapeToClose(onClose);
 
   useEffect(() => {
     setLoading(true);

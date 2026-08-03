@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, DollarSign } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
@@ -20,6 +20,7 @@ import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface EditTaskModalProps {
   task: Task;
@@ -86,14 +87,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
 
   const [saving, setSaving] = useState(false);
 
-  // ESC fecha o modal
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  useEscapeToClose(onClose);
 
   async function handleSave(endOverrideHHMM?: string) {
     if (saving) return;

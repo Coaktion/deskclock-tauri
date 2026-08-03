@@ -55,9 +55,12 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
         const incomplete: string[] = [];
         for (const task of tasks) {
           const missing: string[] = [];
-          if (requiredNullable.includes("name") && !task.name?.trim()) missing.push(fieldLabel.name);
-          if (requiredNullable.includes("project") && !task.projectId) missing.push(fieldLabel.project);
-          if (requiredNullable.includes("category") && !task.categoryId) missing.push(fieldLabel.category);
+          if (requiredNullable.includes("name") && !task.name?.trim())
+            missing.push(fieldLabel.name);
+          if (requiredNullable.includes("project") && !task.projectId)
+            missing.push(fieldLabel.project);
+          if (requiredNullable.includes("category") && !task.categoryId)
+            missing.push(fieldLabel.category);
           if (missing.length > 0) {
             incomplete.push(`"${task.name ?? "(sem nome)"}" — faltam: ${missing.join(", ")}`);
           }
