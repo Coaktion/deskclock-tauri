@@ -48,6 +48,25 @@ const EXEC_H = 262; // status + name + timer + start-time + project + category +
 const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
 const ACTIONS_SECTION_H = 48; // section label + one row of action chips
 
+/**
+ * Typeahead dos chips de Projeto e Categoria: com o chip focado pelo teclado,
+ * qualquer caractere abre a lista já filtrando por ele, como faz um `<select>`
+ * nativo. Antes só Enter e espaço abriam — as demais teclas caíam no vazio, e
+ * quem chegava ao chip pelo Tab não tinha sinal de que ele era editável.
+ *
+ * Enter e as teclas de navegação têm `key` com mais de um caractere e passam
+ * direto: o Enter continua abrindo pelo clique nativo do botão. O espaço abre
+ * sem semear, e é o único que precisa de `preventDefault` — sem ele o botão
+ * ainda dispararia o clique, abrindo duas vezes.
+ */
+function chipTypeahead(open: (seed?: string) => void) {
+  return (e: React.KeyboardEvent) => {
+    if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+    e.preventDefault();
+    open(e.key === " " ? undefined : e.key);
+  };
+}
+
 interface PopupOverlayContentProps {
   runningTask: Task | null;
   activePlannedTaskActions: PlannedTaskAction[];
@@ -183,9 +202,13 @@ function ExecSection({
     }
   }, [projectName, task.projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function openProjectEdit() {
+  // `seed` é o caractere que abriu a edição pelo teclado: entra no lugar do
+  // nome atual para a lista já nascer filtrada. O id continua apontando para o
+  // projeto de antes — sair sem escolher nada não pode apagar o vínculo por
+  // causa de uma tecla.
+  function openProjectEdit(seed?: string) {
     editProjectIdRef.current = task.projectId ?? null;
-    setEditProjectName(projectName ?? "");
+    setEditProjectName(seed ?? projectName ?? "");
     setEditingProject(true);
   }
   async function closeProjectEdit() {
@@ -205,9 +228,9 @@ function ExecSection({
     }
   }, [categoryName, task.categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function openCategoryEdit() {
+  function openCategoryEdit(seed?: string) {
     editCategoryIdRef.current = task.categoryId ?? null;
-    setEditCategoryName(categoryName ?? "");
+    setEditCategoryName(seed ?? categoryName ?? "");
     setEditingCategory(true);
   }
   async function closeCategoryEdit() {
@@ -297,7 +320,8 @@ function ExecSection({
         </div>
       ) : (
         <button
-          onClick={openProjectEdit}
+          onClick={() => openProjectEdit()}
+          onKeyDown={chipTypeahead(openProjectEdit)}
           className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
             projectName
               ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
@@ -341,7 +365,8 @@ function ExecSection({
         </div>
       ) : (
         <button
-          onClick={openCategoryEdit}
+          onClick={() => openCategoryEdit()}
+          onKeyDown={chipTypeahead(openCategoryEdit)}
           className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
             categoryName
               ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
