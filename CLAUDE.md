@@ -371,6 +371,67 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
 | Gerenciar apontamentos | botão abre modal com CRUD direto sobre as time entries do workspace ativo (filtro por período + filtro por tags padrão; entries em andamento são ocultadas) |
 
+**Monday.com:**
+| Campo | Tipo |
+|---|---|
+| API Key | input password + instrução inline |
+| Workspace ativo | dropdown (buscado via API, com catálogo cacheado na config) |
+| Importação de dados | workspace de destino + três blocos: Projetos, Categorias e Project Stage |
+| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
+| Enviar tarefas manualmente | botão abre o `TaskSendModal` genérico |
+| Importar itens como planejadas | botão abre o `MondayImportModal` |
+| Gerenciar atividades | botão abre o `MondayEntriesModal` |
+
+> **Um board é um Project.** A pasta de clientes vira um Project por board; da pasta interna, só o
+> board único escolhido pelo usuário. **Não há tabela de mapeamento** de categoria nem de etapa: o
+> Activity Type é o **nome** da Categoria e o Project Stage é o campo personalizado apontado por
+> `mondayProjectStageFieldId` — a tarefa grava o **id da opção**, e o sender traduz para o rótulo.
+> Rótulo que não existe na coluna do board **não vai no payload**: o Monday recusaria a escrita
+> inteira, derrubando um envio correto por causa de uma categoria não relacionada.
+
+> **As duas telas mostram só os itens do usuário conectado.** Os boards são do time inteiro, e
+> ninguém trabalha em todos os clientes. O filtro é a regra `person-<id>` de `query_params` — o
+> prefixo é obrigatório, mandar só o id devolve zero itens sem erro nenhum para avisar. A busca é
+> `listItemsOwnedBy`, compartilhada pelas duas (§9.4).
+
+> **Id de grupo se repete entre boards com significados diferentes.** `group_mm19wbff` é o grupo
+> "Timeline" num board de cliente e o grupo "Activities" no board interno. Por isso
+> `listItemsOwnedBy` separa as consultas por par **(coluna de pessoa, grupo Activities)** e cada
+> lote leva o **seu** id: a união numa consulta só apagaria o Timeline de todo cliente
+> (`not_any_of`) ou traria o Timeline como se fosse atividade (`any_of`). Nunca una ids de grupo de
+> boards diferentes.
+
+> **Importar itens (`MondayImportModal`):** **todos** os boards mapeados numa visão só, agrupada
+> pelo **Project do DeskClock** — não há seletor de board. Entram os itens **fora** do grupo
+> Activities e **do usuário**, e viram PlannedTasks no workspace ativo. O agendamento vem da coluna
+> **Timeline** do item (resolvida pelo título, porque o board tem várias colunas desse tipo e a
+> primeira é a realizada): um dia vira `specific_date`, vários viram `period`, ausente cai no dia
+> corrente. Os schemas são buscados antes dos itens — em lote, `listBoardSchemas` — justamente para
+> resolver esse título e então pedir só as colunas usadas; o template tem mais de 60. Filtro de
+> período (Hoje / Esta semana / Próximos 30 dias, padrão Esta semana) recorta **o que já veio**, sem
+> nova ida ao Monday, e por sobreposição: um item de 23/07 não polui o planejamento de agosto. As
+> janelas só olham para a frente e **não há "Tudo"** — planejamento é futuro, e a busca já traz tudo
+> o que é do usuário numa vez só. **Item sem cronograma aparece em qualquer recorte** — ele nasce no
+> dia corrente, e escondê-lo por falta de data seria escondê-lo para sempre. Na linha expandida, a
+> categoria vem pré-selecionada pelo Activity Type do item (com o billable acompanhando, §6.2) e o
+> **Project Stage** pela coluna homônima. A etapa é campo personalizado desde a Fase 4, mas aparece
+> aqui — e é o único que aparece — porque o Monday a exige no envio das horas: importar sem ela é
+> adiar um preenchimento que ninguém faz depois. Some, com um aviso apontando para Integrações,
+> enquanto `mondayProjectStageFieldId` não apontar para um campo ativo. Só aparecem boards cujo
+> Project existe no workspace ativo, e o botão importa só o que está visível (§5.6).
+
+> **Gerenciar atividades (`MondayEntriesModal`):** período + boards mapeados → itens do grupo
+> Activities, **apenas os do usuário conectado** — os boards são compartilhados e exclusão aqui é
+> sem confirmação (§1). Todos os boards vão numa **consulta só** (`listItems(boardIds)`, em lotes de
+> 20): uma requisição por board mapeado dispara dezenas de chamadas paralelas para descobrir que
+> quase todas voltam vazias. O filtro de janela é por **sobreposição** do intervalo Start Date → End
+> Date, não por data de início: uma atividade de 01/07 a 28/07 pertence a todo dia do meio — e fica
+> no cliente, porque as regras do Monday não expressam "intervalo que cruza o período" e o intervalo
+> mora em duas colunas separadas. Editáveis: nome, horas, billable, Activity Type e Project Stage —
+> as datas não, porque marcam o envio. **Excluir também apaga a linha de `monday_activity_items`**;
+> sem isso o envio seguinte encontra rastreamento órfão e repete `MondayNotFoundError` a cada
+> execução.
+
 #### Feedback
 - Botão na **sidebar** (não dentro das configurações) que abre URL externa no navegador padrão para envio de feedbacks, bugs, sugestões.
 - Implementado via `tauri-plugin-opener` (`openUrl`).
@@ -535,6 +596,11 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 - Props tipadas com interface dedicada (`interface TaskCardProps`).
 - Modais como componentes isolados em `presentation/modals/`.
 - Overlays como componentes isolados em `presentation/overlays/`.
+- **Todo modal fecha no ESC**, via `useEscapeToClose(onClose)` — um único hook, nunca um
+  `addEventListener` copiado. Um modal que não fecha no ESC é o único da tela que não fecha, e o
+  usuário só descobre qual é tentando. O hook ignora o ESC já consumido (`defaultPrevented`), que é
+  como o `Autocomplete` fecha o dropdown sem derrubar o modal junto. Exceção: o `SetupModal`, que
+  não tem para onde fechar.
 
 ### 8.3 Estado
 - Estado local com `useState`/`useReducer` para UI.
@@ -690,7 +756,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão; §5.6: seleção múltipla e exclusão em massa; §7.6: hooks de presentation são testáveis com `renderHook`)*
+*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão; §5.6: seleção múltipla e exclusão em massa; §7.6: hooks de presentation são testáveis com `renderHook`; §5.7: integração Monday, com import de itens e gerenciamento de atividades)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

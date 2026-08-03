@@ -5,8 +5,9 @@
 - **Project classification:** Current (React 19, TS 5, Vitest 3, CLAUDE.md + CI presentes)
 - **Coverage tier:** A (`domain/usecases/`, repositórios, migrations) / B–C (UI, sem testes de
   renderização — padrão do projeto, §7.6 do `CLAUDE.md`)
-- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute em andamento** — Fases 0 a 4
-  concluídas (0 e 1 validadas no app em 2026-07-30/31; 2, 3 e 4 em 2026-07-31); Fase 5 pendente
+- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · **Execute concluído** — Fases 0 a 5 entregues
+  (0 e 1 validadas no app em 2026-07-30/31; 2 a 5 em 2026-07-31). Falta a validação humana da
+  Fase 5 no app, com token real
 
 > Este documento é a **ordem de trabalho** para a fase de Execute. Foi escrito para ser lido
 > por um agente sem acesso à conversa que o originou — todas as decisões e o porquê delas
@@ -409,6 +410,12 @@ irrevisável. Os arquivos novos da fase estão todos em verde.
 - `domain/usecases/monday/groupTasksForMonday.ts` contém um byte NUL literal, o que faz o git
   tratar o arquivo como binário — nenhum diff dele é revisável. Também anterior à fase. Trocar
   por `\0` escapado num `fix:` separado.
+- **O board interno renomeia duas colunas do template** (visto em "Tech Atividades Internas",
+  2026-08-03): a de cronograma chama-se **"Planned Timeline"** e a de etapa, **"Project Phase"**.
+  Nenhum dos dois títulos está em `resolveBoardActivitiesColumns`, então ali `findTimelineColumnId`
+  e `projectStage` voltam vazios. Hoje não quebra nada — aquele board só tem o grupo Activities, e
+  o import não oferece itens de lá —, mas é ruído esperando virar bug. Não foi tocado por ser fora
+  do escopo do que se pediu; a correção é uma entrada em cada lista de títulos.
 - **Tarefas recorrentes gravadas em sábado ou domingo ficaram órfãs.** O fim de semana saiu do
   planejamento (e a config `showWeekend` foi removida) sem migrar `recurringDays`: os valores 0 e
   6 continuam no banco e não têm mais dia onde aparecer. Ninguém avisa o usuário. Decidir entre
@@ -540,18 +547,121 @@ Pedidos do usuário depois de validar o import no app:
 
 ---
 
-### Fase 5 — Importar e gerenciar atividades do Monday
+### Fase 5 — Importar e gerenciar atividades do Monday ✅ **CONCLUÍDA em 2026-07-31**
 
-1. `IMondayApi.listBoardItems(boardId, { groupId?, since? })` + tipo `MondayItem`; query
-   `items_page` com paginação por cursor no `MondayClient`.
-2. **`MondayImportModal`** (molde do `ImportCalendarModal`): board → itens **fora** do grupo
-   Activities → seleção → PlannedTasks no workspace escolhido.
+1. `IMondayApi.listItems(boardIds, { groupIds?, excludeGroupIds?, owner?, columnIds? })` + tipo
+   `MondayItem`; query `items_page` com paginação por cursor no `MondayClient`.
+2. **`MondayImportModal`** (molde do `ImportCalendarModal`): **todos** os boards mapeados, agrupados
+   por Project → itens **fora** do grupo Activities e **do usuário** → seleção → PlannedTasks no
+   workspace escolhido.
 3. **`MondayEntriesModal`** (molde do `ClockifyEntriesModal`): período + boards mapeados → itens
-   do Activities → editar e excluir direto no Monday.
+   do Activities **do usuário** → editar e excluir direto no Monday.
 4. **Detalhe que não pode escapar:** excluir um item pelo Entries precisa limpar a linha
    correspondente em `monday_activity_items`. Sem isso o próximo envio encontra rastreamento
    órfão e o `MondayNotFoundError` reaparece a cada execução.
 5. Registro em `IntegrationsUiContext` + `IntegrationsModalsHost`.
+
+#### 5.1 O que o board real mostrou (e mudou o desenho)
+
+Esta foi a primeira fase executada com o **MCP do Monday conectado**, então as suposições sobre o
+template foram conferidas contra os boards de produção antes de virar código. Quatro achados:
+
+- **Itens do grupo Activities não têm coluna `timeline` preenchida — em board nenhum.** O intervalo
+  deles é o par **Start Date / End Date**, que é o que o `MondayTaskSender` grava no create. O
+  filtro de período do Entries lê esse par, não a timeline.
+- **O intervalo cruza dias de verdade** (um item real ia de `2026-07-01` a `2026-07-28`), então o
+  filtro precisa ser de **sobreposição**, não de "começa dentro da janela": pelo início, esse item
+  sumiria de 26 dos 28 dias que cobre. É o `periodOverlaps`.
+- **As duas fontes de data têm formatos incompatíveis.** `timeline` guarda data pura
+  (`{"from":"2026-07-16","to":"2026-08-19"}`); `date` guarda `{"date":"…","time":"…"}` **em UTC**,
+  e o `time` às vezes falta. Tratar as duas pelo mesmo caminho jogaria a atividade da meia-noite
+  para o dia anterior — o defeito do §6.6. `parseDayValue` só converte fuso quando há hora.
+- **O board tem até quatro colunas do tipo `timeline`** ("Actual Timeline" e duas "Baseline of…"
+  convivendo com "Timeline"). A primeira implementação pegava "a primeira coluna `timeline` com
+  valor" e funcionaria hoje só por acidente — a Actual Timeline está vazia nos boards novos.
+  Nasceu `findTimelineColumnId`, que resolve pelo **título exato**, como o resto do arquivo.
+
+#### 5.2 Desvios e decisões
+
+- **`since` não entrou na assinatura.** As regras de `query_params` do Monday não expressam
+  "intervalo que cruza o período", e o intervalo da atividade mora em duas colunas separadas. A
+  janela é aplicada por quem chama, com `periodOverlaps` — um use case puro e testado, em vez de
+  uma regra de API que eu não teria como validar.
+- **A busca é de vários boards por requisição, não de um board por requisição** (correção após o
+  teste no app, 2026-08-03). A primeira versão fazia `listBoardItems` em paralelo para cada board
+  mapeado: abrir o Entries disparava dezenas de chamadas simultâneas para descobrir que quase todas
+  voltavam vazias, e a tela ficava no loading. `boards(ids: […])` aceita a lista inteira numa
+  consulta só, em lotes de 20 — o teto existe porque a complexidade cresce com o número de boards e
+  o Monday recusa a **query inteira** ao estourar o orçamento. O cursor é por board e já carrega o
+  escopo da consulta que o gerou, então a paginação continua por board.
+- **As duas telas listam só os itens do usuário conectado** (`person` = `mondayUserId`), e o filtro
+  é **do servidor**. Os boards são compartilhados — um deles tinha lançamentos de cinco pessoas, um
+  de 220 h — e neste app exclusão é sem confirmação (§1); botão de excluir ao lado de hora de colega
+  é armadilha. No import a razão é a mesma somada à óbvia: tarefa de colega não vira planejamento de
+  ninguém. E é o filtro que torna a busca em lote barata — sem ele, a consulta única traria o grupo
+  Activities inteiro de todos os clientes. Um "mostrar de todos" é barato de acrescentar depois.
+- **A regra de pessoa exige `person-<id>` como `compare_value`.** Com o id puro o Monday responde
+  200 com zero itens — validado contra board real, é o tipo de detalhe que só aparece assim. Por
+  isso a montagem da regra vive no `MondayClient` e a porta do domínio recebe só `{ columnId,
+  personId }`.
+- **O import busca os schemas antes dos itens**, e não em paralelo: é o schema que dá o id da coluna
+  de cronograma, e com ele em mãos a busca pede só as colunas usadas. Antes vinham todas — e o
+  template tem mais de 60 por item. Como a visão passou a ser de todos os boards, `getBoardSchema`
+  ganhou o irmão em lote `listBoardSchemas`: um schema por requisição devolveria exatamente o
+  problema que a busca em lote resolveu.
+- **O import não tem seletor de board** (2026-08-03, depois do teste no app). O select no topo
+  obrigava a percorrer cliente por cliente para descobrir onde havia trabalho — e, com o filtro de
+  responsável, na maioria dos boards não há nenhum. A visão é única e o agrupamento é pelo
+  **Project do DeskClock**, que é o nome que o usuário reconhece; o board é detalhe de integração.
+  Custo em API: zero — a busca já era em lote, o seletor só escondia o resultado.
+- **O import filtra por período, com padrão "Esta semana".** Sem recorte, item de julho aparecia
+  para planejar em agosto. O filtro é de sobreposição (mesmo `periodOverlaps` do Entries) e roda
+  **sobre o que já veio**, sem nova ida ao Monday — trocar de janela é instantâneo, e nenhum preset
+  custa chamada. Presets só olham para a frente (Hoje / Esta semana / Próximos 30 dias), porque
+  planejamento é futuro. **"Tudo" foi retirado** a pedido do usuário: convidava a importar item
+  encerrado e, como a busca já traz tudo o que é dele, não comprava nada. Efeito colateral aceito:
+  item com cronograma além de 30 dias fica invisível — se incomodar, o caminho é um preset "em
+  diante", não a volta do "Tudo". **Item sem cronograma no board aparece em qualquer recorte**: ele
+  nasce no dia corrente, e escondê-lo por falta de data seria escondê-lo para sempre.
+- **Nunca una ids de grupo de boards diferentes** (regressão de 2026-08-03, pega no app). A primeira
+  versão da visão única mandava a união dos `activitiesGroupId` como `not_any_of`, e o import parou
+  de achar qualquer tarefa: `group_mm19wbff` é o grupo "Timeline" nos boards de cliente e o grupo
+  "Activities" no board interno, então a união apagava o Timeline de todo cliente. O Entries tinha o
+  espelho do defeito (`any_of` traria Timeline como atividade), ainda não observado porque o board
+  interno tem só um grupo. Daí `listItemsOwnedBy` separar as consultas pelo par **(coluna de pessoa,
+  grupo Activities)** — cada lote leva o seu id. Vale a lição geral: **id gerado por template não é
+  identificador global**, e o que os torna comparáveis é o board.
+- **A seleção só importa o que está visível** (§5.6). Aqui não há a urgência da exclusão sem
+  confirmação, mas o número no botão tem de ser o número de tarefas que vão nascer.
+- **O Project Stage entra no import, e é o único campo personalizado que entra.** A Fase 4 o
+  transformou em custom field, mas o Monday exige a etapa no envio das horas: planejada importada
+  sem etapa é preenchimento adiado para um momento que não chega. Vem pré-selecionado pela coluna do
+  próprio item — casam pelo nome, porque as opções do campo foram semeadas com os rótulos do board.
+  Sem `mondayProjectStageFieldId` apontando para campo ativo, o modal esconde o campo e avisa onde
+  configurá-lo. Renderiza pelo `CustomFieldInputs`, com um campo só na lista: a etapa se parece aqui
+  com o que ela é nos cinco formulários.
+- **O `editMap` guarda só o que foi editado**, e a sugestão é derivada a cada render. Semeá-la ao
+  fim da busca congelava o estado do carregamento: `useCustomFields` resolve em paralelo com o
+  Monday, e uma resposta rápida da API deixava a etapa por preencher sem nada explicando o porquê.
+- **`listItemsOwnedBy` nasceu use case, não helper de modal.** O agrupamento por coluna de pessoa
+  (a regra de responsável é única por consulta) valia para as duas telas e ia virar cópia — §9.4.
+  Foi ele que permitiu corrigir a colisão de ids de grupo num lugar só, com teste próprio.
+- **Datas não são editáveis no Entries.** Elas marcam quando a atividade nasceu no Monday, e quem
+  manda nas horas é o DeskClock. Editáveis: nome, Reported Hours, Billing type, Activity Type e
+  Project Stage — os dois últimos por select alimentado pelo cache de rótulos do mapeamento, com a
+  mesma guarda do sender (rótulo fora da lista não vai no payload).
+- **O import pré-seleciona a categoria pelo Activity Type do item.** Os itens de trabalho já vêm
+  com essa coluna preenchida, e desde a Fase 4 categoria e rótulo casam **pelo nome** — então a
+  sugestão sai de graça, e o `billable` acompanha a categoria (§6.2).
+- **Timeline de um dia vira `specific_date`; de vários, `period`.** Item sem timeline cai no dia
+  corrente, para não nascer invisível no planejamento.
+- **O import só oferece boards cujo projeto existe no workspace ativo.** O vínculo mora na config e
+  não sabe de workspace: sem essa checagem, importar por um board mapeado noutro criaria tarefas
+  apontando para projeto que a tela nem exibe. Os demais viram um aviso com a contagem.
+- **`getBoardSchema` voltou ao import.** A Fase 4 tinha eliminado essa chamada cacheando os rótulos
+  no mapeamento; o id da coluna de cronograma não está lá e só interessa a este modal, então ele é
+  resolvido na hora em vez de engordar o `MondayProjectMapping` com um campo que os vínculos
+  antigos não teriam (a armadilha do fim da §4.2).
 
 ---
 
@@ -593,7 +703,7 @@ Suítes que já estão modificadas na árvore e mudam de novo: `taskValidation.t
 | 2 | ✅ Multi-select na tela de Dados | 1 |
 | 3 | ✅ Custom fields: EAV, CRUD, captura na tarefa, chave de agrupamento | 1 |
 | 4 | ✅ Monday: Project Stage vira custom field; board interno único | 3 |
-| 5 | `MondayImportModal` + `MondayEntriesModal` | 4 |
+| 5 | ✅ `MondayImportModal` + `MondayEntriesModal` | 4 |
 
 Cada fase termina no gate obrigatório: `pnpm lint`, prettier, `@code-quality-reviewer` limpo,
 Conventional Commit. Nenhum commit é proposto antes de um relatório limpo do sub-agente.

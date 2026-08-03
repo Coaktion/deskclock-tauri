@@ -62,6 +62,7 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - **Google Calendar:** importação de eventos como tarefas planejadas + rastreamento automático de reuniões com avisos de início/fim (ver seções acima)
 - Conexão OAuth única para Sheets + Calendar
 - **Clockify:** envio de time-entries via API Key; importação de projetos/tags como entidades do DeskClock; mapeamento por workspace; tags padrão; auto-sync por tarefa ou diário; **modal "Gerenciar apontamentos" com CRUD direto sobre as time entries do Clockify** (criar, editar inline, excluir; filtros por período e por tags padrão)
+- **Monday.com:** envio de horas como atividades no board do projeto, via API Key; cada board vira um Project e cada Activity Type vira uma Categoria, casados pelo nome; o Project Stage vira um campo personalizado; auto-sync por tarefa ou diário; **"Importar itens como planejadas"** traz os itens de trabalho do board para o planejamento, com a data vindo da coluna Timeline; **"Gerenciar atividades"** lista, edita e exclui no Monday as atividades enviadas por você
 
 ### Projetos e Categorias
 - Importação em massa (um por linha)
@@ -210,6 +211,28 @@ A integração com o Clockify usa **API Key** gerada diretamente no painel do us
 Após conectar, selecione o workspace ativo, importe projetos e tags do Clockify e configure os mapeamentos.
 
 Para visualizar e editar as time entries diretamente no DeskClock (sem precisar abrir o painel do Clockify), use **Gerenciar apontamentos** no card Clockify — abre um modal com filtro por período, criar/editar/excluir e o filtro "Apenas com tags padrão" ligado por padrão quando há tags padrão configuradas.
+
+### Integração Monday.com (sem variáveis de ambiente)
+
+Também por **API Key** pessoal, gerada na própria conta do Monday — o token nunca sai da máquina.
+
+1. No Monday, abra o menu do seu avatar → **Administrator** → **API** (ou `/admin/integrations/api`)
+2. Copie o **Personal API Token v2**
+3. Cole em **Configurações → Integrações → Monday → Conectar**
+
+Depois de conectar, escolha o workspace do Monday, aponte a pasta dos boards de cliente e (se usar)
+o board interno único, e rode a importação de Projetos, Categorias e Project Stage. O envio de
+horas cria um item no grupo **Activities** do board do projeto; reenviar **atualiza** o item em vez
+de duplicar.
+
+Dois modais no card do Monday:
+
+- **Importar itens como planejadas** — traz os itens de trabalho do board (tudo fora do grupo
+  Activities) para o planejamento. A data vem da coluna Timeline do item: um dia vira data única,
+  vários viram período.
+- **Gerenciar atividades** — lista as atividades **que você enviou**, por período, e permite
+  corrigir nome, horas, tipo de cobrança, Activity Type e Project Stage, ou excluir direto no
+  Monday.
 
 ### Variáveis de ambiente (integrações Google)
 
