@@ -51,6 +51,9 @@ export function CompactOverlayContent({
   const roundedTop = isSmall ? "rounded-t-[6px]" : "rounded-t-xl";
   const roundedBottom = isSmall ? "rounded-b-[6px]" : "rounded-b-xl";
   const timerSize = isSmall ? "text-[12px]" : "text-[14px]";
+  // O contador é um dígito só na maioria das vezes: pode ser maior que o timer
+  // sem estourar a caixa, e é o que o torna legível de relance.
+  const countSize = isSmall ? "text-[15px]" : "text-[17px]";
 
   // Disco atrás do ícone/timer: é ele que abre o vazio entre as duas crescentes,
   // dispensando uma camada de recorte. Só existe quando há cor para separar —
@@ -63,7 +66,6 @@ export function CompactOverlayContent({
   return (
     // inset-0 + m-auto centraliza dentro da janela (que no GTK pode ser 136px+).
     // max-w/max-h limitam a área visível ao tamanho correto.
-    // Sem overflow-hidden para que o badge possa transbordar.
     <div
       data-tauri-drag-region
       className={`flex flex-col w-full h-full ${maxW} ${maxH} m-auto absolute inset-0 cursor-move bg-gray-900 border shadow-xl transition-colors duration-200 ${rounded} ${borderClass}`}
@@ -84,6 +86,15 @@ export function CompactOverlayContent({
             className={`relative ${centerBackdrop} font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
           >
             {formatHHMMSS(seconds)}
+          </span>
+        ) : pendingCount > 0 ? (
+          // Em repouso, o número é a informação — o ícone só repetiria o que o
+          // overlay já é. Fica no centro, no lugar do ícone, e não como badge de
+          // canto: a 68px o badge era pequeno demais para se ler de relance.
+          <span
+            className={`relative ${centerBackdrop} ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-blue-400`}
+          >
+            {pendingCount > 99 ? "99+" : pendingCount}
           </span>
         ) : (
           <ListTodo
@@ -112,12 +123,6 @@ export function CompactOverlayContent({
           <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
         </div>
       </div>
-
-      {!hasTask && pendingCount > 0 && (
-        <span className="absolute -top-[2px] -right-[4px] aspect-square min-h-[16px] px-[3px] bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center pointer-events-none z-10 leading-none">
-          {pendingCount > 9 ? "9+" : pendingCount}
-        </span>
-      )}
     </div>
   );
 }
