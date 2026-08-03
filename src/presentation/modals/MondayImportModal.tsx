@@ -1,0 +1,642 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckSquare,
+  ChevronDown,
+  ChevronRight,
+  DownloadCloud,
+  Loader2,
+  Square,
+  X,
+} from "lucide-react";
+import { emit } from "@tauri-apps/api/event";
+import type { Category } from "@domain/entities/Category";
+import type { CustomField, CustomValues } from "@domain/entities/CustomField";
+import type { Project } from "@domain/entities/Project";
+import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import {
+  importMondayItems,
+  type ImportMondayItemInput,
+} from "@domain/usecases/monday/importMondayItems";
+import { listItemsOwnedBy } from "@domain/usecases/monday/listItemsOwnedBy";
+import {
+  findColumnValue,
+  parseTimelinePeriod,
+  periodOverlaps,
+  type MondayItemPeriod,
+} from "@domain/usecases/monday/mondayItemPeriod";
+import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
+import { findTimelineColumnId } from "@domain/usecases/monday/resolveBoardActivitiesColumns";
+import { Autocomplete } from "@presentation/components/Autocomplete";
+import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import type { MondayItem } from "@shared/types/monday";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { findByNameCaseInsensitive } from "@shared/utils/calendarMetadata";
+import { addDaysISO, todayISO, weekBoundsISO } from "@shared/utils/time";
+import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+
+type PeriodFilter = "today" | "week" | "next30";
+
+const PERIOD_LABELS: Record<PeriodFilter, string> = {
+  today: "Hoje",
+  week: "Esta semana",
+  next30: "Próximos 30 dias",
+};
+
+/**
+ * Janela de cada filtro.
+ *
+ * Todas olham para a frente, e não existe "tudo": planejamento é futuro, e um
+ * item encerrado em julho só polui a lista de agosto. O recorte é aplicado sobre
+ * o que já veio na busca — **trocar de filtro não custa chamada ao Monday**.
+ */
+function periodWindow(filter: PeriodFilter): { start: string; end: string } {
+  const today = todayISO();
+  switch (filter) {
+    case "today":
+      return { start: today, end: today };
+    case "week":
+      return weekBoundsISO();
+    case "next30":
+      return { start: today, end: addDaysISO(today, 30) };
+  }
+}
+
+interface ItemEditState {
+  categoryId: string | null;
+  categoryName: string;
+  billable: boolean;
+  /** Hoje só o Project Stage, mas o formato é o da planejada. */
+  customValues: CustomValues;
+  expanded: boolean;
+}
+
+interface ImportRow {
+  item: MondayItem;
+  /** Project do DeskClock vinculado ao board de origem. */
+  project: Project;
+  period: MondayItemPeriod | null;
+  /** Rótulo da coluna Activity Type, quando o board a preencheu. */
+  activityTypeLabel: string;
+  /** Rótulo da coluna Project Stage, quando o board a preencheu. */
+  projectStageLabel: string;
+}
+
+function unique(values: (string | undefined)[]): string[] {
+  return [...new Set(values.filter((v): v is string => !!v))];
+}
+
+function periodLabel(period: MondayItemPeriod | null): string {
+  if (!period) return "sem data";
+  const fmt = (dayISO: string) => {
+    const [, m, d] = dayISO.split("-");
+    return `${d}/${m}`;
+  };
+  return period.startDayISO === period.endDayISO
+    ? fmt(period.startDayISO)
+    : `${fmt(period.startDayISO)} – ${fmt(period.endDayISO)}`;
+}
+
+/**
+ * A categoria nasce do Activity Type do próprio item, e a etapa da coluna
+ * Project Stage: desde a Fase 4 os três casam **pelo nome** (a opção do campo
+ * personalizado foi semeada com os rótulos do board), então o item traz a
+ * própria sugestão sem tabela de mapeamento. Sem correspondência, o campo fica
+ * vazio e editável.
+ */
+function defaultEditState(
+  row: ImportRow,
+  categories: Category[],
+  stageField: CustomField | null
+): ItemEditState {
+  const matched = findByNameCaseInsensitive(row.activityTypeLabel, categories);
+  const stageOption = stageField?.options.find(
+    (o) => o.label.trim().toLowerCase() === row.projectStageLabel.trim().toLowerCase()
+  );
+  return {
+    categoryId: matched?.id ?? null,
+    categoryName: matched?.name ?? "",
+    // §6.2: o billable acompanha a categoria escolhida.
+    billable: matched?.defaultBillable ?? false,
+    customValues: stageField && stageOption ? { [stageField.id]: stageOption.id } : {},
+    expanded: false,
+  };
+}
+
+interface MondayImportModalProps {
+  repo: IPlannedTaskRepository;
+  projects: Project[];
+  categories: Category[];
+  onImported: (count: number) => void;
+  onClose: () => void;
+}
+
+export function MondayImportModal({
+  repo,
+  projects,
+  categories,
+  onImported,
+  onClose,
+}: MondayImportModalProps) {
+  const config = useAppConfig();
+  const { createMondayApi } = useIntegrations();
+  const workspaceId = useActiveWorkspaceId();
+  const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
+  const userId = config.get("mondayUserId");
+  const { activeFields } = useCustomFields();
+
+  /**
+   * O Project Stage é campo personalizado (Fase 4), mas o Monday exige a etapa
+   * no envio das horas — então ele aparece aqui, e só aqui, entre todos os
+   * campos: importar sem etapa é adiar um preenchimento que ninguém faz depois.
+   * Vazio enquanto a integração não tiver o campo configurado.
+   */
+  const stageField =
+    activeFields.find((f) => f.id === config.get("mondayProjectStageFieldId")) ?? null;
+
+  const [period, setPeriod] = useState<PeriodFilter>("week");
+  const [rows, setRows] = useState<ImportRow[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editMap, setEditMap] = useState<Map<string, ItemEditState>>(new Map());
+  const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
+  useEscapeToClose(onClose);
+
+  const mappings = useMemo(
+    () =>
+      normalizeProjectMappings(config.get("mondayProjectMapping")).filter(
+        (m) => m.workspaceId === mondayWorkspaceId
+      ),
+    [config.isLoaded, mondayWorkspaceId] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  /**
+   * Só entram os boards cujo projeto existe **no workspace ativo**. O vínculo
+   * mora na config e não sabe de workspace: importar por um board mapeado noutro
+   * criaria tarefas apontando para projeto de fora, que a tela nem exibe.
+   */
+  const availableBoards = useMemo(
+    () => mappings.filter((m) => projects.some((p) => p.id === m.deskclockProjectId)),
+    [mappings, projects]
+  );
+
+  const unavailableCount = mappings.length - availableBoards.length;
+  // A identidade do array muda a cada leitura da config; a chave estável evita
+  // refazer a busca e descartar a seleção em curso.
+  const boardsKey = availableBoards.map((m) => m.mondayBoardId).join(",");
+
+  useEffect(() => {
+    if (availableBoards.length === 0) return;
+    if (!userId) {
+      setError("Conecte o Monday novamente: falta o usuário da conta para filtrar os itens.");
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    const api = createMondayApi();
+
+    // Os schemas vêm antes dos itens porque é deles que sai o id da coluna de
+    // cronograma: ele varia por board, não cabe no mapeamento cacheado e é
+    // resolvido pelo título (o board tem várias colunas `timeline` e a primeira
+    // é a realizada). Com eles em mãos, a busca pede só as colunas usadas — o
+    // template tem mais de sessenta.
+    api
+      .listBoardSchemas(availableBoards.map((m) => m.mondayBoardId))
+      .then(async (schemas) => {
+        const timelineByBoard = new Map(schemas.map((s) => [s.id, findTimelineColumnId(s)]));
+        const items = await listItemsOwnedBy(api, availableBoards, userId, {
+          // O grupo Activities é o destino das horas que o DeskClock envia;
+          // reimportá-lo duplicaria trabalho que já está registrado aqui.
+          scope: "outsideActivities",
+          columnIds: unique([
+            ...availableBoards.map((m) => m.columnIds.activityType),
+            ...availableBoards.map((m) => m.columnIds.projectStage),
+            ...timelineByBoard.values(),
+          ]),
+        });
+
+        const projectByBoard = new Map(
+          availableBoards.map((m) => [
+            m.mondayBoardId,
+            projects.find((p) => p.id === m.deskclockProjectId),
+          ])
+        );
+        const columnsByBoard = new Map(availableBoards.map((m) => [m.mondayBoardId, m.columnIds]));
+
+        const next = items.flatMap<ImportRow>((item) => {
+          const project = projectByBoard.get(item.boardId);
+          if (!project) return [];
+          const columnIds = columnsByBoard.get(item.boardId);
+          return [
+            {
+              item,
+              project,
+              period: parseTimelinePeriod(findColumnValue(item, timelineByBoard.get(item.boardId))),
+              activityTypeLabel: findColumnValue(item, columnIds?.activityType)?.text?.trim() ?? "",
+              projectStageLabel: findColumnValue(item, columnIds?.projectStage)?.text?.trim() ?? "",
+            },
+          ];
+        });
+
+        // A janela de duplicatas cobre tudo o que os itens abrangem: um item de
+        // agosto não teria como bater com a semana corrente.
+        const days = next.flatMap((r) =>
+          r.period ? [r.period.startDayISO, r.period.endDayISO] : []
+        );
+        const today = todayISO();
+        const planned = await repo.findForWeek(
+          days.length > 0 ? days.reduce((a, b) => (a < b ? a : b)) : today,
+          days.length > 0 ? days.reduce((a, b) => (a > b ? a : b)) : today,
+          workspaceId
+        );
+
+        if (cancelled) return;
+        setRows(next);
+        setExistingNames(new Set(planned.map((t) => t.name.toLowerCase().trim())));
+        // O mapa guarda só o que o usuário editou; a sugestão é derivada na
+        // hora, a cada render. Semeá-la aqui congelaria o estado do
+        // carregamento: os campos personalizados chegam em paralelo, e uma
+        // resposta rápida do Monday deixaria a etapa por preencher sem nada
+        // que explicasse o porquê.
+        setEditMap(new Map());
+        setSelected(new Set());
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Erro ao buscar itens dos boards.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // `projects`, `categories` e `repo` vêm de providers e mudariam de
+    // identidade a cada render, refazendo a busca. O filtro de período fica de
+    // fora de propósito: ele recorta o que já veio, sem nova ida ao Monday.
+  }, [boardsKey, workspaceId, userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const visibleRows = useMemo(() => {
+    const window = periodWindow(period);
+    // Item sem cronograma no board entra em qualquer recorte: ele nasce no dia
+    // corrente e escondê-lo por falta de data seria escondê-lo para sempre.
+    return rows.filter((r) => !r.period || periodOverlaps(r.period, window.start, window.end));
+  }, [rows, period]);
+
+  /** Um grupo por projeto, que é o que o usuário reconhece — board é detalhe. */
+  const groups = useMemo(() => {
+    const map = new Map<string, ImportRow[]>();
+    for (const row of visibleRows) {
+      map.set(row.project.name, [...(map.get(row.project.name) ?? []), row]);
+    }
+    return [...map.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }))
+      .map(
+        ([name, list]) =>
+          [
+            name,
+            [...list].sort((a, b) =>
+              (a.period?.startDayISO ?? "9999").localeCompare(b.period?.startDayISO ?? "9999")
+            ),
+          ] as const
+      );
+  }, [visibleRows]);
+
+  // Filtrar não deixa selecionado nada fora da tela: o que o botão promete
+  // importar é exatamente o que está à vista (§5.6).
+  const selectedVisible = visibleRows.filter((r) => selected.has(r.item.id));
+
+  function toggleItem(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleGroup(groupRows: readonly ImportRow[]) {
+    const allSelected = groupRows.every((r) => selected.has(r.item.id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      groupRows.forEach((r) => (allSelected ? next.delete(r.item.id) : next.add(r.item.id)));
+      return next;
+    });
+  }
+
+  function updateEdit(id: string, state: ItemEditState) {
+    setEditMap((prev) => new Map(prev).set(id, state));
+  }
+
+  async function handleImport() {
+    const inputs: ImportMondayItemInput[] = selectedVisible.map((r) => {
+      const edit = editMap.get(r.item.id) ?? defaultEditState(r, categories, stageField);
+      return {
+        item: r.item,
+        projectId: r.project.id,
+        categoryId: edit.categoryId,
+        billable: edit.billable,
+        period: r.period,
+        customValues: edit.customValues,
+      };
+    });
+
+    if (inputs.length === 0) return;
+
+    setImporting(true);
+    try {
+      const count = await importMondayItems(
+        repo,
+        inputs,
+        new Date().toISOString(),
+        workspaceId,
+        addOpenUrlAction
+      );
+      if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+      onImported(count);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao importar itens.");
+      setImporting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
+      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
+        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <DownloadCloud size={16} className="text-blue-400 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-sm font-semibold text-gray-100">Importar itens do Monday</h2>
+              <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+                Somente os seus, nos {availableBoards.length} board(s) vinculados
+              </p>
+            </div>
+            <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  period === p
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {PERIOD_LABELS[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {availableBoards.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-12 px-4">
+              {mappings.length === 0
+                ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
+                : "Os boards vinculados apontam para projetos de outro workspace. Troque o workspace ativo ou importe os projetos neste."}
+            </p>
+          )}
+
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Buscando itens…</span>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
+              <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-red-300">{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && availableBoards.length > 0 && visibleRows.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-12 px-4">
+              {rows.length === 0
+                ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
+                : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
+            </p>
+          )}
+
+          {!loading &&
+            groups.map(([projectName, groupRows]) => {
+              const allSelected = groupRows.every((r) => selected.has(r.item.id));
+              const someSelected = !allSelected && groupRows.some((r) => selected.has(r.item.id));
+              return (
+                <div key={projectName} className="border-b border-gray-800 last:border-0">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/40 sticky top-0 z-10">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(groupRows)}
+                      className="shrink-0 text-gray-400 hover:text-gray-200"
+                    >
+                      {allSelected ? (
+                        <CheckSquare size={13} />
+                      ) : (
+                        <Square size={13} className={someSelected ? "opacity-50" : ""} />
+                      )}
+                    </button>
+                    <span className="text-xs font-semibold text-gray-300 flex-1 truncate">
+                      {projectName}
+                    </span>
+                    <span className="text-xs text-gray-600">
+                      {groupRows.filter((r) => selected.has(r.item.id)).length}/{groupRows.length}
+                    </span>
+                  </div>
+
+                  {groupRows.map((row) => (
+                    <ItemRow
+                      key={row.item.id}
+                      row={row}
+                      selected={selected.has(row.item.id)}
+                      editState={
+                        editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField)
+                      }
+                      categories={categories}
+                      stageField={stageField}
+                      isDuplicate={existingNames.has(row.item.name.toLowerCase().trim())}
+                      onToggleSelect={() => toggleItem(row.item.id)}
+                      onEditChange={(s) => updateEdit(row.item.id, s)}
+                    />
+                  ))}
+                </div>
+              );
+            })}
+        </div>
+
+        {visibleRows.length > 0 && (
+          <div className="flex flex-col gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
+            {unavailableCount > 0 && (
+              <p className="text-[11px] text-gray-600">
+                {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
+                desta lista.
+              </p>
+            )}
+            {!stageField && (
+              <p className="text-[11px] text-gray-600">
+                Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna
+                do board, em Integrações → Monday → Importação de dados.
+              </p>
+            )}
+            <label
+              className="flex items-center gap-2 cursor-pointer select-none"
+              onClick={() => setAddOpenUrlAction((v) => !v)}
+            >
+              <div
+                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                  addOpenUrlAction ? "bg-blue-600" : "bg-gray-700"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
+                    addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </div>
+              <span className="text-xs text-gray-400">
+                Adicionar uma ação de abrir o item no Monday
+              </span>
+            </label>
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={onClose}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={importing || selectedVisible.length === 0}
+                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {importing ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    Importando…
+                  </>
+                ) : (
+                  <>Importar selecionados ({selectedVisible.length})</>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ItemRowProps {
+  row: ImportRow;
+  selected: boolean;
+  editState: ItemEditState;
+  categories: Category[];
+  /** Null enquanto a integração não tiver o campo de etapa configurado. */
+  stageField: CustomField | null;
+  isDuplicate: boolean;
+  onToggleSelect: () => void;
+  onEditChange: (s: ItemEditState) => void;
+}
+
+function ItemRow({
+  row,
+  selected,
+  editState,
+  categories,
+  stageField,
+  isDuplicate,
+  onToggleSelect,
+  onEditChange,
+}: ItemRowProps) {
+  const stageLabel = stageField
+    ? (stageField.options.find((o) => o.id === editState.customValues[stageField.id])?.label ?? "")
+    : "";
+  return (
+    <div
+      className="border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors"
+      onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
+    >
+      <div className="flex items-start gap-2 px-4 py-2.5">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          onClick={(e) => e.stopPropagation()}
+          className="mt-0.5 accent-blue-500 shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-sm text-gray-100 truncate">{row.item.name}</span>
+            {isDuplicate && (
+              <span
+                title="Já existe uma tarefa planejada com este nome"
+                className="flex items-center gap-0.5 px-1 py-0.5 text-[10px] leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
+              >
+                <AlertTriangle size={9} />
+                já existe
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {periodLabel(row.period)}
+            {editState.categoryName && (
+              <span className="ml-2 text-blue-400">{editState.categoryName}</span>
+            )}
+            {stageLabel && <span className="ml-2 text-gray-400">{stageLabel}</span>}
+          </p>
+        </div>
+        <span className="p-1 text-gray-600 shrink-0">
+          {editState.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        </span>
+      </div>
+
+      {editState.expanded && (
+        <div className="mt-1 mx-4 mb-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          <Autocomplete
+            value={editState.categoryName}
+            onChange={(v) => onEditChange({ ...editState, categoryName: v, categoryId: null })}
+            onSelect={(o) => {
+              const category = categories.find((c) => c.id === o.id);
+              onEditChange({
+                ...editState,
+                categoryId: o.id,
+                categoryName: o.name,
+                billable: category?.defaultBillable ?? editState.billable,
+              });
+            }}
+            options={categories}
+            placeholder="Categoria"
+          />
+          {/* Um campo personalizado só — o mesmo componente dos cinco
+              formulários, para a etapa se parecer aqui com o que ela é lá. */}
+          {stageField && (
+            <CustomFieldInputs
+              fields={[stageField]}
+              values={editState.customValues}
+              onChange={(customValues) => onEditChange({ ...editState, customValues })}
+              compact
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

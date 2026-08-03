@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveBoardActivitiesColumns,
+  findTimelineColumnId,
   parseStatusLabels,
 } from "@domain/usecases/monday/resolveBoardActivitiesColumns";
 import type { MondayBoardSchema } from "@shared/types/monday";
@@ -186,5 +187,40 @@ describe("parseStatusLabels", () => {
     expect(
       parseStatusLabels({ id: "c", title: "t", type: "status", settingsStr: "{oops" })
     ).toEqual([]);
+  });
+});
+
+describe("findTimelineColumnId", () => {
+  const timeline = (id: string, title: string) => ({ id, title, type: "timeline" });
+
+  it("resolve a coluna de cronograma planejado pelo título", () => {
+    const schema = makeSchema({
+      columns: [timeline("timerange_mm19cah8", "Timeline")],
+    });
+    expect(findTimelineColumnId(schema)).toBe("timerange_mm19cah8");
+  });
+
+  it("ignora Actual Timeline e as baselines, mesmo vindo antes no board", () => {
+    // O template real traz as quatro; pegar a primeira do tipo importaria o
+    // cronograma realizado no lugar do planejado.
+    const schema = makeSchema({
+      columns: [
+        timeline("timerange_mm2x7dx", "Actual Timeline"),
+        timeline("timerange_mm5725c7", "Baseline of Actual Timeline (13 Jul '26)"),
+        timeline("timerange_mm19cah8", "Timeline"),
+        timeline("timerange_mm576p5s", "Baseline of Planned Timeline (13 Jul '26)"),
+      ],
+    });
+    expect(findTimelineColumnId(schema)).toBe("timerange_mm19cah8");
+  });
+
+  it("aceita o título em português", () => {
+    const schema = makeSchema({ columns: [timeline("t1", "Cronograma")] });
+    expect(findTimelineColumnId(schema)).toBe("t1");
+  });
+
+  it("devolve undefined quando o board não tem a coluna", () => {
+    const schema = makeSchema({ columns: [timeline("t1", "Actual Timeline")] });
+    expect(findTimelineColumnId(schema)).toBeUndefined();
   });
 });

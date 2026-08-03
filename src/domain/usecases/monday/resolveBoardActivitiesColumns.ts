@@ -12,6 +12,8 @@ const TITLES = {
   startDate: ["start date", "data de inicio"],
   endDate: ["end date", "data de termino", "data de fim"],
   status: ["status"],
+  /** Cronograma **planejado** do item de trabalho, base do import (§ Fase 5). */
+  timeline: ["timeline", "cronograma", "linha do tempo"],
 } as const;
 
 /**
@@ -124,6 +126,19 @@ export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): Resolv
       person: person.id,
     },
   };
+}
+
+/**
+ * Id da coluna de cronograma planejado, para o import de itens de trabalho.
+ *
+ * Resolvida pelo **título exato**, e não pelo primeiro `type: "timeline"` do
+ * board: o template traz até quatro colunas desse tipo ("Actual Timeline" e as
+ * duas "Baseline of…" convivem com "Timeline"), e pegar a primeira preenchida
+ * importaria o cronograma realizado no lugar do planejado — sem erro nenhum
+ * para avisar. Sem coluna com esse título, o item entra sem data.
+ */
+export function findTimelineColumnId(schema: MondayBoardSchema): string | undefined {
+  return findColumn(schema.columns, TITLES.timeline)?.id;
 }
 
 /**

@@ -91,6 +91,8 @@ function makeClient(): IMondayApi {
     listFolders: vi.fn(),
     listBoards: vi.fn(),
     getBoardSchema: vi.fn(),
+    listBoardSchemas: vi.fn(async () => []),
+    listItems: vi.fn(async () => []),
     createItem: vi.fn(async () => ({ id: `item-${++created}` })),
     changeColumnValues: vi.fn(async (_board: string, itemId: string) => ({ id: itemId })),
     deleteItem: vi.fn(async () => {}),

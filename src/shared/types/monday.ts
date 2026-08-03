@@ -57,3 +57,30 @@ export interface MondayBoardSchema {
 export interface MondayItemRef {
   id: string;
 }
+
+/**
+ * Valor cru de uma coluna, como o Monday devolve em `column_values`.
+ *
+ * `text` é a representação já formatada pelo Monday e serve para exibir; `value`
+ * é o JSON com a estrutura completa e é o único caminho confiável para datas e
+ * timelines, cujo `text` perde o fuso e o dia final.
+ */
+export interface MondayColumnValue {
+  id: string;
+  type: string;
+  text: string | null;
+  value: string | null;
+}
+
+export interface MondayItem {
+  id: string;
+  name: string;
+  /** Permalink do item, usado como ação "abrir no Monday". */
+  url: string;
+  /** Board de origem — a busca cobre vários de uma vez e o item precisa saber. */
+  boardId: string;
+  groupId: string;
+  groupTitle: string;
+  createdAt: string;
+  columnValues: MondayColumnValue[];
+}

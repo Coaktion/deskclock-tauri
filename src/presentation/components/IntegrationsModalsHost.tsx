@@ -8,6 +8,8 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
+import { MondayEntriesModal } from "@presentation/modals/MondayEntriesModal";
+import { MondayImportModal } from "@presentation/modals/MondayImportModal";
 import { MondaySendModal } from "@presentation/modals/MondaySendModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import { showToast } from "@shared/utils/toast";
@@ -59,6 +61,28 @@ export function IntegrationsModalsHost() {
 
   if (modal === "clockify-entries") {
     return <ClockifyEntriesModal onClose={closeModal} />;
+  }
+
+  if (modal === "monday-entries") {
+    return <MondayEntriesModal onClose={closeModal} />;
+  }
+
+  if (modal === "monday-import") {
+    return (
+      <MondayImportModal
+        repo={plannedTaskRepo}
+        projects={projects}
+        categories={categories}
+        onImported={(count) => {
+          closeModal();
+          showToast(
+            "success",
+            `${count} item${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.`
+          );
+        }}
+        onClose={closeModal}
+      />
+    );
   }
 
   if (modal === "calendar-import" && calendarImporter) {

@@ -194,6 +194,162 @@ describe("MondayClient", () => {
         MondayValidationError
       );
     });
+
+    it("listBoardSchemas traz vários boards numa requisição só", async () => {
+      // O import precisa do schema de todos os boards mapeados; um por
+      // requisição devolveria o problema que a busca em lote resolveu.
+      mockFetch.mockResolvedValue(
+        makeResponse({
+          data: {
+            boards: [
+              { id: 1, name: "A", groups: [], columns: [], views: [] },
+              { id: 2, name: "B", groups: [], columns: [], views: [] },
+            ],
+          },
+        })
+      );
+
+      const schemas = await new MondayClient(API_KEY).listBoardSchemas(["1", "2"]);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(lastBody().variables.ids).toEqual(["1", "2"]);
+      expect(schemas.map((s) => s.id)).toEqual(["1", "2"]);
+    });
+  });
+
+  describe("listItems", () => {
+    /** Item cru como o Monday devolve dentro de `items_page`. */
+    function rawItem(id: string, groupId = "group_mm2e2g9j") {
+      return {
+        id,
+        name: `Item ${id}`,
+        url: `https://coaktion.monday.com/boards/1/pulses/${id}`,
+        created_at: "2026-07-29T18:40:31Z",
+        group: { id: groupId, title: "Activities" },
+        column_values: [{ id: "numeric_mm33gj5m", type: "numbers", text: "2", value: '"2"' }],
+      };
+    }
+
+    function boardsResponse(
+      boards: { id: string | number; cursor?: string | null; items: ReturnType<typeof rawItem>[] }[]
+    ) {
+      return makeResponse({
+        data: {
+          boards: boards.map((b) => ({
+            id: b.id,
+            items_page: { cursor: b.cursor ?? null, items: b.items },
+          })),
+        },
+      });
+    }
+
+    it("consulta todos os boards numa requisição só", async () => {
+      mockFetch.mockResolvedValue(
+        boardsResponse([
+          { id: "1", items: [rawItem("10")] },
+          { id: "2", items: [rawItem("20")] },
+        ])
+      );
+
+      const items = await new MondayClient(API_KEY).listItems(["1", "2"]);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(lastBody().variables.ids).toEqual(["1", "2"]);
+      expect(items.map((i) => i.id)).toEqual(["10", "20"]);
+    });
+
+    it("carimba no item o board de origem", async () => {
+      // Sem isso a busca em lote não sabe a qual mapeamento o item pertence, e
+      // horas de um cliente apareceriam sob o nome de outro.
+      mockFetch.mockResolvedValue(
+        boardsResponse([
+          { id: 1, items: [rawItem("10")] },
+          { id: 2, items: [rawItem("20")] },
+        ])
+      );
+
+      const items = await new MondayClient(API_KEY).listItems(["1", "2"]);
+
+      expect(items.map((i) => i.boardId)).toEqual(["1", "2"]);
+    });
+
+    it("filtra o responsável no servidor, com o prefixo person-", async () => {
+      // Mandar só o id devolve zero itens, sem erro nenhum para avisar.
+      mockFetch.mockResolvedValue(boardsResponse([{ id: "1", items: [] }]));
+
+      await new MondayClient(API_KEY).listItems(["1"], {
+        owner: { columnId: "person", personId: "21181483" },
+      });
+
+      expect(lastBody().variables.rules).toEqual([
+        { column_id: "person", compare_value: ["person-21181483"], operator: "any_of" },
+      ]);
+    });
+
+    it("inclui e exclui grupos pelas regras da consulta", async () => {
+      mockFetch.mockResolvedValue(boardsResponse([{ id: "1", items: [] }]));
+      const client = new MondayClient(API_KEY);
+
+      await client.listItems(["1"], { groupIds: ["g1", "g2"] });
+      expect(lastBody().variables.rules).toEqual([
+        { column_id: "group", compare_value: ["g1", "g2"], operator: "any_of" },
+      ]);
+
+      await client.listItems(["1"], { excludeGroupIds: ["g9"] });
+      expect(lastBody().variables.rules).toEqual([
+        { column_id: "group", compare_value: ["g9"], operator: "not_any_of" },
+      ]);
+    });
+
+    it("omite query_params quando não há filtro", async () => {
+      // `{rules: []}` traria zero itens em vez do board inteiro.
+      mockFetch.mockResolvedValue(boardsResponse([{ id: "1", items: [] }]));
+
+      await new MondayClient(API_KEY).listItems(["1"]);
+
+      expect(lastBody().query).not.toContain("query_params");
+      expect(lastBody().variables.rules).toBeUndefined();
+    });
+
+    it("segue o cursor de cada board até o fim", async () => {
+      mockFetch
+        .mockResolvedValueOnce(
+          boardsResponse([
+            { id: "1", cursor: "c1", items: [rawItem("10")] },
+            { id: "2", items: [rawItem("20")] },
+          ])
+        )
+        .mockResolvedValueOnce(
+          makeResponse({ data: { next_items_page: { cursor: null, items: [rawItem("11")] } } })
+        );
+
+      const items = await new MondayClient(API_KEY).listItems(["1", "2"]);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(lastBody().variables.cursor).toBe("c1");
+      expect(items.map((i) => i.id)).toEqual(["10", "20", "11"]);
+      expect(items.find((i) => i.id === "11")?.boardId).toBe("1");
+    });
+
+    it("quebra a consulta em lotes quando há muitos boards", async () => {
+      // Complexidade cresce com o número de boards e o Monday recusa a query
+      // inteira ao estourar o orçamento.
+      mockFetch.mockResolvedValue(boardsResponse([]));
+      const ids = Array.from({ length: 21 }, (_, i) => String(i + 1));
+
+      await new MondayClient(API_KEY).listItems(ids);
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(lastBody().variables.ids).toEqual(["21"]);
+    });
+
+    it("ignora board repetido", async () => {
+      mockFetch.mockResolvedValue(boardsResponse([{ id: "1", items: [] }]));
+
+      await new MondayClient(API_KEY).listItems(["1", "1", ""]);
+
+      expect(lastBody().variables.ids).toEqual(["1"]);
+    });
   });
 
   describe("mutations", () => {

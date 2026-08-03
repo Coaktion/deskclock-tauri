@@ -47,6 +47,8 @@ function makeApi(boards: MondayBoardRef[], schemas: Record<string, MondayBoardSc
       if (!found) throw new Error(`Board ${id} não encontrado no Monday.`);
       return found;
     }),
+    listBoardSchemas: vi.fn(async () => []),
+    listItems: vi.fn(async () => []),
     createItem: vi.fn(),
     changeColumnValues: vi.fn(),
     deleteItem: vi.fn(),

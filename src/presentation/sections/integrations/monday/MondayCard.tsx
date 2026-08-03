@@ -95,6 +95,8 @@ export function MondayIntegrationCard() {
             reloadProjects={reloadProjects}
             reloadCategories={reloadCategories}
             onShowSendModal={() => openModal("monday-send")}
+            onShowImportModal={() => openModal("monday-import")}
+            onShowEntriesModal={() => openModal("monday-entries")}
           />
         )}
       </div>
