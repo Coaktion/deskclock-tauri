@@ -123,21 +123,31 @@ function TaskRow({
           className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
         />
       )}
-      <span className="text-xs text-gray-500 shrink-0 font-mono tabular-nums w-28">
-        {formatTimeRange(task.startTime, task.endTime)}
-      </span>
-      <span className="flex-1 text-sm text-gray-200 truncate">
-        {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
-      </span>
-      {projectName && (
-        <span className="text-xs text-gray-500 truncate max-w-24">{projectName}</span>
-      )}
-      {categoryName && (
-        <span className="text-xs text-gray-500 truncate max-w-24">{categoryName}</span>
-      )}
-      <span className="text-xs text-gray-500 font-mono tabular-nums shrink-0">
-        {formatHHMMSS(task.durationSeconds ?? 0)}
-      </span>
+      {/* Nome em cima, sozinho e com a linha inteira: é por ele que se procura
+          um apontamento, e disputando espaço com horário, projeto e categoria
+          ele era o primeiro a ser truncado. Os demais campos descem para uma
+          segunda linha, lado a lado, como legenda do que está acima. */}
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <div className="flex items-baseline gap-3">
+          <span className="flex-1 min-w-0 text-sm text-gray-200 truncate">
+            {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
+          </span>
+          {/* O horário sobe para a linha do nome e encosta na direita, alinhado
+              com a duração logo abaixo: os dois são a mesma informação vista de
+              dois jeitos, e juntos liberam a linha de baixo inteira para projeto
+              e categoria, que são os campos que truncavam. */}
+          <span className="shrink-0 text-xs text-gray-500 font-mono tabular-nums">
+            {formatTimeRange(task.startTime, task.endTime)}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          {projectName && <span className="truncate">{projectName}</span>}
+          {categoryName && <span className="truncate">{categoryName}</span>}
+          <span className="ml-auto shrink-0 font-mono tabular-nums">
+            {formatHHMMSS(task.durationSeconds ?? 0)}
+          </span>
+        </div>
+      </div>
       {!selectMode && (
         <>
           <button
