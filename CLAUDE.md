@@ -497,6 +497,14 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > as datas não, porque marcam o envio. **Excluir também apaga a linha de `monday_activity_items`**;
 > sem isso o envio seguinte encontra rastreamento órfão e repete `MondayNotFoundError` a cada
 > execução.
+>
+> **Uma busca serve as quatro janelas.** Como a consulta não tem filtro de data, trocar de janela
+> refazia a mesma ida ao Monday para receber os mesmos itens; agora o período recorta só o que já
+> veio, e 30 dias já contém 7 dias e hoje — o mês idem. As janelas são **prontas** (Hoje / 7 dias /
+> 30 dias / Este mês): o personalizado não abria nada que elas não cubram e custava dois campos de
+> data mais um estado inválido para a tela tratar. Enquanto a busca corre — abertura e botão de
+> recarregar — as pílulas ficam **travadas**, ou dá para pular de janela em janela e cada clique
+> reordena a lista sob o cursor.
 
 #### Feedback
 - Botão na **sidebar** (não dentro das configurações) que abre URL externa no navegador padrão para envio de feedbacks, bugs, sugestões.

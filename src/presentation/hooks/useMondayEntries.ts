@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { buildActivityColumnValues } from "@domain/usecases/monday/buildActivityColumnValues";
@@ -40,8 +40,8 @@ export interface MondayEntryPatch {
 interface UseMondayEntriesOptions {
   mappings: MondayProjectMapping[];
   userId: string;
+  /** Janela exibida. Recorta o que já veio — **não** dispara nova busca. */
   range: { start: string; end: string };
-  rangeValid: boolean;
 }
 
 function columnText(item: MondayItem, columnId: string | undefined): string {
@@ -103,11 +103,18 @@ function toEntry(item: MondayItem, mapping: MondayProjectMapping): MondayEntry {
  * lado das horas de um colega é armadilha, não funcionalidade. O filtro vale
  * também como economia: quem trabalha em três clientes não deve pagar o
  * download das atividades de todos os boards mapeados.
+ *
+ * **Uma busca serve todas as janelas.** As regras do Monday não expressam
+ * "intervalo que cruza o período" e o intervalo mora em duas colunas separadas,
+ * então a consulta nunca teve filtro de data: trocar de janela refazia a mesma
+ * busca para receber exatamente os mesmos itens. O período recorta o que já veio
+ * (`periodOverlaps`), e trocar de filtro passa a ser instantâneo — 30 dias já
+ * contém 7 dias e hoje, e o mês idem.
  */
-export function useMondayEntries({ mappings, userId, range, rangeValid }: UseMondayEntriesOptions) {
+export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOptions) {
   const { createMondayApi } = useIntegrations();
   const { mondayActivityItemRepo } = useRepositories();
-  const [entries, setEntries] = useState<MondayEntry[]>([]);
+  const [allEntries, setAllEntries] = useState<MondayEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -117,8 +124,8 @@ export function useMondayEntries({ mappings, userId, range, rangeValid }: UseMon
   const mappingsKey = mappings.map((m) => m.mondayBoardId).join(",");
 
   useEffect(() => {
-    if (mappings.length === 0 || !userId || !rangeValid) {
-      setEntries([]);
+    if (mappings.length === 0 || !userId) {
+      setAllEntries([]);
       return;
     }
     let cancelled = false;
@@ -133,12 +140,10 @@ export function useMondayEntries({ mappings, userId, range, rangeValid }: UseMon
     })
       .then((items) => {
         if (cancelled) return;
-        setEntries(
+        setAllEntries(
           items.flatMap((item) => {
             const mapping = byBoard.get(item.boardId);
-            if (!mapping) return [];
-            const entry = toEntry(item, mapping);
-            return periodOverlaps(entry.period, range.start, range.end) ? [entry] : [];
+            return mapping ? [toEntry(item, mapping)] : [];
           })
         );
       })
@@ -157,8 +162,14 @@ export function useMondayEntries({ mappings, userId, range, rangeValid }: UseMon
       cancelled = true;
     };
     // `mappings` é recriado a cada leitura da config; a chave estável evita o
-    // laço de busca. `createMondayApi` idem, e vem do provider.
-  }, [mappingsKey, userId, range.start, range.end, rangeValid, refreshSignal]); // eslint-disable-line react-hooks/exhaustive-deps
+    // laço de busca. `createMondayApi` idem, e vem do provider. O `range` está
+    // fora de propósito: ele não muda o que a API devolve (ver doc acima).
+  }, [mappingsKey, userId, refreshSignal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const entries = useMemo(
+    () => allEntries.filter((e) => periodOverlaps(e.period, range.start, range.end)),
+    [allEntries, range.start, range.end]
+  );
 
   const handleSaveEdit = useCallback(
     async (entry: MondayEntry, patch: MondayEntryPatch) => {

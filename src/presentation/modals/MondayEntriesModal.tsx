@@ -7,7 +7,6 @@ import {
   type MondayEntryPatch,
 } from "@presentation/hooks/useMondayEntries";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import {
   addDaysISO,
@@ -17,14 +16,19 @@ import {
   todayISO,
 } from "@shared/utils/time";
 
-type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
+/**
+ * Só janelas prontas. O personalizado saiu: a busca não é filtrada por data no
+ * Monday (§ `useMondayEntries`), então ele não abria nada que as quatro janelas
+ * já não cubram — em troca de dois campos de data e de um estado inválido para
+ * a tela tratar.
+ */
+type QuickFilter = "today" | "7days" | "30days" | "month";
 
 const QUICK_LABELS: Record<QuickFilter, string> = {
   today: "Hoje",
   "7days": "7 dias",
   "30days": "30 dias",
   month: "Este mês",
-  custom: "Personalizado",
 };
 
 function periodLabel(entry: MondayEntry): string {
@@ -66,8 +70,6 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
   const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
 
   const [quick, setQuick] = useState<QuickFilter>("7days");
-  const [customStart, setCustomStart] = useState(todayISO());
-  const [customEnd, setCustomEnd] = useState(todayISO());
 
   useEscapeToClose(onClose);
 
@@ -92,15 +94,11 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
         return { start: addDaysISO(today, -29), end: today };
       case "month":
         return { start: startOfMonthISO(), end: today };
-      case "custom":
-        return { start: customStart, end: customEnd };
     }
-  }, [quick, customStart, customEnd]);
-
-  const rangeValid = !!range.start && !!range.end && range.start <= range.end;
+  }, [quick]);
 
   const { entries, loading, editingId, setEditingId, refresh, handleSaveEdit, handleDelete } =
-    useMondayEntries({ mappings, userId, range, rangeValid });
+    useMondayEntries({ mappings, userId, range });
 
   const dayGroups = useMemo(() => groupByDay(entries), [entries]);
   const totalHours = entries.reduce((sum, e) => sum + e.hoursDecimal, 0);
@@ -160,11 +158,14 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
 
         <div className="px-5 py-3 border-b border-gray-800 flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Travados enquanto a busca corre: sem isso dá para pular de janela
+                em janela e cada clique reordena a lista sob o cursor. */}
             {(Object.keys(QUICK_LABELS) as QuickFilter[]).map((q) => (
               <button
                 key={q}
                 onClick={() => setQuick(q)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                disabled={loading}
+                className={`px-3 py-1 text-xs rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   quick === q
                     ? "bg-blue-600 text-white"
                     : "bg-gray-800 text-gray-400 hover:text-gray-200"
@@ -174,14 +175,6 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
-
-          {quick === "custom" && (
-            <div className="flex items-center gap-2">
-              <DatePickerInput value={customStart} onChange={setCustomStart} className="text-xs" />
-              <span className="text-xs text-gray-600">até</span>
-              <DatePickerInput value={customEnd} onChange={setCustomEnd} className="text-xs" />
-            </div>
-          )}
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -191,17 +184,13 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
             </p>
           )}
 
-          {mappings.length > 0 && !rangeValid && (
-            <p className="text-center text-gray-500 text-sm py-12">Selecione um período válido.</p>
-          )}
-
-          {rangeValid && loading && entries.length === 0 && (
+          {loading && entries.length === 0 && (
             <div className="flex items-center justify-center py-12 text-gray-600">
               <Loader2 size={20} className="animate-spin" />
             </div>
           )}
 
-          {rangeValid && !loading && mappings.length > 0 && dayGroups.length === 0 && (
+          {!loading && mappings.length > 0 && dayGroups.length === 0 && (
             <p className="text-center text-gray-500 text-sm py-12">
               Nenhuma atividade sua neste período.
             </p>
