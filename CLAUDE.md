@@ -239,7 +239,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 - **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa. As ações não são disparadas automaticamente ao iniciar — ficam acessíveis como chips no Popup Flyout durante a execução (ver §6.5).
 - **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
 - **Edição:** abre modal completo.
-- **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação).
+- **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação). **Só aparecem no hover da linha, e sem hover não ocupam largura** (`w-0` + `overflow-hidden`, não apenas `opacity-0`): reservados, o espaço de cinco botões saía do nome da tarefa, que truncava numa linha vazia à direita. `focus-within` abre o bloco para quem navega pelo teclado.
 - **Importar Google Agenda:** Botão visível quando Google conectado. Modal com eventos agrupados por dia (accordion), seleção por dia, editor inline por evento (projeto, categoria, recorrência). Filtra `workingLocation` e `outOfOffice`. `focusTime` **não** é filtrado — blocos de foco viram tarefas, pois costumam representar trabalho real.
 
 #### Lógica de Concluir/Pendente

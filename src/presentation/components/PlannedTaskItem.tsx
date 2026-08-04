@@ -140,7 +140,14 @@ export function PlannedTaskItem({
         </div>
 
         {!selectMode && (
-          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          /* Sem hover os botões não ocupam largura nenhuma (`w-0` + `overflow-hidden`),
+             e não só ficam invisíveis: com `opacity-0` sozinho eles seguiam
+             reservando o espaço de cinco botões, e era o nome da tarefa que
+             pagava por isso, truncando numa linha que estava vazia à direita.
+             `focus-within` repete a abertura para quem chega pelo teclado — o
+             hover nunca acontece ali, e sem isso o botão focado ficaria fora da
+             área visível. */
+          <div className="flex items-center gap-0.5 shrink-0 w-0 overflow-hidden opacity-0 group-hover:w-auto group-hover:opacity-100 focus-within:w-auto focus-within:opacity-100 transition-opacity">
             {!isCompleted && !playDisabled && (
               <button
                 onClick={() => onPlay(task)}
