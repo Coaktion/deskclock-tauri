@@ -26,6 +26,21 @@ export class AutoSyncRunner {
     return this.withTracking(active, (s) => s.runDaily(endDateISO));
   }
 
+  /**
+   * Envio diário de **uma** integração, para o botão "Sincronizar agora".
+   *
+   * `runDaily` dispararia todas as habilitadas — o clique num card mandaria
+   * tarefas para as outras integrações sem o usuário ter pedido. O gatilho aqui
+   * é o clique, então `isDailyEnabled` não é consultado; devolve `null` quando o
+   * nome não corresponde a nenhuma estratégia registrada.
+   */
+  async runDailyFor(integrationName: string, endDateISO: string): Promise<AutoSyncResult | null> {
+    const strategy = this.strategies.find((s) => s.integrationName === integrationName);
+    if (!strategy) return null;
+    const [result] = await this.withTracking([strategy], (s) => s.runDaily(endDateISO));
+    return result;
+  }
+
   isSyncing(integrationName?: string): boolean {
     if (integrationName) return (this.inFlight.get(integrationName) ?? 0) > 0;
     return this.inFlight.size > 0;

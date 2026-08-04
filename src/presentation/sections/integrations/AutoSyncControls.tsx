@@ -1,7 +1,9 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import type { AppConfig } from "@shared/types/appConfig";
-import { formatLastSync } from "@shared/utils/time";
-import { RefreshCw } from "lucide-react";
+import { formatLastSync, todayISO } from "@shared/utils/time";
+import { showToast } from "@shared/utils/toast";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Row, SubSection, Toggle } from "./shared";
 
@@ -21,16 +23,38 @@ type KeysOfType<T> = {
   [K in keyof AppConfig]: AppConfig[K] extends T ? K : never;
 }[keyof AppConfig];
 
+/**
+ * Habilita o "Sincronizar agora" da integração. Opcional porque nem toda
+ * integração registra uma estratégia no `AutoSyncRunner` — sem ela o botão
+ * dispararia no vazio.
+ */
+export interface AutoSyncNow {
+  /** Nome no runner; é por ele que o botão dispara **só** esta integração. */
+  integrationName: string;
+  /** O que o `count` conta muda por destino (tarefas no Sheets, atividades no
+   *  Monday), então a frase de sucesso vem de quem chama. */
+  successMessage: (count: number) => string;
+}
+
 const MODES = ["per-task", "daily"] as const;
 const TRIGGERS = ["on-open", "fixed-time"] as const;
 
-export function AutoSyncControls({ keys }: { keys: AutoSyncConfigKeys }) {
+export function AutoSyncControls({
+  keys,
+  syncNow,
+}: {
+  keys: AutoSyncConfigKeys;
+  syncNow?: AutoSyncNow;
+}) {
   const config = useAppConfig();
+  const { runDailyFor, isSyncing } = useAutoSync();
   const [autoSync, setAutoSync] = useState(false);
   const [syncMode, setSyncMode] = useState<"per-task" | "daily">("per-task");
   const [syncTrigger, setSyncTrigger] = useState<"on-open" | "fixed-time">("on-open");
   const [syncTime, setSyncTime] = useState("18:00");
   const [lastSyncTs, setLastSyncTs] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const autoSyncing = syncNow ? isSyncing(syncNow.integrationName) : false;
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -42,6 +66,37 @@ export function AutoSyncControls({ keys }: { keys: AutoSyncConfigKeys }) {
     // Hidratação única: `config` é estável e `keys` é constante por integração;
     // relistar os setters só reexecutaria o efeito sem mudar o resultado.
   }, [config.isLoaded, keys]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSyncNow() {
+    if (!syncNow) return;
+    setSyncing(true);
+    try {
+      const result = await runDailyFor(syncNow.integrationName, todayISO());
+      // Só acontece se a integração não estiver registrada no runner — o botão
+      // não teria o que disparar, e um toast de sucesso mentiria.
+      if (!result) {
+        await showToast("error", `Integração ${syncNow.integrationName} indisponível.`);
+        return;
+      }
+      if (result.error) {
+        await showToast("error", result.error.message);
+        return;
+      }
+      // A estratégia grava o timestamp; reler a config mantém o "Último envio"
+      // em dia sem esperar uma remontagem da tela.
+      setLastSyncTs(config.get(keys.lastSync));
+      if (result.count === 0) {
+        if (result.warning) await showToast("warning", result.warning, 6000);
+        else await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
+        return;
+      }
+      const success = syncNow.successMessage(result.count);
+      if (result.warning) await showToast("warning", `${success} ${result.warning}`, 6000);
+      else await showToast("success", success);
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   return (
     <SubSection
@@ -139,6 +194,25 @@ export function AutoSyncControls({ keys }: { keys: AutoSyncConfigKeys }) {
                     {lastSyncTs ? formatLastSync(lastSyncTs) : "Nunca"}
                   </span>
                 </span>
+                {syncNow && (
+                  <button
+                    onClick={handleSyncNow}
+                    disabled={syncing || autoSyncing}
+                    title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
+                    className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-2.5 py-1.5 rounded transition-colors shrink-0"
+                  >
+                    {syncing || autoSyncing ? (
+                      <Loader2 size={11} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={11} />
+                    )}
+                    {autoSyncing
+                      ? "Sincronização automática…"
+                      : syncing
+                        ? "Sincronizando…"
+                        : "Sincronizar agora"}
+                  </button>
+                )}
               </div>
             </>
           )}

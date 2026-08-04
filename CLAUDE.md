@@ -380,7 +380,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | API Key | input password + instrução inline |
 | Workspace ativo | dropdown (buscado via API, com catálogo cacheado na config) |
 | Importação de dados | workspace de destino + três blocos: Projetos, Categorias e Project Stage |
-| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
+| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) + "Sincronizar agora" no modo diário |
 | Importação automática de itens | toggle (`mondayAutoImportEnabled`, padrão desativado) + botão "Buscar itens agora" |
 | Enviar tarefas manualmente | botão abre o `TaskSendModal` genérico |
 | Importar itens como planejadas | botão abre o `MondayImportModal` |
@@ -392,6 +392,12 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > utilizável — sem board não há o que consultar, e sem a etapa o Monday recusa a escrita das horas.
 > O atalho existe para quem já usa a integração; oferecê-lo pela metade seria três ações que abrem
 > vazias. A tela de Integrações continua acessível sempre, que é onde a configuração se completa.
+
+> **"Sincronizar agora" dispara só o Monday** (`AutoSyncRunner.runDailyFor`). O `runDaily` do
+> runner roda todas as integrações com o modo diário ligado — o botão de um card mandaria tarefas
+> para as outras sem ninguém pedir. O botão vive no `AutoSyncControls` compartilhado, atrás da prop
+> opcional `syncNow`, e o modo diário é a condição para ele aparecer, como no Google Sheets: no modo
+> por tarefa o envio já acontece ao concluir.
 
 > **Workspace e pastas nascem pré-escolhidos** (`mondayDefaults`): workspace `Delivery Center`,
 > pasta de clientes `Projetos` e pasta de projetos internos `Projetos Internos`. São **sugestões de
