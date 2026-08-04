@@ -16,6 +16,7 @@ import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import { snapshotOf } from "@domain/usecases/monday/diffMondayItem";
+import { findImportedMondayItems } from "@domain/usecases/monday/findImportedMondayItems";
 import {
   importMondayItems,
   type ImportMondayItemInput,
@@ -138,6 +139,8 @@ export function MondayImportModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editMap, setEditMap] = useState<Map<string, ItemEditState>>(new Map());
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
+  /** Itens que já viraram planejada viva — ficam fora da lista, ver o efeito. */
+  const [imported, setImported] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -208,8 +211,19 @@ export function MondayImportModal({
           workspaceId
         );
 
+        // O que já tem planejada viva sai da lista: reimportar duplicaria a
+        // tarefa e ainda reapontaria o vínculo para a cópia, deixando a original
+        // órfã do sync. O badge "já existe" abaixo não cobre isto — ele compara
+        // nomes, e renomear a planejada o apaga.
+        const alreadyImported = await findImportedMondayItems(
+          { trackedRepo: mondayImportedItemRepo, plannedRepo: repo },
+          next.map((r) => r.item.id),
+          workspaceId
+        );
+
         if (cancelled) return;
         setRows(next);
+        setImported(alreadyImported);
         setExistingNames(new Set(planned.map((t) => t.name.toLowerCase().trim())));
         // O mapa guarda só o que o usuário editou; a sugestão é derivada na
         // hora, a cada render. Semeá-la aqui congelaria o estado do
@@ -235,12 +249,23 @@ export function MondayImportModal({
     // fora de propósito: ele recorta o que já veio, sem nova ida ao Monday.
   }, [boardsKey, workspaceId, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleRows = useMemo(() => {
+  /**
+   * O recorte de período e, dentro dele, a separação entre o que ainda cabe
+   * importar e o que já foi. O segundo número existe para o rodapé: some da
+   * lista, mas não sem dizer para onde foi.
+   */
+  const [visibleRows, hiddenImported] = useMemo(() => {
     const window = periodWindow(period);
     // Item sem cronograma no board entra em qualquer recorte: ele nasce no dia
     // corrente e escondê-lo por falta de data seria escondê-lo para sempre.
-    return rows.filter((r) => !r.period || periodOverlaps(r.period, window.start, window.end));
-  }, [rows, period]);
+    const inWindow = rows.filter(
+      (r) => !r.period || periodOverlaps(r.period, window.start, window.end)
+    );
+    return [
+      inWindow.filter((r) => !imported.has(r.item.id)),
+      inWindow.filter((r) => imported.has(r.item.id)).length,
+    ] as const;
+  }, [rows, period, imported]);
 
   /** Um grupo por projeto, que é o que o usuário reconhece — board é detalhe. */
   const groups = useMemo(() => {
@@ -388,7 +413,9 @@ export function MondayImportModal({
             <p className="text-sm text-gray-500 text-center py-12 px-4">
               {rows.length === 0
                 ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
-                : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
+                : hiddenImported > 0
+                  ? `Todas as suas ${hiddenImported} tarefas deste período já estão no planejamento.`
+                  : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
             </p>
           )}
 
@@ -444,6 +471,11 @@ export function MondayImportModal({
               <p className="text-[11px] text-gray-600">
                 {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
                 desta lista.
+              </p>
+            )}
+            {hiddenImported > 0 && (
+              <p className="text-[11px] text-gray-600">
+                {hiddenImported} item(ns) já importado(s) estão fora desta lista.
               </p>
             )}
             {!stageField && (

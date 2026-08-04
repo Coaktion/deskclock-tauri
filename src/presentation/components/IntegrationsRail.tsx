@@ -1,11 +1,13 @@
-import { CalendarDays, ListChecks, Send, Sheet } from "lucide-react";
+import { CalendarDays, DownloadCloud, ListChecks, Send, Sheet } from "lucide-react";
 import type { ReactNode } from "react";
+import { isMondayReady } from "@domain/usecases/monday/isMondayReady";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   useIntegrationsUi,
   type IntegrationModal,
 } from "@presentation/contexts/IntegrationsUiContext";
 import { ClockifyLogo } from "@presentation/sections/integrations/clockify/ClockifyLogo";
+import { MondayLogo } from "@presentation/sections/integrations/monday/MondayLogo";
 
 interface FlyoutAction {
   label: string;
@@ -79,7 +81,18 @@ export function IntegrationsRail() {
   const sheetsConnected = googleConnected && !!config.get("integrationGoogleSheetsSpreadsheetId");
   const clockifyConnected = !!config.get("clockifyApiKey");
 
-  if (!googleConnected && !clockifyConnected) return null;
+  // O Monday só entra configurado ponta a ponta: com a chave de API, mas sem
+  // boards, board interno ou campo de etapa, todas as ações abrem vazias ou
+  // recusam o envio. Ver `isMondayReady`.
+  const mondayReady = isMondayReady({
+    apiKey: config.get("mondayApiKey"),
+    activeWorkspaceId: config.get("mondayActiveWorkspaceId"),
+    projectMapping: config.get("mondayProjectMapping"),
+    internalBoardId: config.get("mondayInternalBoardId"),
+    projectStageFieldId: config.get("mondayProjectStageFieldId"),
+  });
+
+  if (!googleConnected && !clockifyConnected && !mondayReady) return null;
 
   return (
     <aside
@@ -136,6 +149,36 @@ export function IntegrationsRail() {
               label: "Enviar tarefas manualmente…",
               icon: <Send size={14} />,
               modal: "clockify-send",
+            },
+          ]}
+          onOpen={openModal}
+        />
+      )}
+
+      {mondayReady && (
+        <RailTile
+          title="Monday"
+          status="Conectado"
+          // A mesma placa do `IntegrationTile` na tela de Integrações: o logo do
+          // Monday não traz fundo próprio, e inventar um aqui faria o mesmo
+          // ícone ter dois visuais no app.
+          icon={<MondayLogo size={18} />}
+          tileClassName="bg-gray-800/60"
+          actions={[
+            {
+              label: "Enviar tarefas manualmente…",
+              icon: <Send size={14} />,
+              modal: "monday-send",
+            },
+            {
+              label: "Importar itens como planejadas…",
+              icon: <DownloadCloud size={14} />,
+              modal: "monday-import",
+            },
+            {
+              label: "Gerenciar atividades…",
+              icon: <ListChecks size={14} />,
+              modal: "monday-entries",
             },
           ]}
           onOpen={openModal}

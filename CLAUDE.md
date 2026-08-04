@@ -319,6 +319,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Abrir acesso rápido ao iniciar | toggle | Exibe o Command Palette ao abrir o app (padrão: ativo). Sem atalho global padrão — configure um em Configurações → Atalhos, se desejar. |
 | Fechar ao perder foco | toggle | Janela principal fecha ao perder o foco (padrão: desativado); Pin/Unpin na title bar suspende temporariamente |
 | Descartar tarefas com menos de 1 minuto | toggle | Cancela automaticamente tarefas paradas em menos de 60 s (padrão: desativado) |
+| Mostrar rail de integrações | toggle | Faixa à direita com atalhos das integrações conectadas (padrão: ativo). **Some na própria tela de Integrações** — ali os mesmos tiles, com as mesmas ações, já são o conteúdo principal |
 
 #### Overlay
 | Configuração | Tipo | Descrição |
@@ -384,6 +385,13 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Importar itens como planejadas | botão abre o `MondayImportModal` |
 | Gerenciar atividades | botão abre o `MondayEntriesModal` |
 
+> **No rail de integrações o Monday só aparece configurado ponta a ponta** (`isMondayReady`): chave
+> de API, ao menos um board mapeado **no workspace ativo do Monday**, board interno e campo de
+> Project Stage. Diferente do Clockify e do Google, a chave sozinha não torna a integração
+> utilizável — sem board não há o que consultar, e sem a etapa o Monday recusa a escrita das horas.
+> O atalho existe para quem já usa a integração; oferecê-lo pela metade seria três ações que abrem
+> vazias. A tela de Integrações continua acessível sempre, que é onde a configuração se completa.
+
 > **Um board é um Project.** A pasta de clientes vira um Project por board; da pasta interna, só o
 > board único escolhido pelo usuário. **Não há tabela de mapeamento** de categoria nem de etapa: o
 > Activity Type é o **nome** da Categoria e o Project Stage é o campo personalizado apontado por
@@ -421,6 +429,13 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > adiar um preenchimento que ninguém faz depois. Some, com um aviso apontando para Integrações,
 > enquanto `mondayProjectStageFieldId` não apontar para um campo ativo. Só aparecem boards cujo
 > Project existe no workspace ativo, e o botão importa só o que está visível (§5.6).
+>
+> **Item que já tem planejada viva não aparece** (`findImportedMondayItems`), e o rodapé diz quantos
+> ficaram de fora. Reimportar não duplicaria só a tarefa: o `upsert` do vínculo passaria a apontar
+> para a cópia, e a planejada original ficaria órfã do sync — nunca mais atualizada nem podada. O
+> badge "já existe" não cobre isso, porque compara **nomes** e renomear a planejada o apaga. **Item
+> cuja planejada foi apagada à mão continua na lista**: ali não há duplicata a evitar, e este modal
+> é a única volta — o automático nunca recria o que o usuário apagou.
 
 > **Importação automática (`useMondayItemTracker` + `syncMondayPlannedTasks`):** ao abrir o app e a
 > cada 30 min, faz sozinho o que o modal faz à mão — a mesma busca, os mesmos padrões
@@ -788,7 +803,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-03 (§5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-03 (§5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

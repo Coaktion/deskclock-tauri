@@ -248,7 +248,9 @@ function MainContent({
             onFocusTaskEditHandled={onFocusTaskEditHandled}
           />
         </main>
-        <IntegrationsRail />
+        {/* Na própria tela de Integrações o rail é redundante: os mesmos tiles,
+            com as mesmas ações, já ocupam o conteúdo principal. */}
+        {page !== "integrations" && <IntegrationsRail />}
       </div>
       <IntegrationsModalsHost />
     </div>
