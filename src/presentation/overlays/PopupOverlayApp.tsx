@@ -45,6 +45,13 @@ function PopupOverlayAppInner() {
   const isProgrammaticResizeRef = useRef(false);
   const isStartingTaskRef = useRef(false);
   const activePlannedTaskId = useRef<string | null>(null);
+  // Modal aberto no conteúdo do popup (hoje, a edição de planejada). Segura o
+  // fechamento automático: perder o foco ou apertar ESC com o modal aberto
+  // jogaria fora o que o usuário está editando.
+  const modalOpenRef = useRef(false);
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    modalOpenRef.current = open;
+  }, []);
   const [activePlannedTaskActions, setActivePlannedTaskActions] = useState<PlannedTaskAction[]>([]);
   const {
     prompt: meetingPrompt,
@@ -188,7 +195,7 @@ function PopupOverlayAppInner() {
   // reunião está ativo, ignora o blur — o prompt não deve sumir sem resposta.
   useEffect(() => {
     const unlisten = appWindow.listen("tauri://blur", async () => {
-      if (meetingPromptActiveRef.current) return;
+      if (meetingPromptActiveRef.current || modalOpenRef.current) return;
       await emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {});
       await appWindow.hide();
     });
@@ -201,7 +208,7 @@ function PopupOverlayAppInner() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
-      if (meetingPromptActiveRef.current) return;
+      if (meetingPromptActiveRef.current || modalOpenRef.current) return;
       void emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {}).then(() => appWindow.hide());
     }
     document.addEventListener("keydown", onKey);
@@ -353,6 +360,7 @@ function PopupOverlayAppInner() {
           onClose={handleClose}
           onNavigatePlanning={handleNavigatePlanning}
           onResize={programmaticSetSize}
+          onModalOpenChange={handleModalOpenChange}
           onStartTask={handleStartTask}
           onPlay={handlePlay}
           onPause={handlePause}

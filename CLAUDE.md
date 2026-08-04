@@ -175,7 +175,8 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 #### 5.1.2 Popup Flyout (Overlay de execução)
 - **Aparece ao clicar** no Compact Overlay — flyout acoplado, não janela separada.
-- **Estado idle:** lista de tarefas planejadas para hoje + botão "Nova tarefa". Cada linha tem botões `Concluir` (✓) e `Iniciar` (▶) — concluir marca a tarefa como concluída no dia atual sem precisar abrir o planejamento, útil para corrigir tarefas que pararam com "Pendente" mas estavam de fato finalizadas. Botões do header: `Ir para planejamento` | `Fechar`.
+- **Estado idle:** lista de tarefas planejadas para hoje + botão "Nova tarefa". Cada linha tem botões `Editar` (✎), `Concluir` (✓) e `Iniciar` (▶) — concluir marca a tarefa como concluída no dia atual sem precisar abrir o planejamento, útil para corrigir tarefas que pararam com "Pendente" mas estavam de fato finalizadas. Botões do header: `Ir para planejamento` | `Fechar`.
+- **Editar planejada sem sair do overlay (`PlannedTaskEditSheet`):** painel que cobre o conteúdo do popup **no tamanho que ele já tem** — a janela não cresce, porque crescer tiraria o overlay do canto onde o usuário o deixou. Traz os mesmos campos do `EditPlannedTaskModal`: nome, projeto, categoria, billable, agendamento, campos personalizados e ações. O que garante que os dois não divirjam é o `usePlannedTaskEditor`, que guarda todo o estado e a montagem do payload; os componentes só dispõem os campos na tela (§9.4). Adaptações para os 264 px úteis: tudo empilhado em coluna, dias da recorrência com uma letra (o dia inteiro fica no `title`), período com as duas datas empilhadas, e o corpo rolando por dentro — é a rolagem que absorve campos personalizados e ações sem mexer na janela. Com o painel aberto, o popup **não fecha no blur nem no ESC** (o ESC fecha o painel) — fechar sozinho descartaria a edição, a mesma guarda já usada pelo prompt de reunião.
 - **Estado running/paused:** nome da tarefa, timer ao vivo, borda lateral colorida (billable/non-billable). Controles: Play/Pause, Stop (com confirmação Concluída/Pendente), Cancelar, Fechar.
 - **Confirmação de Stop:** ao clicar em Parar, abre um painel inline com input `HH:MM` da hora de término (preenchido com a hora atual) e botões `Concluída` / `Pendente`. Se o usuário não tocar no campo, o término é gravado como agora. Se backdatear, a hora informada vira o `endTime` e a `durationSeconds` é recalculada — atendendo ao caso "esqueci de parar o timer". Validação inline rejeita horas anteriores ao `startTime`.
 - **Edição inline por campo:** clique em nome, projeto ou categoria abre edição in-place sem modal.
@@ -787,7 +788,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-07-31 (workspaces: modelo de dados, tela de Dados, overlays, regras de escopo e exceção de exclusão; §5.6: seleção múltipla e exclusão em massa; §7.6: hooks de presentation são testáveis com `renderHook`; §5.7: integração Monday, com import de itens e gerenciamento de atividades)*
+*Última atualização: 2026-08-03 (§5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

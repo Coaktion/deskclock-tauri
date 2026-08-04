@@ -10,6 +10,7 @@ import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksF
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
+import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChip";
@@ -73,6 +74,11 @@ interface PopupOverlayContentProps {
   onClose: () => void;
   onNavigatePlanning: () => void;
   onResize: (width: number, height: number) => void;
+  /**
+   * Avisa a janela que há um modal aberto. Enquanto houver, o popup não pode
+   * sumir no blur nem no ESC — fechar sozinho descartaria a edição em curso.
+   */
+  onModalOpenChange: (open: boolean) => void;
   onStartTask: (input: {
     name?: string | null;
     projectId?: string | null;
@@ -537,6 +543,7 @@ export function PopupOverlayContent({
   onClose,
   onNavigatePlanning,
   onResize,
+  onModalOpenChange,
   onStartTask,
   onPlay,
   onPause,
@@ -546,7 +553,7 @@ export function PopupOverlayContent({
   onUpdateTask,
 }: PopupOverlayContentProps) {
   const today = todayISO();
-  const { tasks, reload, complete } = usePlannedTasksForDate(today);
+  const { tasks, reload, complete, update } = usePlannedTasksForDate(today);
   const { titles: trackedTitles } = useTrackedMeetingTitles();
   const { groups: completedGroups, totalSeconds: completedTotalSeconds } =
     useCompletedTasksForDate(today);
@@ -559,13 +566,20 @@ export function PopupOverlayContent({
   const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
   const hasActions = activePlannedTaskActions.length > 0;
   const [confirmingStop, setConfirmingStop] = useState(false);
+  const [editingTask, setEditingTask] = useState<PlannedTask | null>(null);
 
   // Reset confirm state whenever the running task changes (started/stopped).
   useEffect(() => {
     if (!runningTask) setConfirmingStop(false);
   }, [runningTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Resize based on state
+  useEffect(() => {
+    onModalOpenChange(!!editingTask);
+  }, [editingTask, onModalOpenChange]);
+
+  // Resize based on state. A edição de planejada **não** entra aqui: o painel
+  // cabe no popup como ele já é, e crescer a janela para editar tiraria o
+  // overlay do lugar onde o usuário o deixou.
   useEffect(() => {
     if (runningTask) {
       const execH = confirmingStop ? EXEC_H_CONFIRMING : EXEC_H;
@@ -597,7 +611,7 @@ export function PopupOverlayContent({
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-visible">
+    <div className="relative w-full h-full flex flex-col bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-visible">
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 bg-gray-800 border-b border-gray-700 shrink-0 rounded-t-xl overflow-hidden"
@@ -727,6 +741,13 @@ export function PopupOverlayContent({
                           )}
                         </div>
                         <button
+                          onClick={() => setEditingTask(task)}
+                          title="Editar"
+                          className="p-1 text-gray-500 hover:text-gray-200 hover:bg-gray-700/40 rounded-lg transition-colors shrink-0"
+                        >
+                          <Pen size={11} />
+                        </button>
+                        <button
                           onClick={() => void complete(task.id, today)}
                           title="Concluir"
                           className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
@@ -771,6 +792,19 @@ export function PopupOverlayContent({
           <ArrowRight size={11} />
         </button>
       </div>
+
+      {/* Edição da planejada sem sair do overlay e sem mexer no tamanho da
+          janela. Os campos são os do modal do planejamento, pelo mesmo
+          `usePlannedTaskEditor` — só a disposição muda (§9.4). */}
+      {editingTask && (
+        <PlannedTaskEditSheet
+          task={editingTask}
+          projects={projects}
+          categories={categories}
+          onSave={update}
+          onClose={() => setEditingTask(null)}
+        />
+      )}
     </div>
   );
 }

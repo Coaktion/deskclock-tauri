@@ -1,30 +1,19 @@
-import { useState } from "react";
 import { X, Plus, ExternalLink, FolderOpen, Trash2, DollarSign } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { CustomValues } from "@domain/entities/CustomField";
-import type { UUID } from "@shared/types";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import {
+  usePlannedTaskEditor,
+  type EditPlannedTaskInput,
+} from "@presentation/hooks/usePlannedTaskEditor";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { todayISO } from "@shared/utils/time";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
-export interface EditPlannedTaskInput {
-  name?: string;
-  projectId?: UUID | null;
-  categoryId?: UUID | null;
-  billable?: boolean;
-  scheduleType?: ScheduleType;
-  scheduleDate?: string | null;
-  recurringDays?: number[] | null;
-  periodStart?: string | null;
-  periodEnd?: string | null;
-  actions?: PlannedTaskAction[];
-  customValues?: CustomValues;
-}
+export type { EditPlannedTaskInput };
 
 interface EditPlannedTaskModalProps {
   task: PlannedTask;
@@ -43,63 +32,42 @@ export function EditPlannedTaskModal({
   onSave,
   onClose,
 }: EditPlannedTaskModalProps) {
-  const [name, setName] = useState(task.name);
-  const [projectId, setProjectId] = useState<UUID | null>(task.projectId);
-  const [projectName, setProjectName] = useState(
-    projects.find((p) => p.id === task.projectId)?.name ?? ""
-  );
-  const [categoryId, setCategoryId] = useState<UUID | null>(task.categoryId);
-  const [categoryName, setCategoryName] = useState(
-    categories.find((c) => c.id === task.categoryId)?.name ?? ""
-  );
-  const [billable, setBillable] = useState(task.billable);
-  const [scheduleType, setScheduleType] = useState<ScheduleType>(task.scheduleType);
-  const [scheduleDate, setScheduleDate] = useState(task.scheduleDate ?? "");
-  const [recurringDays, setRecurringDays] = useState<number[]>(task.recurringDays ?? []);
-  const [periodStart, setPeriodStart] = useState(task.periodStart ?? "");
-  const [periodEnd, setPeriodEnd] = useState(task.periodEnd ?? "");
-  const [actions, setActions] = useState<PlannedTaskAction[]>(task.actions);
-  const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
-  const [newActionValue, setNewActionValue] = useState("");
-  const [saving, setSaving] = useState(false);
   const { activeFields } = useCustomFields();
-  const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
+  const {
+    name,
+    setName,
+    projectName,
+    setProjectName,
+    selectProject,
+    categoryName,
+    setCategoryName,
+    selectCategory,
+    billable,
+    setBillable,
+    scheduleType,
+    setScheduleType,
+    scheduleDate,
+    setScheduleDate,
+    recurringDays,
+    toggleDay,
+    periodStart,
+    setPeriodStart,
+    periodEnd,
+    setPeriodEnd,
+    actions,
+    addAction,
+    removeAction,
+    newActionType,
+    setNewActionType,
+    newActionValue,
+    setNewActionValue,
+    customValues,
+    setCustomValues,
+    saving,
+    save: handleSave,
+  } = usePlannedTaskEditor({ task, projects, categories, onSave, onClose });
 
   useEscapeToClose(onClose);
-
-  function toggleDay(day: number) {
-    setRecurringDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
-    );
-  }
-
-  function handleAddAction() {
-    if (!newActionValue.trim()) return;
-    setActions((prev) => [...prev, { type: newActionType, value: newActionValue.trim() }]);
-    setNewActionValue("");
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      await onSave(task.id, {
-        name: name.trim() || task.name,
-        projectId,
-        categoryId,
-        billable,
-        scheduleType,
-        scheduleDate: scheduleType === "specific_date" ? scheduleDate || null : null,
-        recurringDays: scheduleType === "recurring" ? recurringDays : null,
-        periodStart: scheduleType === "period" ? periodStart || null : null,
-        periodEnd: scheduleType === "period" ? periodEnd || null : null,
-        actions,
-        customValues,
-      });
-      onClose();
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <div
@@ -147,10 +115,7 @@ export function EditPlannedTaskModal({
               <Autocomplete
                 value={projectName}
                 onChange={setProjectName}
-                onSelect={(o) => {
-                  setProjectId(o.id);
-                  setProjectName(o.name);
-                }}
+                onSelect={selectProject}
                 options={projects}
                 placeholder="Projeto"
                 className="flex-1"
@@ -158,12 +123,7 @@ export function EditPlannedTaskModal({
               <Autocomplete
                 value={categoryName}
                 onChange={setCategoryName}
-                onSelect={(o) => {
-                  setCategoryId(o.id);
-                  setCategoryName(o.name);
-                  const cat = categories.find((c) => c.id === o.id);
-                  if (cat) setBillable(cat.defaultBillable);
-                }}
+                onSelect={selectCategory}
                 options={categories}
                 placeholder="Categoria"
                 className="flex-1"
@@ -300,7 +260,7 @@ export function EditPlannedTaskModal({
                       {action.value}
                     </span>
                     <button
-                      onClick={() => setActions((prev) => prev.filter((_, j) => j !== i))}
+                      onClick={() => removeAction(i)}
                       className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
                       title="Remover"
                     >
@@ -325,13 +285,13 @@ export function EditPlannedTaskModal({
                 value={newActionValue}
                 onChange={(e) => setNewActionValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddAction();
+                  if (e.key === "Enter") addAction();
                 }}
                 placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
                 className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
               <button
-                onClick={handleAddAction}
+                onClick={addAction}
                 disabled={!newActionValue.trim()}
                 className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg transition-colors"
               >
