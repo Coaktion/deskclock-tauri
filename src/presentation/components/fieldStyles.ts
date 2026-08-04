@@ -74,6 +74,16 @@ export const floatingLabelClass = [
   "group-has-[textarea:not(:placeholder-shown)]/cf:bg-gray-800 group-has-[textarea:not(:placeholder-shown)]/cf:rounded-sm",
 ].join(" ");
 
-/** Coluna de formulário: largura fixa à esquerda, com a lista da tela ao lado. */
-export const formColumnClass =
-  "w-64 shrink-0 border-r border-gray-800 overflow-y-auto p-2 space-y-3";
+/**
+ * Casca da coluna de formulário: largura fixa à esquerda, com a lista da tela ao
+ * lado. Quem a desenha é o `CollapsibleFormColumn` — a casca é o que permanece
+ * quando o formulário é recolhido, e por isso ela não rola nem espaça nada.
+ */
+export const formColumnShellClass = "w-64 shrink-0 border-r border-gray-800 flex flex-col";
+
+/**
+ * Corpo do formulário dentro da casca: é ele que rola e que espaça os campos.
+ * Separado da casca porque o cabeçalho com o botão de recolher precisa ficar
+ * parado enquanto os campos rolam por baixo.
+ */
+export const formColumnClass = "flex-1 min-h-0 overflow-y-auto p-2 space-y-3";

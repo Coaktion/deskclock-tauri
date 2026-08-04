@@ -37,7 +37,7 @@ export function RetroactiveEntryForm({
   customFields,
 }: RetroactiveEntryFormProps) {
   return (
-    <div data-tour="retroactive-form" className={formColumnClass}>
+    <div className={formColumnClass}>
       <input
         ref={form.nameRef}
         type="text"

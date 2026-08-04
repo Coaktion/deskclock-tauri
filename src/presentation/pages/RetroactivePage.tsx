@@ -7,12 +7,14 @@ import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlanned
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
+import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
@@ -199,6 +201,7 @@ export function RetroactivePage() {
   }, [plannedTaskRepo, selectedDate, workspaceId]);
 
   const { activeFields } = useCustomFields();
+  const formColumn = usePersistedFlag("retroactiveFormCollapsed");
   const form = useRetroactiveForm({
     selectedDate,
     projects,
@@ -224,6 +227,9 @@ export function RetroactivePage() {
     };
 
     function applyPrefill(p: Prefill) {
+      // Preencher um formulário recolhido não teria efeito visível nenhum — quem
+      // chegou por deeplink veio para conferir e completar os campos.
+      formColumn.set(false);
       if (p.date) setSelectedDate(p.date);
       if (p.name != null) form.setName(p.name);
       if (p.projectName != null) form.setProjectName(p.projectName);
@@ -358,12 +364,19 @@ export function RetroactivePage() {
       {/* Formulário à esquerda, dia à direita: com campos personalizados o
           formulário cresce e, empilhado, empurrava a lista para fora da tela. */}
       <div className="flex-1 min-h-0 flex">
-        <RetroactiveEntryForm
-          form={form}
-          projects={projects}
-          categories={categories}
-          customFields={activeFields}
-        />
+        <CollapsibleFormColumn
+          collapsed={formColumn.value}
+          onToggle={formColumn.toggle}
+          label="Novo apontamento"
+          tourId="retroactive-form"
+        >
+          <RetroactiveEntryForm
+            form={form}
+            projects={projects}
+            categories={categories}
+            customFields={activeFields}
+          />
+        </CollapsibleFormColumn>
 
         <div className="flex-1 min-w-0 flex flex-col">
           {/* Tarefas planejadas para o dia — sugestões para lançamento */}
@@ -383,9 +396,16 @@ export function RetroactivePage() {
                       className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
                     >
                       <button
-                        onClick={() =>
-                          hasTime ? void handleDirectLaunch(task) : form.prefill(task)
-                        }
+                        onClick={() => {
+                          if (hasTime) {
+                            void handleDirectLaunch(task);
+                            return;
+                          }
+                          // Pré-preencher é um convite a revisar os campos: com a
+                          // coluna recolhida, o clique não mostraria nada.
+                          formColumn.set(false);
+                          form.prefill(task);
+                        }}
                         title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
                         className={`shrink-0 p-1 rounded-lg transition-colors ${
                           hasTime

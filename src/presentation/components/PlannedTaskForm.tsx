@@ -184,7 +184,7 @@ export function PlannedTaskForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} data-tour="planning-form" className={formColumnClass}>
+    <form onSubmit={handleSubmit} className={formColumnClass}>
       <input
         ref={nameRef}
         type="text"

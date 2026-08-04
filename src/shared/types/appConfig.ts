@@ -23,6 +23,14 @@ export interface AppConfig {
   closeOnFocusLoss: boolean;
   discardTasksUnderOneMinute: boolean;
   showIntegrationsRail: boolean;
+  /**
+   * Colunas de entrada recolhidas, por tela. Persistidas — quem recolhe o
+   * formulário quer a lista com a tela inteira, e reabri-lo a cada navegação
+   * desfaria justamente o que se pediu. Não aparecem em Configurações: o
+   * controle é o próprio botão da coluna.
+   */
+  planningFormCollapsed: boolean;
+  retroactiveFormCollapsed: boolean;
   // Acessibilidade
   fontSize: "P" | "M" | "G" | "GG";
   theme: "azul" | "verde" | "escuro" | "claro";

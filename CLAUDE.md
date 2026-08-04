@@ -226,9 +226,10 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 - **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← → + contador de concluídas.
 - **Layout em duas colunas:** formulário fixo à esquerda (`PlannedTaskForm`), semana à direita — o mesmo arranjo do Lançamento Manual (§5.8). As duas telas de entrada compartilham o vocabulário visual dos campos em `presentation/components/fieldStyles.ts`; **não duplicar essas classes**, ou um ajuste numa tela desalinha a outra em silêncio.
+- **A coluna do formulário recolhe** (`CollapsibleFormColumn`, o mesmo componente do Lançamento Manual): sobra uma faixa de 36 px com o rótulo de pé, e a lista fica com a tela inteira. O estado é **persistido** por tela (`planningFormCollapsed`, `retroactiveFormCollapsed`) — quem recolheu quer espaço para trabalhar, e reabrir a cada navegação desfaria o pedido. Não há toggle em Configurações: o controle é o próprio botão da coluna. O `data-tour` vive na casca, não no formulário, para o tour ter alvo mesmo com a coluna recolhida.
 - **Só dias úteis.** Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta — a antiga `showWeekend` foi removida. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia.
 - **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex, no topo da coluna da direita. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
-- **Barra de seleção:** "Selecionar tarefas" fica sobre a lista da semana, não no header, e só aparece havendo ao menos uma tarefa.
+- **Barra de seleção:** "Selecionar tarefas" fica na **mesma linha dos botões de dia**, encostado à direita (`ml-auto`) — não no header, e só aparece havendo ao menos uma tarefa. Cabe ali desde que o fim de semana saiu do planejamento; uma linha só para a barra custava altura que é da lista. A rolagem horizontal fica no grupo das pílulas, não na linha: na linha, os botões de seleção sairiam da tela junto com os dias.
 - **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campos personalizados, agendamento e ações — empilhados na coluna.
 - **Atalho "Hoje":** No campo Data única, botão de atalho seleciona a data atual.
 - **Tipos de agendamento:**
@@ -491,7 +492,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 - **Acesso:** Ícone `FileClock` na sidebar.
 - **Navegação de data:** Setas ← → e DatePickerInput. Não é possível avançar além de hoje.
-- **Layout em duas colunas:** formulário fixo à esquerda (`RetroactiveEntryForm`, coluna estreita e rolável), lista do dia à direita. Empilhados, os campos personalizados faziam o formulário crescer sem limite e empurravam os apontamentos para fora da tela.
+- **Layout em duas colunas:** formulário fixo à esquerda (`RetroactiveEntryForm`, coluna estreita e rolável), lista do dia à direita. Empilhados, os campos personalizados faziam o formulário crescer sem limite e empurravam os apontamentos para fora da tela. A coluna **recolhe** como a do Planejamento (§5.3) — e **reabre sozinha** quando algo pré-preenche o formulário (deeplink de lançamento, botão de uma planejada sem horário): preencher campo escondido não mostraria nada.
 - **Formulário de criação inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim, Duração e os campos personalizados ativos. Criação sem modal; edição de registros existentes abre `EditTaskModal`.
 - **Rótulo flutuante nos campos personalizados:** o rótulo começa dentro do campo, como placeholder, e sobe para a borda ao focar ou quando há valor — parando na mesma posição do rótulo encaixado de Início/Fim/Duração. Vale só para os campos personalizados, porque são os únicos dinâmicos: "Project Stage" não se explica pela posição no formulário como Nome e Projeto se explicam, então precisa continuar legível depois de preenchido. Os dois modos anteriores (`labelsAsPlaceholder` e rótulo-acima) foram removidos: o flutuante serve à coluna estreita e ao modal. O checkbox é a exceção — não há onde flutuar, o rótulo fica ao lado da caixa.
 - **Modo de duração:** Toggle "Hora fim" / "Duração". Na duração, aceita `HH:MM:SS`, `MM:SS` ou inteiro (minutos).
@@ -803,7 +804,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-03 (§5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-03 (§5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

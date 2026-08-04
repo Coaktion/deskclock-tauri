@@ -20,6 +20,8 @@ const DEFAULTS: AppConfig = {
   closeOnFocusLoss: false,
   discardTasksUnderOneMinute: false,
   showIntegrationsRail: true,
+  planningFormCollapsed: false,
+  retroactiveFormCollapsed: false,
   fontSize: "M" as const,
   theme: "azul" as const,
   shortcutToggleTask: "",

@@ -1,5 +1,6 @@
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
+import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -7,6 +8,7 @@ import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
+import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTour } from "@presentation/hooks/useTour";
@@ -91,6 +93,7 @@ export function WeekPlanningView() {
   const { titles: trackedTitles, today: trackedToday } = useTrackedMeetingTitles();
 
   const calendarConnected = config.isLoaded && !!config.get("googleRefreshToken");
+  const formColumn = usePersistedFlag("planningFormCollapsed");
 
   const calendarImporter = useMemo(
     () => (config.isLoaded ? factories.createCalendarImporter() : null),
@@ -260,19 +263,34 @@ export function WeekPlanningView() {
             início da semana — que é a segunda-feira — e filtrar por segunda
             gera a mesma chave, o formulário não remonta e o campo Data fica
             preso no valor anterior. O bug só aparecia na segunda. */}
-        <PlannedTaskForm
-          key={dayFilter === "all" ? `week-${start}` : `day-${dayFilter}`}
-          projects={projects}
-          categories={categories}
-          showDateFields={true}
-          defaultDate={dayFilter !== "all" ? dayFilter : today}
-          onSubmit={create}
-        />
+        <CollapsibleFormColumn
+          collapsed={formColumn.value}
+          onToggle={formColumn.toggle}
+          label="Nova tarefa"
+          tourId="planning-form"
+        >
+          <PlannedTaskForm
+            key={dayFilter === "all" ? `week-${start}` : `day-${dayFilter}`}
+            projects={projects}
+            categories={categories}
+            showDateFields={true}
+            defaultDate={dayFilter !== "all" ? dayFilter : today}
+            onSubmit={create}
+          />
+        </CollapsibleFormColumn>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* ── Day filter pills ─────────────────────────────────────────────── */}
-          <div data-tour="planning-day-filter" className="border-b border-gray-800 shrink-0">
-            <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto">
+          {/* ── Dias da semana + seleção, na mesma linha ──────────────────────
+              Cabem juntos desde que o fim de semana saiu: cinco pílulas e
+              "Todos" deixam folga à direita, e a barra de seleção sozinha numa
+              linha custava altura que é da lista. A rolagem horizontal fica só
+              no grupo das pílulas — arrastando a linha inteira, os botões de
+              seleção sairiam da tela junto. */}
+          <div
+            data-tour="planning-day-filter"
+            className="border-b border-gray-800 shrink-0 flex items-center gap-3 px-4 py-2.5"
+          >
+            <div className="flex gap-1.5 min-w-0 overflow-x-auto">
               <button
                 onClick={() => setDayFilter("all")}
                 className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
@@ -306,50 +324,50 @@ export function WeekPlanningView() {
                 );
               })}
             </div>
-          </div>
 
-          {/* Barra de seleção: age sobre esta lista, e o header já disputava
-              espaço com a navegação de semana e o contador de concluídas. */}
-          {totalCount > 0 && (
-            <div className="shrink-0 flex items-center justify-end gap-3 px-4 py-2 border-b border-gray-800">
-              {selectMode ? (
-                <>
+            {/* Age sobre a lista da semana, não sobre o header — que já disputa
+                espaço com a navegação de semana e o contador de concluídas. */}
+            {totalCount > 0 && (
+              <div className="ml-auto shrink-0 flex items-center gap-3">
+                {selectMode ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        const allSelected =
+                          allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
+                        setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
+                      }}
+                      className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                    >
+                      {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
+                        ? "Desmarcar todas"
+                        : "Selecionar todas"}
+                    </button>
+                    <button
+                      onClick={() => void handleBulkDelete()}
+                      disabled={selectedIds.size === 0}
+                      className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                    </button>
+                    <button
+                      onClick={exitSelectMode}
+                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
                   <button
-                    onClick={() => {
-                      const allSelected =
-                        allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
-                      setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
-                    }}
-                    className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                    onClick={() => setSelectMode(true)}
+                    className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
                   >
-                    {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
-                      ? "Desmarcar todas"
-                      : "Selecionar todas"}
+                    Selecionar tarefas
                   </button>
-                  <button
-                    onClick={() => void handleBulkDelete()}
-                    disabled={selectedIds.size === 0}
-                    className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-                  </button>
-                  <button
-                    onClick={exitSelectMode}
-                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setSelectMode(true)}
-                  className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
-                >
-                  Selecionar tarefas
-                </button>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
 
           {/* ── Google Calendar import modal ─────────────────────────────────────── */}
           {showImportModal && calendarImporter && (
