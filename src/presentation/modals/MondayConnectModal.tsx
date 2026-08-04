@@ -3,6 +3,7 @@ import { X, ExternalLink, Loader2, KeyRound } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { MondayAuthError } from "@infra/integrations/monday/errors";
+import { pickDefaultFolders, pickDefaultWorkspace } from "@domain/usecases/monday/mondayDefaults";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface MondayConnectModalProps {
@@ -35,10 +36,27 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
 
       const workspaces = await client.listWorkspaces();
       await config.set("mondayWorkspaceCache", workspaces);
-      const first = workspaces[0];
-      if (first && !config.get("mondayActiveWorkspaceId")) {
-        await config.set("mondayActiveWorkspaceId", first.id);
-        await config.set("mondayActiveWorkspaceName", first.name);
+      const workspace = pickDefaultWorkspace(workspaces);
+      if (workspace && !config.get("mondayActiveWorkspaceId")) {
+        await config.set("mondayActiveWorkspaceId", workspace.id);
+        await config.set("mondayActiveWorkspaceName", workspace.name);
+        // A conexão é o único momento em que se sabe que nada foi escolhido —
+        // depois dela, pasta vazia é uma escolha ("Todas as pastas" / "Nenhuma")
+        // e sobrescrevê-la seria desfazer o que o usuário decidiu.
+        // Pastas e boards vêm juntos porque a seção de workspace só busca o
+        // catálogo quando não há cache: gravar um sem o outro deixaria o board
+        // interno sem lista até alguém apertar atualizar.
+        const [folders, boards] = await Promise.all([
+          client.listFolders(workspace.id).catch(() => null),
+          client.listBoards(workspace.id).catch(() => null),
+        ]);
+        if (folders) {
+          await config.set("mondayFolderCache", folders);
+          const defaults = pickDefaultFolders(folders);
+          await config.set("mondayClientsFolderId", defaults.clientsFolderId);
+          await config.set("mondayInternalFolderId", defaults.internalFolderId);
+        }
+        if (boards) await config.set("mondayBoardCache", boards);
       }
       onConnected();
     } catch (err) {

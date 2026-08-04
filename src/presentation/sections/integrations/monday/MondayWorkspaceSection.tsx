@@ -1,4 +1,5 @@
 import { filterProjectBoards } from "@domain/usecases/monday/filterProjectBoards";
+import { pickDefaultFolders } from "@domain/usecases/monday/mondayDefaults";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useMondayCatalog } from "@presentation/hooks/useMondayCatalog";
 import { RefreshCw } from "lucide-react";
@@ -67,6 +68,15 @@ export function MondayWorkspaceSection() {
     await config.set("mondayInternalBoardId", "");
     // Pastas e boards do workspace anterior não valem mais.
     await reset(id);
+
+    // As pastas do novo workspace só existem depois do reset, e o `get` lê o
+    // cache que o próprio reset acabou de gravar. Nada aqui sobrescreve escolha
+    // do usuário: a troca de workspace já as zerou nas linhas acima.
+    const defaults = pickDefaultFolders(config.get("mondayFolderCache"));
+    setClientsFolderId(defaults.clientsFolderId);
+    setInternalFolderId(defaults.internalFolderId);
+    await config.set("mondayClientsFolderId", defaults.clientsFolderId);
+    await config.set("mondayInternalFolderId", defaults.internalFolderId);
   }
 
   async function handleChangeClientsFolder(id: string) {

@@ -393,6 +393,19 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > O atalho existe para quem já usa a integração; oferecê-lo pela metade seria três ações que abrem
 > vazias. A tela de Integrações continua acessível sempre, que é onde a configuração se completa.
 
+> **Workspace e pastas nascem pré-escolhidos** (`mondayDefaults`): workspace `Delivery Center`,
+> pasta de clientes `Projetos` e pasta de projetos internos `Projetos Internos`. São **sugestões de
+> primeira escolha**, aplicadas só quando o id aparece no que a API devolveu — conta que não os
+> tenha cai no comportamento anterior (primeiro workspace, nenhuma pasta), e os três selects
+> continuam trocáveis. Sem lista devolvida pela API não há o que pré-selecionar, e a seção segue
+> mostrando o texto de "nenhuma pasta visível" — não há de onde puxar id nenhum.
+>
+> Os padrões entram **na conexão** e **na troca de workspace**, os dois momentos em que se sabe que
+> nada foi escolhido. Depois deles, pasta vazia é uma escolha ("Todas as pastas" / "Nenhuma"), e
+> reaplicar o padrão desfaria o que o usuário decidiu. Por isso a conexão também grava o cache de
+> pastas **e** o de boards: a seção só busca o catálogo quando não há cache, e gravar um sem o outro
+> deixaria o board interno sem lista até alguém apertar atualizar.
+
 > **Um board é um Project.** A pasta de clientes vira um Project por board; da pasta interna, só o
 > board único escolhido pelo usuário. **Não há tabela de mapeamento** de categoria nem de etapa: o
 > Activity Type é o **nome** da Categoria e o Project Stage é o campo personalizado apontado por
@@ -804,7 +817,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-03 (§5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-04 (§5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
