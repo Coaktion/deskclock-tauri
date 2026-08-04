@@ -5,6 +5,7 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
+import { notifyCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 
 const STEPS = ["Boas-vindas", "Projetos", "Categorias"] as const;
 
@@ -25,9 +26,14 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
   async function handleComplete() {
     setSaving(true);
     if (userName.trim()) await config.set("userName", userName.trim());
-    if (projectsText.trim()) await bulkImportProjects(projectRepo, projectsText, workspaceId);
-    if (categoriesText.trim())
+    if (projectsText.trim()) {
+      await bulkImportProjects(projectRepo, projectsText, workspaceId);
+      await notifyProjectsChanged();
+    }
+    if (categoriesText.trim()) {
       await bulkImportCategories(categoryRepo, categoriesText, workspaceId);
+      await notifyCategoriesChanged();
+    }
     await config.set("setupCompleted", true);
     onComplete();
   }

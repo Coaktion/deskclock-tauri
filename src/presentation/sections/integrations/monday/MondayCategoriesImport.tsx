@@ -2,6 +2,7 @@ import { importMondayCategories } from "@domain/usecases/monday/importMondayCate
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { notifyCategoriesChanged } from "@shared/utils/catalogSync";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useCallback, useEffect, useState } from "react";
@@ -51,6 +52,7 @@ export function MondayCategoriesImport({
       });
       await loadExisting();
       await reloadCategories();
+      await notifyCategoriesChanged();
       await showToast(
         "success",
         `${created.length} categoria(s) criada(s); ${existing.length} já existia(m).`

@@ -3,6 +3,7 @@ import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
+import { notifyCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { showToast } from "@shared/utils/toast";
 import type { ClockifyCategoryMapping, ClockifyProjectMapping } from "@shared/types/clockifyConfig";
 import { ChevronDown, ChevronRight, ListChecks, Loader2, RefreshCw } from "lucide-react";
@@ -165,6 +166,9 @@ export function ClockifyMappingsSection({
         reload: reloadProjects,
         successMessage: (n) => `${n} projeto(s) importado(s).`,
       });
+      // Criados pelo repositório, fora das mutações de `useProjects` — as outras
+      // janelas só ficam sabendo por este aviso.
+      await notifyProjectsChanged();
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao importar projetos.");
     } finally {
@@ -209,6 +213,7 @@ export function ClockifyMappingsSection({
         reload: reloadCategories,
         successMessage: (n) => `${n} tag(s) importada(s) como categorias.`,
       });
+      await notifyCategoriesChanged();
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao importar tags.");
     } finally {

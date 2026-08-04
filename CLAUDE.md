@@ -733,6 +733,7 @@ Pare e pergunte se:
 - ❌ **Nunca** adicionar `new XxxRepository()` ou `new XxxAdapter()` no nível de módulo. Composition root vai num Provider com prop `value?` injetável.
 - ❌ **Nunca** usar `await import("@infra/...")` dinâmico para "esconder" dependência. Se está fazendo isso, é sinal de que falta abstração.
 - ❌ **Nunca** suprimir `react-hooks/exhaustive-deps` sem comentário explicando por quê. Hoje há 30+ supressões — não adicione mais.
+- ❌ **Nunca** criar, renomear ou excluir Project/Category direto pelo repositório sem chamar `notifyProjectsChanged()` / `notifyCategoriesChanged()` (`shared/utils/catalogSync.ts`). Cada janela tem seu próprio `useProjects`/`useCategories`, e o `overlay-popup` nasce com o app e **nunca remonta**: sem o aviso, ele fica para sempre com o catálogo do momento em que o app abriu, e toda tarefa que aponte para um projeto novo aparece lá sem projeto nem categoria. As mutações dos próprios hooks já avisam — a regra vale para importadores de integração e para o `SetupModal`, que gravam pelo repositório.
 
 #### `shared/`
 - ✅ Apenas utils puros, tipos, constantes. Sem side-effects, sem I/O, sem estado.

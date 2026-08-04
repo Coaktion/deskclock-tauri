@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { listen } from "@tauri-apps/api/event";
 import type { Category } from "@domain/entities/Category";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { notifyCategoriesChanged } from "@shared/utils/catalogSync";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getCategories } from "@domain/usecases/categories/GetCategories";
 import { createCategory } from "@domain/usecases/categories/CreateCategory";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
@@ -26,10 +29,20 @@ export function useCategories() {
     load();
   }, [load]);
 
+  // Recarrega quando outra janela mexe no catálogo. O `load` não emite nada —
+  // só as mutações emitem —, ou o próprio evento realimentaria o ciclo.
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.CATEGORIES_CHANGED, () => void load());
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [load]);
+
   const handleCreate = useCallback(
     async (name: string, defaultBillable: boolean) => {
       await createCategory(categoryRepo, name, defaultBillable, workspaceId);
       await load();
+      await notifyCategoriesChanged();
     },
     [categoryRepo, load, workspaceId]
   );
@@ -38,6 +51,7 @@ export function useCategories() {
     async (rawText: string) => {
       const result = await bulkImportCategories(categoryRepo, rawText, workspaceId);
       await load();
+      await notifyCategoriesChanged();
       return result;
     },
     [categoryRepo, load, workspaceId]
@@ -47,6 +61,7 @@ export function useCategories() {
     async (id: string, name: string, defaultBillable: boolean) => {
       await updateCategory(categoryRepo, id, name, defaultBillable, workspaceId);
       await load();
+      await notifyCategoriesChanged();
     },
     [categoryRepo, load, workspaceId]
   );
@@ -55,6 +70,7 @@ export function useCategories() {
     async (id: string) => {
       await deleteCategory(categoryRepo, id);
       await load();
+      await notifyCategoriesChanged();
     },
     [categoryRepo, load]
   );
@@ -63,6 +79,7 @@ export function useCategories() {
     async (ids: string[]) => {
       await deleteCategories(categoryRepo, ids);
       await load();
+      await notifyCategoriesChanged();
     },
     [categoryRepo, load]
   );

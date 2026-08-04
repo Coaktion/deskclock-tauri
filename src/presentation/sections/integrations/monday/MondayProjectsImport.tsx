@@ -3,6 +3,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useCallback, useEffect, useState } from "react";
@@ -75,6 +76,9 @@ export function MondayProjectsImport({
       setSkipped(result.skipped);
       await loadNames();
       await reloadProjects();
+      // Os projetos nascem pelo repositório, sem passar pelas mutações de
+      // `useProjects`: sem este aviso, o overlay não os enxergaria até reiniciar.
+      await notifyProjectsChanged();
 
       await showToast(
         result.skipped.length > 0 ? "warning" : "success",
