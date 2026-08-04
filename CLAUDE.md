@@ -378,6 +378,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Workspace ativo | dropdown (buscado via API, com catálogo cacheado na config) |
 | Importação de dados | workspace de destino + três blocos: Projetos, Categorias e Project Stage |
 | Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
+| Importação automática de itens | toggle (`mondayAutoImportEnabled`, padrão desativado) + botão "Buscar itens agora" |
 | Enviar tarefas manualmente | botão abre o `TaskSendModal` genérico |
 | Importar itens como planejadas | botão abre o `MondayImportModal` |
 | Gerenciar atividades | botão abre o `MondayEntriesModal` |
@@ -419,6 +420,35 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > adiar um preenchimento que ninguém faz depois. Some, com um aviso apontando para Integrações,
 > enquanto `mondayProjectStageFieldId` não apontar para um campo ativo. Só aparecem boards cujo
 > Project existe no workspace ativo, e o botão importa só o que está visível (§5.6).
+
+> **Importação automática (`useMondayItemTracker` + `syncMondayPlannedTasks`):** ao abrir o app e a
+> cada 30 min, faz sozinho o que o modal faz à mão — a mesma busca, os mesmos padrões
+> (`buildImportRows`/`resolveItemDefaults`, compartilhados com o modal, §9.4) — para a **semana
+> corrente**. Sem prompt: é o rastreamento de agendas do Google levado ao Monday, e não há nada a
+> perguntar.
+>
+> **"Buscar itens agora" espera a busca de verdade.** O botão vive nas Configurações e a busca vive
+> no rastreador, na janela principal: o fim chega pelo evento `MONDAY_IMPORT_SYNC_RESULT`, que o
+> rastreador emite em **todo** caminho de saída — erro, nada a fazer e até "não estou conectado" —,
+> ou o botão ficaria girando para sempre. O resultado aparece como frase abaixo do botão, além do
+> toast, porque o toast some e a Configurações é onde se confere se a integração está de pé.
+>
+> **O que dedupe é a tabela `monday_imported_items`**, chaveada por (item, workspace) e guardando um
+> **snapshot** do item no último sync. O nome não serve: renomear a planejada aqui a faria ser
+> criada de novo. **O import manual grava o mesmo vínculo** — sem isso, a varredura seguinte
+> recriaria tudo o que o usuário acabou de importar pelo modal.
+>
+> **A atualização é campo a campo, contra o snapshot.** Só o que mudou no Monday é reescrito, então
+> a edição local sobrevive enquanto o board não tocar naquele campo. Activity Type novo arrasta a
+> categoria e o billable (§6.2); Activity Type que não casa com categoria nenhuma **limpa** o campo,
+> porque manter a anterior afirmaria algo que o board deixou de dizer. A janela recorta só a
+> **criação** — uma planejada existente acompanha o item para onde ele for remarcado.
+>
+> **Item que sumiu da busca** (excluído, reatribuído ou movido para o grupo Activities) leva junto a
+> planejada, desde que ela nunca tenha sido concluída; o que já foi trabalhado fica. **A poda só
+> olha boards do mapeamento atual** — sem essa guarda, desvincular um board apagaria em massa
+> planejadas de itens que continuam vivos lá. E **planejada apagada à mão não volta**: o vínculo
+> permanece, com o snapshot em dia, para o item não gerar tarefa outra vez.
 
 > **Gerenciar atividades (`MondayEntriesModal`):** período + boards mapeados → itens do grupo
 > Activities, **apenas os do usuário conectado** — os boards são compartilhados e exclusão aqui é

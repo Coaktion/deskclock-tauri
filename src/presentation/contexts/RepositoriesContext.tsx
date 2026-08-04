@@ -7,6 +7,7 @@ import { ExportProfileRepository } from "@infra/database/ExportProfileRepository
 import { TaskIntegrationLogRepository } from "@infra/database/TaskIntegrationLogRepository";
 import { TrackedMeetingRepository } from "@infra/database/TrackedMeetingRepository";
 import { MondayActivityItemRepository } from "@infra/database/MondayActivityItemRepository";
+import { MondayImportedItemRepository } from "@infra/database/MondayImportedItemRepository";
 import { WorkspaceRepository } from "@infra/database/WorkspaceRepository";
 import { CustomFieldRepository } from "@infra/database/CustomFieldRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
@@ -17,6 +18,7 @@ import type { IExportProfileRepository } from "@domain/repositories/IExportProfi
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
+import type { ITrackedMondayItemRepository } from "@domain/integrations/ITrackedMondayItemRepository";
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
 import type { IWorkspaceDataPort } from "@domain/repositories/IWorkspaceDataPort";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
@@ -30,6 +32,7 @@ export interface Repositories {
   taskLogRepo: ITaskIntegrationLogRepository;
   trackedMeetingRepo: ITrackedMeetingRepository;
   mondayActivityItemRepo: IMondayActivityItemRepository;
+  mondayImportedItemRepo: ITrackedMondayItemRepository;
   workspaceRepo: IWorkspaceRepository;
   workspaceDataPort: IWorkspaceDataPort;
   customFieldRepo: ICustomFieldRepository;
@@ -56,6 +59,7 @@ export function RepositoriesProvider({
       taskLogRepo: new TaskIntegrationLogRepository(),
       trackedMeetingRepo: new TrackedMeetingRepository(),
       mondayActivityItemRepo: new MondayActivityItemRepository(),
+      mondayImportedItemRepo: new MondayImportedItemRepository(),
       // A mesma instância serve as duas portas: o adaptador implementa ambas.
       workspaceRepo: workspaceRepo,
       workspaceDataPort: workspaceRepo,

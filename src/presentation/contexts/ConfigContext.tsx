@@ -100,6 +100,7 @@ const DEFAULTS: AppConfig = {
   mondayAutoSyncTime: "18:00",
   mondayAutoSyncLastFiredDate: "",
   mondayDailySyncLastTimestamp: "",
+  mondayAutoImportEnabled: false,
   activeWorkspaceId: "",
   toursSeen: [],
 };

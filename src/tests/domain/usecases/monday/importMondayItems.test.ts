@@ -46,8 +46,8 @@ describe("importMondayItems", () => {
     ctx = makeRepo();
   });
 
-  it("cria uma tarefa por item selecionado e devolve a contagem", async () => {
-    const count = await importMondayItems(
+  it("cria uma tarefa por item selecionado e devolve as planejadas criadas", async () => {
+    const planned = await importMondayItems(
       ctx.repo,
       [
         { item: item(), projectId: "p1", categoryId: "c1", billable: true, period: null },
@@ -63,7 +63,12 @@ describe("importMondayItems", () => {
       WORKSPACE_ID
     );
 
-    expect(count).toBe(2);
+    // Na ordem das entradas: é o que emparelha item do Monday e planejada.
+    expect(planned.map((t) => t.name)).toEqual([
+      "Status Report (weekly)",
+      "Status Report (weekly)",
+    ]);
+    expect(planned[0].id).toBe(ctx.saved[0].id);
     expect(ctx.saved).toHaveLength(2);
     expect(ctx.saved[0]).toMatchObject({
       workspaceId: WORKSPACE_ID,
@@ -75,9 +80,9 @@ describe("importMondayItems", () => {
   });
 
   it("não toca no repositório quando nada foi selecionado", async () => {
-    const count = await importMondayItems(ctx.repo, [], NOW_ISO, WORKSPACE_ID);
+    const planned = await importMondayItems(ctx.repo, [], NOW_ISO, WORKSPACE_ID);
 
-    expect(count).toBe(0);
+    expect(planned).toEqual([]);
     expect(ctx.repo.save).not.toHaveBeenCalled();
   });
 

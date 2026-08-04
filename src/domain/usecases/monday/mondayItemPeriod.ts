@@ -1,3 +1,4 @@
+import type { ScheduleType } from "@domain/entities/PlannedTask";
 import type { MondayColumnValue, MondayItem } from "@shared/types/monday";
 import { localDateISO } from "@shared/utils/time";
 
@@ -90,4 +91,41 @@ export function periodOverlaps(
 ): boolean {
   if (!period) return false;
   return period.startDayISO <= toDayISO && period.endDayISO >= fromDayISO;
+}
+
+/** Dois períodos são o mesmo quando as duas pontas coincidem. */
+export function samePeriod(a: MondayItemPeriod | null, b: MondayItemPeriod | null): boolean {
+  if (!a || !b) return a === b || (!a && !b);
+  return a.startDayISO === b.startDayISO && a.endDayISO === b.endDayISO;
+}
+
+/** O agendamento da planejada que corresponde ao intervalo do item. */
+export interface MondayItemSchedule {
+  scheduleType: ScheduleType;
+  scheduleDate: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+}
+
+/**
+ * Traduz a Timeline do item em agendamento: um dia vira `specific_date`, vários
+ * viram `period` — que é justamente o tipo que existe para trabalho espalhado
+ * por uma faixa de dias (§5.3). Item sem Timeline cai no dia corrente, para não
+ * nascer invisível no planejamento.
+ *
+ * Compartilhado pela criação e pela atualização: se cada uma tivesse a sua
+ * regra, remarcar um item no Monday poderia gerar um agendamento que o import
+ * nunca produziria.
+ */
+export function periodToSchedule(
+  period: MondayItemPeriod | null,
+  fallbackDayISO: string
+): MondayItemSchedule {
+  const isRange = period != null && period.startDayISO !== period.endDayISO;
+  return {
+    scheduleType: isRange ? "period" : "specific_date",
+    scheduleDate: isRange ? null : (period?.startDayISO ?? fallbackDayISO),
+    periodStart: isRange ? period.startDayISO : null,
+    periodEnd: isRange ? period.endDayISO : null,
+  };
 }

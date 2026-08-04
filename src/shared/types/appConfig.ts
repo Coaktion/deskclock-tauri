@@ -132,6 +132,11 @@ export interface AppConfig {
   mondayAutoSyncTime: string;
   mondayAutoSyncLastFiredDate: string;
   mondayDailySyncLastTimestamp: string;
+  /**
+   * Importa sozinho, como planejadas, os itens do usuário nos boards mapeados.
+   * Requer a API key e o usuário conectado.
+   */
+  mondayAutoImportEnabled: boolean;
   // Workspaces
   /** Workspace ativo na UI. Vazio = cai no workspace "Padrão" da migration 011. */
   activeWorkspaceId: string;

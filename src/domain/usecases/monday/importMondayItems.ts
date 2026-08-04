@@ -1,10 +1,11 @@
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { CustomValues } from "@domain/entities/CustomField";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { MondayItem } from "@shared/types/monday";
 import type { UUID } from "@shared/types";
 import { localDateISO } from "@shared/utils/time";
 import { createPlannedTask } from "../plannedTasks/CreatePlannedTask";
-import type { MondayItemPeriod } from "./mondayItemPeriod";
+import { periodToSchedule, type MondayItemPeriod } from "./mondayItemPeriod";
 
 export interface ImportMondayItemInput {
   item: MondayItem;
@@ -24,10 +25,10 @@ export interface ImportMondayItemInput {
 /**
  * Cria PlannedTasks a partir dos itens de trabalho selecionados no Monday.
  *
- * O agendamento vem da Timeline do item: um dia vira `specific_date`, vários
- * viram `period` — que é justamente o tipo de agendamento que existe para
- * trabalho espalhado por uma faixa de dias (§5.3). Item sem Timeline cai em
- * `specific_date` no dia corrente, para não nascer invisível no planejamento.
+ * O agendamento vem da Timeline do item, pela regra de `periodToSchedule`.
+ *
+ * Devolve as planejadas criadas, na ordem das entradas: quem importa
+ * automaticamente precisa do id para gravar o vínculo com o item do Monday.
  */
 export async function importMondayItems(
   repo: IPlannedTaskRepository,
@@ -35,13 +36,11 @@ export async function importMondayItems(
   nowISO: string,
   workspaceId: UUID,
   addOpenUrlAction = false
-): Promise<number> {
-  if (inputs.length === 0) return 0;
+): Promise<PlannedTask[]> {
+  const created: PlannedTask[] = [];
 
   for (const { item, projectId, categoryId, billable, period, customValues } of inputs) {
-    const isRange = period != null && period.startDayISO !== period.endDayISO;
-
-    await createPlannedTask(
+    const task = await createPlannedTask(
       repo,
       {
         workspaceId,
@@ -49,16 +48,14 @@ export async function importMondayItems(
         projectId,
         categoryId,
         billable,
-        scheduleType: isRange ? "period" : "specific_date",
-        scheduleDate: isRange ? null : (period?.startDayISO ?? localDateISO(nowISO)),
-        periodStart: isRange ? period.startDayISO : null,
-        periodEnd: isRange ? period.endDayISO : null,
+        ...periodToSchedule(period, localDateISO(nowISO)),
         actions: addOpenUrlAction && item.url ? [{ type: "open_url", value: item.url }] : [],
         customValues: customValues ?? {},
       },
       nowISO
     );
+    created.push(task);
   }
 
-  return inputs.length;
+  return created;
 }

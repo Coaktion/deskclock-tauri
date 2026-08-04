@@ -1,4 +1,5 @@
 import { ListChecks, Send, DownloadCloud } from "lucide-react";
+import { MondayAutoImportSection } from "./MondayAutoImportSection";
 import { MondayAutoSyncSection } from "./MondayAutoSyncSection";
 import { MondayImportSection } from "./MondayImportSection";
 import { MondayWorkspaceSection } from "./MondayWorkspaceSection";
@@ -26,6 +27,7 @@ export function MondayConnectedSections({
       <MondayWorkspaceSection />
       <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
       <MondayAutoSyncSection />
+      <MondayAutoImportSection />
       <div className="border-t border-gray-800 px-4 py-3 space-y-2">
         <button onClick={onShowSendModal} className={ACTION_CLASS}>
           <Send size={12} />

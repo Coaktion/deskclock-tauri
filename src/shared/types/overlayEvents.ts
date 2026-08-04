@@ -21,6 +21,8 @@ export const OVERLAY_EVENTS = {
   MEETING_PROMPT: "meeting-prompt",
   MEETING_PROMPT_RESPONSE: "meeting-prompt:response",
   MEETING_TRACKER_SYNC_NOW: "meeting-tracker:sync-now",
+  MONDAY_IMPORT_SYNC_NOW: "monday-import:sync-now",
+  MONDAY_IMPORT_SYNC_RESULT: "monday-import:sync-result",
   WORKSPACE_CHANGED: "workspace-changed",
 } as const;
 
@@ -85,6 +87,24 @@ export interface MeetingPromptResponsePayload {
  */
 export interface WorkspaceChangedPayload {
   activeWorkspaceId: string;
+}
+
+/**
+ * Resposta do rastreador ao "Buscar itens agora" das Configurações. O botão vive
+ * numa tela, a busca vive no `useMondayItemTracker`: sem este evento a tela não
+ * teria como saber quando a busca terminou, e o botão só poderia adivinhar por
+ * tempo. É emitido **sempre** — inclusive quando o rastreador nem roda por falta
+ * de conexão —, ou o botão ficaria carregando para sempre.
+ */
+export interface MondayImportSyncResultPayload {
+  ok: boolean;
+  created: number;
+  updated: number;
+  removed: number;
+  /** Preenchido quando `ok` é falso. */
+  error?: string;
+  /** O ciclo automático já estava rodando: o clique não iniciou busca nenhuma. */
+  busy?: boolean;
 }
 
 export type ToastVariant = "success" | "error" | "info" | "update" | "warning";

@@ -15,17 +15,19 @@ import type { Category } from "@domain/entities/Category";
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import { snapshotOf } from "@domain/usecases/monday/diffMondayItem";
 import {
   importMondayItems,
   type ImportMondayItemInput,
 } from "@domain/usecases/monday/importMondayItems";
 import { listItemsOwnedBy } from "@domain/usecases/monday/listItemsOwnedBy";
 import {
-  findColumnValue,
-  parseTimelinePeriod,
-  periodOverlaps,
-  type MondayItemPeriod,
-} from "@domain/usecases/monday/mondayItemPeriod";
+  buildImportRows,
+  importColumnIds,
+  resolveItemDefaults,
+  type MondayImportRow,
+} from "@domain/usecases/monday/mondayImportRows";
+import { periodOverlaps, type MondayItemPeriod } from "@domain/usecases/monday/mondayItemPeriod";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { findTimelineColumnId } from "@domain/usecases/monday/resolveBoardActivitiesColumns";
 import { Autocomplete } from "@presentation/components/Autocomplete";
@@ -33,10 +35,9 @@ import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
-import type { MondayItem } from "@shared/types/monday";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { findByNameCaseInsensitive } from "@shared/utils/calendarMetadata";
 import { addDaysISO, todayISO, weekBoundsISO } from "@shared/utils/time";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
@@ -76,21 +77,6 @@ interface ItemEditState {
   expanded: boolean;
 }
 
-interface ImportRow {
-  item: MondayItem;
-  /** Project do DeskClock vinculado ao board de origem. */
-  project: Project;
-  period: MondayItemPeriod | null;
-  /** Rótulo da coluna Activity Type, quando o board a preencheu. */
-  activityTypeLabel: string;
-  /** Rótulo da coluna Project Stage, quando o board a preencheu. */
-  projectStageLabel: string;
-}
-
-function unique(values: (string | undefined)[]): string[] {
-  return [...new Set(values.filter((v): v is string => !!v))];
-}
-
 function periodLabel(period: MondayItemPeriod | null): string {
   if (!period) return "sem data";
   const fmt = (dayISO: string) => {
@@ -103,29 +89,16 @@ function periodLabel(period: MondayItemPeriod | null): string {
 }
 
 /**
- * A categoria nasce do Activity Type do próprio item, e a etapa da coluna
- * Project Stage: desde a Fase 4 os três casam **pelo nome** (a opção do campo
- * personalizado foi semeada com os rótulos do board), então o item traz a
- * própria sugestão sem tabela de mapeamento. Sem correspondência, o campo fica
- * vazio e editável.
+ * A sugestão do item (categoria pelo Activity Type, etapa pelo Project Stage)
+ * vem de `resolveItemDefaults` — a mesma que a importação automática usa, para
+ * as duas concordarem sobre o que um item vira.
  */
 function defaultEditState(
-  row: ImportRow,
+  row: MondayImportRow,
   categories: Category[],
   stageField: CustomField | null
 ): ItemEditState {
-  const matched = findByNameCaseInsensitive(row.activityTypeLabel, categories);
-  const stageOption = stageField?.options.find(
-    (o) => o.label.trim().toLowerCase() === row.projectStageLabel.trim().toLowerCase()
-  );
-  return {
-    categoryId: matched?.id ?? null,
-    categoryName: matched?.name ?? "",
-    // §6.2: o billable acompanha a categoria escolhida.
-    billable: matched?.defaultBillable ?? false,
-    customValues: stageField && stageOption ? { [stageField.id]: stageOption.id } : {},
-    expanded: false,
-  };
+  return { ...resolveItemDefaults(row, categories, stageField), expanded: false };
 }
 
 interface MondayImportModalProps {
@@ -145,6 +118,7 @@ export function MondayImportModal({
 }: MondayImportModalProps) {
   const config = useAppConfig();
   const { createMondayApi } = useIntegrations();
+  const { mondayImportedItemRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
   const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
   const userId = config.get("mondayUserId");
@@ -160,7 +134,7 @@ export function MondayImportModal({
     activeFields.find((f) => f.id === config.get("mondayProjectStageFieldId")) ?? null;
 
   const [period, setPeriod] = useState<PeriodFilter>("week");
-  const [rows, setRows] = useState<ImportRow[]>([]);
+  const [rows, setRows] = useState<MondayImportRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editMap, setEditMap] = useState<Map<string, ItemEditState>>(new Map());
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
@@ -217,35 +191,10 @@ export function MondayImportModal({
           // O grupo Activities é o destino das horas que o DeskClock envia;
           // reimportá-lo duplicaria trabalho que já está registrado aqui.
           scope: "outsideActivities",
-          columnIds: unique([
-            ...availableBoards.map((m) => m.columnIds.activityType),
-            ...availableBoards.map((m) => m.columnIds.projectStage),
-            ...timelineByBoard.values(),
-          ]),
+          columnIds: importColumnIds(availableBoards, timelineByBoard),
         });
 
-        const projectByBoard = new Map(
-          availableBoards.map((m) => [
-            m.mondayBoardId,
-            projects.find((p) => p.id === m.deskclockProjectId),
-          ])
-        );
-        const columnsByBoard = new Map(availableBoards.map((m) => [m.mondayBoardId, m.columnIds]));
-
-        const next = items.flatMap<ImportRow>((item) => {
-          const project = projectByBoard.get(item.boardId);
-          if (!project) return [];
-          const columnIds = columnsByBoard.get(item.boardId);
-          return [
-            {
-              item,
-              project,
-              period: parseTimelinePeriod(findColumnValue(item, timelineByBoard.get(item.boardId))),
-              activityTypeLabel: findColumnValue(item, columnIds?.activityType)?.text?.trim() ?? "",
-              projectStageLabel: findColumnValue(item, columnIds?.projectStage)?.text?.trim() ?? "",
-            },
-          ];
-        });
+        const next = buildImportRows(items, availableBoards, projects, timelineByBoard);
 
         // A janela de duplicatas cobre tudo o que os itens abrangem: um item de
         // agosto não teria como bater com a semana corrente.
@@ -295,7 +244,7 @@ export function MondayImportModal({
 
   /** Um grupo por projeto, que é o que o usuário reconhece — board é detalhe. */
   const groups = useMemo(() => {
-    const map = new Map<string, ImportRow[]>();
+    const map = new Map<string, MondayImportRow[]>();
     for (const row of visibleRows) {
       map.set(row.project.name, [...(map.get(row.project.name) ?? []), row]);
     }
@@ -325,7 +274,7 @@ export function MondayImportModal({
     });
   }
 
-  function toggleGroup(groupRows: readonly ImportRow[]) {
+  function toggleGroup(groupRows: readonly MondayImportRow[]) {
     const allSelected = groupRows.every((r) => selected.has(r.item.id));
     setSelected((prev) => {
       const next = new Set(prev);
@@ -354,16 +303,24 @@ export function MondayImportModal({
     if (inputs.length === 0) return;
 
     setImporting(true);
+    const nowISO = new Date().toISOString();
     try {
-      const count = await importMondayItems(
-        repo,
-        inputs,
-        new Date().toISOString(),
-        workspaceId,
-        addOpenUrlAction
-      );
-      if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-      onImported(count);
+      const planned = await importMondayItems(repo, inputs, nowISO, workspaceId, addOpenUrlAction);
+      // O import manual grava o mesmo rastreamento do automático: sem isso, a
+      // varredura seguinte não reconheceria estes itens e criaria tudo de novo.
+      for (const [index, row] of selectedVisible.entries()) {
+        await mondayImportedItemRepo.upsert({
+          mondayItemId: row.item.id,
+          workspaceId,
+          boardId: row.item.boardId,
+          plannedTaskId: planned[index].id,
+          snapshot: snapshotOf(row),
+          importedAt: nowISO,
+          updatedAt: nowISO,
+        });
+      }
+      if (planned.length > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+      onImported(planned.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao importar itens.");
       setImporting(false);
@@ -545,7 +502,7 @@ export function MondayImportModal({
 }
 
 interface ItemRowProps {
-  row: ImportRow;
+  row: MondayImportRow;
   selected: boolean;
   editState: ItemEditState;
   categories: Category[];
