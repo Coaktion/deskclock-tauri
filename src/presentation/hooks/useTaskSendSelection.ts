@@ -233,11 +233,17 @@ export function useTaskSendSelection(
     return result;
   }
 
+  /**
+   * Basta **uma** tarefa já enviada na seleção para o aviso aparecer. Exigir o
+   * grupo inteiro calava o aviso justamente no caso mais arriscado: o grupo
+   * parcialmente enviado, onde o reenvio mexe em algo que já está no destino. O
+   * aviso nunca impede o envio — quem decide é o botão.
+   */
   const hasSentSelected = useMemo(() => {
     if (selectedKeys.size === 0) return false;
     for (const { date, groups } of dayGroups) {
       for (const g of groups) {
-        if (selectedKeys.has(selKey(date, g.key)) && g.tasks.every((t) => sentIds.has(t.id))) {
+        if (selectedKeys.has(selKey(date, g.key)) && g.tasks.some((t) => sentIds.has(t.id))) {
           return true;
         }
       }

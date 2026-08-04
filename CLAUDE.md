@@ -393,6 +393,22 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > O atalho existe para quem já usa a integração; oferecê-lo pela metade seria três ações que abrem
 > vazias. A tela de Integrações continua acessível sempre, que é onde a configuração se completa.
 
+> **Apagar no Monday é mandar para a lixeira.** O id continua válido e
+> `change_multiple_column_values` responde **sucesso** num item que ninguém mais vê — nunca chega um
+> `MondayNotFoundError`. Por isso o update pede `id state` e trata `state !== "active"` (deleted ou
+> archived) como item perdido: larga a linha de `monday_activity_items` e cria outro no lugar, o
+> mesmo desfecho do erro de não-encontrado. Sem isso o rastreamento aponta para a lixeira para
+> sempre, e a atividade nunca volta ao board por mais que se reenvie.
+
+> **O envio manual escreve sempre** (`forceWrite` do `MondayTaskSender`). O auto-sync pula o grupo
+> cujo payload não mudou — é o que impede o envio diário de reescrever o dia inteiro a cada
+> execução. No manual isso virava armadilha: atividade apagada direto no Monday nunca voltava,
+> porque o rastreamento ainda batia, o envio era pulado em silêncio e o modal ainda dizia "enviado
+> com sucesso". O clique é a intenção, então ali a comparação é ignorada — o item existente é
+> reescrito e, se sumiu do board, recriado. **O aviso de reenvio avisa, nunca impede**, e basta
+> **uma** tarefa já enviada na seleção para ele aparecer: exigir o grupo inteiro calava o aviso no
+> caso mais arriscado, o grupo parcialmente enviado.
+
 > **"Sincronizar agora" dispara só o Monday** (`AutoSyncRunner.runDailyFor`). O `runDaily` do
 > runner roda todas as integrações com o modo diário ligado — o botão de um card mandaria tarefas
 > para as outras sem ninguém pedir. O botão vive no `AutoSyncControls` compartilhado, atrás da prop
@@ -831,7 +847,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-04 (§5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-04 (§5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

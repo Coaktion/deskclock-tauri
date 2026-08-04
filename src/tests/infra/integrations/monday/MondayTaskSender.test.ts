@@ -451,6 +451,120 @@ describe("MondayTaskSender", () => {
       expect(client.changeColumnValues).not.toHaveBeenCalled();
     });
 
+    it("forceWrite reescreve mesmo sem nada ter mudado", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client,
+        { forceWrite: true }
+      );
+
+      await sender.send([makeTask()]);
+      vi.mocked(client.createItem).mockClear();
+      await sender.send([makeTask()]);
+
+      expect(client.changeColumnValues).toHaveBeenCalledTimes(1);
+    });
+
+    it("forceWrite recria a atividade apagada direto no Monday", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client,
+        { forceWrite: true }
+      );
+
+      await sender.send([makeTask()]);
+      vi.mocked(client.createItem).mockClear();
+      // Alguém apagou o item pela interface do Monday: o rastreamento continua
+      // apontando para ele, e sem o forceWrite o envio seria pulado em silêncio.
+      vi.mocked(client.changeColumnValues).mockRejectedValueOnce(
+        new MondayNotFoundError("item não existe")
+      );
+      await sender.send([makeTask()]);
+
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+      expect(itemRepo.deleteItem).toHaveBeenCalledWith(BOARD_ID, "item-1");
+    });
+
+    it("item na lixeira do Monday é largado e recriado, mesmo sem erro na escrita", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ name: "Antes" })]);
+      vi.mocked(client.createItem).mockClear();
+      // Apagar no Monday manda para a lixeira: o id segue válido e a mutação
+      // responde sucesso — o estado é o único sinal de que o item sumiu.
+      vi.mocked(client.changeColumnValues).mockResolvedValueOnce({
+        id: "item-1",
+        state: "deleted",
+      });
+      await sender.send([makeTask({ name: "Depois" })]);
+
+      expect(itemRepo.deleteItem).toHaveBeenCalledWith(BOARD_ID, "item-1");
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("item arquivado segue o mesmo caminho do apagado", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ name: "Antes" })]);
+      vi.mocked(client.createItem).mockClear();
+      vi.mocked(client.changeColumnValues).mockResolvedValueOnce({
+        id: "item-1",
+        state: "archived",
+      });
+      await sender.send([makeTask({ name: "Depois" })]);
+
+      expect(itemRepo.deleteItem).toHaveBeenCalledWith(BOARD_ID, "item-1");
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("item ativo é atualizado sem recriar nada", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask({ name: "Antes" })]);
+      vi.mocked(client.createItem).mockClear();
+      vi.mocked(client.changeColumnValues).mockResolvedValueOnce({
+        id: "item-1",
+        state: "active",
+      });
+      await sender.send([makeTask({ name: "Depois" })]);
+
+      expect(itemRepo.deleteItem).not.toHaveBeenCalled();
+      expect(client.createItem).not.toHaveBeenCalled();
+    });
+
     it("renomear a tarefa atualiza o mesmo item em vez de criar outro", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();

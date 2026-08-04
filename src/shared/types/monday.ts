@@ -56,6 +56,13 @@ export interface MondayBoardSchema {
 
 export interface MondayItemRef {
   id: string;
+  /**
+   * `active` | `archived` | `deleted`. Item apagado no Monday vai para a
+   * **lixeira** e continua endereçável pelo id — mutações nele respondem
+   * sucesso. Sem olhar o estado, uma atividade apagada por lá seria atualizada
+   * dentro da lixeira para sempre, sem nunca voltar ao board.
+   */
+  state?: string;
 }
 
 /**

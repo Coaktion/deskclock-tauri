@@ -20,7 +20,10 @@ export function MondaySendModal({ projects, categories, onClose }: MondaySendMod
   const adapter = useMemo<TaskSendAdapter>(() => {
     const apiKey = config.isLoaded ? config.get("mondayApiKey") : null;
     const workspaceId = config.isLoaded ? config.get("mondayActiveWorkspaceId") : null;
-    const sender = apiKey && workspaceId ? factories.createMondayTaskSender() : null;
+    // Envio manual escreve sempre: o usuário selecionou e mandou enviar, então o
+    // "nada mudou desde a última vez" do auto-sync não vale aqui.
+    const sender =
+      apiKey && workspaceId ? factories.createMondayTaskSender({ forceWrite: true }) : null;
     const mappedProjectIds = new Set(
       (config.isLoaded ? config.get("mondayProjectMapping") : [])
         .filter((m) => m.workspaceId === workspaceId)
@@ -48,9 +51,10 @@ export function MondaySendModal({ projects, categories, onClose }: MondaySendMod
       // O sender unifica internamente e precisa de todos os ids do grupo para
       // reencontrar o item já criado no Monday.
       sendsRawTasks: true,
+      // O aviso avisa, não impede: o envio segue com a seleção que está lá.
       resendWarning:
-        "Uma ou mais tarefas selecionadas já foram enviadas. O reenvio atualiza a atividade " +
-        "já criada no Monday, sem duplicar.",
+        "Uma ou mais tarefas selecionadas já foram enviadas. O reenvio reescreve a atividade " +
+        "no Monday; se ela tiver sido apagada por lá, uma nova é criada — o que pode duplicar.",
     };
     // `config` e `factories` mudam de identidade a cada set(); recriar o adapter
     // a cada render remontaria a seleção do TaskSendModal no meio do envio.

@@ -378,6 +378,17 @@ describe("MondayClient", () => {
       expect(lastBody().query).toContain("change_multiple_column_values");
     });
 
+    it("changeColumnValues pede e devolve o state — é ele que revela a lixeira", async () => {
+      mockFetch.mockResolvedValue(
+        makeResponse({ data: { change_multiple_column_values: { id: 555, state: "deleted" } } })
+      );
+
+      const result = await new MondayClient(API_KEY).changeColumnValues("b1", "555", { a: 1 });
+
+      expect(result).toEqual({ id: "555", state: "deleted" });
+      expect(lastBody().query).toContain("id state");
+    });
+
     it("deleteItem chama a mutation delete_item", async () => {
       mockFetch.mockResolvedValue(makeResponse({ data: { delete_item: { id: "555" } } }));
 

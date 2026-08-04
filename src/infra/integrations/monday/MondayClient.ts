@@ -364,13 +364,15 @@ export class MondayClient implements IMondayApi {
            item_id: $itemId
            column_values: $columnValues
            create_labels_if_missing: false
-         ) { id }
+         ) { id state }
        }`,
       { boardId, itemId, columnValues: JSON.stringify(columnValues) }
     );
     const updated = data.change_multiple_column_values;
     if (!updated) throw new MondayValidationError("O Monday não retornou o item atualizado.");
-    return { id: String(updated.id) };
+    // `state` sai de graça no retorno que o Monday já monta, e é o que revela o
+    // item na lixeira — que aceita a escrita sem erro nenhum.
+    return { id: String(updated.id), ...(updated.state ? { state: updated.state } : {}) };
   }
 
   async deleteItem(itemId: string): Promise<void> {

@@ -6,7 +6,10 @@ import { GoogleSheetsTaskSender } from "@infra/integrations/GoogleSheetsTaskSend
 import { ClockifyTaskSender } from "@infra/integrations/ClockifyTaskSender";
 import { ZendeskTicketImporter } from "@infra/integrations/ZendeskTicketImporter";
 import { ClockifyClient } from "@infra/integrations/clockify/ClockifyClient";
-import { MondayTaskSender } from "@infra/integrations/MondayTaskSender";
+import {
+  MondayTaskSender,
+  type MondayTaskSenderOptions,
+} from "@infra/integrations/MondayTaskSender";
 import { MondayClient } from "@infra/integrations/monday/MondayClient";
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
@@ -27,7 +30,8 @@ export interface IntegrationFactories {
   createClockifyTaskSender(): ITaskSender;
   /** apiKey opcional → permite ConnectModal validar key não persistida. Default usa config. */
   createClockifyApi(apiKey?: string): IClockifyApi;
-  createMondayTaskSender(): ITaskSender;
+  /** `forceWrite` no envio manual: escreve mesmo sem nada ter mudado. */
+  createMondayTaskSender(options?: MondayTaskSenderOptions): ITaskSender;
   /** apiKey opcional → permite ConnectModal validar key não persistida. Default usa config. */
   createMondayApi(apiKey?: string): IMondayApi;
 }
@@ -51,8 +55,15 @@ export function IntegrationsProvider({
         new GoogleSheetsTaskSender(config, spreadsheetId, projects, categories),
       createClockifyTaskSender: () => new ClockifyTaskSender(config),
       createClockifyApi: (apiKey) => new ClockifyClient(apiKey ?? config.get("clockifyApiKey")),
-      createMondayTaskSender: () =>
-        new MondayTaskSender(config, mondayActivityItemRepo, customFieldRepo, categoryRepo),
+      createMondayTaskSender: (options) =>
+        new MondayTaskSender(
+          config,
+          mondayActivityItemRepo,
+          customFieldRepo,
+          categoryRepo,
+          undefined,
+          options
+        ),
       createMondayApi: (apiKey) => new MondayClient(apiKey ?? config.get("mondayApiKey")),
     }),
     [config, mondayActivityItemRepo, customFieldRepo, categoryRepo]
