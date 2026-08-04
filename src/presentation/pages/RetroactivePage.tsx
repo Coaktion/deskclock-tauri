@@ -11,7 +11,7 @@ import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
@@ -19,6 +19,7 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
+import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
@@ -173,6 +174,7 @@ function TaskRow({
 export function RetroactivePage() {
   const { taskRepo, plannedTaskRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
+  const { workspaces } = useWorkspaces();
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -184,6 +186,7 @@ export function RetroactivePage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
 
   // Pelos use cases, e sempre com o workspace ativo. Ir direto ao repositório
   // sem o terceiro argumento é o caminho das integrações (§6.7) e devolvia as
@@ -456,6 +459,15 @@ export function RetroactivePage() {
                     >
                       {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
                     </button>
+                    {workspaces.length > 1 && (
+                      <button
+                        onClick={() => setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))}
+                        disabled={selectedIds.size === 0}
+                        className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Mover para workspace
+                      </button>
+                    )}
                     <button
                       onClick={() => void handleBulkDelete()}
                       disabled={selectedIds.size === 0}
@@ -513,6 +525,23 @@ export function RetroactivePage() {
           categories={categories}
           onSave={loadTasks}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {movingTasks && (
+        <MoveToWorkspaceModal
+          tasks={movingTasks}
+          projects={projects}
+          categories={categories}
+          onMoved={() => {
+            // Mover tira a tarefa do workspace ativo, então some daqui — e
+            // some também das listas das outras janelas, que só recarregam
+            // pelo aviso, como em toda mutação desta tela.
+            void notifyTasksChanged();
+            exitSelectMode();
+            void loadTasks();
+          }}
+          onClose={() => setMovingTasks(null)}
         />
       )}
     </div>

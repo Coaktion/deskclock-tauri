@@ -544,6 +544,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 - **Tecla Enter:** Cria a tarefa (exceto quando autocomplete está aberto — nesse caso, seleciona o item).
 - **Lista de tarefas do dia:** Tarefas completadas do dia selecionado, ordenadas da mais recente para a mais antiga.
   - Botões por linha: Editar (abre `EditTaskModal`) | Excluir (sem confirmação).
+  - **Seleção múltipla** pela barra "Selecionar tarefas", acima da lista: excluir em massa e **Mover para workspace**, este só com mais de um workspace (`MoveToWorkspaceModal`, o mesmo do Histórico e das entradas de hoje). O mover estava nas outras duas listas de tarefas e faltava só aqui — a barra idêntica à do Histórico fazia a ausência parecer feature desativada.
 - **Total do dia:** Exibido no header quando há tarefas.
 
 ---
