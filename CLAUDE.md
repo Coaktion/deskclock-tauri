@@ -104,6 +104,35 @@ src/
 > tem), e **mover para outro workspace** leva a origem junto — fica um id de
 > planejada do workspace anterior, inerte, porque só tarefa em execução tem o
 > vínculo lido e o que se move já está concluído.
+>
+> **Reexecutar leva a origem junto.** O ▶ de uma entrada de hoje e a sugestão
+> "recente" do acesso rápido copiam nome, projeto, categoria e campos
+> personalizados — e agora também de qual planejada aquilo veio. Sem isso a
+> segunda execução parava sem ter qual planejada concluir, e ela reaparecia
+> pendente no planejamento justamente no dia em que foi mais trabalhada. É o
+> oposto do caso da mescla: aqui a cópia tem uma origem só, e é a da tarefa
+> copiada. A sugestão continua marcada como **não** planejada — ela veio do
+> histórico do dia, não da lista de planejadas.
+>
+> **Quem para a tarefa pergunta a ela, se ninguém disse.** `usePostStopLogic`
+> recebe o id da planejada de fora, passado de mão em mão entre janelas e eventos;
+> vindo vazio, ele cai no `plannedTaskId` da própria tarefa. O caminho de fora
+> ainda ganha — ele conhece o start desta execução —, mas um caminho novo que
+> esqueça de repassá-lo deixa de falhar em silêncio.
+>
+> **No evento entre janelas, campo ausente e `null` querem dizer coisas
+> diferentes.** O `plannedTaskId` do `RUNNING_TASK_CHANGED` é opcional, e omiti-lo
+> significa "não altere a origem": é o que pausar, retomar e atualizar fazem, por
+> não mexerem nela. `null` é o oposto — afirma que a tarefa nasceu solta. A janela
+> principal colapsava os dois em `null`, então **pausar pelo popup apagava o
+> vínculo no meio da execução**, e com ele o reconhecimento de reunião por
+> planejada (§5.7, que cai no nome exato) e os chips de "Ações" do Omnibox. A regra
+> vive em `resolveActivePlannedLink` (`domain/utils/plannedLink.ts`), fora do
+> contexto React, porque foi implementada em duas janelas e divergiu em silêncio
+> numa delas. Ela é aplicada pela forma funcional do `setState`: o listener é
+> registrado uma vez só, e ler o vínculo pelo closure devolveria o valor do mount.
+> **O popup segue decidindo em linha**, e não por descuido: lá o mesmo ramo também
+> levanta a marca de estado ao vivo e carrega as ações da planejada.
 
 ### 4.2 PlannedTask (Tarefa planejada)
 
@@ -965,7 +994,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-04 (§4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-05 (§4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

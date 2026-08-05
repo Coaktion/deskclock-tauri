@@ -7,6 +7,7 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
+import { resolveActivePlannedLink } from "@domain/utils/plannedLink";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { usePostStopLogic } from "@presentation/hooks/usePostStopLogic";
@@ -105,7 +106,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   useOverlaySync({
     onTaskChanged: (task, plannedTaskId) => {
       setRunningTask(task);
-      setActivePlannedTaskId(task ? (plannedTaskId ?? null) : null);
+      setActivePlannedTaskId((current) => resolveActivePlannedLink(current, task, plannedTaskId));
       triggerReload();
     },
     onTaskStopped: (task, plannedTaskId, completed) => {

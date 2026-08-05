@@ -5,6 +5,19 @@ import type { Task } from "@domain/entities/Task";
 
 const NOW = "2026-04-08T11:00:00.000Z";
 
+function makeRepo(overrides: Partial<ITaskRepository> = {}): ITaskRepository {
+  return {
+    save: vi.fn(async () => undefined),
+    update: vi.fn(async () => undefined),
+    findById: vi.fn(async () => null),
+    findByStatus: vi.fn(async () => []),
+    findByDateRange: vi.fn(async () => []),
+    delete: vi.fn(async () => undefined),
+    deleteMany: vi.fn(async () => undefined),
+    ...overrides,
+  };
+}
+
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
@@ -35,16 +48,7 @@ describe("mergeTaskGroup", () => {
         endTime: "2026-04-08T10:30:00.000Z",
       }),
     ];
-    const repo: ITaskRepository = {
-      save: vi.fn(async () => undefined),
-      update: vi.fn(),
-      findById: vi.fn(async () => null),
-      findByStatus: vi.fn(async () => []),
-      findByDateRange: vi.fn(async () => []),
-      delete: vi.fn(),
-      deleteMany: vi.fn(async () => undefined),
-    };
-    const result = await mergeTaskGroup(repo, tasks, NOW);
+    const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
     expect(result.durationSeconds).toBe(5400);
   });
 
@@ -62,16 +66,7 @@ describe("mergeTaskGroup", () => {
         durationSeconds: 1800,
       }),
     ];
-    const repo: ITaskRepository = {
-      save: vi.fn(async () => undefined),
-      update: vi.fn(),
-      findById: vi.fn(async () => null),
-      findByStatus: vi.fn(async () => []),
-      findByDateRange: vi.fn(async () => []),
-      delete: vi.fn(),
-      deleteMany: vi.fn(async () => undefined),
-    };
-    const result = await mergeTaskGroup(repo, tasks, NOW);
+    const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
     expect(result.plannedTaskId).toBeUndefined();
   });
 
@@ -88,16 +83,7 @@ describe("mergeTaskGroup", () => {
         durationSeconds: 1800,
       }),
     ];
-    const repo: ITaskRepository = {
-      save: vi.fn(async () => undefined),
-      update: vi.fn(),
-      findById: vi.fn(async () => null),
-      findByStatus: vi.fn(async () => []),
-      findByDateRange: vi.fn(async () => []),
-      delete: vi.fn(),
-      deleteMany: vi.fn(async () => undefined),
-    };
-    const result = await mergeTaskGroup(repo, tasks, NOW);
+    const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
     expect(result.customValues).toEqual({ "f-stage": "o1" });
   });
 
@@ -111,15 +97,7 @@ describe("mergeTaskGroup", () => {
         endTime: "2026-04-08T10:15:00.000Z",
       }),
     ];
-    const repo: ITaskRepository = {
-      save: vi.fn(async () => undefined),
-      update: vi.fn(),
-      findById: vi.fn(async () => null),
-      findByStatus: vi.fn(async () => []),
-      findByDateRange: vi.fn(async () => []),
-      delete: vi.fn(),
-      deleteMany: vi.fn(async () => undefined),
-    };
+    const repo = makeRepo();
     await mergeTaskGroup(repo, tasks, NOW);
     expect(repo.deleteMany).toHaveBeenCalledWith(["t1", "t2"]);
   });
@@ -129,16 +107,7 @@ describe("mergeTaskGroup", () => {
       makeTask({ id: "t1", startTime: "2026-04-08T10:00:00.000Z", durationSeconds: 1800 }),
       makeTask({ id: "t2", startTime: "2026-04-08T09:00:00.000Z", durationSeconds: 3600 }),
     ];
-    const repo: ITaskRepository = {
-      save: vi.fn(async () => undefined),
-      update: vi.fn(),
-      findById: vi.fn(async () => null),
-      findByStatus: vi.fn(async () => []),
-      findByDateRange: vi.fn(async () => []),
-      delete: vi.fn(),
-      deleteMany: vi.fn(async () => undefined),
-    };
-    const result = await mergeTaskGroup(repo, tasks, NOW);
+    const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
     expect(result.startTime).toBe("2026-04-08T09:00:00.000Z");
   });
 
@@ -161,16 +130,7 @@ describe("mergeTaskGroup", () => {
         billable: true,
       }),
     ];
-    const repo: ITaskRepository = {
-      save: vi.fn(async () => undefined),
-      update: vi.fn(),
-      findById: vi.fn(async () => null),
-      findByStatus: vi.fn(async () => []),
-      findByDateRange: vi.fn(async () => []),
-      delete: vi.fn(),
-      deleteMany: vi.fn(async () => undefined),
-    };
-    const result = await mergeTaskGroup(repo, tasks, NOW);
+    const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
     expect(result.name).toBe("Task A");
     expect(result.projectId).toBe("p1");
     expect(result.categoryId).toBe("c1");

@@ -85,7 +85,11 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
       }
 
       if (completed) {
-        await completePlannedIfNeeded(plannedTaskId);
+        // O vínculo atravessa janelas e eventos de mão em mão (§4.1), e quem
+        // esquecer de repassá-lo deixaria a planejada pendente em silêncio. Aqui
+        // `null` explícito também cai na tarefa, ao contrário do que vale no
+        // evento entre janelas: o vínculo gravado é imutável e é a verdade.
+        await completePlannedIfNeeded(plannedTaskId ?? task.plannedTaskId);
         await autoSyncTask(finalTask);
       }
 

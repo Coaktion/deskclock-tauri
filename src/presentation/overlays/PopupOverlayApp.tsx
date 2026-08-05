@@ -45,11 +45,14 @@ function PopupOverlayAppInner() {
   const isProgrammaticResizeRef = useRef(false);
   const isStartingTaskRef = useRef(false);
   const activePlannedTaskId = useRef<string | null>(null);
-  // true quando o vínculo já veio de um evento ao vivo. A restauração do mount lê
-  // o banco e resolve depois; sem esta marca, um start que chegue nesse intervalo
-  // seria sobrescrito pelo estado anterior — e as ações do listener ficariam na
-  // tela com o vínculo zerado.
-  const plannedLinkFromEventRef = useRef(false);
+  // true quando um evento ao vivo já declarou o vínculo com a planejada — o que
+  // inclui parar e cancelar, que o declaram ausente. A restauração do mount lê o
+  // banco e resolve depois; sem esta marca, o que chegar nesse intervalo seria
+  // sobrescrito pelo estado anterior: um start perderia o vínculo, e um stop
+  // ressuscitaria na tela uma tarefa que já não existe. Pause e resume não
+  // levantam a marca de propósito — eles nada dizem sobre a origem, e abortar a
+  // restauração por causa deles deixaria os chips de "Ações" vazios.
+  const liveTaskStateRef = useRef(false);
   // Modal aberto no conteúdo do popup (hoje, a edição de planejada). Segura o
   // fechamento automático: perder o foco ou apertar ESC com o modal aberto
   // jogaria fora o que o usuário está editando.
@@ -116,17 +119,19 @@ function PopupOverlayAppInner() {
     void getActiveTasks(taskRepo).then(async (tasks) => {
       const running = tasks.find((t) => t.status === "running");
       const active = running ?? tasks[0] ?? null;
+      // Evento ao vivo durante a leitura ganha — ele é mais novo que o banco —, e
+      // a guarda vem antes da tarefa, não só do vínculo: parar em outra janela
+      // enquanto esta consulta corre ressuscitava na tela o que já não existe.
+      if (liveTaskStateRef.current) return;
       setRunningTask(active);
       // Restaura a planejada de origem e suas ações: o RUNNING_TASK_CHANGED que
       // as trazia só é emitido em mutação, então reabrir o app durante uma tarefa
       // deixava os chips de "Ações" vazios e o Parar sem o vínculo para concluir.
-      // Evento ao vivo durante a leitura ganha — ele é mais novo que o banco.
-      if (plannedLinkFromEventRef.current) return;
       const plannedId = active?.plannedTaskId ?? null;
       activePlannedTaskId.current = plannedId;
       if (!plannedId) return;
       const planned = await plannedTaskRepo.findById(plannedId).catch(() => null);
-      if (plannedLinkFromEventRef.current) return;
+      if (liveTaskStateRef.current) return;
       setActivePlannedTaskActions(planned?.actions ?? []);
     });
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -159,10 +164,10 @@ function PopupOverlayAppInner() {
         if (!payload.task) {
           setActivePlannedTaskActions([]);
           activePlannedTaskId.current = null;
-          plannedLinkFromEventRef.current = true;
+          liveTaskStateRef.current = true;
         } else if (payload.plannedTaskId !== undefined) {
           activePlannedTaskId.current = payload.plannedTaskId;
-          plannedLinkFromEventRef.current = true;
+          liveTaskStateRef.current = true;
           // Carrega as ações da tarefa planejada de origem para exibir os chips.
           // Vale para qualquer origem (janela principal, atalho ou aviso de reunião),
           // não só o Play disparado a partir do próprio popup.
@@ -251,7 +256,7 @@ function PopupOverlayAppInner() {
           new Date().toISOString()
         );
         activePlannedTaskId.current = input.plannedTaskId ?? null;
-        plannedLinkFromEventRef.current = true;
+        liveTaskStateRef.current = true;
         await emit(OVERLAY_EVENTS.RUNNING_TASK_CHANGED, {
           task,
           source: "overlay",

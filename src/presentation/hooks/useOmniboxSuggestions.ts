@@ -58,7 +58,11 @@ export function useOmniboxSuggestions(
           categoryId: t.categoryId,
           categoryName: categories.find((c) => c.id === t.categoryId)?.name,
           isPlanned: false,
-          plannedTaskId: null,
+          // Reexecutar carrega a origem da tarefa copiada: sem ela, parar a nova
+          // execução não teria qual planejada marcar como concluída, e ela
+          // continuaria pendente no planejamento (§4.1). `isPlanned` segue false —
+          // a sugestão veio do histórico do dia, não da lista de planejadas.
+          plannedTaskId: t.plannedTaskId ?? null,
           customValues: t.customValues,
         });
       }

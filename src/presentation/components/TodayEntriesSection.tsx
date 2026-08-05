@@ -54,6 +54,9 @@ export function TodayEntriesSection({
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      // A origem viaja com a cópia: sem ela, parar a nova execução deixaria a
+      // planejada pendente no planejamento, porque não haveria qual concluir (§4.1).
+      plannedTaskId: task.plannedTaskId ?? null,
       customValues: task.customValues,
     });
   }
