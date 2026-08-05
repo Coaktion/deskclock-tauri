@@ -50,9 +50,7 @@ export async function runDailyTemplate(
 
     if (valid.length === 0) return { integration: deps.integrationName, count: 0, warning };
 
-    const sentIds = new Set(
-      await deps.logRepo.findSentIds(deps.logKey, range.start, range.end)
-    );
+    const sentIds = new Set(await deps.logRepo.findSentIds(deps.logKey, range.start, range.end));
     // Exclui já enviadas ANTES de agrupar: um grupo parcialmente enviado re-somaria
     // durações que já estão na planilha (double-count).
     const unsent = valid.filter((t) => !sentIds.has(t.id));

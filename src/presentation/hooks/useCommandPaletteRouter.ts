@@ -2,10 +2,7 @@ import { useEffect, type RefObject } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ConfigContextValue } from "@shared/types/appConfig";
-import {
-  OVERLAY_EVENTS,
-  type CommandPaletteNavigatePayload,
-} from "@shared/types/overlayEvents";
+import { OVERLAY_EVENTS, type CommandPaletteNavigatePayload } from "@shared/types/overlayEvents";
 import type { Page } from "@presentation/components/Sidebar";
 
 const appWindow = getCurrentWindow();

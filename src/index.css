@@ -93,8 +93,12 @@
 }
 
 /* ── Zendesk logo: teal legível nos temas escuros; cor da marca no tema claro ── */
-.zendesk-logo { color: oklch(0.72 0.08 190); }
-[data-theme="claro"] .zendesk-logo { color: #03363D; }
+.zendesk-logo {
+  color: oklch(0.72 0.08 190);
+}
+[data-theme="claro"] .zendesk-logo {
+  color: #03363d;
+}
 
 /* ── Scrollbars uniformes ── */
 ::-webkit-scrollbar {
@@ -212,7 +216,15 @@ select {
   color: var(--tw-gray-300);
 }
 
-.deskclock-tour .driver-popover-arrow-side-bottom .driver-popover-arrow { border-bottom-color: var(--tw-gray-700); }
-.deskclock-tour .driver-popover-arrow-side-top .driver-popover-arrow    { border-top-color: var(--tw-gray-700); }
-.deskclock-tour .driver-popover-arrow-side-left .driver-popover-arrow   { border-left-color: var(--tw-gray-700); }
-.deskclock-tour .driver-popover-arrow-side-right .driver-popover-arrow  { border-right-color: var(--tw-gray-700); }
+.deskclock-tour .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-bottom-color: var(--tw-gray-700);
+}
+.deskclock-tour .driver-popover-arrow-side-top .driver-popover-arrow {
+  border-top-color: var(--tw-gray-700);
+}
+.deskclock-tour .driver-popover-arrow-side-left .driver-popover-arrow {
+  border-left-color: var(--tw-gray-700);
+}
+.deskclock-tour .driver-popover-arrow-side-right .driver-popover-arrow {
+  border-right-color: var(--tw-gray-700);
+}

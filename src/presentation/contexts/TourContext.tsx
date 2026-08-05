@@ -37,12 +37,12 @@ export function TourProvider({
           skipBtn.textContent = "Pular tour";
           skipBtn.className = "driver-tour-skip-btn";
           skipBtn.addEventListener("click", () => {
-          const seen = config.get("toursSeen");
-          if (!seen.includes(tourId)) {
-            void config.set("toursSeen", [...seen, tourId]);
-          }
-          driverObj.destroy();
-        });
+            const seen = config.get("toursSeen");
+            if (!seen.includes(tourId)) {
+              void config.set("toursSeen", [...seen, tourId]);
+            }
+            driverObj.destroy();
+          });
           popover.footer.prepend(skipBtn);
         },
         onDestroyStarted: () => {

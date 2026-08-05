@@ -1,12 +1,5 @@
 export type TaskField =
-  | "date"
-  | "name"
-  | "project"
-  | "category"
-  | "billable"
-  | "startTime"
-  | "endTime"
-  | "duration";
+  "date" | "name" | "project" | "category" | "billable" | "startTime" | "endTime" | "duration";
 
 export interface SheetColumn {
   field: TaskField;

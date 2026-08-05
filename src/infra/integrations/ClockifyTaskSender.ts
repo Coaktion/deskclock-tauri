@@ -20,12 +20,12 @@ export class ClockifyTaskSender implements ITaskSender {
     const workspaceId = this.config.get("clockifyActiveWorkspaceId");
     if (!workspaceId) throw new Error("Nenhum workspace Clockify configurado.");
 
-    const projectMapping = this.config.get("clockifyProjectMapping").filter(
-      (m) => m.workspaceId === workspaceId
-    );
-    const categoryMapping = this.config.get("clockifyCategoryMapping").filter(
-      (m) => m.workspaceId === workspaceId
-    );
+    const projectMapping = this.config
+      .get("clockifyProjectMapping")
+      .filter((m) => m.workspaceId === workspaceId);
+    const categoryMapping = this.config
+      .get("clockifyCategoryMapping")
+      .filter((m) => m.workspaceId === workspaceId);
     const defaultTagIds = this.config.get("clockifyDefaultTagIds");
 
     const allCompleted = tasks.filter((t) => t.status === "completed" && t.endTime != null);
@@ -45,7 +45,8 @@ export class ClockifyTaskSender implements ITaskSender {
         : undefined;
 
       const categoryTagIds = task.categoryId
-        ? (categoryMapping.find((m) => m.deskclockCategoryId === task.categoryId)?.clockifyTagIds ?? [])
+        ? (categoryMapping.find((m) => m.deskclockCategoryId === task.categoryId)?.clockifyTagIds ??
+          [])
         : [];
 
       const tagIds = Array.from(new Set([...defaultTagIds, ...categoryTagIds]));

@@ -11,9 +11,7 @@ import {
 import { useCallback, useEffect, useRef } from "react";
 
 type PositionKey =
-  | "overlayPosition_compact"
-  | "overlayPosition_execution"
-  | "overlayPosition_planning";
+  "overlayPosition_compact" | "overlayPosition_execution" | "overlayPosition_planning";
 
 const appWindow = getCurrentWindow();
 

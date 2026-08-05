@@ -15,7 +15,10 @@ export function parseCalendarMetadata(description: string | undefined): {
 
   const project = description.match(/^projeto:\s*(.+)$/im)?.[1]?.trim();
   const category = description.match(/^categoria:\s*(.+)$/im)?.[1]?.trim();
-  const billableRaw = description.match(/^faturável:\s*(.+)$/im)?.[1]?.trim().toLowerCase();
+  const billableRaw = description
+    .match(/^faturável:\s*(.+)$/im)?.[1]
+    ?.trim()
+    .toLowerCase();
 
   let billable: boolean | undefined;
   if (billableRaw !== undefined) {

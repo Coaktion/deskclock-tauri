@@ -26,9 +26,7 @@ export function TagMultiSelect({
   const dropRef = useRef<HTMLDivElement>(null);
 
   function toggle(id: string) {
-    onChange(
-      selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]
-    );
+    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
   }
 
   function openDropdown() {
@@ -69,7 +67,10 @@ export function TagMultiSelect({
           <span className="text-gray-500">{placeholder}</span>
         ) : (
           selected.map((t) => (
-            <span key={t.id} className="bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded text-[10px]">
+            <span
+              key={t.id}
+              className="bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded text-[10px]"
+            >
               {t.name}
             </span>
           ))

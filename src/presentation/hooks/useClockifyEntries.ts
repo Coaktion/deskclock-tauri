@@ -45,10 +45,22 @@ export function useClockifyEntries({
       .listTimeEntries(workspaceId, userId, startOfDayISO(range.start), endOfDayISO(range.end))
       .then(setEntries)
       .catch((err: unknown) => {
-        void showToast("error", err instanceof Error ? err.message : "Erro ao carregar apontamentos.");
+        void showToast(
+          "error",
+          err instanceof Error ? err.message : "Erro ao carregar apontamentos."
+        );
       })
       .finally(() => setLoading(false));
-  }, [apiKey, workspaceId, userId, range.start, range.end, rangeValid, refreshSignal, createClockifyApi]);
+  }, [
+    apiKey,
+    workspaceId,
+    userId,
+    range.start,
+    range.end,
+    rangeValid,
+    refreshSignal,
+    createClockifyApi,
+  ]);
 
   useEffect(() => {
     if (!apiKey || !workspaceId) return;

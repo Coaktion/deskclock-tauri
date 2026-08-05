@@ -24,12 +24,9 @@ export function useOverlaySync({ onTaskChanged, onTaskStopped }: OverlaySyncOpti
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const unlisten = listen<TaskStoppedPayload>(
-      OVERLAY_EVENTS.TASK_STOPPED,
-      ({ payload }) => {
-        onTaskStopped(payload.task, payload.plannedTaskId, payload.completed);
-      }
-    );
+    const unlisten = listen<TaskStoppedPayload>(OVERLAY_EVENTS.TASK_STOPPED, ({ payload }) => {
+      onTaskStopped(payload.task, payload.plannedTaskId, payload.completed);
+    });
     return () => {
       unlisten.then((fn) => fn());
     };

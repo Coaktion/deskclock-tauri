@@ -7,15 +7,7 @@ import { useTour } from "@presentation/hooks/useTour";
 import { startZendeskOAuth } from "@infra/integrations/zendesk/ZendeskOAuth";
 import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenManager";
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
-import {
-  CalendarDays,
-  CheckCircle2,
-  Key,
-  Loader2,
-  LogIn,
-  LogOut,
-  X,
-} from "lucide-react";
+import { CalendarDays, CheckCircle2, Key, Loader2, LogIn, LogOut, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
 
@@ -117,7 +109,10 @@ export function ZendeskIntegrationCard() {
   return (
     <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
       {/* Header do card */}
-      <div data-tour="zendesk-header" className="flex items-start gap-3 px-4 py-3 border-b border-gray-800">
+      <div
+        data-tour="zendesk-header"
+        className="flex items-start gap-3 px-4 py-3 border-b border-gray-800"
+      >
         <div className="mt-0.5 shrink-0">
           <ZendeskLogoSmall size={20} />
         </div>
@@ -162,66 +157,73 @@ export function ZendeskIntegrationCard() {
 
       {/* Credenciais OAuth */}
       <div data-tour="zendesk-credentials">
-      <SubSection icon={<Key size={15} />} title="Credenciais OAuth" defaultOpen={!connected}>
-        {!connected && (
-          <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 px-4 py-3 space-y-2 mb-1">
-            <p className="text-xs font-medium text-gray-300">Como criar um OAuth client no Zendesk:</p>
-            <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
-              <li>
-                Acesse{" "}
-                <span className="text-gray-300 font-medium">
-                  Admin Center → Apps e integrações → APIs → APIs do Zendesk → Clientes OAuth
-                </span>
-              </li>
-              <li>
-                Clique em <span className="text-gray-300 font-medium">Adicionar cliente OAuth</span>
-              </li>
-              <li>
-                Em <span className="text-gray-300 font-medium">URLs de redirecionamento</span>, adicione exatamente:{" "}
-                <code className="text-blue-400 font-mono text-[11px]">http://localhost:27422/callback</code>
-              </li>
-              <li>
-                Copie o <span className="text-gray-300 font-medium">Identificador único</span> (Client ID)
-                e o <span className="text-gray-300 font-medium">Secret</span> gerado
-              </li>
-            </ol>
-          </div>
-        )}
-        <Row label="Subdomínio">
-          <div className="flex items-center gap-1.5">
+        <SubSection icon={<Key size={15} />} title="Credenciais OAuth" defaultOpen={!connected}>
+          {!connected && (
+            <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 px-4 py-3 space-y-2 mb-1">
+              <p className="text-xs font-medium text-gray-300">
+                Como criar um OAuth client no Zendesk:
+              </p>
+              <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+                <li>
+                  Acesse{" "}
+                  <span className="text-gray-300 font-medium">
+                    Admin Center → Apps e integrações → APIs → APIs do Zendesk → Clientes OAuth
+                  </span>
+                </li>
+                <li>
+                  Clique em{" "}
+                  <span className="text-gray-300 font-medium">Adicionar cliente OAuth</span>
+                </li>
+                <li>
+                  Em <span className="text-gray-300 font-medium">URLs de redirecionamento</span>,
+                  adicione exatamente:{" "}
+                  <code className="text-blue-400 font-mono text-[11px]">
+                    http://localhost:27422/callback
+                  </code>
+                </li>
+                <li>
+                  Copie o <span className="text-gray-300 font-medium">Identificador único</span>{" "}
+                  (Client ID) e o <span className="text-gray-300 font-medium">Secret</span> gerado
+                </li>
+              </ol>
+            </div>
+          )}
+          <Row label="Subdomínio">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={subdomain}
+                onChange={(e) => setSubdomain(e.target.value)}
+                disabled={connected}
+                placeholder="minha-empresa"
+                className="w-36 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <span className="text-xs text-gray-600 shrink-0">.zendesk.com</span>
+            </div>
+          </Row>
+          <Row label="Client ID">
             <input
               type="text"
-              value={subdomain}
-              onChange={(e) => setSubdomain(e.target.value)}
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
               disabled={connected}
-              placeholder="minha-empresa"
-              className="w-36 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              placeholder="OAuth client identifier"
+              className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             />
-            <span className="text-xs text-gray-600 shrink-0">.zendesk.com</span>
-          </div>
-        </Row>
-        <Row label="Client ID">
-          <input
-            type="text"
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            disabled={connected}
-            placeholder="OAuth client identifier"
-            className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-        </Row>
-        <Row label="Secret">
-          <input
-            type="password"
-            value={clientSecret}
-            onChange={(e) => setClientSecret(e.target.value)}
-            disabled={connected}
-            placeholder="Vazio para cliente público"
-            className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          />
-        </Row>
-      </SubSection>
-      </div>{/* /zendesk-credentials */}
+          </Row>
+          <Row label="Secret">
+            <input
+              type="password"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              disabled={connected}
+              placeholder="Vazio para cliente público"
+              className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+          </Row>
+        </SubSection>
+      </div>
+      {/* /zendesk-credentials */}
 
       {/* Importar tickets */}
       {connected && (

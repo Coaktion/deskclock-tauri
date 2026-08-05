@@ -38,7 +38,11 @@ export function useDailySyncScheduler(config: ConfigContextValue, runDaily: RunD
       if (totalCount > 0 && warnings.length === 0) {
         await showToast("success", `${totalCount} tarefa(s) enviada(s) automaticamente`);
       } else if (totalCount > 0 && warnings.length > 0) {
-        await showToast("warning", `${totalCount} tarefa(s) enviada(s). ${warnings.join(" ")}`, 6000);
+        await showToast(
+          "warning",
+          `${totalCount} tarefa(s) enviada(s). ${warnings.join(" ")}`,
+          6000
+        );
       } else if (warnings.length > 0) {
         for (const w of warnings) await showToast("warning", w, 6000);
       }

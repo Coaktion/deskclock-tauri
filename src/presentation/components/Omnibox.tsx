@@ -83,8 +83,7 @@ export function Omnibox({
   }, [handleOutsideClick]);
 
   if (runningTask) {
-    const runningActions =
-      plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
+    const runningActions = plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
     return (
       <OmniboxRunning
         {...edit}
