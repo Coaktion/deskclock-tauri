@@ -12,14 +12,17 @@ import {
 } from "@domain/usecases/monday/buildActivityColumnValues";
 import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
 
-const COLUMNS: MondayActivityColumnIds = {
+// `satisfies` em vez de anotação: com Billing type, Status e Project Stage
+// opcionais no tipo, anotar tornaria `COLUMNS.status` um `string | undefined` e
+// as asserções abaixo não poderiam indexar por ele.
+const COLUMNS = {
   reportedHours: "numeric_mm33gj5m",
   billingType: "color_mm33rxm7",
   activityType: "color_mm19csp3",
   projectStage: "color_mm19zrwg",
   status: "status",
   person: "person",
-};
+} satisfies MondayActivityColumnIds;
 
 describe("serializadores de coluna do Monday", () => {
   it("serializa numbers como string", () => {
@@ -90,7 +93,7 @@ describe("buildActivityColumnValues", () => {
     });
 
     expect(values[COLUMNS.activityType]).toEqual({ label: "Development" });
-    expect(values[COLUMNS.projectStage!]).toEqual({ label: "Execução" });
+    expect(values[COLUMNS.projectStage]).toEqual({ label: "Execução" });
   });
 
   it("omite Project Stage quando o board não tem a coluna", () => {
@@ -105,6 +108,33 @@ describe("buildActivityColumnValues", () => {
     });
 
     expect(Object.keys(values)).not.toContain("color_mm19zrwg");
+  });
+
+  it("omite Billing type e Status quando o board não tem as colunas", () => {
+    // O board fora do template deixou de ser recusado na importação, então ele
+    // chega aqui. Mandar o id assim mesmo faria o Monday recusar a mutation
+    // inteira — e o "não existe" da resposta é lido pelo sender como item
+    // apagado, que responde recriando: duplicaria a atividade a cada ciclo.
+    const minimal: MondayActivityColumnIds = {
+      reportedHours: COLUMNS.reportedHours,
+      activityType: COLUMNS.activityType,
+      person: COLUMNS.person,
+    };
+
+    const values = buildActivityColumnValues({
+      columnIds: minimal,
+      hoursDecimal: 1.5,
+      billable: true,
+      userId: "1",
+      statusLabel: "Working on it",
+      activityTypeLabel: "Development",
+    });
+
+    expect(values).toEqual({
+      [COLUMNS.reportedHours]: "1.5",
+      [COLUMNS.activityType]: { label: "Development" },
+      [COLUMNS.person]: { personsAndTeams: [{ id: 1, kind: "person" }] },
+    });
   });
 
   it("grava Start Date e End Date com o intervalo trabalhado, em UTC", () => {

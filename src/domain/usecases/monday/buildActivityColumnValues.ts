@@ -50,6 +50,14 @@ export function secondsToDecimalHours(totalSeconds: number): number {
 /**
  * Monta o `column_values` de uma atividade do Monday. Colunas opcionais só
  * entram no payload quando há valor — gravar `null` num status limparia o campo.
+ *
+ * **Coluna que o board não tem também não entra**, e a omissão é o mecanismo de
+ * segurança, não uma economia: mandar um id inexistente faz o Monday recusar a
+ * mutation inteira (HTTP 200 com `InvalidColumnIdException`/
+ * `ResourceNotFoundException` no corpo), e o segundo desses o `MondayClient`
+ * traduz em `MondayNotFoundError` — que o sender lê como "apagaram o item" e
+ * responde recriando. Uma coluna a mais no payload viraria atividade duplicada
+ * no board a cada ciclo, não um erro visível.
  */
 export function buildActivityColumnValues(
   input: BuildActivityColumnValuesInput
@@ -57,13 +65,17 @@ export function buildActivityColumnValues(
   const { columnIds } = input;
   const values: Record<string, unknown> = {
     [columnIds.reportedHours]: serializeNumber(input.hoursDecimal),
-    [columnIds.billingType]: serializeStatus(
-      input.billable ? MONDAY_BILLABLE_LABEL : MONDAY_NON_BILLABLE_LABEL
-    ),
-    [columnIds.status]: serializeStatus(input.statusLabel ?? MONDAY_COMPLETED_LABEL),
     [columnIds.person]: serializePerson(input.userId),
   };
 
+  if (columnIds.billingType) {
+    values[columnIds.billingType] = serializeStatus(
+      input.billable ? MONDAY_BILLABLE_LABEL : MONDAY_NON_BILLABLE_LABEL
+    );
+  }
+  if (columnIds.status) {
+    values[columnIds.status] = serializeStatus(input.statusLabel ?? MONDAY_COMPLETED_LABEL);
+  }
   if (input.activityTypeLabel) {
     values[columnIds.activityType] = serializeStatus(input.activityTypeLabel);
   }

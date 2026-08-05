@@ -44,14 +44,17 @@ const STAGE_FIELD: CustomField = {
   createdAt: "2026-07-30T12:00:00.000Z",
 };
 
-const COLUMN_IDS: MondayActivityColumnIds = {
+// `satisfies` em vez de anotação: Billing type, Status e Project Stage são
+// opcionais no tipo, e anotar faria as asserções indexarem por
+// `string | undefined`.
+const COLUMN_IDS = {
   reportedHours: "numeric_mm33gj5m",
   billingType: "color_mm33rxm7",
   activityType: "color_mm19csp3",
   projectStage: "color_mm19zrwg",
   status: "status",
   person: "person",
-};
+} satisfies MondayActivityColumnIds;
 
 /** Só os boards com as colunas de data recebem Start/End Date. */
 const DATE_COLUMN_IDS = { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" };

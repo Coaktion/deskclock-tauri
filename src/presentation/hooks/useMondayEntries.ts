@@ -63,10 +63,10 @@ function wantedColumns(mapping: MondayProjectMapping): string[] {
   const { columnIds } = mapping;
   return [
     columnIds.reportedHours,
-    columnIds.billingType,
     columnIds.activityType,
-    columnIds.status,
     columnIds.person,
+    ...(columnIds.billingType ? [columnIds.billingType] : []),
+    ...(columnIds.status ? [columnIds.status] : []),
     ...(columnIds.projectStage ? [columnIds.projectStage] : []),
     ...(columnIds.startDate ? [columnIds.startDate] : []),
     ...(columnIds.endDate ? [columnIds.endDate] : []),

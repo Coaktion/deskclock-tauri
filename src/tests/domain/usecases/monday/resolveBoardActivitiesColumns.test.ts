@@ -156,6 +156,49 @@ describe("resolveBoardActivitiesColumns", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.columnIds.projectStage).toBeUndefined();
   });
+
+  it("aceita o board sem Billing type e sem Status", () => {
+    // Recusá-lo deixava o cliente sem projeto e sem caminho nenhum para as horas.
+    const schema = makeSchema({
+      columns: makeSchema().columns.filter(
+        (c) => c.title !== "Billing type" && c.title !== "Status"
+      ),
+    });
+
+    const result = resolveBoardActivitiesColumns(schema);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.columnIds.billingType).toBeUndefined();
+    expect(result.columnIds.status).toBeUndefined();
+    expect(result.columnIds.reportedHours).toBe("numeric_mm33gj5m");
+  });
+
+  it.each([
+    ["Reported Hours", "coluna Reported Hours"],
+    ["Activity Type", "coluna Activity Type"],
+    ["Owner", "coluna de pessoa"],
+  ])("continua recusando o board sem %s", (title, expected) => {
+    const schema = makeSchema({
+      columns: makeSchema().columns.filter((c) => c.title !== title),
+    });
+
+    const result = resolveBoardActivitiesColumns(schema);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.missing).toContain(expected);
+  });
+
+  it("não recusa por Billing type nem por Status ao listar o que falta", () => {
+    const schema = makeSchema({ groups: [], columns: [], views: [] });
+    const result = resolveBoardActivitiesColumns(schema);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.missing).not.toContain("coluna Billing type");
+      expect(result.missing).not.toContain("coluna Status");
+    }
+  });
 });
 
 describe("parseStatusLabels", () => {

@@ -426,21 +426,27 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
           </select>
         )}
 
-        <button
-          type="button"
-          onClick={() => setBillable((b) => !b)}
-          title={
-            billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
-          }
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
-            billable
-              ? "bg-green-900/40 border-green-700 text-green-400"
-              : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
-          }`}
-        >
-          <DollarSign size={13} />
-          {billable ? "Faturável" : "Não-faturável"}
-        </button>
+        {/* Só quando o board tem a coluna Billing type. Ela é opcional desde que
+            a importação parou de recusar board fora do template, e um botão que
+            alterna um valor que nunca sai daqui é armadilha — o mesmo motivo de
+            o Project Stage acima ser condicional. */}
+        {entry.mapping.columnIds.billingType && (
+          <button
+            type="button"
+            onClick={() => setBillable((b) => !b)}
+            title={
+              billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
+            }
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
+              billable
+                ? "bg-green-900/40 border-green-700 text-green-400"
+                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
+            }`}
+          >
+            <DollarSign size={13} />
+            {billable ? "Faturável" : "Não-faturável"}
+          </button>
+        )}
 
         <div className="ml-auto flex items-center gap-2">
           <button

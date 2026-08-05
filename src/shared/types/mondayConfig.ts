@@ -9,13 +9,21 @@ export interface MondayWorkspaceRef {
  */
 export interface MondayActivityColumnIds {
   reportedHours: string;
-  billingType: string;
   activityType: string;
+  /**
+   * Opcionais porque **nem todo board segue o template inteiro**, e recusar o
+   * board por falta delas custava caro: o cliente não virava projeto e as horas
+   * não tinham para onde ir. Sem a coluna, o campo simplesmente não entra no
+   * payload — nunca mandamos id que o board não tem, o que faria o Monday
+   * recusar a escrita inteira (e, pior, responder um "não existe" que o sender
+   * lê como item apagado e recria, duplicando a atividade).
+   */
+  billingType?: string;
+  status?: string;
   projectStage?: string;
-  /** Preenchidas só na criação do item, com o instante do envio. */
+  /** Preenchidas com o intervalo trabalhado; ver `buildActivityDateColumns`. */
   startDate?: string;
   endDate?: string;
-  status: string;
   person: string;
 }
 

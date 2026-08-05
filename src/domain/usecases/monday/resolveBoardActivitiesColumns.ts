@@ -78,6 +78,14 @@ function groupIdFromViewSettings(
  * Ids de grupo e de coluna são gerados por template (`mmXXXX`) e variam de board
  * para board — por isso resolvemos pelo **título** da coluna e pelo **nome** do
  * grupo/view, e cacheamos o resultado no mapeamento do projeto.
+ *
+ * **Só quatro coisas recusam o board:** o grupo Activities (sem ele não há onde
+ * criar a atividade), Reported Hours (sem ela o envio de horas não registra hora
+ * nenhuma, que é o ponto), Activity Type e a coluna de pessoa. Billing type,
+ * Status, Project Stage e as duas datas são opcionais: board que não as tem vira
+ * projeto do mesmo jeito e recebe um payload sem elas. Exigir o template inteiro
+ * deixava clientes de fora sem alternativa nenhuma — não dava para enviar as
+ * horas daquele board por caminho algum.
  */
 export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): ResolveActivitiesResult {
   const missing: string[] = [];
@@ -92,22 +100,23 @@ export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): Resolv
   const reportedHours = findColumn(schema.columns, TITLES.reportedHours);
   if (!reportedHours) missing.push("coluna Reported Hours");
 
-  const billingType = findColumn(schema.columns, TITLES.billingType);
-  if (!billingType) missing.push("coluna Billing type");
-
   const activityType = findColumn(schema.columns, TITLES.activityType);
   if (!activityType) missing.push("coluna Activity Type");
 
-  const status = findColumn(schema.columns, TITLES.status);
-  if (!status) missing.push("coluna Status");
-
+  // A coluna de pessoa não entra só no payload: é por ela que o gerenciador de
+  // atividades e o import de itens pedem ao Monday **apenas os itens do usuário**
+  // (`listItemsOwnedBy`). Os boards são do time inteiro, então sem ela as duas
+  // telas trariam o trabalho de todo mundo — com um botão de excluir ao lado.
   const person = schema.columns.find((c) => c.type === "people");
   if (!person) missing.push("coluna de pessoa");
 
-  if (!activitiesGroupId || !reportedHours || !billingType || !activityType || !status || !person) {
+  if (!activitiesGroupId || !reportedHours || !activityType || !person) {
     return { ok: false, missing };
   }
 
+  // Daqui para baixo, coluna ausente não recusa o board — só não é escrita.
+  const billingType = findColumn(schema.columns, TITLES.billingType);
+  const status = findColumn(schema.columns, TITLES.status);
   const projectStage = findColumn(schema.columns, TITLES.projectStage);
   const startDate = findDateColumn(schema.columns, TITLES.startDate, "startDate");
   const endDate = findDateColumn(schema.columns, TITLES.endDate, "endDate");
@@ -117,12 +126,12 @@ export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): Resolv
     activitiesGroupId,
     columnIds: {
       reportedHours: reportedHours.id,
-      billingType: billingType.id,
       activityType: activityType.id,
+      ...(billingType ? { billingType: billingType.id } : {}),
+      ...(status ? { status: status.id } : {}),
       ...(projectStage ? { projectStage: projectStage.id } : {}),
       ...(startDate ? { startDate: startDate.id } : {}),
       ...(endDate ? { endDate: endDate.id } : {}),
-      status: status.id,
       person: person.id,
     },
   };
