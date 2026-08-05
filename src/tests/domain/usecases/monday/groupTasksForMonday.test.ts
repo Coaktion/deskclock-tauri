@@ -4,6 +4,7 @@ import {
   mondayGroupInterval,
 } from "@domain/usecases/monday/groupTasksForMonday";
 import type { Task } from "@domain/entities/Task";
+import { localISO } from "../../../helpers/localTime";
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -13,8 +14,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     projectId: "proj-1",
     categoryId: "cat-1",
     billable: true,
-    startTime: "2026-07-30T12:00:00.000Z",
-    endTime: "2026-07-30T13:00:00.000Z",
+    startTime: localISO(2026, 7, 30, 12),
+    endTime: localISO(2026, 7, 30, 13),
     durationSeconds: 3600,
     status: "completed",
     createdAt: "2026-07-30T12:00:00.000Z",
@@ -38,8 +39,8 @@ describe("groupTasksForMonday", () => {
 
   it("separa dias locais distintos", () => {
     const groups = groupTasksForMonday([
-      makeTask({ id: "a", startTime: "2026-07-30T12:00:00.000Z" }),
-      makeTask({ id: "b", startTime: "2026-07-31T12:00:00.000Z" }),
+      makeTask({ id: "a", startTime: localISO(2026, 7, 30, 12) }),
+      makeTask({ id: "b", startTime: localISO(2026, 7, 31, 12) }),
     ]);
 
     expect(groups.map((g) => g.dayISO).sort()).toEqual(["2026-07-30", "2026-07-31"]);
@@ -68,8 +69,8 @@ describe("groupTasksForMonday", () => {
   });
 
   it("ordena as tarefas por startTime, independente da ordem de entrada", () => {
-    const early = makeTask({ id: "cedo", startTime: "2026-07-30T09:00:00.000Z" });
-    const late = makeTask({ id: "tarde", startTime: "2026-07-30T17:00:00.000Z" });
+    const early = makeTask({ id: "cedo", startTime: localISO(2026, 7, 30, 9) });
+    const late = makeTask({ id: "tarde", startTime: localISO(2026, 7, 30, 17) });
 
     expect(groupTasksForMonday([late, early])[0].tasks.map((t) => t.id)).toEqual(["cedo", "tarde"]);
     expect(groupTasksForMonday([early, late])[0].tasks.map((t) => t.id)).toEqual(["cedo", "tarde"]);
@@ -90,19 +91,19 @@ describe("mondayGroupInterval", () => {
     const [group] = groupTasksForMonday([
       makeTask({
         id: "a",
-        startTime: "2026-07-30T09:00:00.000Z",
-        endTime: "2026-07-30T10:00:00.000Z",
+        startTime: localISO(2026, 7, 30, 9),
+        endTime: localISO(2026, 7, 30, 10),
       }),
       makeTask({
         id: "b",
-        startTime: "2026-07-30T14:00:00.000Z",
-        endTime: "2026-07-30T17:30:00.000Z",
+        startTime: localISO(2026, 7, 30, 14),
+        endTime: localISO(2026, 7, 30, 17, 30),
       }),
     ]);
 
     expect(mondayGroupInterval(group)).toEqual({
-      startISO: "2026-07-30T09:00:00.000Z",
-      endISO: "2026-07-30T17:30:00.000Z",
+      startISO: localISO(2026, 7, 30, 9),
+      endISO: localISO(2026, 7, 30, 17, 30),
     });
   });
 
@@ -111,25 +112,25 @@ describe("mondayGroupInterval", () => {
     const [group] = groupTasksForMonday([
       makeTask({
         id: "longa",
-        startTime: "2026-07-30T09:00:00.000Z",
-        endTime: "2026-07-30T18:00:00.000Z",
+        startTime: localISO(2026, 7, 30, 9),
+        endTime: localISO(2026, 7, 30, 18),
       }),
       makeTask({
         id: "curta",
-        startTime: "2026-07-30T10:00:00.000Z",
-        endTime: "2026-07-30T11:00:00.000Z",
+        startTime: localISO(2026, 7, 30, 10),
+        endTime: localISO(2026, 7, 30, 11),
       }),
     ]);
 
-    expect(mondayGroupInterval(group).endISO).toBe("2026-07-30T18:00:00.000Z");
+    expect(mondayGroupInterval(group).endISO).toBe(localISO(2026, 7, 30, 18));
   });
 
   it("cai no próprio início quando a tarefa não tem fim", () => {
     const [group] = groupTasksForMonday([makeTask({ endTime: null })]);
 
     expect(mondayGroupInterval(group)).toEqual({
-      startISO: "2026-07-30T12:00:00.000Z",
-      endISO: "2026-07-30T12:00:00.000Z",
+      startISO: localISO(2026, 7, 30, 12),
+      endISO: localISO(2026, 7, 30, 12),
     });
   });
 });

@@ -18,6 +18,7 @@ import type {
 } from "@domain/repositories/IMondayActivityItemRepository";
 import type { AppConfig } from "@shared/types/appConfig";
 import type { MondayActivityColumnIds, MondayProjectMapping } from "@shared/types/mondayConfig";
+import { localISO } from "../../../helpers/localTime";
 
 const WORKSPACE_ID = "15505674";
 const BOARD_ID = "9001";
@@ -58,17 +59,6 @@ const COLUMN_IDS = {
 
 /** Só os boards com as colunas de data recebem Start/End Date. */
 const DATE_COLUMN_IDS = { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" };
-
-/**
- * Instante montado a partir da hora **local**.
- *
- * As duas colunas de data levam o dia local da tarefa (§6.6), e sem hora junto
- * não há o que reconverter no board. Fixar o ISO em UTC faria a asserção passar
- * ou falhar conforme o fuso da máquina que roda a suíte.
- */
-function localISO(day: number, hour: number, minute = 0): string {
-  return new Date(2026, 6, day, hour, minute).toISOString();
-}
 
 const MAPPING: MondayProjectMapping = {
   deskclockProjectId: "proj-1",
@@ -178,8 +168,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     projectId: "proj-1",
     categoryId: "cat-1",
     billable: true,
-    startTime: "2026-07-30T12:00:00.000Z",
-    endTime: "2026-07-30T13:50:00.000Z",
+    startTime: localISO(2026, 7, 30, 12),
+    endTime: localISO(2026, 7, 30, 13, 50),
     durationSeconds: 6600,
     status: "completed",
     createdAt: "2026-07-30T12:00:00.000Z",
@@ -296,8 +286,8 @@ describe("MondayTaskSender", () => {
       );
 
       await sender.send([
-        makeTask({ id: "a", startTime: "2026-07-30T12:00:00.000Z" }),
-        makeTask({ id: "b", startTime: "2026-07-31T12:00:00.000Z" }),
+        makeTask({ id: "a", startTime: localISO(2026, 7, 30, 12) }),
+        makeTask({ id: "b", startTime: localISO(2026, 7, 31, 12) }),
       ]);
 
       expect(client.createItem).toHaveBeenCalledTimes(2);
@@ -790,12 +780,12 @@ describe("MondayTaskSender", () => {
         makeTask({
           id: "t1",
           name: "Tarefa A",
-          startTime: "2026-07-30T09:00:00.000Z",
+          startTime: localISO(2026, 7, 30, 9),
         }),
         makeTask({
           id: "t2",
           name: "Tarefa B",
-          startTime: "2026-07-30T17:00:00.000Z",
+          startTime: localISO(2026, 7, 30, 17),
         }),
       ]);
 
@@ -872,12 +862,12 @@ describe("MondayTaskSender", () => {
       const billableTask = makeTask({
         id: "t1",
         billable: true,
-        startTime: "2026-07-30T12:00:00.000Z",
+        startTime: localISO(2026, 7, 30, 12),
       });
       const otherTask = makeTask({
         id: "t2",
         billable: false,
-        startTime: "2026-07-30T14:00:00.000Z",
+        startTime: localISO(2026, 7, 30, 14),
       });
 
       await sender.send([billableTask, otherTask]);
@@ -983,8 +973,8 @@ describe("MondayTaskSender", () => {
         client
       ).send([
         makeTask({
-          startTime: localISO(28, 12),
-          endTime: localISO(28, 13, 50),
+          startTime: localISO(2026, 7, 28, 12),
+          endTime: localISO(2026, 7, 28, 13, 50),
         }),
       ]);
 
@@ -1011,13 +1001,13 @@ describe("MondayTaskSender", () => {
         // dia 30: a tarefa pertence ao dia do início (§6.6).
         makeTask({
           id: "virada",
-          startTime: localISO(30, 22),
-          endTime: localISO(31, 1),
+          startTime: localISO(2026, 7, 30, 22),
+          endTime: localISO(2026, 7, 31, 1),
         }),
         makeTask({
           id: "cedo",
-          startTime: localISO(30, 6),
-          endTime: localISO(30, 7),
+          startTime: localISO(2026, 7, 30, 6),
+          endTime: localISO(2026, 7, 30, 7),
         }),
       ]);
 
@@ -1040,9 +1030,15 @@ describe("MondayTaskSender", () => {
 
       // "Esqueci de parar o timer": o fim vai da noite do dia 30 para a
       // madrugada do 31, e é o End Date do board que precisa acompanhar.
-      await send(makeTask({ startTime: localISO(30, 22), endTime: localISO(30, 23) }));
       await send(
-        makeTask({ startTime: localISO(30, 22), endTime: localISO(31, 1), durationSeconds: 10800 })
+        makeTask({ startTime: localISO(2026, 7, 30, 22), endTime: localISO(2026, 7, 30, 23) })
+      );
+      await send(
+        makeTask({
+          startTime: localISO(2026, 7, 30, 22),
+          endTime: localISO(2026, 7, 31, 1),
+          durationSeconds: 10800,
+        })
       );
 
       expect(vi.mocked(client.changeColumnValues).mock.calls[0][2]).toMatchObject({

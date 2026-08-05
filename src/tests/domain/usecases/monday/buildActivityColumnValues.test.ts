@@ -11,19 +11,11 @@ import {
   MONDAY_COMPLETED_LABEL,
 } from "@domain/usecases/monday/buildActivityColumnValues";
 import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
+import { localISO } from "../../../helpers/localTime";
 
 // `satisfies` em vez de anotação: com Billing type, Status e Project Stage
 // opcionais no tipo, anotar tornaria `COLUMNS.status` um `string | undefined` e
 // as asserções abaixo não poderiam indexar por ele.
-/**
- * Instante montado a partir da hora **local** — as colunas de data levam o dia
- * local da tarefa (§6.6). Um literal em UTC faria a asserção passar ou falhar
- * conforme o fuso da máquina que roda a suíte.
- */
-function localISO(day: number, hour: number, minute = 0): string {
-  return new Date(2026, 6, day, hour, minute).toISOString();
-}
-
 const COLUMNS = {
   reportedHours: "numeric_mm33gj5m",
   billingType: "color_mm33rxm7",
@@ -149,8 +141,8 @@ describe("buildActivityColumnValues", () => {
   it("grava Start Date e End Date com o dia trabalhado, sem hora", () => {
     const values = buildActivityDateColumns(
       { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
-      localISO(28, 12),
-      localISO(28, 14, 30)
+      localISO(2026, 7, 28, 12),
+      localISO(2026, 7, 28, 14, 30)
     );
 
     expect(values).toEqual({
@@ -163,7 +155,7 @@ describe("buildActivityColumnValues", () => {
     // Uma tarefa das 23h em fuso negativo é do dia 28 para quem a trabalhou e do
     // dia 29 em UTC. Sem hora junto, o Monday não tem como reconverter: mandar o
     // dia UTC jogaria a atividade para o dia seguinte no board.
-    const iso = localISO(28, 23);
+    const iso = localISO(2026, 7, 28, 23);
 
     const values = buildActivityDateColumns(
       { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },

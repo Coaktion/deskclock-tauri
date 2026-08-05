@@ -9,9 +9,10 @@ import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import { startOfDayISO, endOfDayISO, addDaysISO } from "@shared/utils/time";
+import { localISO } from "../../helpers/localTime";
 
 const TODAY = "2026-05-06";
-const NOW_ISO = "2026-05-06T15:00:00.000Z";
+const NOW_ISO = localISO(2026, 5, 6, 15);
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -21,12 +22,12 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     projectId: "proj-1",
     categoryId: "cat-1",
     billable: true,
-    startTime: "2026-05-06T09:00:00.000Z",
-    endTime: "2026-05-06T10:00:00.000Z",
+    startTime: localISO(2026, 5, 6, 9),
+    endTime: localISO(2026, 5, 6, 10),
     durationSeconds: 3600,
     status: "completed",
-    createdAt: "2026-05-06T09:00:00.000Z",
-    updatedAt: "2026-05-06T10:00:00.000Z",
+    createdAt: localISO(2026, 5, 6, 9),
+    updatedAt: localISO(2026, 5, 6, 10),
     customValues: {},
     ...overrides,
   };
@@ -75,7 +76,9 @@ function makeDeps(overrides: Partial<DailyTemplateDeps> = {}): DailyTemplateDeps
 describe("calcDailyRange", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-06T12:00:00Z"));
+    // Relógio no meio-dia **local** de TODAY: `calcDailyRange` parte de
+    // `todayISO()`, que é local, e 12:00Z já é o dia seguinte em fuso positivo.
+    vi.setSystemTime(new Date(localISO(2026, 5, 6, 12)));
   });
   afterEach(() => vi.useRealTimers());
 
@@ -87,21 +90,21 @@ describe("calcDailyRange", () => {
   });
 
   it("timestamp = ontem → start = startOfDay(ontem)", () => {
-    const result = calcDailyRange("2026-05-05T10:00:00.000Z", TODAY);
+    const result = calcDailyRange(localISO(2026, 5, 5, 10), TODAY);
     expect(result).not.toBeNull();
     expect(result!.start).toBe(startOfDayISO("2026-05-05"));
     expect(result!.end).toBe(endOfDayISO(TODAY));
   });
 
   it("timestamp = hoje → range cobre hoje (dedup via log)", () => {
-    const result = calcDailyRange("2026-05-06T10:00:00.000Z", TODAY);
+    const result = calcDailyRange(localISO(2026, 5, 6, 10), TODAY);
     expect(result).not.toBeNull();
     expect(result!.start).toBe(startOfDayISO(TODAY));
     expect(result!.end).toBe(endOfDayISO(TODAY));
   });
 
   it("timestamp = futuro → null", () => {
-    expect(calcDailyRange("2026-05-10T10:00:00.000Z", TODAY)).toBeNull();
+    expect(calcDailyRange(localISO(2026, 5, 10, 10), TODAY)).toBeNull();
   });
 });
 
@@ -112,7 +115,7 @@ describe("runDailyTemplate", () => {
     const taskRepo = makeTaskRepo();
     const deps = makeDeps({
       taskRepo,
-      timestampPort: { get: () => "2026-05-10T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 10, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result).toEqual({ integration: "TestInteg", count: 0 });
@@ -127,7 +130,7 @@ describe("runDailyTemplate", () => {
     ];
     const deps = makeDeps({
       taskRepo: makeTaskRepo(tasks),
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(0);
@@ -146,7 +149,7 @@ describe("runDailyTemplate", () => {
       logRepo,
       validate: (t: Task) => t.id === "t1",
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.warning).toBe(
@@ -165,7 +168,7 @@ describe("runDailyTemplate", () => {
     const deps = makeDeps({
       taskRepo: makeTaskRepo([task]),
       logRepo,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: tsSet },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(0);
@@ -223,7 +226,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: tsSet },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(3);
@@ -270,7 +273,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo: makeLogRepo([]),
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(2);
@@ -308,7 +311,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(1);
@@ -345,7 +348,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-06T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 6, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(1);
@@ -368,7 +371,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo([task]),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: tsSet },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(0);
@@ -389,7 +392,7 @@ describe("runDailyTemplate", () => {
       logRepo,
       validate: () => true,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.warning).toBeUndefined();

@@ -10,9 +10,12 @@ import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRe
 import { syncMondayPlannedTasks } from "@domain/usecases/monday/syncMondayPlannedTasks";
 import type { MondayBoardSchema, MondayItem } from "@shared/types/monday";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { localISO } from "../../../helpers/localTime";
 
 const WORKSPACE_ID = "ws-1";
-const NOW_ISO = "2026-08-03T12:00:00.000Z";
+// Meio-dia **local** do dia 3: o "dia corrente" do sync sai de `localDateISO`,
+// e um literal UTC cairia no dia 4 em fuso positivo.
+const NOW_ISO = localISO(2026, 8, 3, 12);
 const WINDOW = { start: "2026-08-03", end: "2026-08-09" };
 
 const PROJECT: Project = { id: "p1", workspaceId: WORKSPACE_ID, name: "Cliente A" };
