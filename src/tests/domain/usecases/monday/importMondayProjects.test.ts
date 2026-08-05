@@ -72,6 +72,7 @@ function makeApi(items: MondayItem[], schemas: Record<string, MondayBoardSchema>
     listItems: vi.fn(async () => items),
     createItem: vi.fn(),
     changeColumnValues: vi.fn(),
+    moveItemToGroup: vi.fn(),
     deleteItem: vi.fn(),
   };
 }

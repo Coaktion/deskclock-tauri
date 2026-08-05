@@ -14,6 +14,8 @@ export interface BuildActivityColumnValuesInput {
   userId: string;
   activityTypeLabel?: string;
   projectStageLabel?: string;
+  /** Só entra em hora **não faturável**; ver `buildActivityColumnValues`. */
+  nonBillableReasonLabel?: string;
   statusLabel?: string;
 }
 
@@ -41,6 +43,16 @@ export function serializeStatus(label: string): { label: string } {
  */
 export function serializeDate(iso: string): { date: string } {
   return { date: localDateISO(iso) };
+}
+
+/**
+ * Serializador da coluna `dropdown`: uma lista de rótulos, mesmo com um só.
+ *
+ * Difere do `status`, que grava `{ label }` — passar um formato pelo outro faz o
+ * Monday recusar a mutation inteira, e com ela o envio que estava correto.
+ */
+export function serializeDropdown(label: string): { labels: string[] } {
+  return { labels: [label] };
 }
 
 /** Serializador da coluna `people`. */
@@ -89,6 +101,12 @@ export function buildActivityColumnValues(
   }
   if (columnIds.projectStage && input.projectStageLabel) {
     values[columnIds.projectStage] = serializeStatus(input.projectStageLabel);
+  }
+  // O motivo responde "por que **esta** hora não foi faturada": em hora
+  // faturável ele não tem o que dizer, e mandá-lo junto deixaria no board uma
+  // justificativa que contradiz o Billing type ao lado.
+  if (columnIds.nonBillableReason && !input.billable && input.nonBillableReasonLabel) {
+    values[columnIds.nonBillableReason] = serializeDropdown(input.nonBillableReasonLabel);
   }
 
   return values;

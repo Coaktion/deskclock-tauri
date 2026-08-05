@@ -50,6 +50,13 @@ export interface MondayActivityColumnIds {
   billingType?: string;
   status?: string;
   projectStage?: string;
+  /**
+   * Coluna `dropdown` do motivo de não faturável. Ausente em 3 dos 4 boards
+   * internos — e é a **ausência da coluna** que omite o campo, nunca uma regra
+   * "interno não manda motivo": assim o envio continua correto se alguém
+   * adicionar a coluna depois.
+   */
+  nonBillableReason?: string;
   /** Preenchidas com o intervalo trabalhado; ver `buildActivityDateColumns`. */
   startDate?: string;
   endDate?: string;
@@ -75,6 +82,17 @@ export interface MondayProjectMapping {
   scope: MondayProjectScope;
   /** Grupo "Activities" do board, resolvido pela view homônima no import. */
   activitiesGroupId: string;
+  /**
+   * Grupo de destino por **Report Type**, resolvido pelo título no import.
+   *
+   * O Report Type não é coluna no board do projeto — no board de Report ele é o
+   * que a automação lê para rotear, e escrevendo direto ele decide o grupo em
+   * que a atividade nasce. `Activity` aponta sempre para `activitiesGroupId`; os
+   * demais só entram quando o board tem o grupo, e Report Type sem grupo recusa
+   * o envio daquele grupo com mensagem — nunca em silêncio, que mandaria a hora
+   * para o lugar errado do board.
+   */
+  reportTypeGroupIds: Record<string, string>;
   columnIds: MondayActivityColumnIds;
   /**
    * Rótulos da coluna Activity Type, cacheados no import. São eles que viram
@@ -87,4 +105,10 @@ export interface MondayProjectMapping {
   projectStageLabels: string[];
   /** Título da coluna Project Stage no board — nomeia o campo criado. */
   projectStageTitle: string;
+  /**
+   * Rótulos da coluna `dropdown` de motivo de não faturável, lidos com
+   * `parseDropdownLabels` — o formato do `dropdown` é outro, e passá-lo pelo
+   * parser do `status` devolveria lista vazia sem erro nenhum.
+   */
+  nonBillableReasonLabels: string[];
 }

@@ -9,7 +9,7 @@ function mapping(
   personColumnId = "person",
   overrides: Partial<MondayProjectMapping> = {}
 ): MondayProjectMapping {
-  return {
+  const base: MondayProjectMapping = {
     deskclockProjectId: `p-${mondayBoardId}`,
     portfolioItemId: `i-${mondayBoardId}`,
     scope: "cliente",
@@ -26,8 +26,16 @@ function mapping(
     activityTypeLabels: [],
     projectStageLabels: [],
     projectStageTitle: "Project Stage",
+    nonBillableReasonLabels: [],
+    reportTypeGroupIds: {},
     ...overrides,
   };
+  // Sem Report Types próprios, o único grupo de apontamento do board é o
+  // Activities — e é o `activitiesGroupId` já resolvido, inclusive quando o
+  // teste o sobrescreve para simular outro template.
+  return Object.keys(base.reportTypeGroupIds).length > 0
+    ? base
+    : { ...base, reportTypeGroupIds: { Activity: base.activitiesGroupId } };
 }
 
 function item(id: string, boardId: string): MondayItem {
@@ -122,6 +130,48 @@ describe("listItemsOwnedBy", () => {
     expect(listItems.mock.calls[0][0]).toEqual(["1", "2"]);
     expect(listItems.mock.calls[0][1]).toMatchObject({ excludeGroupIds: ["group_mm2e2g9j"] });
     expect(listItems.mock.calls[1][0]).toEqual(["3"]);
+    expect(listItems.mock.calls[1][1]).toMatchObject({ excludeGroupIds: ["group_mm19wbff"] });
+  });
+
+  it("o recorte cobre todos os grupos em que o DeskClock grava horas", async () => {
+    // Atividade cujo Report Type é Meeting nasce no grupo Meetings: fora do
+    // recorte ela sumiria do gerenciador — que não a editaria nem a apagaria —
+    // e voltaria no import como se fosse item de trabalho a virar planejada.
+    const { api, listItems } = makeApi(async () => []);
+    const board = mapping("1", "person", {
+      reportTypeGroupIds: { Activity: "group_activities", Meeting: "g_meet", Risk: "g_risk" },
+    });
+
+    await listItemsOwnedBy(api, [board], "42", { scope: "activities" });
+    expect(listItems).toHaveBeenLastCalledWith(["1"], {
+      groupIds: ["g_meet", "g_risk", "group_activities"],
+      owner: { columnId: "person", personId: "42" },
+    });
+
+    await listItemsOwnedBy(api, [board], "42", { scope: "outsideActivities" });
+    expect(listItems).toHaveBeenLastCalledWith(["1"], {
+      excludeGroupIds: ["g_meet", "g_risk", "group_activities"],
+      owner: { columnId: "person", personId: "42" },
+    });
+  });
+
+  it("separa as consultas quando os grupos de apontamento diferem entre boards", async () => {
+    const { api, listItems } = makeApi(async () => []);
+    const completo = mapping("1", "person", {
+      reportTypeGroupIds: { Activity: "group_mm2e2g9j", Meeting: "g_meet" },
+      activitiesGroupId: "group_mm2e2g9j",
+    });
+    const interno = mapping("2", "person", {
+      reportTypeGroupIds: { Activity: "group_mm19wbff" },
+      activitiesGroupId: "group_mm19wbff",
+    });
+
+    await listItemsOwnedBy(api, [completo, interno], "42", { scope: "outsideActivities" });
+
+    expect(listItems).toHaveBeenCalledTimes(2);
+    expect(listItems.mock.calls[0][1]).toMatchObject({
+      excludeGroupIds: ["g_meet", "group_mm2e2g9j"],
+    });
     expect(listItems.mock.calls[1][1]).toMatchObject({ excludeGroupIds: ["group_mm19wbff"] });
   });
 

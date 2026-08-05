@@ -26,6 +26,24 @@ describe("normalizeProjectMappings", () => {
     expect(mapping.projectStageTitle).toBe("");
   });
 
+  it("dá ao mapeamento antigo o Activities como destino de Activity", () => {
+    // Sem isso, todo projeto vinculado antes do roteamento por Report Type
+    // recusaria o `Activity` que é o padrão de toda tarefa — o envio pararia
+    // inteiro até a próxima varredura de projetos.
+    const [mapping] = normalizeProjectMappings([LEGACY]);
+
+    expect(mapping.reportTypeGroupIds).toEqual({ Activity: "g1" });
+    expect(mapping.nonBillableReasonLabels).toEqual([]);
+  });
+
+  it("não sobrescreve os grupos já resolvidos", () => {
+    const [mapping] = normalizeProjectMappings([
+      { ...LEGACY, reportTypeGroupIds: { Activity: "g1", Meeting: "g2" } },
+    ]);
+
+    expect(mapping.reportTypeGroupIds).toEqual({ Activity: "g1", Meeting: "g2" });
+  });
+
   it("não sobrescreve os rótulos já cacheados", () => {
     const [mapping] = normalizeProjectMappings([
       { ...LEGACY, activityTypeLabels: ["Development"], projectStageTitle: "Etapa do projeto" },

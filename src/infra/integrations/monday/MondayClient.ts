@@ -63,6 +63,13 @@ interface RawItem {
   column_values: { id: string; type: string; text: string | null; value: string | null }[];
 }
 
+/** Retorno das mutations de item: o grupo vem aninhado, não como id solto. */
+interface RawItemRef {
+  id: string | number;
+  state?: string;
+  group?: { id: string } | null;
+}
+
 interface RawItemsPage {
   cursor: string | null;
   items: RawItem[];
@@ -336,7 +343,7 @@ export class MondayClient implements IMondayApi {
     itemName: string,
     columnValues: Record<string, unknown>
   ): Promise<MondayItemRef> {
-    const data = await this.request<{ create_item: MondayItemRef | null }>(
+    const data = await this.request<{ create_item: RawItemRef | null }>(
       `mutation ($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
          create_item(
            board_id: $boardId
@@ -357,26 +364,41 @@ export class MondayClient implements IMondayApi {
     itemId: string,
     columnValues: Record<string, unknown>
   ): Promise<MondayItemRef> {
-    const data = await this.request<{ change_multiple_column_values: MondayItemRef | null }>(
+    const data = await this.request<{ change_multiple_column_values: RawItemRef | null }>(
       `mutation ($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
          change_multiple_column_values(
            board_id: $boardId
            item_id: $itemId
            column_values: $columnValues
            create_labels_if_missing: false
-         ) { id state }
+         ) { id state group { id } }
        }`,
       { boardId, itemId, columnValues: JSON.stringify(columnValues) }
     );
     const updated = data.change_multiple_column_values;
     if (!updated) throw new MondayValidationError("O Monday não retornou o item atualizado.");
-    // `state` sai de graça no retorno que o Monday já monta, e é o que revela o
-    // item na lixeira — que aceita a escrita sem erro nenhum.
-    return { id: String(updated.id), ...(updated.state ? { state: updated.state } : {}) };
+    // `state` e `group` saem de graça no retorno que o Monday já monta: o
+    // primeiro revela o item na lixeira, que aceita a escrita sem erro nenhum; o
+    // segundo, a atividade que precisa mudar de grupo porque o Report Type dela
+    // mudou — escrita de coluna não move item.
+    return {
+      id: String(updated.id),
+      ...(updated.state ? { state: updated.state } : {}),
+      ...(updated.group?.id ? { groupId: String(updated.group.id) } : {}),
+    };
+  }
+
+  async moveItemToGroup(itemId: string, groupId: string): Promise<void> {
+    await this.request<{ move_item_to_group: RawItemRef | null }>(
+      `mutation ($itemId: ID!, $groupId: String!) {
+         move_item_to_group(item_id: $itemId, group_id: $groupId) { id }
+       }`,
+      { itemId, groupId }
+    );
   }
 
   async deleteItem(itemId: string): Promise<void> {
-    await this.request<{ delete_item: MondayItemRef | null }>(
+    await this.request<{ delete_item: RawItemRef | null }>(
       `mutation ($itemId: ID!) {
          delete_item(item_id: $itemId) { id }
        }`,

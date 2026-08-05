@@ -563,6 +563,44 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > duas formas, porque as atividades enviadas antes disso ainda têm hora gravada. Aqui também o
 > primeiro envio reescreve uma vez os itens já rastreados.
 
+> **O Report Type não é coluna no board do projeto — é o grupo em que a atividade nasce.** No
+> board de Report ele é lido por uma automação que roteia o apontamento; escrevendo direto, o
+> roteamento é nosso: `Activity → Activities`, `Meeting → Meetings`, `Expense → Expenses`,
+> `Risk → Risks`, `Lesson Learned → Lessons Learned`. Tarefa sem valor no campo vale `Activity`.
+>
+> **A resolução é pelo título do grupo, nunca pelo id.** `group_mm19wbff` é "Timeline" num board de
+> cliente e "Activities" no interno — casar por id gravaria as horas no cronograma do cliente. Board
+> interno tem um grupo só, então lá só `Activity` resolve: os outros quatro **recusam o envio com
+> mensagem**, em vez de cair no Activities calados, que reportaria como atividade o que o usuário
+> classificou como reunião ou risco.
+>
+> **Mudar o Report Type depois do envio move o item.** Grupo não é coluna, então
+> `change_multiple_column_values` não o alcança — sem o `move_item_to_group` o item ficaria em
+> Activities para sempre. O grupo atual vem de graça no retorno da própria escrita, então só há
+> requisição extra quando ele diverge; recriar o item para trocá-lo perderia as atualizações dele.
+>
+> **O recorte de grupos das duas telas cobre todos os destinos**, não só o Activities: a atividade
+> criada em Meetings sumiria do gerenciador — que não a editaria nem a apagaria — e reapareceria no
+> import como item de trabalho a virar planejada. `listItemsOwnedBy` continua separando as consultas
+> por par (coluna de pessoa, grupos), porque id de grupo se repete entre boards.
+
+> **O motivo de não faturável é obrigatório em projeto de cliente, e dispensado em interno.** Ali a
+> hora não faturada é a exceção e a coluna existe para justificá-la; no interno non-billable é a norma
+> (0 horas faturáveis em 119 itens). A tarefa sem motivo nessa situação **não sobe, com mensagem** —
+> omitir em silêncio mandaria ao board de outra pessoa exatamente o que a coluna existe para impedir.
+> **Board sem a coluna nunca exige**: a omissão precisa vir da ausência no schema (3 dos 4 boards
+> internos não a têm), ou o cliente cujo board não a tem ficaria sem caminho nenhum para lançar hora
+> não faturável.
+>
+> **Recusar um grupo não aborta o envio.** Os demais sobem e as mensagens voltam juntas num erro no
+> fim: o `ITaskSender` só tem o `throw` como canal, e lançar antes de escrever faria uma tarefa travar
+> o dia inteiro.
+>
+> **O Project Stage só entra em projeto de cliente**, agora por guarda explícita de escopo. Ela já não
+> saía por acidente feliz — nos boards internos a coluna se chama "Project Phase" e não bate com os
+> títulos procurados —, e a guarda é o que sobrevive ao dia em que alguém adicionar esse título à
+> lista. Um rótulo de cliente ali derrubaria a mutation inteira.
+
 > **Apagar no Monday é mandar para a lixeira.** O id continua válido e
 > `change_multiple_column_values` responde **sucesso** num item que ninguém mais vê — nunca chega um
 > `MondayNotFoundError`. Por isso o update pede `id state` e trata `state !== "active"` (deleted ou
@@ -1137,7 +1175,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-05 (§7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-05 (§5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

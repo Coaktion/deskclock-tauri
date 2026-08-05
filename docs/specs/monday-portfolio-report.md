@@ -1,6 +1,6 @@
 # Monday — simplificação da configuração (Portfólio + Report de Horas)
 
-> **Status:** Fases 0, 1 e 2 executadas em 2026-08-05. Fases 3 a 5 pendentes.
+> **Status:** Fases 0, 1, 2 e 3 executadas em 2026-08-05. Fases 4 e 5 pendentes.
 > Substitui a configuração por workspace/pastas/board interno descrita em
 > `monday-integration.md`. O que não for contrariado aqui continua valendo.
 
@@ -80,6 +80,38 @@
 >   `parseStatusLabels` da Fase 1 **não** filtra `deactivated_labels` — é a
 >   mesma armadilha, um nível mais barato (vira categoria a mais, não escrita
 >   recusada), e ficou fora do escopo.
+
+> **O que a execução da Fase 3 decidiu**, além do planejado:
+>
+> - **Recusa não aborta o envio.** O grupo sem motivo de não faturável, ou com
+>   Report Type que o board não tem, é **pulado**; os outros sobem, e as
+>   mensagens voltam juntas num erro no fim. O `ITaskSender` só tem o `throw`
+>   como canal, então recusar em silêncio deixaria a hora fora do board sem nada
+>   na tela. Lançar **antes** de escrever faria uma tarefa travar o dia inteiro.
+> - **O Report Type mudado depois do envio move o item de grupo.** Grupo não é
+>   coluna: `change_multiple_column_values` não o alcança, e sem isso o item
+>   ficaria em Activities para sempre. O grupo atual vem no retorno da própria
+>   escrita (`group { id }`, de graça), então `moveItemToGroup` só é chamado
+>   quando ele de fato diverge — e recriar o item para trocá-lo perderia as
+>   atualizações que já existirem nele.
+> - **`listItemsOwnedBy` passou a recortar todos os grupos de apontamento**, não
+>   só o Activities. Sem isso, a atividade com Report Type `Meeting` some do
+>   gerenciador — que não a editaria nem a apagaria — e reaparece no import como
+>   se fosse item de trabalho a virar planejada. A separação por lote continua
+>   sendo por par (coluna de pessoa, grupos), pela mesma razão de sempre: id de
+>   grupo se repete entre boards com significados diferentes.
+> - **O escopo virou a segunda guarda do Project Stage.** A primeira já existia
+>   por acidente feliz — nos boards internos a coluna se chama "Project Phase" e
+>   não bate com os títulos procurados. A guarda explícita é o que sobrevive ao
+>   dia em que alguém adicionar o título à lista.
+> - **`normalizeProjectMappings` dá o Activities ao mapeamento antigo.** Sem o
+>   fallback, todo projeto vinculado antes desta fase recusaria o `Activity` que
+>   é o padrão de toda tarefa, e o envio pararia inteiro até a varredura diária
+>   de projetos reescrever a lista.
+> - **A tabela `monday_activity_items` não mudou.** O grupo não entra no payload
+>   rastreado: ele já é derivável do Report Type, que compõe a chave de
+>   agrupamento e, por ela, a assinatura — mudar o Report Type já tira o grupo do
+>   skip por "nada mudou".
 
 ## 1. O problema
 
@@ -330,7 +362,7 @@ Arquivos: `importMondayFieldCatalogs.ts` (+ teste), `importMondayCategories.ts`
 `IMondayConfigPort.ts`, `MondayCatalogsImport.tsx`, `MondayCatalogField.tsx`,
 `MondayCategoriesImport.tsx`, `MondayImportSection.tsx`.
 
-### Fase 3 — Envio direto no board do projeto
+### Fase 3 — Envio direto no board do projeto ✅
 
 Report Type → `group_id` (sem valor na tarefa, `Activity`); Non Billable reason;
 Project Stage só em cliente.
@@ -342,7 +374,9 @@ mandaria ao board uma hora não faturada sem justificativa, que é exatamente o
 que a coluna existe para impedir.
 
 Arquivos: `buildActivityColumnValues.ts` (+ teste), `MondayTaskSender.ts`,
-`resolveBoardActivitiesColumns.ts` (+ testes).
+`resolveBoardActivitiesColumns.ts` (+ testes), `listItemsOwnedBy.ts` (+ testes),
+`normalizeProjectMappings.ts` (+ teste), `importMondayProjects.ts`,
+`mondayConfig.ts`, `IMondayApi.ts`, `MondayClient.ts` (+ testes).
 
 ### Fase 4 — Import de Timeline e gerenciador
 

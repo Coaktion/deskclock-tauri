@@ -46,6 +46,8 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
         activityTypeLabels: ["Development"],
         projectStageLabels: [],
         projectStageTitle: "",
+        nonBillableReasonLabels: [],
+        reportTypeGroupIds: { Activity: "g1" },
         columnIds: {
           reportedHours: "num",
           billingType: "billing",

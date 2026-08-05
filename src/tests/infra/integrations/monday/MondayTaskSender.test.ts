@@ -28,6 +28,55 @@ const USER_ID = "21181483";
 /** Rótulos da coluna Activity Type do board; a categoria casa com eles pelo nome. */
 const ACTIVITY_TYPE_LABELS = ["Development", "Meeting"];
 
+/** Rótulos da coluna `dropdown` de motivo de não faturável. */
+const NON_BILLABLE_REASON_LABELS = ["Internal Planning", "Rework"];
+
+/**
+ * Grupos de destino por Report Type. Board de cliente tem os cinco; o interno,
+ * só o Activities.
+ */
+const REPORT_TYPE_GROUP_IDS = {
+  Activity: GROUP_ID,
+  Meeting: "group_meetings",
+  Expense: "group_expenses",
+  Risk: "group_risks",
+  "Lesson Learned": "group_lessons",
+};
+
+const REASON_FIELD_ID = "field-reason";
+const REASON_OPTION_ID = "opt-internal-planning";
+
+/** Campo personalizado que alimenta o Non Billable reason. */
+const REASON_FIELD: CustomField = {
+  id: REASON_FIELD_ID,
+  label: "Non Billable reason",
+  type: "select",
+  options: [
+    { id: REASON_OPTION_ID, label: "Internal Planning" },
+    { id: "opt-inventado", label: "Motivo só do DeskClock" },
+  ],
+  sortOrder: 1,
+  archived: false,
+  createdAt: "2026-07-30T12:00:00.000Z",
+};
+
+const REPORT_TYPE_FIELD_ID = "field-report-type";
+
+/** Campo personalizado que decide o grupo de destino da atividade. */
+const REPORT_TYPE_FIELD: CustomField = {
+  id: REPORT_TYPE_FIELD_ID,
+  label: "Report Type",
+  type: "select",
+  options: [
+    { id: "opt-activity", label: "Activity" },
+    { id: "opt-meeting", label: "Meeting" },
+    { id: "opt-risk", label: "Risk" },
+  ],
+  sortOrder: 2,
+  archived: false,
+  createdAt: "2026-07-30T12:00:00.000Z",
+};
+
 const STAGE_FIELD_ID = "field-stage";
 const STAGE_OPTION_ID = "opt-execucao";
 
@@ -67,9 +116,11 @@ const MAPPING: MondayProjectMapping = {
   mondayBoardId: BOARD_ID,
   mondayBoardName: "[BR] Cliente Produto 01-999",
   activitiesGroupId: GROUP_ID,
+  reportTypeGroupIds: REPORT_TYPE_GROUP_IDS,
   activityTypeLabels: ACTIVITY_TYPE_LABELS,
   projectStageLabels: ["Execução", "Discovery"],
   projectStageTitle: "Project Stage",
+  nonBillableReasonLabels: NON_BILLABLE_REASON_LABELS,
   columnIds: COLUMN_IDS,
 };
 
@@ -100,6 +151,7 @@ function makeClient(): IMondayApi {
     listItems: vi.fn(async () => []),
     createItem: vi.fn(async () => ({ id: `item-${++created}` })),
     changeColumnValues: vi.fn(async (_board: string, itemId: string) => ({ id: itemId })),
+    moveItemToGroup: vi.fn(async () => {}),
     deleteItem: vi.fn(async () => {}),
   };
 }
@@ -938,7 +990,7 @@ describe("MondayTaskSender", () => {
             mondayBoardName: "[BR] Cliente Produto 01-999",
             activitiesGroupId: GROUP_ID,
             columnIds: COLUMN_IDS,
-          } as MondayProjectMapping,
+          } as unknown as MondayProjectMapping,
         ],
       });
       const sender = new MondayTaskSender(
@@ -1249,6 +1301,298 @@ describe("MondayTaskSender", () => {
       ]);
 
       expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Report Type escolhe o grupo", () => {
+    /** Config com os três campos personalizados vinculados. */
+    function fullConfig(overrides = {}) {
+      return makeConfig({
+        mondayReportTypeFieldId: REPORT_TYPE_FIELD_ID,
+        mondayNonBillableReasonFieldId: REASON_FIELD_ID,
+        ...overrides,
+      });
+    }
+
+    const allFields = () => makeFieldRepo([STAGE_FIELD, REPORT_TYPE_FIELD, REASON_FIELD]);
+
+    it("cria a atividade no grupo Activities quando a tarefa não escolheu Report Type", async () => {
+      const client = makeClient();
+      await new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][1]).toBe(GROUP_ID);
+    });
+
+    it("cria no grupo do Report Type escolhido", async () => {
+      const client = makeClient();
+      await new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      ).send([
+        makeTask({
+          customValues: {
+            [STAGE_FIELD_ID]: STAGE_OPTION_ID,
+            [REPORT_TYPE_FIELD_ID]: "opt-meeting",
+          },
+        }),
+      ]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][1]).toBe("group_meetings");
+    });
+
+    it("recusa o Report Type que o board não tem, sem escrever nada", async () => {
+      // Board interno tem um grupo só: cair no Activities calado reportaria como
+      // atividade o que o usuário classificou como risco.
+      const client = makeClient();
+      const config = fullConfig({
+        mondayProjectMapping: [
+          { ...MAPPING, scope: "interno" as const, reportTypeGroupIds: { Activity: GROUP_ID } },
+        ],
+      });
+      const sender = new MondayTaskSender(
+        config,
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await expect(
+        sender.send([makeTask({ customValues: { [REPORT_TYPE_FIELD_ID]: "opt-risk" } })])
+      ).rejects.toThrow(/não tem grupo para o Report Type "Risk"/);
+      expect(client.createItem).not.toHaveBeenCalled();
+    });
+
+    it("os demais grupos do envio sobem mesmo com um recusado", async () => {
+      const client = makeClient();
+      const config = fullConfig({
+        mondayProjectMapping: [{ ...MAPPING, reportTypeGroupIds: { Activity: GROUP_ID } }],
+      });
+      const sender = new MondayTaskSender(
+        config,
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await expect(
+        sender.send([
+          makeTask({ id: "t1", name: "Vai subir" }),
+          makeTask({
+            id: "t2",
+            name: "Recusada",
+            customValues: { [REPORT_TYPE_FIELD_ID]: "opt-meeting" },
+          }),
+        ])
+      ).rejects.toThrow(/"Recusada"/);
+
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(client.createItem).mock.calls[0][2]).toBe("Vai subir");
+    });
+
+    it("muda o item de grupo quando o Report Type mudou depois do envio", async () => {
+      // Grupo não é coluna: sem o move, o item ficaria em Activities para
+      // sempre, classificado como o que não é.
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const send = (customValues: Record<string, string>) =>
+        new MondayTaskSender(fullConfig(), itemRepo, allFields(), makeCategoryRepo(), client).send([
+          makeTask({ customValues }),
+        ]);
+
+      await send({});
+      vi.mocked(client.changeColumnValues).mockResolvedValueOnce({
+        id: "item-1",
+        state: "active",
+        groupId: GROUP_ID,
+      });
+      await send({ [REPORT_TYPE_FIELD_ID]: "opt-meeting" });
+
+      expect(client.moveItemToGroup).toHaveBeenCalledWith("item-1", "group_meetings");
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("não move o item que já está no grupo certo", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const send = (name: string) =>
+        new MondayTaskSender(fullConfig(), itemRepo, allFields(), makeCategoryRepo(), client).send([
+          makeTask({ name }),
+        ]);
+
+      await send("Antes");
+      vi.mocked(client.changeColumnValues).mockResolvedValueOnce({
+        id: "item-1",
+        state: "active",
+        groupId: GROUP_ID,
+      });
+      await send("Depois");
+
+      expect(client.moveItemToGroup).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("motivo de não faturável", () => {
+    function fullConfig(overrides = {}) {
+      return makeConfig({
+        mondayNonBillableReasonFieldId: REASON_FIELD_ID,
+        mondayProjectMapping: [
+          { ...MAPPING, columnIds: { ...COLUMN_IDS, nonBillableReason: "dropdown_mm33hnk6" } },
+        ],
+        ...overrides,
+      });
+    }
+
+    const allFields = () => makeFieldRepo([STAGE_FIELD, REASON_FIELD]);
+
+    const nonBillable = (customValues: Record<string, string>) =>
+      makeTask({ billable: false, customValues });
+
+    it("grava o motivo escolhido na coluna dropdown", async () => {
+      const client = makeClient();
+      await new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      ).send([nonBillable({ [REASON_FIELD_ID]: REASON_OPTION_ID })]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        dropdown_mm33hnk6: { labels: ["Internal Planning"] },
+      });
+    });
+
+    it("recusa a hora não faturável de cliente sem motivo", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await expect(sender.send([nonBillable({})])).rejects.toThrow(/informe o motivo/);
+      expect(client.createItem).not.toHaveBeenCalled();
+    });
+
+    it("recusa o motivo que não existe na coluna do board", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await expect(
+        sender.send([nonBillable({ [REASON_FIELD_ID]: "opt-inventado" })])
+      ).rejects.toThrow(/não existe na coluna do board/);
+      expect(client.createItem).not.toHaveBeenCalled();
+    });
+
+    it("aponta para Integrações quando nenhum campo está vinculado ao motivo", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        fullConfig({ mondayNonBillableReasonFieldId: "" }),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await expect(sender.send([nonBillable({})])).rejects.toThrow(
+        /vincule um campo personalizado/
+      );
+    });
+
+    it("não exige motivo em projeto interno", async () => {
+      // Non-billable é a norma lá: 0 horas faturáveis em 119 itens.
+      const client = makeClient();
+      const config = fullConfig({
+        mondayProjectMapping: [
+          {
+            ...MAPPING,
+            scope: "interno" as const,
+            columnIds: { ...COLUMN_IDS, nonBillableReason: "dropdown_mm33hnk6" },
+          },
+        ],
+      });
+
+      await new MondayTaskSender(
+        config,
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      ).send([nonBillable({})]);
+
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("não exige motivo quando o board não tem a coluna", async () => {
+      // A omissão vem da ausência no schema, não de uma regra de negócio: exigir
+      // aqui deixaria o cliente sem caminho nenhum para a hora não faturável.
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        fullConfig({ mondayProjectMapping: [MAPPING] }),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([nonBillable({})]);
+
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("não exige motivo em hora faturável", async () => {
+      const client = makeClient();
+      await new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask({ billable: true, customValues: {} })]);
+
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("Project Stage é só de projeto de cliente", () => {
+    it("omite a etapa em projeto interno", async () => {
+      // Nos boards internos a coluna se chama "Project Phase" e tem outros
+      // quatro rótulos — um rótulo de cliente ali derrubaria a mutation inteira.
+      const client = makeClient();
+      const config = makeConfig({
+        mondayProjectMapping: [{ ...MAPPING, scope: "interno" as const }],
+      });
+
+      await new MondayTaskSender(
+        config,
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
+        COLUMN_IDS.projectStage
+      );
     });
   });
 });

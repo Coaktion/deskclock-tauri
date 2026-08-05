@@ -389,6 +389,33 @@ describe("MondayClient", () => {
       expect(lastBody().query).toContain("id state");
     });
 
+    it("changeColumnValues devolve o grupo atual do item", async () => {
+      // Grupo não é coluna: é por este retorno que o sender descobre a atividade
+      // cujo Report Type mudou e precisa mudar de grupo.
+      mockFetch.mockResolvedValue(
+        makeResponse({
+          data: {
+            change_multiple_column_values: { id: 555, state: "active", group: { id: "g9" } },
+          },
+        })
+      );
+
+      const result = await new MondayClient(API_KEY).changeColumnValues("b1", "555", { a: 1 });
+
+      expect(result).toEqual({ id: "555", state: "active", groupId: "g9" });
+      expect(lastBody().query).toContain("group { id }");
+    });
+
+    it("moveItemToGroup chama a mutation move_item_to_group", async () => {
+      mockFetch.mockResolvedValue(makeResponse({ data: { move_item_to_group: { id: "555" } } }));
+
+      await new MondayClient(API_KEY).moveItemToGroup("555", "g9");
+
+      const body = lastBody();
+      expect(body.query).toContain("move_item_to_group");
+      expect(body.variables).toMatchObject({ itemId: "555", groupId: "g9" });
+    });
+
     it("deleteItem chama a mutation delete_item", async () => {
       mockFetch.mockResolvedValue(makeResponse({ data: { delete_item: { id: "555" } } }));
 

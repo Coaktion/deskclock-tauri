@@ -24,6 +24,8 @@ function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMa
     activityTypeLabels: ["Development", "Meeting"],
     projectStageLabels: [],
     projectStageTitle: "",
+    nonBillableReasonLabels: [],
+    reportTypeGroupIds: { Activity: "g1" },
     ...overrides,
   };
 }

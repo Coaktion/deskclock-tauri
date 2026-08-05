@@ -1,4 +1,4 @@
-import type { MondayBoardSchema, MondayColumn } from "@shared/types/monday";
+import type { MondayBoardSchema, MondayColumn, MondayGroup } from "@shared/types/monday";
 import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
 
 /** Nome da view/grupo que concentra os apontamentos de horas. */
@@ -9,12 +9,40 @@ const TITLES = {
   billingType: ["billing type", "tipo de cobranca"],
   activityType: ["activity type", "tipo de atividade"],
   projectStage: ["project stage", "etapa do projeto"],
+  nonBillableReason: ["non billable reason", "motivo de nao faturavel", "motivo non billable"],
   startDate: ["start date", "data de inicio"],
   endDate: ["end date", "data de termino", "data de fim"],
   status: ["status"],
   /** Cronograma **planejado** do item de trabalho, base do import (§ Fase 5). */
   timeline: ["timeline", "cronograma", "linha do tempo"],
 } as const;
+
+/** Report Type assumido pela atividade que não escolheu nenhum. */
+export const DEFAULT_REPORT_TYPE = "Activity";
+
+/**
+ * Para onde cada Report Type manda a atividade.
+ *
+ * No board de Report o Report Type é coluna, e é ela que a automação lê para
+ * rotear o apontamento. Escrevendo **direto** no board do projeto não há
+ * automação nenhuma: o roteamento vira nossa responsabilidade, e o Report Type
+ * deixa de ser coluna para virar o **grupo** em que o item nasce.
+ *
+ * A resolução é pelo **título do grupo**, nunca pelo id: `group_mm19wbff` é
+ * "Timeline" num board de cliente e "Activities" no interno — casar por id
+ * gravaria as horas no cronograma do cliente.
+ *
+ * Board interno tem um grupo só, então lá só `Activity` resolve; os outros
+ * quatro recusam o envio com mensagem em vez de cair no Activities calados, que
+ * reportaria como atividade o que o usuário classificou como reunião ou risco.
+ */
+export const REPORT_TYPE_GROUP_TITLES: Record<string, readonly string[]> = {
+  [DEFAULT_REPORT_TYPE]: ACTIVITIES_NAMES,
+  Meeting: ["meetings", "reunioes"],
+  Expense: ["expenses", "despesas"],
+  Risk: ["risks", "riscos"],
+  "Lesson Learned": ["lessons learned", "licoes aprendidas"],
+};
 
 /**
  * Ids das colunas de data no template atual, usados quando o título não bate.
@@ -31,7 +59,12 @@ const TEMPLATE_DATE_COLUMN_IDS = {
 } as const;
 
 export type ResolveActivitiesResult =
-  | { ok: true; activitiesGroupId: string; columnIds: MondayActivityColumnIds }
+  | {
+      ok: true;
+      activitiesGroupId: string;
+      reportTypeGroupIds: Record<string, string>;
+      columnIds: MondayActivityColumnIds;
+    }
   | { ok: false; missing: string[] };
 
 function normalize(value: string): string {
@@ -64,6 +97,27 @@ function findDateColumn(
  * (`settings_str` traz os grupos filtrados). Usado como fallback quando nenhum
  * grupo do board se chama "Activities".
  */
+/**
+ * Grupo de destino de cada Report Type que o board tem.
+ *
+ * `Activity` sai do grupo já resolvido — inclusive quando ele veio da view, e
+ * não de um grupo homônimo. Os demais só entram se houver grupo com o título
+ * correspondente: a ausência aqui é o que faz o envio recusar aquele Report
+ * Type em vez de escrever no grupo errado.
+ */
+function resolveReportTypeGroups(
+  groups: MondayGroup[],
+  activitiesGroupId: string
+): Record<string, string> {
+  const ids: Record<string, string> = { [DEFAULT_REPORT_TYPE]: activitiesGroupId };
+  for (const [label, titles] of Object.entries(REPORT_TYPE_GROUP_TITLES)) {
+    if (label === DEFAULT_REPORT_TYPE) continue;
+    const group = groups.find((g) => titles.includes(normalize(g.title)));
+    if (group) ids[label] = group.id;
+  }
+  return ids;
+}
+
 function groupIdFromViewSettings(
   settingsStr: string | undefined,
   groupIds: string[]
@@ -118,18 +172,21 @@ export function resolveBoardActivitiesColumns(schema: MondayBoardSchema): Resolv
   const billingType = findColumn(schema.columns, TITLES.billingType);
   const status = findColumn(schema.columns, TITLES.status);
   const projectStage = findColumn(schema.columns, TITLES.projectStage);
+  const nonBillableReason = findColumn(schema.columns, TITLES.nonBillableReason);
   const startDate = findDateColumn(schema.columns, TITLES.startDate, "startDate");
   const endDate = findDateColumn(schema.columns, TITLES.endDate, "endDate");
 
   return {
     ok: true,
     activitiesGroupId,
+    reportTypeGroupIds: resolveReportTypeGroups(schema.groups, activitiesGroupId),
     columnIds: {
       reportedHours: reportedHours.id,
       activityType: activityType.id,
       ...(billingType ? { billingType: billingType.id } : {}),
       ...(status ? { status: status.id } : {}),
       ...(projectStage ? { projectStage: projectStage.id } : {}),
+      ...(nonBillableReason ? { nonBillableReason: nonBillableReason.id } : {}),
       ...(startDate ? { startDate: startDate.id } : {}),
       ...(endDate ? { endDate: endDate.id } : {}),
       person: person.id,

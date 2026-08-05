@@ -82,6 +82,7 @@ describe("resolveBoardActivitiesColumns", () => {
     expect(result).toEqual({
       ok: true,
       activitiesGroupId: "group_mm2e2g9j",
+      reportTypeGroupIds: { Activity: "group_mm2e2g9j" },
       columnIds: {
         reportedHours: "numeric_mm33gj5m",
         billingType: "color_mm33rxm7",
@@ -198,6 +199,92 @@ describe("resolveBoardActivitiesColumns", () => {
       expect(result.missing).not.toContain("coluna Billing type");
       expect(result.missing).not.toContain("coluna Status");
     }
+  });
+});
+
+describe("grupos por Report Type", () => {
+  /** Board de cliente completo: os cinco destinos do template. */
+  const FULL_GROUPS = [
+    { id: "group_mm19wbff", title: "Timeline" },
+    { id: "group_mm2e2g9j", title: "Activities" },
+    { id: "g_meet", title: "Meetings" },
+    { id: "g_exp", title: "Expenses" },
+    { id: "g_risk", title: "Risks" },
+    { id: "g_lesson", title: "Lessons Learned" },
+  ];
+
+  it("resolve um grupo de destino por Report Type, pelo título", () => {
+    const result = resolveBoardActivitiesColumns(makeSchema({ groups: FULL_GROUPS }));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.reportTypeGroupIds).toEqual({
+      Activity: "group_mm2e2g9j",
+      Meeting: "g_meet",
+      Expense: "g_exp",
+      Risk: "g_risk",
+      "Lesson Learned": "g_lesson",
+    });
+  });
+
+  it("não deixa o Timeline entrar como destino de nenhum Report Type", () => {
+    // `group_mm19wbff` é "Timeline" no board de cliente e "Activities" no
+    // interno: casar por id gravaria as horas no cronograma do cliente.
+    const result = resolveBoardActivitiesColumns(makeSchema({ groups: FULL_GROUPS }));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.values(result.reportTypeGroupIds)).not.toContain("group_mm19wbff");
+  });
+
+  it("board interno só resolve Activity, e é o grupo único dele", () => {
+    // Os quatro boards internos têm um grupo só; os demais Report Types recusam
+    // o envio, em vez de cair no Activities calados.
+    const result = resolveBoardActivitiesColumns(
+      makeSchema({ groups: [{ id: "group_mm19wbff", title: "Activities" }], views: [] })
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.reportTypeGroupIds).toEqual({ Activity: "group_mm19wbff" });
+  });
+
+  it("Activity aponta para o grupo achado pela view quando nenhum se chama Activities", () => {
+    const result = resolveBoardActivitiesColumns(
+      makeSchema({
+        groups: [{ id: "group_mm2e2g9j", title: "Apontamentos" }],
+        views: [
+          {
+            id: "270215505",
+            name: "Activities",
+            type: "table",
+            settingsStr: '{"rules":[{"columnId":"group","compareValue":["group_mm2e2g9j"]}]}',
+          },
+        ],
+      })
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.reportTypeGroupIds.Activity).toBe("group_mm2e2g9j");
+  });
+});
+
+describe("coluna de motivo de não faturável", () => {
+  const REASON = { id: "dropdown_mm33hnk6", title: "Non Billable reason", type: "dropdown" };
+
+  it("resolve a coluna pelo título", () => {
+    const schema = makeSchema({ columns: [...makeSchema().columns, REASON] });
+    const result = resolveBoardActivitiesColumns(schema);
+
+    expect(result).toMatchObject({ ok: true, columnIds: { nonBillableReason: REASON.id } });
+  });
+
+  it("é opcional — 3 dos 4 boards internos não a têm", () => {
+    const result = resolveBoardActivitiesColumns(makeSchema());
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.columnIds.nonBillableReason).toBeUndefined();
   });
 });
 

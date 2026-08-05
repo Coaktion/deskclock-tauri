@@ -8,6 +8,7 @@ import {
   parseStatusLabels,
   type ResolveActivitiesResult,
 } from "./resolveBoardActivitiesColumns";
+import { parseDropdownLabels } from "./importMondayFieldCatalogs";
 
 /**
  * Colunas do board de Portfólio, hardcodadas de propósito.
@@ -50,19 +51,23 @@ export interface ImportMondayProjectsResult {
 export type MondayProjectDestination = Pick<
   MondayProjectMapping,
   | "activitiesGroupId"
+  | "reportTypeGroupIds"
   | "columnIds"
   | "activityTypeLabels"
   | "projectStageLabels"
   | "projectStageTitle"
+  | "nonBillableReasonLabels"
 >;
 
 /** Colunas de um projeto cujo board não foi lido — nada será escrito nele. */
 export const NO_DESTINATION: MondayProjectDestination = {
   activitiesGroupId: "",
+  reportTypeGroupIds: {},
   columnIds: { reportedHours: "", activityType: "", person: "" },
   activityTypeLabels: [],
   projectStageLabels: [],
   projectStageTitle: "",
+  nonBillableReasonLabels: [],
 };
 
 function columnText(item: MondayItem, columnId: string): string {
@@ -105,10 +110,14 @@ function buildDestination(
   const stageColumn = columnById(resolved.columnIds.projectStage);
   return {
     activitiesGroupId: resolved.activitiesGroupId,
+    reportTypeGroupIds: resolved.reportTypeGroupIds,
     columnIds: resolved.columnIds,
     activityTypeLabels: parseStatusLabels(columnById(resolved.columnIds.activityType)),
     projectStageLabels: parseStatusLabels(stageColumn),
     projectStageTitle: stageColumn?.title ?? "",
+    // O motivo é `dropdown`, não `status`: o formato dos rótulos é outro e o
+    // parser do status devolveria lista vazia sem erro nenhum para avisar.
+    nonBillableReasonLabels: parseDropdownLabels(columnById(resolved.columnIds.nonBillableReason)),
   };
 }
 

@@ -1,4 +1,5 @@
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { DEFAULT_REPORT_TYPE } from "./resolveBoardActivitiesColumns";
 
 /**
  * Preenche os campos que um mapeamento gravado por uma versão anterior não tem.
@@ -30,5 +31,13 @@ export function normalizeProjectMappings(
     activityTypeLabels: mapping.activityTypeLabels ?? [],
     projectStageLabels: mapping.projectStageLabels ?? [],
     projectStageTitle: mapping.projectStageTitle ?? "",
+    nonBillableReasonLabels: mapping.nonBillableReasonLabels ?? [],
+    // Vínculo gravado antes do roteamento por Report Type conhece só o
+    // Activities. Cair no grupo já gravado mantém o envio de pé até a próxima
+    // varredura — sem isso, todo projeto anterior recusaria o `Activity` que é
+    // o padrão de toda tarefa, e o envio pararia inteiro.
+    reportTypeGroupIds: mapping.reportTypeGroupIds ?? {
+      [DEFAULT_REPORT_TYPE]: mapping.activitiesGroupId,
+    },
   }));
 }

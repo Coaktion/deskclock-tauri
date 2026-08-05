@@ -6,6 +6,7 @@ import {
   serializeNumber,
   serializePerson,
   serializeStatus,
+  serializeDropdown,
   MONDAY_BILLABLE_LABEL,
   MONDAY_NON_BILLABLE_LABEL,
   MONDAY_COMPLETED_LABEL,
@@ -32,6 +33,12 @@ describe("serializadores de coluna do Monday", () => {
 
   it("serializa status pelo rótulo visível", () => {
     expect(serializeStatus("Development")).toEqual({ label: "Development" });
+  });
+
+  it("serializa dropdown como lista de rótulos, mesmo com um só", () => {
+    // O `status` grava `{ label }`; passar um formato pelo outro faz o Monday
+    // recusar a mutation inteira.
+    expect(serializeDropdown("Internal Planning")).toEqual({ labels: ["Internal Planning"] });
   });
 
   it("serializa people no formato personsAndTeams com id numérico", () => {
@@ -136,6 +143,46 @@ describe("buildActivityColumnValues", () => {
       [COLUMNS.activityType]: { label: "Development" },
       [COLUMNS.person]: { personsAndTeams: [{ id: 1, kind: "person" }] },
     });
+  });
+
+  it("grava o motivo de não faturável na coluna dropdown", () => {
+    const values = buildActivityColumnValues({
+      columnIds: { ...COLUMNS, nonBillableReason: "dropdown_mm33hnk6" },
+      hoursDecimal: 1,
+      billable: false,
+      userId: "1",
+      nonBillableReasonLabel: "Internal Planning",
+    });
+
+    expect(values["dropdown_mm33hnk6"]).toEqual({ labels: ["Internal Planning"] });
+  });
+
+  it("não grava o motivo numa hora faturável", () => {
+    // O motivo responde "por que **esta** hora não foi faturada": junto de um
+    // Billing type "Billable" ele contradiria a coluna ao lado.
+    const values = buildActivityColumnValues({
+      columnIds: { ...COLUMNS, nonBillableReason: "dropdown_mm33hnk6" },
+      hoursDecimal: 1,
+      billable: true,
+      userId: "1",
+      nonBillableReasonLabel: "Internal Planning",
+    });
+
+    expect(Object.keys(values)).not.toContain("dropdown_mm33hnk6");
+  });
+
+  it("omite o motivo quando o board não tem a coluna", () => {
+    // Ausente em 3 dos 4 boards internos; mandar o id assim mesmo derrubaria a
+    // mutation inteira.
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 1,
+      billable: false,
+      userId: "1",
+      nonBillableReasonLabel: "Internal Planning",
+    });
+
+    expect(Object.keys(values)).not.toContain("dropdown_mm33hnk6");
   });
 
   it("grava Start Date e End Date com o dia trabalhado, sem hora", () => {

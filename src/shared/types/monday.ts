@@ -63,6 +63,13 @@ export interface MondayItemRef {
    * dentro da lixeira para sempre, sem nunca voltar ao board.
    */
   state?: string;
+  /**
+   * Grupo em que o item está **agora**. Sai de graça no retorno que o Monday já
+   * monta, e é o que revela a atividade cujo Report Type mudou depois do envio:
+   * uma escrita de colunas não move o item de grupo, então sem isso ela ficaria
+   * em Activities para sempre, classificada como o que não é.
+   */
+  groupId?: string;
 }
 
 /**

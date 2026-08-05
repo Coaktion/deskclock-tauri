@@ -63,6 +63,13 @@ export interface IMondayApi {
     itemId: string,
     columnValues: Record<string, unknown>
   ): Promise<MondayItemRef>;
+  /**
+   * Move a atividade de grupo, quando o Report Type dela mudou depois do envio.
+   *
+   * O grupo não é coluna: `changeColumnValues` não o alcança, e recriar o item
+   * para trocá-lo perderia as atualizações que já existirem nele.
+   */
+  moveItemToGroup(itemId: string, groupId: string): Promise<void>;
   /** Usado quando dois grupos se fundem e o item perdedor precisa sair do board. */
   deleteItem(itemId: string): Promise<void>;
 }

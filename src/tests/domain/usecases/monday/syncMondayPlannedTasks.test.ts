@@ -51,6 +51,8 @@ const MAPPING: MondayProjectMapping = {
   activityTypeLabels: [],
   projectStageLabels: [],
   projectStageTitle: "Project Stage",
+  nonBillableReasonLabels: [],
+  reportTypeGroupIds: { Activity: "group_act" },
 };
 
 const SCHEMA: MondayBoardSchema = {
