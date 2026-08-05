@@ -81,6 +81,14 @@ export class TrackedMeetingRepository implements ITrackedMeetingRepository {
     );
   }
 
+  async setStartedTaskId(calendarEventId: string, startedTaskId: string): Promise<void> {
+    const db = await getDb();
+    await db.execute(
+      "UPDATE calendar_tracked_meetings SET started_task_id = $2 WHERE calendar_event_id = $1",
+      [calendarEventId, startedTaskId]
+    );
+  }
+
   async remove(calendarEventId: string): Promise<void> {
     const db = await getDb();
     await db.execute("DELETE FROM calendar_tracked_meetings WHERE calendar_event_id = $1", [

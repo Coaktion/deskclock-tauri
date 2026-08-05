@@ -51,11 +51,15 @@ export function useMeetingTracker() {
   const { createCalendarImporter } = useIntegrations();
   const { trackedMeetingRepo, plannedTaskRepo, projectRepo, categoryRepo } = useRepositories();
   const { activeWorkspaceId: workspaceId, loading: workspaceLoading } = useWorkspaces();
-  const { runningTask, switchToTask, stopTask } = useRunningTask();
+  const { runningTask, activePlannedTaskId, switchToTask, stopTask } = useRunningTask();
 
   // Refs para uso dentro de intervalos/handlers sem stale closures.
   const runningTaskRef = useRef(runningTask);
   runningTaskRef.current = runningTask;
+  // De qual planejada a execução partiu. Não vive na Task: é o contexto que
+  // guarda, e é o sinal forte para reconhecer a reunião iniciada à mão.
+  const activePlannedIdRef = useRef(activePlannedTaskId);
+  activePlannedIdRef.current = activePlannedTaskId;
   const switchRef = useRef(switchToTask);
   switchRef.current = switchToTask;
   const stopRef = useRef(stopTask);
@@ -133,12 +137,34 @@ export function useMeetingTracker() {
       return result;
     }
 
-    async function runPromptCheck() {
+    async function runTrackingCheck() {
       const meetings = await trackedMeetingRepo.listForDate(todayISO());
-      const [action] = computeMeetingPromptActions(new Date().toISOString(), meetings, {
+      const running = runningTaskRef.current;
+      const actions = computeMeetingPromptActions(new Date().toISOString(), meetings, {
         startLeadMs: START_LEAD_MS,
         startRepromptMs: START_REPROMPT_MS,
+        runningTask: running
+          ? {
+              id: running.id,
+              name: running.name,
+              plannedTaskId: activePlannedIdRef.current,
+              startTimeISO: running.startTime,
+            }
+          : null,
       });
+
+      // Reunião iniciada à mão: grava o vínculo com a tarefa em curso. Escrita
+      // estreita, não upsert — o snapshot acima é anterior ao `plannedTaskId`
+      // que o sync deste mesmo tick pode ter acabado de gravar.
+      for (const action of actions) {
+        if (action.kind === "attach") {
+          await trackedMeetingRepo.setStartedTaskId(action.meeting.calendarEventId, action.taskId);
+        }
+      }
+
+      // Um prompt por tick, como antes. `attach` nunca coexiste com o `start` da
+      // mesma reunião, então nada de perguntar sobre o que acabou de ser anexado.
+      const action = actions.find((a) => a.kind === "start" || a.kind === "end");
       if (!action) return;
 
       const m = action.meeting;
@@ -172,7 +198,7 @@ export function useMeetingTracker() {
           lastSyncMs = nowMs;
           await runSync();
         }
-        await runPromptCheck();
+        await runTrackingCheck();
       } finally {
         inFlight = false;
       }
@@ -204,7 +230,10 @@ export function useMeetingTracker() {
         billable: match?.billable ?? false,
         plannedTaskId: match?.id ?? null,
       });
-      if (task) await trackedMeetingRepo.upsert({ ...m, startedTaskId: task.id });
+      // Escrita estreita: entre a leitura de `m` acima e este ponto houve uma
+      // troca de tarefa (parada + início), tempo de sobra para um ciclo de sync
+      // gravar o `plannedTaskId` que um upsert de linha inteira desfaria.
+      if (task) await trackedMeetingRepo.setStartedTaskId(m.calendarEventId, task.id);
     }
 
     async function handleResponse(payload: MeetingPromptResponsePayload) {
@@ -239,7 +268,7 @@ export function useMeetingTracker() {
       try {
         lastSyncMs = Date.now();
         const result = await runSync();
-        await runPromptCheck();
+        await runTrackingCheck();
         const tracked = result?.tracked ?? 0;
         if (tracked > 0) await showToast("success", `${tracked} reunião(ões) rastreada(s)`);
         else await showToast("info", "Nenhum evento novo na agenda de hoje");

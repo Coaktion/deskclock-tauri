@@ -13,6 +13,7 @@ import {
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { composeLocalISO, composeMeetingEndISO } from "./meetingTime";
+import { nameKey } from "./nameKey";
 
 export interface SyncTodayMeetingsDeps {
   importer: ICalendarImporter;
@@ -249,8 +250,6 @@ async function adoptPlannedTask(
   if (planned.actions.some((a) => a.type === action.type && a.value === action.value)) return;
   await plannedRepo.update({ ...planned, actions: [...planned.actions, action] });
 }
-
-const nameKey = (name: string) => name.toLowerCase().trim();
 
 /**
  * Alinha as reuniões já rastreadas de hoje com o estado atual da agenda:

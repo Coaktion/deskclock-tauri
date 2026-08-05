@@ -361,6 +361,31 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 > **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 2 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
 
+> **Reunião iniciada à mão é reconhecida, não re-perguntada.** O rastreamento só sabia da reunião
+> iniciada pelo próprio prompt, então quem dava Play na planejada (popup, planejamento, omnibox)
+> recebia o convite de início **a cada 5 min até o fim do evento** — e nunca o de término, que
+> depende de `startedTaskId`. Agora, dentro da janela do evento, a tarefa em execução que é a reunião
+> é **anexada** (`kind: "attach"` em `computeMeetingPromptActions`): grava `startedTaskId` em vez de
+> perguntar, o que cala o re-prompt e habilita o de término.
+>
+> O reconhecimento é por **vínculo da planejada** (`activePlannedTaskId` do `RunningTaskContext` ==
+> `plannedTaskId` da reunião) ou, sem vínculo, por **nome exato** — exato pela mesma razão da adoção
+> de planejadas: anexar errado cala o início e para a tarefa alheia no prompt de término.
+>
+> **Só dentro da janela do evento**, e o caminho do nome exige ainda que a tarefa **tenha começado**
+> dentro dela: uma "Daily" iniciada às 8h e ainda rodando às 10h não é a Daily das 10h, e anexá-la
+> faria a parada dessa tarefa marcar a reunião como encerrada (via `RUNNING_TASK_CHANGED`), matando os
+> dois prompts do dia. O vínculo da planejada dispensa essa segunda guarda — é a planejada *daquela*
+> reunião, então tê-la iniciado adiantado é escolha, não colisão de nomes. **Pausada conta como em
+> execução**: pausar no meio de uma reunião é corriqueiro, e perguntar "quer iniciar?" sobre a tarefa
+> que está ali só faria o "sim" parar e recriar a mesma coisa. O `attach` vem **antes** da cadência
+> de "perguntei há pouco": barrar por ela adiaria o reconhecimento justamente para o intervalo em que
+> o prompt indevido dispara. Reunião dispensada não é anexada — "Dispensar" é decisão explícita.
+>
+> A escrita é `setStartedTaskId`, espelho de `setPlannedTaskId` e pelo mesmo motivo, no sentido
+> inverso: o snapshot da reunião é anterior ao `plannedTaskId` que o ciclo de sync pode ter acabado
+> de gravar, e um `upsert` de linha inteira o desfaria.
+
 > **Rastrear e planejar são etapas separadas, e a planejada tem vínculo explícito**
 > (`calendar_tracked_meetings.planned_task_id`). Enquanto a criação da planejada vivia dentro do laço
 > que rastreia, ela só acontecia para evento novo **naquele ciclo**: o upsert do rastreamento gravava
@@ -920,7 +945,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-04 (§5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-04 (§5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

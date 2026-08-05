@@ -15,7 +15,14 @@ export interface TrackedMeeting {
   startISO: string;
   /** Fim do evento como ISO datetime no fuso local — null se indeterminado. */
   endISO: string | null;
-  /** ID da Task iniciada para esta reunião, ou null se ainda não iniciada. */
+  /**
+   * ID da Task iniciada para esta reunião, ou null se ainda não iniciada.
+   *
+   * Gravado pelo prompt de início **ou** pelo reconhecimento de uma tarefa
+   * iniciada por fora dele (Play na planejada, omnibox). Sem esse segundo
+   * caminho, quem começava a reunião à mão continuava recebendo o convite de
+   * início na cadência de re-pergunta, e nunca o de término.
+   */
   startedTaskId: string | null;
   /**
    * PlannedTask que representa esta reunião no planejamento — criada por ela ou
