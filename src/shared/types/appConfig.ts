@@ -151,6 +151,15 @@ export interface AppConfig {
    * Requer a API key e o usuário conectado.
    */
   mondayAutoImportEnabled: boolean;
+  /**
+   * Dia (YYYY-MM-DD) da última releitura automática dos boards como projetos.
+   * Vazio = nunca rodou. É o que faz a varredura acontecer **uma vez por dia**:
+   * cliente novo no Monday vira Project sozinho, sem depender de alguém lembrar
+   * de apertar "Atualizar" na tela de Integrações.
+   */
+  mondayProjectsSyncLastDate: string;
+  /** Falha do último ciclo da releitura, exibida no card de Projetos. */
+  mondayProjectsLastSyncError: string;
   // Workspaces
   /** Workspace ativo na UI. Vazio = cai no workspace "Padrão" da migration 011. */
   activeWorkspaceId: string;

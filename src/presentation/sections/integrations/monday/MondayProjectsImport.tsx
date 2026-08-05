@@ -4,6 +4,7 @@ import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyProjectsChanged } from "@shared/utils/catalogSync";
+import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useCallback, useEffect, useState } from "react";
@@ -34,6 +35,13 @@ export function MondayProjectsImport({
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [skipped, setSkipped] = useState<SkippedBoard[]>([]);
   const [namesById, setNamesById] = useState<Map<string, string>>(new Map());
+  const [autoError, setAutoError] = useState("");
+
+  // Hidratação única: `config` é recriado a cada render do provider e reler a
+  // cada um sobrescreveria o estado de um import em curso.
+  useEffect(() => {
+    if (config.isLoaded) setAutoError(config.get("mondayProjectsLastSyncError"));
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Os projetos que existem **no destino**, e não a lista do workspace ativo do
@@ -72,6 +80,12 @@ export function MondayProjectsImport({
         .get("mondayProjectMapping")
         .filter((m) => m.workspaceId !== mondayWorkspaceId);
       await config.set("mondayProjectMapping", [...otherWorkspaces, ...result.mappings]);
+      // O clique acabou de fazer o trabalho do dia: marcar a data evita que a
+      // releitura automática repita a mesma varredura horas depois, e limpar o
+      // erro tira da tela uma falha que deixou de valer.
+      await config.set("mondayProjectsSyncLastDate", todayISO());
+      await config.set("mondayProjectsLastSyncError", "");
+      setAutoError("");
       onImported(result.mappings);
       setSkipped(result.skipped);
       await loadNames();
@@ -97,7 +111,7 @@ export function MondayProjectsImport({
   return (
     <ImportCard
       title="Projetos"
-      hint="Cada board vira um projeto e guarda onde as horas serão gravadas."
+      hint="Cada board vira um projeto e guarda onde as horas serão gravadas. A lista é relida sozinha uma vez por dia."
       action={
         <ImportActionButton
           label={linked.length > 0 ? "Atualizar" : "Importar"}
@@ -128,6 +142,15 @@ export function MondayProjectsImport({
             </div>
           ))}
         </div>
+      )}
+
+      {/* A releitura diária roda em segundo plano: sem esta linha, ela falharia
+          em silêncio e a lista pararia de crescer sem nada na tela para dizer
+          por quê — o mesmo motivo da frase de erro do rastreio da Agenda. */}
+      {autoError && (
+        <p className="text-[11px] text-amber-500/80">
+          Falha na última atualização automática: {autoError}
+        </p>
       )}
 
       {stale > 0 && (

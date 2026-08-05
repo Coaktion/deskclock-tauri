@@ -14,6 +14,7 @@ import {
   type MeetingTrackerSyncResultPayload,
   type RunningTaskChangedPayload,
 } from "@shared/types/overlayEvents";
+import { truncateError } from "@shared/utils/syncError";
 import { endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
@@ -31,14 +32,6 @@ const START_REPROMPT_MS = 5 * 60 * 1000;
 // criada oculta no startup) registrar o listener de MEETING_PROMPT antes de o
 // primeiro prompt ser emitido — evita perder o prompt logo na abertura do app.
 const INITIAL_TICK_DELAY_MS = 4000;
-// Teto da mensagem de erro persistida. Ela vem de terceiro (Google) e vai para o
-// banco e para a tela: convém um limite, e nunca o objeto de erro inteiro.
-const MAX_ERROR_CHARS = 300;
-
-function truncateError(message: string): string {
-  if (message.length <= MAX_ERROR_CHARS) return message;
-  return `${message.slice(0, MAX_ERROR_CHARS)}…`;
-}
 
 /**
  * Orquestra o rastreamento automático de reuniões do Google Agenda. Deve rodar

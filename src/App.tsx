@@ -18,6 +18,7 @@ import { useDeepLink } from "@presentation/hooks/useDeepLink";
 import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
 import { useMeetingTracker } from "@presentation/hooks/useMeetingTracker";
 import { useMondayItemTracker } from "@presentation/hooks/useMondayItemTracker";
+import { useMondayProjectsTracker } from "@presentation/hooks/useMondayProjectsTracker";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
@@ -88,6 +89,9 @@ function MainContent({
   useMeetingTracker();
   // Importação automática dos itens do Monday como planejadas (gated por config).
   useMondayItemTracker();
+  // Releitura diária dos boards do Monday como projetos (gated por já haver
+  // board mapeado no workspace ativo).
+  useMondayProjectsTracker();
 
   // Ctrl+1–7 navigates directly
   useEffect(() => {
