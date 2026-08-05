@@ -26,6 +26,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     status: "completed",
     created_at: "2026-04-08T09:00:00.000Z",
     updated_at: "2026-04-08T10:00:00.000Z",
+    planned_task_id: null,
     ...overrides,
   };
 }
@@ -71,6 +72,14 @@ describe("TaskRepository", () => {
       const repo = new TaskRepository();
       const result = await repo.findById("t1");
       expect(result?.billable).toBe(false);
+    });
+
+    it("mapeia o vínculo com a planejada de origem", async () => {
+      mockDb.select.mockResolvedValueOnce([makeRow({ planned_task_id: "pt-1" })]);
+      mockDb.select.mockResolvedValueOnce([]);
+      const repo = new TaskRepository();
+      const task = await repo.findById("t1");
+      expect(task?.plannedTaskId).toBe("pt-1");
     });
 
     it("retorna null quando não encontrada", async () => {
@@ -163,6 +172,22 @@ describe("TaskRepository", () => {
       expect(args).toContain(0);
     });
 
+    it("grava o vínculo com a planejada de origem", async () => {
+      const repo = new TaskRepository();
+      await repo.save(makeTask({ plannedTaskId: "pt-1" }));
+      const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("planned_task_id");
+      expect(args).toContain("pt-1");
+    });
+
+    it("grava null quando a tarefa não veio de planejada", async () => {
+      const repo = new TaskRepository();
+      await repo.save(makeTask());
+      const args = mockDb.execute.mock.calls[0][1] as unknown[];
+      // Última posição do INSERT: ausente na entidade significa "solta", não undefined.
+      expect(args[args.length - 1]).toBeNull();
+    });
+
     it("grava os valores personalizados junto com a tarefa", async () => {
       const repo = new TaskRepository();
       await repo.save(makeTask({ customValues: { "f-stage": "o1" } }));
@@ -181,6 +206,14 @@ describe("TaskRepository", () => {
         expect.stringContaining("UPDATE"),
         expect.arrayContaining(["t1"])
       );
+    });
+
+    it("NÃO toca planned_task_id — origem é imutável e o caller pode não conhecê-la", async () => {
+      const repo = new TaskRepository();
+      await repo.update(makeTask({ plannedTaskId: "pt-1" }));
+      const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+      expect(sql).not.toContain("planned_task_id");
+      expect(args).not.toContain("pt-1");
     });
   });
 

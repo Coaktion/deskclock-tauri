@@ -28,6 +28,9 @@ export async function mergeTaskGroup(
     status: "completed",
     createdAt: nowISO,
     updatedAt: nowISO,
+    // Sem `plannedTaskId`: a origem não compõe a chave do grupo, então as tarefas
+    // mescladas podem ter vindo de planejadas diferentes (ou de nenhuma), e herdar
+    // a da primeira afirmaria uma origem que o registro somado não tem.
     // Os custom values compõem a chave do grupo, então todas as tarefas daqui
     // têm exatamente os mesmos: herdar da primeira não escolhe nada.
     customValues: { ...first.customValues },

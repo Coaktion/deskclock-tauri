@@ -92,6 +92,10 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       const running = tasks.find((t) => t.status === "running");
       const active = running ?? tasks[0] ?? null;
       setRunningTask(active);
+      // Restaura a planejada de origem: sem isso, parar a tarefa depois de
+      // reabrir o app não a marcava como concluída no dia (applyStopRules
+      // recebia null) e ela voltava a aparecer pendente.
+      setActivePlannedTaskId(active?.plannedTaskId ?? null);
     });
     return () => {
       mounted.current = false;

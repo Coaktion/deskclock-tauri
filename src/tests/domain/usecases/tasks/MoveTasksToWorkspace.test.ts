@@ -105,6 +105,30 @@ describe("moveTasksToWorkspace", () => {
     expect(saved.createdAt).toBe(NOW);
   });
 
+  it("a origem da execução acompanha a tarefa nos dois modos", async () => {
+    // Decisão deliberada: o vínculo registra de onde a execução partiu, e mudar de
+    // workspace não desfaz isso. O id de planejada do workspace de origem fica
+    // inerte — só tarefa em execução tem o vínculo lido, e aqui se move concluída.
+    const deps = makeDeps();
+    const plan = { toWorkspaceId: "ws-destino", project: UNSET, category: UNSET } as const;
+
+    await moveTasksToWorkspace(
+      deps,
+      [makeTask({ plannedTaskId: "pt-1" })],
+      { ...plan, mode: "copy" },
+      NOW
+    );
+    expect(vi.mocked(deps.taskRepo.save).mock.calls[0][0].plannedTaskId).toBe("pt-1");
+
+    await moveTasksToWorkspace(
+      deps,
+      [makeTask({ plannedTaskId: "pt-1" })],
+      { ...plan, mode: "move" },
+      NOW
+    );
+    expect(vi.mocked(deps.taskRepo.update).mock.calls[0][0].plannedTaskId).toBe("pt-1");
+  });
+
   it("aplica match reusando o id do destino, sem criar nada", async () => {
     const deps = makeDeps();
     await moveTasksToWorkspace(

@@ -76,6 +76,13 @@ export async function moveTasksToWorkspace(
   );
 
   for (const task of tasks) {
+    // `plannedTaskId` atravessa a mudança de workspace, de propósito: ele registra
+    // de onde a execução partiu, e isso não deixa de ser verdade porque a tarefa
+    // mudou de lugar. Fica um id de planejada de outro workspace, e ele é inerte —
+    // quem lê o vínculo (conclusão da planejada ao parar, reconhecimento de
+    // reunião) só olha tarefa em execução, e aqui se move o que já foi concluído.
+    // Zerá-lo no modo `move` exigiria escrever a coluna no UPDATE, que é justamente
+    // o que mantém a origem imutável para todos os outros callers.
     const moved: Task = {
       ...task,
       workspaceId: plan.toWorkspaceId,

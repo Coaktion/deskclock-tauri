@@ -48,6 +48,33 @@ describe("mergeTaskGroup", () => {
     expect(result.durationSeconds).toBe(5400);
   });
 
+  it("o registro somado nasce sem origem, ainda que as tarefas tenham vindo de planejadas", async () => {
+    // A origem não compõe a chave do grupo (§6.3), então as mescladas podem vir de
+    // planejadas diferentes: herdar a da primeira afirmaria uma origem que o
+    // registro somado não tem.
+    const tasks = [
+      makeTask({ id: "t1", plannedTaskId: "pt-1", durationSeconds: 3600 }),
+      makeTask({
+        id: "t2",
+        plannedTaskId: "pt-2",
+        startTime: "2026-04-08T10:00:00.000Z",
+        endTime: "2026-04-08T10:30:00.000Z",
+        durationSeconds: 1800,
+      }),
+    ];
+    const repo: ITaskRepository = {
+      save: vi.fn(async () => undefined),
+      update: vi.fn(),
+      findById: vi.fn(async () => null),
+      findByStatus: vi.fn(async () => []),
+      findByDateRange: vi.fn(async () => []),
+      delete: vi.fn(),
+      deleteMany: vi.fn(async () => undefined),
+    };
+    const result = await mergeTaskGroup(repo, tasks, NOW);
+    expect(result.plannedTaskId).toBeUndefined();
+  });
+
   it("preserva os valores personalizados do grupo", async () => {
     // Só entram no mesmo grupo tarefas com os mesmos valores (§6.3) — unificar
     // não pode perdê-los, ou o registro somado cairia em outro grupo.

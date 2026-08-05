@@ -11,6 +11,9 @@ interface StartTaskInput {
   categoryId?: string | null;
   billable: boolean;
   startTime?: string;
+  /** PlannedTask de origem, quando o início partiu de uma. Persistido na tarefa
+   *  desde a migration 015: em memória, o vínculo morria ao reabrir o app. */
+  plannedTaskId?: string | null;
   customValues?: CustomValues;
 }
 
@@ -49,6 +52,7 @@ export async function startTask(
     status: "running",
     createdAt: nowISO,
     updatedAt: nowISO,
+    plannedTaskId: input.plannedTaskId ?? null,
     customValues: input.customValues ?? {},
   };
   await repo.save(task);

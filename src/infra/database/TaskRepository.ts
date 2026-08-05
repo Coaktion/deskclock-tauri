@@ -16,6 +16,7 @@ interface TaskRow {
   status: string;
   created_at: string;
   updated_at: string;
+  planned_task_id: string | null;
 }
 
 function rowToTask(r: TaskRow): Task {
@@ -32,6 +33,7 @@ function rowToTask(r: TaskRow): Task {
     status: r.status as TaskStatus,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    plannedTaskId: r.planned_task_id,
     customValues: {},
   };
 }
@@ -58,8 +60,8 @@ export class TaskRepository implements ITaskRepository {
     await db.execute(
       `INSERT INTO tasks
         (id, workspace_id, name, project_id, category_id, billable, start_time, end_time,
-         duration_seconds, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+         duration_seconds, status, created_at, updated_at, planned_task_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         task.id,
         task.workspaceId,
@@ -73,6 +75,7 @@ export class TaskRepository implements ITaskRepository {
         task.status,
         task.createdAt,
         task.updatedAt,
+        task.plannedTaskId ?? null,
       ]
     );
     await saveCustomValues(db, "task_custom_values", "task_id", task.id, task.customValues);
@@ -81,6 +84,9 @@ export class TaskRepository implements ITaskRepository {
   async update(task: Task): Promise<void> {
     const db = await getDb();
     await db.execute(
+      // planned_task_id fica fora do UPDATE: é a origem da execução, imutável
+      // depois do início. Incluí-lo faria todo caller que monta uma Task sem o
+      // campo (edição, merge, regras pós-parada) apagar o vínculo sem querer.
       `UPDATE tasks SET
         name = $1, project_id = $2, category_id = $3, billable = $4,
         start_time = $5, end_time = $6, duration_seconds = $7,

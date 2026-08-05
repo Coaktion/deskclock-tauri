@@ -33,6 +33,25 @@ describe("startTask", () => {
     expect(task.startTime).toBe(NOW);
   });
 
+  it("persiste a planejada de origem quando o início partiu de uma", async () => {
+    const repo = makeRepo();
+    const task = await startTask(
+      repo,
+      { workspaceId: "ws-1", billable: true, plannedTaskId: "pt-1" },
+      NOW
+    );
+    // Persistido, não só carregado em memória: é o que sobrevive ao reabrir o app
+    // e faz o Parar marcar a planejada como concluída no dia.
+    expect(task.plannedTaskId).toBe("pt-1");
+    expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ plannedTaskId: "pt-1" }));
+  });
+
+  it("grava null quando a tarefa não veio de planejada", async () => {
+    const repo = makeRepo();
+    const task = await startTask(repo, { workspaceId: "ws-1", billable: true }, NOW);
+    expect(task.plannedTaskId).toBeNull();
+  });
+
   it("usa startTime customizado quando fornecido", async () => {
     const repo = makeRepo();
     const custom = "2026-04-08T08:00:00.000Z";

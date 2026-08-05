@@ -1,0 +1,21 @@
+-- Vínculo entre a tarefa executada e a PlannedTask de onde ela partiu.
+--
+-- Antes, esse vínculo vivia só em memória: `activePlannedTaskId` no
+-- RunningTaskContext e um useRef no PopupOverlayApp. Reabrir o app repovoa a
+-- tarefa em execução pelo banco, e o vínculo nascia nulo — três sintomas da mesma
+-- causa:
+--   1. parar a tarefa não marcava a planejada como concluída no dia (o
+--      `completePlannedIfNeeded` recebia null), e ela voltava a aparecer pendente;
+--   2. os chips da seção "Ações" desapareciam do popup;
+--   3. o rastreamento de reuniões perdia o sinal forte de reconhecimento e caía
+--      no casamento por nome, que exige início dentro da janela do evento.
+--
+-- Reinferir o vínculo comparando nome/projeto/categoria contra as planejadas do
+-- dia foi descartado: é matching aproximado para decidir qual planejada será
+-- concluída, e errar aqui é silencioso e sem desfazer.
+--
+-- Backfill NULL é intencional: tarefa já gravada não tem de onde recuperar a
+-- origem, e NULL é exatamente o que ela sempre significou ("não veio de
+-- planejada"). Sem FK por consistência com o resto do schema, e porque planejada
+-- apagada não deve impedir a tarefa de existir.
+ALTER TABLE tasks ADD COLUMN planned_task_id TEXT;

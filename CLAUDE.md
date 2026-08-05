@@ -82,8 +82,28 @@ src/
 | end_time | datetime \| null | null = em execução |
 | duration_seconds | integer \| null | Calculado: end_time - start_time |
 | status | enum | `running` \| `paused` \| `completed` |
+| planned_task_id | UUID \| null | Referência lógica à PlannedTask de origem (**sem FK**); `null` = tarefa solta |
 | created_at | datetime | Auto |
 | updated_at | datetime | Auto |
+
+> **A origem é persistida, e é imutável depois do início.** O vínculo com a
+> planejada vivia só em memória (`activePlannedTaskId` no `RunningTaskContext`, um
+> `useRef` no `PopupOverlayApp`), e reabrir o app o perdia: **parar a tarefa não
+> marcava mais a planejada como concluída** no dia — ela reaparecia pendente —, os
+> chips de "Ações" sumiam do popup e o rastreamento de reuniões perdia o sinal
+> forte de reconhecimento (§5.7). As duas janelas restauram o vínculo no mount,
+> lendo-o da tarefa. O `UPDATE` do repositório **não** toca a coluna: quem monta
+> uma `Task` para editar, mesclar ou aplicar regras pós-parada não conhece a
+> origem, e incluí-la no update apagaria o vínculo sem querer. Reinferir por
+> nome/projeto/categoria foi descartado — é matching aproximado escolhendo qual
+> planejada concluir, sem desfazer.
+>
+> Duas consequências decididas de propósito: **mesclar** um grupo produz registro
+> **sem** origem (a origem não compõe a chave do grupo, então as mescladas podem vir
+> de planejadas diferentes, e herdar a da primeira afirmaria o que o somado não
+> tem), e **mover para outro workspace** leva a origem junto — fica um id de
+> planejada do workspace anterior, inerte, porque só tarefa em execução tem o
+> vínculo lido e o que se move já está concluído.
 
 ### 4.2 PlannedTask (Tarefa planejada)
 
@@ -945,7 +965,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-04 (§5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-04 (§4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
