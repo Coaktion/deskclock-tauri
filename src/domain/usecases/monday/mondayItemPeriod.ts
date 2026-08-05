@@ -47,11 +47,13 @@ export function parseTimelinePeriod(value: MondayColumnValue | undefined): Monda
 }
 
 /**
- * Coluna `date` (as atividades): `{"date":"…","time":"…"}`, **em UTC**.
+ * Coluna `date` (as atividades): `{"date":"…"}`, ou `{"date":"…","time":"…"}`
+ * **em UTC** nas atividades antigas.
  *
- * Com hora, o instante é convertido para o dia local — é o inverso exato do
- * `serializeDate` do envio. Sem hora, a data já é o dia e não sofre conversão,
- * senão toda atividade lançada sem horário recuaria um dia.
+ * O envio hoje grava só o dia (`serializeDate`), mas o board guarda as duas
+ * formas: com hora, o instante é convertido para o dia local; sem hora, a data
+ * já **é** o dia e não sofre conversão, senão toda atividade lançada sem horário
+ * recuaria um dia em fuso negativo. As duas continuam sendo lidas.
  */
 export function parseDayValue(value: MondayColumnValue | undefined): string | null {
   const parsed = parseJson<{ date?: string | null; time?: string | null }>(value?.value);

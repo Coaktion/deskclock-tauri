@@ -1,4 +1,5 @@
 import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
+import { localDateISO } from "@shared/utils/time";
 
 export const MONDAY_BILLABLE_LABEL = "Billable";
 export const MONDAY_NON_BILLABLE_LABEL = "Non Billable";
@@ -27,12 +28,19 @@ export function serializeStatus(label: string): { label: string } {
 }
 
 /**
- * Serializador da coluna `date`, que o Monday guarda **em UTC** e exibe no fuso
- * da conta. Mandar a hora local aqui deslocaria o horário exibido.
+ * Serializador da coluna `date`: **só o dia**, sem hora.
+ *
+ * A hora ia junto e descrevia o instante exato do início e do fim do intervalo —
+ * precisão que o board não usa: o que se reporta ali é o dia em que o trabalho
+ * aconteceu.
+ *
+ * O dia é o **local** (§6.6), não o dia em UTC. Com hora junto, o Monday
+ * guardava em UTC e reexibia no fuso da conta, então o dia se acertava sozinho;
+ * sem ela não há o que reconverter, e o instante das 21h em fuso negativo — dia
+ * 28 para quem trabalhou, dia 29 em UTC — cairia no dia seguinte do board.
  */
-export function serializeDate(iso: string): { date: string; time: string } {
-  const [date, rest] = new Date(iso).toISOString().split("T");
-  return { date, time: rest.slice(0, 8) };
+export function serializeDate(iso: string): { date: string } {
+  return { date: localDateISO(iso) };
 }
 
 /** Serializador da coluna `people`. */
@@ -88,7 +96,8 @@ export function buildActivityColumnValues(
 
 /**
  * Colunas Start Date e End Date: o intervalo **trabalhado no DeskClock**, do
- * início da primeira tarefa do grupo ao fim da última.
+ * início da primeira tarefa do grupo ao fim da última — em dias, sem hora
+ * (ver `serializeDate`).
  *
  * Antes as duas levavam o instante do envio, o que descrevia quando a linha
  * nasceu no Monday e não quando o trabalho aconteceu — lançamento retroativo e

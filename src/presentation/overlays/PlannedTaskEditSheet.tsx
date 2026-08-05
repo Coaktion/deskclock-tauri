@@ -135,6 +135,23 @@ export function PlannedTaskEditSheet({
           </button>
         </div>
 
+        {/* Campos personalizados logo depois de categoria e billable, antes do
+            agendamento: são atributos do trabalho em si, como projeto e
+            categoria, e o agendamento é o bloco que diz *quando* — separá-los
+            deixava os dois grupos intercalados. */}
+        {activeFields.length > 0 && (
+          <>
+            <div className="border-t border-gray-800 mt-0.5" />
+            <CustomFieldInputs
+              fields={activeFields}
+              values={editor.customValues}
+              onChange={editor.setCustomValues}
+              onEnter={() => void editor.save()}
+              compact
+            />
+          </>
+        )}
+
         <div className="border-t border-gray-800 mt-0.5" />
 
         {/* Agendamento */}
@@ -211,19 +228,6 @@ export function PlannedTaskEditSheet({
               label="Fim"
             />
           </div>
-        )}
-
-        {activeFields.length > 0 && (
-          <>
-            <div className="border-t border-gray-800 mt-0.5" />
-            <CustomFieldInputs
-              fields={activeFields}
-              values={editor.customValues}
-              onChange={editor.setCustomValues}
-              onEnter={() => void editor.save()}
-              compact
-            />
-          </>
         )}
 
         <div className="border-t border-gray-800 mt-0.5" />

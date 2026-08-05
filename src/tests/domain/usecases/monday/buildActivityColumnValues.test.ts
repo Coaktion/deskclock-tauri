@@ -15,6 +15,15 @@ import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
 // `satisfies` em vez de anotação: com Billing type, Status e Project Stage
 // opcionais no tipo, anotar tornaria `COLUMNS.status` um `string | undefined` e
 // as asserções abaixo não poderiam indexar por ele.
+/**
+ * Instante montado a partir da hora **local** — as colunas de data levam o dia
+ * local da tarefa (§6.6). Um literal em UTC faria a asserção passar ou falhar
+ * conforme o fuso da máquina que roda a suíte.
+ */
+function localISO(day: number, hour: number, minute = 0): string {
+  return new Date(2026, 6, day, hour, minute).toISOString();
+}
+
 const COLUMNS = {
   reportedHours: "numeric_mm33gj5m",
   billingType: "color_mm33rxm7",
@@ -137,18 +146,34 @@ describe("buildActivityColumnValues", () => {
     });
   });
 
-  it("grava Start Date e End Date com o intervalo trabalhado, em UTC", () => {
+  it("grava Start Date e End Date com o dia trabalhado, sem hora", () => {
     const values = buildActivityDateColumns(
       { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
-      "2026-07-28T12:00:00.000Z",
-      "2026-07-28T14:30:15.000Z"
+      localISO(28, 12),
+      localISO(28, 14, 30)
     );
 
-    // O Monday guarda a coluna `date` em UTC e exibe no fuso da conta; mandar a
-    // hora local deslocaria o horário exibido.
     expect(values).toEqual({
-      date_mm33tthy: { date: "2026-07-28", time: "12:00:00" },
-      date_mm33zcmr: { date: "2026-07-28", time: "14:30:15" },
+      date_mm33tthy: { date: "2026-07-28" },
+      date_mm33zcmr: { date: "2026-07-28" },
+    });
+  });
+
+  it("usa o dia **local** do instante, não o dia em UTC", () => {
+    // Uma tarefa das 23h em fuso negativo é do dia 28 para quem a trabalhou e do
+    // dia 29 em UTC. Sem hora junto, o Monday não tem como reconverter: mandar o
+    // dia UTC jogaria a atividade para o dia seguinte no board.
+    const iso = localISO(28, 23);
+
+    const values = buildActivityDateColumns(
+      { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
+      iso,
+      iso
+    );
+
+    expect(values).toEqual({
+      date_mm33tthy: { date: "2026-07-28" },
+      date_mm33zcmr: { date: "2026-07-28" },
     });
   });
 

@@ -59,6 +59,17 @@ const COLUMN_IDS = {
 /** Só os boards com as colunas de data recebem Start/End Date. */
 const DATE_COLUMN_IDS = { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" };
 
+/**
+ * Instante montado a partir da hora **local**.
+ *
+ * As duas colunas de data levam o dia local da tarefa (§6.6), e sem hora junto
+ * não há o que reconverter no board. Fixar o ISO em UTC faria a asserção passar
+ * ou falhar conforme o fuso da máquina que roda a suíte.
+ */
+function localISO(day: number, hour: number, minute = 0): string {
+  return new Date(2026, 6, day, hour, minute).toISOString();
+}
+
 const MAPPING: MondayProjectMapping = {
   deskclockProjectId: "proj-1",
   portfolioItemId: "item-proj-1",
@@ -957,7 +968,7 @@ describe("MondayTaskSender", () => {
       );
     });
 
-    it("grava Start Date e End Date com o intervalo da tarefa, não com o do envio", async () => {
+    it("grava Start Date e End Date com o dia da tarefa, não com o do envio", async () => {
       const client = makeClient();
       const config = makeConfig({
         mondayProjectMapping: [{ ...MAPPING, columnIds: { ...COLUMN_IDS, ...DATE_COLUMN_IDS } }],
@@ -972,14 +983,14 @@ describe("MondayTaskSender", () => {
         client
       ).send([
         makeTask({
-          startTime: "2026-07-28T12:00:00.000Z",
-          endTime: "2026-07-28T13:50:00.000Z",
+          startTime: localISO(28, 12),
+          endTime: localISO(28, 13, 50),
         }),
       ]);
 
       expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
-        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-28", time: "12:00:00" },
-        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-28", time: "13:50:00" },
+        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-28" },
+        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-28" },
       });
     });
 
@@ -996,25 +1007,27 @@ describe("MondayTaskSender", () => {
         makeCategoryRepo(),
         client
       ).send([
+        // A que vira a madrugada é a última do grupo, e o grupo continua sendo do
+        // dia 30: a tarefa pertence ao dia do início (§6.6).
         makeTask({
-          id: "tarde",
-          startTime: "2026-07-30T16:00:00.000Z",
-          endTime: "2026-07-30T17:30:00.000Z",
+          id: "virada",
+          startTime: localISO(30, 22),
+          endTime: localISO(31, 1),
         }),
         makeTask({
           id: "cedo",
-          startTime: "2026-07-30T09:00:00.000Z",
-          endTime: "2026-07-30T10:00:00.000Z",
+          startTime: localISO(30, 6),
+          endTime: localISO(30, 7),
         }),
       ]);
 
       expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
-        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-30", time: "09:00:00" },
-        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-30", time: "17:30:00" },
+        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-30" },
+        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-31" },
       });
     });
 
-    it("repete as datas no update — vindo da tarefa, corrigir o horário acerta o board", async () => {
+    it("repete as datas no update — vindo da tarefa, corrigir o horário acerta a data no board", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
       const config = makeConfig({
@@ -1025,12 +1038,16 @@ describe("MondayTaskSender", () => {
           task,
         ]);
 
-      await send(makeTask());
-      await send(makeTask({ endTime: "2026-07-30T14:50:00.000Z", durationSeconds: 10200 }));
+      // "Esqueci de parar o timer": o fim vai da noite do dia 30 para a
+      // madrugada do 31, e é o End Date do board que precisa acompanhar.
+      await send(makeTask({ startTime: localISO(30, 22), endTime: localISO(30, 23) }));
+      await send(
+        makeTask({ startTime: localISO(30, 22), endTime: localISO(31, 1), durationSeconds: 10800 })
+      );
 
       expect(vi.mocked(client.changeColumnValues).mock.calls[0][2]).toMatchObject({
-        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-30", time: "12:00:00" },
-        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-30", time: "14:50:00" },
+        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-30" },
+        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-31" },
       });
     });
 

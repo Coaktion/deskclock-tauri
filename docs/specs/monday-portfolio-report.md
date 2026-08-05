@@ -195,8 +195,10 @@ nunca em silêncio.
 `board_relation_mm19xxv7` ("Portfolio") já vem preenchido pelo template — não é
 nosso.
 
-As duas datas são `show_time_by_default: true` também nos boards de projeto, o
-que preserva a decisão do §5.7 de mandar o intervalo trabalhado com hora real.
+As duas datas são `show_time_by_default: true` também nos boards de projeto, mas
+o envio manda **só o dia** — a hora descrevia o instante exato de início e fim,
+precisão que o board não usa. O dia é o local (§6.6): sem hora junto, não há o
+que o Monday reconverta.
 
 ### Rótulos por tipo de projeto
 
