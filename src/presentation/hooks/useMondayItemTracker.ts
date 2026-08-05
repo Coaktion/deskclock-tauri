@@ -9,7 +9,7 @@ import {
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { OVERLAY_EVENTS, type MondayImportSyncResultPayload } from "@shared/types/overlayEvents";
 import { weekBoundsISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
@@ -34,16 +34,22 @@ export function useMondayItemTracker() {
   const { createMondayApi } = useIntegrations();
   const { mondayImportedItemRepo, plannedTaskRepo, projectRepo, categoryRepo, customFieldRepo } =
     useRepositories();
-  const workspaceId = useActiveWorkspaceId();
+  const { activeWorkspaceId: workspaceId, loading: workspaceLoading } = useWorkspaces();
 
   // O efeito roda uma vez e captura o closure; sem o ref, o workspace congelaria
   // no que estava ativo na montagem e todo item importado depois de uma troca
   // cairia no workspace errado.
   const workspaceIdRef = useRef(workspaceId);
   workspaceIdRef.current = workspaceId;
-
+  // Enquanto o WorkspaceContext carrega, o id ativo é o do workspace "Padrão" —
+  // um palpite. Sincronizar antes da resolução leria o catálogo do workspace
+  // errado e, sem projeto mapeado lá, o ciclo não faria nada em silêncio.
+  //
+  // O gate é no efeito, não no `enabled()`: aqui o intervalo é de 30 min, então
+  // barrar dentro do tick não adiaria o primeiro ciclo por um tick — adiaria por
+  // meia hora. Reexecutar o efeito faz o atraso inicial contar da resolução.
   useEffect(() => {
-    if (!config.isLoaded) return;
+    if (!config.isLoaded || workspaceLoading) return;
 
     let disposed = false;
     let inFlight = false;
@@ -182,5 +188,5 @@ export function useMondayItemTracker() {
     };
     // createMondayApi e os repos vêm de Providers e são estáveis por sessão;
     // capturá-los uma vez no mount é seguro (§9.2).
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config.isLoaded, workspaceLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 }

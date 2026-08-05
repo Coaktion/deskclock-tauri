@@ -458,13 +458,15 @@ export function ImportCalendarModal({
 
     setImporting(true);
     try {
-      const count = await importCalendarEvents(
-        repo,
-        inputs,
-        new Date().toISOString(),
-        workspaceId,
-        addOpenUrlAction
-      );
+      const count = (
+        await importCalendarEvents(
+          repo,
+          inputs,
+          new Date().toISOString(),
+          workspaceId,
+          addOpenUrlAction
+        )
+      ).length;
       if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(count);
     } catch (err) {

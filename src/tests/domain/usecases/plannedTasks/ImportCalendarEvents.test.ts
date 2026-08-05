@@ -35,14 +35,14 @@ const NOW = "2026-04-09T10:00:00.000Z";
 describe("importCalendarEvents", () => {
   it("retorna 0 e não salva nada com lista vazia", async () => {
     const repo = makeRepo();
-    const count = await importCalendarEvents(repo, [], NOW, "ws-1");
-    expect(count).toBe(0);
+    const created = await importCalendarEvents(repo, [], NOW, "ws-1");
+    expect(created).toHaveLength(0);
     expect(repo.save).not.toHaveBeenCalled();
   });
 
   it("cria tarefa specific_date preservando a data do evento", async () => {
     const repo = makeRepo();
-    const count = await importCalendarEvents(
+    const created = await importCalendarEvents(
       repo,
       [
         {
@@ -57,7 +57,7 @@ describe("importCalendarEvents", () => {
       "ws-1"
     );
 
-    expect(count).toBe(1);
+    expect(created).toHaveLength(1);
     expect(repo.save).toHaveBeenCalledTimes(1);
 
     const saved = vi.mocked(repo.save).mock.calls[0][0];
@@ -142,7 +142,7 @@ describe("importCalendarEvents", () => {
       makeEvent({ id: "e3", title: "Planning" }),
     ];
 
-    const count = await importCalendarEvents(
+    const created = await importCalendarEvents(
       repo,
       events.map((event) => ({
         event,
@@ -155,7 +155,7 @@ describe("importCalendarEvents", () => {
       "ws-1"
     );
 
-    expect(count).toBe(3);
+    expect(created).toHaveLength(3);
     expect(repo.save).toHaveBeenCalledTimes(3);
   });
 

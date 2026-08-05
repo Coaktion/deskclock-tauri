@@ -10,6 +10,7 @@ function makeMeeting(overrides: Partial<TrackedMeeting> = {}): TrackedMeeting {
     startISO: "2026-07-01T10:00:00.000Z",
     endISO: "2026-07-01T10:30:00.000Z",
     startedTaskId: null,
+    plannedTaskId: null,
     startPromptedAt: null,
     startDismissed: false,
     endPromptCount: 0,

@@ -27,6 +27,7 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTour } from "@presentation/hooks/useTour";
+import { useSyncNowButton, type SyncFeedback } from "@presentation/hooks/useSyncNowButton";
 import {
   DEFAULT_COLUMN_MAPPING,
   type SheetColumn,
@@ -49,9 +50,8 @@ import {
   TableProperties,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { IntegrationTile, Row, StatusBadge, SubSection, Toggle } from "./shared";
-import { emit } from "@tauri-apps/api/event";
-import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { IntegrationTile, Row, StatusBadge, SubSection, SyncFeedbackLine, Toggle } from "./shared";
+import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
 export const ALL_GOOGLE_SCOPES = [
@@ -457,24 +457,36 @@ function SheetsSection({
 
 /* ── Sub-seção Google Calendar ── */
 
+/**
+ * Payload do rastreador → frase abaixo do botão. Só o erro merece frase: o
+ * sucesso já vira toast no próprio rastreador, e devolver `null` aqui é o que
+ * apaga da tela um erro que deixou de valer.
+ */
+function describeMeetingSync(payload: MeetingTrackerSyncResultPayload): SyncFeedback | null {
+  return payload.error ? { ok: false, text: payload.error } : null;
+}
+
 function CalendarSection({ disabled }: { disabled: boolean }) {
   const { openModal } = useIntegrationsUi();
   const config = useAppConfig();
   const [autoTracking, setAutoTracking] = useState(false);
-  const [searching, setSearching] = useState(false);
+  // O fim do ciclo chega por evento — inclusive o do ciclo automático, que é o que
+  // faz a linha de erro sumir sozinha quando a busca volta a funcionar.
+  const { searching, feedback, setFeedback, trigger } =
+    useSyncNowButton<MeetingTrackerSyncResultPayload>(
+      OVERLAY_EVENTS.MEETING_TRACKER_SYNC_NOW,
+      OVERLAY_EVENTS.MEETING_TRACKER_SYNC_RESULT,
+      describeMeetingSync
+    );
 
   useEffect(() => {
     if (!config.isLoaded) return;
     setAutoTracking(config.get("calendarAutoTrackingEnabled"));
+    // A falha do último ciclo fica na config: sem semear, abrir a tela esconderia
+    // um erro que continua valendo até o próximo ciclo responder.
+    const persisted = config.get("calendarLastSyncError");
+    if (persisted) setFeedback({ ok: false, text: persisted });
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handleSearchNow() {
-    setSearching(true);
-    await emit(OVERLAY_EVENTS.MEETING_TRACKER_SYNC_NOW, {});
-    // O resultado chega via toast disparado pelo useMeetingTracker; liberamos o
-    // botão após um curto intervalo para evitar cliques repetidos.
-    setTimeout(() => setSearching(false), 2500);
-  }
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
@@ -508,13 +520,14 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
         {autoTracking && (
           <div className="pb-2.5">
             <button
-              onClick={handleSearchNow}
+              onClick={trigger}
               disabled={searching}
               className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors border border-gray-700"
             >
               <RefreshCw size={12} className={searching ? "animate-spin" : ""} />
               {searching ? "Buscando…" : "Buscar eventos agora"}
             </button>
+            {feedback && !searching && <SyncFeedbackLine feedback={feedback} />}
           </div>
         )}
       </div>

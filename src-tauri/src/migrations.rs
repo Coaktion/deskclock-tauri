@@ -80,5 +80,11 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/013_monday_imported_items.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 14,
+            description: "calendar_meeting_planned_link",
+            sql: include_str!("../migrations/014_calendar_meeting_planned_link.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

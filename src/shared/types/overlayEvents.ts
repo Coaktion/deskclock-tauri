@@ -23,6 +23,7 @@ export const OVERLAY_EVENTS = {
   MEETING_PROMPT: "meeting-prompt",
   MEETING_PROMPT_RESPONSE: "meeting-prompt:response",
   MEETING_TRACKER_SYNC_NOW: "meeting-tracker:sync-now",
+  MEETING_TRACKER_SYNC_RESULT: "meeting-tracker:sync-result",
   MONDAY_IMPORT_SYNC_NOW: "monday-import:sync-now",
   MONDAY_IMPORT_SYNC_RESULT: "monday-import:sync-result",
   WORKSPACE_CHANGED: "workspace-changed",
@@ -107,6 +108,20 @@ export interface MondayImportSyncResultPayload {
   error?: string;
   /** O ciclo automático já estava rodando: o clique não iniciou busca nenhuma. */
   busy?: boolean;
+}
+
+/**
+ * Fim de um ciclo do rastreador de reuniões — automático ou pelo botão. A tela de
+ * Integrações depende dele para mostrar e **limpar** a linha de erro: ler a config
+ * depois de um tempo fixo mostra o estado anterior quando o ciclo demora, e um
+ * ciclo de fundo bem-sucedido nunca apagaria da tela um erro que deixou de valer.
+ */
+export interface MeetingTrackerSyncResultPayload {
+  tracked: number;
+  plannedCreated: number;
+  plannedLinked: number;
+  /** Vazio quando o ciclo correu inteiro sem falha. */
+  error: string;
 }
 
 export type ToastVariant = "success" | "error" | "info" | "update" | "warning";

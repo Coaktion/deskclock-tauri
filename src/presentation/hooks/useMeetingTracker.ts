@@ -3,7 +3,7 @@ import { emit, listen } from "@tauri-apps/api/event";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { computeMeetingPromptActions } from "@domain/usecases/calendar/computeMeetingPromptActions";
 import { syncTodayMeetings } from "@domain/usecases/calendar/syncTodayMeetings";
@@ -11,6 +11,7 @@ import {
   OVERLAY_EVENTS,
   type MeetingPromptPayload,
   type MeetingPromptResponsePayload,
+  type MeetingTrackerSyncResultPayload,
   type RunningTaskChangedPayload,
 } from "@shared/types/overlayEvents";
 import { endOfDayISO, startOfDayISO, todayISO } from "@shared/utils/time";
@@ -30,6 +31,14 @@ const START_REPROMPT_MS = 5 * 60 * 1000;
 // criada oculta no startup) registrar o listener de MEETING_PROMPT antes de o
 // primeiro prompt ser emitido — evita perder o prompt logo na abertura do app.
 const INITIAL_TICK_DELAY_MS = 4000;
+// Teto da mensagem de erro persistida. Ela vem de terceiro (Google) e vai para o
+// banco e para a tela: convém um limite, e nunca o objeto de erro inteiro.
+const MAX_ERROR_CHARS = 300;
+
+function truncateError(message: string): string {
+  if (message.length <= MAX_ERROR_CHARS) return message;
+  return `${message.slice(0, MAX_ERROR_CHARS)}…`;
+}
 
 /**
  * Orquestra o rastreamento automático de reuniões do Google Agenda. Deve rodar
@@ -41,7 +50,7 @@ export function useMeetingTracker() {
   const config = useAppConfig();
   const { createCalendarImporter } = useIntegrations();
   const { trackedMeetingRepo, plannedTaskRepo, projectRepo, categoryRepo } = useRepositories();
-  const workspaceId = useActiveWorkspaceId();
+  const { activeWorkspaceId: workspaceId, loading: workspaceLoading } = useWorkspaces();
   const { runningTask, switchToTask, stopTask } = useRunningTask();
 
   // Refs para uso dentro de intervalos/handlers sem stale closures.
@@ -56,9 +65,13 @@ export function useMeetingTracker() {
   // de uma troca cairia no workspace errado.
   const workspaceIdRef = useRef(workspaceId);
   workspaceIdRef.current = workspaceId;
-
+  // Enquanto o WorkspaceContext carrega, o id ativo é o do workspace "Padrão" —
+  // um palpite, não uma escolha. O primeiro ciclo dispara poucos segundos após o
+  // mount, e sincronizar antes da resolução criaria planejada no workspace errado.
+  // O gate é no efeito, não no `enabled()`: barrar dentro do tick só adiaria o
+  // ciclo para o próximo intervalo, e aqui o efeito reexecuta quando resolve.
   useEffect(() => {
-    if (!config.isLoaded) return;
+    if (!config.isLoaded || workspaceLoading) return;
 
     let disposed = false;
     let inFlight = false;
@@ -69,24 +82,52 @@ export function useMeetingTracker() {
 
     async function runSync() {
       const today = todayISO();
-      const result: Awaited<ReturnType<typeof syncTodayMeetings>> | null = await syncTodayMeetings(
-        {
-          importer: createCalendarImporter(),
-          trackedRepo: trackedMeetingRepo,
-          plannedRepo: plannedTaskRepo,
-          projectRepo,
-          categoryRepo,
-        },
-        {
-          todayISO: today,
-          fromISO: startOfDayISO(today),
-          toISO: endOfDayISO(today),
-          nowISO: new Date().toISOString(),
-          workspaceId: workspaceIdRef.current,
-        }
-      ).catch(() => null); // busca é best-effort (rede/token)
-      // Novas planejadas criadas → avisa a UI para atualizar a lista ao vivo.
-      if (result && result.plannedCreated > 0) {
+      let result: Awaited<ReturnType<typeof syncTodayMeetings>> | null = null;
+      // A busca é best-effort (rede/token) e não pode derrubar o intervalo, mas
+      // engolir a falha sem rastro torna "a reunião não virou planejada"
+      // indiagnosticável — o resultado é publicado e a tela de Integrações o mostra.
+      let failure = "";
+      try {
+        result = await syncTodayMeetings(
+          {
+            importer: createCalendarImporter(),
+            trackedRepo: trackedMeetingRepo,
+            plannedRepo: plannedTaskRepo,
+            projectRepo,
+            categoryRepo,
+          },
+          {
+            todayISO: today,
+            fromISO: startOfDayISO(today),
+            toISO: endOfDayISO(today),
+            nowISO: new Date().toISOString(),
+            workspaceId: workspaceIdRef.current,
+          }
+        );
+        // Falha por reunião não aborta o ciclo; a primeira mensagem basta para
+        // apontar a causa, e a reunião sem vínculo é retentada no próximo ciclo.
+        failure = result.errors[0] ?? "";
+      } catch (err: unknown) {
+        failure = err instanceof Error ? err.message : String(err);
+        console.error("[meetingTracker] falha no ciclo de rastreamento", err);
+      }
+
+      failure = truncateError(failure);
+      // Escrever só na mudança: o ciclo roda a cada 2 min e gravar sempre seria um
+      // UPDATE no SQLite por ciclo, para sempre, sem nada de novo para dizer.
+      if (config.get("calendarLastSyncError") !== failure) {
+        await config.set("calendarLastSyncError", failure);
+      }
+      await emit(OVERLAY_EVENTS.MEETING_TRACKER_SYNC_RESULT, {
+        tracked: result?.tracked ?? 0,
+        plannedCreated: result?.plannedCreated ?? 0,
+        plannedLinked: result?.plannedLinked ?? 0,
+        error: failure,
+      } satisfies MeetingTrackerSyncResultPayload);
+
+      // Planejada criada ou adotada (que ganha a ação do Meet) → refresh da lista.
+      // Vale também no ciclo parcial: o que foi criado antes da falha está gravado.
+      if (result && result.plannedCreated + result.plannedLinked > 0) {
         await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       }
       return result;
@@ -150,16 +191,12 @@ export function useMeetingTracker() {
         if (prev) await trackedMeetingRepo.upsert({ ...prev, ended: true });
       }
 
-      // Copia projeto/categoria da PlannedTask de mesmo nome, se houver.
-      // Escopado ao workspace ativo de propósito: a tarefa nasce nele, e
-      // projeto e categoria são únicos POR workspace (§4.3) — casar com uma
-      // planejada de outro workspace colaria nela um projectId que não existe
-      // no seu. Aqui `findForDate` sem workspace não é o caminho de integração
-      // do §6.7; é um vazamento entre workspaces.
-      const planned = await plannedTaskRepo.findForDate(today, workspaceIdRef.current);
-      const match = planned.find(
-        (p) => p.name.toLowerCase().trim() === m.title.toLowerCase().trim()
-      );
+      // Copia projeto/categoria da planejada vinculada à reunião. O vínculo é
+      // gravado pelo sync (criada por ele ou adotada de quem já existia), então
+      // aqui não se adivinha por nome: renomear a planejada não desfaz o
+      // pareamento, e uma reunião que adotou a planejada do Monday herda também
+      // o Project Stage que o envio de horas exige.
+      const match = m.plannedTaskId ? await plannedTaskRepo.findById(m.plannedTaskId) : null;
       const task = await switchRef.current({
         name: m.title,
         projectId: match?.projectId ?? null,
@@ -186,8 +223,18 @@ export function useMeetingTracker() {
     }
 
     // Busca manual disparada pelo botão "Buscar eventos agora" nas Configurações.
+    // O botão fica travado até o evento de resultado chegar, então **todo** caminho
+    // de saída precisa publicá-lo — inclusive os que não fazem busca nenhuma.
     async function handleSyncNow() {
-      if (disposed || inFlight || !enabled()) return;
+      if (disposed || inFlight || !enabled()) {
+        await emit(OVERLAY_EVENTS.MEETING_TRACKER_SYNC_RESULT, {
+          tracked: 0,
+          plannedCreated: 0,
+          plannedLinked: 0,
+          error: inFlight ? "" : "Conecte o Google e ative o rastreamento de reuniões.",
+        } satisfies MeetingTrackerSyncResultPayload);
+        return;
+      }
       inFlight = true;
       try {
         lastSyncMs = Date.now();
@@ -242,5 +289,7 @@ export function useMeetingTracker() {
     };
     // createCalendarImporter e os repos vêm de Providers e são estáveis por sessão;
     // capturá-los uma vez no mount é seguro (§9.2).
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+    // `workspaceLoading` faz true→false uma vez por mount, então é uma
+    // reexecução só — e é ela que faz o primeiro ciclo contar da resolução.
+  }, [config.isLoaded, workspaceLoading]); // eslint-disable-line react-hooks/exhaustive-deps
 }

@@ -64,6 +64,12 @@ export interface AppConfig {
   sheetsDailySyncLastTimestamp: string;
   // Google Agenda
   calendarAutoTrackingEnabled: boolean;
+  /**
+   * Resultado do último ciclo de rastreamento: "" quando correu bem, a mensagem
+   * de erro quando falhou. O ciclo roda em segundo plano e engolia a falha em
+   * silêncio — sem este rastro, reunião que não vira planejada é indiagnosticável.
+   */
+  calendarLastSyncError: string;
   // Tokens Google OAuth
   googleAccessToken: string;
   googleRefreshToken: string;

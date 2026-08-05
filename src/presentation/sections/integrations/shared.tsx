@@ -1,7 +1,30 @@
-import { CheckCircle2, ChevronDown, ChevronRight, Circle } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Circle } from "lucide-react";
 import { useState } from "react";
+import type { SyncFeedback } from "@presentation/hooks/useSyncNowButton";
 
 /* ── helpers ── */
+
+/**
+ * Resultado da última busca manual, abaixo do botão que a disparou. Existe além do
+ * toast porque o toast some, e a tela de Integrações é onde se confere se a
+ * integração está de pé.
+ */
+export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
+  return (
+    <p
+      className={`flex items-start gap-1.5 mt-2 text-[11px] leading-relaxed ${
+        feedback.ok ? "text-green-400" : "text-rose-400"
+      }`}
+    >
+      {feedback.ok ? (
+        <CheckCircle2 size={12} className="mt-px shrink-0" />
+      ) : (
+        <AlertCircle size={12} className="mt-px shrink-0" />
+      )}
+      {feedback.text}
+    </p>
+  );
+}
 
 export function StatusBadge({ connected, email }: { connected: boolean; email?: string }) {
   return connected ? (
@@ -17,7 +40,13 @@ export function StatusBadge({ connected, email }: { connected: boolean; email?: 
   );
 }
 
-export function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+export function Toggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <button
       onClick={() => onChange(!checked)}

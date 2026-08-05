@@ -359,7 +359,79 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Autorização | botão OAuth |
 | Rastrear reuniões automaticamente | toggle (`calendarAutoTrackingEnabled`, padrão desativado; requer Google conectado) |
 
-> **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 30 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
+> **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 2 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
+
+> **Rastrear e planejar são etapas separadas, e a planejada tem vínculo explícito**
+> (`calendar_tracked_meetings.planned_task_id`). Enquanto a criação da planejada vivia dentro do laço
+> que rastreia, ela só acontecia para evento novo **naquele ciclo**: o upsert do rastreamento gravava
+> primeiro, e uma falha na criação deixava o evento marcado como visto para sempre — o prompt
+> disparava no horário e a planejada nunca aparecia, nem reabrindo o app, porque o ciclo seguinte
+> pulava o evento por já conhecê-lo. Agora `ensurePlannedTasks` parte de **toda** reunião do dia sem
+> vínculo, então falha é nova tentativa no ciclo seguinte, e reunião que ficou sem planejada se
+> recupera sozinha. O vínculo grava logo após cada criação: erro na terceira reunião não desfaz as
+> duas primeiras nem marca a terceira como resolvida.
+>
+> `NULL` significa **ainda não tratada**; preenchido significa **tratada**, e continua assim mesmo
+> que a planejada seja apagada depois — planejada apagada à mão não volta, nem quando a poda do
+> Monday é que a apagou. A poda diária do rastreamento é o que mantém isso vivível: uma recorrente
+> volta a ser avaliada na próxima ocorrência.
+>
+> O vínculo também substituiu o casamento **por nome** que o prompt fazia para copiar projeto e
+> categoria: renomear a planejada não desfaz mais o pareamento.
+>
+> **O vínculo é gravado por `setPlannedTaskId`, não por `upsert`.** A escrita estreita não é
+> economia: o `upsert` parte de um objeto lido no início do ciclo, e o prompt de reunião grava
+> `startedTaskId` **fora** da guarda `inFlight`. Reescrever a linha inteira por cima devolveria
+> `startedTaskId` a null no meio de uma reunião em andamento — o prompt de início seria reoferecido e
+> o de término nunca dispararia.
+>
+> **Falha de uma reunião não aborta o ciclo.** Cada uma tem seu `try` e as mensagens voltam em
+> `errors`: sem isso, um erro na terceira deixava a quarta e a quinta sem planejada e levava a poda
+> diária junto.
+
+> **Reunião e item do Monday para o mesmo trabalho não viram duas planejadas.** Existindo planejada
+> de mesmo nome no dia — inclusive importada do Monday —, a reunião **adota** aquela em vez de criar
+> outra. Sem isso sobravam duas linhas no planejamento, uma com o link do Meet e outra com o Project
+> Stage que o envio de horas ao Monday exige; adotando, a mesma linha tem os dois. O nome usado é o
+> **do evento**, não o da reunião rastreada, porque o reconcile pode tê-lo atualizado no mesmo ciclo.
+>
+> **Na adoção entra só o link de conferência, nunca o `htmlLink` do evento** — na criação o `htmlLink`
+> segue valendo como reserva, porque a planejada nasceu daquele evento. A planejada adotada costuma
+> ser de longa vida (recorrente, ou de período, como as que o Monday cria) e o rastreamento é podado
+> todo dia: amanhã a mesma reunião volta a adotá-la. Como o `htmlLink` é único por ocorrência, o
+> dedupe nunca casaria e a planejada acumularia uma ação por dia, indefinidamente. O link de
+> conferência de uma recorrente é o mesmo em toda ocorrência — e é o único que serve para entrar na
+> reunião.
+>
+> **O casamento é por nome exato, e de propósito.** Matching aproximado penduraria a reunião no
+> trabalho errado em silêncio, num job de fundo, herdando projeto e etapa errados — duplicata visível
+> é melhor que vínculo errado invisível. Nomes diferentes continuam gerando duas planejadas; a saída
+> desenhada para isso é um apelido de agenda na planejada, ainda não implementado.
+
+> **A falha do ciclo fica registrada** em `calendarLastSyncError` e aparece como frase abaixo do
+> "Buscar eventos agora". O ciclo roda em segundo plano e engolia o erro com um `.catch(() => null)`:
+> reunião que não virava planejada não deixava rastro nenhum, e a causa raiz do episódio de
+> 2026-08-04 se perdeu por isso. A mensagem vem de terceiro, então é truncada antes de persistir, e a
+> config só é escrita quando o valor muda — a cada 2 min, gravar sempre seria um `UPDATE` por ciclo
+> sem nada novo a dizer.
+>
+> **Quem avisa a tela é o evento `MEETING_TRACKER_SYNC_RESULT`**, emitido em todo caminho de saída,
+> como o `MONDAY_IMPORT_SYNC_RESULT`. Ler a config depois de um tempo fixo mostrava o estado anterior
+> justamente quando a busca demorava, e um ciclo automático bem-sucedido nunca apagaria da tela um
+> erro antigo.
+>
+> Os dois botões de "buscar agora" — este e o do Monday — compartilham o `useSyncNowButton` e a
+> `SyncFeedbackLine` (§9.4). O **watchdog** dentro do hook não é detalhe: o rastreador registra o
+> listener num efeito que espera config e workspace resolverem, então um clique nessa janela é
+> emitido no vazio, e sem o corte por tempo o botão giraria até a tela remontar.
+
+> **Os rastreadores esperam o workspace resolver, e o gate é no efeito.** Enquanto o
+> `WorkspaceContext` carrega, o id ativo é o do workspace "Padrão" — um palpite, não uma escolha.
+> Sincronizar antes da resolução criaria planejada no workspace errado (agenda) ou leria o catálogo
+> errado e não faria nada em silêncio (Monday). O gate **não** pode ficar no `enabled()` de dentro do
+> tick: ali ele não adiaria o primeiro ciclo por um tick, e sim pelo intervalo inteiro — 30 min no
+> Monday. No efeito, `loading` faz true→false uma vez por mount, o efeito reexecuta e o atraso inicial
+> passa a contar da resolução. Vale para `useMeetingTracker` e `useMondayItemTracker`.
 
 **Clockify:**
 | Campo | Tipo |
@@ -848,7 +920,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-04 (§5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-04 (§5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
