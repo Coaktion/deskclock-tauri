@@ -19,14 +19,14 @@ export function MondaySendModal({ projects, categories, onClose }: MondaySendMod
 
   const adapter = useMemo<TaskSendAdapter>(() => {
     const apiKey = config.isLoaded ? config.get("mondayApiKey") : null;
-    const workspaceId = config.isLoaded ? config.get("mondayActiveWorkspaceId") : null;
     // Envio manual escreve sempre: o usuário selecionou e mandou enviar, então o
     // "nada mudou desde a última vez" do auto-sync não vale aqui.
-    const sender =
-      apiKey && workspaceId ? factories.createMondayTaskSender({ forceWrite: true }) : null;
+    const sender = apiKey ? factories.createMondayTaskSender({ forceWrite: true }) : null;
+    // Sem quadro de destino não há onde criar a atividade — o projeto existe no
+    // Portfólio, mas a coluna "ID Quadro Projeto" ainda está vazia.
     const mappedProjectIds = new Set(
       (config.isLoaded ? config.get("mondayProjectMapping") : [])
-        .filter((m) => m.workspaceId === workspaceId)
+        .filter((m) => !!m.mondayBoardId)
         .map((m) => m.deskclockProjectId)
     );
 

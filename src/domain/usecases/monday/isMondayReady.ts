@@ -4,31 +4,30 @@ import { normalizeProjectMappings } from "./normalizeProjectMappings";
 /** As chaves de config que decidem se a integração está de pé. */
 export interface MondayReadinessConfig {
   apiKey: string;
-  activeWorkspaceId: string;
+  /** Board que lista os projetos. */
+  portfolioBoardId: string;
+  /** Board que guarda o catálogo canônico dos rótulos. */
+  reportBoardId: string;
   projectMapping: MondayProjectMapping[] | undefined;
-  internalBoardId: string;
-  projectStageFieldId: string;
 }
 
 /**
  * Se a integração do Monday está configurada ponta a ponta.
  *
- * Diferente do Clockify e do Google, ter a chave de API não basta: o Monday só
- * é utilizável depois de o usuário escolher os boards, o board interno e o
- * campo que alimenta o Project Stage. Sem qualquer um deles, todas as ações da
- * integração abrem em estado vazio ou recusam o envio — a coluna Project Stage
- * é exigida na escrita das horas.
+ * Diferente do Clockify e do Google, ter a chave de API não basta: sem os dois
+ * boards não há de onde tirar os projetos nem os rótulos, e sem projeto
+ * importado não há board de destino a consultar. Todas as ações da integração
+ * abririam em estado vazio.
  *
- * **Os boards contam pelo workspace ativo do Monday**, não pelo total: o
- * mapeamento guarda os vínculos de todos os workspaces, e trocar para um
- * workspace ainda não importado deixa a integração sem board algum a consultar.
+ * **Projeto sem quadro de destino não conta.** Ele existe de propósito — a
+ * coluna "ID Quadro Projeto" está vazia em 14 dos 62 itens do Portfólio —, mas
+ * as três ações do atalho consultam boards. Com projetos mas nenhum quadro,
+ * elas abrem vazias, que é exatamente o que o atalho existe para evitar.
  */
 export function isMondayReady(config: MondayReadinessConfig): boolean {
   if (!config.apiKey) return false;
-  if (!config.internalBoardId) return false;
-  if (!config.projectStageFieldId) return false;
+  if (!config.portfolioBoardId) return false;
+  if (!config.reportBoardId) return false;
 
-  return normalizeProjectMappings(config.projectMapping).some(
-    (m) => m.workspaceId === config.activeWorkspaceId
-  );
+  return normalizeProjectMappings(config.projectMapping).some((m) => !!m.mondayBoardId);
 }

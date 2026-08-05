@@ -26,27 +26,23 @@ export function MondayImportSection({
   const [mappings, setMappings] = useState<MondayProjectMapping[]>([]);
   const [destinationId, setDestinationId] = useState("");
 
-  // Distinto do destino: este é o workspace do **Monday**.
-  const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
-
   useEffect(() => {
     if (!config.isLoaded) return;
-    setMappings(
-      normalizeProjectMappings(config.get("mondayProjectMapping")).filter(
-        (m) => m.workspaceId === mondayWorkspaceId
-      )
-    );
-    // Relê só quando a config carrega ou o workspace do Monday muda: `config` é
-    // recriado a cada render do provider e sobrescreveria um import em curso.
-  }, [config.isLoaded, mondayWorkspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    setMappings(normalizeProjectMappings(config.get("mondayProjectMapping")));
+    // Relê só quando a config carrega: `config` é recriado a cada render do
+    // provider e sobrescreveria um import em curso.
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!destinationId && activeWorkspaceId) setDestinationId(activeWorkspaceId);
   }, [activeWorkspaceId, destinationId]);
 
-  // O board interno tem o próprio Activity Type; os rótulos de etapa, não — eles
-  // vêm de qualquer board mapeado, já que todos nascem do mesmo template.
-  const stageSource = mappings.find((m) => m.projectStageLabels.length > 0);
+  // Os rótulos de etapa vêm de qualquer projeto **de cliente**: nos boards
+  // internos a coluna se chama "Project Phase" e traz outros quatro rótulos, que
+  // não são a etapa que o envio das horas preenche.
+  const stageSource = mappings.find(
+    (m) => m.scope === "cliente" && m.projectStageLabels.length > 0
+  );
 
   return (
     <SubSection icon={<DownloadCloud size={15} />} title="Importação de dados">
@@ -76,7 +72,6 @@ export function MondayImportSection({
 
         <MondayProjectsImport
           mappings={mappings}
-          mondayWorkspaceId={mondayWorkspaceId}
           deskclockWorkspaceId={destinationId}
           onImported={setMappings}
           reloadProjects={reloadProjects}

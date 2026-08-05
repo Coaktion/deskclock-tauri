@@ -81,15 +81,14 @@ export function IntegrationsRail() {
   const sheetsConnected = googleConnected && !!config.get("integrationGoogleSheetsSpreadsheetId");
   const clockifyConnected = !!config.get("clockifyApiKey");
 
-  // O Monday só entra configurado ponta a ponta: com a chave de API, mas sem
-  // boards, board interno ou campo de etapa, todas as ações abrem vazias ou
-  // recusam o envio. Ver `isMondayReady`.
+  // O Monday só entra configurado ponta a ponta: com a chave de API, mas sem os
+  // dois boards ou sem projeto com quadro de destino, todas as ações abrem
+  // vazias. Ver `isMondayReady`.
   const mondayReady = isMondayReady({
     apiKey: config.get("mondayApiKey"),
-    activeWorkspaceId: config.get("mondayActiveWorkspaceId"),
+    portfolioBoardId: config.get("mondayPortfolioBoardId"),
+    reportBoardId: config.get("mondayReportBoardId"),
     projectMapping: config.get("mondayProjectMapping"),
-    internalBoardId: config.get("mondayInternalBoardId"),
-    projectStageFieldId: config.get("mondayProjectStageFieldId"),
   });
 
   if (!googleConnected && !clockifyConnected && !mondayReady) return null;

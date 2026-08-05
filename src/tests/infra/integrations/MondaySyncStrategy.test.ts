@@ -33,11 +33,13 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
     mondayAutoSync: true,
     mondayAutoSyncMode: "per-task",
     mondayApiKey: "token",
-    mondayActiveWorkspaceId: "ws1",
+    mondayPortfolioBoardId: "ws1",
     mondayDailySyncLastTimestamp: "",
     mondayProjectMapping: [
       {
         deskclockProjectId: "proj-1",
+        portfolioItemId: "item-proj-1",
+        scope: "cliente" as const,
         mondayBoardId: "b1",
         mondayBoardName: "Board",
         activitiesGroupId: "g1",
@@ -51,7 +53,6 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
           status: "status",
           person: "person",
         },
-        workspaceId: "ws1",
       },
     ],
     ...overrides,
@@ -157,7 +158,7 @@ describe("MondaySyncStrategy", () => {
     it("não habilita sem workspace", () => {
       const { taskRepo, logRepo, itemRepo } = makeDeps();
       const strategy = new MondaySyncStrategy(
-        makeConfig({ mondayActiveWorkspaceId: "" }),
+        makeConfig({ mondayPortfolioBoardId: "" }),
         taskRepo,
         logRepo,
         itemRepo,

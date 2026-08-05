@@ -30,7 +30,7 @@ export class MondaySyncStrategy implements ISyncStrategy {
       this.config.get("mondayAutoSync") &&
       this.config.get("mondayAutoSyncMode") === mode &&
       !!this.config.get("mondayApiKey") &&
-      !!this.config.get("mondayActiveWorkspaceId")
+      !!this.config.get("mondayPortfolioBoardId")
     );
   }
 
@@ -52,13 +52,18 @@ export class MondaySyncStrategy implements ISyncStrategy {
     );
   }
 
-  /** Projetos com board mapeado no workspace ativo — sem board não há onde criar a atividade. */
+  /**
+   * Projetos com board de destino — sem board não há onde criar a atividade.
+   *
+   * O item de Portfólio sem a coluna "ID Quadro Projeto" preenchida vira um
+   * projeto normal, mas as horas dele não têm para onde ir: incluí-lo aqui
+   * mandaria o envio tentar criar atividade num board vazio a cada ciclo.
+   */
   private mappedProjectIds(): Set<string> {
-    const workspaceId = this.config.get("mondayActiveWorkspaceId");
     return new Set(
       this.config
         .get("mondayProjectMapping")
-        .filter((m) => m.workspaceId === workspaceId)
+        .filter((m) => !!m.mondayBoardId)
         .map((m) => m.deskclockProjectId)
     );
   }

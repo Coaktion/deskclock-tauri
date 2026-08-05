@@ -39,14 +39,9 @@ export function MondayIntegrationCard() {
     await config.set("mondayUserId", "");
     await config.set("mondayUserName", "");
     await config.set("mondayUserEmail", "");
-    await config.set("mondayActiveWorkspaceId", "");
-    await config.set("mondayActiveWorkspaceName", "");
-    await config.set("mondayClientsFolderId", "");
-    await config.set("mondayInternalFolderId", "");
-    await config.set("mondayInternalBoardId", "");
-    await config.set("mondayWorkspaceCache", []);
-    await config.set("mondayFolderCache", []);
-    await config.set("mondayBoardCache", []);
+    // Os dois board ids **ficam**: descrevem a conta, não a sessão. Reconectar
+    // com o mesmo token deve reencontrar o Portfólio onde ele estava, e limpá-los
+    // faria a reconexão exigir dois ids que ninguém tem à mão.
     setConnected(false);
     setEmail("");
     setLoading(false);

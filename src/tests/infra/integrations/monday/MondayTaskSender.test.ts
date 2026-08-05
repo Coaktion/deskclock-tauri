@@ -61,6 +61,8 @@ const DATE_COLUMN_IDS = { startDate: "date_mm33tthy", endDate: "date_mm33zcmr" }
 
 const MAPPING: MondayProjectMapping = {
   deskclockProjectId: "proj-1",
+  portfolioItemId: "item-proj-1",
+  scope: "cliente" as const,
   mondayBoardId: BOARD_ID,
   mondayBoardName: "[BR] Cliente Produto 01-999",
   activitiesGroupId: GROUP_ID,
@@ -68,14 +70,13 @@ const MAPPING: MondayProjectMapping = {
   projectStageLabels: ["Execução", "Discovery"],
   projectStageTitle: "Project Stage",
   columnIds: COLUMN_IDS,
-  workspaceId: WORKSPACE_ID,
 };
 
 function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
   const values: Partial<AppConfig> = {
     mondayApiKey: "token",
     mondayUserId: USER_ID,
-    mondayActiveWorkspaceId: WORKSPACE_ID,
+    mondayPortfolioBoardId: WORKSPACE_ID,
     mondayProjectMapping: [MAPPING],
     mondayProjectStageFieldId: STAGE_FIELD_ID,
     ...overrides,
@@ -183,17 +184,6 @@ beforeEach(() => {
 
 describe("MondayTaskSender", () => {
   describe("pré-condições", () => {
-    it("falha sem workspace configurado", async () => {
-      const sender = new MondayTaskSender(
-        makeConfig({ mondayActiveWorkspaceId: "" }),
-        makeItemRepo(),
-        makeFieldRepo(),
-        makeCategoryRepo(),
-        makeClient()
-      );
-      await expect(sender.send([makeTask()])).rejects.toThrow(/workspace/i);
-    });
-
     it("falha sem usuário do Monday identificado", async () => {
       const sender = new MondayTaskSender(
         makeConfig({ mondayUserId: "" }),
@@ -242,21 +232,12 @@ describe("MondayTaskSender", () => {
       await expect(sender.send([makeTask()])).rejects.toThrow(/não estão mapeados/);
     });
 
-    it("desconsidera mapeamentos de outro workspace", async () => {
+    // O item de Portfólio existe e virou projeto, mas a coluna "ID Quadro
+    // Projeto" está vazia: não há board onde criar a atividade. Deixá-lo passar
+    // faria o envio tentar escrever num board de id vazio a cada ciclo.
+    it("desconsidera o projeto ainda sem quadro de destino", async () => {
       const config = makeConfig({
-        mondayProjectMapping: [
-          {
-            deskclockProjectId: "proj-1",
-            mondayBoardId: BOARD_ID,
-            mondayBoardName: "Board",
-            activitiesGroupId: GROUP_ID,
-            activityTypeLabels: ACTIVITY_TYPE_LABELS,
-            projectStageLabels: ["Execução", "Discovery"],
-            projectStageTitle: "Project Stage",
-            columnIds: COLUMN_IDS,
-            workspaceId: "outro-ws",
-          },
-        ],
+        mondayProjectMapping: [{ ...MAPPING, mondayBoardId: "" }],
       });
       const sender = new MondayTaskSender(
         config,
@@ -797,13 +778,11 @@ describe("MondayTaskSender", () => {
       await sender.send([
         makeTask({
           id: "t1",
-          workspaceId: "ws-1",
           name: "Tarefa A",
           startTime: "2026-07-30T09:00:00.000Z",
         }),
         makeTask({
           id: "t2",
-          workspaceId: "ws-1",
           name: "Tarefa B",
           startTime: "2026-07-30T17:00:00.000Z",
         }),
@@ -881,13 +860,11 @@ describe("MondayTaskSender", () => {
       );
       const billableTask = makeTask({
         id: "t1",
-        workspaceId: "ws-1",
         billable: true,
         startTime: "2026-07-30T12:00:00.000Z",
       });
       const otherTask = makeTask({
         id: "t2",
-        workspaceId: "ws-1",
         billable: false,
         startTime: "2026-07-30T14:00:00.000Z",
       });
@@ -954,11 +931,12 @@ describe("MondayTaskSender", () => {
         mondayProjectMapping: [
           {
             deskclockProjectId: "proj-1",
+            portfolioItemId: "item-proj-1",
+            scope: "cliente" as const,
             mondayBoardId: BOARD_ID,
             mondayBoardName: "[BR] Cliente Produto 01-999",
             activitiesGroupId: GROUP_ID,
             columnIds: COLUMN_IDS,
-            workspaceId: WORKSPACE_ID,
           } as MondayProjectMapping,
         ],
       });

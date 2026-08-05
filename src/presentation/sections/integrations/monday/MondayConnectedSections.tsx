@@ -2,7 +2,7 @@ import { ListChecks, Send, DownloadCloud } from "lucide-react";
 import { MondayAutoImportSection } from "./MondayAutoImportSection";
 import { MondayAutoSyncSection } from "./MondayAutoSyncSection";
 import { MondayImportSection } from "./MondayImportSection";
-import { MondayWorkspaceSection } from "./MondayWorkspaceSection";
+import { MondayBoardsSection } from "./MondayBoardsSection";
 
 interface MondayConnectedSectionsProps {
   reloadProjects: () => Promise<void>;
@@ -24,7 +24,7 @@ export function MondayConnectedSections({
 }: MondayConnectedSectionsProps) {
   return (
     <>
-      <MondayWorkspaceSection />
+      <MondayBoardsSection />
       <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
       <MondayAutoSyncSection />
       <MondayAutoImportSection />

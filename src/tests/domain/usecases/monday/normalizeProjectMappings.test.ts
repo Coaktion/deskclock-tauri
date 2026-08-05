@@ -15,7 +15,6 @@ const LEGACY = {
     status: "status",
     person: "person",
   },
-  workspaceId: "ws-monday",
 } as MondayProjectMapping;
 
 describe("normalizeProjectMappings", () => {
@@ -34,6 +33,19 @@ describe("normalizeProjectMappings", () => {
 
     expect(mapping.activityTypeLabels).toEqual(["Development"]);
     expect(mapping.projectStageTitle).toBe("Etapa do projeto");
+  });
+
+  it("assume cliente no mapeamento anterior ao escopo", () => {
+    const [mapping] = normalizeProjectMappings([LEGACY]);
+
+    expect(mapping.scope).toBe("cliente");
+    expect(mapping.portfolioItemId).toBe("");
+  });
+
+  it("não sobrescreve o escopo já gravado", () => {
+    const [mapping] = normalizeProjectMappings([{ ...LEGACY, scope: "interno" }]);
+
+    expect(mapping.scope).toBe("interno");
   });
 
   it("aceita config ausente", () => {

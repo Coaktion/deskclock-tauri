@@ -1,4 +1,8 @@
-import { importMondayProjects } from "@domain/usecases/monday/importMondayProjects";
+import {
+  importMondayProjects,
+  resolveProjectDestination,
+} from "@domain/usecases/monday/importMondayProjects";
+import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -14,16 +18,49 @@ interface SkippedBoard {
   reason: string;
 }
 
-/** Um projeto por board de cliente, mais o board interno vinculado. */
+/**
+ * Campo do id do quadro, para o projeto cujo item de Portfólio ainda não tem a
+ * coluna "ID Quadro Projeto" preenchida — 14 dos 62 hoje.
+ *
+ * Grava no blur ou no Enter, e não a cada tecla: um id parcial viraria uma
+ * consulta a board inexistente no próximo ciclo do rastreador.
+ */
+function ProjectBoardIdInput({
+  value,
+  onSave,
+}: {
+  value: string;
+  onSave: (boardId: string) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  function commit() {
+    const next = draft.trim();
+    if (next === value) return;
+    void onSave(next);
+  }
+
+  return (
+    <input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      placeholder="ID do quadro"
+      title="Id do board onde as horas deste projeto serão gravadas"
+      className="shrink-0 w-28 bg-gray-800 border border-amber-500/40 rounded px-2 py-0.5 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+    />
+  );
+}
+
+/** Um projeto por item do board de Portfólio. */
 export function MondayProjectsImport({
   mappings,
-  mondayWorkspaceId,
   deskclockWorkspaceId,
   onImported,
   reloadProjects,
 }: {
   mappings: MondayProjectMapping[];
-  mondayWorkspaceId: string;
   deskclockWorkspaceId: string;
   onImported: (mappings: MondayProjectMapping[]) => void;
   reloadProjects: () => Promise<void>;
@@ -58,8 +95,35 @@ export function MondayProjectsImport({
     void loadNames();
   }, [loadNames, mappings]);
 
+  const portfolioBoardId = config.isLoaded ? config.get("mondayPortfolioBoardId") : "";
   const linked = mappings.filter((m) => namesById.has(m.deskclockProjectId));
   const stale = mappings.length - linked.length;
+  const missingBoard = linked.filter((m) => !m.mondayBoardId).length;
+
+  /**
+   * Grava o quadro digitado à mão e já lê o schema dele.
+   *
+   * Sem ler o schema o vínculo ficaria sem grupo nem colunas — o projeto
+   * apareceria vinculado e o envio continuaria sem ter onde criar a atividade,
+   * que é o problema que o campo existe para resolver.
+   */
+  async function handleSetBoardId(portfolioItemId: string, boardId: string) {
+    const { destination, failure } = await resolveProjectDestination(
+      factories.createMondayApi(),
+      boardId
+    );
+    if (failure) {
+      await showToast("error", failure);
+      return;
+    }
+
+    const next = normalizeProjectMappings(config.get("mondayProjectMapping")).map((m) =>
+      m.portfolioItemId === portfolioItemId ? { ...m, mondayBoardId: boardId, ...destination } : m
+    );
+    await config.set("mondayProjectMapping", next);
+    onImported(next);
+    await showToast("success", boardId ? "Quadro vinculado." : "Quadro removido.");
+  }
 
   async function handleImport() {
     setImporting(true);
@@ -68,18 +132,15 @@ export function MondayProjectsImport({
       const result = await importMondayProjects({
         api: factories.createMondayApi(),
         projectRepo,
-        workspaceId: mondayWorkspaceId,
+        portfolioBoardId: config.get("mondayPortfolioBoardId"),
         deskclockWorkspaceId,
-        clientsFolderId: config.get("mondayClientsFolderId"),
-        internalFolderId: config.get("mondayInternalFolderId"),
-        internalBoardId: config.get("mondayInternalBoardId"),
+        // Sem isto, o quadro digitado à mão logo abaixo seria desfeito no
+        // primeiro "Atualizar": o Portfólio devolve a coluna vazia.
+        existingMappings: normalizeProjectMappings(config.get("mondayProjectMapping")),
         onProgress: (done, total) => setProgress({ done, total }),
       });
 
-      const otherWorkspaces = config
-        .get("mondayProjectMapping")
-        .filter((m) => m.workspaceId !== mondayWorkspaceId);
-      await config.set("mondayProjectMapping", [...otherWorkspaces, ...result.mappings]);
+      await config.set("mondayProjectMapping", result.mappings);
       // O clique acabou de fazer o trabalho do dia: marcar a data evita que a
       // releitura automática repita a mesma varredura horas depois, e limpar o
       // erro tira da tela uma falha que deixou de valer.
@@ -111,19 +172,19 @@ export function MondayProjectsImport({
   return (
     <ImportCard
       title="Projetos"
-      hint="Cada board vira um projeto e guarda onde as horas serão gravadas. A lista é relida sozinha uma vez por dia."
+      hint="Cada item do Portfólio vira um projeto e guarda onde as horas serão gravadas. A lista é relida sozinha uma vez por dia."
       action={
         <ImportActionButton
           label={linked.length > 0 ? "Atualizar" : "Importar"}
           busy={importing}
-          disabled={!mondayWorkspaceId || !deskclockWorkspaceId}
+          disabled={!portfolioBoardId || !deskclockWorkspaceId}
           onClick={handleImport}
         />
       }
     >
       {progress && progress.total > 0 && (
         <p className="text-[11px] text-gray-500">
-          Lendo boards: {progress.done}/{progress.total}
+          Lendo projetos: {progress.done}/{progress.total}
         </p>
       )}
 
@@ -132,16 +193,32 @@ export function MondayProjectsImport({
       ) : (
         <div className="space-y-1">
           {linked.map((m) => (
-            <div key={m.mondayBoardId} className="flex items-center gap-3 py-1">
+            <div key={m.portfolioItemId} className="flex items-center gap-3 py-1">
               <span className="text-xs text-gray-300 flex-1 truncate">
                 {namesById.get(m.deskclockProjectId)}
               </span>
-              <span className="text-xs text-gray-500 truncate max-w-[45%]">
-                {m.mondayBoardName}
-              </span>
+              {m.mondayBoardId ? (
+                <span className="text-xs text-gray-500 truncate max-w-[45%]">
+                  {m.mondayBoardName}
+                </span>
+              ) : (
+                <ProjectBoardIdInput
+                  value={m.mondayBoardId}
+                  onSave={(boardId) => handleSetBoardId(m.portfolioItemId, boardId)}
+                />
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {/* O motivo fica visível para o campo acima não parecer decoração: sem o
+          id, tudo funciona menos o que a integração existe para fazer. */}
+      {missingBoard > 0 && (
+        <p className="text-[11px] text-amber-500/80">
+          {missingBoard} projeto(s) sem quadro — as horas deles não sobem. Preencha o &quot;ID
+          Quadro Projeto&quot; no Portfólio ou digite o id aqui.
+        </p>
       )}
 
       {/* A releitura diária roda em segundo plano: sem esta linha, ela falharia

@@ -5,8 +5,7 @@ import type {
   ClockifyProjectMapping,
   ClockifyCategoryMapping,
 } from "@shared/types/clockifyConfig";
-import type { MondayWorkspaceRef, MondayProjectMapping } from "@shared/types/mondayConfig";
-import type { MondayBoardRef, MondayFolder } from "@shared/types/monday";
+import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 
 export interface OverlayPosition {
   x: number;
@@ -114,26 +113,24 @@ export interface AppConfig {
   mondayUserId: string;
   mondayUserName: string;
   mondayUserEmail: string;
-  mondayActiveWorkspaceId: string;
-  mondayActiveWorkspaceName: string;
   /**
-   * Catálogo do Monday cacheado: sem ele a tela de importação refazia três
-   * chamadas à API a cada abertura. Recarregado só pelo botão de atualizar ou
-   * quando o workspace do Monday muda.
+   * Board que lista os projetos ("Portfólio Aktie Now"). Cada item vira um
+   * Project, e é ele que diz em qual board as horas daquele projeto são
+   * gravadas.
+   *
+   * Substituiu cinco escolhas de configuração — workspace do Monday, pasta de
+   * clientes, pasta de internos, board interno e o mapeamento manual board ↔
+   * projeto — que descreviam à mão o que o próprio Monday já descreve.
    */
-  mondayWorkspaceCache: MondayWorkspaceRef[];
-  mondayFolderCache: MondayFolder[];
-  mondayBoardCache: MondayBoardRef[];
-  /** Pasta dos boards de cliente; vazio = sem filtro de pasta (fallback por nome). */
-  mondayClientsFolderId: string;
-  /** Pasta dos boards internos; vazio = nenhum board interno é importado. */
-  mondayInternalFolderId: string;
+  mondayPortfolioBoardId: string;
   /**
-   * Board interno **único** escolhido pelo usuário. Vira um Project como
-   * qualquer outro — a granularidade interna vem da categoria. Escolher outro
-   * substitui o anterior.
+   * Board "Report de Horas". **Não é destino de escrita**: criar item ali
+   * dispara uma automação que copia o apontamento para o board do projeto, mas
+   * não o atualiza nem o exclui — editar ou apagar aqui deixaria órfão o que
+   * foi copiado para lá. Serve de catálogo: é o único lugar onde os rótulos de
+   * cliente e os de projeto interno convivem, e semeia os dois numa leitura só.
    */
-  mondayInternalBoardId: string;
+  mondayReportBoardId: string;
   /**
    * Campo personalizado que alimenta a coluna "Project Stage" da atividade.
    * Vazio = a coluna não é preenchida.

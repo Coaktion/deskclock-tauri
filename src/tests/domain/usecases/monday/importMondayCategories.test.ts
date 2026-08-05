@@ -5,13 +5,13 @@ import type { ICategoryRepository } from "@domain/repositories/ICategoryReposito
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 
 const DESKCLOCK_WS = "ws-1";
-const MONDAY_WS = "15505674";
-const INTERNAL_BOARD = "int-1";
 
 function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMapping {
   return {
     deskclockProjectId: "p1",
+    portfolioItemId: "i1",
     mondayBoardId: "b1",
+    scope: "cliente",
     mondayBoardName: "[BR] Cliente Produto 01-999",
     activitiesGroupId: "g1",
     columnIds: {
@@ -24,7 +24,6 @@ function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMa
     activityTypeLabels: ["Development", "Meeting"],
     projectStageLabels: [],
     projectStageTitle: "",
-    workspaceId: MONDAY_WS,
     ...overrides,
   };
 }
@@ -67,15 +66,12 @@ describe("importMondayCategories", () => {
     ]);
   });
 
-  it("marca como non-billable os Activity Types do board interno", async () => {
+  it("marca como non-billable os Activity Types de projeto interno", async () => {
     const categoryRepo = makeRepo();
 
     await importMondayCategories({
       categoryRepo,
-      mappings: [
-        mapping({ mondayBoardId: INTERNAL_BOARD, activityTypeLabels: ["Recrutamento", "Estudo"] }),
-      ],
-      internalBoardId: INTERNAL_BOARD,
+      mappings: [mapping({ scope: "interno", activityTypeLabels: ["Recrutamento", "Estudo"] })],
       deskclockWorkspaceId: DESKCLOCK_WS,
     });
 
@@ -91,10 +87,9 @@ describe("importMondayCategories", () => {
     await importMondayCategories({
       categoryRepo,
       mappings: [
-        mapping({ mondayBoardId: INTERNAL_BOARD, activityTypeLabels: ["Meeting", "Estudo"] }),
+        mapping({ scope: "interno", activityTypeLabels: ["Meeting", "Estudo"] }),
         mapping({ activityTypeLabels: ["Meeting"] }),
       ],
-      internalBoardId: INTERNAL_BOARD,
       deskclockWorkspaceId: DESKCLOCK_WS,
     });
 

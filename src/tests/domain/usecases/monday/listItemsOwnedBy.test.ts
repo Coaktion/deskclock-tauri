@@ -11,6 +11,8 @@ function mapping(
 ): MondayProjectMapping {
   return {
     deskclockProjectId: `p-${mondayBoardId}`,
+    portfolioItemId: `i-${mondayBoardId}`,
+    scope: "cliente",
     mondayBoardId,
     mondayBoardName: `Board ${mondayBoardId}`,
     activitiesGroupId: "group_activities",
@@ -24,7 +26,6 @@ function mapping(
     activityTypeLabels: [],
     projectStageLabels: [],
     projectStageTitle: "Project Stage",
-    workspaceId: "ws-monday",
     ...overrides,
   };
 }

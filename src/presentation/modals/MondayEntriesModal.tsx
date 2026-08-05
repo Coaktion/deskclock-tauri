@@ -67,20 +67,19 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
   const config = useAppConfig();
   const apiKey = config.get("mondayApiKey");
   const userId = config.get("mondayUserId");
-  const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
 
   const [quick, setQuick] = useState<QuickFilter>("7days");
 
   useEscapeToClose(onClose);
 
+  // Só projeto com quadro de destino: sem ele não há atividade a listar, e o id
+  // vazio entraria na consulta que pede os itens de vários boards de uma vez.
   const mappings = useMemo(
     () =>
-      normalizeProjectMappings(config.get("mondayProjectMapping")).filter(
-        (m) => m.workspaceId === mondayWorkspaceId
-      ),
-    // Relê só quando a config carrega ou o workspace do Monday muda — `config`
-    // é recriado a cada render do provider.
-    [config.isLoaded, mondayWorkspaceId] // eslint-disable-line react-hooks/exhaustive-deps
+      normalizeProjectMappings(config.get("mondayProjectMapping")).filter((m) => !!m.mondayBoardId),
+    // Relê só quando a config carrega — `config` é recriado a cada render do
+    // provider.
+    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const range = useMemo(() => {
@@ -115,12 +114,12 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
   const dayGroups = useMemo(() => groupByDay(entries), [entries]);
   const totalHours = entries.reduce((sum, e) => sum + e.hoursDecimal, 0);
 
-  if (!apiKey || !mondayWorkspaceId || !userId) {
+  if (!apiKey || !userId || mappings.length === 0) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
         <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
           <p className="text-sm text-gray-200 mb-4">
-            Conecte o Monday e escolha um workspace na tela de Integrações antes de abrir esta
+            Conecte o Monday e importe os projetos na tela de Integrações antes de abrir esta
             janela.
           </p>
           <button
@@ -190,12 +189,6 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {mappings.length === 0 && (
-            <p className="text-center text-gray-500 text-sm py-12">
-              Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro.
-            </p>
-          )}
-
           {loading && entries.length === 0 && (
             <div className="flex items-center justify-center py-12 text-gray-600">
               <Loader2 size={20} className="animate-spin" />

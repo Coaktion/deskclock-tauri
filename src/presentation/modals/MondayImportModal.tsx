@@ -121,7 +121,6 @@ export function MondayImportModal({
   const { createMondayApi } = useIntegrations();
   const { mondayImportedItemRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
-  const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
   const userId = config.get("mondayUserId");
   const { activeFields } = useCustomFields();
 
@@ -147,12 +146,11 @@ export function MondayImportModal({
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
   useEscapeToClose(onClose);
 
+  // Só projeto com quadro de destino: sem ele não há board de onde ler itens.
   const mappings = useMemo(
     () =>
-      normalizeProjectMappings(config.get("mondayProjectMapping")).filter(
-        (m) => m.workspaceId === mondayWorkspaceId
-      ),
-    [config.isLoaded, mondayWorkspaceId] // eslint-disable-line react-hooks/exhaustive-deps
+      normalizeProjectMappings(config.get("mondayProjectMapping")).filter((m) => !!m.mondayBoardId),
+    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   /**

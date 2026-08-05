@@ -3,7 +3,8 @@ import type { AppConfig } from "@shared/types/appConfig";
 export type MondayConfigKey =
   | "mondayApiKey"
   | "mondayUserId"
-  | "mondayActiveWorkspaceId"
+  | "mondayPortfolioBoardId"
+  | "mondayReportBoardId"
   | "mondayProjectMapping"
   | "mondayProjectStageFieldId"
   | "mondayAutoSync"

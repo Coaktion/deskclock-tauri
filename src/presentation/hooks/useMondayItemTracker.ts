@@ -61,7 +61,6 @@ export function useMondayItemTracker() {
 
     async function runSync(): Promise<SyncMondayPlannedTasksResult | null> {
       const activeWorkspaceId = workspaceIdRef.current;
-      const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
 
       const [projects, categories, fields] = await Promise.all([
         projectRepo.findAll(activeWorkspaceId),
@@ -72,8 +71,10 @@ export function useMondayItemTracker() {
       // Só os boards cujo Project existe **no workspace ativo**: o vínculo mora
       // na config e não sabe de workspace, então importar por um board mapeado
       // noutro criaria planejadas apontando para projeto que a tela nem exibe.
+      // E só os que têm board: projeto sem "ID Quadro Projeto" não tem itens a
+      // buscar, e mandá-lo na consulta pediria os itens de um board vazio.
       const mappings = normalizeProjectMappings(config.get("mondayProjectMapping"))
-        .filter((m) => m.workspaceId === mondayWorkspaceId)
+        .filter((m) => !!m.mondayBoardId)
         .filter((m) => projects.some((p) => p.id === m.deskclockProjectId));
 
       const stageField =

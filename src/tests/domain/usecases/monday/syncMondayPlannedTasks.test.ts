@@ -32,6 +32,8 @@ const STAGE_FIELD: CustomField = {
 
 const MAPPING: MondayProjectMapping = {
   deskclockProjectId: "p1",
+  portfolioItemId: "item-p1",
+  scope: "cliente" as const,
   mondayBoardId: "b1",
   mondayBoardName: "Cliente A",
   activitiesGroupId: "group_act",
@@ -46,7 +48,6 @@ const MAPPING: MondayProjectMapping = {
   activityTypeLabels: [],
   projectStageLabels: [],
   projectStageTitle: "Project Stage",
-  workspaceId: "monday-ws",
 };
 
 const SCHEMA: MondayBoardSchema = {

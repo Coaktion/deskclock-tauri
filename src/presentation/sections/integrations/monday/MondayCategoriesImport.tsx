@@ -1,5 +1,4 @@
 import { importMondayCategories } from "@domain/usecases/monday/importMondayCategories";
-import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyCategoriesChanged } from "@shared/utils/catalogSync";
@@ -21,7 +20,6 @@ export function MondayCategoriesImport({
   reloadCategories: () => Promise<void>;
 }) {
   const { categoryRepo } = useRepositories();
-  const config = useAppConfig();
   const [importing, setImporting] = useState(false);
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
 
@@ -47,7 +45,6 @@ export function MondayCategoriesImport({
       const { created, existing } = await importMondayCategories({
         categoryRepo,
         mappings,
-        internalBoardId: config.get("mondayInternalBoardId"),
         deskclockWorkspaceId,
       });
       await loadExisting();

@@ -3,7 +3,6 @@ import { X, ExternalLink, Loader2, KeyRound } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { MondayAuthError } from "@infra/integrations/monday/errors";
-import { pickDefaultFolders, pickDefaultWorkspace } from "@domain/usecases/monday/mondayDefaults";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface MondayConnectModalProps {
@@ -30,34 +29,14 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
       const client = factories.createMondayApi(key);
       const user = await client.getMe();
       await config.set("mondayApiKey", key);
+      // Cache derivado da chave, nunca campo de tela: é por ele que as consultas
+      // pedem ao Monday só os itens de quem está conectado.
       await config.set("mondayUserId", user.id);
       await config.set("mondayUserName", user.name);
       await config.set("mondayUserEmail", user.email);
-
-      const workspaces = await client.listWorkspaces();
-      await config.set("mondayWorkspaceCache", workspaces);
-      const workspace = pickDefaultWorkspace(workspaces);
-      if (workspace && !config.get("mondayActiveWorkspaceId")) {
-        await config.set("mondayActiveWorkspaceId", workspace.id);
-        await config.set("mondayActiveWorkspaceName", workspace.name);
-        // A conexão é o único momento em que se sabe que nada foi escolhido —
-        // depois dela, pasta vazia é uma escolha ("Todas as pastas" / "Nenhuma")
-        // e sobrescrevê-la seria desfazer o que o usuário decidiu.
-        // Pastas e boards vêm juntos porque a seção de workspace só busca o
-        // catálogo quando não há cache: gravar um sem o outro deixaria o board
-        // interno sem lista até alguém apertar atualizar.
-        const [folders, boards] = await Promise.all([
-          client.listFolders(workspace.id).catch(() => null),
-          client.listBoards(workspace.id).catch(() => null),
-        ]);
-        if (folders) {
-          await config.set("mondayFolderCache", folders);
-          const defaults = pickDefaultFolders(folders);
-          await config.set("mondayClientsFolderId", defaults.clientsFolderId);
-          await config.set("mondayInternalFolderId", defaults.internalFolderId);
-        }
-        if (boards) await config.set("mondayBoardCache", boards);
-      }
+      // Os dois boards já vêm com os ids da conta em que a integração foi
+      // desenhada, e a conexão não os toca: alterá-los aqui desfaria a escolha
+      // de quem já os trocou na seção e depois reconectou.
       onConnected();
     } catch (err) {
       if (err instanceof MondayAuthError) {

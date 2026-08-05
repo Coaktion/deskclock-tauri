@@ -87,14 +87,11 @@ const DEFAULTS: AppConfig = {
   mondayUserId: "",
   mondayUserName: "",
   mondayUserEmail: "",
-  mondayActiveWorkspaceId: "",
-  mondayActiveWorkspaceName: "",
-  mondayWorkspaceCache: [],
-  mondayFolderCache: [],
-  mondayBoardCache: [],
-  mondayClientsFolderId: "",
-  mondayInternalFolderId: "",
-  mondayInternalBoardId: "",
+  // Os dois boards da conta em que a integração foi desenhada. São padrões
+  // trocáveis pelos campos da seção, não constantes: outra conta troca os dois
+  // ids e o resto da integração segue igual.
+  mondayPortfolioBoardId: "18418432045",
+  mondayReportBoardId: "18422834169",
   mondayProjectStageFieldId: "",
   mondayProjectMapping: [],
   mondayAutoSync: false,

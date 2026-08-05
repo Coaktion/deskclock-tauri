@@ -21,13 +21,12 @@ const TICK_MS = 30 * 60 * 1000;
 const INITIAL_DELAY_MS = 8000;
 
 /**
- * Relê os boards do Monday como Projects **uma vez por dia**.
+ * Relê o Portfólio do Monday como Projects **uma vez por dia**.
  *
- * Cliente novo no board vira Project sem ninguém lembrar de abrir Integrações e
- * apertar "Atualizar" — que era a única forma de a lista crescer. Faz
- * exatamente o que aquele botão faz (`importMondayProjects`), no mesmo destino,
- * e mantém os vínculos dos outros workspaces do Monday, que a varredura deste
- * não conhece.
+ * Cliente novo no Portfólio vira Project sem ninguém lembrar de abrir
+ * Integrações e apertar "Atualizar" — que era a única forma de a lista crescer.
+ * Faz exatamente o que aquele botão faz (`importMondayProjects`), no mesmo
+ * destino.
  *
  * **Só roda num workspace que já tem projeto mapeado do Monday.** Sem isso, o
  * destino seria o workspace ativo, qualquer que fosse ele: bastava estar num
@@ -61,38 +60,28 @@ export function useMondayProjectsTracker() {
 
     async function runSync(): Promise<void> {
       const deskclockWorkspaceId = workspaceIdRef.current;
-      const mondayWorkspaceId = config.get("mondayActiveWorkspaceId");
+      const existingMappings = normalizeProjectMappings(config.get("mondayProjectMapping"));
 
       // Já mapeado **neste** workspace: é o que prova que o usuário escolheu
-      // trazer os boards do Monday para cá. O vínculo mora na config e não sabe
-      // de workspace, então a prova é o projeto existir no destino.
+      // trazer os projetos do Monday para cá. O vínculo mora na config e não
+      // sabe de workspace, então a prova é o projeto existir no destino.
       const projectIds = new Set(
         (await projectRepo.findAll(deskclockWorkspaceId)).map((p) => p.id)
       );
-      const linked = isMondayLinkedWorkspace(
-        normalizeProjectMappings(config.get("mondayProjectMapping")),
-        mondayWorkspaceId,
-        projectIds
-      );
-      if (!linked) return;
+      if (!isMondayLinkedWorkspace(existingMappings, projectIds)) return;
 
       const result = await importMondayProjects({
         api: createMondayApi(),
         projectRepo,
-        workspaceId: mondayWorkspaceId,
+        portfolioBoardId: config.get("mondayPortfolioBoardId"),
         deskclockWorkspaceId,
-        clientsFolderId: config.get("mondayClientsFolderId"),
-        internalFolderId: config.get("mondayInternalFolderId"),
-        internalBoardId: config.get("mondayInternalBoardId"),
+        // Os vínculos atuais são a única fonte do quadro que foi preenchido à
+        // mão: o Portfólio devolve a coluna vazia e, sem eles, a varredura
+        // apagaria a referência todo dia.
+        existingMappings,
       });
 
-      // Os vínculos dos outros workspaces do Monday não passaram por esta
-      // varredura: sobrescrever a chave inteira os apagaria. Mesma mescla do
-      // botão da tela de Integrações.
-      const otherWorkspaces = normalizeProjectMappings(config.get("mondayProjectMapping")).filter(
-        (m) => m.workspaceId !== mondayWorkspaceId
-      );
-      await config.set("mondayProjectMapping", [...otherWorkspaces, ...result.mappings]);
+      await config.set("mondayProjectMapping", result.mappings);
 
       // Os projetos nascem pelo repositório, sem passar pelas mutações de
       // `useProjects`: sem o aviso, o overlay-popup — que nasce com o app e
@@ -108,7 +97,7 @@ export function useMondayProjectsTracker() {
       if (disposed || inFlight) return;
       const due = shouldSyncMondayProjects({
         apiKey: config.get("mondayApiKey"),
-        mondayWorkspaceId: config.get("mondayActiveWorkspaceId"),
+        portfolioBoardId: config.get("mondayPortfolioBoardId"),
         lastSyncDate: config.get("mondayProjectsSyncLastDate"),
         todayISO: todayISO(),
       });

@@ -15,6 +15,8 @@ const PROJECT: Project = { id: "p1", workspaceId: "ws-1", name: "Cliente A" };
 function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMapping {
   return {
     deskclockProjectId: "p1",
+    portfolioItemId: "item-p1",
+    scope: "cliente" as const,
     mondayBoardId: "b1",
     mondayBoardName: "Cliente A",
     activitiesGroupId: "group_act",
@@ -29,7 +31,6 @@ function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMa
     activityTypeLabels: [],
     projectStageLabels: [],
     projectStageTitle: "Project Stage",
-    workspaceId: "monday-ws",
     ...overrides,
   };
 }
