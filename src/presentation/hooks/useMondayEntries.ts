@@ -99,10 +99,21 @@ function toEntry(item: MondayItem, mapping: MondayProjectMapping): MondayEntry {
  * do DeskClock.
  *
  * Lista **apenas as do usuário conectado**: o board é compartilhado com o time
- * inteiro e neste app exclusão é sem confirmação (§1) — um botão de excluir ao
- * lado das horas de um colega é armadilha, não funcionalidade. O filtro vale
- * também como economia: quem trabalha em três clientes não deve pagar o
- * download das atividades de todos os boards mapeados.
+ * inteiro — um botão de excluir ao lado das horas de um colega é armadilha, não
+ * funcionalidade. O filtro vale também como economia: quem trabalha em três
+ * clientes não deve pagar o download das atividades de todos os boards mapeados.
+ *
+ * **Excluir aqui pede confirmação**, contra o §1, pela mesma razão do workspace
+ * (§6.7): a linha não é do DeskClock, é um item no board do cliente, e apagá-la
+ * não tem desfazer nem daqui nem de lá — o que volta pela lixeira do Monday é um
+ * id que este app já esqueceu. Um clique errado a 13 px do lápis some com horas
+ * que o time inteiro enxerga.
+ *
+ * **A lista some o item na hora, sem rebuscar.** O toast dizia "excluída" com a
+ * linha ainda na tela: a rebusca é que mandava, e ela vinha depois. Rebuscar
+ * também reabria a porta para o item voltar — a exclusão do Monday é assíncrona
+ * o bastante para uma consulta logo em seguida ainda devolvê-lo. O que se sabe
+ * está decidido no `await`; a rebusca fica no botão de recarregar.
  *
  * **Uma busca serve todas as janelas.** As regras do Monday não expressam
  * "intervalo que cruza o período" e o intervalo mora em duas colunas separadas,
@@ -118,6 +129,7 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
   const [loading, setLoading] = useState(false);
   const [refreshSignal, setRefreshSignal] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Serializado para que a identidade do array não redispare a busca a cada
   // render da tela de integrações, que recria o mapeamento na leitura.
@@ -207,24 +219,28 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
   const handleDelete = useCallback(
     async (entry: MondayEntry) => {
       const api = createMondayApi();
+      setDeletingId(entry.itemId);
       try {
         await api.deleteItem(entry.itemId);
         // Sem limpar o rastreamento, o próximo envio reencontra o item apagado,
         // erra com `MondayNotFoundError` e repete o erro a cada execução.
         await mondayActivityItemRepo.deleteItem(entry.boardId, entry.itemId);
+        setAllEntries((prev) => prev.filter((e) => e.itemId !== entry.itemId));
+        setEditingId((cur) => (cur === entry.itemId ? null : cur));
         await showToast("success", "Atividade excluída do Monday.");
-        if (editingId === entry.itemId) setEditingId(null);
-        setRefreshSignal((n) => n + 1);
       } catch (err) {
         await showToast("error", err instanceof Error ? err.message : "Erro ao excluir no Monday.");
+      } finally {
+        setDeletingId(null);
       }
     },
-    [createMondayApi, mondayActivityItemRepo, editingId]
+    [createMondayApi, mondayActivityItemRepo]
   );
 
   return {
     entries,
     loading,
+    deletingId,
     editingId,
     setEditingId,
     refresh: () => setRefreshSignal((n) => n + 1),

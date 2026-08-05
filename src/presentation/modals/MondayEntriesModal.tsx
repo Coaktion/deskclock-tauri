@@ -97,8 +97,20 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
     }
   }, [quick]);
 
-  const { entries, loading, editingId, setEditingId, refresh, handleSaveEdit, handleDelete } =
-    useMondayEntries({ mappings, userId, range });
+  const {
+    entries,
+    loading,
+    deletingId,
+    editingId,
+    setEditingId,
+    refresh,
+    handleSaveEdit,
+    handleDelete,
+  } = useMondayEntries({ mappings, userId, range });
+
+  // Recarregar durante uma exclusão traria de volta o item que acabou de sair da
+  // lista — a exclusão no Monday não fica visível na consulta seguinte na hora.
+  const busy = loading || deletingId !== null;
 
   const dayGroups = useMemo(() => groupByDay(entries), [entries]);
   const totalHours = entries.reduce((sum, e) => sum + e.hoursDecimal, 0);
@@ -140,7 +152,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
             )}
             <button
               onClick={refresh}
-              disabled={loading}
+              disabled={busy}
               title="Recarregar"
               className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
             >
@@ -164,7 +176,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
               <button
                 key={q}
                 onClick={() => setQuick(q)}
-                disabled={loading}
+                disabled={busy}
                 className={`px-3 py-1 text-xs rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   quick === q
                     ? "bg-blue-600 text-white"
@@ -218,6 +230,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
                   <EntryRow
                     key={entry.itemId}
                     entry={entry}
+                    deleting={deletingId === entry.itemId}
                     onStartEdit={() => setEditingId(entry.itemId)}
                     onDelete={() => handleDelete(entry)}
                   />
@@ -233,13 +246,24 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
 
 interface EntryRowProps {
   entry: MondayEntry;
+  deleting: boolean;
   onStartEdit: () => void;
   onDelete: () => Promise<void>;
 }
 
-function EntryRow({ entry, onStartEdit, onDelete }: EntryRowProps) {
+function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
+  // Confirmação na própria linha, e não em modal: a pergunta é sim/não e o que
+  // se apaga precisa continuar à vista enquanto se responde (o modal do
+  // workspace existe porque lá há um destino a escolher). Pergunta pendente
+  // fixa o bloco de ações — some no hover ele viraria armadilha nova.
+  const [confirming, setConfirming] = useState(false);
+
   return (
-    <div className="grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group">
+    <div
+      className={`grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group ${
+        deleting ? "opacity-50" : ""
+      }`}
+    >
       <div className="flex items-center gap-1.5 shrink-0">
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -270,21 +294,48 @@ function EntryRow({ entry, onStartEdit, onDelete }: EntryRowProps) {
         {formatDurationCompact(Math.round(entry.hoursDecimal * 3600))}
       </span>
 
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
-          onClick={onStartEdit}
-          className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-          title="Editar no Monday"
-        >
-          <Pencil size={13} />
-        </button>
-        <button
-          onClick={() => void onDelete()}
-          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-          title="Excluir do Monday"
-        >
-          <Trash2 size={13} />
-        </button>
+      <div
+        className={`flex items-center gap-1 transition-opacity shrink-0 ${
+          confirming || deleting ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+        }`}
+      >
+        {confirming || deleting ? (
+          <>
+            <span className="text-[11px] text-gray-400 mr-1">Excluir do Monday?</span>
+            <button
+              onClick={() => setConfirming(false)}
+              disabled={deleting}
+              className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => void onDelete()}
+              disabled={deleting}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-red-900/40 border border-red-800 text-red-300 hover:bg-red-900/60 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            >
+              {deleting && <Loader2 size={11} className="animate-spin" />}
+              Excluir
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onStartEdit}
+              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+              title="Editar no Monday"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              onClick={() => setConfirming(true)}
+              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+              title="Excluir do Monday"
+            >
+              <Trash2 size={13} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
