@@ -539,6 +539,20 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > O atalho existe para quem já usa a integração; oferecê-lo pela metade seria três ações que abrem
 > vazias. A tela de Integrações continua acessível sempre, que é onde a configuração se completa.
 
+> **Start Date e End Date são o intervalo trabalhado, não o do envio.** As duas colunas levavam o
+> instante em que a atividade nasceu no Monday, o que descrevia o envio e não o trabalho: lançamento
+> retroativo e envio diário caíam todos no dia em que se apertou o botão, e o filtro por período do
+> gerenciador de atividades — que lê justamente este par (§ `parseDatePairPeriod`) — mostrava a
+> atividade no dia errado. Agora vêm do grupo: início da primeira tarefa, fim da última. O fim é o
+> **maior** `endTime`, não o da tarefa que começou por último — duas execuções do mesmo trabalho podem
+> se sobrepor.
+>
+> Por virem da tarefa, o valor é estável entre execuções, e por isso **entram também no update**: era
+> a volatilidade do "agora" que as obrigava a ficar só no create, sob pena de o payload mudar a cada
+> ciclo e nenhum grupo cair mais no skip por "nada mudou". A consequência é que corrigir o horário de
+> uma tarefa já enviada acerta a data no board — e que o primeiro envio depois desta mudança reescreve
+> uma vez os itens já rastreados, que é o que conserta as datas antigas.
+
 > **Apagar no Monday é mandar para a lixeira.** O id continua válido e
 > `change_multiple_column_values` responde **sucesso** num item que ninguém mais vê — nunca chega um
 > `MondayNotFoundError`. Por isso o update pede `id state` e trata `state !== "active"` (deleted ou
@@ -994,7 +1008,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-05 (§4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-05 (§5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.7: workspace e pastas do Monday pré-escolhidos na conexão; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

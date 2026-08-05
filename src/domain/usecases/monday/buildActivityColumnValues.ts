@@ -75,20 +75,27 @@ export function buildActivityColumnValues(
 }
 
 /**
- * Colunas Start Date e End Date, ambas com o instante do envio.
+ * Colunas Start Date e End Date: o intervalo **trabalhado no DeskClock**, do
+ * início da primeira tarefa do grupo ao fim da última.
  *
- * Ficam fora de `buildActivityColumnValues` de propósito: só entram no **create**.
- * No update elas mudariam a cada execução, o payload nunca bateria com o gravado
- * e o envio diário voltaria a chamar a API para todo grupo, mesmo sem alteração
- * nenhuma nas horas.
+ * Antes as duas levavam o instante do envio, o que descrevia quando a linha
+ * nasceu no Monday e não quando o trabalho aconteceu — lançamento retroativo e
+ * envio diário caíam todos no dia do envio, e o filtro por período do
+ * gerenciador de atividades (que lê justamente este par) mostrava a atividade no
+ * dia errado.
+ *
+ * Vindo da tarefa, o valor é estável entre execuções, então elas entram também
+ * no **update**: era a volatilidade do "agora" que as obrigava a ficar só no
+ * create, sob pena de o payload mudar a cada ciclo e nenhum grupo cair mais no
+ * skip por "nada mudou".
  */
 export function buildActivityDateColumns(
   columnIds: MondayActivityColumnIds,
-  nowISO: string
+  startISO: string,
+  endISO: string
 ): Record<string, unknown> {
-  const value = serializeDate(nowISO);
   return {
-    ...(columnIds.startDate ? { [columnIds.startDate]: value } : {}),
-    ...(columnIds.endDate ? { [columnIds.endDate]: value } : {}),
+    ...(columnIds.startDate ? { [columnIds.startDate]: serializeDate(startISO) } : {}),
+    ...(columnIds.endDate ? { [columnIds.endDate]: serializeDate(endISO) } : {}),
   };
 }

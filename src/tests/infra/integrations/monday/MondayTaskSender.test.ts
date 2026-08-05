@@ -976,41 +976,81 @@ describe("MondayTaskSender", () => {
       );
     });
 
-    it("grava Start Date e End Date na criação e não as repete no update", async () => {
+    it("grava Start Date e End Date com o intervalo da tarefa, não com o do envio", async () => {
       const client = makeClient();
-      const itemRepo = makeItemRepo();
+      const config = makeConfig({
+        mondayProjectMapping: [{ ...MAPPING, columnIds: { ...COLUMN_IDS, ...DATE_COLUMN_IDS } }],
+      });
+
+      // Tarefa lançada retroativamente: o dia dela não é o dia do envio.
+      await new MondayTaskSender(
+        config,
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([
+        makeTask({
+          startTime: "2026-07-28T12:00:00.000Z",
+          endTime: "2026-07-28T13:50:00.000Z",
+        }),
+      ]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-28", time: "12:00:00" },
+        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-28", time: "13:50:00" },
+      });
+    });
+
+    it("abre o intervalo na primeira tarefa do grupo e fecha na última", async () => {
+      const client = makeClient();
       const config = makeConfig({
         mondayProjectMapping: [{ ...MAPPING, columnIds: { ...COLUMN_IDS, ...DATE_COLUMN_IDS } }],
       });
 
       await new MondayTaskSender(
         config,
-        itemRepo,
+        makeItemRepo(),
         makeFieldRepo(),
         makeCategoryRepo(),
         client
-      ).send([makeTask()]);
+      ).send([
+        makeTask({
+          id: "tarde",
+          startTime: "2026-07-30T16:00:00.000Z",
+          endTime: "2026-07-30T17:30:00.000Z",
+        }),
+        makeTask({
+          id: "cedo",
+          startTime: "2026-07-30T09:00:00.000Z",
+          endTime: "2026-07-30T10:00:00.000Z",
+        }),
+      ]);
 
-      const created = vi.mocked(client.createItem).mock.calls[0][3];
-      expect(created[DATE_COLUMN_IDS.startDate]).toEqual(created[DATE_COLUMN_IDS.endDate]);
-      expect(created[DATE_COLUMN_IDS.startDate]).toMatchObject({
-        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        time: expect.stringMatching(/^\d{2}:\d{2}:\d{2}$/),
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-30", time: "09:00:00" },
+        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-30", time: "17:30:00" },
       });
+    });
 
-      await new MondayTaskSender(
-        config,
-        itemRepo,
-        makeFieldRepo(),
-        makeCategoryRepo(),
-        client
-      ).send([makeTask({ durationSeconds: 7200 })]);
+    it("repete as datas no update — vindo da tarefa, corrigir o horário acerta o board", async () => {
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+      const config = makeConfig({
+        mondayProjectMapping: [{ ...MAPPING, columnIds: { ...COLUMN_IDS, ...DATE_COLUMN_IDS } }],
+      });
+      const send = (task: Task) =>
+        new MondayTaskSender(config, itemRepo, makeFieldRepo(), makeCategoryRepo(), client).send([
+          task,
+        ]);
 
-      // As datas marcam o nascimento do item: no update elas mudariam a cada
-      // execução e nenhum grupo cairia mais no skip por payload igual.
-      const updated = vi.mocked(client.changeColumnValues).mock.calls[0][2];
-      expect(updated).not.toHaveProperty(DATE_COLUMN_IDS.startDate);
-      expect(updated).not.toHaveProperty(DATE_COLUMN_IDS.endDate);
+      await send(makeTask());
+      await send(makeTask({ endTime: "2026-07-30T14:50:00.000Z", durationSeconds: 10200 }));
+
+      expect(vi.mocked(client.changeColumnValues).mock.calls[0][2]).toMatchObject({
+        [DATE_COLUMN_IDS.startDate]: { date: "2026-07-30", time: "12:00:00" },
+        [DATE_COLUMN_IDS.endDate]: { date: "2026-07-30", time: "14:50:00" },
+      });
     });
 
     it("segue pulando a API quando nada mudou, apesar das datas", async () => {

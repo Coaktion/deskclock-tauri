@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { groupTasksForMonday } from "@domain/usecases/monday/groupTasksForMonday";
+import {
+  groupTasksForMonday,
+  mondayGroupInterval,
+} from "@domain/usecases/monday/groupTasksForMonday";
 import type { Task } from "@domain/entities/Task";
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -79,6 +82,55 @@ describe("groupTasksForMonday", () => {
 
   it("retorna vazio sem tarefas", () => {
     expect(groupTasksForMonday([])).toEqual([]);
+  });
+});
+
+describe("mondayGroupInterval", () => {
+  it("vai do início da primeira tarefa ao fim da última", () => {
+    const [group] = groupTasksForMonday([
+      makeTask({
+        id: "a",
+        startTime: "2026-07-30T09:00:00.000Z",
+        endTime: "2026-07-30T10:00:00.000Z",
+      }),
+      makeTask({
+        id: "b",
+        startTime: "2026-07-30T14:00:00.000Z",
+        endTime: "2026-07-30T17:30:00.000Z",
+      }),
+    ]);
+
+    expect(mondayGroupInterval(group)).toEqual({
+      startISO: "2026-07-30T09:00:00.000Z",
+      endISO: "2026-07-30T17:30:00.000Z",
+    });
+  });
+
+  it("usa o maior fim, não o da tarefa que começou por último", () => {
+    // Execuções sobrepostas: a última a começar terminou antes.
+    const [group] = groupTasksForMonday([
+      makeTask({
+        id: "longa",
+        startTime: "2026-07-30T09:00:00.000Z",
+        endTime: "2026-07-30T18:00:00.000Z",
+      }),
+      makeTask({
+        id: "curta",
+        startTime: "2026-07-30T10:00:00.000Z",
+        endTime: "2026-07-30T11:00:00.000Z",
+      }),
+    ]);
+
+    expect(mondayGroupInterval(group).endISO).toBe("2026-07-30T18:00:00.000Z");
+  });
+
+  it("cai no próprio início quando a tarefa não tem fim", () => {
+    const [group] = groupTasksForMonday([makeTask({ endTime: null })]);
+
+    expect(mondayGroupInterval(group)).toEqual({
+      startISO: "2026-07-30T12:00:00.000Z",
+      endISO: "2026-07-30T12:00:00.000Z",
+    });
   });
 });
 

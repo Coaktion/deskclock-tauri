@@ -411,7 +411,8 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
       </div>
 
       <p className="text-[11px] text-gray-600">
-        As datas vêm do envio e não são editáveis aqui — quem manda nas horas é o DeskClock.
+        As datas vêm da tarefa no DeskClock e não são editáveis aqui — quem manda nas horas é o
+        DeskClock.
       </p>
     </div>
   );
