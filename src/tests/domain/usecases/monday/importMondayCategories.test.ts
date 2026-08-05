@@ -170,4 +170,65 @@ describe("importMondayCategories", () => {
     expect(result.created).toEqual([]);
     expect(categoryRepo.save).not.toHaveBeenCalled();
   });
+
+  it("cria rótulo do catálogo que nenhum board mapeado tem", async () => {
+    const categoryRepo = makeRepo();
+
+    // O catálogo do Report cobre os 35 rótulos; os boards importados podem
+    // conhecer só uma parte deles — inclusive nenhum, se ainda não abriram.
+    const result = await importMondayCategories({
+      categoryRepo,
+      catalogLabels: ["Go-live", "Training"],
+      mappings: [mapping({ activityTypeLabels: [] })],
+      deskclockWorkspaceId: DESKCLOCK_WS,
+    });
+
+    expect(result.created).toEqual(["Go-live", "Training"]);
+  });
+
+  it("rótulo só do catálogo nasce billable", async () => {
+    const categoryRepo = makeRepo();
+
+    await importMondayCategories({
+      categoryRepo,
+      catalogLabels: ["Go-live"],
+      mappings: [],
+      deskclockWorkspaceId: DESKCLOCK_WS,
+    });
+
+    expect(vi.mocked(categoryRepo.save).mock.calls.map(([c]) => c)).toMatchObject([
+      { name: "Go-live", defaultBillable: true },
+    ]);
+  });
+
+  it("o escopo do board vence o padrão do catálogo", async () => {
+    const categoryRepo = makeRepo();
+
+    // O catálogo é só a lista de rótulos: quem diz que "Eventos" é trabalho
+    // interno é o board interno em que ele aparece.
+    await importMondayCategories({
+      categoryRepo,
+      catalogLabels: ["Eventos", "Development"],
+      mappings: [mapping({ scope: "interno", activityTypeLabels: ["Eventos"] })],
+      deskclockWorkspaceId: DESKCLOCK_WS,
+    });
+
+    expect(vi.mocked(categoryRepo.save).mock.calls.map(([c]) => c)).toMatchObject([
+      { name: "Eventos", defaultBillable: false },
+      { name: "Development", defaultBillable: true },
+    ]);
+  });
+
+  it("não duplica rótulo que está no catálogo e no board", async () => {
+    const categoryRepo = makeRepo();
+
+    const result = await importMondayCategories({
+      categoryRepo,
+      catalogLabels: ["Development", "  Meeting  "],
+      mappings: [mapping({ activityTypeLabels: ["Development", "Meeting"] })],
+      deskclockWorkspaceId: DESKCLOCK_WS,
+    });
+
+    expect(result.created).toEqual(["Development", "Meeting"]);
+  });
 });

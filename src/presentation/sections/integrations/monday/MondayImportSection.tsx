@@ -1,18 +1,24 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { mergeLabels } from "@domain/usecases/monday/importMondayFieldCatalogs";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
-import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import {
+  EMPTY_FIELD_CATALOGS,
+  type MondayFieldCatalogs,
+  type MondayProjectMapping,
+} from "@shared/types/mondayConfig";
 import { DownloadCloud } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SubSection } from "../shared";
+import { MondayCatalogField } from "./MondayCatalogField";
+import { MondayCatalogsImport } from "./MondayCatalogsImport";
 import { MondayCategoriesImport } from "./MondayCategoriesImport";
-import { MondayProjectStageField } from "./MondayProjectStageField";
 import { MondayProjectsImport } from "./MondayProjectsImport";
 
 /**
  * Traz do Monday o que o DeskClock precisa para registrar horas: projetos,
- * categorias e as opções de Project Stage. Não há tabela de mapeamento a manter
- * — o nome no DeskClock **é** o rótulo no board.
+ * categorias e as opções dos três campos de atividade. Não há tabela de
+ * mapeamento a manter — o nome no DeskClock **é** o rótulo no board.
  */
 export function MondayImportSection({
   reloadProjects,
@@ -24,11 +30,13 @@ export function MondayImportSection({
   const config = useAppConfig();
   const { workspaces, activeWorkspaceId } = useWorkspaces();
   const [mappings, setMappings] = useState<MondayProjectMapping[]>([]);
+  const [catalogs, setCatalogs] = useState<MondayFieldCatalogs>(EMPTY_FIELD_CATALOGS);
   const [destinationId, setDestinationId] = useState("");
 
   useEffect(() => {
     if (!config.isLoaded) return;
     setMappings(normalizeProjectMappings(config.get("mondayProjectMapping")));
+    setCatalogs(config.get("mondayFieldCatalogs") ?? EMPTY_FIELD_CATALOGS);
     // Relê só quando a config carrega: `config` é recriado a cada render do
     // provider e sobrescreveria um import em curso.
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -37,12 +45,16 @@ export function MondayImportSection({
     if (!destinationId && activeWorkspaceId) setDestinationId(activeWorkspaceId);
   }, [activeWorkspaceId, destinationId]);
 
-  // Os rótulos de etapa vêm de qualquer projeto **de cliente**: nos boards
-  // internos a coluna se chama "Project Phase" e traz outros quatro rótulos, que
-  // não são a etapa que o envio das horas preenche.
+  // Os rótulos de etapa vêm do catálogo e, como reserva, de qualquer projeto
+  // **de cliente**: nos boards internos a coluna se chama "Project Phase" e traz
+  // outros quatro rótulos, que não são a etapa que o envio das horas preenche.
+  // Os 18 do Report batem exatamente com os dos boards de cliente, então as duas
+  // origens dizem a mesma coisa — a reserva existe para a tela não ficar vazia
+  // enquanto os catálogos não forem lidos.
   const stageSource = mappings.find(
     (m) => m.scope === "cliente" && m.projectStageLabels.length > 0
   );
+  const stageLabels = mergeLabels(catalogs.projectStage, stageSource?.projectStageLabels ?? []);
 
   return (
     <SubSection icon={<DownloadCloud size={15} />} title="Importação de dados">
@@ -77,15 +89,35 @@ export function MondayImportSection({
           reloadProjects={reloadProjects}
         />
 
+        <MondayCatalogsImport catalogs={catalogs} onRead={setCatalogs} />
+
         <MondayCategoriesImport
           mappings={mappings}
+          catalogLabels={catalogs.activityType}
           deskclockWorkspaceId={destinationId}
           reloadCategories={reloadCategories}
         />
 
-        <MondayProjectStageField
-          optionLabels={stageSource?.projectStageLabels ?? []}
-          columnTitle={stageSource?.projectStageTitle ?? ""}
+        <MondayCatalogField
+          title="Project Stage"
+          hint="Etapa do projeto na atividade. Só entra no apontamento de projeto de cliente — nos boards internos a coluna homônima tem outros rótulos."
+          configKey="mondayProjectStageFieldId"
+          optionLabels={stageLabels}
+          defaultFieldLabel={stageSource?.projectStageTitle ?? "Project Stage"}
+        />
+
+        <MondayCatalogField
+          title="Report Type"
+          hint="Decide em qual grupo do board do projeto a atividade é criada. Sem valor na tarefa, vale Activity."
+          configKey="mondayReportTypeFieldId"
+          optionLabels={catalogs.reportType}
+        />
+
+        <MondayCatalogField
+          title="Non Billable reason"
+          hint="Por que a hora não foi faturada. Obrigatório em projeto de cliente marcado como non-billable; dispensado em projeto interno."
+          configKey="mondayNonBillableReasonFieldId"
+          optionLabels={catalogs.nonBillableReason}
         />
       </div>
     </SubSection>

@@ -526,7 +526,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | API Key | input password + instrução inline |
 | Board de Portfólio | input com o id do board que lista os projetos (`mondayPortfolioBoardId`) |
 | Board de Report de Horas | input com o id do board que guarda o catálogo dos rótulos (`mondayReportBoardId`) |
-| Importação de dados | workspace de destino + três blocos: Projetos, Categorias e Project Stage |
+| Importação de dados | workspace de destino + seis blocos: Projetos, Catálogos, Categorias e os três campos de atividade (Project Stage, Report Type, Non Billable reason) |
 | Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) + "Sincronizar agora" no modo diário |
 | Importação automática de itens | toggle (`mondayAutoImportEnabled`, padrão desativado) + botão "Buscar itens agora" |
 | Enviar tarefas manualmente | botão abre o `TaskSendModal` genérico |
@@ -612,11 +612,51 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > é um board só, escolhido por id — não há variação a acomodar, e resolver por título só criaria a
 > chance de casar com a coluna errada.
 >
-> **Não há tabela de mapeamento** de categoria nem de etapa: o Activity Type é o **nome** da
-> Categoria e o Project Stage é o campo personalizado apontado por `mondayProjectStageFieldId` — a
+> **Não há tabela de mapeamento** de categoria nem dos campos de atividade: o Activity Type é o
+> **nome** da Categoria e os outros três são campos personalizados apontados por
+> `mondayProjectStageFieldId`, `mondayReportTypeFieldId` e `mondayNonBillableReasonFieldId` — a
 > tarefa grava o **id da opção**, e o sender traduz para o rótulo. Rótulo que não existe na coluna do
 > board **não vai no payload**: o Monday recusaria a escrita inteira, derrubando um envio correto por
 > causa de uma categoria não relacionada.
+
+> **Uma leitura do board de Report semeia os quatro conjuntos de rótulos** (`importMondayFieldCatalogs`,
+> card "Catálogos"): Activity Type (35), Project Stage (18), Non Billable reason (8) e Report Type
+> (5). São quatro colunas do mesmo board, então quatro consultas seriam quatro idas ao Monday para
+> montar campos que sempre se configuram juntos. Os ids dessas colunas são **hardcodados**, como os
+> do Portfólio e pelo mesmo motivo — é um board só, escolhido por id, e ele tem outras quatro colunas
+> `status` e três `dropdown` com que resolver por título poderia casar. Os rótulos ficam em
+> `mondayFieldCatalogs`; sem o cache, abrir Integrações custaria uma consulta só para dizer quantos
+> rótulos faltam em cada campo.
+>
+> **`status` e `dropdown` guardam os rótulos em formatos diferentes** — `{"labels":{"0":"Rótulo"}}`
+> contra `{"labels":[{"id":1,"name":"Rótulo"}]}` — e passar um pelo parser do outro devolve lista
+> vazia **sem erro nenhum**: a tela mostraria zero opções e a integração seguiria em pé. Daí
+> `parseDropdownLabels` existir ao lado de `parseStatusLabels`. Rótulo desativado fica de fora, que é
+> a mesma regra de nunca mandar valor que a coluna não aceita.
+>
+> **A lista de Activity Types é a união do catálogo com os rótulos cacheados nos boards**
+> (`mergeLabels`), porque as duas metades cobrem buracos diferentes: o catálogo traz rótulo de board
+> que ainda não foi importado ou não abre, e o cache traz rótulo que existe num board de projeto e
+> não está no Report. O envio valida contra a coluna do board de destino, então rótulo a mais custa
+> uma categoria não usada — rótulo a menos custa a coluna Activity Type em branco no apontamento.
+>
+> **O escopo de cada rótulo sai dos mapeamentos, não de uma consulta nova** (`billableByActivityType`):
+> o import dos projetos já cacheou os rótulos de cada board junto do escopo que a coluna "Oferta"
+> classificou. Cliente é billable, interno não; rótulo nos dois lados e rótulo que board nenhum
+> confirmou ficam billable, porque trabalho de cliente é o caso majoritário e `default_billable` é só
+> um padrão.
+>
+> **Não existe default de motivo de non-billable por categoria**, e por isso não há tabela lateral de
+> categoria. O motivo é escolha da **atividade** — a mesma categoria rende hora faturável e não
+> faturável, e "por que *esta* hora não foi faturada" não tem resposta no nível da categoria. Ele é
+> **obrigatório** em projeto de cliente marcado como non-billable e **dispensado** em projeto
+> interno, onde non-billable é a norma (0 horas faturáveis em 119 itens).
+>
+> **Os três são campos personalizados, e não colunas próprias em `tasks`.** Precisam ser editáveis no
+> planejamento, no popup, no lançamento retroativo, na tarefa em execução, nos modais de edição, no
+> acesso rápido, no import do Monday e na exportação — tudo que os campos personalizados já
+> atravessam. Coluna nova exigiria reescrever o mesmo input em nove telas. O `MondayCatalogField` é
+> um componente só para os três: eles diferem na chave de config e no catálogo, em mais nada.
 
 > **Board ilegível não custa o Project.** A importação exigia as seis coisas do template e recusava
 > o board na falta de qualquer uma — recusa sem alternativa: o cliente não virava Project, nada
@@ -1081,7 +1121,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-05 (§5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-05 (§5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

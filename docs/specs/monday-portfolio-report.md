@@ -1,6 +1,6 @@
 # Monday — simplificação da configuração (Portfólio + Report de Horas)
 
-> **Status:** Fases 0 e 1 executadas em 2026-08-05. Fases 2 a 5 pendentes.
+> **Status:** Fases 0, 1 e 2 executadas em 2026-08-05. Fases 3 a 5 pendentes.
 > Substitui a configuração por workspace/pastas/board interno descrita em
 > `monday-integration.md`. O que não for contrariado aqui continua valendo.
 
@@ -32,6 +32,54 @@
 >   ações do atalho consultam boards e abririam vazias.
 > - **Desconectar não limpa os dois board ids** — descrevem a conta, não a
 >   sessão.
+
+> **O que a execução da Fase 2 decidiu**, além do planejado:
+>
+> - **Não existe default de motivo por categoria, e a tabela do §5 não foi
+>   criada.** O motivo de non-billable é escolha da **atividade**, não atributo
+>   da categoria: a mesma categoria rende horas faturáveis e não faturáveis, e a
+>   pergunta que o campo responde ("por que *esta* hora não foi faturada") não
+>   tem resposta no nível da categoria. Sem essa coluna sobrava só o `scope` na
+>   tabela — e o escopo é derivável dos mapeamentos a qualquer momento, que é
+>   justamente de onde ele sai. Tabela cujo único campo é cache do que a config
+>   já tem é dívida: se um dia aparecer algo de fato por-categoria, ela nasce
+>   ali. **A Fase 2 não tem migration.**
+> - **A regra do motivo é de validação, e é da Fase 3:** obrigatório em projeto
+>   de **cliente** marcado como non-billable, dispensado em projeto **interno**,
+>   onde non-billable é a norma (0 horas faturáveis em 119 itens).
+> - **O cruzamento de escopo não consulta `color_mm19csp3`.** O planejado era ler
+>   a coluna de um board de cliente e de um interno; o id é gerado por template e
+>   o resto da integração resolve coluna por título. Não foi preciso: os
+>   `activityTypeLabels` e o `scope` de cada board já estão cacheados nos
+>   mapeamentos desde a Fase 1, então o cruzamento é local e não custa requisição
+>   nenhuma. `billableByActivityType` é quem o faz.
+> - **A lista de Activity Types é a união do catálogo com o cache dos boards.**
+>   As duas metades cobrem buracos diferentes — o catálogo traz rótulo de board
+>   que ainda não foi importado ou não abre; o cache traz rótulo que existe num
+>   board de projeto e não está no Report. Rótulo a mais custa uma categoria não
+>   usada; rótulo a menos custa a coluna Activity Type em branco no apontamento.
+>   `mergeLabels` é compartilhada pelo use case e pela tela.
+> - **Os três campos são irmãos, e a decisão é sobre onde eles precisam ser
+>   editáveis.** `mondayReportTypeFieldId` e `mondayNonBillableReasonFieldId`
+>   entraram ao lado de `mondayProjectStageFieldId`, e o
+>   `MondayProjectStageField` virou `MondayCatalogField`, genérico (antecipando o
+>   que a Fase 5 previa). Campo nativo exigiria reescrever o mesmo input em nove
+>   telas — planejamento, popup, retroativo, tarefa em execução, modais de
+>   edição, omnibox, import do Monday, exportação —, tudo que os campos
+>   personalizados já atravessam.
+> - **`parseDropdownLabels` existe porque o formato do `dropdown` é outro:**
+>   `status` guarda `{"labels":{"0":"Rótulo"}}` e `dropdown` guarda
+>   `{"labels":[{"id":1,"name":"Rótulo"}]}` (verificado na API). Passar um pelo
+>   parser do outro devolve lista vazia **sem erro nenhum**.
+> - **Os catálogos ficam na config** (`mondayFieldCatalogs`), pelo mesmo motivo
+>   dos `activityTypeLabels` do mapeamento: sem o cache, abrir a tela de
+>   Integrações custaria uma consulta só para dizer quantos rótulos faltam em
+>   cada campo.
+> - **Rótulo desativado fica de fora** do catálogo de dropdown: ele não pode ser
+>   escrito e valor inválido faz o Monday recusar a mutation inteira. O
+>   `parseStatusLabels` da Fase 1 **não** filtra `deactivated_labels` — é a
+>   mesma armadilha, um nível mais barato (vira categoria a mais, não escrita
+>   recusada), e ficou fora do escopo.
 
 ## 1. O problema
 
@@ -219,15 +267,16 @@ cliente. Responde "por que essa hora de cliente não foi faturada".
 
 ## 5. Onde guardar escopo e motivo padrão
 
-Tabela lateral, **não** colunas em `categories`:
-
-```sql
-monday_category_settings(category_id, scope, default_non_billable_reason)
--- scope: 'cliente' | 'interno' | 'ambos'
-```
-
-Mesmo precedente do `calendar_tracked_meetings` (§5.7): a identidade da
-integração fica confinada nela e `Category` permanece agnóstica.
+> **Descartado na execução da Fase 2.** A tabela
+> `monday_category_settings(category_id, scope, default_non_billable_reason)`
+> **não existe**. Não há default de motivo por categoria: o motivo é escolha da
+> atividade, e a mesma categoria rende horas faturáveis e não faturáveis. Sem
+> essa coluna sobrava só o `scope`, que é derivável dos mapeamentos —
+> `billableByActivityType` o calcula no import, em memória.
+>
+> O precedente do `calendar_tracked_meetings` continua valendo para quando
+> aparecer algo de fato por-categoria: a identidade do Monday fica confinada numa
+> tabela lateral e `Category` permanece agnóstica.
 
 ---
 
@@ -263,20 +312,32 @@ Arquivos: `importMondayProjects.ts` (+ teste), `mondayProjectsSyncPolicy.ts`,
 `useMondayProjectsTracker.ts`, `MondayProjectsImport.tsx`,
 `normalizeProjectMappings.ts`.
 
-### Fase 2 — Catálogos do board de Report
+### Fase 2 — Catálogos do board de Report ✅
 
-Novo use case `importMondayFieldCatalogs`, lendo `18422834169` numa consulta só
-(tabela do §3). O escopo de cada categoria sai do cruzamento com
-`color_mm19csp3` de **um** board de cliente e **um** interno, descobertos pelo
-Portfólio. Migration da tabela do §5.
+`importMondayFieldCatalogs` lê `18422834169` numa consulta só (tabela do §3), com
+`parseDropdownLabels` para o formato do `dropdown`. O escopo de cada Activity
+Type sai do cruzamento dos mapeamentos (`billableByActivityType`), sem consulta
+nova. **Sem migration** — ver §5.
 
-Novos campos personalizados: **Report Type** (default `Activity`) e
-**Non Billable reason**. `mondayProjectStageFieldId` ganha dois irmãos, ou os
-três viram campos nativos da integração — decidir na execução.
+`mondayProjectStageFieldId` ganhou dois irmãos (`mondayReportTypeFieldId`,
+`mondayNonBillableReasonFieldId`) e o card virou genérico (`MondayCatalogField`).
+Os catálogos ficam em `mondayFieldCatalogs`.
+
+Arquivos: `importMondayFieldCatalogs.ts` (+ teste), `importMondayCategories.ts`
+(+ teste), `mondayConfig.ts`, `appConfig.ts`, `ConfigContext.tsx`,
+`IMondayConfigPort.ts`, `MondayCatalogsImport.tsx`, `MondayCatalogField.tsx`,
+`MondayCategoriesImport.tsx`, `MondayImportSection.tsx`.
 
 ### Fase 3 — Envio direto no board do projeto
 
-Report Type → `group_id`; Non Billable reason; Project Stage só em cliente.
+Report Type → `group_id` (sem valor na tarefa, `Activity`); Non Billable reason;
+Project Stage só em cliente.
+
+**O motivo é obrigatório em projeto de cliente marcado como non-billable**, e
+dispensado em projeto interno. É validação de envio, não default de cadastro: a
+tarefa sem motivo nessa situação não sobe, com mensagem — omitir em silêncio
+mandaria ao board uma hora não faturada sem justificativa, que é exatamente o
+que a coluna existe para impedir.
 
 Arquivos: `buildActivityColumnValues.ts` (+ teste), `MondayTaskSender.ts`,
 `resolveBoardActivitiesColumns.ts` (+ testes).

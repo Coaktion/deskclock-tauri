@@ -5,7 +5,7 @@ import type {
   ClockifyProjectMapping,
   ClockifyCategoryMapping,
 } from "@shared/types/clockifyConfig";
-import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import type { MondayFieldCatalogs, MondayProjectMapping } from "@shared/types/mondayConfig";
 
 export interface OverlayPosition {
   x: number;
@@ -136,7 +136,30 @@ export interface AppConfig {
    * Vazio = a coluna não é preenchida.
    */
   mondayProjectStageFieldId: string;
+  /**
+   * Campo personalizado que decide o **grupo** de destino da atividade no board
+   * do projeto (Activity → Activities, Meeting → Meetings…). No board de Report
+   * o Report Type é coluna; escrevendo direto no board do projeto, ele vira o
+   * `group_id`. Vazio, ou sem valor na tarefa, cai em `Activity`.
+   */
+  mondayReportTypeFieldId: string;
+  /**
+   * Campo personalizado que alimenta a coluna "Non Billable reason". Responde
+   * "por que essa hora de cliente não foi faturada": é **obrigatório** em
+   * projeto de cliente marcado como non-billable e dispensado em projeto
+   * interno, onde non-billable é a norma.
+   */
+  mondayNonBillableReasonFieldId: string;
   mondayProjectMapping: MondayProjectMapping[];
+  /**
+   * Rótulos lidos do board de Report, cacheados para semear categorias e as
+   * opções dos três campos personalizados acima.
+   *
+   * Ficam na config pelo mesmo motivo dos `activityTypeLabels` do mapeamento:
+   * sem o cache, abrir a tela de Integrações custaria uma consulta ao Monday só
+   * para exibir quantos rótulos faltam em cada campo.
+   */
+  mondayFieldCatalogs: MondayFieldCatalogs;
   mondayAutoSync: boolean;
   mondayAutoSyncMode: "per-task" | "daily";
   mondayAutoSyncTrigger: "on-open" | "fixed-time";

@@ -9,6 +9,30 @@
 export type MondayProjectScope = "cliente" | "interno";
 
 /**
+ * Os rótulos que o Monday reconhece, lidos do board de Report de Horas.
+ *
+ * O Report **não é destino de escrita** — criar item ali dispara uma automação
+ * que copia o apontamento para o board do projeto e depois não o atualiza nem o
+ * exclui. Ele serve de catálogo: é o único lugar onde os rótulos de cliente e os
+ * de projeto interno convivem, então uma leitura dele semeia os quatro conjuntos
+ * de uma vez.
+ */
+export interface MondayFieldCatalogs {
+  /** Vira Categoria — o envio casa categoria e coluna pelo nome. */
+  activityType: string[];
+  projectStage: string[];
+  nonBillableReason: string[];
+  reportType: string[];
+}
+
+export const EMPTY_FIELD_CATALOGS: MondayFieldCatalogs = {
+  activityType: [],
+  projectStage: [],
+  nonBillableReason: [],
+  reportType: [],
+};
+
+/**
  * Ids das colunas do grupo Activities de um board, resolvidos por título no
  * import. São gerados por template (`mmXXXX`) — nunca hardcodar.
  */

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
+import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
 import type {
   AppConfig,
   ConfigContextValue,
@@ -93,7 +94,10 @@ const DEFAULTS: AppConfig = {
   mondayPortfolioBoardId: "18418432045",
   mondayReportBoardId: "18422834169",
   mondayProjectStageFieldId: "",
+  mondayReportTypeFieldId: "",
+  mondayNonBillableReasonFieldId: "",
   mondayProjectMapping: [],
+  mondayFieldCatalogs: EMPTY_FIELD_CATALOGS,
   mondayAutoSync: false,
   mondayAutoSyncMode: "per-task" as const,
   mondayAutoSyncTrigger: "on-open" as const,

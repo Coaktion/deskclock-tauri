@@ -6,7 +6,10 @@ export type MondayConfigKey =
   | "mondayPortfolioBoardId"
   | "mondayReportBoardId"
   | "mondayProjectMapping"
+  | "mondayFieldCatalogs"
   | "mondayProjectStageFieldId"
+  | "mondayReportTypeFieldId"
+  | "mondayNonBillableReasonFieldId"
   | "mondayAutoSync"
   | "mondayAutoSyncMode"
   | "mondayDailySyncLastTimestamp";

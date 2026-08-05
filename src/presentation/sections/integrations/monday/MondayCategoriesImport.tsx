@@ -1,4 +1,7 @@
-import { importMondayCategories } from "@domain/usecases/monday/importMondayCategories";
+import {
+  activityTypeCatalog,
+  importMondayCategories,
+} from "@domain/usecases/monday/importMondayCategories";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyCategoriesChanged } from "@shared/utils/catalogSync";
@@ -7,15 +10,19 @@ import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useCallback, useEffect, useState } from "react";
 
 /**
- * Uma categoria por Activity Type dos boards importados. O envio casa os dois
- * **pelo nome**, então renomear a categoria a desliga da coluna do Monday.
+ * Uma categoria por Activity Type. O envio casa os dois **pelo nome**, então
+ * renomear a categoria a desliga da coluna do Monday.
  */
 export function MondayCategoriesImport({
   mappings,
+  catalogLabels,
   deskclockWorkspaceId,
   reloadCategories,
 }: {
+  /** Rótulos cacheados dos boards e o escopo de cada um. */
   mappings: MondayProjectMapping[];
+  /** Activity Types do board de Report. */
+  catalogLabels: string[];
   deskclockWorkspaceId: string;
   reloadCategories: () => Promise<void>;
 }) {
@@ -23,7 +30,9 @@ export function MondayCategoriesImport({
   const [importing, setImporting] = useState(false);
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
 
-  const labels = [...new Set(mappings.flatMap((m) => m.activityTypeLabels))];
+  // A mesma função que o import usa: contar por outro caminho faria o número da
+  // tela divergir do que o clique cria.
+  const labels = activityTypeCatalog(catalogLabels, mappings);
 
   // As categorias do **destino**, que pode não ser o workspace ativo — usar a
   // lista do app contaria de outro lugar e mentiria sobre o que falta importar.
@@ -44,6 +53,7 @@ export function MondayCategoriesImport({
     try {
       const { created, existing } = await importMondayCategories({
         categoryRepo,
+        catalogLabels,
         mappings,
         deskclockWorkspaceId,
       });
@@ -64,20 +74,20 @@ export function MondayCategoriesImport({
   return (
     <ImportCard
       title="Categorias"
-      hint="Cada Activity Type vira uma categoria. Boards de cliente nascem billable; o board interno, non-billable. Categorias que já existem não são alteradas."
+      hint="Cada Activity Type vira uma categoria. Rótulo de board de cliente nasce billable; de projeto interno, non-billable. Categorias que já existem não são alteradas."
       action={
         <ImportActionButton
           label={known > 0 ? "Atualizar" : "Importar"}
           busy={importing}
           disabled={labels.length === 0 || !deskclockWorkspaceId}
-          title={labels.length === 0 ? "Importe os projetos primeiro." : undefined}
+          title={labels.length === 0 ? "Leia os catálogos ou importe os projetos." : undefined}
           onClick={handleImport}
         />
       }
     >
       {labels.length === 0 ? (
         <p className="text-xs text-gray-600 italic">
-          Importe os projetos para carregar os Activity Types dos boards.
+          Leia os catálogos, ou importe os projetos, para carregar os Activity Types.
         </p>
       ) : (
         <p className="text-[11px] text-gray-500">

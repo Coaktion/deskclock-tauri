@@ -1,24 +1,46 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import type { AppConfig } from "@shared/types/appConfig";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useEffect, useState } from "react";
 
+/** As chaves de config que apontam um campo personalizado para uma coluna do Monday. */
+export type MondayFieldConfigKey = {
+  [K in keyof AppConfig]: K extends `monday${string}FieldId` ? K : never;
+}[keyof AppConfig];
+
 /**
- * Vínculo entre a coluna "Project Stage" do board e um campo personalizado da
- * tarefa. A etapa é atributo da **atividade**, não da categoria: duas tarefas da
- * mesma categoria podem estar em etapas diferentes.
+ * Vínculo entre uma coluna do Monday e um campo personalizado da tarefa.
+ *
+ * Os três — Project Stage, Report Type e Non Billable reason — são atributo da
+ * **atividade**, não da categoria nem do projeto: duas tarefas da mesma
+ * categoria podem estar em etapas diferentes, e o motivo de uma hora não ter
+ * sido faturada é dela, não da categoria dela.
+ *
+ * Campo personalizado, e não coluna própria em `tasks`: o valor precisa ser
+ * editável no planejamento, no popup, no lançamento retroativo, na tarefa em
+ * execução e nos modais de edição — tudo isso os campos personalizados já
+ * atravessam. Uma coluna nova exigiria reescrever à mão o mesmo input em nove
+ * lugares.
  *
  * Importar do Monday semeia as opções com os rótulos do próprio board — assim
  * rótulo do DeskClock e rótulo do Monday coincidem e não existe uma segunda
  * tabela de mapeamento para manter.
  */
-export function MondayProjectStageField({
+export function MondayCatalogField({
+  title,
+  hint,
+  configKey,
   optionLabels,
-  columnTitle,
+  defaultFieldLabel,
 }: {
+  title: string;
+  hint: string;
+  configKey: MondayFieldConfigKey;
   optionLabels: string[];
-  columnTitle: string;
+  /** Nome do campo criado pelo botão. Vazio cai no título do card. */
+  defaultFieldLabel?: string;
 }) {
   const config = useAppConfig();
   const { fields, createField, updateField } = useCustomFields();
@@ -27,10 +49,10 @@ export function MondayProjectStageField({
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    setFieldId(config.get("mondayProjectStageFieldId"));
+    setFieldId(config.get(configKey));
     // Hidratação única: só lemos a config na carga. `config` é recriado a cada
     // render do provider, então tê-lo nas deps desfaria a escolha do usuário.
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config.isLoaded, configKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // O campo vinculado continua na lista mesmo arquivado — sumir com ele faria o
   // vínculo existente parecer inexistente.
@@ -42,14 +64,14 @@ export function MondayProjectStageField({
 
   async function handleSelect(id: string) {
     setFieldId(id);
-    await config.set("mondayProjectStageFieldId", id);
+    await config.set(configKey, id);
   }
 
-  /** Cria o campo, ou reaproveita o que já tem o nome da coluna. */
+  /** Cria o campo, ou reaproveita o que já tem o nome esperado. */
   async function handleCreate() {
     setBusy(true);
     try {
-      const label = columnTitle.trim() || "Project Stage";
+      const label = (defaultFieldLabel ?? "").trim() || title;
       // Só um `select` serve: vincular um campo `text` homônimo mandaria texto
       // livre para uma coluna `status` e sumiria do select desta tela, que só
       // lista selects — o vínculo pareceria não existir.
@@ -97,11 +119,11 @@ export function MondayProjectStageField({
     }
   }
 
+  const noLabels = optionLabels.length === 0;
+  const emptyHint = "Leia os catálogos para carregar os rótulos desta coluna.";
+
   return (
-    <ImportCard
-      title="Project Stage"
-      hint="Selecione um campo personalizado para representar o Project Stage ou crie um novo importando as opções direto do Monday (recomendado)."
-    >
+    <ImportCard title={title} hint={hint}>
       <div className="flex items-center gap-2">
         <select
           value={fieldId}
@@ -119,10 +141,10 @@ export function MondayProjectStageField({
           <ImportActionButton
             label={missingOptions > 0 ? `Atualizar (+${missingOptions})` : "Atualizar"}
             busy={busy}
-            disabled={optionLabels.length === 0 || missingOptions === 0}
+            disabled={noLabels || missingOptions === 0}
             title={
-              optionLabels.length === 0
-                ? "Importe os projetos para ler os rótulos da coluna."
+              noLabels
+                ? emptyHint
                 : missingOptions === 0
                   ? "As opções do campo já cobrem os rótulos do board."
                   : undefined
@@ -133,12 +155,8 @@ export function MondayProjectStageField({
           <ImportActionButton
             label="Criar do Monday"
             busy={busy}
-            disabled={optionLabels.length === 0}
-            title={
-              optionLabels.length === 0
-                ? "Importe os projetos para ler os rótulos da coluna."
-                : undefined
-            }
+            disabled={noLabels}
+            title={noLabels ? emptyHint : undefined}
             onClick={handleCreate}
           />
         )}
