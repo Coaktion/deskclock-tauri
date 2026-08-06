@@ -11,6 +11,7 @@ import { notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 interface SkippedBoard {
@@ -73,6 +74,9 @@ export function MondayProjectsImport({
   const [skipped, setSkipped] = useState<SkippedBoard[]>([]);
   const [namesById, setNamesById] = useState<Map<string, string>>(new Map());
   const [autoError, setAutoError] = useState("");
+  // Recolhida por padrão: o caso comum é conferir se o import trouxe o número
+  // certo de projetos, não ler os 60 nomes.
+  const [listOpen, setListOpen] = useState(false);
 
   // Hidratação única: `config` é recriado a cada render do provider e reler a
   // cada um sobrescreveria o estado de um import em curso.
@@ -191,33 +195,59 @@ export function MondayProjectsImport({
       {linked.length === 0 ? (
         <p className="text-xs text-gray-600 italic">Nenhum projeto vinculado ainda.</p>
       ) : (
-        <div className="space-y-1">
-          {linked.map((m) => (
-            <div key={m.portfolioItemId} className="flex items-center gap-3 py-1">
-              <span className="text-xs text-gray-300 flex-1 truncate">
-                {namesById.get(m.deskclockProjectId)}
-              </span>
-              {m.mondayBoardId ? (
-                <span className="text-xs text-gray-500 truncate max-w-[45%]">
-                  {m.mondayBoardName}
-                </span>
-              ) : (
-                <ProjectBoardIdInput
-                  value={m.mondayBoardId}
-                  onSave={(boardId) => handleSetBoardId(m.portfolioItemId, boardId)}
-                />
-              )}
+        <>
+          {/* A lista acompanha o Portfólio e já passa de 60 itens: aberta, ela
+              empurrava os catálogos e os três campos para fora da tela, e o card
+              de Projetos virava a seção inteira. O contador e o aviso de quadro
+              faltando ficam de fora do recolhimento — são eles que dizem se vale
+              abrir. */}
+          <button
+            onClick={() => setListOpen((v) => !v)}
+            aria-expanded={listOpen}
+            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-gray-300 transition-colors"
+          >
+            {listOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {linked.length} projeto(s) vinculado(s)
+            {missingBoard > 0 && (
+              <span className="text-amber-500/80">· {missingBoard} sem quadro</span>
+            )}
+          </button>
+
+          {listOpen && (
+            // O teto é o que mantém o resto da seção alcançável; a rolagem, o que
+            // mantém os 60 projetos acessíveis dentro dele. `pr-1` afasta a barra
+            // do campo de id, que encosta na borda direita da linha.
+            <div className="max-h-[300px] overflow-y-auto pr-1 space-y-1">
+              {linked.map((m) => (
+                <div key={m.portfolioItemId} className="flex items-center gap-3 py-1">
+                  <span className="text-xs text-gray-300 flex-1 truncate">
+                    {namesById.get(m.deskclockProjectId)}
+                  </span>
+                  {m.mondayBoardId ? (
+                    <span className="text-xs text-gray-500 truncate max-w-[45%]">
+                      {m.mondayBoardName}
+                    </span>
+                  ) : (
+                    <ProjectBoardIdInput
+                      value={m.mondayBoardId}
+                      onSave={(boardId) => handleSetBoardId(m.portfolioItemId, boardId)}
+                    />
+                  )}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
-      {/* O motivo fica visível para o campo acima não parecer decoração: sem o
-          id, tudo funciona menos o que a integração existe para fazer. */}
+      {/* O motivo fica visível para o campo não parecer decoração: sem o id, tudo
+          funciona menos o que a integração existe para fazer. Com a lista
+          recolhida, o texto precisa dizer onde está o campo — "digite aqui"
+          apontaria para nada. */}
       {missingBoard > 0 && (
         <p className="text-[11px] text-amber-500/80">
           {missingBoard} projeto(s) sem quadro — as horas deles não sobem. Preencha o &quot;ID
-          Quadro Projeto&quot; no Portfólio ou digite o id aqui.
+          Quadro Projeto&quot; no Portfólio ou abra a lista acima e digite o id.
         </p>
       )}
 
