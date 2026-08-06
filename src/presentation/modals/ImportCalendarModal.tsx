@@ -23,7 +23,8 @@ import {
   Square,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
@@ -110,11 +111,12 @@ interface EventEditorProps {
   event: CalendarEvent;
   state: EventEditState;
   projects: Project[];
-  categories: Category[];
+  /** Recorte de categorias do projeto da linha — ver `useProjectCategoryMap`. */
+  categoryOptionsFor: (projectId: string | null) => Category[];
   onChange: (s: EventEditState) => void;
 }
 
-function EventEditor({ event, state, projects, categories, onChange }: EventEditorProps) {
+function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: EventEditorProps) {
   function toggleDay(day: number) {
     const next = state.recurringDays.includes(day)
       ? state.recurringDays.filter((d) => d !== day)
@@ -127,7 +129,17 @@ function EventEditor({ event, state, projects, categories, onChange }: EventEdit
       <Autocomplete
         value={state.projectName}
         onChange={(v) => onChange({ ...state, projectName: v, projectId: null })}
-        onSelect={(o) => onChange({ ...state, projectId: o.id, projectName: o.name })}
+        onSelect={(o) =>
+          // Projeto novo zera a categoria. Só aqui: o `onChange` acima dispara a
+          // cada tecla, e limpar ali apagaria a categoria enquanto se digita.
+          onChange({
+            ...state,
+            projectId: o.id,
+            projectName: o.name,
+            categoryId: null,
+            categoryName: "",
+          })
+        }
         options={projects}
         placeholder="Projeto"
       />
@@ -135,7 +147,7 @@ function EventEditor({ event, state, projects, categories, onChange }: EventEdit
         value={state.categoryName}
         onChange={(v) => onChange({ ...state, categoryName: v, categoryId: null })}
         onSelect={(o) => onChange({ ...state, categoryId: o.id, categoryName: o.name })}
-        options={categories}
+        options={categoryOptionsFor(state.projectId)}
         placeholder="Categoria"
       />
 
@@ -199,7 +211,7 @@ interface EventRowProps {
   selected: boolean;
   editState: EventEditState;
   projects: Project[];
-  categories: Category[];
+  categoryOptionsFor: (projectId: string | null) => Category[];
   isDeduped: boolean;
   isDuplicateOfExisting: boolean;
   onToggleSelect: () => void;
@@ -211,7 +223,7 @@ function EventRow({
   selected,
   editState,
   projects,
-  categories,
+  categoryOptionsFor,
   isDeduped,
   isDuplicateOfExisting,
   onToggleSelect,
@@ -287,7 +299,7 @@ function EventRow({
           event={event}
           state={editState}
           projects={projects}
-          categories={categories}
+          categoryOptionsFor={categoryOptionsFor}
           onChange={onEditChange}
         />
       )}
@@ -323,6 +335,12 @@ export function ImportCalendarModal({
   // ativo — decisão registrada (§5.7), não descuido.
   const config = useAppConfig();
   const workspaceId = resolveIntegrationWorkspaceId(config.get("calendarDeskclockWorkspaceId"));
+  // Uma consulta para o modal inteiro: um hook por linha viraria dezenas.
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptionsFor = useCallback(
+    (projectId: string | null) => categoriesFor(categories, projectId),
+    [categoriesFor, categories]
+  );
   const [fromDate, setFromDate] = useState(defaultFromISO.slice(0, 10));
   const [toDate, setToDate] = useState(defaultToISO.slice(0, 10));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -536,7 +554,7 @@ export function ImportCalendarModal({
               selected={selected.has(event.id)}
               editState={editMap.get(event.id) ?? defaultEditState(event, projects, categories)}
               projects={projects}
-              categories={categories}
+              categoryOptionsFor={categoryOptionsFor}
               isDeduped={dedupedEventIds.has(event.id)}
               isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
               onToggleSelect={() => toggleEvent(event.id)}

@@ -3,6 +3,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "./Autocomplete";
 import type { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import type { SuggestionItem } from "@presentation/hooks/useOmniboxSuggestions";
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
@@ -85,6 +86,9 @@ export function OmniboxIdle({
   handleSuggestionSelect,
   handleInputKeyDown,
 }: OmniboxIdleProps) {
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, draft.projectId);
+
   return (
     <div
       ref={containerRef}
@@ -131,7 +135,14 @@ export function OmniboxIdle({
               value={draft.projectName}
               onChange={(v) => setDraft((d) => ({ ...d, projectName: v }))}
               onSelect={(o) => {
-                setDraft((d) => ({ ...d, projectName: o.name, projectId: o.id }));
+                // Trocar o projeto zera a categoria: o recorte de opções mudou.
+                setDraft((d) => ({
+                  ...d,
+                  projectName: o.name,
+                  projectId: o.id,
+                  categoryName: "",
+                  categoryId: null,
+                }));
                 setEditingChip(null);
               }}
               onEnter={() => setEditingChip(null)}
@@ -164,7 +175,7 @@ export function OmniboxIdle({
                 setEditingChip(null);
               }}
               onEnter={() => setEditingChip(null)}
-              options={categories}
+              options={categoryOptions}
               placeholder="Categoria"
               autoFocus
             />

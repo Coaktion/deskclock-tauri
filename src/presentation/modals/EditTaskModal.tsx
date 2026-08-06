@@ -17,6 +17,7 @@ import {
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
@@ -61,6 +62,11 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(task.categoryId);
   const { activeFields } = useCustomFields();
   const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(
+    categories,
+    projects.find((p) => p.name === projectName)?.id ?? selectedProjectId
+  );
 
   // Data de início (local) como referência para construir os ISOs
   const [startDate, setStartDate] = useState(localDateISO(task.startTime));
@@ -160,7 +166,12 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             <Autocomplete
               value={projectName}
               onChange={setProjectName}
-              onSelect={(o) => setSelectedProjectId(o.id)}
+              onSelect={(o) => {
+                setSelectedProjectId(o.id);
+                // Trocar o projeto zera a categoria: o recorte de opções mudou.
+                setSelectedCategoryId(null);
+                setCategoryName("");
+              }}
               onEnter={handleSave}
               options={projects}
               placeholder="Projeto"
@@ -181,7 +192,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                   if (cat) setBillable(cat.defaultBillable);
                 }}
                 onEnter={handleSave}
-                options={categories}
+                options={categoryOptions}
                 placeholder="Categoria"
                 className="flex-1 min-w-0"
                 inputClassName={bareInputClass}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import {
   X,
   Loader2,
@@ -69,17 +70,28 @@ function defaultEditState(ticket: ZendeskTicket): TicketEditState {
 interface TicketEditorProps {
   state: TicketEditState;
   projects: Project[];
-  categories: Category[];
+  /** Recorte de categorias do projeto da linha — ver `useProjectCategoryMap`. */
+  categoryOptionsFor: (projectId: string | null) => Category[];
   onChange: (s: TicketEditState) => void;
 }
 
-function TicketEditor({ state, projects, categories, onChange }: TicketEditorProps) {
+function TicketEditor({ state, projects, categoryOptionsFor, onChange }: TicketEditorProps) {
   return (
     <div className="mt-1 mx-4 mb-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
       <Autocomplete
         value={state.projectName}
         onChange={(v) => onChange({ ...state, projectName: v, projectId: null })}
-        onSelect={(o) => onChange({ ...state, projectId: o.id, projectName: o.name })}
+        onSelect={(o) =>
+          // Projeto novo zera a categoria. Só no `onSelect`: o `onChange` acima
+          // dispara a cada tecla digitada.
+          onChange({
+            ...state,
+            projectId: o.id,
+            projectName: o.name,
+            categoryId: null,
+            categoryName: "",
+          })
+        }
         options={projects}
         placeholder="Projeto"
       />
@@ -87,7 +99,7 @@ function TicketEditor({ state, projects, categories, onChange }: TicketEditorPro
         value={state.categoryName}
         onChange={(v) => onChange({ ...state, categoryName: v, categoryId: null })}
         onSelect={(o) => onChange({ ...state, categoryId: o.id, categoryName: o.name })}
-        options={categories}
+        options={categoryOptionsFor(state.projectId)}
         placeholder="Categoria"
       />
 
@@ -156,7 +168,7 @@ interface TicketRowProps {
   selected: boolean;
   editState: TicketEditState;
   projects: Project[];
-  categories: Category[];
+  categoryOptionsFor: (projectId: string | null) => Category[];
   onToggleSelect: () => void;
   onEditChange: (s: TicketEditState) => void;
 }
@@ -166,7 +178,7 @@ function TicketRow({
   selected,
   editState,
   projects,
-  categories,
+  categoryOptionsFor,
   onToggleSelect,
   onEditChange,
 }: TicketRowProps) {
@@ -213,7 +225,7 @@ function TicketRow({
         <TicketEditor
           state={editState}
           projects={projects}
-          categories={categories}
+          categoryOptionsFor={categoryOptionsFor}
           onChange={onEditChange}
         />
       )}
@@ -243,6 +255,12 @@ export function ImportZendeskModal({
   // Destino escolhido na integração, não o workspace aberto na tela.
   const config = useAppConfig();
   const workspaceId = resolveIntegrationWorkspaceId(config.get("zendeskDeskclockWorkspaceId"));
+  // Uma consulta para o modal inteiro: um hook por linha viraria dezenas.
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptionsFor = useCallback(
+    (projectId: string | null) => categoriesFor(categories, projectId),
+    [categoriesFor, categories]
+  );
   const [tickets, setTickets] = useState<ZendeskTicket[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editMap, setEditMap] = useState<Map<number, TicketEditState>>(new Map());
@@ -383,7 +401,7 @@ export function ImportZendeskModal({
                   selected={selected.has(ticket.id)}
                   editState={editMap.get(ticket.id) ?? defaultEditState(ticket)}
                   projects={projects}
-                  categories={categories}
+                  categoryOptionsFor={categoryOptionsFor}
                   onToggleSelect={() => toggleTicket(ticket.id)}
                   onEditChange={(s) => updateEdit(ticket.id, s)}
                 />

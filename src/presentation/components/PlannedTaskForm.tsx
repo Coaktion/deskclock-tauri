@@ -12,6 +12,7 @@ import {
   formColumnClass,
 } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { todayISO } from "@shared/utils/time";
 import { DollarSign, ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -109,6 +110,8 @@ export function PlannedTaskForm({
 }: PlannedTaskFormProps) {
   const [form, setForm] = useState<FormState>({ ...INITIAL, scheduleDate: defaultDate });
   const { activeFields } = useCustomFields();
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, form.projectId);
   const [submitting, setSubmitting] = useState(false);
   const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
   const [newActionValue, setNewActionValue] = useState("");
@@ -116,6 +119,16 @@ export function PlannedTaskForm({
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /**
+   * Trocar ou limpar o projeto zera a categoria — o recorte de categorias mudou
+   * debaixo dela, e manter a anterior deixaria escolhida uma opção que o campo
+   * já não oferece. Chamado só nos dois caminhos em que o projeto de fato muda
+   * de id, nunca a cada tecla digitada.
+   */
+  function clearCategory() {
+    setForm((prev) => ({ ...prev, categoryId: null, categoryName: "" }));
   }
 
   function toggleDay(day: number) {
@@ -204,11 +217,15 @@ export function PlannedTaskForm({
         value={form.projectName}
         onChange={(v) => {
           set("projectName", v);
-          if (!v) set("projectId", null);
+          if (!v) {
+            set("projectId", null);
+            clearCategory();
+          }
         }}
         onSelect={(o) => {
           set("projectId", o.id);
           set("projectName", o.name);
+          clearCategory();
         }}
         onEnter={() => void handleSubmit()}
         options={projects}
@@ -232,7 +249,7 @@ export function PlannedTaskForm({
             }));
           }}
           onEnter={() => void handleSubmit()}
-          options={categories}
+          options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
           inputClassName={bareInputClass}

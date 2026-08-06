@@ -42,6 +42,7 @@ export function EditPlannedTaskModal({
     categoryName,
     setCategoryName,
     selectCategory,
+    categoryOptions,
     billable,
     setBillable,
     scheduleType,
@@ -124,7 +125,7 @@ export function EditPlannedTaskModal({
                 value={categoryName}
                 onChange={setCategoryName}
                 onSelect={selectCategory}
-                options={categories}
+                options={categoryOptions}
                 placeholder="Categoria"
                 className="flex-1"
               />

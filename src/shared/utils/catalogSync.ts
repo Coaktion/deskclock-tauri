@@ -36,3 +36,16 @@ export function notifyCategoriesChanged(): Promise<void> {
 export function notifyCustomFieldsChanged(): Promise<void> {
   return emit(OVERLAY_EVENTS.CUSTOM_FIELDS_CHANGED, {});
 }
+
+/**
+ * O mesmo, para as associações projeto ↔ categoria — que decidem quais
+ * categorias cada autocomplete oferece.
+ *
+ * Sem o aviso, associar uma categoria na tela de Dados não chegaria ao
+ * `overlay-popup`: ele continuaria oferecendo o catálogo inteiro (ou o recorte
+ * antigo) durante a execução, discordando da janela principal sobre o que é
+ * escolha válida para o mesmo projeto.
+ */
+export function notifyProjectCategoriesChanged(): Promise<void> {
+  return emit(OVERLAY_EVENTS.PROJECT_CATEGORIES_CHANGED, {});
+}

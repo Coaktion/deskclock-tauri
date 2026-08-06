@@ -10,6 +10,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
@@ -234,11 +235,19 @@ function ExecSection({
   }
   async function closeProjectEdit() {
     setEditingProject(false);
-    if (editProjectIdRef.current !== task.projectId)
-      await onUpdateTask({ projectId: editProjectIdRef.current });
+    if (editProjectIdRef.current !== task.projectId) {
+      // Mesma regra do `onSelect`: projeto novo, categoria zerada.
+      editCategoryIdRef.current = null;
+      setEditCategoryName("");
+      await onUpdateTask({ projectId: editProjectIdRef.current, categoryId: null });
+    }
   }
 
   // ── category ──────────────────────────────────────────────────────────────
+  // Só as `options`: `categoryName` continua vindo do catálogo cheio, ou
+  // desassociar a categoria apagaria o rótulo do chip da tarefa que já a usa.
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, task.projectId);
   const [editingCategory, setEditingCategory] = useState(false);
   const [editCategoryName, setEditCategoryName] = useState(categoryName ?? "");
   const editCategoryIdRef = useRef<string | null>(task.categoryId ?? null);
@@ -330,7 +339,12 @@ function ExecSection({
             onSelect={(o) => {
               editProjectIdRef.current = o.id;
               setEditProjectName(o.name);
-              void onUpdateTask({ projectId: o.id });
+              // A categoria vai junto: o recorte de opções mudou, e aqui a
+              // edição é gravada na hora — deixá-la para trás manteria na
+              // tarefa uma categoria que o chip já não oferece.
+              editCategoryIdRef.current = null;
+              setEditCategoryName("");
+              void onUpdateTask({ projectId: o.id, categoryId: null });
               setEditingProject(false);
             }}
             options={projects}
@@ -378,7 +392,7 @@ function ExecSection({
               });
               setEditingCategory(false);
             }}
-            options={categories}
+            options={categoryOptions}
             placeholder="Categoria"
             className="w-full text-[12px]"
             dropUp

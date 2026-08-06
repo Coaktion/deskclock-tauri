@@ -15,7 +15,7 @@ import type { UUID } from "@shared/types";
  */
 export function resolveCategoriesForProject(
   categories: Category[],
-  allowedIds: Set<UUID>
+  allowedIds: ReadonlySet<UUID>
 ): Category[] {
   if (allowedIds.size === 0) return categories;
   return categories.filter((c) => allowedIds.has(c.id));

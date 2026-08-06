@@ -7,6 +7,7 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface GroupUpdates {
@@ -44,6 +45,11 @@ export function EditGroupModal({
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(first.projectId);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(first.categoryId);
   const [saving, setSaving] = useState(false);
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(
+    categories,
+    projects.find((p) => p.name === projectName)?.id ?? selectedProjectId
+  );
   const { activeFields } = useCustomFields();
   // Todas as tarefas do grupo têm os mesmos valores — eles compõem a chave (§6.3).
   const [customValues, setCustomValues] = useState<CustomValues>(first.customValues);
@@ -100,7 +106,12 @@ export function EditGroupModal({
             <Autocomplete
               value={projectName}
               onChange={setProjectName}
-              onSelect={(o) => setSelectedProjectId(o.id)}
+              onSelect={(o) => {
+                setSelectedProjectId(o.id);
+                // Trocar o projeto zera a categoria: o recorte de opções mudou.
+                setSelectedCategoryId(null);
+                setCategoryName("");
+              }}
               onEnter={handleSave}
               options={projects}
               placeholder="Projeto"
@@ -118,7 +129,7 @@ export function EditGroupModal({
                 if (cat) setBillable(cat.defaultBillable);
               }}
               onEnter={handleSave}
-              options={categories}
+              options={categoryOptions}
               placeholder="Categoria"
             />
           </div>

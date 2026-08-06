@@ -16,6 +16,7 @@ import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { RunningTaskEditForm } from "./RunningTaskEditForm";
 import { Autocomplete } from "./Autocomplete";
 import { formatHHMMSS, formatTimeOfDay, parseStartTimeInput } from "@shared/utils/time";
@@ -49,6 +50,8 @@ export function RunningTaskSection({
   const [fillCategoryId, setFillCategoryId] = useState<string | null>(null);
   const [editingStartTime, setEditingStartTime] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState("");
+  // Antes do `return null` de baixo: hook não pode ficar atrás de saída antecipada.
+  const { categoriesFor } = useProjectCategoryMap();
 
   // Abre edição ao receber sinal do overlay — usa prop em vez de listener Tauri
   // para garantir que o sinal seja processado mesmo quando o componente ainda
@@ -72,7 +75,12 @@ export function RunningTaskSection({
   const isRunning = runningTask.status === "running";
   const displayName = runningTask.name ?? "(sem nome)";
   const project = projects.find((p) => p.id === runningTask.projectId);
+  // Do catálogo cheio: é o nome já gravado, não uma escolha nova.
   const category = categories.find((c) => c.id === runningTask.categoryId);
+  const fillCategoryOptions = categoriesFor(
+    categories,
+    projects.find((p) => p.name === fillProjectName)?.id ?? fillProjectId
+  );
 
   async function handlePlayPause() {
     if (isRunning) await pauseTask();
@@ -261,7 +269,12 @@ export function RunningTaskSection({
           <Autocomplete
             value={fillProjectName}
             onChange={setFillProjectName}
-            onSelect={(o) => setFillProjectId(o.id)}
+            onSelect={(o) => {
+              setFillProjectId(o.id);
+              // O recorte de categorias mudou junto com o projeto.
+              setFillCategoryName("");
+              setFillCategoryId(null);
+            }}
             options={projects}
             placeholder="Projeto"
           />
@@ -274,7 +287,7 @@ export function RunningTaskSection({
             }}
             onSelect={(o) => setFillCategoryId(o.id)}
             onEnter={handleFillSubmit}
-            options={categories}
+            options={fillCategoryOptions}
             placeholder="Categoria"
           />
           <div className="flex gap-2 justify-end">

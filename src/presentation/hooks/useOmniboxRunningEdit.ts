@@ -84,6 +84,12 @@ export function useOmniboxRunningEdit({
     }
   }
 
+  /** Trocar o projeto no preenchimento obrigatório zera a categoria já digitada. */
+  function clearFillCategory() {
+    setFillCategoryName("");
+    setFillCategoryId(null);
+  }
+
   async function handleFillSubmit() {
     const pId = projects.find((p) => p.name === fillProjectName)?.id ?? fillProjectId ?? null;
     const cId = categories.find((c) => c.name === fillCategoryName)?.id ?? fillCategoryId ?? null;
@@ -167,6 +173,7 @@ export function useOmniboxRunningEdit({
     fillCategoryName,
     setFillCategoryName,
     fillCategoryId,
+    clearFillCategory,
     editingStartTime,
     startTimeInput,
     setStartTimeInput,

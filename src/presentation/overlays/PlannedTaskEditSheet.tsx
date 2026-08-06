@@ -114,7 +114,7 @@ export function PlannedTaskEditSheet({
             value={editor.categoryName}
             onChange={editor.setCategoryName}
             onSelect={editor.selectCategory}
-            options={categories}
+            options={editor.categoryOptions}
             placeholder="Categoria"
             className="flex-1 min-w-0 text-[12px]"
             inputClassName="w-full px-2 py-1.5 bg-transparent text-gray-100 placeholder-gray-500 focus:outline-none"

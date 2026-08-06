@@ -8,6 +8,7 @@ import { ActionChip } from "./ActionChip";
 import { Autocomplete } from "./Autocomplete";
 import { OmniboxCustomFieldsPanel } from "./OmniboxCustomFieldsPanel";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 import type { OmniboxRunningEditState } from "@presentation/hooks/useOmniboxRunningEdit";
 
@@ -47,6 +48,7 @@ export function OmniboxRunning({
   setFillProjectName,
   fillCategoryName,
   setFillCategoryName,
+  clearFillCategory,
   editingStartTime,
   startTimeInput,
   setStartTimeInput,
@@ -69,6 +71,17 @@ export function OmniboxRunning({
   const runCategory = categories.find((c) => c.id === runningTask.categoryId);
   const { activeFields } = useCustomFields();
   const filledCustomValues = countFilledCustomValues(activeFields, runningTask.customValues);
+
+  // Dois recortes diferentes: o chip edita a categoria da tarefa em execução, e o
+  // preenchimento obrigatório trabalha sobre o projeto que está sendo digitado
+  // ali — que ainda não é o da tarefa. `runCategory` continua saindo do catálogo
+  // cheio, ou desassociar a categoria apagaria o nome dela do chip.
+  const { categoriesFor } = useProjectCategoryMap();
+  const runningCategoryOptions = categoriesFor(categories, runningTask.projectId);
+  const fillCategoryOptions = categoriesFor(
+    categories,
+    projects.find((p) => p.name === fillProjectName)?.id ?? runningTask.projectId
+  );
 
   return (
     <div
@@ -190,7 +203,7 @@ export function OmniboxRunning({
                     void handleCategorySelect(o.id, cat?.defaultBillable ?? runningTask.billable);
                   }}
                   onEnter={() => setEditingRunningChip(null)}
-                  options={categories}
+                  options={runningCategoryOptions}
                   placeholder="Categoria"
                   autoFocus
                 />
@@ -362,7 +375,10 @@ export function OmniboxRunning({
           <Autocomplete
             value={fillProjectName}
             onChange={setFillProjectName}
-            onSelect={(o) => setFillProjectName(o.name)}
+            onSelect={(o) => {
+              setFillProjectName(o.name);
+              clearFillCategory();
+            }}
             options={projects}
             placeholder="Projeto"
           />
@@ -371,7 +387,7 @@ export function OmniboxRunning({
             onChange={setFillCategoryName}
             onSelect={(o) => setFillCategoryName(o.name)}
             onEnter={handleFillSubmit}
-            options={categories}
+            options={fillCategoryOptions}
             placeholder="Categoria"
           />
           <div className="flex gap-2 justify-end">

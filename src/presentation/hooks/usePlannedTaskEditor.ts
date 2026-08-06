@@ -3,6 +3,7 @@ import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import type { UUID } from "@shared/types";
 
 export interface EditPlannedTaskInput {
@@ -63,9 +64,20 @@ export function usePlannedTaskEditor({
   const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
   const [saving, setSaving] = useState(false);
 
+  const { categoriesFor } = useProjectCategoryMap();
+  /**
+   * Nasce aqui, e não em cada componente, porque o hook serve dois — o
+   * `EditPlannedTaskModal` e o `PlannedTaskEditSheet` do popup (§9.4). Calculado
+   * nos dois, um ajuste acertaria só uma das telas.
+   */
+  const categoryOptions = categoriesFor(categories, projectId);
+
   function selectProject(option: { id: string; name: string }) {
     setProjectId(option.id);
     setProjectName(option.name);
+    // O recorte de categorias mudou: a anterior pode não estar mais na lista.
+    setCategoryId(null);
+    setCategoryName("");
   }
 
   /** Trocar de categoria arrasta o billable padrão dela (§6.2). */
@@ -123,6 +135,7 @@ export function usePlannedTaskEditor({
     categoryName,
     setCategoryName,
     selectCategory,
+    categoryOptions,
     billable,
     setBillable,
     scheduleType,

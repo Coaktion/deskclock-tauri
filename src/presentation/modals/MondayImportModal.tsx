@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -34,6 +34,7 @@ import { findTimelineColumnId } from "@domain/usecases/monday/resolveBoardActivi
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -136,6 +137,13 @@ export function MondayImportModal({
    */
   const stageField =
     activeFields.find((f) => f.id === config.get("mondayProjectStageFieldId")) ?? null;
+
+  // Uma consulta para o modal inteiro: um hook por linha viraria dezenas.
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptionsFor = useCallback(
+    (projectId: string | null) => categoriesFor(categories, projectId),
+    [categoriesFor, categories]
+  );
 
   const [period, setPeriod] = useState<PeriodFilter>("week");
   const [rows, setRows] = useState<MondayImportRow[]>([]);
@@ -456,6 +464,7 @@ export function MondayImportModal({
                         editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField)
                       }
                       categories={categories}
+                      categoryOptionsFor={categoryOptionsFor}
                       stageField={stageField}
                       isDuplicate={existingNames.has(row.item.name.toLowerCase().trim())}
                       onToggleSelect={() => toggleItem(row.item.id)}
@@ -540,6 +549,8 @@ interface ItemRowProps {
   selected: boolean;
   editState: ItemEditState;
   categories: Category[];
+  /** Recorte de categorias do Project do grupo — ver `useProjectCategoryMap`. */
+  categoryOptionsFor: (projectId: string | null) => Category[];
   /** Null enquanto a integração não tiver o campo de etapa configurado. */
   stageField: CustomField | null;
   isDuplicate: boolean;
@@ -552,6 +563,7 @@ function ItemRow({
   selected,
   editState,
   categories,
+  categoryOptionsFor,
   stageField,
   isDuplicate,
   onToggleSelect,
@@ -613,7 +625,7 @@ function ItemRow({
                 billable: category?.defaultBillable ?? editState.billable,
               });
             }}
-            options={categories}
+            options={categoryOptionsFor(row.project.id)}
             placeholder="Categoria"
           />
           {/* Um campo personalizado só — o mesmo componente dos cinco

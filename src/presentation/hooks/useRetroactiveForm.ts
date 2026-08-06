@@ -164,6 +164,18 @@ export function useRetroactiveForm({
     nameRef.current?.focus();
   }
 
+  /**
+   * Zera a categoria ao trocar de projeto. Vive aqui, e não num `useEffect`
+   * keyed em `selectedProjectId`, porque `prefill` preenche projeto e categoria
+   * **juntos**: um efeito apagaria a categoria que acabou de chegar ao lado
+   * dela. Quem chama é o `onSelect` do autocomplete de projeto — escolha de
+   * verdade —, nunca o `onChange`, que dispara a cada tecla.
+   */
+  function clearCategory() {
+    setCategoryName("");
+    setSelectedCategoryId(null);
+  }
+
   function advanceChainStart(newStartHHMM: string) {
     const durSecs = parseDurationInput(durationInput) ?? DEFAULT_DURATION_SECS;
     const newEnd = computeEndHHMM(newStartHHMM, durSecs);
@@ -190,8 +202,10 @@ export function useRetroactiveForm({
     setBillable,
     customValues,
     setCustomValues,
+    selectedProjectId,
     setSelectedProjectId,
     setSelectedCategoryId,
+    clearCategory,
     startTime,
     endTime,
     durationInput,

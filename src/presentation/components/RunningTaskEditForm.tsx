@@ -7,6 +7,7 @@ import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "./Autocomplete";
 import { CustomFieldInputs } from "./CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 
 interface RunningTaskEditFormProps {
   task: Task;
@@ -43,6 +44,13 @@ export function RunningTaskEditForm({
   const [categoryId, setCategoryId] = useState<string | null>(task.categoryId);
   const { activeFields } = useCustomFields();
   const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
+  const { categoriesFor } = useProjectCategoryMap();
+  // Mesma resolução de `handleSave`: o campo aceita texto livre, e o id em
+  // estado só existe quando houve escolha pelo dropdown.
+  const categoryOptions = categoriesFor(
+    categories,
+    projects.find((p) => p.name === projectName)?.id ?? projectId
+  );
 
   function handleSave() {
     const pId = projects.find((p) => p.name === projectName)?.id ?? projectId ?? null;
@@ -74,7 +82,11 @@ export function RunningTaskEditForm({
         <Autocomplete
           value={projectName}
           onChange={setProjectName}
-          onSelect={(o) => setProjectId(o.id)}
+          onSelect={(o) => {
+            setProjectId(o.id);
+            setCategoryId(null);
+            setCategoryName("");
+          }}
           onEnter={handleSave}
           options={projects}
           placeholder="Projeto"
@@ -94,7 +106,7 @@ export function RunningTaskEditForm({
             if (cat) setBillable(cat.defaultBillable);
           }}
           onEnter={handleSave}
-          options={categories}
+          options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
           autoFocus={focusField === "category"}

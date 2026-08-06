@@ -12,6 +12,7 @@ import {
   notchedLabelClass,
 } from "@presentation/components/fieldStyles";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { DollarSign } from "lucide-react";
 
 interface RetroactiveEntryFormProps {
@@ -36,6 +37,9 @@ export function RetroactiveEntryForm({
   categories,
   customFields,
 }: RetroactiveEntryFormProps) {
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, form.selectedProjectId);
+
   return (
     <div className={formColumnClass}>
       <input
@@ -53,7 +57,10 @@ export function RetroactiveEntryForm({
       <Autocomplete
         value={form.projectName}
         onChange={form.setProjectName}
-        onSelect={(o) => form.setSelectedProjectId(o.id)}
+        onSelect={(o) => {
+          form.setSelectedProjectId(o.id);
+          form.clearCategory();
+        }}
         onEnter={form.handleAdd}
         options={projects}
         placeholder="Projeto"
@@ -73,7 +80,7 @@ export function RetroactiveEntryForm({
             if (cat) form.setBillable(cat.defaultBillable);
           }}
           onEnter={form.handleAdd}
-          options={categories}
+          options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
           inputClassName={bareInputClass}
