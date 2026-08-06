@@ -7,10 +7,12 @@ import {
   findColumnValue,
   parseDatePairPeriod,
   periodOverlaps,
+  searchFloorDayISO,
   type MondayItemPeriod,
 } from "@domain/usecases/monday/mondayItemPeriod";
 import type { MondayItem } from "@shared/types/monday";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
 export interface MondayEntry {
@@ -121,6 +123,13 @@ function toEntry(item: MondayItem, mapping: MondayProjectMapping): MondayEntry {
  * busca para receber exatamente os mesmos itens. O período recorta o que já veio
  * (`periodOverlaps`), e trocar de filtro passa a ser instantâneo — 30 dias já
  * contém 7 dias e hoje, e o mês idem.
+ *
+ * **Mas a busca tem um piso** (`searchFloorDay`). Sem ele, a consulta baixava
+ * *todas* as atividades já enviadas em todos os boards mapeados, desde sempre —
+ * e a paginação é serial, uma página de 100 por requisição. O custo não era
+ * grande hoje e crescia sozinho: mais um ano de uso, mais páginas em série a
+ * cada abertura do modal. O piso é a mais antiga das quatro janelas, com folga,
+ * então nenhuma delas perde item.
  */
 export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOptions) {
   const { createMondayApi } = useIntegrations();
@@ -149,6 +158,7 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
     listItemsOwnedBy(api, mappings, userId, {
       scope: "activities",
       columnIds: unique(mappings.flatMap(wantedColumns)),
+      endsOnOrAfterDay: searchFloorDayISO(todayISO()),
     })
       .then((items) => {
         if (cancelled) return;

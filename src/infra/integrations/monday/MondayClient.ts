@@ -121,16 +121,24 @@ function sleep(ms: number): Promise<void> {
 interface ItemsQueryRule {
   column_id: string;
   compare_value: string[];
-  operator: "any_of" | "not_any_of";
+  operator: "any_of" | "not_any_of" | "greater_than_or_equals";
 }
 
 /**
  * Traduz as opções de busca para as regras de `query_params`.
  *
  * A coluna de pessoa espera `person-<id>` como valor de comparação — mandar só
- * o id devolve zero itens, sem erro nenhum para avisar.
+ * o id devolve zero itens, sem erro nenhum para avisar. Coluna de data espera o
+ * par `["EXACT", "AAAA-MM-DD"]`; sem o prefixo, o Monday recusa a requisição.
+ *
+ * As regras são combinadas com **E**, que é o padrão do `query_params`.
  */
-function buildItemRules({ groupIds, excludeGroupIds, owner }: ListItemsOptions): ItemsQueryRule[] {
+function buildItemRules({
+  groupIds,
+  excludeGroupIds,
+  owner,
+  endsOnOrAfter,
+}: ListItemsOptions): ItemsQueryRule[] {
   const rules: ItemsQueryRule[] = [];
   if (owner) {
     rules.push({
@@ -144,6 +152,13 @@ function buildItemRules({ groupIds, excludeGroupIds, owner }: ListItemsOptions):
   }
   if (excludeGroupIds && excludeGroupIds.length > 0) {
     rules.push({ column_id: "group", compare_value: excludeGroupIds, operator: "not_any_of" });
+  }
+  if (endsOnOrAfter) {
+    rules.push({
+      column_id: endsOnOrAfter.columnId,
+      compare_value: ["EXACT", endsOnOrAfter.dayISO],
+      operator: "greater_than_or_equals",
+    });
   }
   return rules;
 }

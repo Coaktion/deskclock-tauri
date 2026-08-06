@@ -1,6 +1,6 @@
 import type { ScheduleType } from "@domain/entities/PlannedTask";
 import type { MondayColumnValue, MondayItem } from "@shared/types/monday";
-import { localDateISO } from "@shared/utils/time";
+import { addDaysISO, localDateISO } from "@shared/utils/time";
 
 /**
  * Intervalo de um item do Monday, em **dias locais** (AAAA-MM-DD).
@@ -93,6 +93,32 @@ export function periodOverlaps(
 ): boolean {
   if (!period) return false;
   return period.startDayISO <= toDayISO && period.endDayISO >= fromDayISO;
+}
+
+/**
+ * Folga entre a janela mais antiga e o piso da busca.
+ *
+ * Absorve o que o recorte do servidor enxerga diferente da tela: o par de datas
+ * invertido à mão no board (que `parseDatePairPeriod` desvira aqui, mas a regra
+ * do Monday lê como está), e a virada do dia com o app aberto, já que o piso é
+ * calculado uma vez por montagem. Uma semana a mais de atividades não pesa; um
+ * item sumindo do gerenciador sem explicação, sim.
+ */
+const SEARCH_FLOOR_SLACK_DAYS = 7;
+
+/**
+ * Dia mais antigo que a busca do gerenciador precisa alcançar.
+ *
+ * As quatro janelas (hoje, 7 dias, 30 dias, este mês) olham só para trás, e a
+ * mais antiga é a que manda: no dia 31 é o começo do mês, no dia 1º são os 30
+ * dias. É este piso que impede a consulta de crescer indefinidamente — sem ele
+ * ela baixa todas as atividades já enviadas, desde sempre.
+ */
+export function searchFloorDayISO(todayISO: string): string {
+  const startOfMonth = `${todayISO.slice(0, 8)}01`;
+  const thirtyDaysBack = addDaysISO(todayISO, -29);
+  const oldest = startOfMonth < thirtyDaysBack ? startOfMonth : thirtyDaysBack;
+  return addDaysISO(oldest, -SEARCH_FLOOR_SLACK_DAYS);
 }
 
 /** Dois períodos são o mesmo quando as duas pontas coincidem. */

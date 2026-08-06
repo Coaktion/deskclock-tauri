@@ -175,6 +175,67 @@ describe("listItemsOwnedBy", () => {
     expect(listItems.mock.calls[1][1]).toMatchObject({ excludeGroupIds: ["group_mm19wbff"] });
   });
 
+  describe("teto de idade", () => {
+    it("vira regra de data na consulta", async () => {
+      const { api, listItems } = makeApi(async () => []);
+      const board = mapping("1", "person", {
+        columnIds: { ...mapping("1").columnIds, endDate: "date_end" },
+      });
+
+      await listItemsOwnedBy(api, [board], "42", {
+        scope: "activities",
+        endsOnOrAfterDay: "2026-06-24",
+      });
+
+      expect(listItems).toHaveBeenLastCalledWith(["1"], {
+        groupIds: ["group_activities"],
+        owner: { columnId: "person", personId: "42" },
+        endsOnOrAfter: { columnId: "date_end", dayISO: "2026-06-24" },
+      });
+    });
+
+    it("não entra no board sem a coluna de End Date", async () => {
+      // Regra apontando para coluna que o board não tem faz o Monday recusar a
+      // consulta inteira — o board vem sem teto, como antes.
+      const { api, listItems } = makeApi(async () => []);
+
+      await listItemsOwnedBy(api, [mapping("1")], "42", { endsOnOrAfterDay: "2026-06-24" });
+
+      expect(listItems.mock.calls[0][1]).not.toHaveProperty("endsOnOrAfter");
+    });
+
+    it("separa as consultas quando a coluna de End Date difere entre boards", async () => {
+      const { api, listItems } = makeApi(async () => []);
+      const comColuna = mapping("1", "person", {
+        columnIds: { ...mapping("1").columnIds, endDate: "date_end" },
+      });
+      const semColuna = mapping("2");
+
+      await listItemsOwnedBy(api, [comColuna, semColuna], "42", {
+        endsOnOrAfterDay: "2026-06-24",
+      });
+
+      expect(listItems).toHaveBeenCalledTimes(2);
+      expect(listItems.mock.calls[0][0]).toEqual(["1"]);
+      expect(listItems.mock.calls[0][1]).toMatchObject({
+        endsOnOrAfter: { columnId: "date_end", dayISO: "2026-06-24" },
+      });
+      expect(listItems.mock.calls[1][0]).toEqual(["2"]);
+      expect(listItems.mock.calls[1][1]).not.toHaveProperty("endsOnOrAfter");
+    });
+
+    it("sem teto, a consulta sai como sempre saiu", async () => {
+      const { api, listItems } = makeApi(async () => []);
+      const board = mapping("1", "person", {
+        columnIds: { ...mapping("1").columnIds, endDate: "date_end" },
+      });
+
+      await listItemsOwnedBy(api, [board], "42");
+
+      expect(listItems.mock.calls[0][1]).not.toHaveProperty("endsOnOrAfter");
+    });
+  });
+
   it("não consulta nada sem mapeamento ou sem usuário", async () => {
     // Sem o id do usuário a busca traria o board do time inteiro.
     const { api, listItems } = makeApi(async () => []);

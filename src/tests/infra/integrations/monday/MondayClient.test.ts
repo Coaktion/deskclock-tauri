@@ -370,6 +370,23 @@ describe("MondayClient", () => {
       ]);
     });
 
+    it("manda a data com o prefixo EXACT, que o Monday exige", async () => {
+      // Sem o prefixo a API recusa a requisição inteira.
+      mockFetch.mockResolvedValue(boardsResponse([{ id: "1", items: [] }]));
+
+      await client().listItems(["1"], {
+        endsOnOrAfter: { columnId: "date_end", dayISO: "2026-06-24" },
+      });
+
+      expect(lastBody().variables.rules).toEqual([
+        {
+          column_id: "date_end",
+          compare_value: ["EXACT", "2026-06-24"],
+          operator: "greater_than_or_equals",
+        },
+      ]);
+    });
+
     it("omite query_params quando não há filtro", async () => {
       // `{rules: []}` traria zero itens em vez do board inteiro.
       mockFetch.mockResolvedValue(boardsResponse([{ id: "1", items: [] }]));

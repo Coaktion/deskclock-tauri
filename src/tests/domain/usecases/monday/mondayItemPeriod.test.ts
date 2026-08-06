@@ -5,8 +5,10 @@ import {
   parseDayValue,
   parseTimelinePeriod,
   periodOverlaps,
+  searchFloorDayISO,
 } from "@domain/usecases/monday/mondayItemPeriod";
 import type { MondayColumnValue, MondayItem } from "@shared/types/monday";
+import { addDaysISO } from "@shared/utils/time";
 
 function col(id: string, type: string, value: string | null, text = ""): MondayColumnValue {
   return { id, type, text, value };
@@ -136,5 +138,39 @@ describe("periodOverlaps", () => {
 
   it("exclui item sem período — não há como afirmar que ele cai na janela", () => {
     expect(periodOverlaps(null, "2026-07-01", "2026-07-31")).toBe(false);
+  });
+});
+
+describe("searchFloorDayISO", () => {
+  // As quatro janelas do gerenciador: hoje, 7 dias, 30 dias e este mês. A mais
+  // antiga é o piso, e nenhuma delas pode perder item por causa dele.
+  const windows = (todayISO: string) => [
+    todayISO,
+    addDaysISO(todayISO, -6),
+    addDaysISO(todayISO, -29),
+    `${todayISO.slice(0, 8)}01`,
+  ];
+
+  it("fica antes do início de toda janela, em qualquer dia do mês", () => {
+    for (const today of ["2026-08-01", "2026-08-06", "2026-08-15", "2026-08-31", "2026-01-31"]) {
+      const floor = searchFloorDayISO(today);
+      for (const start of windows(today)) {
+        expect(floor < start).toBe(true);
+      }
+    }
+  });
+
+  it("no fim do mês, quem manda é o começo do mês", () => {
+    // Dia 31: o começo do mês está 30 dias atrás, além dos 29 da outra janela.
+    expect(searchFloorDayISO("2026-08-31")).toBe(addDaysISO("2026-08-01", -7));
+  });
+
+  it("no começo do mês, quem manda são os 30 dias", () => {
+    // Dia 1º: o começo do mês é hoje, e a janela de 30 dias vai bem mais longe.
+    expect(searchFloorDayISO("2026-08-01")).toBe(addDaysISO("2026-07-03", -7));
+  });
+
+  it("atravessa a virada do ano sem se perder", () => {
+    expect(searchFloorDayISO("2026-01-05")).toBe("2025-11-30");
   });
 });

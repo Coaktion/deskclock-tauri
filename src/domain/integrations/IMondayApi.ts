@@ -22,6 +22,16 @@ export interface ListItemsOptions {
   owner?: { columnId: string; personId: string };
   /** Reduz o payload às colunas de interesse. Omitido = todas. */
   columnIds?: string[];
+  /**
+   * Teto de idade: só itens cuja coluna de data indicada seja deste dia em
+   * diante (`greater_than_or_equals`, no servidor).
+   *
+   * Uma coluna só, e não o par início/fim, porque `query_params` combina as
+   * regras com **E**: exigir também "início antes do fim da janela" recortaria
+   * certo, mas o que se quer aqui não é o recorte exato — é impedir que a busca
+   * cresça para sempre. A janela exibida continua sendo aplicada por quem chama.
+   */
+  endsOnOrAfter?: { columnId: string; dayISO: string };
 }
 
 export interface IMondayApi {
@@ -46,10 +56,10 @@ export interface IMondayApi {
    * requisições paralelas para descobrir que quase todas voltam vazias. Grupo e
    * responsável são filtrados no servidor pelo mesmo motivo.
    *
-   * Sem filtro de período: o Monday não expressa "intervalo que cruza o
-   * período" nas regras de `query_params`, e as atividades guardam o intervalo
-   * em duas colunas separadas. A janela é aplicada por quem chama, com
-   * `periodOverlaps`.
+   * A **janela exibida** é aplicada por quem chama, com `periodOverlaps`: o
+   * Monday não expressa "intervalo que cruza o período" nas regras de
+   * `query_params`, e as atividades guardam o intervalo em duas colunas
+   * separadas. O que o servidor faz é só o teto de idade do `endsOnOrAfter`.
    */
   listItems(boardIds: string[], options?: ListItemsOptions): Promise<MondayItem[]>;
   createItem(
