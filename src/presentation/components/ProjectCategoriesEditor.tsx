@@ -58,7 +58,7 @@ export function ProjectCategoriesEditor({
         <button
           type="button"
           onClick={onClearAll}
-          className="self-start text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+          className="self-start px-2 py-1 text-[11px] bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-200 hover:text-gray-100 rounded-lg transition-colors"
         >
           Desmarcar todas ({sourceById.size})
         </button>
