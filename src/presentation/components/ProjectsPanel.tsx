@@ -150,6 +150,7 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
               categories={categories}
               sourceById={sourceByProject.get(p.id) ?? EMPTY_SOURCES}
               onToggleCategory={(categoryId) => void handleToggleCategory(p.id, categoryId)}
+              onClearCategories={() => void setForProject(p.id, [])}
             />
           ))
         )}

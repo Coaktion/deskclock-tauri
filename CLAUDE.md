@@ -356,6 +356,8 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
   fica **sempre visível**, ao contrário de renomear e excluir: carrega estado, e escondê-la no hover
   esconderia a informação junto com o controle.
 - **Cada clique grava**, como o toggle de billable das listas de tarefas — não há botão de salvar.
+- **"Desmarcar todas" aparece com mais de uma marcada** — com uma só, a própria caixa já é o botão.
+  É o caminho de volta ao "oferece todas", e apaga também as do Monday, como a caixa individual.
 - **Sem associação, o projeto oferece o catálogo inteiro** (§6.4). O bloco diz isso em texto: é o
   estado de todo projeto até alguém marcar algo, e sem a frase parece que a associação se perdeu.
 - **As linhas semeadas pelo Monday aparecem marcadas e são removíveis**, mas a remoção vale só até a
@@ -720,7 +722,8 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > causa de uma categoria não relacionada.
 
 > **O import de projetos semeia quais categorias cada projeto oferece**
-> (`seedMondayProjectCategories`, nos dois gatilhos: o botão "Atualizar" e a varredura diária). O
+> (`seedMondayProjectCategories`, no botão "Atualizar", na varredura diária e **a cada abertura do
+> app**, a partir dos vínculos já gravados). O
 > board de destino já publica os Activity Types válidos, e o Activity Type **é** o nome da Categoria
 > — então a associação não custa consulta nova: os rótulos vieram no `activityTypeLabels` do próprio
 > import. O card de Projetos diz quantas foram semeadas, ou a escrita seria invisível.
@@ -735,6 +738,13 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > correspondente é ignorado em silêncio** — quem cria categoria a partir do Monday é
 > `importMondayCategories`, que pode não ter rodado ainda, e criar aqui duplicaria a regra de
 > billable por escopo.
+>
+> **A semeadura não fica atrás do portão de uma vez por dia**, e essa foi a correção que o primeiro
+> uso exigiu: presa à varredura, no dia em que a feature subiu — com a varredura do dia já feita —
+> nenhum vínculo nascia até o dia seguinte, e a integração parecia não criá-los. Ela não fala com o
+> Monday (os rótulos estão em `mondayProjectMapping` desde o último import), então roda também na
+> abertura. O que a torna barata é **pular o projeto cujo conjunto não mudou**: depois da primeira
+> vez o custo é uma leitura, e o aviso entre janelas só sai quando algo mudou de fato.
 
 > **Uma leitura do board de Report semeia os quatro conjuntos de rótulos** (`importMondayFieldCatalogs`,
 > card "Catálogos"): Activity Type (35), Project Stage (18), Non Billable reason (8) e Report Type

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { Category } from "@domain/entities/Category";
+import type { ProjectCategory, ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
@@ -29,9 +30,12 @@ function makeMapping(
   };
 }
 
-function makeRepos(categories: Category[]) {
+function makeRepos(categories: Category[], existing: ProjectCategory[] = []) {
   const categoryRepo = { findAll: vi.fn().mockResolvedValue(categories) };
-  const projectCategoryRepo = { replaceMondayFor: vi.fn().mockResolvedValue(undefined) };
+  const projectCategoryRepo = {
+    findAll: vi.fn().mockResolvedValue(existing),
+    replaceMondayFor: vi.fn().mockResolvedValue(undefined),
+  };
   return {
     categoryRepo,
     projectCategoryRepo,
@@ -41,6 +45,14 @@ function makeRepos(categories: Category[]) {
       projectCategoryRepo: projectCategoryRepo as unknown as IProjectCategoryRepository,
     },
   };
+}
+
+function assoc(
+  projectId: string,
+  categoryId: string,
+  source: ProjectCategorySource = "monday"
+): ProjectCategory {
+  return { projectId, categoryId, source, createdAt: "2026-08-06T12:00:00.000Z" };
 }
 
 describe("seedMondayProjectCategories", () => {
@@ -113,6 +125,51 @@ describe("seedMondayProjectCategories", () => {
     await seedMondayProjectCategories({ mappings: [], workspaceId: "ws-monday", ...repos.input });
 
     expect(repos.categoryRepo.findAll).toHaveBeenCalledWith("ws-monday");
+  });
+
+  it("projeto cujo conjunto não mudou é pulado — é o que a deixa barata a cada abertura", async () => {
+    const repos = makeRepos(
+      [makeCategory("c1", "Desenvolvimento"), makeCategory("c2", "Reunião")],
+      [assoc("p1", "c1"), assoc("p1", "c2")]
+    );
+
+    const result = await seedMondayProjectCategories({
+      mappings: [makeMapping("p1", ["Desenvolvimento", "Reunião"])],
+      workspaceId: "ws1",
+      ...repos.input,
+    });
+
+    expect(repos.projectCategoryRepo.replaceMondayFor).not.toHaveBeenCalled();
+    expect(result).toEqual({ seeded: 0, projects: 0 });
+  });
+
+  it("rótulo novo no quadro reescreve o conjunto", async () => {
+    const repos = makeRepos(
+      [makeCategory("c1", "Desenvolvimento"), makeCategory("c2", "Reunião")],
+      [assoc("p1", "c1")]
+    );
+
+    await seedMondayProjectCategories({
+      mappings: [makeMapping("p1", ["Desenvolvimento", "Reunião"])],
+      workspaceId: "ws1",
+      ...repos.input,
+    });
+
+    expect(repos.projectCategoryRepo.replaceMondayFor).toHaveBeenCalledWith("p1", ["c1", "c2"]);
+  });
+
+  it("associação manual do mesmo par não conta como já semeada", async () => {
+    // O usuário marcou c1 à mão; a varredura ainda precisa gravá-la como
+    // `monday`, ou o quadro nunca passaria a ser dono daquele vínculo.
+    const repos = makeRepos([makeCategory("c1", "Desenvolvimento")], [assoc("p1", "c1", "manual")]);
+
+    await seedMondayProjectCategories({
+      mappings: [makeMapping("p1", ["Desenvolvimento"])],
+      workspaceId: "ws1",
+      ...repos.input,
+    });
+
+    expect(repos.projectCategoryRepo.replaceMondayFor).toHaveBeenCalledWith("p1", ["c1"]);
   });
 
   it("rótulo repetido no board não duplica a associação", async () => {

@@ -42,6 +42,11 @@ export interface SeedMondayProjectCategoriesResult {
  * **Rótulo sem categoria correspondente é ignorado em silêncio.** Quem cria
  * categoria a partir do Monday é `importMondayCategories`, que pode não ter
  * rodado ainda — criar aqui duplicaria a regra de billable por escopo.
+ *
+ * **Projeto cujo conjunto não mudou é pulado**, o que a torna barata o bastante
+ * para rodar a cada abertura do app — e é isso que a desprende da varredura
+ * diária. Presa a ela, ela só acontecia uma vez por dia: no dia em que a feature
+ * subiu, com a varredura já feita, nenhum vínculo nascia até o dia seguinte.
  */
 export async function seedMondayProjectCategories({
   mappings,
@@ -51,6 +56,19 @@ export async function seedMondayProjectCategories({
 }: SeedMondayProjectCategoriesInput): Promise<SeedMondayProjectCategoriesResult> {
   const categories = await categoryRepo.findAll(workspaceId);
   const idByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]));
+
+  // O que já está gravado, para não reescrever o que não mudou. Isto é o que
+  // torna a semeadura barata o bastante para rodar a cada abertura do app: sem
+  // a comparação seriam ~50 pares de DELETE+INSERT toda vez, mais o aviso entre
+  // janelas, para gravar exatamente o que já estava lá.
+  const existing = await projectCategoryRepo.findAll(workspaceId);
+  const mondayByProject = new Map<string, Set<string>>();
+  for (const row of existing) {
+    if (row.source !== "monday") continue;
+    const set = mondayByProject.get(row.projectId) ?? new Set<string>();
+    set.add(row.categoryId);
+    mondayByProject.set(row.projectId, set);
+  }
 
   let seeded = 0;
   let projects = 0;
@@ -67,6 +85,11 @@ export async function seedMondayProjectCategories({
       ),
     ];
     if (categoryIds.length === 0) continue;
+
+    const current = mondayByProject.get(mapping.deskclockProjectId);
+    const unchanged =
+      current?.size === categoryIds.length && categoryIds.every((id) => current.has(id));
+    if (unchanged) continue;
 
     await projectCategoryRepo.replaceMondayFor(mapping.deskclockProjectId, categoryIds);
     seeded += categoryIds.length;

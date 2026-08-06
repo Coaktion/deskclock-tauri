@@ -113,6 +113,40 @@ export function useMondayProjectsTracker() {
       }
     }
 
+    /**
+     * Semeia as categorias a partir dos vínculos **já gravados**, sem passar
+     * pelo Portfólio.
+     *
+     * Existe separado de `runSync` porque a semeadura não é a varredura: ela não
+     * fala com o Monday — os rótulos estão em `mondayProjectMapping` desde o
+     * último import — e por isso não tem por que ficar atrás do portão de uma
+     * vez por dia. Presa a ele, no dia em que a feature subiu, com a varredura
+     * do dia já feita, nenhum vínculo nascia até o dia seguinte: a integração
+     * parecia não criá-los.
+     *
+     * Rodar a cada abertura é barato porque o use case pula o projeto cujo
+     * conjunto não mudou — depois da primeira vez, o custo é uma leitura.
+     */
+    async function seedFromStoredMappings(): Promise<void> {
+      const mappings = normalizeProjectMappings(config.get("mondayProjectMapping"));
+      if (mappings.length === 0) return;
+
+      const result = await seedMondayProjectCategories({
+        mappings,
+        categoryRepo,
+        projectCategoryRepo,
+        workspaceId: resolveIntegrationWorkspaceId(config.get("mondayDeskclockWorkspaceId")),
+      });
+      // Só avisa quando algo mudou: o evento recarrega o mapa em toda janela.
+      if (result.projects > 0) await notifyProjectCategoriesChanged();
+    }
+
+    void seedFromStoredMappings().catch((err: unknown) => {
+      // Não derruba o rastreador: a varredura do dia é o trabalho principal, e
+      // a semeadura tenta de novo na próxima abertura.
+      console.error("[mondayProjectsTracker] falha ao semear categorias", err);
+    });
+
     const initialTimer = setTimeout(() => void tick(), INITIAL_DELAY_MS);
     const interval = setInterval(() => void tick(), TICK_MS);
 

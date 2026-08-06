@@ -10,6 +10,7 @@ interface ProjectCategoriesEditorProps {
   /** Ids associados hoje, na origem em que estão gravados. */
   sourceById: Map<UUID, ProjectCategorySource>;
   onToggle: (categoryId: UUID) => void;
+  onClearAll: () => void;
 }
 
 /**
@@ -26,6 +27,7 @@ export function ProjectCategoriesEditor({
   categories,
   sourceById,
   onToggle,
+  onClearAll,
 }: ProjectCategoriesEditorProps) {
   const [search, setSearch] = useState("");
   const showSearch = categories.length > 12;
@@ -46,6 +48,20 @@ export function ProjectCategoriesEditor({
     <div className="flex flex-col gap-2">
       {showSearch && (
         <SearchInput value={search} onChange={setSearch} placeholder="Filtrar categorias..." />
+      )}
+
+      {/* Só com mais de uma marcada: com uma só, a própria caixa já é o botão, e
+          desmarcar tudo é o caminho de volta ao "oferece todas". Apaga também as
+          do Monday — como a caixa individual, e pela mesma razão de ser a saída
+          de emergência do filtro. */}
+      {sourceById.size > 1 && (
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="self-start text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          Desmarcar todas ({sourceById.size})
+        </button>
       )}
 
       <div className="max-h-48 overflow-y-auto flex flex-col">

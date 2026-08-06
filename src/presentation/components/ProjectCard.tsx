@@ -18,6 +18,7 @@ interface ProjectCardProps {
   /** Associações deste projeto, por id de categoria. Vazio = oferece todas. */
   sourceById: Map<UUID, ProjectCategorySource>;
   onToggleCategory: (categoryId: UUID) => void;
+  onClearCategories: () => void;
 }
 
 export function ProjectCard({
@@ -29,6 +30,7 @@ export function ProjectCard({
   categories,
   sourceById,
   onToggleCategory,
+  onClearCategories,
 }: ProjectCardProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(project.name);
@@ -168,6 +170,7 @@ export function ProjectCard({
             categories={categories}
             sourceById={sourceById}
             onToggle={onToggleCategory}
+            onClearAll={onClearCategories}
           />
         </div>
       )}
