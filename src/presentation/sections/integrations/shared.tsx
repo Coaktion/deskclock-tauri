@@ -1,5 +1,5 @@
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Circle } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
@@ -21,8 +21,10 @@ import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
  * **Some com um único workspace**, como toda a UI de workspace (§5.1.1, §5.6) —
  * e é o que torna esta mudança invisível para quem nunca criou um segundo.
  *
- * Escreve direto na config, sem rascunho local: a escolha é um clique único,
- * não um campo que se digita aos poucos.
+ * **O valor selecionado é estado local, e não uma leitura da config.** O cache do
+ * `ConfigContext` é um `useRef` e o `set` não dispara render: lendo direto, a
+ * escolha só aparecia ao sair e voltar da tela. É a mesma razão pela qual todas
+ * as seções vizinhas guardam o valor em `useState`.
  */
 export function DeskclockWorkspaceRow({
   configKey,
@@ -39,10 +41,21 @@ export function DeskclockWorkspaceRow({
 }) {
   const config = useAppConfig();
   const { workspaces } = useWorkspaces();
+  const [selected, setSelected] = useState("");
+
+  // Hidratação a partir da config já carregada. `config` é recriado a cada
+  // render do provider e reverteria a escolha recém-feita.
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    setSelected(resolveIntegrationWorkspaceId(config.get(configKey)));
+  }, [config.isLoaded, configKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleChange(id: string) {
+    setSelected(id);
+    await config.set(configKey, id);
+  }
 
   if (workspaces.length <= 1) return null;
-
-  const selected = resolveIntegrationWorkspaceId(config.isLoaded ? config.get(configKey) : "");
 
   return (
     <div className={className}>
@@ -53,7 +66,7 @@ export function DeskclockWorkspaceRow({
         </div>
         <select
           value={selected}
-          onChange={(e) => void config.set(configKey, e.target.value)}
+          onChange={(e) => void handleChange(e.target.value)}
           className="shrink-0 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[180px]"
         >
           {workspaces.map((w) => (
