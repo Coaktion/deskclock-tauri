@@ -15,8 +15,11 @@ import { weekBoundsISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
 // Item de board não muda de minuto em minuto, e cada ciclo custa uma busca de
-// schemas mais uma de itens por variação de template.
-const SYNC_INTERVAL_MS = 30 * 60 * 1000;
+// schemas mais uma de itens por variação de template — a mais cara da
+// integração. Quatro horas cobrem o dia de trabalho em três varreduras, e quem
+// precisa do item agora tem o "Buscar itens agora" das Configurações, que roda
+// exatamente este mesmo ciclo sob demanda.
+const SYNC_INTERVAL_MS = 4 * 60 * 60 * 1000;
 // Atraso do primeiro ciclo: dá tempo de a config e os repositórios assentarem
 // antes da primeira ida à rede, e tira a busca do caminho da abertura do app.
 const INITIAL_DELAY_MS = 5000;

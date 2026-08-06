@@ -61,10 +61,10 @@ export function MondayAutoImportSection() {
         />
       </Row>
       <p className="text-[11px] text-gray-500 leading-relaxed py-2.5">
-        Ao abrir o app e a cada 30 minutos, importa as suas tarefas da semana nos boards vinculados
-        como planejadas. Item já importado não vira tarefa de novo: o que mudar no Monday é
-        atualizado aqui, preservando as suas edições, e o que sair de lá some daqui se nunca tiver
-        sido concluído.
+        Ao abrir o app e a cada 4 horas, importa as suas tarefas da semana nos boards vinculados
+        como planejadas — para trazer alguma novidade na hora, use &quot;Buscar itens agora&quot;.
+        Item já importado não vira tarefa de novo: o que mudar no Monday é atualizado aqui,
+        preservando as suas edições, e o que sair de lá some daqui se nunca tiver sido concluído.
       </p>
       {enabled && (
         <div className="pb-2.5">
