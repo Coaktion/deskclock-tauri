@@ -4,6 +4,7 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { WorkspaceProvider, useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { getActiveTasks } from "@domain/usecases/tasks/GetActiveTasks";
@@ -345,6 +346,7 @@ function PopupOverlayAppInner() {
       categoryId?: string | null;
       billable?: boolean;
       startTime?: string;
+      customValues?: CustomValues;
     }) => {
       if (!runningTask) return;
       const updated = await updateTaskUC(taskRepo, runningTask.id, input, new Date().toISOString());

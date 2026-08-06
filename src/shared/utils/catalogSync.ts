@@ -22,3 +22,17 @@ export function notifyProjectsChanged(): Promise<void> {
 export function notifyCategoriesChanged(): Promise<void> {
   return emit(OVERLAY_EVENTS.CATEGORIES_CHANGED, {});
 }
+
+/**
+ * O mesmo, para os campos personalizados — que são criados na tela de Dados, na
+ * janela principal, e passaram a ser editáveis durante a execução no overlay e
+ * no omnibox.
+ *
+ * Sem o aviso, o `overlay-popup` — que nasce com o app e nunca remonta — ficaria
+ * com o catálogo do momento da abertura: criar o campo "Project Stage" e iniciar
+ * uma tarefa mostraria o overlay sem campo nenhum, e o chip "Campos" nem
+ * apareceria, até reabrir o app.
+ */
+export function notifyCustomFieldsChanged(): Promise<void> {
+  return emit(OVERLAY_EVENTS.CUSTOM_FIELDS_CHANGED, {});
+}

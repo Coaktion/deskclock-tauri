@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { listen } from "@tauri-apps/api/event";
 import type { CustomField } from "@domain/entities/CustomField";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { notifyCustomFieldsChanged } from "@shared/utils/catalogSync";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getCustomFields, activeCustomFields } from "@domain/usecases/customFields/GetCustomFields";
 import {
   createCustomField,
@@ -32,11 +35,22 @@ export function useCustomFields() {
     void load();
   }, [load]);
 
+  // Recarrega quando outra janela mexe no catálogo, como em `useProjects`. O
+  // `load` não emite nada — só as mutações emitem —, ou o evento realimentaria
+  // o ciclo.
+  useEffect(() => {
+    const unlisten = listen(OVERLAY_EVENTS.CUSTOM_FIELDS_CHANGED, () => void load());
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [load]);
+
   /** Devolve o campo criado: quem cria a partir de uma integração precisa do id. */
   const handleCreate = useCallback(
     async (input: CreateCustomFieldInput) => {
       const field = await createCustomField(customFieldRepo, input, new Date().toISOString());
       await load();
+      await notifyCustomFieldsChanged();
       return field;
     },
     [customFieldRepo, load]
@@ -46,6 +60,7 @@ export function useCustomFields() {
     async (id: UUID, input: UpdateCustomFieldInput) => {
       await updateCustomField(customFieldRepo, id, input);
       await load();
+      await notifyCustomFieldsChanged();
     },
     [customFieldRepo, load]
   );
@@ -54,6 +69,7 @@ export function useCustomFields() {
     async (id: UUID) => {
       await deleteCustomField(customFieldRepo, id);
       await load();
+      await notifyCustomFieldsChanged();
     },
     [customFieldRepo, load]
   );

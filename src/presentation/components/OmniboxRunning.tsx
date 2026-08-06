@@ -1,10 +1,13 @@
-import { ArrowRight, CheckCircle2, Clock, Pause, Pen, Play, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, ListChecks, Pause, Pen, Play, X } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
+import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
 import { ActionChip } from "./ActionChip";
 import { Autocomplete } from "./Autocomplete";
+import { OmniboxCustomFieldsPanel } from "./OmniboxCustomFieldsPanel";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 import type { OmniboxRunningEditState } from "@presentation/hooks/useOmniboxRunningEdit";
 
@@ -47,6 +50,8 @@ export function OmniboxRunning({
   editingStartTime,
   startTimeInput,
   setStartTimeInput,
+  editingCustomFields,
+  setEditingCustomFields,
   isRunning,
   handlePlayPause,
   handleStopClick,
@@ -58,9 +63,12 @@ export function OmniboxRunning({
   handleProjectSelect,
   handleCategorySelect,
   handleBillableToggle,
+  handleCustomValuesSave,
 }: OmniboxRunningProps) {
   const runProject = projects.find((p) => p.id === runningTask.projectId);
   const runCategory = categories.find((c) => c.id === runningTask.categoryId);
+  const { activeFields } = useCustomFields();
+  const filledCustomValues = countFilledCustomValues(activeFields, runningTask.customValues);
 
   return (
     <div
@@ -217,6 +225,26 @@ export function OmniboxRunning({
               {runningTask.billable ? "Billable" : "Non-billable"}
             </button>
 
+            {/* Campos personalizados: o chip diz quantos já têm valor, e o painel
+                abre abaixo. Sem ele, quem trabalha pelo omnibox só descobria o
+                Project Stage em branco quando o envio ao Monday recusava a
+                atividade (§5.7). */}
+            {activeFields.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setEditingCustomFields(!editingCustomFields)}
+                title="Campos personalizados"
+                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors ${
+                  filledCustomValues > 0
+                    ? "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
+                    : "border-dashed border-gray-600 text-gray-500 hover:border-gray-500 hover:text-gray-400"
+                }`}
+              >
+                <ListChecks size={11} />
+                Campos · {filledCustomValues}/{activeFields.length}
+              </button>
+            )}
+
             {/* Start time */}
             {editingStartTime ? (
               <input
@@ -296,6 +324,16 @@ export function OmniboxRunning({
           )}
         </div>
       </div>
+
+      {/* Campos personalizados (painel embutido) */}
+      {editingCustomFields && activeFields.length > 0 && (
+        <OmniboxCustomFieldsPanel
+          task={runningTask}
+          fields={activeFields}
+          onSave={handleCustomValuesSave}
+          onClose={() => setEditingCustomFields(false)}
+        />
+      )}
 
       {/* Actions section */}
       {actions.length > 0 && (

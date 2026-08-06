@@ -1,16 +1,20 @@
 import type { Category } from "@domain/entities/Category";
+import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
+import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
+import { RunningCustomFieldsSheet } from "@presentation/overlays/RunningCustomFieldsSheet";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChip";
@@ -25,6 +29,7 @@ import {
   CheckCircle2,
   Clock,
   DollarSign,
+  ListChecks,
   Pause,
   Pen,
   Play,
@@ -48,6 +53,10 @@ const ROW_H = 44;
 const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
 const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
 const ACTIONS_SECTION_H = 48; // section label + one row of action chips
+// Uma linha só, com o chip que abre o painel — e por isso constante: os campos
+// personalizados são quantos o usuário quiser, e empilhá-los aqui faria a altura
+// da janela depender do cadastro dele.
+const CUSTOM_FIELDS_ROW_H = 36; // chip (28) + o gap-2 da coluna
 
 /**
  * Typeahead dos chips de Projeto e Categoria: com o chip focado pelo teclado,
@@ -97,6 +106,7 @@ interface PopupOverlayContentProps {
     categoryId?: string | null;
     billable?: boolean;
     startTime?: string;
+    customValues?: CustomValues;
   }) => Promise<void>;
 }
 
@@ -115,15 +125,18 @@ interface ExecSectionProps {
   categoryName?: string;
   projects: Project[];
   categories: Category[];
+  customFields: CustomField[];
   actions: PlannedTaskAction[];
   confirmingStop: boolean;
   setConfirmingStop: (v: boolean) => void;
+  onOpenCustomFields: () => void;
   onUpdateTask: (input: {
     name?: string | null;
     projectId?: string | null;
     categoryId?: string | null;
     billable?: boolean;
     startTime?: string;
+    customValues?: CustomValues;
   }) => Promise<void>;
   onPause: () => Promise<void>;
   onResume: () => Promise<void>;
@@ -137,9 +150,11 @@ function ExecSection({
   categoryName,
   projects,
   categories,
+  customFields,
   actions,
   confirmingStop,
   setConfirmingStop,
+  onOpenCustomFields,
   onUpdateTask,
   onPause,
   onResume,
@@ -429,6 +444,23 @@ function ExecSection({
         )}
       </div>
 
+      {/* Campos personalizados: só o chip fica aqui, com o quanto já foi
+          preenchido. Os campos em si abrem no painel que cobre o popup — é o que
+          mantém a altura da janela independente de quantos campos existem. */}
+      {customFields.length > 0 && (
+        <button
+          onClick={onOpenCustomFields}
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
+            countFilledCustomValues(customFields, task.customValues) > 0
+              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
+              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
+          }`}
+        >
+          <ListChecks size={11} className="shrink-0" />
+          Campos · {countFilledCustomValues(customFields, task.customValues)}/{customFields.length}
+        </button>
+      )}
+
       {/* Actions section */}
       {actions.length > 0 && (
         <div>
@@ -559,23 +591,34 @@ export function PopupOverlayContent({
     useCompletedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
+  const { activeFields } = useCustomFields();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
   const [activeTab, setActiveTab] = useState<"planned" | "completed">("planned");
 
   const projectName = projects.find((p) => p.id === runningTask?.projectId)?.name;
   const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
   const hasActions = activePlannedTaskActions.length > 0;
+  const hasCustomFields = activeFields.length > 0;
   const [confirmingStop, setConfirmingStop] = useState(false);
   const [editingTask, setEditingTask] = useState<PlannedTask | null>(null);
+  const [editingCustomFields, setEditingCustomFields] = useState(false);
 
   // Reset confirm state whenever the running task changes (started/stopped).
+  // O painel de campos vai junto: sem tarefa ele editaria o que já não está em
+  // execução, e o `Salvar` gravaria numa tarefa parada por outra janela.
   useEffect(() => {
-    if (!runningTask) setConfirmingStop(false);
+    if (!runningTask) {
+      setConfirmingStop(false);
+      setEditingCustomFields(false);
+    }
   }, [runningTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Os dois painéis seguram o fechamento automático pelo mesmo motivo: o popup
+  // some no blur, e o dos campos personalizados guarda texto digitado que
+  // ninguém salvou ainda.
   useEffect(() => {
-    onModalOpenChange(!!editingTask);
-  }, [editingTask, onModalOpenChange]);
+    onModalOpenChange(!!editingTask || editingCustomFields);
+  }, [editingTask, editingCustomFields, onModalOpenChange]);
 
   // Resize based on state. A edição de planejada **não** entra aqui: o painel
   // cabe no popup como ele já é, e crescer a janela para editar tiraria o
@@ -583,13 +626,20 @@ export function PopupOverlayContent({
   useEffect(() => {
     if (runningTask) {
       const execH = confirmingStop ? EXEC_H_CONFIRMING : EXEC_H;
-      onResize(POPUP_W, HEADER_H + execH + (hasActions ? ACTIONS_SECTION_H : 0) + FOOTER_H);
+      onResize(
+        POPUP_W,
+        HEADER_H +
+          execH +
+          (hasActions ? ACTIONS_SECTION_H : 0) +
+          (hasCustomFields ? CUSTOM_FIELDS_ROW_H : 0) +
+          FOOTER_H
+      );
     } else {
       // Altura fixa: abas + área de conteúdo com scroll interno, independente do
       // tamanho das listas (resolve o crescimento do popup em listas grandes).
       onResize(POPUP_W, HEADER_H + NEW_TASK_H + TABS_H + CONTENT_H + FOOTER_H);
     }
-  }, [!!runningTask, hasActions, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [!!runningTask, hasActions, hasCustomFields, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePlay(task: PlannedTask) {
     await onPlay(task);
@@ -647,9 +697,11 @@ export function PopupOverlayContent({
           categoryName={categoryName}
           projects={projects}
           categories={categories}
+          customFields={activeFields}
           actions={activePlannedTaskActions}
           confirmingStop={confirmingStop}
           setConfirmingStop={setConfirmingStop}
+          onOpenCustomFields={() => setEditingCustomFields(true)}
           onUpdateTask={onUpdateTask}
           onPause={onPause}
           onResume={onResume}
@@ -803,6 +855,17 @@ export function PopupOverlayContent({
           categories={categories}
           onSave={update}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {/* Campos personalizados da tarefa em execução, no mesmo desenho de painel
+          e pela mesma razão: a janela não cresce. */}
+      {editingCustomFields && runningTask && (
+        <RunningCustomFieldsSheet
+          task={runningTask}
+          fields={activeFields}
+          onSave={(customValues) => onUpdateTask({ customValues })}
+          onClose={() => setEditingCustomFields(false)}
         />
       )}
     </div>

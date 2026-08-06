@@ -13,6 +13,7 @@ export const OVERLAY_EVENTS = {
   TASKS_CHANGED: "tasks-changed",
   PROJECTS_CHANGED: "projects-changed",
   CATEGORIES_CHANGED: "categories-changed",
+  CUSTOM_FIELDS_CHANGED: "custom-fields-changed",
   COMMAND_PALETTE_NAVIGATE: "command-palette:navigate",
   OVERLAY_OPEN_APP: "overlay-open-app",
   COMMAND_PALETTE_START_TASK: "command-palette:start-task",
