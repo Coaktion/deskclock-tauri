@@ -108,6 +108,11 @@ export interface MondayImportSyncResultPayload {
   removed: number;
   /** Preenchido quando `ok` é falso. */
   error?: string;
+  /**
+   * Causa técnica do erro, para o tooltip do ícone. Separada do `error` porque
+   * a linha da tela precisa continuar legível — ver `errorDetail`.
+   */
+  errorDetail?: string;
   /** O ciclo automático já estava rodando: o clique não iniciou busca nenhuma. */
   busy?: boolean;
 }

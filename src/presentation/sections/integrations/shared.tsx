@@ -84,6 +84,11 @@ export function DeskclockWorkspaceRow({
  * Resultado da última busca manual, abaixo do botão que a disparou. Existe além do
  * toast porque o toast some, e a tela de Integrações é onde se confere se a
  * integração está de pé.
+ *
+ * **A causa técnica fica no tooltip do ícone**, quando existe. Ela é útil só para
+ * quem foi investigar — "verifique sua internet" é o mesmo texto para DNS, proxy
+ * e certificado recusado —, mas na linha ela empurraria para fora da tela a
+ * frase que diz o que houve. No ícone, quem não procura não vê.
  */
 export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
   return (
@@ -95,7 +100,14 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
       {feedback.ok ? (
         <CheckCircle2 size={12} className="mt-px shrink-0" />
       ) : (
-        <AlertCircle size={12} className="mt-px shrink-0" />
+        // O `title` vai no wrapper, não no ícone: em SVG inline o atributo não
+        // vira tooltip — o navegador só o reconhece como elemento filho.
+        <span
+          className={`mt-px shrink-0 ${feedback.detail ? "cursor-help" : ""}`}
+          title={feedback.detail}
+        >
+          <AlertCircle size={12} />
+        </span>
       )}
       {feedback.text}
     </p>

@@ -11,6 +11,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { OVERLAY_EVENTS, type MondayImportSyncResultPayload } from "@shared/types/overlayEvents";
+import { errorDetail } from "@shared/utils/errorDetail";
 import { weekBoundsISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
@@ -140,7 +141,14 @@ export function useMondayItemTracker() {
         result = await tick();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Erro ao buscar itens.";
-        await emitSyncResult({ ok: false, created: 0, updated: 0, removed: 0, error: message });
+        await emitSyncResult({
+          ok: false,
+          created: 0,
+          updated: 0,
+          removed: 0,
+          error: message,
+          errorDetail: errorDetail(err),
+        });
         await showToast("error", message);
         return;
       }

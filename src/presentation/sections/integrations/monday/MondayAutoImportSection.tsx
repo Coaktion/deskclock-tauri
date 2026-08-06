@@ -8,7 +8,11 @@ import { Row, SubSection, SyncFeedbackLine, Toggle } from "../shared";
 /** Payload do rastreador → frase mostrada abaixo do botão. */
 export function describeSyncResult(payload: MondayImportSyncResultPayload): SyncFeedback {
   if (!payload.ok) {
-    return { ok: false, text: payload.error || "Erro ao buscar itens." };
+    return {
+      ok: false,
+      text: payload.error || "Erro ao buscar itens.",
+      detail: payload.errorDetail,
+    };
   }
   if (payload.busy) {
     return { ok: true, text: "Uma busca automática já estava em andamento." };

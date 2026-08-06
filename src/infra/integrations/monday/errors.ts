@@ -76,6 +76,14 @@ export class MondayValidationError extends Error {
   }
 }
 
+/**
+ * O `fetch` não chegou a receber resposta.
+ *
+ * `originalCause` é lido pelo `errorDetail` e vira o tooltip do ícone de erro na
+ * tela. Ele ficava guardado aqui e **nunca era exibido nem registrado** —
+ * "verifique sua internet" é o mesmo texto para DNS, proxy corporativo e
+ * certificado recusado, e a diferença morria no ponto de origem.
+ */
 export class MondayNetworkError extends Error {
   readonly originalCause?: unknown;
 

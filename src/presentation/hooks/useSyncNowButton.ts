@@ -5,6 +5,13 @@ import { emit, listen } from "@tauri-apps/api/event";
 export interface SyncFeedback {
   ok: boolean;
   text: string;
+  /**
+   * Causa técnica, exibida só no tooltip do ícone (§ `SyncFeedbackLine`). Fica
+   * fora do `text` de propósito: quem lê a linha quer saber se funcionou, e um
+   * `TypeError: Failed to fetch` no meio da frase não ajuda ninguém a decidir o
+   * que fazer — mas some com a única pista de por que a rede falhou.
+   */
+  detail?: string;
 }
 
 // Rede lenta com muitos boards leva minutos; o corte existe só para o botão não
