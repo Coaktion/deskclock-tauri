@@ -6,7 +6,8 @@ export type SheetsConfigKey =
   | "integrationGoogleSheetsSpreadsheetId"
   | "integrationGoogleSheetsSheetName"
   | "integrationGoogleSheetsColumnMapping"
-  | "sheetsDailySyncLastTimestamp";
+  | "sheetsDailySyncLastTimestamp"
+  | "sheetsDeskclockWorkspaceId";
 
 export interface ISheetsConfigPort {
   get<K extends SheetsConfigKey>(key: K): AppConfig[K];

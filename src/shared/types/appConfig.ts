@@ -12,7 +12,33 @@ export interface OverlayPosition {
   y: number;
 }
 
-export interface AppConfig {
+/**
+ * Workspace do DeskClock em que cada integração trabalha.
+ *
+ * **Vazio resolve para o workspace "Padrão" na leitura** — ver
+ * `resolveIntegrationWorkspaceId`. Nenhuma delas é escrita sozinha: quem tem um
+ * workspace só nunca vê o seletor, e a chave só nasce quando alguém escolhe.
+ */
+export interface IntegrationWorkspaceConfig {
+  /** Import de itens, varredura diária de projetos, import de catálogo e envio de horas. */
+  mondayDeskclockWorkspaceId: string;
+  /** Import de projetos e tags, e envio de apontamentos. */
+  clockifyDeskclockWorkspaceId: string;
+  /** De qual workspace saem as tarefas do envio à planilha. */
+  sheetsDeskclockWorkspaceId: string;
+  /**
+   * **Só** o "Importar eventos" manual. O rastreio automático de reuniões
+   * continua criando no workspace **ativo**: a decisão é registrada, não
+   * descuido — ver §5.7 do CLAUDE.md antes de "consertar".
+   */
+  calendarDeskclockWorkspaceId: string;
+  /** Destino dos tickets importados. */
+  zendeskDeskclockWorkspaceId: string;
+}
+
+export type IntegrationWorkspaceKey = keyof IntegrationWorkspaceConfig;
+
+export interface AppConfig extends IntegrationWorkspaceConfig {
   // Geral
   setupCompleted: boolean;
   userName: string;

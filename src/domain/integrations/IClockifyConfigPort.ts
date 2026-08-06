@@ -8,7 +8,8 @@ export type ClockifyConfigKey =
   | "clockifyProjectMapping"
   | "clockifyCategoryMapping"
   | "clockifyDefaultTagIds"
-  | "clockifyDailySyncLastTimestamp";
+  | "clockifyDailySyncLastTimestamp"
+  | "clockifyDeskclockWorkspaceId";
 
 export interface IClockifyConfigPort {
   get<K extends ClockifyConfigKey>(key: K): AppConfig[K];

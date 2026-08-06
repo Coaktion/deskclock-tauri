@@ -12,7 +12,8 @@ export type MondayConfigKey =
   | "mondayNonBillableReasonFieldId"
   | "mondayAutoSync"
   | "mondayAutoSyncMode"
-  | "mondayDailySyncLastTimestamp";
+  | "mondayDailySyncLastTimestamp"
+  | "mondayDeskclockWorkspaceId";
 
 export interface IMondayConfigPort {
   get<K extends MondayConfigKey>(key: K): AppConfig[K];

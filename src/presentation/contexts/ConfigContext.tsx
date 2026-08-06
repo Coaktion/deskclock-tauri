@@ -108,6 +108,14 @@ const DEFAULTS: AppConfig = {
   mondayProjectsSyncLastDate: "",
   mondayProjectsLastSyncError: "",
   activeWorkspaceId: "",
+  // Workspace do DeskClock de cada integração. Vazio resolve para o "Padrão" na
+  // leitura (`resolveIntegrationWorkspaceId`): é o que torna a migração
+  // invisível para quem tem um workspace só.
+  mondayDeskclockWorkspaceId: "",
+  clockifyDeskclockWorkspaceId: "",
+  sheetsDeskclockWorkspaceId: "",
+  calendarDeskclockWorkspaceId: "",
+  zendeskDeskclockWorkspaceId: "",
   toursSeen: [],
 };
 
