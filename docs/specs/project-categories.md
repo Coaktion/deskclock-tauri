@@ -334,11 +334,38 @@ Nenhuma linha de `tasks`, `planned_tasks`, `projects` ou `categories` é tocada 
 ## Ordem de execução
 
 ```
-Fase 0 (migration + domain + infra + testes)   → commit, mergeável sozinho, inerte
-Fase 1 (hook + 14 telas)                        → commit, ainda inerte (tabela vazia)
-Fase 2 (edição na tela de Dados)                → commit, a partir daqui a feature vive
-Fase 3 (semeadura pelo Monday)                  → commit
+Fase 0 (migration + domain + infra + testes)   ✅ 667a76e
+Fase 1 (hook + 14 telas)                        ✅ 3b14223
+Fase 2 (edição na tela de Dados)                ✅ aa4ec62
+Fase 3 (semeadura pelo Monday)                  ✅
 ```
+
+### Desvios do plano, e por quê
+
+1. **O hook virou `useProjectCategoryMap`** — carrega o mapa do workspace inteiro de uma vez, não
+   `useCategoriesForProject(projectId)`. Três dos pontos de entrada são modais de importação que
+   renderizam um editor por item: um hook por linha viraria dezenas de consultas para montar uma tela
+   só. Ali o recorte desce como `categoryOptionsFor`.
+
+2. **O filtro vale só para as `options`.** Os componentes usam a mesma lista de categorias para
+   oferecer opções e para resolver o nome exibido; filtrar a prop inteira faria uma categoria
+   desassociada sumir das tarefas que já a usam.
+
+3. **`setManual` virou `setForProject`, e a semântica mudou:** o que sai da seleção sai, **seja qual
+   for a origem**. O plano dizia não tocar em linha `monday`, mas isso deixaria na tela uma caixa que
+   desmarca e não apaga — e o próprio plano pede que as do Monday sejam removíveis. O DELETE recorta
+   por `category_id NOT IN (seleção)` em vez de por origem, o que resolve o outro lado de graça: a
+   linha `monday` que continua marcada não é reescrita, então o `INSERT OR IGNORE` a preserva com a
+   origem que tinha.
+
+4. **A semeadura virou use case próprio** (`seedMondayProjectCategories`), chamado pelos dois
+   gatilhos, em vez de entrar dentro de `importMondayProjects` — que já lê o Portfólio, cria projetos
+   e resolve o schema de 62 boards. **Board sem rótulo é pulado, não zerado**, ou uma falha de
+   leitura apagaria as associações.
+
+5. **O caminho do "campo esvaziado" só existe onde o código já zerava o id do projeto.** Em
+   `usePlannedTaskEditor` e nos dois modais de edição, apagar o texto não anula `projectId` — é
+   comportamento anterior, e não foi inventado um agora.
 
 A Fase 2 vem antes da 3 de propósito: se o Monday semeasse primeiro, o filtro duro passaria a valer
 para todos os projetos dele, e um rótulo que não casou por nome deixaria a pessoa sem caminho para a

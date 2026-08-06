@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { importMondayProjects } from "@domain/usecases/monday/importMondayProjects";
+import { seedMondayProjectCategories } from "@domain/usecases/monday/seedMondayProjectCategories";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { shouldSyncMondayProjects } from "@domain/usecases/monday/mondayProjectsSyncPolicy";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { notifyProjectsChanged } from "@shared/utils/catalogSync";
+import { notifyProjectCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { truncateError } from "@shared/utils/syncError";
 import { todayISO } from "@shared/utils/time";
 
@@ -37,7 +38,7 @@ const INITIAL_DELAY_MS = 8000;
 export function useMondayProjectsTracker() {
   const config = useAppConfig();
   const { createMondayApi } = useIntegrations();
-  const { projectRepo } = useRepositories();
+  const { projectRepo, categoryRepo, projectCategoryRepo } = useRepositories();
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -64,10 +65,20 @@ export function useMondayProjectsTracker() {
 
       await config.set("mondayProjectMapping", result.mappings);
 
+      // Os Activity Types de cada board viram as categorias que o projeto
+      // oferece. Não custa consulta nova — os rótulos vieram no import.
+      await seedMondayProjectCategories({
+        mappings: result.mappings,
+        categoryRepo,
+        projectCategoryRepo,
+        workspaceId: deskclockWorkspaceId,
+      });
+
       // Os projetos nascem pelo repositório, sem passar pelas mutações de
       // `useProjects`: sem o aviso, o overlay-popup — que nasce com o app e
       // nunca remonta — ficaria com o catálogo velho para sempre (§9.2).
       await notifyProjectsChanged();
+      await notifyProjectCategoriesChanged();
 
       // Só depois do sucesso: gravar antes trocaria uma falha de rede pela
       // perda da varredura do dia inteiro.

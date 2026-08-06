@@ -3,11 +3,15 @@ import {
   resolveProjectDestination,
 } from "@domain/usecases/monday/importMondayProjects";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
+import {
+  seedMondayProjectCategories,
+  type SeedMondayProjectCategoriesResult,
+} from "@domain/usecases/monday/seedMondayProjectCategories";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
-import { notifyProjectsChanged } from "@shared/utils/catalogSync";
+import { notifyProjectCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
@@ -96,7 +100,7 @@ export function MondayProjectsImport({
   onImported: (mappings: MondayProjectMapping[]) => void;
   reloadProjects: () => Promise<void>;
 }) {
-  const { projectRepo } = useRepositories();
+  const { projectRepo, categoryRepo, projectCategoryRepo } = useRepositories();
   const config = useAppConfig();
   const factories = useIntegrations();
   const [importing, setImporting] = useState(false);
@@ -106,6 +110,9 @@ export function MondayProjectsImport({
   // então o número não aparece mais em lugar nenhum — e é justamente ele que
   // explica por que o board tem mais linhas do que o app tem projetos.
   const [ignored, setIgnored] = useState(0);
+  /** Quantas associações projeto ↔ categoria a varredura semeou no último clique. */
+  const [seededCategories, setSeededCategories] =
+    useState<SeedMondayProjectCategoriesResult | null>(null);
   const [namesById, setNamesById] = useState<Map<string, string>>(new Map());
   const [autoError, setAutoError] = useState("");
   // Recolhida por padrão: o caso comum é conferir se o import trouxe o número
@@ -179,6 +186,17 @@ export function MondayProjectsImport({
       });
 
       await config.set("mondayProjectMapping", result.mappings);
+
+      // Os Activity Types de cada board viram as categorias que o projeto
+      // oferece. Não custa consulta nova — os rótulos vieram no import.
+      const seeded = await seedMondayProjectCategories({
+        mappings: result.mappings,
+        categoryRepo,
+        projectCategoryRepo,
+        workspaceId: deskclockWorkspaceId,
+      });
+      setSeededCategories(seeded);
+
       // O clique acabou de fazer o trabalho do dia: marcar a data evita que a
       // releitura automática repita a mesma varredura horas depois, e limpar o
       // erro tira da tela uma falha que deixou de valer.
@@ -193,6 +211,7 @@ export function MondayProjectsImport({
       // Os projetos nascem pelo repositório, sem passar pelas mutações de
       // `useProjects`: sem este aviso, o overlay não os enxergaria até reiniciar.
       await notifyProjectsChanged();
+      await notifyProjectCategoriesChanged();
 
       await showToast(
         result.skipped.length > 0 ? "warning" : "success",
@@ -224,6 +243,16 @@ export function MondayProjectsImport({
       {progress && progress.total > 0 && (
         <p className="text-[11px] text-gray-500">
           Lendo projetos: {progress.done}/{progress.total}
+        </p>
+      )}
+
+      {/* Os Activity Types de cada board viram as categorias que aquele projeto
+          oferece. Sem esta linha a semeadura seria invisível: ela acontece no
+          mesmo clique e só aparece na tela de Dados, projeto a projeto. */}
+      {seededCategories && seededCategories.projects > 0 && (
+        <p className="text-[11px] text-gray-500">
+          {seededCategories.seeded} associação(ões) de categoria em {seededCategories.projects}{" "}
+          projeto(s).
         </p>
       )}
 

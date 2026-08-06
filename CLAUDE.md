@@ -351,6 +351,17 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 - **Exclusão em massa** sem confirmação (§1). O botão fica sempre no fluxo, invisível enquanto não há seleção — mostrar e esconder deslocaria a lista.
 - **A seleção é sempre a interseção com o que está visível.** Filtrar não deixa selecionado nada fora da tela: como não existe desfazer, o número na barra tem de ser exatamente o que será apagado. A regra vive em `useMultiSelect` (genérico por id) — **não** reaproveitar `useTaskSendSelection`, que é acoplado a `TaskGroup` e dia (§9.4).
 
+#### Categorias por projeto
+- **Na linha do projeto**, uma pílula com a contagem (ou "todas") abre o bloco de associação. Ela
+  fica **sempre visível**, ao contrário de renomear e excluir: carrega estado, e escondê-la no hover
+  esconderia a informação junto com o controle.
+- **Cada clique grava**, como o toggle de billable das listas de tarefas — não há botão de salvar.
+- **Sem associação, o projeto oferece o catálogo inteiro** (§6.4). O bloco diz isso em texto: é o
+  estado de todo projeto até alguém marcar algo, e sem a frase parece que a associação se perdeu.
+- **As linhas semeadas pelo Monday aparecem marcadas e são removíveis**, mas a remoção vale só até a
+  próxima varredura — para tirar de vez, remova o Activity Type do quadro. É esta tela a saída de
+  emergência do filtro duro, e por isso ela existiu **antes** da semeadura.
+
 #### Workspaces
 - **Criar:** nome + seletor de cor. A cor sugerida é o primeiro slot ainda não usado da paleta e **não muda enquanto se digita** — só o seletor a altera.
 - **Editar:** nome e cor inline.
@@ -708,6 +719,23 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > board **não vai no payload**: o Monday recusaria a escrita inteira, derrubando um envio correto por
 > causa de uma categoria não relacionada.
 
+> **O import de projetos semeia quais categorias cada projeto oferece**
+> (`seedMondayProjectCategories`, nos dois gatilhos: o botão "Atualizar" e a varredura diária). O
+> board de destino já publica os Activity Types válidos, e o Activity Type **é** o nome da Categoria
+> — então a associação não custa consulta nova: os rótulos vieram no `activityTypeLabels` do próprio
+> import. O card de Projetos diz quantas foram semeadas, ou a escrita seria invisível.
+>
+> Fica **fora** de `importMondayProjects` de propósito: aquele use case já lê o Portfólio, cria
+> projetos e resolve o schema de 62 boards, e juntar a escrita lhe daria dois repositórios a mais.
+>
+> **Board sem rótulo nenhum é pulado, não zerado.** `activityTypeLabels` vazio significa board
+> ilegível ou projeto sem destino (14 dos 62), não "este projeto não aceita categoria nenhuma":
+> chamar `replaceMondayFor` com lista vazia apagaria as associações a cada falha de leitura. É a
+> mesma regra do "ID Quadro Projeto", onde vazio nunca sobrescreve o local. **Rótulo sem categoria
+> correspondente é ignorado em silêncio** — quem cria categoria a partir do Monday é
+> `importMondayCategories`, que pode não ter rodado ainda, e criar aqui duplicaria a regra de
+> billable por escopo.
+
 > **Uma leitura do board de Report semeia os quatro conjuntos de rótulos** (`importMondayFieldCatalogs`,
 > card "Catálogos"): Activity Type (35), Project Stage (18), Non Billable reason (8) e Report Type
 > (5). São quatro colunas do mesmo board, então quatro consultas seriam quatro idas ao Monday para
@@ -934,6 +962,29 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 - Enter com dropdown fechado (ou sem resultados): dispara `onEnter` (geralmente cria/salva o item do formulário pai).
 - Dropdown fecha ao perder foco (`onBlur`).
 - Permite texto livre se nenhum resultado — não cria projeto/categoria automaticamente.
+
+> **O autocomplete de categoria depende do projeto escolhido.** Tendo o projeto ao menos uma
+> associação em `project_categories` (§5.6), o campo oferece **só** as associadas; **conjunto vazio
+> devolve o catálogo inteiro**, e é essa regra — em `resolveCategoriesForProject` — que torna o
+> filtro duro seguro: projeto sem associação, que é o estado de todos até alguém popular a tabela,
+> continua oferecendo tudo. Vale em **14 pontos de entrada**; o **Histórico fica de fora**, porque
+> ali o campo é filtro de busca e restringi-lo esconderia tarefas já gravadas.
+>
+> **O recorte vale só para as `options`.** Toda busca que resolve um valor **já existente** — o nome
+> exibido da categoria da tarefa em execução, o casamento por nome do import do Monday — continua no
+> catálogo cheio: o filtro governa o que se pode escolher, nunca o que o app pode mostrar. Sem essa
+> separação, desassociar uma categoria apagaria o nome dela das tarefas que já a usam.
+>
+> **Trocar o projeto zera a categoria** (escolha do usuário, por consistência). O reset vive no
+> `onSelect` do autocomplete de projeto — e, onde o código já zerava o id, no campo esvaziado. Nunca
+> num `useEffect` keyed em `projectId`: `prefill`, os três modais de importação e o reexecutar de uma
+> entrada preenchem projeto e categoria **juntos**, e o efeito apagaria a categoria recém-chegada. E
+> nunca no `onChange`, que dispara a cada tecla. No popup, onde editar o chip grava na hora, o reset
+> vai no mesmo `onUpdateTask({ projectId, categoryId: null })`.
+>
+> O mapa é carregado **uma vez por tela** (`useProjectCategoryMap`), não por projeto: três dos pontos
+> de entrada são modais de importação que renderizam um editor por item, e um hook por linha viraria
+> dezenas de consultas para montar uma tela só. Ali o recorte desce como `categoryOptionsFor`.
 
 ### 6.5 Ações de tarefa planejada
 - Ao iniciar uma tarefa planejada via Play, as ações configuradas **não são executadas automaticamente**. Elas aparecem como chips clicáveis na seção "Ações" do Popup Flyout enquanto a tarefa estiver em execução, permitindo que o usuário dispare cada uma sob demanda (e mais de uma vez, se quiser).
@@ -1240,7 +1291,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-06 (§6.7: o modal de exclusão de workspace avisa quais integrações param junto, incluindo as que usam o "Padrão" sem tê-lo escolhido; §5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-06 (§5.6, §6.4 e §5.7: categorias por projeto — o autocomplete de categoria oferece só as associadas, conjunto vazio devolve o catálogo inteiro, a associação se edita na linha do projeto na tela de Dados e o import do Monday a semeia pelos Activity Types do board; §6.7: o modal de exclusão de workspace avisa quais integrações param junto, incluindo as que usam o "Padrão" sem tê-lo escolhido; §5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
