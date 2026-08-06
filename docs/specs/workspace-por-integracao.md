@@ -1,8 +1,38 @@
 # Workspace DeskClock por integração — handoff
 
-> **Estado:** não iniciado. Escrito em 2026-08-05, na sessão que entregou as duas mudanças
-> irmãs (`4390ab2` e `e5ccf6e`, branch `feat/monday-integration`). Leia o CLAUDE.md antes;
-> este documento pressupõe o §5.7 e o §9.5.
+> **Estado: executado em 2026-08-06**, na branch `feat/monday-integration`. Escrito em
+> 2026-08-05, na sessão que entregou as duas mudanças irmãs (`4390ab2` e `e5ccf6e`). Leia o
+> CLAUDE.md antes; este documento pressupõe o §5.7 e o §9.5.
+
+> **O que a execução decidiu**, além do planejado:
+>
+> - **O handoff foi escrito antes da Fase 0 do Portfólio+Report** e cita `MondayWorkspaceSection.tsx`
+>   e `mondayActiveWorkspaceId`, que já não existiam. O seletor remoto do Monday tinha sumido junto:
+>   lá entrou só o seletor novo, sem renomeação. A do Clockify ("Workspace ativo" → **Workspace
+>   Clockify**) foi feita.
+> - **`isMondayLinkedWorkspace` saiu**, como planejado, e a consequência aceita é que a varredura
+>   diária passa a fazer também o **primeiro** import. Com a chave ainda vazia ela cria os projetos
+>   do Portfólio no workspace "Padrão" — quem tem o Monday em outro workspace precisa escolhê-lo em
+>   Integrações antes da primeira virada de dia.
+> - **Todo caminho manual segue a config**, inclusive o `TaskSendModal`: o `TaskSendAdapter` ganhou
+>   `workspaceId` e os três adaptadores leem cada um a sua chave. O envio manual deixou de ver todos
+>   os workspaces — o que revoga o §9.5 item 7 também no caminho manual, não só no automático.
+> - **Os catálogos precisaram acompanhar, e isso não estava no plano.** `useProjects`/`useCategories`
+>   leem o workspace ativo, e os modais de integração os recebiam por prop: com o import criando no
+>   workspace da integração, a planejada nasceria apontando para projeto de outro workspace.
+>   `useIntegrationCatalogs` é o par deles para as telas de integração, e o
+>   `IntegrationsModalsHost` resolve a chave por modal (`MODAL_WORKSPACE_KEY`).
+> - **Tarefa de outro workspace é pulada sem `warning`.** O plano falava só do `findByDateRange`; no
+>   modo por tarefa, avisar seria repetir o incômodo que a mudança veio resolver.
+> - **Os gates de `workspaceLoading` dos dois rastreadores do Monday saíram** junto com os `useRef`
+>   que carregavam o id ativo — o destino não depende mais da resolução do `WorkspaceContext`. O do
+>   `useMeetingTracker` fica, por causa da exceção da Agenda.
+> - **A correção do "a cada 30 minutos"** (`GoogleIntegrationSection`, rastreio que roda a cada 2)
+>   saiu junto, como pedido.
+> - **Não foi feito, e está registrado:** excluir um workspace **não** limpa as cinco chaves que
+>   apontem para ele. A integração passaria a escopar por um id inexistente e pararia de enviar em
+>   silêncio. Cabe em ~6 linhas no `useWorkspaceAdmin.remove`; ficou de fora por ser mudança que
+>   ninguém pediu (§"Mudanças fora do escopo" do CLAUDE.md).
 
 ## O pedido, na voz do usuário
 

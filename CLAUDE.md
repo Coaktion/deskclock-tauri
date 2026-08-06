@@ -394,6 +394,28 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 #### Integrações externas
 
+> **Cada integração trabalha num workspace do DeskClock, escolhido nela mesma.** `Workspace
+> DeskClock` é o primeiro controle de cada card (no Google, de cada subseção — um card, duas
+> chaves): `mondayDeskclockWorkspaceId`, `clockifyDeskclockWorkspaceId`,
+> `sheetsDeskclockWorkspaceId`, `calendarDeskclockWorkspaceId`, `zendeskDeskclockWorkspaceId`. É
+> dele que saem o destino dos imports e o recorte do envio — **a integração roda independente do
+> workspace aberto na tela**, que era de onde vinham os dois defeitos silenciosos: importação
+> nascendo onde a pessoa estivesse no instante do ciclo, e envio mandando ao board do cliente a
+> hora do trabalho pessoal.
+>
+> **Vazio resolve para o "Padrão" na leitura** (`resolveIntegrationWorkspaceId`), e nada é gravado
+> na montagem: o seletor **some com um único workspace** e quem nunca criou um segundo não percebe
+> mudança nenhuma. No envio por tarefa, a de outro workspace é pulada **sem aviso** — o aviso diz
+> "isto deveria ter subido e não subiu", e aqui nada deveria; era justamente o "o projeto não está
+> mapeado" a cada parada num workspace pessoal que incomodava.
+>
+> **Os catálogos acompanham** (`useIntegrationCatalogs`): projetos e categorias dos modais de
+> integração vêm do workspace dela, não do ativo. Sem isso o import criaria a planejada no
+> workspace certo apontando para um projeto do errado, e a lista de envio exibiria o nome errado.
+>
+> Isto **revogou** a regra do §9.5 item 7 ("integrações enxergam tudo"), que era deliberada — ver a
+> nota lá antes de "corrigir" código escopado.
+
 **Google Sheets:**
 | Campo | Tipo |
 |---|---|
@@ -406,7 +428,15 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Campo | Tipo |
 |---|---|
 | Autorização | botão OAuth |
+| Workspace DeskClock | dropdown (`calendarDeskclockWorkspaceId`). Governa **só** o "Importar eventos" |
 | Rastrear reuniões automaticamente | toggle (`calendarAutoTrackingEnabled`, padrão desativado; requer Google conectado) |
+
+> **A Agenda é a exceção ao workspace por integração, e a exceção foi escolhida.** O seletor dela
+> vale só para o **"Importar eventos" manual**; o **rastreio automático de reuniões continua
+> criando no workspace ativo**. Foi apontado ao usuário, na pergunta, que o mesmo modal também
+> abre pelo Planejamento e passaria a importar para um workspace diferente do que a tela mostra —
+> ele escolheu assim mesmo. **Não "conserte" sem perguntar.** É por isso que só o
+> `useMeetingTracker` mantém o gate de `workspaceLoading` (§ acima).
 
 > **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 2 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
 
@@ -499,19 +529,23 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > listener num efeito que espera config e workspace resolverem, então um clique nessa janela é
 > emitido no vazio, e sem o corte por tempo o botão giraria até a tela remontar.
 
-> **Os rastreadores esperam o workspace resolver, e o gate é no efeito.** Enquanto o
-> `WorkspaceContext` carrega, o id ativo é o do workspace "Padrão" — um palpite, não uma escolha.
-> Sincronizar antes da resolução criaria planejada no workspace errado (agenda) ou leria o catálogo
-> errado e não faria nada em silêncio (Monday). O gate **não** pode ficar no `enabled()` de dentro do
-> tick: ali ele não adiaria o primeiro ciclo por um tick, e sim pelo intervalo inteiro — 30 min no
-> Monday. No efeito, `loading` faz true→false uma vez por mount, o efeito reexecuta e o atraso inicial
-> passa a contar da resolução. Vale para `useMeetingTracker` e `useMondayItemTracker`.
+> **O rastreio de reuniões espera o workspace resolver, e o gate é no efeito.** Enquanto o
+> `WorkspaceContext` carrega, o id ativo é o do workspace "Padrão" — um palpite, não uma escolha, e
+> sincronizar antes criaria a planejada no lugar errado. O gate **não** pode ficar no `enabled()` de
+> dentro do tick: ali ele não adiaria o primeiro ciclo por um tick, e sim pelo intervalo inteiro. No
+> efeito, `loading` faz true→false uma vez por mount, o efeito reexecuta e o atraso inicial passa a
+> contar da resolução.
+>
+> **Vale só para o `useMeetingTracker`**, e é consequência da exceção da Agenda abaixo: os
+> rastreadores do Monday leem o workspace da **config** e não dependem mais dessa resolução — o gate
+> deles saiu junto com o `useRef` que carregava o id ativo.
 
 **Clockify:**
 | Campo | Tipo |
 |---|---|
 | API Key | input password + instrução inline |
-| Workspace ativo | dropdown (buscado via API) |
+| Workspace DeskClock | dropdown com os workspaces do app (`clockifyDeskclockWorkspaceId`) |
+| Workspace Clockify | dropdown (buscado via API). Chamava-se "Workspace ativo" — com o do DeskClock logo acima, "ativo" deixou de dizer qual dos dois |
 | Importar projetos | botão → cria Projects no DeskClock + mapeamento automático |
 | Importar tags | botão → cria Categories no DeskClock + mapeamento automático |
 | Mapeamento de projetos | tabela DeskClock Project ↔ Clockify Project (por workspace) |
@@ -524,9 +558,10 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Campo | Tipo |
 |---|---|
 | API Key | input password + instrução inline |
+| Workspace DeskClock | dropdown com os workspaces do app (`mondayDeskclockWorkspaceId`) |
 | Board de Portfólio | input com o id do board que lista os projetos (`mondayPortfolioBoardId`) |
 | Board de Report de Horas | input com o id do board que guarda o catálogo dos rótulos (`mondayReportBoardId`) |
-| Importação de dados | workspace de destino + seis blocos: Projetos, Catálogos, Categorias e os três campos de atividade (Project Stage, Report Type, Non Billable reason) |
+| Importação de dados | seis blocos: Projetos, Catálogos, Categorias e os três campos de atividade (Project Stage, Report Type, Non Billable reason). O destino é o Workspace DeskClock da integração — o seletor local que existia aqui era estado de tela e morria ao sair |
 | Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) + "Sincronizar agora" no modo diário |
 | Importação automática de itens | toggle (`mondayAutoImportEnabled`, padrão desativado) + botão "Buscar itens agora" |
 | Enviar tarefas manualmente | botão abre o `TaskSendModal` genérico |
@@ -740,11 +775,12 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > inteira precisa notar sem ser reaberto) e a data só é gravada **depois do sucesso**: falha de rede
 > volta a tentar no tique seguinte em vez de custar a varredura do dia.
 >
-> **Só roda em workspace que já tem projeto vindo do Monday.** Sem a guarda o destino seria o ativo,
-> qualquer que fosse: bastava estar num workspace pessoal na virada do dia para os 60 projetos da
-> empresa nascerem lá dentro. É **provisória** — sai quando a integração ganhar o workspace DeskClock
-> associado em config. O erro do ciclo fica em `mondayProjectsLastSyncError` e aparece no card de
-> Projetos, pelo mesmo motivo do erro do rastreio da Agenda.
+> **O destino é o workspace da integração**, e por isso a varredura faz também o **primeiro**
+> import. Enquanto o destino era o ativo, uma guarda provisória (`isMondayLinkedWorkspace`) só a
+> deixava rodar onde já houvesse projeto do Monday — sem ela, bastava estar num workspace pessoal na
+> virada do dia para os 60 projetos da empresa nascerem lá dentro. Com o destino escolhido, não há o
+> que adivinhar, e a guarda saiu. O erro do ciclo fica em `mondayProjectsLastSyncError` e aparece no
+> card de Projetos, pelo mesmo motivo do erro do rastreio da Agenda.
 
 > **As duas telas mostram só os itens do usuário conectado.** Os boards são do time inteiro, e
 > ninguém trabalha em todos os clientes. O filtro é a regra `person-<id>` de `query_params` — o
@@ -913,7 +949,13 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 ### 6.7 Workspaces
 - Todo registro nasce no **workspace ativo**, lido do `WorkspaceContext`. Nenhum hook recebe workspace por parâmetro — é isso que mantém as assinaturas públicas estáveis.
-- `findAll(workspaceId?)` e afins tratam `undefined` como "todos os workspaces". Esse é o caminho das **integrações**, que são externas ao workspace e enxergam tudo. `useTaskSendSelection` depende disso de propósito.
+- `findAll(workspaceId?)` e afins tratam `undefined` como "todos os workspaces". **Nenhuma
+  integração usa mais esse caminho:** cada uma escolhe o seu workspace do DeskClock em
+  Integrações (`mondayDeskclockWorkspaceId` e irmãs) e escopa por ele, inclusive o
+  `useTaskSendSelection`, que dependia do contrário de propósito. Vazio resolve para o "Padrão"
+  na leitura (`resolveIntegrationWorkspaceId`), sem gravar nada — quem tem um workspace só não
+  vê seletor nenhum e não percebe a mudança. A exceção é o rastreio automático de reuniões da
+  Agenda, que continua criando no ativo (§5.7).
 - `findByName(name, workspaceId)` exige o parâmetro: a unicidade de projeto e categoria é por workspace.
 - **Trocar de workspace com tarefa em execução é bloqueado** — a UI oferece "parar e trocar" reusando a pergunta Concluída/Pendente. A guarda vive em `useWorkspaceSwitchGuard`, não em `switchTo`, porque o `RunningTaskContext` já consome o `WorkspaceContext` e o caminho inverso fecharia um ciclo.
 - Cada janela tem seu próprio `WorkspaceProvider`; o evento `WORKSPACE_CHANGED` mantém todas em sincronia.
@@ -1167,10 +1209,18 @@ Roteiro obrigatório:
 4. Registrar a strategy no Provider central de auto-sync (não em `App.tsx` nem em `usePostStopLogic` — esses dois lugares hoje têm cópias hardcoded; novo trabalho deve usar o ponto único).
 5. UI consome via hook injetado, **nunca** `new TogglClient()` direto em componente.
 6. Adicionar testes em `tests/infra/integrations/toggl/` espelhando a estrutura dos existentes.
-7. **Não escopar as leituras por workspace.** Integrações são externas ao workspace e enxergam
-   tudo — chame `findAll()` / `findByDateRange(start, end)` sem o terceiro argumento. Se precisar
-   criar Projects a partir de um catálogo externo, aí sim o workspace de destino é obrigatório, e
-   ele vem do seletor da UI (ver `deskclockWorkspaceId` em `importMondayProjects`).
+7. **Escopar as leituras pelo workspace da integração.** Declare a chave
+   `<integração>DeskclockWorkspaceId` no `AppConfig`, resolva-a com
+   `resolveIntegrationWorkspaceId` (vazio = workspace "Padrão") e passe o resultado a
+   `findAll(ws)` / `findByDateRange(start, end, ws)`. No modo por tarefa, a de outro workspace é
+   pulada **sem `warning`**. A integração lê a **própria** config — não recebe workspace por
+   parâmetro nem do `WorkspaceContext` (§6.7).
+
+   > **Esta regra dizia o contrário até 2026-08-06** ("integrações são externas ao workspace e
+   > enxergam tudo"), e a inversão é o ponto. Sem escopo, o board do cliente recebia as horas do
+   > trabalho pessoal e o import nascia em qualquer workspace que estivesse aberto na hora do
+   > ciclo. Quem encontrar código escopado e a regra antiga na memória: a regra antiga foi
+   > revogada, não esquecida.
 
 ### 9.6 Adicionando configuração ao usuário
 
@@ -1183,7 +1233,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-05 (§5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-06 (§5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
