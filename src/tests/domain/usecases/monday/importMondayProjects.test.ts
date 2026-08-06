@@ -83,7 +83,9 @@ function makeApi(items: MondayItem[], schemas: Record<string, MondayBoardSchema>
 function makeProjectRepo(existing: { id: string; name: string }[] = []): IProjectRepository {
   const store: Project[] = existing.map((p) => ({ ...p, workspaceId: DESKCLOCK_WS }));
   return {
-    findAll: vi.fn(async () => store),
+    findAll: vi.fn(async (workspaceId?: string) =>
+      workspaceId ? store.filter((p) => p.workspaceId === workspaceId) : store
+    ),
     findByName: vi.fn(
       async (name: string, workspaceId: string) =>
         store.find((p) => p.name === name && p.workspaceId === workspaceId) ?? null
@@ -384,6 +386,60 @@ describe("importMondayProjects", () => {
 
     expect(result.mappings[0].deskclockProjectId).toBe("p-existente");
     expect(projectRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("lê o catálogo de projetos uma vez só, não um por item", async () => {
+    // Eram ~60 idas ao SQLite em série para montar um índice que uma leitura
+    // resolve. `findByName` sobra só para a releitura do nome duplicado.
+    const api = makeApi(
+      [
+        item({ id: "i1", name: "Cliente A", projectBoardId: "b1" }),
+        item({ id: "i2", name: "Cliente B", projectBoardId: "b2" }),
+        item({ id: "i3", name: "Cliente C", projectBoardId: "b3" }),
+      ],
+      { b1: schema(), b2: schema({ id: "b2" }), b3: schema({ id: "b3" }) }
+    );
+    const projectRepo = makeProjectRepo([
+      { id: "p-a", name: "Cliente A" },
+      { id: "p-b", name: "Cliente B" },
+      { id: "p-c", name: "Cliente C" },
+    ]);
+
+    await run(api, { projectRepo });
+
+    expect(projectRepo.findAll).toHaveBeenCalledTimes(1);
+    expect(projectRepo.findAll).toHaveBeenCalledWith(DESKCLOCK_WS);
+    expect(projectRepo.findByName).not.toHaveBeenCalled();
+  });
+
+  it("encontra o projeto de item cujo nome tem espaço na ponta", async () => {
+    // O nome é gravado aparado. Comparando cru, o item não achava o projeto que
+    // ele mesmo criou no ciclo anterior e voltava em `skipped` toda varredura —
+    // sem mapeamento, e portanto sem envio de horas.
+    const api = makeApi([item({ name: "  Cliente A  " })], { b1: schema() });
+    const projectRepo = makeProjectRepo([{ id: "p-a", name: "Cliente A" }]);
+
+    const result = await run(api, { projectRepo });
+
+    expect(result.mappings[0].deskclockProjectId).toBe("p-a");
+    expect(result.skipped).toEqual([]);
+    expect(projectRepo.save).not.toHaveBeenCalled();
+  });
+
+  it("cria uma vez só o projeto de dois itens de mesmo nome", async () => {
+    const api = makeApi(
+      [
+        item({ id: "i1", name: "Cliente A", projectBoardId: "b1" }),
+        item({ id: "i2", name: "Cliente A", projectBoardId: "b2" }),
+      ],
+      { b1: schema(), b2: schema({ id: "b2" }) }
+    );
+    const projectRepo = makeProjectRepo();
+
+    const result = await run(api, { projectRepo });
+
+    expect(projectRepo.save).toHaveBeenCalledTimes(1);
+    expect(result.mappings[0].deskclockProjectId).toBe(result.mappings[1].deskclockProjectId);
   });
 
   it("reporta progresso do início ao fim", async () => {

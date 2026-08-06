@@ -1,5 +1,6 @@
 import type { IMondayApi } from "@domain/integrations/IMondayApi";
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
+import type { Project } from "@domain/entities/Project";
 import type { MondayProjectMapping, MondayProjectScope } from "@shared/types/mondayConfig";
 import type { MondayBoardSchema, MondayItem } from "@shared/types/monday";
 import { createProject } from "@domain/usecases/projects/CreateProject";
@@ -239,6 +240,38 @@ function destinationOf(
 }
 
 /**
+ * O Project de um item do Portfólio, criando-o na primeira vez que ele aparece.
+ *
+ * **O nome é comparado aparado, porque é aparado que ele é gravado**
+ * (`createProject`). Comparando cru, um item com espaço na ponta não encontrava
+ * o projeto que ele mesmo criara no ciclo anterior: o `createProject` recusava
+ * por duplicidade, a releitura crua tornava a não encontrar, e aquele board
+ * voltava em `skipped` a cada varredura — sem mapeamento, e portanto sem envio
+ * de horas.
+ *
+ * O recém-criado entra no índice para o item de nome repetido no Portfólio
+ * reaproveitá-lo, como a consulta ao banco fazia.
+ */
+async function ensureProject(
+  projectRepo: IProjectRepository,
+  byName: Map<string, Project>,
+  rawName: string,
+  workspaceId: string
+): Promise<Project | null> {
+  const name = rawName.trim();
+  const existing = byName.get(name);
+  if (existing) return existing;
+
+  // A releitura no `catch` cobre a criação que corre em paralelo com esta: o
+  // erro esperado é o de nome duplicado, e nele o projeto existe.
+  const created = await createProject(projectRepo, name, workspaceId).catch(() =>
+    projectRepo.findByName(name, workspaceId)
+  );
+  if (created) byName.set(name, created);
+  return created;
+}
+
+/**
  * Importa os itens do board de Portfólio como Projects do DeskClock.
  *
  * Cada item classificado pela coluna "Oferta" vira um projeto, e a coluna "ID
@@ -286,17 +319,26 @@ export async function importMondayProjects({
     targets.map((t) => t.mondayBoardId)
   );
 
+  // Um `findByName` por item eram ~60 idas ao SQLite, em série, para montar um
+  // índice que uma leitura só resolve. `findAll` já é escopado pelo workspace,
+  // que é exatamente o recorte da unicidade do nome (§4.3), e a comparação da
+  // coluna é byte-exata — o `Map` responde o mesmo que a consulta respondia.
+  const projectsByName = new Map(
+    (await projectRepo.findAll(deskclockWorkspaceId)).map((p) => [p.name, p])
+  );
+
   const mappings: MondayProjectMapping[] = [];
   const skipped: { boardName: string; reason: string }[] = [];
 
   for (const [index, { item, scope, mondayBoardId }] of targets.entries()) {
     onProgress?.(index, targets.length);
 
-    const project =
-      (await projectRepo.findByName(item.name, deskclockWorkspaceId)) ??
-      (await createProject(projectRepo, item.name, deskclockWorkspaceId).catch(() =>
-        projectRepo.findByName(item.name, deskclockWorkspaceId)
-      ));
+    const project = await ensureProject(
+      projectRepo,
+      projectsByName,
+      item.name,
+      deskclockWorkspaceId
+    );
     if (!project) {
       skipped.push({ boardName: item.name, reason: "Não foi possível criar o projeto." });
       continue;
