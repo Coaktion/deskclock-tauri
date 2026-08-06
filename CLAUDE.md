@@ -820,6 +820,69 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > que adivinhar, e a guarda saiu. O erro do ciclo fica em `mondayProjectsLastSyncError` e aparece no
 > card de Projetos, pelo mesmo motivo do erro do rastreio da Agenda.
 
+> **Os schemas dos boards são lidos em lote, uma vez por varredura.** Era um `getBoardSchema` por
+> projeto, dentro do laço: ~46 idas **sequenciais** ao Monday, cada uma pedindo todas as colunas e
+> todas as views com `settings_str` de um board de 60+ colunas. O board de destino passa a ser
+> resolvido **antes** do laço, e `listBoardSchemas` quebra o resto em lotes de 20 — três requisições
+> no lugar de quarenta e seis. Era o gargalo da varredura diária e do botão "Atualizar".
+>
+> **Board inacessível não vem no retorno, e é a ausência que vira o motivo em `skipped`**: a consulta
+> em lote não falha por causa de um id ruim. O que falha — token, rede, orçamento de complexidade —
+> **aborta a varredura**, e isso é a correção de um defeito silencioso: com a leitura por board dentro
+> de um `catch`, um token vencido produzia 46 destinos vazios que o rastreador **gravava por cima** do
+> mapeamento bom, e o envio de horas parava até a varredura seguinte dar certo. Abortar preserva o
+> mapeamento.
+>
+> **Os lotes correm em paralelo, com teto** (`mapWithConcurrency`, `BATCH_CONCURRENCY = 4`). O lote
+> existe para caber no orçamento de complexidade, não porque um dependa do outro — mas o `for` com
+> `await` fazia as três requisições esperarem umas às outras, e o mesmo valia para a busca de itens
+> das duas telas. **A ordem do retorno continua sendo a da entrada**, nunca a de chegada: a lista
+> sairia embaralhada de um jeito diferente a cada execução. O teto existe porque o número de lotes
+> cresce com os boards mapeados, e disparar todos de uma vez contra uma API com limite de requisições
+> troca lentidão por 429 intermitente — que é pior, por ser aleatório.
+
+> **A requisição se repete no que for recusa temporária, e só nisso** (`retry.ts`, até 3 tentativas).
+> É o contrapeso do paralelismo acima: mais requisições ao mesmo tempo tornam o 429 provável, e sem
+> nova tentativa o ganho de tempo viraria erro intermitente na tela.
+>
+> **A regra que governa tudo é se a requisição é uma `mutation`.** Ela **não** se repete em 5xx nem
+> em falha de rede: nos dois a escrita pode ter acontecido e só a resposta se perdeu, e repetir
+> criaria a atividade duas vezes no board do cliente — o defeito que o rastreamento de itens existe
+> para evitar. Já o 429 e o estouro de complexidade são recusas **antes** da execução: nada foi
+> gravado, e ali a mutation repete como qualquer leitura. A pergunta é respondida pelo texto da
+> query, que nasce toda dentro do `MondayClient`.
+>
+> **Prazo declarado é obedecido, e prazo longo demais é motivo para desistir na hora.** O
+> `Retry-After` e o "reset in N seconds" da mensagem de complexidade viram a espera; acima de 15 s,
+> o erro sobe imediatamente dizendo em quanto tempo tentar de novo — boa parte destas chamadas está
+> atrás de um spinner de modal, e um minuto de giro não é nova tentativa, é janela travada. O jitter
+> de ±25% existe porque os lotes paralelos tomam 429 juntos e voltariam juntos, reproduzindo a
+> rajada que os derrubou.
+>
+> **5xx virou classe própria** (`MondayServerError`). Caía no `MondayValidationError`, que por
+> definição não se repete — os dois pedem coisas opostas: o de validação diz que a query está errada
+> e repeti-la só repete o erro. Enquanto eram a mesma classe, não havia como escrever a distinção.
+>
+> **O detalhe do Monday acompanha a recusa de credencial, sem substituir a sugestão.** 401 e 403
+> chegam pela mesma porta e a mensagem virava "Token inválido ou revogado. Reconecte." mesmo quando o
+> texto deles dizia *sem acesso a este board* — mandar reautenticar por falta de permissão é conselho
+> errado. Agora a sugestão fica e o detalhe entra entre parênteses, com o status.
+
+> **A coluna de cronograma é cacheada no mapeamento** (`timelineColumnId`), e é o que dispensa o
+> ciclo de importação de reler schema nenhum. Ele lia o schema de **todos** os boards mapeados a cada
+> execução — a requisição mais cara da integração — só para extrair este id, que a varredura de
+> projetos já tinha em mãos: ela lê o mesmo schema para resolver grupo, colunas e rótulos.
+>
+> **Os três estados são distintos, e é isso que faz o cache funcionar** (`resolveTimelineByBoard`):
+> `undefined` = nunca resolvido, e **só ele** manda ler o schema; `""` = lido, board sem coluna de
+> cronograma; preenchido = o id. Colapsar os dois primeiros faria o board sem Timeline pagar a leitura
+> para sempre — ou, na direção oposta, faria todo board parar de reler quando devia. Por isso
+> `normalizeProjectMappings` **não** lhe dá default: o default seria o colapso.
+>
+> Board que não serve de destino também guarda o cronograma quando o schema foi lido — ele continua
+> valendo para o import de itens de trabalho, e sem gravar o id ele releria o schema em todo ciclo.
+> A regra é usada pelo automático e pelo `MondayImportModal`, que precisam concordar (§9.4).
+
 > **As duas telas mostram só os itens do usuário conectado.** Os boards são do time inteiro, e
 > ninguém trabalha em todos os clientes. O filtro é a regra `person-<id>` de `query_params` — o
 > prefixo é obrigatório, mandar só o id devolve zero itens sem erro nenhum para avisar. A busca é
@@ -859,10 +922,18 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > é a única volta — o automático nunca recria o que o usuário apagou.
 
 > **Importação automática (`useMondayItemTracker` + `syncMondayPlannedTasks`):** ao abrir o app e a
-> cada 30 min, faz sozinho o que o modal faz à mão — a mesma busca, os mesmos padrões
+> cada **4 h**, faz sozinho o que o modal faz à mão — a mesma busca, os mesmos padrões
 > (`buildImportRows`/`resolveItemDefaults`, compartilhados com o modal, §9.4) — para a **semana
 > corrente**. Sem prompt: é o rastreamento de agendas do Google levado ao Monday, e não há nada a
 > perguntar.
+>
+> **O intervalo é de 4 h porque este é o ciclo mais caro da integração**, e item de board não muda
+> de meia em meia hora: uma varredura custa a leitura dos schemas de todos os boards mapeados mais
+> uma busca de itens por variação de template. Quatro horas cobrem o dia de trabalho em três
+> varreduras, e **a atualização pontual continua sendo o "Buscar itens agora"**, que dispara este
+> mesmo ciclo sob demanda — é ele, e não o relógio, o caminho de "acabaram de me passar uma tarefa".
+> Não confundir com o tique de 30 min do `useMondayProjectsTracker`: aquele não vai à rede, só
+> percebe a virada do dia.
 >
 > **"Buscar itens agora" espera a busca de verdade.** O botão vive nas Configurações e a busca vive
 > no rastreador, na janela principal: o fim chega pelo evento `MONDAY_IMPORT_SYNC_RESULT`, que o
@@ -1301,7 +1372,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-06 (§5.6, §6.4 e §5.7: categorias por projeto — o autocomplete de categoria oferece só as associadas, conjunto vazio devolve o catálogo inteiro, a associação se edita na linha do projeto na tela de Dados e o import do Monday a semeia pelos Activity Types do board; §6.7: o modal de exclusão de workspace avisa quais integrações param junto, incluindo as que usam o "Padrão" sem tê-lo escolhido; §5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-06 (§5.7: otimização da API do Monday — lotes de board em paralelo com teto, e nova tentativa nas recusas temporárias, com a `mutation` fora do 5xx e da falha de rede para não duplicar atividade; §5.7: otimização da API do Monday — schemas dos boards lidos em lote na varredura de projetos (~46 requisições sequenciais → 3, e falha de token deixa de zerar o mapeamento) e coluna de cronograma cacheada em `timelineColumnId`, que tira a leitura de schema do ciclo de importação; §5.7: importação automática de itens passa de 30 min para 4 h, com o "Buscar itens agora" como caminho pontual; §5.6, §6.4 e §5.7: categorias por projeto — o autocomplete de categoria oferece só as associadas, conjunto vazio devolve o catálogo inteiro, a associação se edita na linha do projeto na tela de Dados e o import do Monday a semeia pelos Activity Types do board; §6.7: o modal de exclusão de workspace avisa quais integrações param junto, incluindo as que usam o "Padrão" sem tê-lo escolhido; §5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

@@ -8,13 +8,17 @@ import type {
   MondayItemRef,
 } from "@shared/types/monday";
 import type { IMondayApi, ListItemsOptions } from "@domain/integrations/IMondayApi";
+import { mapWithConcurrency } from "@shared/utils/concurrency";
 import {
+  authMessage,
   MondayAuthError,
   MondayNetworkError,
   MondayNotFoundError,
   MondayRateLimitError,
+  MondayServerError,
   MondayValidationError,
 } from "./errors";
+import { nextRetryDelayMs, parseComplexityResetSeconds, parseRetryAfterSeconds } from "./retry";
 
 const BASE_URL = "https://api.monday.com/v2";
 const API_VERSION = "2024-10";
@@ -93,6 +97,27 @@ const MAX_ITEM_PAGES = 50;
  */
 const BOARD_BATCH = 20;
 
+/**
+ * Lotes em voo ao mesmo tempo, numa mesma operação.
+ *
+ * Os lotes existem para caber no orçamento de complexidade (ver acima), e isso
+ * não muda: cada requisição continua custando o mesmo. O que muda é a espera —
+ * eram três idas em série para ler os schemas de 46 boards. O teto existe
+ * porque o número de lotes cresce com os boards mapeados, e disparar todos de
+ * uma vez contra uma API com limite de requisições troca lentidão por 429.
+ */
+const BATCH_CONCURRENCY = 4;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 interface ItemsQueryRule {
   column_id: string;
   compare_value: string[];
@@ -124,9 +149,40 @@ function buildItemRules({ groupIds, excludeGroupIds, owner }: ListItemsOptions):
 }
 
 export class MondayClient implements IMondayApi {
-  constructor(private readonly apiKey: string) {}
+  constructor(
+    private readonly apiKey: string,
+    /**
+     * A espera entre tentativas. Injetável para que o teste do laço não dependa
+     * do relógio: o que se quer verificar é *o que* se repete e *o que não*, e
+     * com a espera real cada caso desses custaria segundos de suíte.
+     */
+    private readonly waitFor: (ms: number) => Promise<void> = sleep
+  ) {}
 
+  /**
+   * Uma requisição, com nova tentativa no que for recusa temporária.
+   *
+   * Quem decide o que se repete é o `nextRetryDelayMs` — e o que ele precisa
+   * saber é se a query é uma **mutation**, porque aí repetir pode duplicar a
+   * atividade no board do cliente. A pergunta é respondida pelo próprio texto da
+   * query: todas nascem aqui neste arquivo, então não há terceiro que possa
+   * mandar uma escrita disfarçada de leitura.
+   */
   private async request<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
+    const isMutation = query.trimStart().startsWith("mutation");
+
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await this.attempt<T>(query, variables);
+      } catch (err) {
+        const delay = nextRetryDelayMs(err, attempt, isMutation);
+        if (delay === null) throw err;
+        await this.waitFor(delay);
+      }
+    }
+  }
+
+  private async attempt<T>(query: string, variables: Record<string, unknown>): Promise<T> {
     let res: Response;
     try {
       res = await fetch(BASE_URL, {
@@ -142,24 +198,38 @@ export class MondayClient implements IMondayApi {
       throw new MondayNetworkError(err);
     }
 
-    if (res.status === 401 || res.status === 403) throw new MondayAuthError();
-    if (res.status === 429) throw new MondayRateLimitError();
+    if (res.status === 429) {
+      throw new MondayRateLimitError(parseRetryAfterSeconds(res.headers?.get("Retry-After")));
+    }
 
     const body = (await res.json().catch(() => ({}))) as GraphQLResponse<T>;
-
-    if (!res.ok && !body.errors && !body.error_message) {
-      throw new MondayValidationError(`Erro HTTP ${res.status} no Monday.`);
-    }
 
     // O Monday responde 200 mesmo em erro de autenticação/complexidade — o
     // discriminador está no corpo, não no status.
     const message = body.error_message ?? body.errors?.map((e) => e.message).join("; ");
+
+    // O detalhe entra na mensagem: 401 e 403 chegam pela mesma porta, e é o
+    // texto deles que separa "token vencido" de "sem acesso a este board" —
+    // dois problemas com soluções diferentes.
+    if (res.status === 401 || res.status === 403) {
+      throw new MondayAuthError(authMessage(res.status, message));
+    }
+
+    // 5xx não diz nada sobre a query, e é o único erro de status que vale nova
+    // tentativa. Antes caía no `MondayValidationError` genérico, que por
+    // definição não se repete.
+    if (res.status >= 500) throw new MondayServerError(res.status, message);
+
+    if (!res.ok && !message) {
+      throw new MondayValidationError(`Erro HTTP ${res.status} no Monday.`);
+    }
+
     if (message) {
       if (/unauthorized|not authenticated|invalid token/i.test(message)) {
         throw new MondayAuthError(message);
       }
       if (/complexity|rate limit|budget exhausted/i.test(message)) {
-        throw new MondayRateLimitError();
+        throw new MondayRateLimitError(parseComplexityResetSeconds(message));
       }
       // Distinguido do erro genérico porque é o único caso em que recriar o item
       // é seguro — nos demais o item existe e recriar duplicaria o apontamento.
@@ -231,9 +301,8 @@ export class MondayClient implements IMondayApi {
 
   async listBoardSchemas(boardIds: string[]): Promise<MondayBoardSchema[]> {
     const ids = [...new Set(boardIds.filter(Boolean))];
-    const all: MondayBoardSchema[] = [];
-    for (let i = 0; i < ids.length; i += BOARD_BATCH) {
-      const data = await this.request<{ boards: RawBoardSchema[] | null }>(
+    const perBatch = await mapWithConcurrency(chunk(ids, BOARD_BATCH), BATCH_CONCURRENCY, (batch) =>
+      this.request<{ boards: RawBoardSchema[] | null }>(
         `query ($ids: [ID!]) {
            boards(ids: $ids) {
              id
@@ -245,11 +314,10 @@ export class MondayClient implements IMondayApi {
              views { id name type settings_str }
            }
          }`,
-        { ids: ids.slice(i, i + BOARD_BATCH) }
-      );
-      all.push(...(data.boards ?? []).map(toBoardSchema));
-    }
-    return all;
+        { ids: batch }
+      )
+    );
+    return perBatch.flatMap((data) => (data.boards ?? []).map(toBoardSchema));
   }
 
   async getBoardSchema(boardId: string): Promise<MondayBoardSchema> {
@@ -260,11 +328,10 @@ export class MondayClient implements IMondayApi {
 
   async listItems(boardIds: string[], options: ListItemsOptions = {}): Promise<MondayItem[]> {
     const ids = [...new Set(boardIds.filter(Boolean))];
-    const all: MondayItem[] = [];
-    for (let i = 0; i < ids.length; i += BOARD_BATCH) {
-      all.push(...(await this.listItemsBatch(ids.slice(i, i + BOARD_BATCH), options)));
-    }
-    return all;
+    const perBatch = await mapWithConcurrency(chunk(ids, BOARD_BATCH), BATCH_CONCURRENCY, (batch) =>
+      this.listItemsBatch(batch, options)
+    );
+    return perBatch.flat();
   }
 
   /** Uma requisição para o lote inteiro de boards, mais as páginas que sobrarem. */
