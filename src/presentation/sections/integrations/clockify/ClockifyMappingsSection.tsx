@@ -1,5 +1,5 @@
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
@@ -63,9 +63,11 @@ export function ClockifyMappingsSection({
   reloadCategories: () => Promise<void>;
 }) {
   const { projectRepo, categoryRepo } = useRepositories();
-  // Distinto do `workspaceId` desta tela, que é o workspace do **Clockify**.
-  const deskclockWorkspaceId = useActiveWorkspaceId();
   const config = useAppConfig();
+  // Distinto do `workspaceId` desta tela, que é o workspace do **Clockify**.
+  const deskclockWorkspaceId = resolveIntegrationWorkspaceId(
+    config.get("clockifyDeskclockWorkspaceId")
+  );
   const factories = useIntegrations();
   const [clockifyProjects, setClockifyProjects] = useState<ClockifyRef[]>([]);
   const [clockifyTags, setClockifyTags] = useState<ClockifyRef[]>([]);

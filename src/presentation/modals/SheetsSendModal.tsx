@@ -8,6 +8,7 @@ import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TaskSendModal, type TaskSendAdapter } from "./TaskSendModal";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 
 interface SheetsSendModalProps {
   projects: Project[];
@@ -31,6 +32,9 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
 
     return {
       integrationId: "google_sheets",
+      workspaceId: resolveIntegrationWorkspaceId(
+        config.isLoaded ? config.get("sheetsDeskclockWorkspaceId") : ""
+      ),
       title: "Enviar para Google Sheets",
       sender,
       validateTask: validateTaskForSheets,

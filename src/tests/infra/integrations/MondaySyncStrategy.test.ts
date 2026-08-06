@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { DEFAULT_WORKSPACE_ID } from "@domain/entities/Workspace";
 import type { Task } from "@domain/entities/Task";
 import type { AppConfig } from "@shared/types/appConfig";
 import type { IMondayConfigPort } from "@domain/integrations/IMondayConfigPort";
@@ -35,6 +36,10 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IMondayConfigPort {
     mondayApiKey: "token",
     mondayPortfolioBoardId: "ws1",
     mondayDailySyncLastTimestamp: "",
+    // O workspace do DeskClock em que a integração trabalha — o mesmo de
+    // `makeTask`, para que os casos que não tratam de workspace não caiam no
+    // recorte e sim naquilo que se propõem a verificar.
+    mondayDeskclockWorkspaceId: "ws-1",
     mondayProjectMapping: [
       {
         deskclockProjectId: "proj-1",
@@ -323,6 +328,71 @@ describe("MondaySyncStrategy", () => {
       expect(logRepo.markSent).not.toHaveBeenCalled();
     });
 
+    it("não envia — nem avisa — tarefa de fora do workspace da integração", async () => {
+      const { taskRepo, logRepo, itemRepo } = makeDeps();
+      const strategy = new MondaySyncStrategy(
+        makeConfig({ mondayDeskclockWorkspaceId: "ws-trabalho" }),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
+
+      const result = await strategy.runPerTask(makeTask({ workspaceId: "ws-pessoal" }));
+
+      expect(result.count).toBe(0);
+      // Sem `warning` de propósito: a hora pessoal não é assunto do Monday, e
+      // avisar a cada parada faria a integração reclamar do que ela não devia
+      // sequer ter considerado.
+      expect(result.warning).toBeUndefined();
+      expect(sendMock).not.toHaveBeenCalled();
+      expect(logRepo.markSent).not.toHaveBeenCalled();
+    });
+
+    it("monta o grupo do dia só com o workspace da integração", async () => {
+      const task = makeTask({ workspaceId: "ws-trabalho" });
+      const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
+      const strategy = new MondaySyncStrategy(
+        makeConfig({ mondayDeskclockWorkspaceId: "ws-trabalho" }),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
+
+      await strategy.runPerTask(task);
+
+      expect(taskRepo.findByDateRange).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        "ws-trabalho"
+      );
+    });
+
+    it("sem workspace escolhido, trabalha no Padrão", async () => {
+      const task = makeTask({ workspaceId: DEFAULT_WORKSPACE_ID });
+      const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
+      const strategy = new MondaySyncStrategy(
+        makeConfig({ mondayDeskclockWorkspaceId: "" }),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
+
+      const result = await strategy.runPerTask(task);
+
+      expect(result.count).toBe(1);
+      expect(taskRepo.findByDateRange).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        DEFAULT_WORKSPACE_ID
+      );
+    });
+
     it("marca como enviada e atualiza o timestamp no sucesso", async () => {
       const task = makeTask();
       const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
@@ -390,6 +460,22 @@ describe("MondaySyncStrategy", () => {
       expect(validate(makeTask())).toBe(true);
       expect(validate(makeTask({ name: null }))).toBe(false);
       expect(validate(makeTask({ projectId: "proj-sem-board" }))).toBe(false);
+    });
+
+    it("passa adiante o workspace da integração, para o envio não varrer todos", async () => {
+      const { taskRepo, logRepo, itemRepo } = makeDeps();
+      const strategy = new MondaySyncStrategy(
+        makeConfig({ mondayDeskclockWorkspaceId: "ws-trabalho" }),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      );
+
+      await strategy.runDaily("2026-07-30");
+
+      expect(dailyMock.mock.calls[0][0].workspaceId).toBe("ws-trabalho");
     });
   });
 });

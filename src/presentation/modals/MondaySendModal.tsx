@@ -6,6 +6,7 @@ import { validateTaskForMonday } from "@domain/integrations/taskValidation";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TaskSendModal, type TaskSendAdapter } from "./TaskSendModal";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 
 interface MondaySendModalProps {
   projects: Project[];
@@ -32,6 +33,9 @@ export function MondaySendModal({ projects, categories, onClose }: MondaySendMod
 
     return {
       integrationId: "monday",
+      workspaceId: resolveIntegrationWorkspaceId(
+        config.isLoaded ? config.get("mondayDeskclockWorkspaceId") : ""
+      ),
       title: "Enviar para Monday",
       sender,
       validateTask: validateTaskForMonday,

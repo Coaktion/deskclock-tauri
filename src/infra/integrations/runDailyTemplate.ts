@@ -12,6 +12,11 @@ export interface DailyTemplateDeps {
   logKey: string;
   taskRepo: ITaskRepository;
   logRepo: ITaskIntegrationLogRepository;
+  /**
+   * Workspace do DeskClock da integração. Sem ele a busca devolveria as tarefas
+   * de **todos** os workspaces — o envio levaria junto o trabalho pessoal.
+   */
+  workspaceId: string;
   timestampPort: {
     get(): string;
     set(iso: string): Promise<void>;
@@ -39,7 +44,7 @@ export async function runDailyTemplate(
   const range = calcDailyRange(deps.timestampPort.get(), endDateISO);
   if (!range) return { integration: deps.integrationName, count: 0 };
   try {
-    const tasks = await deps.taskRepo.findByDateRange(range.start, range.end);
+    const tasks = await deps.taskRepo.findByDateRange(range.start, range.end, deps.workspaceId);
     const allCompleted = tasks.filter((t) => t.status === "completed");
     const valid = allCompleted.filter(deps.validate);
     const invalidCount = allCompleted.length - valid.length;

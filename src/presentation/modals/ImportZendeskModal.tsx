@@ -19,7 +19,8 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { todayISO } from "@shared/utils/time";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
@@ -239,7 +240,9 @@ export function ImportZendeskModal({
   onImported,
   onClose,
 }: ImportZendeskModalProps) {
-  const workspaceId = useActiveWorkspaceId();
+  // Destino escolhido na integração, não o workspace aberto na tela.
+  const config = useAppConfig();
+  const workspaceId = resolveIntegrationWorkspaceId(config.get("zendeskDeskclockWorkspaceId"));
   const [tickets, setTickets] = useState<ZendeskTicket[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [editMap, setEditMap] = useState<Map<number, TicketEditState>>(new Map());

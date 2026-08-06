@@ -37,7 +37,7 @@ import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { addDaysISO, todayISO, weekBoundsISO } from "@shared/utils/time";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
@@ -120,7 +120,11 @@ export function MondayImportModal({
   const config = useAppConfig();
   const { createMondayApi } = useIntegrations();
   const { mondayImportedItemRepo } = useRepositories();
-  const workspaceId = useActiveWorkspaceId();
+  // O workspace da integração, não o ativo: este modal é o gêmeo manual do
+  // `useMondayItemTracker`, e os dois precisam criar no mesmo lugar. O dedupe de
+  // `monday_imported_items` é chaveado por (item, workspace) — divergindo, a
+  // mesma planejada nasceria duas vezes, cada uma invisível para o outro lado.
+  const workspaceId = resolveIntegrationWorkspaceId(config.get("mondayDeskclockWorkspaceId"));
   const userId = config.get("mondayUserId");
   const { activeFields } = useCustomFields();
 
@@ -154,9 +158,9 @@ export function MondayImportModal({
   );
 
   /**
-   * Só entram os boards cujo projeto existe **no workspace ativo**. O vínculo
-   * mora na config e não sabe de workspace: importar por um board mapeado noutro
-   * criaria tarefas apontando para projeto de fora, que a tela nem exibe.
+   * Só entram os boards cujo projeto existe **no workspace da integração**. O
+   * vínculo mora na config e não sabe de workspace: importar por um board
+   * mapeado noutro criaria planejadas apontando para projeto de fora.
    */
   const availableBoards = useMemo(
     () => mappings.filter((m) => projects.some((p) => p.id === m.deskclockProjectId)),
@@ -389,7 +393,7 @@ export function MondayImportModal({
             <p className="text-sm text-gray-500 text-center py-12 px-4">
               {mappings.length === 0
                 ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
-                : "Os boards vinculados apontam para projetos de outro workspace. Troque o workspace ativo ou importe os projetos neste."}
+                : "Os boards vinculados apontam para projetos de outro workspace. Confira o workspace escolhido na integração ou importe os projetos nele."}
             </p>
           )}
 

@@ -1,5 +1,3 @@
-import type { MondayProjectMapping } from "@shared/types/mondayConfig";
-
 export interface MondayProjectsSyncState {
   apiKey: string;
   /** Board de onde a lista de projetos é lida. Sem ele não há o que reler. */
@@ -22,23 +20,4 @@ export interface MondayProjectsSyncState {
 export function shouldSyncMondayProjects(state: MondayProjectsSyncState): boolean {
   if (!state.apiKey || !state.portfolioBoardId) return false;
   return state.lastSyncDate !== state.todayISO;
-}
-
-/**
- * Se este workspace do DeskClock já recebe os projetos do Monday.
- *
- * É a prova de que alguém escolheu trazer o Portfólio para cá, e sem ela o
- * destino da releitura seria o workspace ativo, qualquer que fosse: bastava
- * estar num workspace pessoal na virada do dia para os 60 projetos da empresa
- * nascerem lá dentro. O vínculo mora na config e não sabe de workspace do
- * DeskClock, então quem responde é o projeto existir no destino.
- *
- * Provisória: sai quando a integração ganhar o workspace DeskClock associado em
- * config, e o destino deixar de depender de onde o usuário está.
- */
-export function isMondayLinkedWorkspace(
-  mappings: MondayProjectMapping[],
-  projectIdsInWorkspace: Set<string>
-): boolean {
-  return mappings.some((m) => projectIdsInWorkspace.has(m.deskclockProjectId));
 }

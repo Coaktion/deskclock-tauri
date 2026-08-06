@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
-import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
+import {
+  useIntegrationsUi,
+  type IntegrationModal,
+} from "@presentation/contexts/IntegrationsUiContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { useProjects } from "@presentation/hooks/useProjects";
+import { useIntegrationCatalogs } from "@presentation/hooks/useIntegrationCatalogs";
 import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
@@ -12,6 +14,7 @@ import { MondayEntriesModal } from "@presentation/modals/MondayEntriesModal";
 import { MondayImportModal } from "@presentation/modals/MondayImportModal";
 import { MondaySendModal } from "@presentation/modals/MondaySendModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
+import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 import { showToast } from "@shared/utils/toast";
 
 function defaultCalendarRangeISO() {
@@ -30,13 +33,33 @@ function defaultCalendarRangeISO() {
   };
 }
 
+/**
+ * Qual workspace do DeskClock cada modal enxerga.
+ *
+ * Todos eles são de integração, e nenhum trabalha no workspace aberto na tela:
+ * o import cria no workspace da integração e o envio manda o dele. Os catálogos
+ * têm de vir do mesmo lugar, ou a planejada nasce apontando para projeto de fora
+ * e a lista de envio mostra o nome errado.
+ */
+const MODAL_WORKSPACE_KEY: Record<IntegrationModal, IntegrationWorkspaceKey | null> = {
+  "sheets-send": "sheetsDeskclockWorkspaceId",
+  "clockify-send": "clockifyDeskclockWorkspaceId",
+  "monday-send": "mondayDeskclockWorkspaceId",
+  "monday-import": "mondayDeskclockWorkspaceId",
+  "calendar-import": "calendarDeskclockWorkspaceId",
+  // Operam direto sobre o destino remoto e não montam nada com o catálogo local.
+  "clockify-entries": null,
+  "monday-entries": null,
+};
+
 export function IntegrationsModalsHost() {
   const { modal, closeModal } = useIntegrationsUi();
   const config = useAppConfig();
   const factories = useIntegrations();
   const { plannedTaskRepo } = useRepositories();
-  const { projects } = useProjects();
-  const { categories } = useCategories();
+  const { projects, categories } = useIntegrationCatalogs(
+    modal ? MODAL_WORKSPACE_KEY[modal] : null
+  );
 
   const calendarImporter = useMemo(
     () => (config.isLoaded ? factories.createCalendarImporter() : null),

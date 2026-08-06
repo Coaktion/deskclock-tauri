@@ -1,8 +1,7 @@
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { useProjects } from "@presentation/hooks/useProjects";
+import { useIntegrationCatalogs } from "@presentation/hooks/useIntegrationCatalogs";
 import { useTour } from "@presentation/hooks/useTour";
 import { startZendeskOAuth } from "@infra/integrations/zendesk/ZendeskOAuth";
 import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenManager";
@@ -37,8 +36,9 @@ export function ZendeskIntegrationCard() {
   const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
   const factories = useIntegrations();
-  const { projects } = useProjects();
-  const { categories } = useCategories();
+  // Catálogos do workspace da integração: o import cria as planejadas lá, e as
+  // do ativo fariam a tarefa apontar para projeto de outro workspace.
+  const { projects, categories } = useIntegrationCatalogs("zendeskDeskclockWorkspaceId");
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
   const [subdomain, setSubdomain] = useState("");

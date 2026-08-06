@@ -1,14 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { importMondayProjects } from "@domain/usecases/monday/importMondayProjects";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import {
-  isMondayLinkedWorkspace,
-  shouldSyncMondayProjects,
-} from "@domain/usecases/monday/mondayProjectsSyncPolicy";
+import { shouldSyncMondayProjects } from "@domain/usecases/monday/mondayProjectsSyncPolicy";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { truncateError } from "@shared/utils/syncError";
 import { todayISO } from "@shared/utils/time";
@@ -28,12 +25,12 @@ const INITIAL_DELAY_MS = 8000;
  * Faz exatamente o que aquele botão faz (`importMondayProjects`), no mesmo
  * destino.
  *
- * **Só roda num workspace que já tem projeto mapeado do Monday.** Sem isso, o
- * destino seria o workspace ativo, qualquer que fosse ele: bastava estar num
- * workspace pessoal na virada do dia para todos os boards da empresa nascerem
- * lá dentro, sem ninguém ter pedido. A guarda é provisória e some quando a
- * integração ganhar o workspace DeskClock associado em config — aí o destino
- * deixa de depender de onde o usuário está.
+ * **O destino é o workspace da integração**, lido da config. Enquanto era o
+ * ativo, uma guarda provisória (`isMondayLinkedWorkspace`) impedia a varredura
+ * de rodar onde ainda não houvesse projeto do Monday — sem ela, bastava estar
+ * num workspace pessoal na virada do dia para os projetos da empresa nascerem
+ * lá dentro. Com o destino escolhido explicitamente não há mais o que adivinhar,
+ * e a varredura passa a fazer também o **primeiro** import.
  *
  * Deve rodar na janela principal, como os outros rastreadores.
  */
@@ -41,34 +38,18 @@ export function useMondayProjectsTracker() {
   const config = useAppConfig();
   const { createMondayApi } = useIntegrations();
   const { projectRepo } = useRepositories();
-  const { activeWorkspaceId: workspaceId, loading: workspaceLoading } = useWorkspaces();
 
-  // O efeito roda uma vez e captura o closure; sem o ref, o destino congelaria
-  // no workspace da montagem e uma troca depois criaria projeto no lugar errado.
-  const workspaceIdRef = useRef(workspaceId);
-  workspaceIdRef.current = workspaceId;
-
-  // Enquanto o WorkspaceContext carrega, o id ativo é o do workspace "Padrão" —
-  // um palpite. O gate é no efeito e não dentro do tick porque aqui o intervalo
-  // é de 30 min: barrar no tick não adiaria o primeiro ciclo por um tick, e sim
-  // por meia hora (§5.7).
   useEffect(() => {
-    if (!config.isLoaded || workspaceLoading) return;
+    if (!config.isLoaded) return;
 
     let disposed = false;
     let inFlight = false;
 
     async function runSync(): Promise<void> {
-      const deskclockWorkspaceId = workspaceIdRef.current;
-      const existingMappings = normalizeProjectMappings(config.get("mondayProjectMapping"));
-
-      // Já mapeado **neste** workspace: é o que prova que o usuário escolheu
-      // trazer os projetos do Monday para cá. O vínculo mora na config e não
-      // sabe de workspace, então a prova é o projeto existir no destino.
-      const projectIds = new Set(
-        (await projectRepo.findAll(deskclockWorkspaceId)).map((p) => p.id)
+      const deskclockWorkspaceId = resolveIntegrationWorkspaceId(
+        config.get("mondayDeskclockWorkspaceId")
       );
-      if (!isMondayLinkedWorkspace(existingMappings, projectIds)) return;
+      const existingMappings = normalizeProjectMappings(config.get("mondayProjectMapping"));
 
       const result = await importMondayProjects({
         api: createMondayApi(),
@@ -131,5 +112,5 @@ export function useMondayProjectsTracker() {
     };
     // createMondayApi e projectRepo vêm de Providers e são estáveis por sessão;
     // capturá-los uma vez na montagem é seguro (§9.2).
-  }, [config.isLoaded, workspaceLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 }

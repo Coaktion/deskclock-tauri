@@ -19,6 +19,7 @@ import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { validateTaskForSheets } from "@domain/integrations/taskValidation";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useAutoSync, SHEETS_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
@@ -221,6 +222,9 @@ function SheetsSection({
           logKey: "google_sheets",
           taskRepo,
           logRepo: taskLogRepo,
+          // O mesmo recorte do envio automático: o botão manda o dia do
+          // workspace da integração, não o de quem estiver aberto na tela.
+          workspaceId: resolveIntegrationWorkspaceId(config.get("sheetsDeskclockWorkspaceId")),
           timestampPort: {
             get: () => config.get("sheetsDailySyncLastTimestamp"),
             set: (iso) => config.set("sheetsDailySyncLastTimestamp", iso),

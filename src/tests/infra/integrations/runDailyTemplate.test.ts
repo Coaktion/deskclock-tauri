@@ -60,6 +60,7 @@ function makeDeps(overrides: Partial<DailyTemplateDeps> = {}): DailyTemplateDeps
     logKey: "test_key",
     taskRepo: makeTaskRepo(),
     logRepo: makeLogRepo(),
+    workspaceId: "ws-integracao",
     timestampPort: {
       get: vi.fn().mockReturnValue(""),
       set: vi.fn().mockResolvedValue(undefined),

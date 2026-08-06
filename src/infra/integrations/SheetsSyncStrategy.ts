@@ -7,6 +7,7 @@ import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncSt
 import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 import type { ISheetsConfigPort } from "@domain/integrations/ISheetsConfigPort";
 import { validateTaskForSheets, formatMissingFields } from "@domain/integrations/taskValidation";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { runDailyTemplate } from "./runDailyTemplate";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 
@@ -41,7 +42,16 @@ export class SheetsSyncStrategy implements ISyncStrategy {
     );
   }
 
+  /** Ver `MondaySyncStrategy.workspaceId`: lido a cada uso, nunca na construção. */
+  private workspaceId(): string {
+    return resolveIntegrationWorkspaceId(this.config.get("sheetsDeskclockWorkspaceId"));
+  }
+
   async runPerTask(task: Task): Promise<AutoSyncResult> {
+    // Tarefa de outro workspace sai sem aviso: nada deveria ter subido.
+    if (task.workspaceId !== this.workspaceId()) {
+      return { integration: this.integrationName, count: 0 };
+    }
     const validation = validateTaskForSheets(task);
     if (!validation.ok) {
       return {
@@ -78,6 +88,7 @@ export class SheetsSyncStrategy implements ISyncStrategy {
         logKey: "google_sheets",
         taskRepo: this.taskRepo,
         logRepo: this.logRepo,
+        workspaceId: this.workspaceId(),
         timestampPort: {
           get: () => this.config.get("sheetsDailySyncLastTimestamp"),
           set: (iso) => this.config.set("sheetsDailySyncLastTimestamp", iso),

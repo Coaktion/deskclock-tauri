@@ -35,6 +35,11 @@ import {
 export interface TaskSendAdapter {
   /** Id da integração — usado em taskLogRepo.findSentIds / markSent. */
   integrationId: string;
+  /**
+   * Workspace do DeskClock da integração — o recorte da lista de tarefas.
+   * Cada adaptador resolve o seu (`resolveIntegrationWorkspaceId`).
+   */
+  workspaceId: string;
   /** Título exibido no header do modal. */
   title: string;
   /** Sender pronto para uso (null quando integração não configurada). */
@@ -164,7 +169,11 @@ const QUICK_LABELS: Record<QuickPeriod, string> = {
 
 export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSendModalProps) {
   const { taskLogRepo } = useRepositories();
-  const sel = useTaskSendSelection(adapter.integrationId, adapter.validateTask);
+  const sel = useTaskSendSelection(
+    adapter.integrationId,
+    adapter.validateTask,
+    adapter.workspaceId
+  );
 
   const [sending, setSending] = useState(false);
 

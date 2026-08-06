@@ -94,7 +94,8 @@ export interface UseTaskSendSelectionResult {
 
 export function useTaskSendSelection(
   integrationId: string,
-  validateTask: (task: Task) => TaskValidationResult
+  validateTask: (task: Task) => TaskValidationResult,
+  workspaceId: string
 ): UseTaskSendSelectionResult {
   const { taskRepo, taskLogRepo } = useRepositories();
 
@@ -128,9 +129,10 @@ export function useTaskSendSelection(
       try {
         const { start, end } = quickToRange(quick, customStartRef.current, customEndRef.current);
         const [tasks, sentIdsArr] = await Promise.all([
-          // Sem filtro de workspace de propósito: as integrações são externas ao
-          // workspace e enxergam tudo (decisão registrada no spec, item 3).
-          taskRepo.findByDateRange(startOfDayISO(start), endOfDayISO(end)),
+          // Só as tarefas do workspace **da integração**. Antes a busca era sem
+          // escopo, de propósito — "integrações enxergam tudo" —, e a lista
+          // oferecia ao board do cliente as horas do trabalho pessoal.
+          taskRepo.findByDateRange(startOfDayISO(start), endOfDayISO(end), workspaceId),
           taskLogRepo.findSentIds(integrationId, startOfDayISO(start), endOfDayISO(end)),
         ]);
         if (cancelled) return;
@@ -174,7 +176,7 @@ export function useTaskSendSelection(
     };
     // integrationId e validateTask são estáveis por contrato do chamador
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [taskRepo, taskLogRepo, quick, reloadKey]);
+  }, [taskRepo, taskLogRepo, quick, reloadKey, workspaceId]);
 
   function toggleGroup(date: string, key: string, group: TaskGroup) {
     if (!validateTask(group.tasks[0]).ok) return;

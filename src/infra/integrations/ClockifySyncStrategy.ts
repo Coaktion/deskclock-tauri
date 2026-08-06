@@ -4,6 +4,7 @@ import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { IClockifyConfigPort } from "@domain/integrations/IClockifyConfigPort";
 import { validateTaskForClockify, formatMissingFields } from "@domain/integrations/taskValidation";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { runDailyTemplate } from "./runDailyTemplate";
 import { ClockifyTaskSender } from "./ClockifyTaskSender";
 
@@ -34,7 +35,16 @@ export class ClockifySyncStrategy implements ISyncStrategy {
     );
   }
 
+  /** Ver `MondaySyncStrategy.workspaceId`: lido a cada uso, nunca na construção. */
+  private workspaceId(): string {
+    return resolveIntegrationWorkspaceId(this.config.get("clockifyDeskclockWorkspaceId"));
+  }
+
   async runPerTask(task: Task): Promise<AutoSyncResult> {
+    // Tarefa de outro workspace sai sem aviso: nada deveria ter subido.
+    if (task.workspaceId !== this.workspaceId()) {
+      return { integration: this.integrationName, count: 0 };
+    }
     const validation = validateTaskForClockify(task);
     if (!validation.ok) {
       return {
@@ -66,6 +76,7 @@ export class ClockifySyncStrategy implements ISyncStrategy {
         logKey: "clockify",
         taskRepo: this.taskRepo,
         logRepo: this.logRepo,
+        workspaceId: this.workspaceId(),
         timestampPort: {
           get: () => this.config.get("clockifyDailySyncLastTimestamp"),
           set: (iso) => this.config.set("clockifyDailySyncLastTimestamp", iso),

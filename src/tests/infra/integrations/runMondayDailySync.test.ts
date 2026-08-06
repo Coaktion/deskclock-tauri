@@ -48,6 +48,7 @@ function makeDeps(tasks: Task[], overrides: Partial<MondayDailySyncDeps> = {}) {
     integrationName: "Monday",
     taskRepo,
     logRepo,
+    workspaceId: "ws-integracao",
     timestampPort: { get: () => LAST_TIMESTAMP, set: setTimestamp },
     validate: () => true,
     createSender: () => sender,

@@ -7,6 +7,7 @@ import type { ICategoryRepository } from "@domain/repositories/ICategoryReposito
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { IMondayConfigPort } from "@domain/integrations/IMondayConfigPort";
 import { validateTaskForMonday, formatMissingFields } from "@domain/integrations/taskValidation";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { localDateISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { runMondayDailySync, MONDAY_LOG_KEY } from "./runMondayDailySync";
 import { MondayTaskSender } from "./MondayTaskSender";
@@ -40,6 +41,16 @@ export class MondaySyncStrategy implements ISyncStrategy {
 
   isDailyEnabled(): boolean {
     return this.isEnabled("daily");
+  }
+
+  /**
+   * Workspace do DeskClock em que esta integração trabalha.
+   *
+   * Lido a cada uso, não guardado na construção: a strategy nasce com o app e
+   * viveria com a escolha do momento em que ele abriu.
+   */
+  private workspaceId(): string {
+    return resolveIntegrationWorkspaceId(this.config.get("mondayDeskclockWorkspaceId"));
   }
 
   /** Ponto único de composição: cada repositório novo no sender para aqui. */
@@ -81,7 +92,11 @@ export class MondaySyncStrategy implements ISyncStrategy {
    */
   private async collectSameDayScope(task: Task): Promise<Task[]> {
     const day = localDateISO(task.startTime);
-    const sameDay = await this.taskRepo.findByDateRange(startOfDayISO(day), endOfDayISO(day));
+    const sameDay = await this.taskRepo.findByDateRange(
+      startOfDayISO(day),
+      endOfDayISO(day),
+      this.workspaceId()
+    );
     const others = sameDay.filter(
       (t) => t.id !== task.id && t.status === "completed" && t.projectId === task.projectId
     );
@@ -89,6 +104,13 @@ export class MondaySyncStrategy implements ISyncStrategy {
   }
 
   async runPerTask(task: Task): Promise<AutoSyncResult> {
+    // Tarefa de outro workspace não é assunto desta integração — e sai **sem
+    // aviso**. O aviso existe para dizer "isto deveria ter subido e não subiu";
+    // aqui nada deveria, e reclamar a cada parada num workspace pessoal era
+    // justamente o incômodo que o workspace por integração veio resolver.
+    if (task.workspaceId !== this.workspaceId()) {
+      return { integration: this.integrationName, count: 0 };
+    }
     const validation = validateTaskForMonday(task);
     if (!validation.ok) {
       return {
@@ -129,6 +151,7 @@ export class MondaySyncStrategy implements ISyncStrategy {
         integrationName: this.integrationName,
         taskRepo: this.taskRepo,
         logRepo: this.logRepo,
+        workspaceId: this.workspaceId(),
         timestampPort: {
           get: () => this.config.get("mondayDailySyncLastTimestamp"),
           set: (iso) => this.config.set("mondayDailySyncLastTimestamp", iso),

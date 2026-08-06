@@ -24,7 +24,8 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -317,7 +318,11 @@ export function ImportCalendarModal({
   onImported,
   onClose,
 }: ImportCalendarModalProps) {
-  const workspaceId = useActiveWorkspaceId();
+  // Destino escolhido na integração da Agenda. Vale **só** para este import
+  // manual: o rastreio automático de reuniões continua criando no workspace
+  // ativo — decisão registrada (§5.7), não descuido.
+  const config = useAppConfig();
+  const workspaceId = resolveIntegrationWorkspaceId(config.get("calendarDeskclockWorkspaceId"));
   const [fromDate, setFromDate] = useState(defaultFromISO.slice(0, 10));
   const [toDate, setToDate] = useState(defaultToISO.slice(0, 10));
   const [events, setEvents] = useState<CalendarEvent[]>([]);
