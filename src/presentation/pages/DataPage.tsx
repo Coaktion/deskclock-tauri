@@ -47,7 +47,13 @@ export function DataPage() {
           </button>
         ))}
       </div>
-      {section === "projetos" && <ProjectsPanel showTitle={false} data={projectsData} />}
+      {section === "projetos" && (
+        <ProjectsPanel
+          showTitle={false}
+          data={projectsData}
+          categories={categoriesData.categories}
+        />
+      )}
       {section === "categorias" && <CategoriesPanel showTitle={false} data={categoriesData} />}
       {section === "workspaces" && <WorkspacesPanel showTitle={false} />}
       {section === "campos" && <CustomFieldsPanel showTitle={false} data={customFieldsData} />}

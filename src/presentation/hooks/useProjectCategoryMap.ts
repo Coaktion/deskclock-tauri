@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { Category } from "@domain/entities/Category";
+import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { notifyProjectCategoriesChanged } from "@shared/utils/catalogSync";
 import { resolveCategoriesForProject } from "@domain/usecases/projectCategories/resolveCategoriesForProject";
 import { buildProjectCategoryMap } from "@domain/usecases/projectCategories/buildProjectCategoryMap";
 import type { UUID } from "@shared/types";
@@ -31,13 +33,18 @@ const NO_ASSOCIATION: ReadonlySet<UUID> = new Set<UUID>();
 export function useProjectCategoryMap() {
   const { projectCategoryRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
+  // As linhas cruas ficam ao lado do mapa porque a tela de Dados precisa da
+  // **origem** de cada associação para marcar as do Monday; os autocompletes,
+  // que são a maioria dos consumidores, só precisam do mapa.
+  const [rows, setRows] = useState<ProjectCategory[]>([]);
   const [map, setMap] = useState<Map<UUID, Set<UUID>>>(() => new Map());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const rows = await projectCategoryRepo.findAll(workspaceId);
-    setMap(buildProjectCategoryMap(rows));
+    const data = await projectCategoryRepo.findAll(workspaceId);
+    setRows(data);
+    setMap(buildProjectCategoryMap(data));
     setLoading(false);
   }, [projectCategoryRepo, workspaceId]);
 
@@ -63,7 +70,24 @@ export function useProjectCategoryMap() {
     [map]
   );
 
-  return useMemo(() => ({ categoriesFor, loading, reload: load }), [categoriesFor, loading, load]);
+  /**
+   * Grava a seleção de um projeto e avisa as outras janelas — sem o aviso, o
+   * `overlay-popup`, que nasce com o app e nunca remonta, seguiria oferecendo o
+   * recorte antigo durante a execução (§9.2).
+   */
+  const setForProject = useCallback(
+    async (projectId: UUID, categoryIds: UUID[]) => {
+      await projectCategoryRepo.setForProject(projectId, categoryIds);
+      await load();
+      await notifyProjectCategoriesChanged();
+    },
+    [projectCategoryRepo, load]
+  );
+
+  return useMemo(
+    () => ({ rows, categoriesFor, setForProject, loading, reload: load }),
+    [rows, categoriesFor, setForProject, loading, load]
+  );
 }
 
 export type UseProjectCategoryMapResult = ReturnType<typeof useProjectCategoryMap>;

@@ -57,20 +57,24 @@ describe("ProjectCategoryRepository", () => {
     expect(String(mockDb.select.mock.calls[0][0])).not.toContain("workspace_id");
   });
 
-  it("setManual apaga só as manuais e não rebaixa as do Monday", async () => {
-    await new ProjectCategoryRepository().setManual("p1", ["c1", "c2"]);
+  it("setForProject apaga o que saiu da seleção, de qualquer origem", async () => {
+    await new ProjectCategoryRepository().setForProject("p1", ["c1", "c2"]);
 
+    // Sem recorte por `source`: apagar linha do Monday daqui é a saída de
+    // emergência do filtro duro.
     expect(sqlOf(0)).toBe(
-      "DELETE FROM project_categories WHERE project_id = $1 AND source = 'manual'"
+      "DELETE FROM project_categories WHERE project_id = $1 AND category_id NOT IN ($2, $3)"
     );
+    expect(mockDb.execute.mock.calls[0][1]).toEqual(["p1", "c1", "c2"]);
+  });
+
+  it("setForProject não rebaixa a `monday` que continua selecionada", async () => {
+    await new ProjectCategoryRepository().setForProject("p1", ["c1"]);
+
+    // A linha que sobreviveu ao DELETE não é reescrita: o `OR IGNORE` a preserva
+    // com a origem que ela já tinha, e a varredura segue dona dela.
     expect(sqlOf(1)).toContain("INSERT OR IGNORE");
-    expect(mockDb.execute.mock.calls[1][1]).toEqual([
-      "p1",
-      "manual",
-      expect.any(String),
-      "c1",
-      "c2",
-    ]);
+    expect(mockDb.execute.mock.calls[1][1]).toEqual(["p1", "manual", expect.any(String), "c1"]);
   });
 
   it("replaceMondayFor apaga só as do Monday e não reivindica as manuais", async () => {
@@ -83,9 +87,9 @@ describe("ProjectCategoryRepository", () => {
     expect(mockDb.execute.mock.calls[1][1]).toEqual(["p1", "monday", expect.any(String), "c1"]);
   });
 
-  it("lista vazia apaga e não insere — é assim que se desassocia tudo", async () => {
-    await new ProjectCategoryRepository().setManual("p1", []);
+  it("lista vazia apaga tudo do projeto e não insere — volta a oferecer o catálogo inteiro", async () => {
+    await new ProjectCategoryRepository().setForProject("p1", []);
     expect(mockDb.execute).toHaveBeenCalledOnce();
-    expect(sqlOf(0)).toContain("DELETE");
+    expect(sqlOf(0)).toBe("DELETE FROM project_categories WHERE project_id = $1");
   });
 });

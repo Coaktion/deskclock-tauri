@@ -46,11 +46,18 @@ export class ProjectCategoryRepository implements IProjectCategoryRepository {
     return rows.map(rowToProjectCategory);
   }
 
-  async setManual(projectId: UUID, categoryIds: UUID[]): Promise<void> {
+  async setForProject(projectId: UUID, categoryIds: UUID[]): Promise<void> {
     const db = await getDb();
-    await db.execute("DELETE FROM project_categories WHERE project_id = $1 AND source = 'manual'", [
-      projectId,
-    ]);
+    // Apaga o que saiu da seleção, **sem filtrar por origem** — e deixa de pé o
+    // que continua nela, para um par que já era `monday` não ser rebaixado a
+    // `manual` por ter sobrevivido a uma edição na tela.
+    const placeholders = categoryIds.map((_, i) => `$${i + 2}`).join(", ");
+    await db.execute(
+      categoryIds.length === 0
+        ? "DELETE FROM project_categories WHERE project_id = $1"
+        : `DELETE FROM project_categories WHERE project_id = $1 AND category_id NOT IN (${placeholders})`,
+      [projectId, ...categoryIds]
+    );
     await this.insertIgnoring(projectId, categoryIds, "manual");
   }
 
@@ -63,10 +70,11 @@ export class ProjectCategoryRepository implements IProjectCategoryRepository {
   }
 
   /**
-   * `INSERT OR IGNORE` porque o par pode já existir com a **outra** origem, e
-   * quem está gravando não é dono dela: a varredura do Monday não rebaixa o que
-   * o usuário associou à mão, e o usuário não reivindica o que a varredura
-   * semeou. Sem o `OR IGNORE` isso seria um erro de PK, não uma preservação.
+   * `INSERT OR IGNORE` porque o par pode já existir com outra origem, e quem
+   * grava não é dono dela: a varredura do Monday não rebaixa o que o usuário
+   * associou à mão, e a tela de Dados não reivindica como manual o que a
+   * varredura semeou. Sem o `OR IGNORE` isso seria um erro de PK, não uma
+   * preservação.
    */
   private async insertIgnoring(
     projectId: UUID,

@@ -1,20 +1,28 @@
 import { useMemo, useState } from "react";
 import { Plus, Upload } from "lucide-react";
+import type { Category } from "@domain/entities/Category";
+import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { UseProjectsResult } from "@presentation/hooks/useProjects";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { SearchInput } from "./SearchInput";
 import { ProjectCard } from "./ProjectCard";
 import { SelectionBar } from "./SelectionBar";
 import { BulkImportModal } from "@presentation/modals/BulkImportModal";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
 
+/** Referência estável: um `new Map()` no JSX remontaria o bloco a cada render. */
+const EMPTY_SOURCES: Map<string, ProjectCategorySource> = new Map();
+
 interface ProjectsPanelProps {
   showTitle?: boolean;
   /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
   data: UseProjectsResult;
+  /** Catálogo do workspace, para associar categorias na linha do projeto. */
+  categories: Category[];
 }
 
-export function ProjectsPanel({ showTitle = true, data }: ProjectsPanelProps) {
+export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPanelProps) {
   const {
     projects,
     loading,
@@ -27,6 +35,31 @@ export function ProjectsPanel({ showTitle = true, data }: ProjectsPanelProps) {
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [bulkOpen, setBulkOpen] = useState(false);
+  const { rows: associations, setForProject } = useProjectCategoryMap();
+
+  /** Associações por projeto, guardando a origem — é ela que marca as do Monday. */
+  const sourceByProject = useMemo(() => {
+    const byProject = new Map<string, Map<string, ProjectCategorySource>>();
+    for (const a of associations) {
+      const map = byProject.get(a.projectId) ?? new Map<string, ProjectCategorySource>();
+      map.set(a.categoryId, a.source);
+      byProject.set(a.projectId, map);
+    }
+    return byProject;
+  }, [associations]);
+
+  /**
+   * Um clique grava a seleção inteira. O toggle é calculado aqui, e não no
+   * componente da caixa, porque a fonte é `associations` — o estado local
+   * divergiria a cada recarga vinda de outra janela.
+   */
+  async function handleToggleCategory(projectId: string, categoryId: string) {
+    const current = sourceByProject.get(projectId) ?? new Map<string, ProjectCategorySource>();
+    const next = new Set(current.keys());
+    if (next.has(categoryId)) next.delete(categoryId);
+    else next.add(categoryId);
+    await setForProject(projectId, [...next]);
+  }
 
   const filtered = useMemo(
     () => projects.filter((p) => fuzzyMatch(search, p.name)),
@@ -114,6 +147,9 @@ export function ProjectsPanel({ showTitle = true, data }: ProjectsPanelProps) {
               onToggleSelect={selection.toggle}
               onUpdate={updateProject}
               onDelete={deleteProject}
+              categories={categories}
+              sourceById={sourceByProject.get(p.id) ?? EMPTY_SOURCES}
+              onToggleCategory={(categoryId) => void handleToggleCategory(p.id, categoryId)}
             />
           ))
         )}

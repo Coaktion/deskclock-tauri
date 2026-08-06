@@ -6,11 +6,17 @@ export interface IProjectCategoryRepository {
   /** `workspaceId` omitido devolve as associações de TODOS os workspaces. */
   findAll(workspaceId?: UUID): Promise<ProjectCategory[]>;
   /**
-   * Substitui as associações `manual` do projeto. **Não toca nas `monday`** — a
-   * varredura é dona delas, e rebaixá-las aqui as faria voltar no ciclo seguinte
-   * como se o usuário nunca tivesse mexido.
+   * Grava a seleção da tela de Dados: **o que não está na lista sai, seja qual
+   * for a origem**, e o que entra entra como `manual`.
+   *
+   * Apagar uma linha `monday` daqui é deliberado — é a saída de emergência do
+   * filtro duro, e sem ela a tela mostraria uma caixa que desmarca e não apaga.
+   * A varredura seguinte a recria: quem quer removê-la de vez tira o Activity
+   * Type do board. Categoria que já era `monday` e **continua** na seleção segue
+   * `monday` (o `INSERT OR IGNORE` não a rebaixa), ou a varredura passaria a
+   * enxergá-la como escolha manual e nunca mais a atualizaria.
    */
-  setManual(projectId: UUID, categoryIds: UUID[]): Promise<void>;
+  setForProject(projectId: UUID, categoryIds: UUID[]): Promise<void>;
   /**
    * Substitui as associações `monday` do projeto. Um par que já é `manual`
    * permanece `manual`: o usuário escolheu aquilo, e a varredura não tem por que
