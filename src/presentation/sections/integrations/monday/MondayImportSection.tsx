@@ -106,12 +106,14 @@ export function MondayImportSection({
           defaultFieldLabel={stageSource?.projectStageTitle ?? "Project Stage"}
         />
 
-        <MondayCatalogField
-          title="Report Type"
-          hint="Decide em qual grupo do board do projeto a atividade é criada. Sem valor na tarefa, vale Activity."
-          configKey="mondayReportTypeFieldId"
-          optionLabels={catalogs.reportType}
-        />
+        {/*
+          O card do Report Type está **adormecido**, não removido: o roteamento
+          por grupo existe e é testado, mas o time ainda não fechou o que cada
+          valor significa, e um campo que ninguém sabe preencher mandaria hora
+          para o grupo errado do board do cliente. Toda atividade vai como
+          `Activity` enquanto isso — ver `MondayTaskSender.catalogFields`.
+          Acordar é devolver este bloco e o `reportType` do sender.
+        */}
 
         <MondayCatalogField
           title="Non Billable reason"

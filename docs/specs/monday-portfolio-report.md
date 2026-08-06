@@ -108,6 +108,15 @@
 >   fallback, todo projeto vinculado antes desta fase recusaria o `Activity` que
 >   é o padrão de toda tarefa, e o envio pararia inteiro até a varredura diária
 >   de projetos reescrever a lista.
+> - **O Report Type nasceu adormecido.** Decidido logo após a Fase 3: o time ainda não fechou
+>   o que cada valor significa, então o card sai de Integrações e `catalogFields` devolve
+>   `reportType: null` — toda atividade vai como `Activity`. **Adormecido, não removido**: o
+>   roteamento por grupo, o `moveItemToGroup`, o recorte de `listItemsOwnedBy` e a recusa por
+>   grupo ausente continuam no lugar e testados no domínio. A chave de config, o catálogo do
+>   board de Report e os `reportTypeGroupIds` do mapeamento seguem sendo mantidos, porque
+>   despertar não pode custar reler board nenhum. **Acordar é ler
+>   `mondayReportTypeFieldId` em `catalogFields` e devolver o `MondayCatalogField` em
+>   `MondayImportSection`** — os dois pontos estão comentados como tal.
 > - **A tabela `monday_activity_items` não mudou.** O grupo não entra no payload
 >   rastreado: ele já é derivável do Report Type, que compõe a chave de
 >   agrupamento e, por ela, a assinatura — mudar o Report Type já tira o grupo do

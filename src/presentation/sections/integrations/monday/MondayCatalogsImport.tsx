@@ -29,11 +29,11 @@ export function MondayCatalogsImport({
   const [busy, setBusy] = useState(false);
 
   const reportBoardId = config.isLoaded ? config.get("mondayReportBoardId") : "";
+  // O Report Type continua sendo lido e cacheado — acordar a feature não pode
+  // depender de reler o board —, mas fica **fora da conta e do resumo**: campo
+  // que a tela não oferece, contado aqui, viraria uma pergunta sem resposta.
   const total =
-    catalogs.activityType.length +
-    catalogs.projectStage.length +
-    catalogs.nonBillableReason.length +
-    catalogs.reportType.length;
+    catalogs.activityType.length + catalogs.projectStage.length + catalogs.nonBillableReason.length;
 
   async function handleRead() {
     setBusy(true);
@@ -46,7 +46,7 @@ export function MondayCatalogsImport({
       onRead(result);
       await showToast(
         "success",
-        `${result.activityType.length} Activity Type(s), ${result.projectStage.length} Project Stage(s), ${result.nonBillableReason.length} motivo(s) e ${result.reportType.length} Report Type(s).`
+        `${result.activityType.length} Activity Type(s), ${result.projectStage.length} Project Stage(s) e ${result.nonBillableReason.length} motivo(s).`
       );
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao ler os catálogos.");
@@ -58,7 +58,7 @@ export function MondayCatalogsImport({
   return (
     <ImportCard
       title="Catálogos"
-      hint="Lê o board de Report de Horas e traz os rótulos que semeiam as categorias e os três campos abaixo."
+      hint="Lê o board de Report de Horas e traz os rótulos que semeiam as categorias e os campos abaixo."
       action={
         <ImportActionButton
           label={total > 0 ? "Atualizar" : "Ler catálogos"}
@@ -74,8 +74,7 @@ export function MondayCatalogsImport({
       ) : (
         <p className="text-[11px] text-gray-500">
           {catalogs.activityType.length} Activity Type · {catalogs.projectStage.length} Project
-          Stage · {catalogs.nonBillableReason.length} motivo de non-billable ·{" "}
-          {catalogs.reportType.length} Report Type
+          Stage · {catalogs.nonBillableReason.length} motivo de non-billable
         </p>
       )}
     </ImportCard>

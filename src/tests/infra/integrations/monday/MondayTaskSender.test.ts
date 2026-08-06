@@ -1304,8 +1304,8 @@ describe("MondayTaskSender", () => {
     });
   });
 
-  describe("Report Type escolhe o grupo", () => {
-    /** Config com os três campos personalizados vinculados. */
+  describe("Report Type adormecido", () => {
+    /** Config com os campos vivos, mais o Report Type que a feature ignora. */
     function fullConfig(overrides = {}) {
       return makeConfig({
         mondayReportTypeFieldId: REPORT_TYPE_FIELD_ID,
@@ -1316,20 +1316,10 @@ describe("MondayTaskSender", () => {
 
     const allFields = () => makeFieldRepo([STAGE_FIELD, REPORT_TYPE_FIELD, REASON_FIELD]);
 
-    it("cria a atividade no grupo Activities quando a tarefa não escolheu Report Type", async () => {
-      const client = makeClient();
-      await new MondayTaskSender(
-        fullConfig(),
-        makeItemRepo(),
-        allFields(),
-        makeCategoryRepo(),
-        client
-      ).send([makeTask()]);
-
-      expect(vi.mocked(client.createItem).mock.calls[0][1]).toBe(GROUP_ID);
-    });
-
-    it("cria no grupo do Report Type escolhido", async () => {
+    it("cria toda atividade em Activities, mesmo com a tarefa escolhendo outro Report Type", async () => {
+      // O roteamento por grupo existe e está testado no domínio, mas o time
+      // ainda não fechou o que cada valor significa: um campo que ninguém sabe
+      // preencher mandaria hora para o grupo errado do board do cliente.
       const client = makeClient();
       await new MondayTaskSender(
         fullConfig(),
@@ -1346,79 +1336,55 @@ describe("MondayTaskSender", () => {
         }),
       ]);
 
-      expect(vi.mocked(client.createItem).mock.calls[0][1]).toBe("group_meetings");
+      expect(vi.mocked(client.createItem).mock.calls[0][1]).toBe(GROUP_ID);
     });
 
-    it("recusa o Report Type que o board não tem, sem escrever nada", async () => {
-      // Board interno tem um grupo só: cair no Activities calado reportaria como
-      // atividade o que o usuário classificou como risco.
+    it("não lê o campo vinculado ao Report Type", async () => {
+      // Enquanto dorme, o valor da tarefa não pode influenciar nada — nem por
+      // um caminho lateral que alguém adicione depois.
       const client = makeClient();
-      const config = fullConfig({
-        mondayProjectMapping: [
-          { ...MAPPING, scope: "interno" as const, reportTypeGroupIds: { Activity: GROUP_ID } },
-        ],
-      });
-      const sender = new MondayTaskSender(
-        config,
+      const fieldRepo = allFields();
+      await new MondayTaskSender(
+        fullConfig(),
         makeItemRepo(),
-        allFields(),
+        fieldRepo,
         makeCategoryRepo(),
         client
-      );
+      ).send([makeTask({ customValues: { [REPORT_TYPE_FIELD_ID]: "opt-risk" } })]);
 
-      await expect(
-        sender.send([makeTask({ customValues: { [REPORT_TYPE_FIELD_ID]: "opt-risk" } })])
-      ).rejects.toThrow(/não tem grupo para o Report Type "Risk"/);
-      expect(client.createItem).not.toHaveBeenCalled();
+      expect(vi.mocked(fieldRepo.findById).mock.calls.flat()).not.toContain(REPORT_TYPE_FIELD_ID);
     });
 
-    it("os demais grupos do envio sobem mesmo com um recusado", async () => {
-      const client = makeClient();
-      const config = fullConfig({
-        mondayProjectMapping: [{ ...MAPPING, reportTypeGroupIds: { Activity: GROUP_ID } }],
-      });
-      const sender = new MondayTaskSender(
-        config,
-        makeItemRepo(),
-        allFields(),
-        makeCategoryRepo(),
-        client
-      );
-
-      await expect(
-        sender.send([
-          makeTask({ id: "t1", name: "Vai subir" }),
-          makeTask({
-            id: "t2",
-            name: "Recusada",
-            customValues: { [REPORT_TYPE_FIELD_ID]: "opt-meeting" },
-          }),
-        ])
-      ).rejects.toThrow(/"Recusada"/);
-
-      expect(client.createItem).toHaveBeenCalledTimes(1);
-      expect(vi.mocked(client.createItem).mock.calls[0][2]).toBe("Vai subir");
-    });
-
-    it("muda o item de grupo quando o Report Type mudou depois do envio", async () => {
-      // Grupo não é coluna: sem o move, o item ficaria em Activities para
-      // sempre, classificado como o que não é.
+    it("move o item quando o grupo Activities do board passou a ser outro", async () => {
+      // Grupo não é coluna: sem o move, o item ficaria no grupo antigo para
+      // sempre. É o mesmo caminho que a feature usará ao acordar.
       const client = makeClient();
       const itemRepo = makeItemRepo();
-      const send = (customValues: Record<string, string>) =>
-        new MondayTaskSender(fullConfig(), itemRepo, allFields(), makeCategoryRepo(), client).send([
-          makeTask({ customValues }),
-        ]);
+      const send = (mapping: MondayProjectMapping, name: string) =>
+        new MondayTaskSender(
+          makeConfig({ mondayProjectMapping: [mapping] }),
+          itemRepo,
+          allFields(),
+          makeCategoryRepo(),
+          client
+        ).send([makeTask({ name })]);
 
-      await send({});
+      await send(MAPPING, "Antes");
       vi.mocked(client.changeColumnValues).mockResolvedValueOnce({
         id: "item-1",
         state: "active",
         groupId: GROUP_ID,
       });
-      await send({ [REPORT_TYPE_FIELD_ID]: "opt-meeting" });
+      await send(
+        {
+          ...MAPPING,
+          activitiesGroupId: "group_outro",
+          reportTypeGroupIds: { ...REPORT_TYPE_GROUP_IDS, Activity: "group_outro" },
+        },
+        "Depois"
+      );
 
-      expect(client.moveItemToGroup).toHaveBeenCalledWith("item-1", "group_meetings");
+      expect(client.moveItemToGroup).toHaveBeenCalledWith("item-1", "group_outro");
       expect(client.createItem).toHaveBeenCalledTimes(1);
     });
 
@@ -1485,6 +1451,29 @@ describe("MondayTaskSender", () => {
 
       await expect(sender.send([nonBillable({})])).rejects.toThrow(/informe o motivo/);
       expect(client.createItem).not.toHaveBeenCalled();
+    });
+
+    it("os demais grupos do envio sobem mesmo com um recusado", async () => {
+      // Lançar antes de escrever faria uma tarefa sem motivo travar o dia
+      // inteiro; o erro no fim é o que impede a recusa de passar em silêncio.
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        fullConfig(),
+        makeItemRepo(),
+        allFields(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await expect(
+        sender.send([
+          makeTask({ id: "t1", name: "Vai subir" }),
+          makeTask({ id: "t2", name: "Recusada", billable: false, customValues: {} }),
+        ])
+      ).rejects.toThrow(/"Recusada"/);
+
+      expect(client.createItem).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(client.createItem).mock.calls[0][2]).toBe("Vai subir");
     });
 
     it("recusa o motivo que não existe na coluna do board", async () => {
