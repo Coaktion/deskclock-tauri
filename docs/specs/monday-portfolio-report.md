@@ -1,6 +1,8 @@
 # Monday — simplificação da configuração (Portfólio + Report de Horas)
 
-> **Status:** Fases 0, 1, 2 e 3 executadas em 2026-08-05. Fases 4 e 5 pendentes.
+> **Status:** concluída. Fases 0, 1, 2 e 3 executadas em 2026-08-05 (`9f004d2`,
+> `67d1142`, `1f57d05`); as Fases 4 e 5 **saíram dentro delas** — verificado em
+> 2026-08-06, não há trabalho pendente aqui.
 > Substitui a configuração por workspace/pastas/board interno descrita em
 > `monday-integration.md`. O que não for contrariado aqui continua valendo.
 
@@ -387,18 +389,28 @@ Arquivos: `buildActivityColumnValues.ts` (+ teste), `MondayTaskSender.ts`,
 `normalizeProjectMappings.ts` (+ teste), `importMondayProjects.ts`,
 `mondayConfig.ts`, `IMondayApi.ts`, `MondayClient.ts` (+ testes).
 
-### Fase 4 — Import de Timeline e gerenciador
+### Fase 4 — Import de Timeline e gerenciador ✅
 
 Praticamente intactos: continuam operando sobre N boards de projeto. Só troca a
 **origem da lista de boards** (Portfólio, não mapeamento manual).
 `listItemsOwnedBy`, `monday_activity_items`, `monday_imported_items` e a
 detecção de item na lixeira são preservados.
 
-### Fase 5 — Limpeza de UI e docs
+> **Saiu dentro das Fases 1 e 3, sem PR próprio.** O `mondayProjectMapping`
+> nasce do Portfólio desde a Fase 1 e é a única lista de boards que existe — o
+> import, o gerenciador e os rastreadores já leem dali filtrando por
+> `!!m.mondayBoardId`. Não sobrou troca de origem a fazer.
+
+### Fase 5 — Limpeza de UI e docs ✅
 
 `MondayIntegrationSection` perde workspace/pastas/board interno e ganha os dois
 ids e o card de catálogos. `MondayProjectStageField` vira genérico para os três
 campos. Atualizar §5.7 do CLAUDE.md.
+
+> **Saiu junto das Fases 0 a 3**, pelo mesmo motivo: tirar as chaves antigas da
+> config obrigava a tirá-las da tela no mesmo passo, e o
+> `MondayProjectStageField` virou `MondayCatalogField` na Fase 2, quando os três
+> campos de atividade passaram a existir.
 
 **Ordem de PRs:** 0 → 1 → 2 → 3 → 4/5. Cada uma buildável, com testes de domínio
 escritos antes da implementação (§7.1).
