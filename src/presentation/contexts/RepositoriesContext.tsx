@@ -10,6 +10,7 @@ import { MondayActivityItemRepository } from "@infra/database/MondayActivityItem
 import { MondayImportedItemRepository } from "@infra/database/MondayImportedItemRepository";
 import { WorkspaceRepository } from "@infra/database/WorkspaceRepository";
 import { CustomFieldRepository } from "@infra/database/CustomFieldRepository";
+import { ProjectCategoryRepository } from "@infra/database/ProjectCategoryRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
@@ -22,6 +23,7 @@ import type { ITrackedMondayItemRepository } from "@domain/integrations/ITracked
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
 import type { IWorkspaceDataPort } from "@domain/repositories/IWorkspaceDataPort";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 
 export interface Repositories {
   taskRepo: ITaskRepository;
@@ -36,6 +38,7 @@ export interface Repositories {
   workspaceRepo: IWorkspaceRepository;
   workspaceDataPort: IWorkspaceDataPort;
   customFieldRepo: ICustomFieldRepository;
+  projectCategoryRepo: IProjectCategoryRepository;
 }
 
 const RepositoriesContext = createContext<Repositories | null>(null);
@@ -64,6 +67,7 @@ export function RepositoriesProvider({
       workspaceRepo: workspaceRepo,
       workspaceDataPort: workspaceRepo,
       customFieldRepo: new CustomFieldRepository(),
+      projectCategoryRepo: new ProjectCategoryRepository(),
     };
   }
   const repos = useMemo<Repositories>(() => ({ ...defaultsRef.current!, ...value }), [value]);
