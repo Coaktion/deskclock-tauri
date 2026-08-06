@@ -183,6 +183,7 @@ describe("importMondayProjects", () => {
 
     expect(result.mappings.map((m) => m.portfolioItemId)).toEqual(["i1"]);
     expect(result.skipped).toEqual([]);
+    expect(result.ignored).toBe(2);
     expect(api.getBoardSchema).toHaveBeenCalledTimes(1);
   });
 
@@ -310,5 +311,26 @@ describe("importMondayProjects", () => {
 
     expect(onProgress).toHaveBeenCalledWith(0, 2);
     expect(onProgress).toHaveBeenLastCalledWith(2, 2);
+  });
+
+  // O total do progresso é o que será importado, não o tamanho do board: começar
+  // em 63 para terminar em 61 fazia os dois itens sem Oferta sumirem calados.
+  it("conta no progresso só os itens que virão a ser projeto", async () => {
+    const api = makeApi(
+      [
+        item({ id: "i1", projectBoardId: "b1" }),
+        item({ id: "i2", name: "Sem oferta", offer: null, projectBoardId: "b2" }),
+        item({ id: "i3", name: "Outro", projectBoardId: "b2" }),
+      ],
+      { b1: schema(), b2: schema({ id: "b2" }) }
+    );
+    const onProgress = vi.fn();
+
+    const result = await run(api, { onProgress });
+
+    expect(onProgress).toHaveBeenCalledWith(0, 2);
+    expect(onProgress).toHaveBeenLastCalledWith(2, 2);
+    expect(result.mappings).toHaveLength(2);
+    expect(result.ignored).toBe(1);
   });
 });

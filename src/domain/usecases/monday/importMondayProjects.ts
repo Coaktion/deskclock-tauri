@@ -45,6 +45,14 @@ export interface ImportMondayProjectsResult {
   mappings: MondayProjectMapping[];
   /** Boards de destino que não puderam ser lidos; o projeto existe do mesmo jeito. */
   skipped: { boardName: string; reason: string }[];
+  /**
+   * Itens do Portfólio com a coluna "Oferta" vazia, que não viram projeto.
+   *
+   * Volta como número porque é o que explica a diferença entre o tamanho do
+   * board e o total importado — sem ele, "61 projetos" depois de um board de 63
+   * linhas some com dois itens sem dizer para onde foram.
+   */
+  ignored: number;
 }
 
 /** O que o envio precisa saber sobre o board de destino de um projeto. */
@@ -182,14 +190,20 @@ export async function importMondayProjects({
   });
   const existingByItem = new Map(existingMappings.map((m) => [m.portfolioItemId, m]));
 
+  // A classificação vem **antes** do laço para o progresso poder começar no
+  // total que de fato será importado. Contando as 63 linhas do board para
+  // terminar em 61, os dois itens sem "Oferta" sumiam sem deixar rastro: o
+  // usuário via o número encolher e não tinha como saber o que ficou de fora.
+  const classified = items.flatMap((item) => {
+    const scope = resolveScope(columnText(item, PORTFOLIO_OFFER_COLUMN_ID));
+    return scope ? [{ item, scope }] : [];
+  });
+
   const mappings: MondayProjectMapping[] = [];
   const skipped: { boardName: string; reason: string }[] = [];
 
-  for (const [index, item] of items.entries()) {
-    onProgress?.(index, items.length);
-
-    const scope = resolveScope(columnText(item, PORTFOLIO_OFFER_COLUMN_ID));
-    if (!scope) continue;
+  for (const [index, { item, scope }] of classified.entries()) {
+    onProgress?.(index, classified.length);
 
     const project =
       (await projectRepo.findByName(item.name, deskclockWorkspaceId)) ??
@@ -215,6 +229,6 @@ export async function importMondayProjects({
     });
   }
 
-  onProgress?.(items.length, items.length);
-  return { mappings, skipped };
+  onProgress?.(classified.length, classified.length);
+  return { mappings, skipped, ignored: items.length - classified.length };
 }

@@ -102,6 +102,10 @@ export function MondayProjectsImport({
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [skipped, setSkipped] = useState<SkippedBoard[]>([]);
+  // Itens do Portfólio sem "Oferta". O progresso já conta só os classificados,
+  // então o número não aparece mais em lugar nenhum — e é justamente ele que
+  // explica por que o board tem mais linhas do que o app tem projetos.
+  const [ignored, setIgnored] = useState(0);
   const [namesById, setNamesById] = useState<Map<string, string>>(new Map());
   const [autoError, setAutoError] = useState("");
   // Recolhida por padrão: o caso comum é conferir se o import trouxe o número
@@ -183,6 +187,7 @@ export function MondayProjectsImport({
       setAutoError("");
       onImported(result.mappings);
       setSkipped(result.skipped);
+      setIgnored(result.ignored);
       await loadNames();
       await reloadProjects();
       // Os projetos nascem pelo repositório, sem passar pelas mutações de
@@ -288,6 +293,15 @@ export function MondayProjectsImport({
       {autoError && (
         <p className="text-[11px] text-amber-500/80">
           Falha na última atualização automática: {autoError}
+        </p>
+      )}
+
+      {/* Fica depois do import e não some com a lista recolhida: é a resposta à
+          pergunta "o board tem 63 linhas, por que importou 61?". */}
+      {ignored > 0 && (
+        <p className="text-[11px] text-gray-500">
+          {ignored} item(ns) do Portfólio sem &quot;Oferta&quot; preenchida — não viram projeto.
+          Classifique a coluna no Monday e importe de novo.
         </p>
       )}
 
