@@ -316,4 +316,18 @@ describe("syncMondayPlannedTasks", () => {
     expect(await run(ctx, [])).toEqual({ created: 0, updated: 0, removed: 0 });
     expect(ctx.api.listBoardSchemas).not.toHaveBeenCalled();
   });
+
+  // O ciclo lia o schema de **todos** os boards mapeados a cada execução — a
+  // requisição mais cara da integração — só para extrair o id da coluna de
+  // cronograma, que a varredura de projetos já cacheou no mapeamento.
+  it("não relê o schema quando o mapeamento traz a coluna de cronograma", async () => {
+    ctx = makeCtx([item({}, { from: "2026-08-05" })]);
+
+    const result = await run(ctx, [{ ...MAPPING, timelineColumnId: "col_timeline" }]);
+
+    expect(ctx.api.listBoardSchemas).not.toHaveBeenCalled();
+    expect(result.created).toBe(1);
+    // E o cronograma continua sendo lido do item, como quando vinha do schema.
+    expect(ctx.saved[0].scheduleDate).toBe("2026-08-05");
+  });
 });

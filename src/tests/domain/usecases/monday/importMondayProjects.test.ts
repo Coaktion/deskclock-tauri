@@ -68,7 +68,10 @@ function makeApi(items: MondayItem[], schemas: Record<string, MondayBoardSchema>
       if (!found) throw new Error(`Board ${id} não encontrado no Monday.`);
       return found;
     }),
-    listBoardSchemas: vi.fn(async () => []),
+    // Espelha o Monday: id que não existe (ou sem acesso) simplesmente **não
+    // volta** no array, sem erro nenhum. É a ausência que a importação lê como
+    // "board não encontrado".
+    listBoardSchemas: vi.fn(async (ids: string[]) => ids.flatMap((id) => schemas[id] ?? [])),
     listItems: vi.fn(async () => items),
     createItem: vi.fn(),
     changeColumnValues: vi.fn(),
@@ -184,7 +187,8 @@ describe("importMondayProjects", () => {
     expect(result.mappings.map((m) => m.portfolioItemId)).toEqual(["i1"]);
     expect(result.skipped).toEqual([]);
     expect(result.ignored).toBe(2);
-    expect(api.getBoardSchema).toHaveBeenCalledTimes(1);
+    // O board dos ignorados nem entra na leitura de schemas.
+    expect(api.listBoardSchemas).toHaveBeenCalledWith(["b1"]);
   });
 
   // 14 dos 62 itens estão assim. O projeto existe e recebe tarefas; só as horas
@@ -201,7 +205,7 @@ describe("importMondayProjects", () => {
       activitiesGroupId: "",
     });
     expect(projectRepo.save).toHaveBeenCalledTimes(1);
-    expect(api.getBoardSchema).not.toHaveBeenCalled();
+    expect(api.listBoardSchemas).not.toHaveBeenCalled();
   });
 
   it("preserva o quadro preenchido à mão quando o Portfólio devolve a coluna vazia", async () => {
@@ -255,6 +259,88 @@ describe("importMondayProjects", () => {
 
     expect(result.mappings).toHaveLength(2);
     expect(result.skipped[0].boardName).toBe("Board sumido");
+  });
+
+  // Era um `getBoardSchema` por projeto, em série: ~46 idas ao Monday por
+  // varredura, contra as três em que o cliente quebra o lote hoje.
+  it("lê os schemas de todos os boards de destino numa consulta só", async () => {
+    const api = makeApi(
+      [
+        item({ id: "i1", name: "Cliente A", projectBoardId: "b1" }),
+        item({ id: "i2", name: "Cliente B", projectBoardId: "b2" }),
+        item({ id: "i3", name: "Cliente C", projectBoardId: "b3" }),
+      ],
+      { b1: schema(), b2: schema({ id: "b2" }), b3: schema({ id: "b3" }) }
+    );
+
+    await run(api);
+
+    expect(api.listBoardSchemas).toHaveBeenCalledTimes(1);
+    expect(api.listBoardSchemas).toHaveBeenCalledWith(["b1", "b2", "b3"]);
+    expect(api.getBoardSchema).not.toHaveBeenCalled();
+  });
+
+  // Antes, cada board era lido dentro de um `catch`: um token vencido virava 46
+  // destinos vazios, **gravados por cima** do mapeamento bom pelo rastreador, e
+  // o envio de horas parava até a varredura seguinte dar certo.
+  it("aborta a varredura quando a leitura em lote falha, em vez de zerar os destinos", async () => {
+    const api = makeApi([item()], { b1: schema() });
+    api.listBoardSchemas = vi.fn(async () => {
+      throw new Error("Token inválido.");
+    });
+
+    await expect(run(api)).rejects.toThrow("Token inválido.");
+  });
+
+  it("cacheia o id da coluna de cronograma, para o import de itens não reler o schema", async () => {
+    const api = makeApi([item()], {
+      b1: schema({
+        columns: [
+          ...schema().columns,
+          { id: "timeline_mm3xk", title: "Timeline", type: "timeline" },
+        ],
+      }),
+    });
+
+    const result = await run(api);
+
+    expect(result.mappings[0].timelineColumnId).toBe("timeline_mm3xk");
+  });
+
+  // Os três estados são distintos de propósito: `""` é "board sem cronograma" e
+  // encerra o assunto; `undefined` é "ainda não sei" e manda reler o schema.
+  it("marca com string vazia o board lido que não tem coluna de cronograma", async () => {
+    const api = makeApi([item()], { b1: schema() });
+
+    const result = await run(api);
+
+    expect(result.mappings[0].timelineColumnId).toBe("");
+  });
+
+  it("deixa o cronograma indefinido no board que não pôde ser lido", async () => {
+    const api = makeApi([item({ projectBoardId: "b-sumido" })], {});
+
+    const result = await run(api);
+
+    expect(result.mappings[0].timelineColumnId).toBeUndefined();
+    expect(result.skipped[0].reason).toBe("Board não encontrado no Monday ou sem acesso.");
+  });
+
+  // O board não serve de destino de horas, mas o schema foi lido: o cronograma é
+  // conhecido, e sem gravá-lo esse board releria o schema em todo ciclo.
+  it("cacheia o cronograma mesmo quando o board não serve de destino", async () => {
+    const api = makeApi([item()], {
+      b1: schema({
+        groups: [],
+        views: [],
+        columns: [...schema().columns, { id: "tl", title: "Cronograma", type: "timeline" }],
+      }),
+    });
+
+    const result = await run(api);
+
+    expect(result.mappings[0].activitiesGroupId).toBe("");
+    expect(result.mappings[0].timelineColumnId).toBe("tl");
   });
 
   it("cacheia os rótulos das colunas de status no mapeamento", async () => {

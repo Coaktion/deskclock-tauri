@@ -24,7 +24,7 @@ import {
   type MondayImportRow,
 } from "./mondayImportRows";
 import { periodOverlaps } from "./mondayItemPeriod";
-import { findTimelineColumnId } from "./resolveBoardActivitiesColumns";
+import { resolveTimelineByBoard } from "./resolveTimelineColumns";
 
 export interface SyncMondayPlannedTasksDeps {
   api: IMondayApi;
@@ -82,8 +82,9 @@ export async function syncMondayPlannedTasks(
   const { mappings, projects, personId, workspaceId, window, nowISO } = params;
   if (mappings.length === 0 || !personId) return EMPTY;
 
-  const schemas = await api.listBoardSchemas(mappings.map((m) => m.mondayBoardId));
-  const timelineByBoard = new Map(schemas.map((s) => [s.id, findTimelineColumnId(s)]));
+  // Do cache do mapeamento; só board sem ele custa uma leitura de schema, o que
+  // depois da primeira varredura significa nenhuma (§ `resolveTimelineByBoard`).
+  const timelineByBoard = await resolveTimelineByBoard(api, mappings);
   const items = await listItemsOwnedBy(api, mappings, personId, {
     // O grupo Activities é o destino das horas que o DeskClock envia;
     // reimportá-lo duplicaria trabalho que já está registrado aqui.

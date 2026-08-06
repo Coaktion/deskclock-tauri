@@ -4,6 +4,7 @@ import type { MondayProjectMapping, MondayProjectScope } from "@shared/types/mon
 import type { MondayBoardSchema, MondayItem } from "@shared/types/monday";
 import { createProject } from "@domain/usecases/projects/CreateProject";
 import {
+  findTimelineColumnId,
   resolveBoardActivitiesColumns,
   parseStatusLabels,
   type ResolveActivitiesResult,
@@ -65,9 +66,17 @@ export type MondayProjectDestination = Pick<
   | "projectStageLabels"
   | "projectStageTitle"
   | "nonBillableReasonLabels"
+  | "timelineColumnId"
 >;
 
-/** Colunas de um projeto cujo board não foi lido — nada será escrito nele. */
+/**
+ * Colunas de um projeto cujo board não foi lido — nada será escrito nele.
+ *
+ * `timelineColumnId` fica **de fora**, e não como `""`: o schema não foi lido,
+ * então não sabemos se o board tem cronograma. `undefined` é o estado que manda
+ * o import perguntar ao Monday; `""` afirmaria que a resposta é "não tem" e
+ * mataria a busca de itens daquele board para sempre.
+ */
 export const NO_DESTINATION: MondayProjectDestination = {
   activitiesGroupId: "",
   reportTypeGroupIds: {},
@@ -126,42 +135,107 @@ function buildDestination(
     // O motivo é `dropdown`, não `status`: o formato dos rótulos é outro e o
     // parser do status devolveria lista vazia sem erro nenhum para avisar.
     nonBillableReasonLabels: parseDropdownLabels(columnById(resolved.columnIds.nonBillableReason)),
+    // Cache do id da coluna de cronograma. Com o schema em mãos ele sai de
+    // graça, e é o que dispensa o ciclo de importação de reler estes mesmos
+    // schemas a cada execução (§ `resolveTimelineByBoard`).
+    timelineColumnId: findTimelineColumnId(schema) ?? "",
   };
 }
 
+/** O destino do envio, ou o motivo de o board não servir de destino. */
+export interface ResolvedDestination {
+  destination: MondayProjectDestination;
+  failure?: string;
+}
+
 /**
- * Lê o board de destino e devolve o que o envio precisa saber dele.
+ * Traduz um schema **já lido** no que o envio precisa saber do board.
  *
  * Os rótulos das duas colunas de status entram no mapeamento porque são eles
  * que viram Categoria e opção de Project Stage; sem o cache, cada tela teria de
  * reconsultar o schema só para exibi-los, e o envio não teria como validar o
  * rótulo antes de mandar.
  *
- * Nunca lança: board ilegível devolve destino vazio mais o motivo, porque tanto
- * a varredura de 62 itens quanto o campo digitado à mão precisam seguir em pé
- * quando um board não abre.
+ * É pura porque quem lê o schema é a batelada de fora: um `getBoardSchema` por
+ * projeto custava uma ida ao Monday por board mapeado, em série.
+ */
+export function destinationFromSchema(schema: MondayBoardSchema): ResolvedDestination {
+  const resolved = resolveBoardActivitiesColumns(schema);
+  if (!resolved.ok) {
+    return {
+      // O board não serve de destino de horas, mas o schema foi lido — então o
+      // cronograma é conhecido, e o import de itens de trabalho continua
+      // valendo para ele. Deixar `undefined` aqui faria esse board reler o
+      // schema em todo ciclo de importação, que é o custo que este cache
+      // existe para remover.
+      destination: { ...NO_DESTINATION, timelineColumnId: findTimelineColumnId(schema) ?? "" },
+      failure: `Não encontrado: ${resolved.missing.join(", ")}.`,
+    };
+  }
+  return { destination: buildDestination(schema, resolved) };
+}
+
+/**
+ * Lê **um** board e resolve o destino. É o caminho do campo "ID Quadro
+ * Projeto" digitado à mão, onde há um board só e a leitura é o próprio
+ * feedback do que a pessoa acabou de digitar.
+ *
+ * Nunca lança: board ilegível devolve destino vazio mais o motivo. A varredura
+ * do Portfólio **não** passa por aqui — ela lê os schemas em lote.
  */
 export async function resolveProjectDestination(
   api: IMondayApi,
   boardId: string
-): Promise<{ destination: MondayProjectDestination; failure?: string }> {
+): Promise<ResolvedDestination> {
   if (!boardId) return { destination: NO_DESTINATION };
   try {
-    const schema = await api.getBoardSchema(boardId);
-    const resolved = resolveBoardActivitiesColumns(schema);
-    if (!resolved.ok) {
-      return {
-        destination: NO_DESTINATION,
-        failure: `Não encontrado: ${resolved.missing.join(", ")}.`,
-      };
-    }
-    return { destination: buildDestination(schema, resolved) };
+    return destinationFromSchema(await api.getBoardSchema(boardId));
   } catch (err) {
     return {
       destination: NO_DESTINATION,
       failure: err instanceof Error ? err.message : "Falha ao ler o board.",
     };
   }
+}
+
+/**
+ * Schemas de todos os boards de destino, por id, numa leitura só.
+ *
+ * O `MondayClient` já quebra em lotes de 20 — o que existia era um
+ * `getBoardSchema` **por projeto**, dentro do laço, o que fazia a varredura
+ * custar uma requisição sequencial por board mapeado (~46 hoje) em vez de três.
+ *
+ * Board inacessível não vem no retorno, e é a **ausência** que vira o motivo no
+ * `skipped`: a consulta em lote não falha por causa de um id ruim. O que falha
+ * — token, rede, orçamento de complexidade — sobe como exceção e aborta a
+ * varredura, de propósito. Antes, com a leitura por board dentro de um `catch`,
+ * um token vencido produzia 46 destinos vazios que eram **gravados por cima**
+ * do mapeamento bom, e o envio de horas parava até a próxima varredura
+ * bem-sucedida.
+ */
+async function readBoardSchemas(
+  api: IMondayApi,
+  boardIds: string[]
+): Promise<Map<string, MondayBoardSchema>> {
+  const ids = [...new Set(boardIds.filter(Boolean))];
+  if (ids.length === 0) return new Map();
+  return new Map((await api.listBoardSchemas(ids)).map((schema) => [schema.id, schema]));
+}
+
+/** O destino de um board a partir dos schemas já lidos em lote. */
+function destinationOf(
+  schemaById: Map<string, MondayBoardSchema>,
+  boardId: string
+): ResolvedDestination {
+  if (!boardId) return { destination: NO_DESTINATION };
+  const schema = schemaById.get(boardId);
+  if (!schema) {
+    return {
+      destination: NO_DESTINATION,
+      failure: "Board não encontrado no Monday ou sem acesso.",
+    };
+  }
+  return destinationFromSchema(schema);
 }
 
 /**
@@ -199,11 +273,24 @@ export async function importMondayProjects({
     return scope ? [{ item, scope }] : [];
   });
 
+  // O board de destino é resolvido **antes** do laço para que os schemas possam
+  // ser lidos numa batelada só. A regra de merge é a mesma de sempre: o remoto
+  // ganha quando vem preenchido, vazio nunca apaga o local.
+  const targets = classified.map(({ item, scope }) => ({
+    item,
+    scope,
+    mondayBoardId: resolveProjectBoardId(item, existingByItem.get(item.id)),
+  }));
+  const schemaById = await readBoardSchemas(
+    api,
+    targets.map((t) => t.mondayBoardId)
+  );
+
   const mappings: MondayProjectMapping[] = [];
   const skipped: { boardName: string; reason: string }[] = [];
 
-  for (const [index, { item, scope }] of classified.entries()) {
-    onProgress?.(index, classified.length);
+  for (const [index, { item, scope, mondayBoardId }] of targets.entries()) {
+    onProgress?.(index, targets.length);
 
     const project =
       (await projectRepo.findByName(item.name, deskclockWorkspaceId)) ??
@@ -215,8 +302,7 @@ export async function importMondayProjects({
       continue;
     }
 
-    const mondayBoardId = resolveProjectBoardId(item, existingByItem.get(item.id));
-    const { destination, failure } = await resolveProjectDestination(api, mondayBoardId);
+    const { destination, failure } = destinationOf(schemaById, mondayBoardId);
     if (failure) skipped.push({ boardName: item.name, reason: failure });
 
     mappings.push({

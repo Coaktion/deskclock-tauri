@@ -30,7 +30,7 @@ import {
 } from "@domain/usecases/monday/mondayImportRows";
 import { periodOverlaps, type MondayItemPeriod } from "@domain/usecases/monday/mondayItemPeriod";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { findTimelineColumnId } from "@domain/usecases/monday/resolveBoardActivitiesColumns";
+import { resolveTimelineByBoard } from "@domain/usecases/monday/resolveTimelineColumns";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -191,15 +191,12 @@ export function MondayImportModal({
     setError(null);
     const api = createMondayApi();
 
-    // Os schemas vêm antes dos itens porque é deles que sai o id da coluna de
-    // cronograma: ele varia por board, não cabe no mapeamento cacheado e é
-    // resolvido pelo título (o board tem várias colunas `timeline` e a primeira
-    // é a realizada). Com eles em mãos, a busca pede só as colunas usadas — o
-    // template tem mais de sessenta.
-    api
-      .listBoardSchemas(availableBoards.map((m) => m.mondayBoardId))
-      .then(async (schemas) => {
-        const timelineByBoard = new Map(schemas.map((s) => [s.id, findTimelineColumnId(s)]));
+    // A coluna de cronograma vem antes dos itens: é ela que diz quais colunas
+    // pedir, e o template tem mais de sessenta. O id sai do cache do mapeamento
+    // — só board que ainda não o tem custa uma leitura de schema, que era o que
+    // este modal fazia para **todos** os boards a cada abertura.
+    resolveTimelineByBoard(api, availableBoards)
+      .then(async (timelineByBoard) => {
         const items = await listItemsOwnedBy(api, availableBoards, userId, {
           // O grupo Activities é o destino das horas que o DeskClock envia;
           // reimportá-lo duplicaria trabalho que já está registrado aqui.

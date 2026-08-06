@@ -111,4 +111,25 @@ export interface MondayProjectMapping {
    * parser do `status` devolveria lista vazia sem erro nenhum.
    */
   nonBillableReasonLabels: string[];
+  /**
+   * Coluna de cronograma **planejado**, base do import de itens de trabalho.
+   *
+   * Está aqui pelo mesmo motivo dos rótulos acima — sai do schema e quase nunca
+   * muda —, e a ausência dela custava caro: o ciclo de importação lia o schema
+   * de **todos** os boards mapeados, a cada execução, só para extrair este id. É
+   * a leitura mais pesada da integração (todas as colunas e todas as views, com
+   * `settings_str`, de boards de 60+ colunas) e o resto do schema já estava
+   * cacheado aqui do lado.
+   *
+   * **Os três estados são distintos, e é isso que faz o cache funcionar:**
+   * `undefined` = nunca resolvido (vínculo de uma versão anterior, ou board que
+   * não abriu) e **só ele** dispara a leitura do schema; `""` = resolvido, e o
+   * board não tem coluna de cronograma; preenchido = o id. Colapsar os dois
+   * primeiros num `""` faria o board sem Timeline nunca mais ser relido — ou,
+   * na direção oposta, faria todo board pagar a leitura para sempre.
+   *
+   * Por isso `normalizeProjectMappings` **não** lhe dá default: o default seria
+   * exatamente o colapso que se quer evitar.
+   */
+  timelineColumnId?: string;
 }
