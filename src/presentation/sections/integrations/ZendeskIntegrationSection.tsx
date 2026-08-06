@@ -9,7 +9,7 @@ import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenMan
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
 import { CalendarDays, CheckCircle2, Key, Loader2, LogIn, LogOut, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
+import { DeskclockWorkspaceRow, IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
 
 /* ── SVG Zendesk ── */
 
@@ -229,6 +229,11 @@ export function ZendeskIntegrationCard() {
       {connected && (
         <SubSection icon={<CalendarDays size={15} />} title="Importar tickets" defaultOpen>
           <div className="pt-1">
+            <DeskclockWorkspaceRow
+              configKey="zendeskDeskclockWorkspaceId"
+              hint="Onde os tickets importados viram tarefas planejadas."
+              className="pb-2.5 mb-3 border-b border-gray-800"
+            />
             <p className="text-xs text-gray-500 mb-3">
               Importe tickets abertos atribuídos a você como tarefas planejadas.
             </p>

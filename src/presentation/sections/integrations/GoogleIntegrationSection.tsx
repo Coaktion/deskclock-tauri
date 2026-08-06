@@ -50,7 +50,15 @@ import {
   TableProperties,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { IntegrationTile, Row, StatusBadge, SubSection, SyncFeedbackLine, Toggle } from "./shared";
+import {
+  DeskclockWorkspaceRow,
+  IntegrationTile,
+  Row,
+  StatusBadge,
+  SubSection,
+  SyncFeedbackLine,
+  Toggle,
+} from "./shared";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
 // Escopos unificados — uma única conexão Google para todos os serviços
@@ -254,6 +262,11 @@ function SheetsSection({
   return (
     <>
       <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
+        <DeskclockWorkspaceRow
+          configKey="sheetsDeskclockWorkspaceId"
+          hint="De qual workspace saem as tarefas enviadas à planilha."
+          className="py-2.5 border-b border-gray-800"
+        />
         <Row label="ID da planilha">
           <input
             type="text"
@@ -490,6 +503,16 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
+      {/*
+        Governa **só** o "Importar eventos" abaixo. O rastreio automático de
+        reuniões continua criando no workspace **ativo** — decisão registrada
+        (ver §5.7), não descuido: não "conserte" sem perguntar.
+      */}
+      <DeskclockWorkspaceRow
+        configKey="calendarDeskclockWorkspaceId"
+        hint="Destino do 'Importar eventos'. O rastreio automático de reuniões continua criando no workspace aberto na tela."
+        className="py-2.5 border-b border-gray-800"
+      />
       <div className="py-2.5 flex items-center justify-between">
         <p className="text-xs text-gray-500">
           Importe eventos do Google Agenda como tarefas planejadas.
@@ -513,7 +536,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
           />
         </Row>
         <p className="text-[11px] text-gray-500 leading-relaxed pb-2.5">
-          Ao abrir o app e a cada 30 minutos, busca os eventos do dia e pergunta, no horário de
+          Ao abrir o app e a cada 2 minutos, busca os eventos do dia e pergunta, no horário de
           início, se deseja iniciar cada reunião. Ao fim do evento, pergunta se ainda está em
           andamento.
         </p>

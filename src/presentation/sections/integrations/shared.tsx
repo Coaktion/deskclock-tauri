@@ -1,8 +1,71 @@
 import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Circle } from "lucide-react";
 import { useState } from "react";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import type { SyncFeedback } from "@presentation/hooks/useSyncNowButton";
+import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 
 /* ── helpers ── */
+
+/**
+ * Workspace do DeskClock em que a integração trabalha — o topo do escopo que
+ * ela governa.
+ *
+ * É o que faz a integração rodar **independente do workspace aberto na tela**:
+ * o destino do import e o recorte do envio saem daqui, não do ativo. Sem ele, a
+ * importação nascia onde a pessoa estivesse no instante do ciclo e o envio
+ * enxergava todos os workspaces, mandando ao board do cliente hora de trabalho
+ * pessoal.
+ *
+ * **Some com um único workspace**, como toda a UI de workspace (§5.1.1, §5.6) —
+ * e é o que torna esta mudança invisível para quem nunca criou um segundo.
+ *
+ * Escreve direto na config, sem rascunho local: a escolha é um clique único,
+ * não um campo que se digita aos poucos.
+ */
+export function DeskclockWorkspaceRow({
+  configKey,
+  hint,
+  // O padrão é a faixa de card, como a das outras seções de topo. Dentro de uma
+  // SubSection o `px-4` já veio do pai, e repeti-lo indentaria a linha duas
+  // vezes — daí o wrapper ser do componente, e não do chamador: com um
+  // workspace só ele some inteiro, sem deixar uma borda vazia para trás.
+  className = "border-t border-gray-800 px-4 py-3",
+}: {
+  configKey: IntegrationWorkspaceKey;
+  hint: string;
+  className?: string;
+}) {
+  const config = useAppConfig();
+  const { workspaces } = useWorkspaces();
+
+  if (workspaces.length <= 1) return null;
+
+  const selected = resolveIntegrationWorkspaceId(config.isLoaded ? config.get(configKey) : "");
+
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <span className="text-sm text-gray-300">Workspace DeskClock</span>
+          <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
+        </div>
+        <select
+          value={selected}
+          onChange={(e) => void config.set(configKey, e.target.value)}
+          className="shrink-0 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[180px]"
+        >
+          {workspaces.map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.name}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
 
 /**
  * Resultado da última busca manual, abaixo do botão que a disparou. Existe além do
