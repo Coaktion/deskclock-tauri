@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Check, CheckCircle2, Clock, Pen, Plus, Trash2, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import { WORKSPACE_COLORS } from "@domain/utils/workspaceColor";
+import { integrationsBoundToWorkspace } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchGuard";
@@ -30,6 +32,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 
 export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
   const { workspaces, activeWorkspaceId, create, update, remove } = useWorkspaceAdmin();
+  const config = useAppConfig();
   const { runningTask, stopTask } = useRunningTask();
   const { pending, request, confirm, cancel } = useWorkspaceSwitchGuard({ runningTask, stopTask });
 
@@ -245,6 +248,7 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
         <DeleteWorkspaceModal
           workspace={deleting}
           others={workspaces.filter((w) => w.id !== deleting.id)}
+          boundIntegrations={integrationsBoundToWorkspace(config, deleting.id)}
           onConfirm={(target) => remove(deleting.id, target)}
           onClose={() => setDeleting(null)}
         />

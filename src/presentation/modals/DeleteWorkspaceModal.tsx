@@ -2,14 +2,57 @@ import { useState } from "react";
 import { AlertTriangle, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import type { WorkspaceDeletionTarget } from "@domain/usecases/workspaces/DeleteWorkspace";
+import type { IntegrationWorkspaceBinding } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 interface DeleteWorkspaceModalProps {
   workspace: Workspace;
   others: Workspace[];
+  /** Integrações que trabalham neste workspace — vazio esconde o aviso. */
+  boundIntegrations: IntegrationWorkspaceBinding[];
   onConfirm: (target: WorkspaceDeletionTarget) => Promise<void>;
   onClose: () => void;
+}
+
+/**
+ * Integrações que param de funcionar com a exclusão.
+ *
+ * O dado é o que a tela de Integrações não mostra: excluído o workspace, a chave
+ * da integração aponta para um id que não existe mais e ela **para em
+ * silêncio** — a busca não devolve nada e não há erro a exibir. Como não há
+ * desfazer, o aviso é a única defesa.
+ *
+ * **Avisa, não impede.** Quem quer excluir mesmo assim segue em frente e depois
+ * escolhe outro workspace em Integrações; o que não pode é descobrir a quebra
+ * semanas depois, ao notar que as horas pararam de subir.
+ */
+function IntegrationsWarning({ bindings }: { bindings: IntegrationWorkspaceBinding[] }) {
+  return (
+    <div className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2.5">
+      <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
+      <div className="min-w-0">
+        <p className="text-xs text-amber-200 leading-relaxed">
+          {bindings.length === 1
+            ? "Uma integração trabalha neste workspace e vai parar de funcionar:"
+            : `${bindings.length} integrações trabalham neste workspace e vão parar de funcionar:`}
+        </p>
+        <ul className="mt-1.5 flex flex-col gap-1">
+          {bindings.map((b) => (
+            <li key={b.key} className="text-[11px] text-amber-200/80 leading-snug">
+              <span className="font-medium text-amber-200">{b.label}</span> {b.consequence}
+              {/* A chave está vazia: a tela de Integrações não nomeia este
+                  workspace, e sem a ressalva o aviso pareceria engano. */}
+              {b.implicit && " — está sem workspace escolhido e usa o Padrão"}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-1.5 text-[11px] text-amber-200/60 leading-snug">
+          Para voltar a funcionar, escolha outro workspace em Integrações depois de excluir.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -21,6 +64,7 @@ interface DeleteWorkspaceModalProps {
 export function DeleteWorkspaceModal({
   workspace,
   others,
+  boundIntegrations,
   onConfirm,
   onClose,
 }: DeleteWorkspaceModalProps) {
@@ -60,6 +104,10 @@ export function DeleteWorkspaceModal({
         </div>
 
         <div className="px-5 py-4 flex flex-col gap-3">
+          {/* Antes do destino: é a consequência que a escolha de destino não
+              resolve — mover os dados não move a integração junto. */}
+          {boundIntegrations.length > 0 && <IntegrationsWarning bindings={boundIntegrations} />}
+
           <p className="text-xs text-gray-400 leading-relaxed">
             Tarefas, planejadas, projetos, categorias e perfis de exportação deste workspace
             precisam de um destino.
