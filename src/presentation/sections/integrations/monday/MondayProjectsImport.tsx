@@ -11,7 +11,7 @@ import { notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 interface SkippedBoard {
@@ -25,6 +25,11 @@ interface SkippedBoard {
  *
  * Grava no blur ou no Enter, e não a cada tecla: um id parcial viraria uma
  * consulta a board inexistente no próximo ciclo do rastreador.
+ *
+ * **Gravar não é instantâneo, e a espera precisa aparecer.** O `onSave` lê o
+ * schema do board no Monday antes de vincular, e sem sinal nenhum o campo ficava
+ * parado por segundos: o usuário não sabia se o Enter tinha sido registrado, e
+ * digitar de novo por cima disparava uma segunda leitura da mesma coisa.
  */
 function ProjectBoardIdInput({
   value,
@@ -34,23 +39,48 @@ function ProjectBoardIdInput({
   onSave: (boardId: string) => Promise<void>;
 }) {
   const [draft, setDraft] = useState(value);
+  const [busy, setBusy] = useState(false);
 
-  function commit() {
+  async function commit() {
     const next = draft.trim();
-    if (next === value) return;
-    void onSave(next);
+    // O `busy` também barra o commit que o próprio `disabled` provoca: desativar
+    // o input tira o foco dele, e o blur cairia aqui de novo.
+    if (next === value || busy) return;
+    setBusy(true);
+    try {
+      await onSave(next);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <input
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      placeholder="ID do quadro"
-      title="Id do board onde as horas deste projeto serão gravadas"
-      className="shrink-0 w-28 bg-gray-800 border border-amber-500/40 rounded px-2 py-0.5 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
-    />
+    <span className="relative shrink-0">
+      <input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        disabled={busy}
+        placeholder="ID do quadro"
+        title={
+          busy
+            ? "Lendo o board no Monday…"
+            : "Id do board onde as horas deste projeto serão gravadas"
+        }
+        className={`w-28 bg-gray-800 border border-amber-500/40 rounded px-2 py-0.5 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 ${
+          busy ? "pr-6 opacity-70" : ""
+        }`}
+      />
+      {/* Dentro do campo, e não ao lado: a linha inteira não pode mudar de
+          largura enquanto a leitura corre, ou a lista se mexe sob o cursor. */}
+      {busy && (
+        <Loader2
+          size={10}
+          className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-gray-400"
+        />
+      )}
+    </span>
   );
 }
 
@@ -218,16 +248,17 @@ export function MondayProjectsImport({
             // mantém os 60 projetos acessíveis dentro dele. `pr-1` afasta a barra
             // do campo de id, que encosta na borda direita da linha.
             <div className="max-h-[300px] overflow-y-auto pr-1 space-y-1">
+              {/* Só o nome do projeto. O nome do board remoto repetia a mesma
+                  coisa por outro caminho — item do Portfólio e Project nascem
+                  do mesmo nome — e não havia nada a decidir a partir dele. O
+                  que interessa na linha é a exceção: o projeto sem quadro, que
+                  ganha o campo no lugar onde o nome remoto ficava. */}
               {linked.map((m) => (
                 <div key={m.portfolioItemId} className="flex items-center gap-3 py-1">
                   <span className="text-xs text-gray-300 flex-1 truncate">
                     {namesById.get(m.deskclockProjectId)}
                   </span>
-                  {m.mondayBoardId ? (
-                    <span className="text-xs text-gray-500 truncate max-w-[45%]">
-                      {m.mondayBoardName}
-                    </span>
-                  ) : (
+                  {!m.mondayBoardId && (
                     <ProjectBoardIdInput
                       value={m.mondayBoardId}
                       onSave={(boardId) => handleSetBoardId(m.portfolioItemId, boardId)}
