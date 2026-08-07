@@ -24,7 +24,7 @@ import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -219,6 +219,25 @@ export function RetroactivePage() {
     void loadPlannedTasks();
   }, [loadTasks, loadPlannedTasks]);
 
+  // Esta tela era a única lista de tarefas que não escutava os dois avisos entre
+  // janelas: concluir uma planejada pelo popup não sumia com a sugestão daqui, e
+  // parar uma tarefa pelo overlay não trazia o registro para a lista do dia. As
+  // recargas são as mesmas do efeito acima, então elas já recortam pelo dia
+  // selecionado — e por isso os callbacks precisam ficar nas dependências: presos
+  // ao mount, o listener recarregaria para sempre a data de quando a tela abriu.
+  useEffect(() => {
+    const unlistenPlanned = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => {
+      void loadPlannedTasks();
+    });
+    const unlistenTasks = listen(OVERLAY_EVENTS.TASKS_CHANGED, () => {
+      void loadTasks();
+    });
+    return () => {
+      unlistenPlanned.then((fn) => fn());
+      unlistenTasks.then((fn) => fn());
+    };
+  }, [loadTasks, loadPlannedTasks]);
+
   useEffect(() => {
     type Prefill = {
       date?: string | null;
@@ -285,6 +304,9 @@ export function RetroactivePage() {
     );
     await completePlannedTask(plannedTaskRepo, task.id, selectedDate);
     void notifyTasksChanged();
+    // O mesmo defeito na direção contrária: lançar direto conclui a planejada, e
+    // sem o aviso ela seguia pendente no popup e no planejamento.
+    void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
     form.advanceChainStart(task.endTime!);
     await Promise.all([loadTasks(), loadPlannedTasks()]);
   }
