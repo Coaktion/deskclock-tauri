@@ -123,7 +123,10 @@ function ProjectDistribution({ groups, projects }: { groups: DayGroup[]; project
           const m = Math.floor((x.seconds % 3600) / 60);
           const color = getProjectColor(x.id);
           return (
-            <div key={x.name} className="flex items-center gap-2">
+            // A `key` é a mesma chave do agrupamento, não o nome: projeto que
+            // não está no catálogo vira "—", e dois ids órfãos diferentes
+            // rendiam duas linhas com o mesmo nome.
+            <div key={x.id ?? "__none__"} className="flex items-center gap-2">
               <span
                 className="w-1.5 h-1.5 rounded-full shrink-0"
                 style={{ backgroundColor: color }}

@@ -271,11 +271,20 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
         <p className="text-sm text-gray-100 truncate">{entry.name}</p>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           <span className="text-[11px] text-gray-500 truncate">{entry.boardName}</span>
-          {[entry.activityTypeLabel, entry.projectStageLabel]
-            .filter((label) => label.length > 0)
-            .map((label) => (
+          {/* A `key` é o campo, não o rótulo: os dois catálogos saem do mesmo
+              board de Report e têm rótulos em comum ("Development" é Activity
+              Type *e* etapa), então keyar pelo texto colidia sempre que a
+              atividade tinha o mesmo valor nos dois. */}
+          {(
+            [
+              ["activityType", entry.activityTypeLabel],
+              ["projectStage", entry.projectStageLabel],
+            ] as const
+          )
+            .filter(([, label]) => label.length > 0)
+            .map(([field, label]) => (
               <span
-                key={label}
+                key={field}
                 className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[10px]"
               >
                 {label}

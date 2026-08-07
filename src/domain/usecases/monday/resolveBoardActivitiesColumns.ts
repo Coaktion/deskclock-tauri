@@ -214,14 +214,28 @@ export function findTimelineColumnId(schema: MondayBoardSchema): string | undefi
  * `buildOptions`), então um rótulo com espaço nas pontas viraria categoria
  * `"Development"` e ficaria `" Development "` no cache do mapeamento — e o
  * casamento por nome do envio falharia em silêncio.
+ *
+ * **Sem repetição**, e é o aparar que a torna possível: a coluna guarda um
+ * rótulo por índice, então `{"0":"Development","1":" Development "}` chegava
+ * aqui como duas entradas idênticas. O que se faz com a lista não distingue as
+ * duas — o envio casa por nome e a tela oferece uma opção —, mas a segunda
+ * aparecia como opção repetida no gerenciador de atividades e derrubava a
+ * unicidade da `key` do React. A ordem é a de primeira aparição, como em
+ * `mergeLabels`.
  */
 export function parseStatusLabels(column: MondayColumn | undefined): string[] {
   if (!column?.settingsStr) return [];
   try {
     const parsed = JSON.parse(column.settingsStr) as { labels?: Record<string, string> };
-    return Object.values(parsed.labels ?? {})
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
+    const seen = new Set<string>();
+    const labels: string[] = [];
+    for (const raw of Object.values(parsed.labels ?? {})) {
+      const label = raw.trim();
+      if (!label || seen.has(label)) continue;
+      seen.add(label);
+      labels.push(label);
+    }
+    return labels;
   } catch {
     return [];
   }

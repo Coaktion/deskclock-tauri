@@ -265,6 +265,7 @@ describe("importMondayProjects", () => {
     expect(result.mappings[0]).toMatchObject({ mondayBoardId: "b1", activitiesGroupId: "" });
     expect(result.skipped).toEqual([
       {
+        portfolioItemId: "i1",
         boardName: "[BR] Cliente Produto 01-999",
         reason: "Não encontrado: grupo Activities.",
       },

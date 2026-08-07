@@ -311,6 +311,17 @@ describe("parseStatusLabels", () => {
     expect(labels).toEqual(["Development"]);
   });
 
+  it("não repete rótulo que só difere por espaço nas pontas", () => {
+    const labels = parseStatusLabels({
+      id: "c",
+      title: "t",
+      type: "status",
+      settingsStr: '{"labels":{"0":"Development","1":" Development ","2":"Setup"}}',
+    });
+
+    expect(labels).toEqual(["Development", "Setup"]);
+  });
+
   it("retorna vazio para coluna sem settings ou com JSON inválido", () => {
     expect(parseStatusLabels(undefined)).toEqual([]);
     expect(parseStatusLabels({ id: "c", title: "t", type: "status" })).toEqual([]);

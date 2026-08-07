@@ -57,8 +57,13 @@ export interface ImportMondayProjectsInput {
 
 export interface ImportMondayProjectsResult {
   mappings: MondayProjectMapping[];
-  /** Boards de destino que não puderam ser lidos; o projeto existe do mesmo jeito. */
-  skipped: { boardName: string; reason: string }[];
+  /**
+   * Boards de destino que não puderam ser lidos; o projeto existe do mesmo jeito.
+   *
+   * Leva o id do item do Portfólio porque o nome não identifica a linha: dois
+   * itens homônimos apontam para o mesmo Project e recusam juntos.
+   */
+  skipped: { portfolioItemId: string; boardName: string; reason: string }[];
   /**
    * Itens do Portfólio com a coluna "Oferta" vazia, que não viram projeto.
    *
@@ -428,7 +433,7 @@ export async function importMondayProjects({
   );
 
   const mappings: MondayProjectMapping[] = [];
-  const skipped: { boardName: string; reason: string }[] = [];
+  const skipped: ImportMondayProjectsResult["skipped"] = [];
 
   for (const [index, target] of targets.entries()) {
     const { item, scope, mondayBoardId } = target;
@@ -441,12 +446,16 @@ export async function importMondayProjects({
       deskclockWorkspaceId
     );
     if (!project) {
-      skipped.push({ boardName: item.name, reason: "Não foi possível criar o projeto." });
+      skipped.push({
+        portfolioItemId: item.id,
+        boardName: item.name,
+        reason: "Não foi possível criar o projeto.",
+      });
       continue;
     }
 
     const { destination, failure } = destinationOf(target, schemaById, nowISO);
-    if (failure) skipped.push({ boardName: item.name, reason: failure });
+    if (failure) skipped.push({ portfolioItemId: item.id, boardName: item.name, reason: failure });
 
     mappings.push({
       deskclockProjectId: project.id,

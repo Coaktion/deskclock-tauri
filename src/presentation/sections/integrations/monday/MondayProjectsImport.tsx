@@ -19,6 +19,7 @@ import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 interface SkippedBoard {
+  portfolioItemId: string;
   boardName: string;
   reason: string;
 }
@@ -356,7 +357,7 @@ export function MondayProjectsImport({
             {skipped.length} board(s) fora do template de Activities:
           </p>
           {skipped.map((s) => (
-            <div key={s.boardName} className="flex items-baseline gap-2">
+            <div key={s.portfolioItemId} className="flex items-baseline gap-2">
               <span className="text-[11px] text-gray-400 truncate max-w-[45%]">{s.boardName}</span>
               <span className="text-[11px] text-gray-600 truncate">{s.reason}</span>
             </div>
