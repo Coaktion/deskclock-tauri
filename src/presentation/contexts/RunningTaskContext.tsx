@@ -7,6 +7,7 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { startTask as startTaskUC } from "@domain/usecases/tasks/StartTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
+import { applyRunningTaskEditToPlanned } from "@domain/usecases/plannedTasks/ApplyRunningTaskEditToPlanned";
 import { resolveActivePlannedLink } from "@domain/utils/plannedLink";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
@@ -75,7 +76,7 @@ interface RunningTaskProviderProps {
 }
 
 export function RunningTaskProvider({ children, config }: RunningTaskProviderProps) {
-  const { taskRepo } = useRepositories();
+  const { taskRepo, plannedTaskRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [reloadSignal, setReloadSignal] = useState(0);
@@ -205,8 +206,16 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       const updated = await updateTaskUC(taskRepo, runningTask.id, input, new Date().toISOString());
       setRunningTask(updated);
       await notifyOverlay(updated, activePlannedTaskId);
+      // O vínculo também leva a edição de volta: configurar a tarefa depois de
+      // iniciá-la deixa a planejada configurada para a próxima ocorrência. O
+      // fallback na própria tarefa é o mesmo de `usePostStopLogic` (§4.1) — o
+      // vínculo gravado é imutável e é a verdade quando ninguém o repassou.
+      const plannedId = activePlannedTaskId ?? updated.plannedTaskId;
+      if (!plannedId) return;
+      const planned = await applyRunningTaskEditToPlanned(plannedTaskRepo, plannedId, input);
+      if (planned) await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
     },
-    [taskRepo, runningTask, activePlannedTaskId]
+    [taskRepo, plannedTaskRepo, runningTask, activePlannedTaskId]
   );
 
   return (

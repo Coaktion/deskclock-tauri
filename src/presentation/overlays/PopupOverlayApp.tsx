@@ -14,6 +14,7 @@ import { resumeTask as resumeTaskUC } from "@domain/usecases/tasks/ResumeTask";
 import { stopTask as stopTaskUC } from "@domain/usecases/tasks/StopTask";
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
+import { applyRunningTaskEditToPlanned } from "@domain/usecases/plannedTasks/ApplyRunningTaskEditToPlanned";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   OVERLAY_EVENTS,
@@ -356,8 +357,16 @@ function PopupOverlayAppInner() {
         source: "overlay",
         plannedTaskId: activePlannedTaskId.current,
       } satisfies RunningTaskChangedPayload);
+      // Configurar a tarefa aqui, depois de iniciá-la, configura também a
+      // planejada de origem — sem isso a próxima ocorrência voltava crua. Mesma
+      // regra do `updateActiveTask` da janela principal, e o mesmo fallback no
+      // vínculo gravado na tarefa (§4.1).
+      const plannedId = activePlannedTaskId.current ?? updated.plannedTaskId;
+      if (!plannedId) return;
+      const planned = await applyRunningTaskEditToPlanned(plannedTaskRepo, plannedId, input);
+      if (planned) await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
     },
-    [taskRepo, runningTask]
+    [taskRepo, plannedTaskRepo, runningTask]
   );
 
   const handleClose = useCallback(async () => {
