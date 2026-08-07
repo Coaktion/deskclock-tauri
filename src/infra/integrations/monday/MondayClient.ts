@@ -1,8 +1,5 @@
 import type {
   MondayUser,
-  MondayWorkspace,
-  MondayFolder,
-  MondayBoardRef,
   MondayBoardSchema,
   MondayItem,
   MondayItemRef,
@@ -31,13 +28,6 @@ interface GraphQLResponse<T> {
   error_message?: string;
 }
 
-interface RawBoardRef {
-  id: string;
-  name: string;
-  state: string;
-  board_folder_id: string | number | null;
-}
-
 interface RawColumn {
   id: string;
   title: string;
@@ -52,7 +42,9 @@ interface RawView {
   settings_str?: string | null;
 }
 
-interface RawBoardSchema extends RawBoardRef {
+interface RawBoardSchema {
+  id: string;
+  name: string;
   groups: { id: string; title: string }[];
   columns: RawColumn[];
   views: RawView[];
@@ -266,54 +258,6 @@ export class MondayClient implements IMondayApi {
     return data.me;
   }
 
-  async listWorkspaces(): Promise<MondayWorkspace[]> {
-    const all: MondayWorkspace[] = [];
-    let page = 1;
-    for (;;) {
-      const data = await this.request<{ workspaces: MondayWorkspace[] | null }>(
-        `query ($limit: Int!, $page: Int!) {
-           workspaces(limit: $limit, page: $page) { id name }
-         }`,
-        { limit: PAGE_SIZE, page }
-      );
-      const chunk = data.workspaces ?? [];
-      all.push(...chunk);
-      if (chunk.length < PAGE_SIZE) break;
-      page++;
-    }
-    return all;
-  }
-
-  async listFolders(workspaceId: string): Promise<MondayFolder[]> {
-    const data = await this.request<{ folders: MondayFolder[] | null }>(
-      `query ($workspaceIds: [ID!], $limit: Int!) {
-         folders(workspace_ids: $workspaceIds, limit: $limit) { id name }
-       }`,
-      { workspaceIds: [workspaceId], limit: PAGE_SIZE }
-    );
-    return data.folders ?? [];
-  }
-
-  async listBoards(workspaceId: string): Promise<MondayBoardRef[]> {
-    const all: MondayBoardRef[] = [];
-    let page = 1;
-    for (;;) {
-      const data = await this.request<{ boards: RawBoardRef[] | null }>(
-        `query ($workspaceIds: [ID!], $limit: Int!, $page: Int!) {
-           boards(workspace_ids: $workspaceIds, limit: $limit, page: $page) {
-             id name state board_folder_id
-           }
-         }`,
-        { workspaceIds: [workspaceId], limit: PAGE_SIZE, page }
-      );
-      const chunk = data.boards ?? [];
-      all.push(...chunk.map(toBoardRef));
-      if (chunk.length < PAGE_SIZE) break;
-      page++;
-    }
-    return all;
-  }
-
   async listBoardSchemas(boardIds: string[]): Promise<MondayBoardSchema[]> {
     const ids = [...new Set(boardIds.filter(Boolean))];
     const perBatch = await mapWithConcurrency(chunk(ids, BOARD_BATCH), BATCH_CONCURRENCY, (batch) =>
@@ -322,8 +266,6 @@ export class MondayClient implements IMondayApi {
            boards(ids: $ids) {
              id
              name
-             state
-             board_folder_id
              groups { id title }
              columns { id title type settings_str }
              views { id name type settings_str }
@@ -524,14 +466,5 @@ function toItem(raw: RawItem, boardId: string): MondayItem {
       text: c.text,
       value: c.value,
     })),
-  };
-}
-
-function toBoardRef(raw: RawBoardRef): MondayBoardRef {
-  return {
-    id: String(raw.id),
-    name: raw.name,
-    folderId: raw.board_folder_id == null ? null : String(raw.board_folder_id),
-    state: raw.state,
   };
 }

@@ -178,51 +178,6 @@ describe("MondayClient", () => {
     });
   });
 
-  describe("listBoards", () => {
-    it("pagina até a página vir incompleta e normaliza board_folder_id", async () => {
-      const fullPage = Array.from({ length: 100 }, (_, i) => ({
-        id: i,
-        name: `Board ${i}`,
-        state: "active",
-        board_folder_id: 20715906,
-      }));
-      mockFetch
-        .mockResolvedValueOnce(makeResponse({ data: { boards: fullPage } }))
-        .mockResolvedValueOnce(
-          makeResponse({
-            data: {
-              boards: [{ id: 999, name: "Subitems of X", state: "active", board_folder_id: null }],
-            },
-          })
-        );
-
-      const boards = await client().listBoards("15505674");
-
-      expect(boards).toHaveLength(101);
-      expect(boards[0]).toEqual({
-        id: "0",
-        name: "Board 0",
-        folderId: "20715906",
-        state: "active",
-      });
-      expect(boards[100].folderId).toBeNull();
-      expect(mockFetch).toHaveBeenCalledTimes(2);
-      expect(lastBody().variables).toMatchObject({ workspaceIds: ["15505674"], page: 2 });
-    });
-
-    it("trata boards nulo como lista vazia", async () => {
-      mockFetch.mockResolvedValue(makeResponse({ data: { boards: null } }));
-      await expect(client().listBoards("ws")).resolves.toEqual([]);
-    });
-  });
-
-  describe("listFolders", () => {
-    it("retorna lista vazia quando o token não enxerga pastas", async () => {
-      mockFetch.mockResolvedValue(makeResponse({ data: { folders: null } }));
-      await expect(client().listFolders("ws")).resolves.toEqual([]);
-    });
-  });
-
   describe("getBoardSchema", () => {
     it("mapeia settings_str para settingsStr e omite quando ausente", async () => {
       mockFetch.mockResolvedValue(

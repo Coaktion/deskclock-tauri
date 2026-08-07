@@ -52,9 +52,6 @@ function fullSchema(): MondayBoardSchema {
 function makeApi(boardSchema: MondayBoardSchema): IMondayApi {
   return {
     getMe: vi.fn(),
-    listWorkspaces: vi.fn(),
-    listFolders: vi.fn(),
-    listBoards: vi.fn(),
     listBoardSchemas: vi.fn(),
     getBoardSchema: vi.fn(async () => boardSchema),
     listItems: vi.fn(),

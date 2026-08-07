@@ -143,9 +143,6 @@ function makeClient(): IMondayApi {
   let created = 0;
   return {
     getMe: vi.fn(),
-    listWorkspaces: vi.fn(),
-    listFolders: vi.fn(),
-    listBoards: vi.fn(),
     getBoardSchema: vi.fn(),
     listBoardSchemas: vi.fn(async () => []),
     listItems: vi.fn(async () => []),

@@ -1,8 +1,5 @@
 import type {
   MondayUser,
-  MondayWorkspace,
-  MondayFolder,
-  MondayBoardRef,
   MondayBoardSchema,
   MondayItem,
   MondayItemRef,
@@ -34,11 +31,19 @@ export interface ListItemsOptions {
   endsOnOrAfter?: { columnId: string; dayISO: string };
 }
 
+/**
+ * A superfície da API do Monday que a integração usa.
+ *
+ * **Não tem como navegar a conta** — nada de listar workspaces, pastas ou boards.
+ * Aquelas três chamadas existiam para a configuração antiga, que pedia workspace,
+ * duas pastas e um board interno e montava o mapeamento à mão; hoje a
+ * configuração são dois ids de board digitados (§5.7 do CLAUDE.md), e é o
+ * Portfólio que descreve os projetos. Se voltar a fazer falta, o que se busca
+ * provavelmente é um id de board — e o caminho é o campo da tela, não uma
+ * varredura da conta.
+ */
 export interface IMondayApi {
   getMe(): Promise<MondayUser>;
-  listWorkspaces(): Promise<MondayWorkspace[]>;
-  listFolders(workspaceId: string): Promise<MondayFolder[]>;
-  listBoards(workspaceId: string): Promise<MondayBoardRef[]>;
   /**
    * Schemas de vários boards numa requisição.
    *

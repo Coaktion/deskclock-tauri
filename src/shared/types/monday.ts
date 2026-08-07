@@ -6,24 +6,6 @@ export interface MondayUser {
   email: string;
 }
 
-export interface MondayWorkspace {
-  id: string;
-  name: string;
-}
-
-export interface MondayFolder {
-  id: string;
-  name: string;
-}
-
-export interface MondayBoardRef {
-  id: string;
-  name: string;
-  /** `board_folder_id` — null para boards fora de pasta (ex: "Subitems of …"). */
-  folderId: string | null;
-  state: string;
-}
-
 export interface MondayColumn {
   id: string;
   title: string;

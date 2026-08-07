@@ -61,9 +61,6 @@ function schema(overrides: Partial<MondayBoardSchema> = {}): MondayBoardSchema {
 function makeApi(items: MondayItem[], schemas: Record<string, MondayBoardSchema>): IMondayApi {
   return {
     getMe: vi.fn(),
-    listWorkspaces: vi.fn(),
-    listFolders: vi.fn(),
-    listBoards: vi.fn(async () => []),
     getBoardSchema: vi.fn(async (id: string) => {
       const found = schemas[id];
       if (!found) throw new Error(`Board ${id} não encontrado no Monday.`);
