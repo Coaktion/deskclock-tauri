@@ -71,7 +71,7 @@ export function PlannedTaskItem({
   return (
     <>
       <div
-        className={`relative flex items-center gap-3 pl-5 pr-3 py-3 border-b border-gray-800 transition-colors group ${
+        className={`flex items-center gap-3 pl-4 pr-3 py-3 border-b border-gray-800 transition-colors group ${
           isCompleted && !selectMode ? "opacity-50" : ""
         } ${
           selectMode
@@ -80,25 +80,13 @@ export function PlannedTaskItem({
         }`}
         onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
       >
-        {/* Billable left accent */}
-        {task.billable && !isCompleted && !selectMode && (
-          <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
-        )}
-
-        {/* Checkbox (select mode) or dot indicator */}
-        {selectMode ? (
+        {selectMode && (
           <input
             type="checkbox"
             checked={selected}
             onChange={() => onToggleSelect?.(task.id)}
             onClick={(e) => e.stopPropagation()}
             className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
-          />
-        ) : (
-          <span
-            className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-              task.billable ? "bg-emerald-400" : "bg-gray-600"
-            }`}
           />
         )}
 
@@ -109,6 +97,17 @@ export function PlannedTaskItem({
             >
               {task.name}
             </p>
+            {/* O billable era duas cores sem legenda — barra à esquerda e ponto —, e
+                cor sozinha não diz o que significa. O chip escreve. */}
+            <span
+              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border ${
+                task.billable
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                  : "bg-gray-800 border-gray-700 text-gray-500"
+              }`}
+            >
+              {task.billable ? "Billable" : "Non-billable"}
+            </span>
             {task.scheduleType === "recurring" && (
               <span className="shrink-0 flex items-center gap-0.5 text-[10px] text-blue-400/70 leading-none">
                 <RefreshCw size={9} />
