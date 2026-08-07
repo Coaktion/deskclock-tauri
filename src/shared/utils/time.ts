@@ -157,6 +157,30 @@ export function computeEndHHMM(start: string, durationSeconds: number): string {
   return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
 }
 
+/**
+ * Hora de fim HH:MM a exibir na edição de uma tarefa já registrada: **a duração
+ * gravada manda sobre o instante da parada**. Os dois divergem sempre que a
+ * regra de arredondamento agiu (ela reescreve só `durationSeconds`, deixando o
+ * `endTime` real) e também quando a tarefa passou por pausas (o `stopTask` soma
+ * os trechos rodados, não o intervalo). É a duração gravada que as listas, os
+ * totalizadores e as exportações exibem — derivar o fim do intervalo mostrava no
+ * modal um valor que o resto do app não mostra em lugar nenhum, e salvar sem
+ * tocar em nada regravava esse valor por cima, desfazendo o arredondamento em
+ * silêncio.
+ *
+ * O `endTime` só entra como reserva, para o registro sem duração gravada.
+ */
+export function resolveRegisteredEndHHMM(
+  startHHMM: string,
+  durationSeconds: number | null | undefined,
+  endHHMM: string | null
+): string {
+  if (durationSeconds != null && durationSeconds > 0) {
+    return computeEndHHMM(startHHMM, durationSeconds);
+  }
+  return endHHMM ?? startHHMM;
+}
+
 /** Formata timestamp ISO de último envio para exibição "DD/MM às HH:MM" */
 // Interpreta "HH:MM" como horário local do dia de refISO, clampando para now se futuro.
 // Retorna null se o input for inválido.

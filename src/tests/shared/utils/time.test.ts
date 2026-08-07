@@ -7,6 +7,7 @@ import {
   computeDurationHHMM,
   computeEndHHMM,
   localDateISO,
+  resolveRegisteredEndHHMM,
 } from "@shared/utils/time";
 
 describe("localDateISO", () => {
@@ -88,4 +89,23 @@ describe("computeEndHHMM", () => {
   it("wrap ao cruzar meia-noite", () => expect(computeEndHHMM("23:00", 7200)).toBe("01:00"));
   it("retorna início para duração inválida", () =>
     expect(computeEndHHMM("09:00", NaN)).toBe("09:00"));
+});
+
+describe("resolveRegisteredEndHHMM", () => {
+  it("arredondada: o fim vem da duração gravada, não do instante da parada", () =>
+    // 09:00 → 10:23 registrado como 1h30 pela regra de arredondamento
+    expect(resolveRegisteredEndHHMM("09:00", 5400, "10:23")).toBe("10:30"));
+  it("pausada: o fim vem do tempo somado, não do intervalo", () =>
+    // rodou 09:00–10:00, pausou 1h, rodou 11:00–11:30 → 1h30 gravado
+    expect(resolveRegisteredEndHHMM("09:00", 5400, "11:30")).toBe("10:30"));
+  it("sem divergência, devolve o mesmo fim gravado", () =>
+    expect(resolveRegisteredEndHHMM("09:00", 5400, "10:30")).toBe("10:30"));
+  it("cruzando meia-noite, o fim dá a volta", () =>
+    expect(resolveRegisteredEndHHMM("23:00", 7200, "00:47")).toBe("01:00"));
+  it("sem duração gravada, cai no fim registrado", () =>
+    expect(resolveRegisteredEndHHMM("09:00", null, "10:23")).toBe("10:23"));
+  it("duração zerada não colapsa o fim no início", () =>
+    expect(resolveRegisteredEndHHMM("09:00", 0, "10:23")).toBe("10:23"));
+  it("sem duração e sem fim, cai no início", () =>
+    expect(resolveRegisteredEndHHMM("09:00", null, null)).toBe("09:00"));
 });

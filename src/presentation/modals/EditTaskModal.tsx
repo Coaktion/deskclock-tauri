@@ -19,7 +19,7 @@ import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
-import { addDaysISO } from "@shared/utils/time";
+import { addDaysISO, resolveRegisteredEndHHMM } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -72,14 +72,18 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
   // Data de início (local) como referência para construir os ISOs
   const [startDate, setStartDate] = useState(localDateISO(task.startTime));
 
-  // Início, fim e duração são mantidos em sincronia pelo hook compartilhado.
-  const initialEnd = task.endTime
-    ? isoToHHMM(task.endTime)
-    : isoToHHMM(
-        new Date(
-          new Date(task.startTime).getTime() + (task.durationSeconds ?? 0) * 1000
-        ).toISOString()
-      );
+  // Início, fim e duração são mantidos em sincronia pelo hook compartilhado, e
+  // quem ancora os três é a duração gravada (`resolveRegisteredEndHHMM`): o fim
+  // exibido é o que fecha a conta com ela, não o instante da parada. Salvar
+  // grava esse fim, deixando o registro coerente — o preço é perder o instante
+  // real da parada de uma tarefa arredondada ou pausada, e foi escolhido em
+  // troca de os três campos nunca se contradizerem na tela.
+  const initialStart = isoToHHMM(task.startTime);
+  const initialEnd = resolveRegisteredEndHHMM(
+    initialStart,
+    task.durationSeconds,
+    task.endTime ? isoToHHMM(task.endTime) : null
+  );
   const {
     startTime,
     endTime,
@@ -90,7 +94,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
     handleEndChange,
     handleEndCommit,
     commitDuration,
-  } = useDurationSync({ initialStart: isoToHHMM(task.startTime), initialEnd });
+  } = useDurationSync({ initialStart, initialEnd });
 
   const [saving, setSaving] = useState(false);
 
