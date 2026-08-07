@@ -29,7 +29,11 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 function makeSender(overrides: Partial<ITaskSender> = {}): ITaskSender {
   return {
     integrationName: "Mock Integration",
-    send: vi.fn(async () => undefined),
+    send: vi.fn(async (tasks: Task[]) => ({
+      sentTaskIds: tasks.map((t) => t.id),
+      refused: [],
+      failed: [],
+    })),
     ...overrides,
   };
 }
@@ -79,8 +83,12 @@ describe("sendTasks", () => {
     await expect(sendTasks(sender, [makeTask()])).rejects.toThrow("Falha na integração");
   });
 
-  it("não lança erro com sender e tarefas válidos", async () => {
+  it("devolve o resultado do sender em vez de descartá-lo", async () => {
     const sender = makeSender();
-    await expect(sendTasks(sender, [makeTask()])).resolves.toBeUndefined();
+    await expect(sendTasks(sender, [makeTask({ id: "t1" })])).resolves.toEqual({
+      sentTaskIds: ["t1"],
+      refused: [],
+      failed: [],
+    });
   });
 });

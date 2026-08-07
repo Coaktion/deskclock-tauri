@@ -9,8 +9,14 @@ import type { IMondayActivityItemRepository } from "@domain/repositories/IMonday
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import type { MondayDailySyncDeps } from "@infra/integrations/runMondayDailySync";
+import type { TaskSendOutcome } from "@domain/integrations/ITaskSender";
 
-const sendMock = vi.fn(async (_tasks: Task[]) => {});
+/** Aceita tudo: devolve como enviado exatamente o que recebeu. */
+const sendMock = vi.fn(async (tasks: Task[]): Promise<TaskSendOutcome> => ({
+  sentTaskIds: tasks.map((t) => t.id),
+  refused: [],
+  failed: [],
+}));
 vi.mock("@infra/integrations/MondayTaskSender", () => ({
   MondayTaskSender: class {
     readonly integrationName = "Monday";
@@ -213,6 +219,82 @@ describe("MondaySyncStrategy", () => {
       // t3 é de outro grupo, mas do mesmo projeto: precisa entrar para que o item
       // que a contém seja reconciliado caso alguma tarefa tenha trocado de grupo
       expect(sendMock.mock.calls[0][0].map((t) => t.id)).toEqual(["t1", "t2", "t3"]);
+    });
+
+    it("tarefa recusada pelo sender não é marcada como enviada", async () => {
+      // Com a recusa fora do canal de exceção, "não lançou" deixou de significar
+      // "subiu": sem esta guarda a hora que o board recusou ganhava o badge
+      // "Enviado" e nunca mais seria reenviada.
+      const task = makeTask({ id: "t1" });
+      const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
+      sendMock.mockResolvedValueOnce({
+        sentTaskIds: [],
+        refused: ['"Tarefa": informe o motivo de não faturável.'],
+        failed: [],
+      });
+
+      const result = await new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      ).runPerTask(task);
+
+      expect(result.count).toBe(0);
+      expect(result.warning).toContain("informe o motivo");
+      expect(logRepo.markSent).not.toHaveBeenCalled();
+    });
+
+    it("recusa de outro grupo do dia vira aviso, sem tirar o mérito do que subiu", async () => {
+      // O escopo enviado é o dia inteiro do projeto: esta tarefa pode subir
+      // enquanto outro grupo é recusado. Descartar o `refused` calaria o aviso.
+      const task = makeTask({ id: "t1" });
+      const { taskRepo, logRepo, itemRepo } = makeDeps([task, makeTask({ id: "t2" })]);
+      sendMock.mockResolvedValueOnce({
+        sentTaskIds: ["t1"],
+        refused: ['"Outra": sem grupo para o Report Type.'],
+        failed: [],
+      });
+
+      const result = await new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      ).runPerTask(task);
+
+      expect(result.count).toBe(1);
+      expect(logRepo.markSent).toHaveBeenCalledWith(["t1"], "monday");
+      expect(result.warning).toContain("sem grupo para o Report Type");
+    });
+
+    it("falha técnica no envio por tarefa vira error, não warning", async () => {
+      // É a distinção que se perdeu ao tirar a recusa do canal de exceção:
+      // antes, queda de rede lançava e virava toast vermelho.
+      const task = makeTask({ id: "t1" });
+      const { taskRepo, logRepo, itemRepo } = makeDeps([task]);
+      sendMock.mockResolvedValueOnce({
+        sentTaskIds: [],
+        refused: [],
+        failed: ['"Daily": Failed to fetch.'],
+      });
+
+      const result = await new MondaySyncStrategy(
+        makeConfig(),
+        taskRepo,
+        logRepo,
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo()
+      ).runPerTask(task);
+
+      expect(result.error?.message).toContain("Failed to fetch");
+      expect(result.warning).toBeUndefined();
+      expect(logRepo.markSent).not.toHaveBeenCalled();
     });
 
     it("não arrasta tarefas de outros projetos para o envio", async () => {

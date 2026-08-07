@@ -4,7 +4,7 @@ import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIn
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import type { AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import { groupTasksForMonday } from "@domain/usecases/monday/groupTasksForMonday";
-import { calcDailyRange } from "./runDailyTemplate";
+import { calcDailyRange, dailySendFeedback } from "./runDailyTemplate";
 
 export const MONDAY_LOG_KEY = "monday";
 
@@ -70,14 +70,32 @@ export async function runMondayDailySync(
     const groups = groupTasksForMonday(valid);
 
     const sender = await deps.createSender();
-    await sender.send(valid);
-    await deps.logRepo.markSent(
-      valid.map((t) => t.id),
-      MONDAY_LOG_KEY
-    );
-    await deps.timestampPort.set((deps.nowISO ?? (() => new Date().toISOString()))());
+    const outcome = await sender.send(valid);
 
-    return { integration: deps.integrationName, count: groups.length, warning };
+    // Aqui as tarefas vão cruas, então os ids que voltam já são os das tarefas —
+    // não há representante a expandir. Marcar `valid` inteiro daria o badge
+    // "enviado" ao grupo que o sender recusou (hora não faturável sem motivo,
+    // board sem grupo para o Report Type) ou que falhou na escrita.
+    const sentIds = new Set(outcome.sentTaskIds);
+    const sentGroups = groups.filter((g) => g.tasks.some((t) => sentIds.has(t.id)));
+
+    if (outcome.sentTaskIds.length > 0) {
+      await deps.logRepo.markSent(outcome.sentTaskIds, MONDAY_LOG_KEY);
+    }
+
+    // Só avança com o envio limpo: a janela do ciclo seguinte começa no dia
+    // local deste timestamp, e o grupo pendente hoje sairia dela amanhã. Aqui o
+    // envio é upsert por assinatura, então repetir o dia não duplica nada.
+    const pending = outcome.refused.length + outcome.failed.length;
+    if (pending === 0 && outcome.sentTaskIds.length > 0) {
+      await deps.timestampPort.set((deps.nowISO ?? (() => new Date().toISOString()))());
+    }
+
+    return {
+      integration: deps.integrationName,
+      count: sentGroups.length,
+      ...dailySendFeedback(warning, outcome, "Monday"),
+    };
   } catch (err) {
     return {
       integration: deps.integrationName,

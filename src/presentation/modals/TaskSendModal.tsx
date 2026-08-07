@@ -16,6 +16,7 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import type { TaskValidationResult } from "@domain/integrations/taskValidation";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
+import { resolveSentTasks } from "@domain/utils/resolveSentTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import {
   sendTasks,
@@ -27,9 +28,11 @@ import { getProjectColor } from "@shared/utils/projectColor";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import {
   useTaskSendSelection,
+  buildResultMessage,
   formatDayLabel,
   selKey,
   type QuickPeriod,
+  type SendTone,
 } from "@presentation/hooks/useTaskSendSelection";
 
 export interface TaskSendAdapter {
@@ -64,6 +67,12 @@ export interface TaskSendAdapter {
 
 const DEFAULT_RESEND_WARNING =
   "Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas.";
+
+const TONE_CLASS: Record<SendTone, string> = {
+  success: "text-green-400",
+  warning: "text-yellow-300",
+  error: "text-red-400",
+};
 
 interface GroupRowProps {
   group: TaskGroup;
@@ -190,36 +199,50 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
           ...g.tasks[0],
           durationSeconds: g.totalSeconds,
         }));
-    const allTaskIds = selectedGroups.flatMap((g) => g.tasks.map((t) => t.id));
-
     if (adapter.validateBeforeSend) {
       const err = adapter.validateBeforeSend(tasksToSend);
       if (err) {
-        sel.setMessage({ text: err, error: true });
+        sel.setMessage({ text: err, tone: "error" });
         return;
       }
     }
 
     setSending(true);
     try {
-      await sendTasks(adapter.sender, tasksToSend);
-      await taskLogRepo.markSent(allTaskIds, adapter.integrationId);
-      await adapter.onSendSuccess(allTaskIds);
-      sel.setMessage({
-        text: `${selectedGroups.length} grupo(s) enviado(s) com sucesso.`,
-        error: false,
-      });
-      sel.deselectAll();
+      const outcome = await sendTasks(adapter.sender, tasksToSend);
+
+      // Quem conhece o agrupamento da tela é esta tela; o sender só devolve ids.
+      // A regra vive em `domain/utils` porque decide o que recebe o badge
+      // "Enviado" — e o badge é o que impede o reenvio.
+      const sent = resolveSentTasks(selectedGroups, outcome.sentTaskIds, !!adapter.sendsRawTasks);
+
+      if (sent.taskIds.length > 0) {
+        await taskLogRepo.markSent(sent.taskIds, adapter.integrationId);
+      }
+
+      // O `onSendSuccess` avança o timestamp do envio diário nas três
+      // integrações, e a janela do próximo ciclo começa nele: avançá-lo com
+      // algo recusado faria o grupo que ficou para trás sair da janela e nunca
+      // mais ser tentado sozinho.
+      if (outcome.refused.length + outcome.failed.length === 0 && sent.taskIds.length > 0) {
+        await adapter.onSendSuccess(sent.taskIds);
+      }
+
+      sel.setMessage(buildResultMessage(sent.fullySentGroups, outcome));
+
+      // O reload é o que devolve a seleção certa: o efeito de carga remarca o
+      // que ainda não foi inteiramente enviado, então o recusado volta marcado
+      // e o que subiu sai — sem precisar mexer na seleção aqui.
       sel.triggerReload();
     } catch (err) {
       if (err instanceof NoIntegrationError) {
-        sel.setMessage({ text: adapter.notConfiguredMessage, error: true });
+        sel.setMessage({ text: adapter.notConfiguredMessage, tone: "error" });
       } else if (err instanceof NoTasksSelectedError) {
-        sel.setMessage({ text: "Selecione ao menos uma tarefa.", error: true });
+        sel.setMessage({ text: "Selecione ao menos uma tarefa.", tone: "error" });
       } else {
         sel.setMessage({
           text: err instanceof Error ? err.message : "Erro ao enviar.",
-          error: true,
+          tone: "error",
         });
       }
     } finally {
@@ -391,9 +414,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
 
         {/* Mensagem de resultado */}
         {sel.message && (
-          <p
-            className={`mx-5 mb-2 text-xs whitespace-pre-line ${sel.message.error ? "text-red-400" : "text-green-400"}`}
-          >
+          <p className={`mx-5 mb-2 text-xs whitespace-pre-line ${TONE_CLASS[sel.message.tone]}`}>
             {sel.message.text}
           </p>
         )}

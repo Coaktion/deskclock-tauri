@@ -1,5 +1,5 @@
 import type { Task } from "@domain/entities/Task";
-import type { ITaskSender } from "@domain/integrations/ITaskSender";
+import type { ITaskSender, TaskSendOutcome } from "@domain/integrations/ITaskSender";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
@@ -23,14 +23,20 @@ export class GoogleSheetsTaskSender implements ITaskSender {
     this.tokenManager = new GoogleTokenManager(config);
   }
 
-  async send(tasks: Task[]): Promise<void> {
+  /**
+   * Aqui não existe envio parcial: as linhas vão todas num `values.update` só,
+   * então ou a planilha aceita a requisição inteira ou não escreve nada. O
+   * `TaskSendOutcome` sai por isso no extremo — todos os ids ou uma exceção —,
+   * e é o contrato que permite ao chamador tratar as três integrações igual.
+   */
+  async send(tasks: Task[]): Promise<TaskSendOutcome> {
     const validTasks = tasks.filter((t) => validateTaskForSheets(t).ok);
     if (validTasks.length === 0 && tasks.length > 0) {
       throw new Error(
         "Nenhuma tarefa válida para enviar ao Google Sheets (precisa de nome, projeto e categoria)."
       );
     }
-    if (validTasks.length === 0) return;
+    if (validTasks.length === 0) return { sentTaskIds: [], refused: [], failed: [] };
 
     const token = await this.tokenManager.getValidAccessToken();
     const sheetName = this.config.get("integrationGoogleSheetsSheetName") || "DeskClock";
@@ -133,6 +139,10 @@ export class GoogleSheetsTaskSender implements ITaskSender {
         console.warn("[Sheets] Falha ao aplicar formato de duração:", err);
       }
     }
+
+    // As linhas já estão escritas neste ponto — a formatação acima é cosmética e
+    // seu erro não tira nada da planilha.
+    return { sentTaskIds: validTasks.map((t) => t.id), refused: [], failed: [] };
   }
 
   private async ensureSheetExists(

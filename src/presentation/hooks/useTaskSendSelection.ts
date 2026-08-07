@@ -20,6 +20,20 @@ export interface DayGroup {
   groups: TaskGroup[];
 }
 
+/**
+ * O tom precisa de três estados porque o envio tem três desfechos, e o booleano
+ * `error` só expressava dois. O desfecho que faltava é o comum: parte dos grupos
+ * sobe e parte é recusada. Pintá-lo de vermelho negava o que já estava no
+ * destino — foi o que fez um envio ao Monday com uma tarefa sem motivo de não
+ * faturável parecer cancelado por inteiro.
+ */
+export type SendTone = "success" | "warning" | "error";
+
+export interface SendMessage {
+  text: string;
+  tone: SendTone;
+}
+
 export function formatDayLabel(isoDate: string): string {
   const d = new Date(isoDate + "T12:00:00");
   const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" });
@@ -38,6 +52,43 @@ export function groupTasksByDay(tasks: Task[]): DayGroup[] {
   return [...byDate.entries()]
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([date, dayTasks]) => ({ date, groups: groupTasks(dayTasks) }));
+}
+
+/**
+ * A frase que o modal exibe depois de enviar, a partir do que subiu e do que foi
+ * recusado.
+ *
+ * Fica aqui, e não no componente, porque é a única regra de decisão do envio que
+ * o usuário lê — e a anterior estava errada em silêncio: dizia "N grupo(s)
+ * enviado(s)" contando a **seleção**, não o resultado, ou então nada era exibido
+ * porque a recusa de um grupo virava exceção e derrubava a mensagem inteira.
+ */
+export function buildResultMessage(
+  sentGroups: number,
+  outcome: { refused: string[]; failed: string[] }
+): SendMessage {
+  const lines: string[] = [];
+  if (sentGroups > 0) lines.push(`${sentGroups} grupo(s) enviado(s) com sucesso.`);
+  if (outcome.refused.length > 0) {
+    lines.push(`${outcome.refused.length} não subiu(ram): ${outcome.refused.join(" ")}`);
+  }
+  if (outcome.failed.length > 0) {
+    lines.push(`${outcome.failed.length} falhou(ram): ${outcome.failed.join(" ")}`);
+  }
+  if (lines.length === 0) return { text: "Nenhum grupo enviado.", tone: "error" };
+
+  // **Falha técnica é vermelha mesmo com parte enviada**, e recusa é amarela:
+  // uma pede tentar de novo, a outra pede editar a tarefa. Enquanto as duas
+  // moravam no mesmo campo, queda de rede aparecia como aviso, indistinguível
+  // de "preencha o motivo".
+  // Nada enviado é vermelho seja qual for o motivo: o clique não produziu nada.
+  const tone: SendTone =
+    sentGroups === 0 || outcome.failed.length > 0
+      ? "error"
+      : outcome.refused.length > 0
+        ? "warning"
+        : "success";
+  return { text: lines.join(" "), tone };
 }
 
 export function selKey(date: string, groupKey: string): string {
@@ -79,8 +130,8 @@ export interface UseTaskSendSelectionResult {
   collapsedDays: Set<string>;
   loaded: boolean;
   loading: boolean;
-  message: { text: string; error: boolean } | null;
-  setMessage: (m: { text: string; error: boolean } | null) => void;
+  message: SendMessage | null;
+  setMessage: (m: SendMessage | null) => void;
   reloadKey: number;
   triggerReload: () => void;
   hasSentSelected: boolean;
@@ -99,17 +150,33 @@ export function useTaskSendSelection(
 ): UseTaskSendSelectionResult {
   const { taskRepo, taskLogRepo } = useRepositories();
 
-  const [quick, setQuick] = useState<QuickPeriod>("today");
-  const [customStart, setCustomStart] = useState(todayISO());
-  const [customEnd, setCustomEnd] = useState(todayISO());
+  const [quick, setQuickState] = useState<QuickPeriod>("today");
+  const [customStart, setCustomStartState] = useState(todayISO());
+  const [customEnd, setCustomEndState] = useState(todayISO());
   const [dayGroups, setDayGroups] = useState<DayGroup[]>([]);
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
+  const [message, setMessage] = useState<SendMessage | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // Trocar o recorte descarta a mensagem: ela descreve um envio sobre a lista
+  // que acabou de sair de cena. É o contraponto de o efeito de carga não limpar
+  // mais nada — sem estes três, a frase do envio sobreviveria à navegação.
+  function setQuick(q: QuickPeriod) {
+    setMessage(null);
+    setQuickState(q);
+  }
+  function setCustomStart(v: string) {
+    setMessage(null);
+    setCustomStartState(v);
+  }
+  function setCustomEnd(v: string) {
+    setMessage(null);
+    setCustomEndState(v);
+  }
 
   const customStartRef = useRef(customStart);
   const customEndRef = useRef(customEnd);
@@ -123,7 +190,13 @@ export function useTaskSendSelection(
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setMessage(null);
+    // **Não limpe a mensagem aqui.** O envio termina com `triggerReload()`, que
+    // muda `reloadKey` e reexecuta este efeito — zerar a mensagem no começo dele
+    // apagava a frase do resultado no mesmo instante em que ela era exibida.
+    // Valia para o sucesso desde sempre; passou a doer quando o resultado do
+    // envio parcial virou a informação principal da tela. Quem limpa é quem
+    // troca o recorte (`setQuick`, datas do período), porque aí a mensagem
+    // descreve uma lista que saiu de cena.
 
     async function run() {
       try {
@@ -163,7 +236,7 @@ export function useTaskSendSelection(
               : typeof err === "string"
                 ? err
                 : "Erro ao carregar tarefas.";
-          setMessage({ text: msg, error: true });
+          setMessage({ text: msg, tone: "error" });
         }
       } finally {
         if (!cancelled) setLoading(false);

@@ -8,7 +8,7 @@ import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 import type { ISheetsConfigPort } from "@domain/integrations/ISheetsConfigPort";
 import { validateTaskForSheets, formatMissingFields } from "@domain/integrations/taskValidation";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
-import { runDailyTemplate } from "./runDailyTemplate";
+import { runDailyTemplate, taskSendFeedback } from "./runDailyTemplate";
 import { GoogleSheetsTaskSender } from "./GoogleSheetsTaskSender";
 
 export const SHEETS_INTEGRATION_NAME = "Google Sheets";
@@ -67,7 +67,17 @@ export class SheetsSyncStrategy implements ISyncStrategy {
         this.categoryRepo.findAll(),
       ]);
       const sender = new GoogleSheetsTaskSender(this.config, spreadsheetId, projects, categories);
-      await sender.send([task]);
+      const outcome = await sender.send([task]);
+      // O Sheets é tudo-ou-nada por escrever numa requisição só, então aqui a
+      // lista vazia só acontece se a tarefa não passar na validação — mas a
+      // conferência fica pelo contrato, não pela implementação de hoje.
+      if (outcome.sentTaskIds.length === 0) {
+        return {
+          integration: this.integrationName,
+          count: 0,
+          ...taskSendFeedback("Google Sheets", outcome),
+        };
+      }
       await this.logRepo.markSent([task.id], "google_sheets");
       await this.config.set("sheetsDailySyncLastTimestamp", new Date().toISOString());
       return { integration: this.integrationName, count: 1 };

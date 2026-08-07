@@ -194,4 +194,33 @@ describe("ClockifyTaskSender", () => {
     await sender.send([makeTask({ id: "t1" }), makeTask({ id: "t2" })]);
     expect(client.createTimeEntry).toHaveBeenCalledTimes(2);
   });
+
+  it("devolve os ids das entries criadas", async () => {
+    const sender = new ClockifyTaskSender(makeConfig(), client);
+    const outcome = await sender.send([makeTask({ id: "t1" }), makeTask({ id: "t2" })]);
+    expect(outcome).toEqual({ sentTaskIds: ["t1", "t2"], refused: [], failed: [] });
+  });
+
+  it("falha numa entry não cancela as demais", async () => {
+    // Sem o `try` por tarefa, o erro na primeira deixava as duas seguintes sem
+    // enviar — e, como nada era marcado, o reenvio duplicava o que já subiu.
+    // O Clockify não tem rastreamento de item como o Monday.
+    vi.mocked(client.createTimeEntry)
+      .mockRejectedValueOnce(new Error("HTTP 500"))
+      .mockResolvedValue({ id: "te" } as never);
+
+    const sender = new ClockifyTaskSender(makeConfig(), client);
+    const outcome = await sender.send([
+      makeTask({ id: "t1", name: "Quebra" }),
+      makeTask({ id: "t2" }),
+      makeTask({ id: "t3" }),
+    ]);
+
+    expect(outcome.sentTaskIds).toEqual(["t2", "t3"]);
+    // `failed`, não `refused`: é falha técnica, e a tela precisa pintá-la de
+    // vermelho em vez de amarelo — não há campo nenhum a preencher.
+    expect(outcome.failed).toEqual(['"Quebra": HTTP 500.']);
+    expect(outcome.refused).toEqual([]);
+    expect(client.createTimeEntry).toHaveBeenCalledTimes(3);
+  });
 });

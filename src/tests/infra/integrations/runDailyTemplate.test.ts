@@ -46,10 +46,15 @@ function makeLogRepo(sentIds: string[] = []): ITaskIntegrationLogRepository {
   } as unknown as ITaskIntegrationLogRepository;
 }
 
+/** Sender que aceita tudo: devolve como enviado exatamente o que recebeu. */
 function makeSender(): ITaskSender {
   return {
     integrationName: "TestInteg",
-    send: vi.fn().mockResolvedValue(undefined),
+    send: vi.fn(async (tasks: Task[]) => ({
+      sentTaskIds: tasks.map((t) => t.id),
+      refused: [],
+      failed: [],
+    })),
   };
 }
 
@@ -398,5 +403,72 @@ describe("runDailyTemplate", () => {
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.warning).toBeUndefined();
     expect(sender.send as ReturnType<typeof vi.fn>).toHaveBeenCalledOnce();
+  });
+
+  describe("envio parcial", () => {
+    it("expande o representante e marca só as tarefas dos grupos que subiram", async () => {
+      // O sender vê um representante por grupo; quem conhece o agrupamento é
+      // este template. Marcar todos os ids daria o badge "enviado" a tarefas de
+      // grupos que ficaram no caminho.
+      const tasks = [
+        makeTask({ id: "a1", name: "Grupo A" }),
+        makeTask({ id: "a2", name: "Grupo A" }),
+        makeTask({ id: "b1", name: "Grupo B" }),
+      ];
+      const logRepo = makeLogRepo([]);
+      const tsSet = vi.fn();
+      const sender = {
+        integrationName: "TestInteg",
+        // Só o representante do grupo A volta como enviado.
+        send: vi.fn(async (sent: Task[]) => ({
+          sentTaskIds: [sent.find((t) => t.name === "Grupo A")!.id],
+          refused: ['"Grupo B": HTTP 500.'],
+          failed: [],
+        })),
+      };
+      const deps = makeDeps({
+        taskRepo: makeTaskRepo(tasks),
+        logRepo,
+        createSender: () => sender,
+        timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
+      });
+
+      const result = await runDailyTemplate(deps, TODAY);
+
+      expect(result.count).toBe(1);
+      expect(logRepo.markSent as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
+        ["a1", "a2"],
+        "test_key"
+      );
+      expect(result.warning).toContain("HTTP 500");
+      // `calcDailyRange` deriva o início da janela do dia local do timestamp:
+      // avançá-lo com o grupo B recusado o tiraria da busca do ciclo seguinte.
+      expect(tsSet).not.toHaveBeenCalled();
+    });
+
+    it("nada confirmado não marca nem avança o timestamp", async () => {
+      const logRepo = makeLogRepo([]);
+      const tsSet = vi.fn();
+      const sender = {
+        integrationName: "TestInteg",
+        send: vi.fn(async () => ({
+          sentTaskIds: [],
+          refused: ['"X": falta o motivo.'],
+          failed: [],
+        })),
+      };
+      const deps = makeDeps({
+        taskRepo: makeTaskRepo([makeTask()]),
+        logRepo,
+        createSender: () => sender,
+        timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
+      });
+
+      const result = await runDailyTemplate(deps, TODAY);
+
+      expect(result.count).toBe(0);
+      expect(logRepo.markSent as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+      expect(tsSet).not.toHaveBeenCalled();
+    });
   });
 });

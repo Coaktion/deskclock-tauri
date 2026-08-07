@@ -35,7 +35,11 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 function makeDeps(tasks: Task[], overrides: Partial<MondayDailySyncDeps> = {}) {
   const sender: ITaskSender = {
     integrationName: "Monday",
-    send: vi.fn(async (_tasks: Task[]) => {}),
+    send: vi.fn(async (tasks: Task[]) => ({
+      sentTaskIds: tasks.map((t) => t.id),
+      refused: [],
+      failed: [],
+    })),
   };
   const taskRepo = { findByDateRange: vi.fn(async () => tasks) } as unknown as ITaskRepository;
   const logRepo = {
@@ -175,5 +179,75 @@ describe("runMondayDailySync", () => {
     expect(result.count).toBe(0);
     expect(logRepo.markSent).not.toHaveBeenCalled();
     expect(setTimestamp).not.toHaveBeenCalled();
+  });
+
+  describe("envio parcial", () => {
+    it("marca só o que o sender confirmou, e reporta o recusado no warning", async () => {
+      // Marcar `valid` inteiro dava o badge "enviado" ao grupo que o sender
+      // recusou — a hora não faturável sem motivo, que o board não aceita.
+      const { deps, sender, logRepo, setTimestamp } = makeDeps([
+        makeTask({ id: "a" }),
+        makeTask({ id: "b" }),
+      ]);
+      vi.mocked(sender.send).mockResolvedValueOnce({
+        sentTaskIds: ["a"],
+        refused: ['"Tarefa B": informe o motivo de não faturável.'],
+        failed: [],
+      });
+
+      const result = await runMondayDailySync(deps, END_DATE);
+
+      expect(logRepo.markSent).toHaveBeenCalledWith(["a"], "monday");
+      expect(result.warning).toContain("informe o motivo");
+      expect(result.error).toBeUndefined();
+      // A janela do ciclo seguinte começa no dia local deste timestamp:
+      // avançá-lo tiraria o grupo recusado da busca de amanhã, e ele nunca mais
+      // seria tentado. Repetir o dia não duplica — o envio é upsert por
+      // assinatura.
+      expect(setTimestamp).not.toHaveBeenCalled();
+    });
+
+    it("falha técnica vira error, não warning", async () => {
+      // O `usePostStopLogic` só emite toast vermelho para `error`. Enquanto
+      // recusa e falha dividiam o mesmo campo, queda de rede aparecia como
+      // aviso amarelo, indistinguível de "preencha o motivo".
+      const { deps, sender, setTimestamp } = makeDeps([makeTask({ id: "a" })]);
+      vi.mocked(sender.send).mockResolvedValueOnce({
+        sentTaskIds: [],
+        refused: [],
+        failed: ['"Tarefa A": Failed to fetch.'],
+      });
+
+      const result = await runMondayDailySync(deps, END_DATE);
+
+      expect(result.error?.message).toContain("Failed to fetch");
+      expect(result.warning).toBeUndefined();
+      expect(setTimestamp).not.toHaveBeenCalled();
+    });
+
+    it("envio limpo avança o timestamp", async () => {
+      const { deps, logRepo, setTimestamp } = makeDeps([makeTask({ id: "a" })]);
+
+      await runMondayDailySync(deps, END_DATE);
+
+      expect(logRepo.markSent).toHaveBeenCalledWith(["a"], "monday");
+      expect(setTimestamp).toHaveBeenCalled();
+    });
+
+    it("nada confirmado não marca nem avança o timestamp", async () => {
+      const { deps, sender, logRepo, setTimestamp } = makeDeps([makeTask({ id: "a" })]);
+      vi.mocked(sender.send).mockResolvedValueOnce({
+        sentTaskIds: [],
+        refused: ['"Tarefa A": sem grupo para o Report Type.'],
+        failed: [],
+      });
+
+      const result = await runMondayDailySync(deps, END_DATE);
+
+      expect(result.count).toBe(0);
+      expect(logRepo.markSent).not.toHaveBeenCalled();
+      expect(setTimestamp).not.toHaveBeenCalled();
+      expect(result.warning).toContain("sem grupo para o Report Type");
+    });
   });
 });

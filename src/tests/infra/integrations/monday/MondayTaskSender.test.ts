@@ -679,9 +679,9 @@ describe("MondayTaskSender", () => {
         new MondayValidationError("Label not found in Activity Type")
       );
 
-      await expect(sender.send([makeTask({ durationSeconds: 6600 })])).rejects.toBeInstanceOf(
-        MondayValidationError
-      );
+      const outcome = await sender.send([makeTask({ durationSeconds: 6600 })]);
+      expect(outcome.sentTaskIds).toEqual([]);
+      expect(outcome.failed[0]).toMatch(/Label not found in Activity Type/);
       expect(client.createItem).toHaveBeenCalledTimes(1);
       expect(itemRepo.deleteItem).not.toHaveBeenCalled();
     });
@@ -772,12 +772,12 @@ describe("MondayTaskSender", () => {
           makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
           makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A" }),
         ])
-      ).resolves.toBeUndefined();
+      ).resolves.toMatchObject({ refused: [] });
 
       expect(itemRepo.deleteItem).toHaveBeenCalledWith(BOARD_ID, "item-2");
     });
 
-    it("propaga erro que não seja 'não encontrado' ao apagar o órfão", async () => {
+    it("erro que não seja 'não encontrado' ao apagar o órfão não limpa o rastreamento", async () => {
       const client = makeClient();
       const itemRepo = makeItemRepo();
       const sender = new MondayTaskSender(
@@ -796,12 +796,18 @@ describe("MondayTaskSender", () => {
         new MondayValidationError("sem permissão")
       );
 
-      await expect(
-        sender.send([
-          makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
-          makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A" }),
-        ])
-      ).rejects.toBeInstanceOf(MondayValidationError);
+      // O que importa continua sendo não largar o rastreamento de um item que
+      // pode estar vivo no board — largá-lo criaria outro no lugar e duplicaria
+      // as horas. O erro deixou de subir como exceção porque isso descartaria
+      // o envio inteiro, já gravado: ele vira pendência no `refused`.
+      const outcome = await sender.send([
+        makeTask({ id: "t1", workspaceId: "ws-1", name: "Tarefa A" }),
+        makeTask({ id: "t2", workspaceId: "ws-1", name: "Tarefa A" }),
+      ]);
+
+      expect(outcome.failed[0]).toMatch(/limpeza de itens órfãos: sem permissão/);
+      // E o envio que já estava gravado no board continua contando como enviado.
+      expect(outcome.sentTaskIds).toEqual(["t1", "t2"]);
       expect(itemRepo.deleteItem).not.toHaveBeenCalled();
     });
 
@@ -950,9 +956,12 @@ describe("MondayTaskSender", () => {
       await sender.send([makeTask({ durationSeconds: 3600 })]);
       vi.mocked(client.changeColumnValues).mockRejectedValueOnce(new MondayNetworkError());
 
-      await expect(sender.send([makeTask({ durationSeconds: 6600 })])).rejects.toBeInstanceOf(
-        MondayNetworkError
-      );
+      // Erro de rede não é "apagaram o item": recriar duplicaria o apontamento.
+      // Ele volta em `refused` em vez de lançar — lançar abortaria os grupos
+      // seguintes do mesmo envio e apagaria o registro do que já subiu.
+      const outcome = await sender.send([makeTask({ durationSeconds: 6600 })]);
+      expect(outcome.sentTaskIds).toEqual([]);
+      expect(outcome.failed).toHaveLength(1);
       expect(itemRepo.deleteItem).not.toHaveBeenCalled();
     });
   });
@@ -1446,13 +1455,17 @@ describe("MondayTaskSender", () => {
         client
       );
 
-      await expect(sender.send([nonBillable({})])).rejects.toThrow(/informe o motivo/);
+      const outcome = await sender.send([nonBillable({})]);
+      expect(outcome.refused[0]).toMatch(/informe o motivo/);
+      expect(outcome.sentTaskIds).toEqual([]);
       expect(client.createItem).not.toHaveBeenCalled();
     });
 
     it("os demais grupos do envio sobem mesmo com um recusado", async () => {
-      // Lançar antes de escrever faria uma tarefa sem motivo travar o dia
-      // inteiro; o erro no fim é o que impede a recusa de passar em silêncio.
+      // Lançar faria uma tarefa sem motivo travar o dia inteiro; a recusa volta
+      // em `refused` — e não como exceção — para que o `sentTaskIds` ainda
+      // consiga dizer o que subiu. Enquanto isto era um `throw`, quem chamava
+      // não marcava nada como enviado, nem o grupo que chegou ao board.
       const client = makeClient();
       const sender = new MondayTaskSender(
         fullConfig(),
@@ -1462,13 +1475,14 @@ describe("MondayTaskSender", () => {
         client
       );
 
-      await expect(
-        sender.send([
-          makeTask({ id: "t1", name: "Vai subir" }),
-          makeTask({ id: "t2", name: "Recusada", billable: false, customValues: {} }),
-        ])
-      ).rejects.toThrow(/"Recusada"/);
+      const outcome = await sender.send([
+        makeTask({ id: "t1", name: "Vai subir" }),
+        makeTask({ id: "t2", name: "Recusada", billable: false, customValues: {} }),
+      ]);
 
+      expect(outcome.sentTaskIds).toEqual(["t1"]);
+      expect(outcome.refused).toHaveLength(1);
+      expect(outcome.refused[0]).toMatch(/"Recusada"/);
       expect(client.createItem).toHaveBeenCalledTimes(1);
       expect(vi.mocked(client.createItem).mock.calls[0][2]).toBe("Vai subir");
     });
@@ -1483,9 +1497,8 @@ describe("MondayTaskSender", () => {
         client
       );
 
-      await expect(
-        sender.send([nonBillable({ [REASON_FIELD_ID]: "opt-inventado" })])
-      ).rejects.toThrow(/não existe na coluna do board/);
+      const outcome = await sender.send([nonBillable({ [REASON_FIELD_ID]: "opt-inventado" })]);
+      expect(outcome.refused[0]).toMatch(/não existe na coluna do board/);
       expect(client.createItem).not.toHaveBeenCalled();
     });
 
@@ -1499,9 +1512,8 @@ describe("MondayTaskSender", () => {
         client
       );
 
-      await expect(sender.send([nonBillable({})])).rejects.toThrow(
-        /vincule um campo personalizado/
-      );
+      const outcome = await sender.send([nonBillable({})]);
+      expect(outcome.refused[0]).toMatch(/vincule um campo personalizado/);
     });
 
     it("não exige motivo em projeto interno", async () => {
@@ -1579,6 +1591,64 @@ describe("MondayTaskSender", () => {
       expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(
         COLUMN_IDS.projectStage
       );
+    });
+  });
+
+  describe("envio parcial", () => {
+    it("erro de escrita num grupo não impede os seguintes", async () => {
+      // O `for ... await` cru abortava no primeiro erro: os grupos seguintes
+      // nunca subiam, e quem chamava não marcava como enviado nem o que já
+      // estava no board.
+      const client = makeClient();
+      vi.mocked(client.createItem)
+        .mockRejectedValueOnce(new MondayNetworkError())
+        .mockResolvedValueOnce({ id: "item-2" });
+
+      const outcome = await new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([
+        makeTask({ id: "t1", name: "Falha na escrita" }),
+        makeTask({ id: "t2", name: "Sobe mesmo assim" }),
+      ]);
+
+      expect(outcome.sentTaskIds).toEqual(["t2"]);
+      expect(outcome.failed).toHaveLength(1);
+      expect(outcome.failed[0]).toMatch(/"Falha na escrita"/);
+      expect(client.createItem).toHaveBeenCalledTimes(2);
+    });
+
+    it("grupo que falhou não conta como cobertura para apagar órfão", async () => {
+      // O item de "Tarefa B" só pode ser apagado se o grupo que absorveu as
+      // horas dela escrever com sucesso. Falhando, apagá-lo tiraria do board
+      // horas que nada reescreveu.
+      const client = makeClient();
+      const itemRepo = makeItemRepo();
+
+      await new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask({ id: "t1", name: "Tarefa A" }), makeTask({ id: "t2", name: "Tarefa B" })]);
+
+      // Renomear funde os dois grupos num só, que agora falha ao escrever.
+      vi.mocked(client.changeColumnValues).mockRejectedValueOnce(new MondayNetworkError());
+
+      const outcome = await new MondayTaskSender(
+        makeConfig(),
+        itemRepo,
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      ).send([makeTask({ id: "t1", name: "Tarefa A" }), makeTask({ id: "t2", name: "Tarefa A" })]);
+
+      expect(outcome.sentTaskIds).toEqual([]);
+      expect(client.deleteItem).not.toHaveBeenCalled();
     });
   });
 });

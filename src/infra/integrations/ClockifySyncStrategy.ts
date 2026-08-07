@@ -5,7 +5,7 @@ import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncSt
 import type { IClockifyConfigPort } from "@domain/integrations/IClockifyConfigPort";
 import { validateTaskForClockify, formatMissingFields } from "@domain/integrations/taskValidation";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
-import { runDailyTemplate } from "./runDailyTemplate";
+import { runDailyTemplate, taskSendFeedback } from "./runDailyTemplate";
 import { ClockifyTaskSender } from "./ClockifyTaskSender";
 
 export class ClockifySyncStrategy implements ISyncStrategy {
@@ -55,7 +55,17 @@ export class ClockifySyncStrategy implements ISyncStrategy {
     }
     try {
       const sender = new ClockifyTaskSender(this.config);
-      await sender.send([task]);
+      const outcome = await sender.send([task]);
+      // Recusa não lança mais (§ `TaskSendOutcome`) — sem conferir, a tarefa que
+      // não chegou ao Clockify receberia o badge "enviado" e nunca mais seria
+      // reenviada.
+      if (outcome.sentTaskIds.length === 0) {
+        return {
+          integration: this.integrationName,
+          count: 0,
+          ...taskSendFeedback("Clockify", outcome),
+        };
+      }
       await this.logRepo.markSent([task.id], "clockify");
       await this.config.set("clockifyDailySyncLastTimestamp", new Date().toISOString());
       return { integration: this.integrationName, count: 1 };

@@ -10,6 +10,7 @@ import { validateTaskForMonday, formatMissingFields } from "@domain/integrations
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { localDateISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { runMondayDailySync, MONDAY_LOG_KEY } from "./runMondayDailySync";
+import { taskSendFeedback } from "./runDailyTemplate";
 import { MondayTaskSender } from "./MondayTaskSender";
 
 export const MONDAY_INTEGRATION_NAME = "Monday";
@@ -129,8 +130,43 @@ export class MondaySyncStrategy implements ISyncStrategy {
     try {
       const group = await this.collectSameDayScope(task);
       const sender = this.createSender();
-      await sender.send(group);
+      const outcome = await sender.send(group);
+
+      // A recusa do sender deixou de ser exceção (§ `TaskSendOutcome`), então
+      // "não lançou" já não significa "subiu". Marcar sem conferir daria o badge
+      // "enviado" à hora não faturável sem motivo — a que o board recusa — e
+      // ainda avançaria o timestamp do último envio por cima dela.
+      if (!outcome.sentTaskIds.includes(task.id)) {
+        return {
+          integration: this.integrationName,
+          count: 0,
+          ...taskSendFeedback("Monday", outcome),
+        };
+      }
+
       await this.logRepo.markSent([task.id], MONDAY_LOG_KEY);
+
+      // O escopo enviado é o dia inteiro do projeto (`collectSameDayScope`), não
+      // só esta tarefa: outro grupo pode ficar pendente enquanto esta sobe.
+      // Descartar isso calava o aviso — antes ele aparecia porque a recusa era
+      // exceção. O timestamp fica parado no mesmo caso, pela razão de
+      // `runMondayDailySync`: a janela do ciclo seguinte começa nele.
+      if (outcome.refused.length + outcome.failed.length > 0) {
+        const feedback = taskSendFeedback("Monday", outcome);
+        return {
+          integration: this.integrationName,
+          count: 1,
+          // A tarefa subiu — a mensagem precisa dizer isso, porque um `error`
+          // no resultado suprime o toast de sucesso (`usePostStopLogic`).
+          ...(feedback.error
+            ? { error: new Error(`Tarefa enviada ao Monday, mas: ${feedback.error.message}`) }
+            : {}),
+          ...(feedback.warning
+            ? { warning: `Enviado ao Monday com pendências: ${feedback.warning}` }
+            : {}),
+        };
+      }
+
       await this.config.set("mondayDailySyncLastTimestamp", new Date().toISOString());
       return { integration: this.integrationName, count: 1 };
     } catch (err) {
