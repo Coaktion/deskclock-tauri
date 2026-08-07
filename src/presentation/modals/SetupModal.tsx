@@ -6,6 +6,7 @@ import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 import { notifyCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 const STEPS = ["Boas-vindas", "Projetos", "Categorias"] as const;
 
@@ -40,9 +41,17 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
 
   const isLast = step === STEPS.length - 1;
 
+  /** Avançar é o submit deste formulário — no último passo, concluir. */
+  function advance() {
+    if (isLast) void handleComplete();
+    else setStep((s) => s + 1);
+  }
+
+  const handleKeyDown = useSubmitOnEnter(advance, { disabled: saving });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950">
-      <div className="w-full max-w-lg mx-4 flex flex-col gap-8">
+      <div onKeyDown={handleKeyDown} className="w-full max-w-lg mx-4 flex flex-col gap-8">
         {/* Logo + título */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="p-3 bg-blue-600/20 rounded-2xl">
@@ -91,10 +100,8 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
                 type="text"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") setStep(1);
-                }}
                 placeholder="Seu nome (opcional)"
+                autoComplete="off"
                 className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
             </>
@@ -156,20 +163,14 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => {
-                if (isLast) void handleComplete();
-                else setStep((s) => s + 1);
-              }}
+              onClick={advance}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
             >
               {isLast ? "Pular tudo e começar" : "Pular"}
               {!isLast && <ChevronRight size={14} />}
             </button>
             <button
-              onClick={() => {
-                if (isLast) void handleComplete();
-                else setStep((s) => s + 1);
-              }}
+              onClick={advance}
               disabled={saving}
               className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
             >

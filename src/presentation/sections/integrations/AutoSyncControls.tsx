@@ -183,6 +183,7 @@ export function AutoSyncControls({
                     onChange={(e) => setSyncTime(e.target.value)}
                     onBlur={() => config.set(keys.time, syncTime)}
                     className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                    autoComplete="off"
                   />
                 </Row>
               )}

@@ -12,6 +12,7 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface MoveToWorkspaceModalProps {
   tasks: Task[];
@@ -115,6 +116,9 @@ export function MoveToWorkspaceModal({
   const sourceCategoryName = categories.find((c) => c.id === first?.categoryId)?.name ?? null;
 
   useEscapeToClose(onClose);
+  const handleKeyDown = useSubmitOnEnter(() => void handleConfirm(), {
+    disabled: busy || loading || others.length === 0,
+  });
 
   useEffect(() => {
     if (!targetId) {
@@ -181,7 +185,10 @@ export function MoveToWorkspaceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl">
+      <div
+        onKeyDown={handleKeyDown}
+        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl"
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
           <h2 className="text-sm font-semibold text-gray-100">
             {mode === "move" ? "Mover" : "Copiar"} {tasks.length}{" "}

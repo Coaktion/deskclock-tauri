@@ -12,6 +12,7 @@ import {
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { todayISO } from "@shared/utils/time";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 export type { EditPlannedTaskInput };
 
@@ -69,6 +70,7 @@ export function EditPlannedTaskModal({
   } = usePlannedTaskEditor({ task, projects, categories, onSave, onClose });
 
   useEscapeToClose(onClose);
+  const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving });
 
   return (
     <div
@@ -84,7 +86,10 @@ export function EditPlannedTaskModal({
         }
       }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl mx-4">
+      <div
+        onKeyDown={handleKeyDown}
+        className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl mx-4"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 shrink-0">
           <h2 className="text-base font-semibold text-gray-100">Editar tarefa planejada</h2>
@@ -106,10 +111,8 @@ export function EditPlannedTaskModal({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleSave();
-              }}
               placeholder="Nome da tarefa"
+              autoComplete="off"
               className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
             />
             <div className="flex gap-2">
@@ -231,7 +234,6 @@ export function EditPlannedTaskModal({
                 fields={activeFields}
                 values={customValues}
                 onChange={setCustomValues}
-                onEnter={() => void handleSave()}
               />
             </>
           )}
@@ -286,9 +288,14 @@ export function EditPlannedTaskModal({
                 value={newActionValue}
                 onChange={(e) => setNewActionValue(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") addAction();
+                  // Sub-formulário: aqui o Enter adiciona a ação, não salva a
+                  // tarefa. O `preventDefault` avisa isso ao `useSubmitOnEnter`.
+                  if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                  e.preventDefault();
+                  addAction();
                 }}
                 placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
+                autoComplete="off"
                 className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
               />
               <button

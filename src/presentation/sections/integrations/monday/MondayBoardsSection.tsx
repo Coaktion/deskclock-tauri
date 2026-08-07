@@ -61,6 +61,7 @@ function BoardIdInput({
       placeholder={placeholder}
       inputMode="numeric"
       className={INPUT_CLASS}
+      autoComplete="off"
     />
   );
 }

@@ -22,6 +22,7 @@ import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { addDaysISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface EditTaskModalProps {
   task: Task;
@@ -134,13 +135,14 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
     onClose();
   }
 
-  const enterSave = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.nativeEvent.isComposing) void handleSave();
-  };
+  const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl">
+      <div
+        onKeyDown={handleKeyDown}
+        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl"
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-100">Editar tarefa</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
@@ -156,9 +158,9 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={enterSave}
             placeholder="Nome (opcional)"
             autoFocus
+            autoComplete="off"
             className={fieldClass}
           />
 
@@ -172,7 +174,6 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                 setSelectedCategoryId(null);
                 setCategoryName("");
               }}
-              onEnter={handleSave}
               options={projects}
               placeholder="Projeto"
             />
@@ -191,7 +192,6 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                   const cat = categories.find((c) => c.id === o.id);
                   if (cat) setBillable(cat.defaultBillable);
                 }}
-                onEnter={handleSave}
                 options={categoryOptions}
                 placeholder="Categoria"
                 className="flex-1 min-w-0"
@@ -220,7 +220,6 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             fields={activeFields}
             values={customValues}
             onChange={setCustomValues}
-            onEnter={() => void handleSave()}
           />
 
           {/* Data e duração dividem a linha: são os dois campos que o usuário
@@ -243,13 +242,17 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                 onChange={(e) => setDurationInput(e.target.value)}
                 onBlur={commitDuration}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-                    const newEnd = commitDuration();
-                    void handleSave(typeof newEnd === "string" ? newEnd : undefined);
-                  }
+                  // Consome porque tem trabalho próprio antes do submit: o Enter
+                  // não dispara o `onBlur`, e sem commit a tarefa seria salva
+                  // com o fim antigo.
+                  if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                  e.preventDefault();
+                  const newEnd = commitDuration();
+                  void handleSave(typeof newEnd === "string" ? newEnd : undefined);
                 }}
                 placeholder="1h30, 90, 1h…"
                 title="Aceita: 1:30, 90, 1h, 1h 30m"
+                autoComplete="off"
                 className={`${bareInputClass} pt-3 placeholder-gray-600`}
               />
             </div>
@@ -266,7 +269,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                 value={startTime}
                 onChange={(e) => handleStartChange(e.target.value)}
                 onBlur={(e) => handleStartCommit(e.target.value)}
-                onKeyDown={enterSave}
+                autoComplete="off"
                 className={`${bareInputClass} pt-3`}
               />
             </div>
@@ -280,7 +283,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                 value={endTime}
                 onChange={(e) => handleEndChange(e.target.value)}
                 onBlur={(e) => handleEndCommit(e.target.value)}
-                onKeyDown={enterSave}
+                autoComplete="off"
                 className={`${bareInputClass} pt-3`}
               />
             </div>

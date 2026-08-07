@@ -22,6 +22,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { buildExportRows, customColumnField, toCSV, toJSON } from "@domain/utils/exportFormatter";
 import type { CustomField } from "@domain/entities/CustomField";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -89,6 +90,7 @@ function SortableColumn({ col, idx, onToggle, onRename }: SortableColumnProps) {
       <input
         value={col.label}
         onChange={(e) => onRename(idx, e.target.value)}
+        autoComplete="off"
         className="flex-1 bg-transparent text-sm text-gray-200 focus:outline-none"
       />
     </div>
@@ -154,14 +156,19 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
     setColumns((prev) => prev.map((c, i) => (i === idx ? { ...c, label } : c)));
   }
 
+  const handleKeyDown = useSubmitOnEnter(() =>
+    onSave({ name, isDefault, format, separator, durationFormat, dateFormat, columns })
+  );
+
   return (
-    <div className="flex flex-col gap-4 h-full overflow-y-auto">
+    <div onKeyDown={handleKeyDown} className="flex flex-col gap-4 h-full overflow-y-auto">
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
           <label className="text-xs text-gray-400 mb-1 block">Nome do perfil</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
+            autoComplete="off"
             className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
           />
         </div>

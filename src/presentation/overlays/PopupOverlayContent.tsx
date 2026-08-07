@@ -13,6 +13,7 @@ import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
 import { RunningCustomFieldsSheet } from "@presentation/overlays/RunningCustomFieldsSheet";
@@ -187,6 +188,14 @@ function ExecSection({
 
   const endTimeResolved = resolveEndTimeISO();
 
+  const handleConfirmStopKeyDown = useSubmitOnEnter(
+    () => {
+      setConfirmingStop(false);
+      void onStop(true, endTimeResolved.iso);
+    },
+    { disabled: !!endTimeResolved.error }
+  );
+
   // ── name ──────────────────────────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(task.name ?? "");
@@ -301,6 +310,7 @@ function ExecSection({
           }}
           placeholder="Nome da tarefa"
           className="w-full px-0 text-[13px] font-medium bg-transparent border-b border-gray-600 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          autoComplete="off"
         />
       ) : (
         <button
@@ -445,6 +455,7 @@ function ExecSection({
                 }
               }}
               className="flex-1 bg-transparent border-b border-gray-600 focus:outline-none focus:border-blue-500 text-[12px] text-gray-300"
+              autoComplete="off"
             />
           </div>
         ) : (
@@ -494,7 +505,10 @@ function ExecSection({
 
       {/* Controls */}
       {confirmingStop ? (
-        <div className="flex flex-col gap-1.5">
+        // Enter no campo de hora encerra como **Concluída** — a ação primária do
+        // painel, e a única que cabe num atalho: "Pendente" é a escolha
+        // alternativa, e continua exigindo o clique que a diferencia.
+        <div className="flex flex-col gap-1.5" onKeyDown={handleConfirmStopKeyDown}>
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-gray-400">Encerrar às</span>
             <div className="flex items-center gap-1.5 flex-1">
@@ -511,6 +525,7 @@ function ExecSection({
                     ? "border-red-500 focus:border-red-400"
                     : "border-gray-600 focus:border-blue-500"
                 }`}
+                autoComplete="off"
               />
             </div>
             <button

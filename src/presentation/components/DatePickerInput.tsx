@@ -105,6 +105,27 @@ export function DatePickerInput({
     setOpen((o) => !o);
   }
 
+  /**
+   * Mesma regra do dropdown do `Autocomplete`: calendário aberto, o Enter é
+   * daqui — fecha e marca a tecla como consumida, para o formulário em volta
+   * não submeter junto. Fechado, deixa subir para o `useSubmitOnEnter`.
+   *
+   * O campo é `readOnly` e só abria no clique; ↓ e Espaço existem para quem
+   * chegou até ele pelo teclado ter como abri-lo sem submeter o formulário.
+   */
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      if (!open) return;
+      e.preventDefault();
+      setOpen(false);
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === " ") {
+      e.preventDefault();
+      if (!open) handleOpen();
+    }
+  }
+
   function handleSelect(date: Date | undefined) {
     if (date) {
       onChange(dateToIso(date));
@@ -124,6 +145,8 @@ export function DatePickerInput({
         value={formatDisplay(value)}
         placeholder={placeholder}
         onClick={handleOpen}
+        onKeyDown={handleKeyDown}
+        autoComplete="off"
         className={`${bareInputClass} pt-3 cursor-pointer`}
       />
     </div>
@@ -136,6 +159,8 @@ export function DatePickerInput({
         value={formatDisplay(value)}
         placeholder={placeholder}
         onClick={handleOpen}
+        onKeyDown={handleKeyDown}
+        autoComplete="off"
         className={`w-full px-2.5 py-1.5 text-sm bg-gray-800 border rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none cursor-pointer transition-colors ${
           invalid ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-blue-500"
         }`}

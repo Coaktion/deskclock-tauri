@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Plus, Upload } from "lucide-react";
 import type { UseCategoriesResult } from "@presentation/hooks/useCategories";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { SearchInput } from "./SearchInput";
 import { ToggleBillable } from "./ToggleBillable";
 import { CategoryCard } from "./CategoryCard";
@@ -57,6 +58,8 @@ export function CategoriesPanel({ showTitle = true, data }: CategoriesPanelProps
     }
   }
 
+  const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
+
   return (
     <div className="flex flex-col gap-3">
       {showTitle && <h2 className="text-base font-semibold text-gray-100">Categorias</h2>}
@@ -78,15 +81,19 @@ export function CategoriesPanel({ showTitle = true, data }: CategoriesPanelProps
         </button>
       </div>
 
-      {/* Add input */}
-      <div className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors">
+      {/* Add input — o formulário é esta linha, não o painel: o campo de filtro
+          acima é busca ao vivo e um Enter ali não deve cadastrar nada. */}
+      <div
+        onKeyDown={handleAddKeyDown}
+        className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+      >
         <Plus size={14} className="text-gray-500 shrink-0" />
         <input
           type="text"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           placeholder="Adicionar nova categoria (Enter para salvar)"
+          autoComplete="off"
           className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
         />
         <ToggleBillable value={newBillable} onChange={setNewBillable} />

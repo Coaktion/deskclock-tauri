@@ -124,6 +124,7 @@ export function OmniboxRunning({
               autoFocus
               placeholder="Nome da tarefa"
               className="w-full text-sm font-medium bg-transparent border-b border-blue-500 text-gray-100 placeholder-gray-500 focus:outline-none pb-0.5"
+              autoComplete="off"
             />
           ) : (
             <button
@@ -274,6 +275,7 @@ export function OmniboxRunning({
                 }}
                 autoFocus
                 className="w-24 bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                autoComplete="off"
               />
             ) : (
               <button
@@ -371,6 +373,7 @@ export function OmniboxRunning({
             placeholder="Nome da tarefa"
             autoFocus
             className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            autoComplete="off"
           />
           <Autocomplete
             value={fillProjectName}

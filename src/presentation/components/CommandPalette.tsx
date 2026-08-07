@@ -328,6 +328,7 @@ export function CommandPalette({
           onKeyDown={onKeyDown}
           placeholder="Buscar ação, tela, ou tarefa planejada…"
           className="flex-1 bg-transparent text-sm text-gray-100 outline-none placeholder-gray-500"
+          autoComplete="off"
         />
         {query && (
           <button

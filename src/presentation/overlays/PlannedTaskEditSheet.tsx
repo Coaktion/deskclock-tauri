@@ -7,6 +7,7 @@ import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
   usePlannedTaskEditor,
   type EditPlannedTaskInput,
@@ -64,10 +65,12 @@ export function PlannedTaskEditSheet({
   const editor = usePlannedTaskEditor({ task, projects, categories, onSave, onClose });
 
   useEscapeToClose(onClose);
+  const handleKeyDown = useSubmitOnEnter(() => void editor.save(), { disabled: editor.saving });
 
   return (
     <div
       data-modal-open
+      onKeyDown={handleKeyDown}
       className="absolute inset-0 z-40 flex flex-col bg-gray-900 rounded-xl overflow-hidden"
     >
       {/* Header */}
@@ -90,10 +93,8 @@ export function PlannedTaskEditSheet({
           type="text"
           value={editor.name}
           onChange={(e) => editor.setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void editor.save();
-          }}
           placeholder="Nome da tarefa"
+          autoComplete="off"
           className={inputClass}
         />
 
@@ -146,7 +147,6 @@ export function PlannedTaskEditSheet({
               fields={activeFields}
               values={editor.customValues}
               onChange={editor.setCustomValues}
-              onEnter={() => void editor.save()}
               compact
             />
           </>
@@ -277,9 +277,13 @@ export function PlannedTaskEditSheet({
             value={editor.newActionValue}
             onChange={(e) => editor.setNewActionValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") editor.addAction();
+              // Sub-formulário: o Enter adiciona a ação, não salva a planejada.
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              editor.addAction();
             }}
             placeholder={editor.newActionType === "open_url" ? "https://..." : "/caminho"}
+            autoComplete="off"
             className="flex-1 min-w-0 px-2 py-1 text-[11px] bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <button

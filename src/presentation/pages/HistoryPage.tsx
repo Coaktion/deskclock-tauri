@@ -3,6 +3,7 @@ import { Search, Pencil, Trash2, FileDown, Filter } from "lucide-react";
 import { useHistory, type QuickFilter, type DayGroup } from "@presentation/hooks/useHistory";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
@@ -173,6 +174,10 @@ export function HistoryPage() {
     void search(filters);
   }
 
+  // O mesmo submit para os dois blocos de filtro: o painel avançado e a busca
+  // por nome — em ambos o Enter significa "buscar".
+  const handleKeyDown = useSubmitOnEnter(handleSearch);
+
   function handleQuick(quick: QuickFilter) {
     setQuick(quick);
     if (quick === "custom") setAdvancedOpen(true);
@@ -246,7 +251,10 @@ export function HistoryPage() {
 
       {/* Advanced filters panel */}
       {advancedOpen && (
-        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800">
+        <div
+          onKeyDown={handleKeyDown}
+          className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800"
+        >
           <div className="flex gap-2">
             <DatePickerInput
               value={filters.startDate}
@@ -318,7 +326,7 @@ export function HistoryPage() {
       )}
 
       {/* Search input */}
-      <div className="relative px-4 py-2.5 border-b border-gray-800">
+      <div onKeyDown={handleKeyDown} className="relative px-4 py-2.5 border-b border-gray-800">
         <Search
           size={13}
           className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
@@ -327,10 +335,8 @@ export function HistoryPage() {
           type="text"
           value={filters.name}
           onChange={(e) => updateFilter("name", e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSearch();
-          }}
           placeholder="Buscar por nome…"
+          autoComplete="off"
           className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
         />
       </div>

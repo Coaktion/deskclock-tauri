@@ -197,6 +197,7 @@ export function ZendeskIntegrationCard() {
                 disabled={connected}
                 placeholder="minha-empresa"
                 className="w-36 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                autoComplete="off"
               />
               <span className="text-xs text-gray-600 shrink-0">.zendesk.com</span>
             </div>
@@ -209,6 +210,7 @@ export function ZendeskIntegrationCard() {
               disabled={connected}
               placeholder="OAuth client identifier"
               className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              autoComplete="off"
             />
           </Row>
           <Row label="Secret">
@@ -219,6 +221,7 @@ export function ZendeskIntegrationCard() {
               disabled={connected}
               placeholder="Vazio para cliente público"
               className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              autoComplete="off"
             />
           </Row>
         </SubSection>

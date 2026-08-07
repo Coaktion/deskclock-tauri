@@ -124,6 +124,7 @@ export function OmniboxIdle({
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
           className="flex-1 bg-transparent text-[15px] font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
+          autoComplete="off"
         />
       </div>
 

@@ -8,6 +8,7 @@ import {
 } from "@presentation/hooks/useMondayEntries";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
   addDaysISO,
   formatDurationCompact,
@@ -367,17 +368,24 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
     }
   }
 
+  // O submit desta linha é salvar a própria atividade — não a lista em volta.
+  const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving || !canSave });
+
   const selectClass =
     "px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500";
 
   return (
-    <div className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2">
+    <div
+      onKeyDown={handleKeyDown}
+      className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2"
+    >
       <input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Nome da atividade"
         autoFocus
+        autoComplete="off"
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
       />
 
@@ -389,6 +397,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
           value={hours}
           onChange={(e) => setHours(e.target.value)}
           className="w-20 px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 tabular-nums focus:outline-none focus:border-blue-500"
+          autoComplete="off"
         />
 
         <select

@@ -108,6 +108,7 @@ function SortableSheetColumn({ col, idx, onToggle, onRename }: SortableSheetColu
         onChange={(e) => onRename(idx, e.target.value)}
         disabled={!col.enabled}
         className="flex-1 bg-transparent border-b border-gray-700 focus:border-blue-500 text-xs text-gray-200 outline-none py-0.5 disabled:text-gray-600"
+        autoComplete="off"
       />
       <span className="text-xs text-gray-600 w-16 shrink-0">{col.field}</span>
     </div>
@@ -279,6 +280,7 @@ function SheetsSection({
             onBlur={() => config.set("integrationGoogleSheetsSpreadsheetId", spreadsheetId.trim())}
             placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
             className="w-64 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+            autoComplete="off"
           />
         </Row>
         <Row label="Nome da aba">
@@ -293,6 +295,7 @@ function SheetsSection({
             }}
             placeholder="DeskClock"
             className="w-40 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+            autoComplete="off"
           />
         </Row>
 
@@ -420,6 +423,7 @@ function SheetsSection({
                         onChange={(e) => setSyncTime(e.target.value)}
                         onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
                         className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                        autoComplete="off"
                       />
                     </Row>
                   )}

@@ -5,6 +5,7 @@ import type { WorkspaceDeletionTarget } from "@domain/usecases/workspaces/Delete
 import type { IntegrationWorkspaceBinding } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface DeleteWorkspaceModalProps {
   workspace: Workspace;
@@ -74,6 +75,12 @@ export function DeleteWorkspaceModal({
   const [error, setError] = useState<string | null>(null);
 
   useEscapeToClose(onClose);
+  // Enter confirma também aqui, por decisão explícita do usuário — a guarda
+  // deste modal continua sendo a escolha obrigatória do destino dos dados, não
+  // a dificuldade de acionar o botão.
+  const handleKeyDown = useSubmitOnEnter(() => void handleConfirm(), {
+    disabled: busy || (mode === "move" && !targetId),
+  });
 
   async function handleConfirm() {
     if (busy) return;
@@ -92,7 +99,10 @@ export function DeleteWorkspaceModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl">
+      <div
+        onKeyDown={handleKeyDown}
+        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl"
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
           <h2 className="text-sm font-semibold text-gray-100 flex items-center gap-2">
             <WorkspaceDot color={workspace.color} />

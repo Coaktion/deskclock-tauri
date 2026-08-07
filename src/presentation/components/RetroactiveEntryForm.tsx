@@ -13,6 +13,7 @@ import {
 } from "@presentation/components/fieldStyles";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { DollarSign } from "lucide-react";
 
 interface RetroactiveEntryFormProps {
@@ -39,18 +40,17 @@ export function RetroactiveEntryForm({
 }: RetroactiveEntryFormProps) {
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, form.selectedProjectId);
+  const handleKeyDown = useSubmitOnEnter(() => void form.handleAdd());
 
   return (
-    <div className={formColumnClass}>
+    <div className={formColumnClass} onKeyDown={handleKeyDown}>
       <input
         ref={form.nameRef}
         type="text"
         value={form.name}
         onChange={(e) => form.setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.nativeEvent.isComposing) void form.handleAdd();
-        }}
         placeholder="Nome da tarefa"
+        autoComplete="off"
         className={fieldClass}
       />
 
@@ -61,7 +61,6 @@ export function RetroactiveEntryForm({
           form.setSelectedProjectId(o.id);
           form.clearCategory();
         }}
-        onEnter={form.handleAdd}
         options={projects}
         placeholder="Projeto"
       />
@@ -79,7 +78,6 @@ export function RetroactiveEntryForm({
             const cat = categories.find((c) => c.id === o.id);
             if (cat) form.setBillable(cat.defaultBillable);
           }}
-          onEnter={form.handleAdd}
           options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
@@ -105,7 +103,6 @@ export function RetroactiveEntryForm({
         fields={customFields}
         values={form.customValues}
         onChange={form.setCustomValues}
-        onEnter={() => void form.handleAdd()}
         compact
         className="space-y-3"
       />
@@ -127,12 +124,16 @@ export function RetroactiveEntryForm({
             onChange={(e) => form.setDurationInput(e.target.value)}
             onBlur={form.commitDuration}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const newEnd = form.commitDuration();
-                if (newEnd) void form.handleAdd(newEnd);
-              }
+              // Consome porque tem trabalho próprio antes do submit: o Enter não
+              // dispara o `onBlur`, então a duração digitada precisa virar hora
+              // de fim aqui — senão a tarefa nasceria com o fim antigo.
+              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+              e.preventDefault();
+              const newEnd = form.commitDuration();
+              void form.handleAdd(newEnd || undefined);
             }}
             placeholder="HH:MM"
+            autoComplete="off"
             title="Aceita: 1:30, 90, 1h, 1h 30m"
             className={`${bareInputClass} w-20! pt-3 text-gray-100 placeholder-gray-600`}
           />
@@ -154,14 +155,13 @@ export function RetroactiveEntryForm({
             onChange={(e) => form.handleStartChange(e.target.value)}
             onBlur={(e) => form.handleStartCommit(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (!form.startTime) {
-                  form.handleStartCommit("");
-                  return;
-                }
-                void form.handleAdd();
-              }
+              // Campo vazio: o Enter restaura o valor anterior e para por aqui —
+              // o segundo Enter é que adiciona. Preenchido, sobe para o submit.
+              if (e.key !== "Enter" || form.startTime) return;
+              e.preventDefault();
+              form.handleStartCommit("");
             }}
+            autoComplete="off"
             className={`${bareInputClass} pt-3`}
           />
         </div>
@@ -176,15 +176,11 @@ export function RetroactiveEntryForm({
             onChange={(e) => form.handleEndChange(e.target.value)}
             onBlur={(e) => form.handleEndCommit(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.stopPropagation();
-                if (!form.endTime) {
-                  form.handleEndCommit("");
-                  return;
-                }
-                void form.handleAdd();
-              }
+              if (e.key !== "Enter" || form.endTime) return;
+              e.preventDefault();
+              form.handleEndCommit("");
             }}
+            autoComplete="off"
             className={`${bareInputClass} pt-3`}
           />
         </div>

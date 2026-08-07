@@ -102,6 +102,7 @@ export function GeralTab() {
             onBlur={handleUserNameBlur}
             placeholder="Seu nome"
             className="w-full bg-transparent text-sm font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
+            autoComplete="off"
           />
         </div>
       </div>

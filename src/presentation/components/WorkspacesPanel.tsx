@@ -7,6 +7,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchGuard";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
 
@@ -68,6 +69,8 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
     }
   }
 
+  const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
+
   function startEdit(w: Workspace) {
     setEditingId(w.id);
     setEditName(w.name);
@@ -95,15 +98,18 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
       </p>
 
       {/* Criação */}
-      <div className="flex flex-col gap-2 px-3 py-2.5 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors">
+      <div
+        onKeyDown={handleAddKeyDown}
+        className="flex flex-col gap-2 px-3 py-2.5 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+      >
         <div className="flex items-center gap-2">
           <WorkspaceDot color={previewColor} size={10} />
           <input
             type="text"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void handleAdd()}
             placeholder="Adicionar novo workspace (Enter para salvar)"
+            autoComplete="off"
             className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
           />
           <button
@@ -147,6 +153,7 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                     }}
                     autoFocus
                     className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+                    autoComplete="off"
                   />
                 ) : (
                   <span className="flex-1 text-sm text-gray-200 truncate">{w.name}</span>

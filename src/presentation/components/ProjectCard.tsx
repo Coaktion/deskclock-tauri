@@ -90,6 +90,7 @@ export function ProjectCard({
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
               className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+              autoComplete="off"
             />
             <button
               onClick={confirmEdit}

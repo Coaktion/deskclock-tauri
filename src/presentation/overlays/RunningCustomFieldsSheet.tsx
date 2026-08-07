@@ -4,6 +4,7 @@ import type { Task } from "@domain/entities/Task";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useRunningCustomFields } from "@presentation/hooks/useRunningCustomFields";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface RunningCustomFieldsSheetProps {
   task: Task;
@@ -31,10 +32,12 @@ export function RunningCustomFieldsSheet({
   const editor = useRunningCustomFields({ task, onSave, onClose });
 
   useEscapeToClose(onClose);
+  const handleKeyDown = useSubmitOnEnter(() => void editor.save(), { disabled: editor.saving });
 
   return (
     <div
       data-modal-open
+      onKeyDown={handleKeyDown}
       className="absolute inset-0 z-40 flex flex-col bg-gray-900 rounded-xl overflow-hidden"
     >
       {/* Header */}
@@ -56,7 +59,6 @@ export function RunningCustomFieldsSheet({
           fields={fields}
           values={editor.values}
           onChange={editor.setValues}
-          onEnter={() => void editor.save()}
           compact
         />
       </div>

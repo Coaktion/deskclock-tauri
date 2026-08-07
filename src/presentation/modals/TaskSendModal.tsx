@@ -269,6 +269,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
                 max={sel.customEnd}
                 onChange={(e) => sel.setCustomStart(e.target.value)}
                 className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                autoComplete="off"
               />
               <span className="text-xs text-gray-600">até</span>
               <input
@@ -278,6 +279,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
                 max={todayISO()}
                 onChange={(e) => sel.setCustomEnd(e.target.value)}
                 className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                autoComplete="off"
               />
               <button
                 onClick={sel.triggerReload}

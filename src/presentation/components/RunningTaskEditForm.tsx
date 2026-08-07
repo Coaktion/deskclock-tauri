@@ -8,6 +8,7 @@ import { Autocomplete } from "./Autocomplete";
 import { CustomFieldInputs } from "./CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface RunningTaskEditFormProps {
   task: Task;
@@ -58,11 +59,16 @@ export function RunningTaskEditForm({
     onSave({ name: name.trim() || null, projectId: pId, categoryId: cId, billable, customValues });
   }
 
+  const submitOnEnter = useSubmitOnEnter(handleSave);
+
+  /** ESC cancela, Enter salva — as duas saídas do formulário, num handler só. */
   function handleFormKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Escape") {
       e.stopPropagation();
       onCancel();
+      return;
     }
+    submitOnEnter(e);
   }
 
   return (
@@ -71,10 +77,8 @@ export function RunningTaskEditForm({
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSave();
-        }}
         placeholder="Nome (opcional)"
+        autoComplete="off"
         autoFocus={focusField === "name" || !focusField}
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
       />
@@ -87,7 +91,6 @@ export function RunningTaskEditForm({
             setCategoryId(null);
             setCategoryName("");
           }}
-          onEnter={handleSave}
           options={projects}
           placeholder="Projeto"
           className="flex-1"
@@ -105,7 +108,6 @@ export function RunningTaskEditForm({
             const cat = categories.find((c) => c.id === o.id);
             if (cat) setBillable(cat.defaultBillable);
           }}
-          onEnter={handleSave}
           options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
@@ -129,7 +131,6 @@ export function RunningTaskEditForm({
         fields={activeFields}
         values={customValues}
         onChange={setCustomValues}
-        onEnter={handleSave}
         compact
       />
       <div className="flex gap-2 pt-1">

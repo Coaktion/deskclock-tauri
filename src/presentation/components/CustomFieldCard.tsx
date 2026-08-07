@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Pencil, Trash2, Check, X, Archive, ArchiveRestore } from "lucide-react";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { UpdateCustomFieldInput } from "@domain/usecases/customFields/UpdateCustomField";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import type { UUID } from "@shared/types";
 
 interface CustomFieldCardProps {
@@ -47,18 +48,26 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
     setEditing(false);
   }
 
+  // No campo de seleção, o Enter no rótulo não salvava — a lista de opções fica
+  // num textarea, onde o Enter é quebra de linha, e não havia atalho nenhum para
+  // confirmar. Agora o rótulo salva e o textarea salva com Ctrl/Cmd+Enter.
+  const handleKeyDown = useSubmitOnEnter(() => void confirmEdit());
+
   if (editing) {
     return (
-      <div className="flex flex-col gap-2 px-3 py-2.5 rounded-lg bg-gray-800/50">
+      <div
+        onKeyDown={handleKeyDown}
+        className="flex flex-col gap-2 px-3 py-2.5 rounded-lg bg-gray-800/50"
+      >
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && field.type !== "select") void confirmEdit();
               if (e.key === "Escape") cancelEdit();
             }}
+            autoComplete="off"
             className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
           />
           <button

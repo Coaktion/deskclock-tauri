@@ -208,6 +208,7 @@ function TicketRow({
               onChange={(e) => onEditChange({ ...editState, name: e.target.value })}
               onClick={(e) => e.stopPropagation()}
               className="flex-1 min-w-0 text-sm text-gray-100 bg-transparent outline-none focus:bg-gray-800 focus:px-1 rounded transition-all truncate"
+              autoComplete="off"
             />
           </div>
           {(editState.projectName || editState.categoryName) && (

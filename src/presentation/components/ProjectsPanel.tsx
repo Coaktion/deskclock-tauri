@@ -5,6 +5,7 @@ import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { UseProjectsResult } from "@presentation/hooks/useProjects";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { SearchInput } from "./SearchInput";
 import { ProjectCard } from "./ProjectCard";
 import { SelectionBar } from "./SelectionBar";
@@ -88,6 +89,8 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
     }
   }
 
+  const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
+
   return (
     <div className="flex flex-col gap-3">
       {showTitle && <h2 className="text-base font-semibold text-gray-100">Projetos</h2>}
@@ -109,15 +112,19 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
         </button>
       </div>
 
-      {/* Add input */}
-      <div className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors">
+      {/* Add input — o formulário é esta linha, não o painel: o campo de filtro
+          acima é busca ao vivo e um Enter ali não deve cadastrar nada. */}
+      <div
+        onKeyDown={handleAddKeyDown}
+        className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+      >
         <Plus size={14} className="text-gray-500 shrink-0" />
         <input
           type="text"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
           placeholder="Adicionar novo projeto (Enter para salvar)"
+          autoComplete="off"
           className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
         />
       </div>

@@ -75,6 +75,7 @@ function ProjectBoardIdInput({
         className={`w-28 bg-gray-800 border border-amber-500/40 rounded px-2 py-0.5 text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 ${
           busy ? "pr-6 opacity-70" : ""
         }`}
+        autoComplete="off"
       />
       {/* Dentro do campo, e não ao lado: a linha inteira não pode mudar de
           largura enquanto a leitura corre, ou a lista se mexe sob o cursor. */}

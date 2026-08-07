@@ -12,6 +12,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
   todayISO,
   addDaysISO,
@@ -556,14 +557,21 @@ function EntryForm({
     }
   }
 
+  // O submit deste bloco é salvar o próprio apontamento — não a lista em volta.
+  const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving || !canSave });
+
   return (
-    <div className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2">
+    <div
+      onKeyDown={handleKeyDown}
+      className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2"
+    >
       <input
         type="text"
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Descrição *"
         autoFocus
+        autoComplete="off"
         className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
       />
 
@@ -604,6 +612,7 @@ function EntryForm({
           value={startHHMM}
           onChange={(e) => setStartHHMM(e.target.value)}
           className="w-24 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+          autoComplete="off"
         />
         <span className="text-xs text-gray-500">Fim</span>
         <input
@@ -611,6 +620,7 @@ function EntryForm({
           value={endHHMM}
           onChange={(e) => setEndHHMM(e.target.value)}
           className="w-24 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+          autoComplete="off"
         />
         <div className="ml-auto flex items-center gap-2">
           <button

@@ -13,6 +13,7 @@ import {
 } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO } from "@shared/utils/time";
 import { DollarSign, ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -116,6 +117,7 @@ export function PlannedTaskForm({
   const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
   const [newActionValue, setNewActionValue] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
+  const handleKeyDown = useSubmitOnEnter(() => void handleSubmit());
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -197,19 +199,17 @@ export function PlannedTaskForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className={formColumnClass}>
+    // O `onKeyDown` não é redundante com o `onSubmit`: o submit implícito do
+    // navegador cobriria só parte dos campos, e é ele que o hook cancela para o
+    // Enter ter uma regra só em todo o app (`useSubmitOnEnter`).
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className={formColumnClass}>
       <input
         ref={nameRef}
         type="text"
         value={form.name}
         onChange={(e) => set("name", e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            void handleSubmit();
-          }
-        }}
         placeholder="Nome da tarefa"
+        autoComplete="off"
         className={fieldClass}
       />
 
@@ -227,7 +227,6 @@ export function PlannedTaskForm({
           set("projectName", o.name);
           clearCategory();
         }}
-        onEnter={() => void handleSubmit()}
         options={projects}
         placeholder="Projeto"
       />
@@ -248,7 +247,6 @@ export function PlannedTaskForm({
               ...(cat ? { billable: cat.defaultBillable } : {}),
             }));
           }}
-          onEnter={() => void handleSubmit()}
           options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
@@ -274,7 +272,6 @@ export function PlannedTaskForm({
         fields={activeFields}
         values={form.customValues}
         onChange={(values) => set("customValues", values)}
-        onEnter={() => void handleSubmit()}
         compact
         className="space-y-3"
       />
@@ -410,12 +407,14 @@ export function PlannedTaskForm({
           value={newActionValue}
           onChange={(e) => setNewActionValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddAction();
-            }
+            // Sub-formulário: aqui o Enter adiciona a ação, não cria a tarefa.
+            // O `preventDefault` é o que avisa isso ao `useSubmitOnEnter`.
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            handleAddAction();
           }}
           placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
+          autoComplete="off"
           className={`${bareInputClass} text-xs`}
         />
         <button

@@ -9,6 +9,7 @@ import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface GroupUpdates {
   name: string | null;
@@ -72,13 +73,14 @@ export function EditGroupModal({
     onClose();
   }
 
-  const enterSave = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.nativeEvent.isComposing) handleSave();
-  };
+  const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl">
+      <div
+        onKeyDown={handleKeyDown}
+        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl"
+      >
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-sm font-semibold text-gray-100">Editar grupo</h2>
@@ -96,9 +98,9 @@ export function EditGroupModal({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onKeyDown={enterSave}
             placeholder="Nome (opcional)"
             autoFocus
+            autoComplete="off"
             className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
 
@@ -112,7 +114,6 @@ export function EditGroupModal({
                 setSelectedCategoryId(null);
                 setCategoryName("");
               }}
-              onEnter={handleSave}
               options={projects}
               placeholder="Projeto"
             />
@@ -128,7 +129,6 @@ export function EditGroupModal({
                 const cat = categories.find((c) => c.id === o.id);
                 if (cat) setBillable(cat.defaultBillable);
               }}
-              onEnter={handleSave}
               options={categoryOptions}
               placeholder="Categoria"
             />
@@ -154,7 +154,6 @@ export function EditGroupModal({
             fields={activeFields}
             values={customValues}
             onChange={setCustomValues}
-            onEnter={handleSave}
           />
         </div>
 

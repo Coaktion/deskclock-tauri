@@ -12,7 +12,11 @@ interface CustomFieldInputsProps {
   fields: CustomField[];
   values: CustomValues;
   onChange: (values: CustomValues) => void;
-  /** Enter cria/salva o item do formulário pai, como nos demais campos (§6.4). */
+  /**
+   * Destino do Enter para quem **não** está dentro de um formulário com submit
+   * único — os editores por linha dos modais de lista. Ausente, o Enter sobe
+   * para o `useSubmitOnEnter` do formulário, que é o caminho normal (§6.4).
+   */
   onEnter?: () => void;
   /** `compact` encurta rótulos e alturas para caber em formulários inline. */
   compact?: boolean;
@@ -179,9 +183,16 @@ function TextCustomField({ inputId, field, value, onCommit, onEnter, rows }: Tex
       value={text}
       onChange={(e) => handle(e.target.value)}
       onKeyDown={(e) => {
-        if (e.key === "Enter" && !e.nativeEvent.isComposing) onEnter?.();
+        // Sem `onEnter`, a tecla sobe para o formulário. Marcar como consumida
+        // aqui faria o `useSubmitOnEnter` ignorá-la (ver `Autocomplete`).
+        if (!onEnter) return;
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+          e.preventDefault();
+          onEnter();
+        }
       }}
       placeholder=" "
+      autoComplete="off"
       className={fieldClass}
     />
   );

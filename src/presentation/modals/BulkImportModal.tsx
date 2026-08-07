@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X, Upload } from "lucide-react";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface BulkImportModalProps {
   title: string;
@@ -13,6 +14,11 @@ export function BulkImportModal({ title, placeholder, onImport, onClose }: BulkI
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   useEscapeToClose(onClose);
+  // O corpo do modal é um textarea — "uma linha por item" é o formato. O Enter
+  // quebra linha e Ctrl/Cmd+Enter importa, regra do `useSubmitOnEnter`.
+  const handleKeyDown = useSubmitOnEnter(() => void handleImport(), {
+    disabled: loading || !text.trim(),
+  });
 
   async function handleImport() {
     if (!text.trim()) return;
@@ -24,7 +30,10 @@ export function BulkImportModal({ title, placeholder, onImport, onClose }: BulkI
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl">
+      <div
+        onKeyDown={handleKeyDown}
+        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl"
+      >
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-100">{title}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300">

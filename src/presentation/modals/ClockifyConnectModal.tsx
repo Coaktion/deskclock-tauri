@@ -4,6 +4,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { ClockifyAuthError } from "@infra/integrations/clockify/errors";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface ClockifyConnectModalProps {
   onConnected: () => void;
@@ -17,6 +18,7 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEscapeToClose(onClose);
+  const handleKeyDown = useSubmitOnEnter(() => void handleConnect(), { disabled: loading });
 
   async function handleConnect() {
     const key = apiKey.trim();
@@ -50,7 +52,10 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-xl shadow-xl">
+      <div
+        onKeyDown={handleKeyDown}
+        className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-xl shadow-xl"
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-100">Conectar ao Clockify</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
@@ -97,8 +102,8 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && !loading && handleConnect()}
                 placeholder="Cole sua API Key aqui"
+                autoComplete="off"
                 className="w-full pl-8 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
                 autoFocus
               />

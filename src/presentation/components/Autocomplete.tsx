@@ -12,6 +12,13 @@ interface AutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onSelect?: (option: Option) => void;
+  /**
+   * Destino do Enter com a lista fechada, para o campo que **não** vive dentro
+   * de um formulário com submit único — os editores por linha dos modais de
+   * lista. Presente, o campo consome a tecla; ausente, deixa o Enter subir para
+   * o `useSubmitOnEnter` do formulário. A presença da prop é o que escolhe entre
+   * os dois, então nunca há dois disparos para a mesma tecla.
+   */
   onEnter?: () => void;
   options: Option[];
   placeholder?: string;
@@ -80,15 +87,22 @@ export function Autocomplete({
       e.preventDefault();
       setActiveIdx((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
-      e.preventDefault();
       if (open && filtered.length > 0) {
+        // Consumido: `preventDefault` é o que impede o formulário em volta de
+        // submeter na mesma tecla que escolheu a opção (§6.4).
+        e.preventDefault();
         const chosen = filtered[activeIdx] ?? filtered[0];
         onChange(chosen.name);
         onSelect?.(chosen);
         setOpen(false);
       } else {
         setOpen(false);
-        onEnter?.();
+        // Sem `onEnter`, a tecla sobe para o `useSubmitOnEnter` do formulário —
+        // e não pode ser marcada como consumida, ou ele a ignoraria.
+        if (onEnter) {
+          e.preventDefault();
+          onEnter();
+        }
       }
     } else if (e.key === "Escape") {
       if (open) {
@@ -121,6 +135,7 @@ export function Autocomplete({
         placeholder={placeholder}
         autoFocus={autoFocus}
         className={inputClassName}
+        autoComplete="off"
       />
       {open && filtered.length > 0 && (
         <ul
