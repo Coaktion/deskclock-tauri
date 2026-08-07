@@ -2,6 +2,7 @@ import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICalendarImporter";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import { dedupeCalendarEvents } from "@domain/usecases/plannedTasks/DedupeCalendarEvents";
 import {
   importCalendarEvents,
   type ImportEventInput,
@@ -214,6 +215,12 @@ interface EventRowProps {
   categoryOptionsFor: (projectId: string | null) => Category[];
   isDeduped: boolean;
   isDuplicateOfExisting: boolean;
+  /**
+   * Dias que a planejada terá de fato — os desta linha mais os das ocorrências
+   * que ela absorveu. Fica no resumo, e não no editor: ali se edita o dia deste
+   * evento, e a linha diz o que será criado.
+   */
+  effectiveRecurringDays: number[];
   onToggleSelect: () => void;
   onEditChange: (s: EventEditState) => void;
 }
@@ -226,6 +233,7 @@ function EventRow({
   categoryOptionsFor,
   isDeduped,
   isDuplicateOfExisting,
+  effectiveRecurringDays,
   onToggleSelect,
   onEditChange,
 }: EventRowProps) {
@@ -282,8 +290,11 @@ function EventRow({
             {hasEdits && (
               <span className="ml-2 text-blue-400">
                 {editState.projectName || ""}
-                {editState.scheduleType === "recurring" && editState.recurringDays.length > 0
-                  ? ` · ${editState.recurringDays.map((d) => DAY_LABELS[d][0]).join("")}`
+                {editState.scheduleType === "recurring" && effectiveRecurringDays.length > 0
+                  ? ` · ${[...effectiveRecurringDays]
+                      .sort((a, b) => a - b)
+                      .map((d) => DAY_LABELS[d][0])
+                      .join("")}`
                   : ""}
               </span>
             )}
@@ -363,7 +374,20 @@ export function ImportCalendarModal({
     // A duplicata é procurada no workspace **de destino** do import, não em
     // todos: sem o escopo, evento já importado noutro workspace vinha marcado
     // "já existe" e desmarcado aqui, onde ele ainda não foi importado.
-    Promise.all([importer.getEvents(fromISO, toISO), repo.findForWeek(fromISO, toISO, workspaceId)])
+    //
+    // O `findForWeek` recebe **dia**, não instante, e é o que todos os outros
+    // chamadores passam: ele compara com `schedule_date`, que é "AAAA-MM-DD" no
+    // banco. Passando o instante, o SQLite comparava `"2026-08-03"` com
+    // `"2026-08-03T03:00:00.000Z"` como texto — o mais curto é prefixo do outro,
+    // logo **menor** —, e a planejada do **primeiro dia do intervalo** ficava de
+    // fora da busca. Na prática, o evento da segunda-feira nunca era marcado
+    // "já existe", vinha selecionado e era importado de novo a cada import; do
+    // segundo dia em diante o chip funcionava. O fim escapava por sorte, porque
+    // ali ser "menor que o instante" é justamente o que se queria.
+    Promise.all([
+      importer.getEvents(fromISO, toISO),
+      repo.findForWeek(fromDate, toDate, workspaceId),
+    ])
       .then(([evts, existingTasks]) => {
         const names = new Set(existingTasks.map((t) => t.name.toLowerCase().trim()));
         setExistingNames(names);
@@ -409,22 +433,26 @@ export function ImportCalendarModal({
     return events.filter((e) => getMondayISO(e.date) === selectedWeek);
   }, [events, selectedWeek]);
 
-  const dedupedEventIds = useMemo(() => {
-    const seenSeriesIds = new Set<string>();
-    const duped = new Set<string>();
-    for (const e of events) {
-      if (!selected.has(e.id)) continue;
-      const edit = editMap.get(e.id);
-      if (edit?.scheduleType === "recurring" && e.recurringEventId) {
-        if (seenSeriesIds.has(e.recurringEventId)) {
-          duped.add(e.id);
-        } else {
-          seenSeriesIds.add(e.recurringEventId);
-        }
-      }
-    }
-    return duped;
-  }, [events, selected, editMap]);
+  // Nome + horário, não o id da série do Google — ver `dedupeCalendarEvents`.
+  const { dedupedIds: dedupedEventIds, daysById: mergedDaysById } = useMemo(
+    () =>
+      dedupeCalendarEvents(
+        events
+          .filter((e) => selected.has(e.id))
+          .map((e) => {
+            const edit = editMap.get(e.id);
+            return {
+              id: e.id,
+              title: e.title,
+              startTime: e.startTime,
+              endTime: e.endTime,
+              isRecurring: edit?.scheduleType === "recurring",
+              recurringDays: edit?.recurringDays ?? [],
+            };
+          })
+      ),
+    [events, selected, editMap]
+  );
 
   const effectiveTaskCount = selected.size - dedupedEventIds.size;
 
@@ -476,7 +504,9 @@ export function ImportCalendarModal({
           projectId: edit.projectId,
           categoryId: edit.categoryId,
           scheduleType: edit.scheduleType,
-          recurringDays: edit.recurringDays,
+          // Os dias das ocorrências absorvidas entram aqui: a série partida em
+          // dois ids pode cobrir dias diferentes em cada metade.
+          recurringDays: mergedDaysById.get(e.id) ?? edit.recurringDays,
         };
       });
 
@@ -560,6 +590,12 @@ export function ImportCalendarModal({
               categoryOptionsFor={categoryOptionsFor}
               isDeduped={dedupedEventIds.has(event.id)}
               isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
+              effectiveRecurringDays={
+                mergedDaysById.get(event.id) ??
+                editMap.get(event.id)?.recurringDays ??
+                event.suggestedRecurringDays ??
+                []
+              }
               onToggleSelect={() => toggleEvent(event.id)}
               onEditChange={(s) => updateEdit(event.id, s)}
             />
