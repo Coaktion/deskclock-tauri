@@ -6,6 +6,48 @@ interface Option {
   name: string;
 }
 
+/**
+ * Teto de largura da lista — o `max-w-96` da escala do Tailwind (24rem). A lista
+ * se dimensiona pelo nome mais longo, e sem teto um único item comprido abriria
+ * um painel da largura da janela por causa de uma opção só.
+ */
+const MAX_LIST_WIDTH = 384;
+/** Folga até a borda da janela — o `2` da escala de espaçamento (0.5rem). */
+const VIEWPORT_MARGIN = 8;
+/**
+ * Largura abaixo da qual crescer para a direita não resolve o que o crescimento
+ * existe para resolver — o `w-56` da escala (14rem). Só então a lista passa a
+ * crescer para a esquerda: alinhar à direita é a exceção, não o padrão, ou o
+ * campo que fica um pouco depois do meio da tela abriria a lista para o lado
+ * "errado" sem que faltasse espaço nenhum.
+ */
+const MIN_COMFORTABLE_WIDTH = 224;
+
+interface ListBox {
+  maxWidth: number;
+  alignRight: boolean;
+}
+
+/**
+ * Espaço disponível a partir do campo, medido na abertura. A lista é
+ * `absolute`, então nada em CSS sabe a que distância ela está da borda da
+ * janela — e é isso que impede um simples `min-width` de resolver o caso: no
+ * campo encostado à direita (ou dentro do popup, de 264 px úteis) ele a jogaria
+ * para fora da tela.
+ */
+export function measureListBox(
+  rect: Pick<DOMRect, "left" | "right" | "width">,
+  viewportWidth: number
+): ListBox {
+  const spaceRight = viewportWidth - rect.left - VIEWPORT_MARGIN;
+  const spaceLeft = rect.right - VIEWPORT_MARGIN;
+  const alignRight = spaceRight < MIN_COMFORTABLE_WIDTH && spaceLeft > spaceRight;
+  const space = alignRight ? spaceLeft : spaceRight;
+  // O piso é a largura do próprio campo: espremer a lista para menos que ele
+  // deixaria as duas bordas desalinhadas sem ganhar nada.
+  return { maxWidth: Math.min(Math.max(space, rect.width), MAX_LIST_WIDTH), alignRight };
+}
+
 interface AutocompleteProps {
   /** Id do input interno, para associar um `<label htmlFor>` externo. */
   id?: string;
@@ -48,6 +90,7 @@ export function Autocomplete({
 }: AutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [listBox, setListBox] = useState<ListBox | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -67,6 +110,14 @@ export function Autocomplete({
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  // Mede na abertura, e só nela: a lista não muda de lugar enquanto está aberta
+  // — o clique fora a fecha, e o campo só se move com a janela sendo
+  // redimensionada, que não é caminho de uso com a lista aberta.
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    setListBox(measureListBox(containerRef.current.getBoundingClientRect(), window.innerWidth));
+  }, [open]);
 
   // Mantém o item ativo visível ao navegar com teclado
   useEffect(() => {
@@ -140,7 +191,12 @@ export function Autocomplete({
       {open && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className={`absolute z-50 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
+          // `w-max` dimensiona pelo nome mais longo e `min-w-full` impede que ela
+          // fique mais estreita que o campo; o teto medido é o que a mantém
+          // dentro da janela. O nome que ainda assim não couber quebra em duas
+          // linhas — truncar devolveria o problema que isto veio resolver.
+          style={{ maxWidth: listBox?.maxWidth }}
+          className={`absolute z-50 w-max min-w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto ${listBox?.alignRight ? "right-0" : "left-0"} ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
         >
           {filtered.map((o, idx) => (
             <li
