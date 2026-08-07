@@ -1,3 +1,4 @@
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import { nameKey } from "./nameKey";
@@ -9,6 +10,15 @@ export interface MeetingTaskDefaults {
   billable: boolean;
   /** Planejada de origem da execução, ou `null` quando a tarefa nasce solta. */
   plannedTaskId: string | null;
+  /**
+   * Campos personalizados da planejada — entre eles o **Project Stage**, que o
+   * Monday exige no envio das horas (§5.7), e que ficava para trás: o alerta
+   * copiava projeto e categoria e parava aí, então a reunião adotada de um item
+   * do Monday subia sem a etapa e o preenchimento voltava a ser manual. Também
+   * entram na chave de agrupamento (§6.3), como em todo início a partir de uma
+   * tarefa existente.
+   */
+  customValues: CustomValues;
 }
 
 export interface ResolveMeetingTaskDefaultsInput {
@@ -22,22 +32,27 @@ export interface ResolveMeetingTaskDefaultsInput {
   workspaceId: string;
 }
 
-const NOTHING: MeetingTaskDefaults = {
+/** Função, não constante: devolver o mesmo objeto (e o mesmo `customValues`) a
+ *  toda chamada convidaria quem recebe a mutá-lo para todos os outros. */
+const nothing = (): MeetingTaskDefaults => ({
   projectId: null,
   categoryId: null,
   billable: false,
   plannedTaskId: null,
-};
+  customValues: {},
+});
 
 const fromPlanned = (p: PlannedTask): MeetingTaskDefaults => ({
   projectId: p.projectId,
   categoryId: p.categoryId,
   billable: p.billable,
   plannedTaskId: p.id,
+  customValues: { ...p.customValues },
 });
 
 /**
- * Decide com que projeto, categoria e vínculo a tarefa de uma reunião começa.
+ * Decide com que projeto, categoria, campos personalizados e vínculo a tarefa de
+ * uma reunião começa.
  *
  * **O vínculo manda, mas só dentro do workspace em que a tarefa vai nascer.** O
  * rastreamento de reuniões é global (`calendar_tracked_meetings` não tem
@@ -73,5 +88,5 @@ export async function resolveMeetingTaskDefaults(
   const key = nameKey(input.title);
   const sameDay = await plannedRepo.findForDate(input.todayISO, input.workspaceId);
   const match = sameDay.find((p) => nameKey(p.name) === key);
-  return match ? fromPlanned(match) : NOTHING;
+  return match ? fromPlanned(match) : nothing();
 }

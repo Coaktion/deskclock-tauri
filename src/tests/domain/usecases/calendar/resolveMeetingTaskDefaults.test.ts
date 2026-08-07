@@ -65,9 +65,38 @@ describe("resolveMeetingTaskDefaults", () => {
       categoryId: "cat-1",
       billable: true,
       plannedTaskId: "pt-1",
+      customValues: {},
     });
     // Vínculo bom não custa a segunda consulta.
     expect(repo.findForDate).not.toHaveBeenCalled();
+  });
+
+  it("leva os campos personalizados junto — é deles que vem o Project Stage", async () => {
+    const repo = makeRepo(makePlanned({ customValues: { "cf-stage": "opt-7", "cf-obs": "x" } }));
+
+    const defaults = await resolveMeetingTaskDefaults(repo, input());
+
+    expect(defaults.customValues).toEqual({ "cf-stage": "opt-7", "cf-obs": "x" });
+  });
+
+  it("copia os campos personalizados, não a referência da planejada", async () => {
+    const planned = makePlanned({ customValues: { "cf-stage": "opt-7" } });
+    const repo = makeRepo(planned);
+
+    const defaults = await resolveMeetingTaskDefaults(repo, input());
+    defaults.customValues["cf-stage"] = "outro";
+
+    expect(planned.customValues["cf-stage"]).toBe("opt-7");
+  });
+
+  it("leva os campos personalizados também pelo casamento por nome", async () => {
+    const repo = makeRepo(makePlanned({ id: "pt-outro", workspaceId: OTHER_WS }), [
+      makePlanned({ id: "pt-local", customValues: { "cf-stage": "opt-local" } }),
+    ]);
+
+    const defaults = await resolveMeetingTaskDefaults(repo, input({ plannedTaskId: "pt-outro" }));
+
+    expect(defaults.customValues).toEqual({ "cf-stage": "opt-local" });
   });
 
   it("herda mesmo com a planejada renomeada — o vínculo não depende do nome", async () => {
@@ -95,6 +124,7 @@ describe("resolveMeetingTaskDefaults", () => {
       categoryId: "cat-local",
       billable: true,
       plannedTaskId: "pt-local",
+      customValues: {},
     });
     expect(repo.findForDate).toHaveBeenCalledWith(TODAY, ACTIVE_WS);
   });
@@ -110,6 +140,7 @@ describe("resolveMeetingTaskDefaults", () => {
       categoryId: null,
       billable: false,
       plannedTaskId: null,
+      customValues: {},
     });
   });
 

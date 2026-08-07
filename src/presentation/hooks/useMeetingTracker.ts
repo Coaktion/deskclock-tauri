@@ -211,8 +211,9 @@ export function useMeetingTracker() {
         if (prev) await trackedMeetingRepo.upsert({ ...prev, ended: true });
       }
 
-      // Projeto, categoria e vínculo saem da planejada de origem — a vinculada
-      // pelo sync, ou, se ela for de outro workspace, a de mesmo nome no ativo.
+      // Projeto, categoria, campos personalizados e vínculo saem da planejada de
+      // origem — a vinculada pelo sync, ou, se ela for de outro workspace, a de
+      // mesmo nome no ativo.
       // A regra vive num use case porque é ela que decide o que a tarefa herda,
       // e aqui dentro do efeito não havia como testá-la.
       const defaults = await resolveMeetingTaskDefaults(plannedTaskRepo, {
