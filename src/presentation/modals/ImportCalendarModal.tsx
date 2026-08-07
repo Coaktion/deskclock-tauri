@@ -360,7 +360,10 @@ export function ImportCalendarModal({
     setSelectedWeek(null);
     const fromISO = new Date(fromDate + "T00:00:00").toISOString();
     const toISO = new Date(toDate + "T23:59:59").toISOString();
-    Promise.all([importer.getEvents(fromISO, toISO), repo.findForWeek(fromISO, toISO)])
+    // A duplicata é procurada no workspace **de destino** do import, não em
+    // todos: sem o escopo, evento já importado noutro workspace vinha marcado
+    // "já existe" e desmarcado aqui, onde ele ainda não foi importado.
+    Promise.all([importer.getEvents(fromISO, toISO), repo.findForWeek(fromISO, toISO, workspaceId)])
       .then(([evts, existingTasks]) => {
         const names = new Set(existingTasks.map((t) => t.name.toLowerCase().trim()));
         setExistingNames(names);
@@ -387,7 +390,7 @@ export function ImportCalendarModal({
         setError(msg || "Erro ao buscar eventos do Google Agenda.");
       })
       .finally(() => setLoading(false));
-  }, [fromDate, toDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fromDate, toDate, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const grouped = useMemo(() => groupByDate(events), [events]);
 
