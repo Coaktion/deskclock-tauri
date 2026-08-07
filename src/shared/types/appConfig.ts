@@ -56,6 +56,19 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
    */
   planningFormCollapsed: boolean;
   retroactiveFormCollapsed: boolean;
+  /**
+   * Largura arrastada de cada coluna de entrada, em px. Chave separada do
+   * recolhido de propósito: é o que faz a coluna reabrir na largura em que
+   * estava, inclusive quando quem a recolheu foi o próprio arraste.
+   */
+  planningFormWidth: number;
+  retroactiveFormWidth: number;
+  /**
+   * Teto da lista de planejadas do Lançamento Manual, em px. É **teto**, não
+   * altura: com duas planejadas a seção continua encolhendo até o conteúdo, como
+   * fazia com o `max-h-36` que este valor substituiu.
+   */
+  retroactivePlannedHeight: number;
   // Acessibilidade
   fontSize: "P" | "M" | "G" | "GG";
   theme: "azul" | "verde" | "escuro" | "claro";

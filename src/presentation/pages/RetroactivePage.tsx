@@ -8,6 +8,7 @@ import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPla
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
@@ -15,6 +16,7 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useResizablePanel } from "@presentation/hooks/useResizablePanel";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
@@ -33,7 +35,15 @@ import {
   Play,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+
+/**
+ * Limites do arraste da lista de planejadas. O padrão é a altura que ela tinha
+ * fixa (`max-h-36` = 144px), então quem nunca arrastar não vê diferença. O
+ * mínimo cabe duas linhas — menos que isso a seção deixa de informar e só ocupa
+ * espaço, e quem não a quer tem o dia sem planejadas, em que ela não aparece.
+ */
+const PLANNED_LIST_HEIGHT = { min: 72, max: 480, default: 144 } as const;
 
 const DAY_NAMES_PT = [
   "domingo",
@@ -218,6 +228,29 @@ export function RetroactivePage() {
 
   const { activeFields } = useCustomFields();
   const formColumn = usePersistedFlag("retroactiveFormCollapsed");
+
+  // ── Altura da lista de planejadas ──────────────────────────────────────────
+  // O teto do arraste é o **conteúdo**, não o limite duro: passado ele não há
+  // mais nada a revelar, e deixar o divisor seguir o cursor no vazio faz o
+  // gesto parecer quebrado — arrasta-se 200px e nada se move, e o caminho de
+  // volta só responde depois de recuperar os mesmos 200px. Parar onde a lista
+  // acaba é a mesma resposta de bater no máximo.
+  const plannedListRef = useRef<HTMLDivElement | null>(null);
+  const [plannedContentHeight, setPlannedContentHeight] = useState<number>(PLANNED_LIST_HEIGHT.max);
+  useLayoutEffect(() => {
+    const el = plannedListRef.current;
+    if (el) setPlannedContentHeight(el.scrollHeight);
+  }, [plannedTasks]);
+
+  const plannedPanel = useResizablePanel({
+    key: "retroactivePlannedHeight",
+    min: PLANNED_LIST_HEIGHT.min,
+    // O `Math.max` protege a invariante do clamp: com uma planejada só, o
+    // conteúdo é menor que o mínimo e um `max` abaixo do `min` inverteria os dois.
+    max: Math.max(PLANNED_LIST_HEIGHT.min, Math.min(PLANNED_LIST_HEIGHT.max, plannedContentHeight)),
+    defaultSize: PLANNED_LIST_HEIGHT.default,
+    anchor: "top",
+  });
   const form = useRetroactiveForm({
     selectedDate,
     projects,
@@ -445,6 +478,7 @@ export function RetroactivePage() {
           collapsed={formColumn.value}
           onToggle={formColumn.toggle}
           label="Novo apontamento"
+          widthKey="retroactiveFormWidth"
           tourId="retroactive-form"
         >
           <RetroactiveEntryForm
@@ -456,9 +490,11 @@ export function RetroactivePage() {
         </CollapsibleFormColumn>
 
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* Tarefas planejadas para o dia — sugestões para lançamento */}
+          {/* Tarefas planejadas para o dia — sugestões para lançamento. Sem
+              `border-b`: quem desenha a linha é o `ResizeHandle` abaixo, ou
+              haveria linha dupla. */}
           {plannedTasks.length > 0 && (
-            <div className="border-b border-gray-800 shrink-0">
+            <div className="shrink-0">
               <div className="flex items-center gap-3 px-5 pt-2.5 pb-1">
                 <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
                   Planejadas para este dia
@@ -478,7 +514,14 @@ export function RetroactivePage() {
                 )}
               </div>
               {launchError && <p className="px-5 pb-1 text-xs text-red-400">{launchError}</p>}
-              <div className="max-h-36 overflow-y-auto">
+              {/* `maxHeight`, não `height`: com duas planejadas a seção encolhe
+                  até o conteúdo, como fazia com o `max-h-36` que isto substitui
+                  — altura fixa deixaria espaço vazio todo dia. */}
+              <div
+                ref={plannedListRef}
+                className="overflow-y-auto"
+                style={{ maxHeight: plannedPanel.size }}
+              >
                 {plannedTasks.map((task) => {
                   const projectName = projects.find((p) => p.id === task.projectId)?.name;
                   const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
@@ -533,6 +576,15 @@ export function RetroactivePage() {
                 })}
               </div>
             </div>
+          )}
+
+          {plannedTasks.length > 0 && (
+            <ResizeHandle
+              {...plannedPanel.handleProps}
+              active={plannedPanel.isDragging}
+              aria-label="Altura da lista de planejadas"
+              title="Arraste para redimensionar. Duplo clique volta ao padrão."
+            />
           )}
 
           {/* Lista de tarefas */}

@@ -75,11 +75,20 @@ export const floatingLabelClass = [
 ].join(" ");
 
 /**
- * Casca da coluna de formulário: largura fixa à esquerda, com a lista da tela ao
- * lado. Quem a desenha é o `CollapsibleFormColumn` — a casca é o que permanece
- * quando o formulário é recolhido, e por isso ela não rola nem espaça nada.
+ * Casca da coluna de formulário: fica à esquerda, com a lista da tela ao lado.
+ * Quem a desenha é o `CollapsibleFormColumn` — a casca é o que permanece quando
+ * o formulário é recolhido, e por isso ela não rola nem espaça nada.
+ *
+ * **Sem largura e sem borda à direita, de propósito.** A largura é arrastável e
+ * vem do `useResizablePanel` como estilo em linha (classe do Tailwind é estática
+ * e não expressa um valor que o usuário escolhe); a borda é o próprio
+ * `ResizeHandle`, ou haveria linha dupla entre a coluna e a lista.
  */
-export const formColumnShellClass = "w-64 shrink-0 border-r border-gray-800 flex flex-col";
+export const formColumnShellClass = "shrink-0 min-w-0 flex flex-col";
+
+/** Limites do arraste das colunas de formulário. O padrão é a largura que elas
+ *  tinham fixa (`w-64`), então quem nunca arrastar não vê diferença. */
+export const FORM_COLUMN_WIDTH = { min: 224, max: 560, default: 256 } as const;
 
 /**
  * Corpo do formulário dentro da casca: é ele que rola e que espaça os campos.

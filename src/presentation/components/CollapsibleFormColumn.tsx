@@ -1,4 +1,6 @@
-import { formColumnShellClass } from "@presentation/components/fieldStyles";
+import { FORM_COLUMN_WIDTH, formColumnShellClass } from "@presentation/components/fieldStyles";
+import { ResizeHandle } from "@presentation/components/ResizeHandle";
+import { useResizablePanel, type NumberConfigKey } from "@presentation/hooks/useResizablePanel";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 interface CollapsibleFormColumnProps {
@@ -6,6 +8,8 @@ interface CollapsibleFormColumnProps {
   onToggle: () => void;
   /** Rótulo do que a coluna cria — aparece no cabeçalho e, de pé, na faixa. */
   label: string;
+  /** Chave da config onde a largura arrastada fica gravada. */
+  widthKey: NumberConfigKey;
   /** Valor de `data-tour`. Fica na casca, não no formulário: recolhida, a casca continua na tela. */
   tourId?: string;
   children: React.ReactNode;
@@ -19,16 +23,33 @@ interface CollapsibleFormColumnProps {
  * A faixa inteira é o botão de reabrir: recolhida, ela não tem outra função, e
  * um alvo de 36px é mais fácil de acertar que um ícone solto.
  *
- * O estado mora em quem chama, e não aqui, porque ele é persistido na config —
- * quem recolhe a coluna quer espaço para trabalhar, não para uma sessão só.
+ * Aberta, a coluna é **arrastável** pelo divisor à direita, e arrastar bem
+ * abaixo do mínimo a recolhe — o mesmo destino do botão, pelo gesto que já está
+ * em curso. Recolhida não há divisor: não há o que dimensionar, e a faixa toda
+ * já é o botão de reabrir.
+ *
+ * O recolhido e a largura moram em chaves diferentes da config, e é o que
+ * permite reabrir na largura de antes. Nenhum dos dois mora aqui: quem recolhe
+ * ou alarga a coluna quer trabalhar assim, não por uma sessão só.
  */
 export function CollapsibleFormColumn({
   collapsed,
   onToggle,
   label,
+  widthKey,
   tourId,
   children,
 }: CollapsibleFormColumnProps) {
+  // Antes do `return` do estado recolhido: hook não pode ficar atrás de condição.
+  const panel = useResizablePanel({
+    key: widthKey,
+    min: FORM_COLUMN_WIDTH.min,
+    max: FORM_COLUMN_WIDTH.max,
+    defaultSize: FORM_COLUMN_WIDTH.default,
+    // Só recolhe estando aberta — e, estando aberta, alternar é recolher.
+    onCollapse: collapsed ? undefined : onToggle,
+  });
+
   if (collapsed) {
     return (
       <button
@@ -49,21 +70,31 @@ export function CollapsibleFormColumn({
   }
 
   return (
-    <div data-tour={tourId} className={formColumnShellClass}>
-      <div className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-800">
-        <span className="flex-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide truncate">
-          {label}
-        </span>
-        <button
-          type="button"
-          onClick={onToggle}
-          title={`Recolher — ${label}`}
-          className="shrink-0 text-gray-600 hover:text-gray-200 transition-colors"
-        >
-          <PanelLeftClose size={14} />
-        </button>
+    <>
+      <div data-tour={tourId} className={formColumnShellClass} style={{ width: panel.size }}>
+        <div className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-800">
+          {/* `leading-none`: com a entrelinha padrão, a caixa do texto fica mais
+              alta que as letras e o rótulo desce em relação ao ícone ao lado. */}
+          <span className="flex-1 text-[11px] leading-none font-medium text-gray-500 uppercase tracking-wide truncate">
+            {label}
+          </span>
+          <button
+            type="button"
+            onClick={onToggle}
+            title={`Recolher — ${label}`}
+            className="shrink-0 text-gray-600 hover:text-gray-200 transition-colors"
+          >
+            <PanelLeftClose size={14} />
+          </button>
+        </div>
+        {children}
       </div>
-      {children}
-    </div>
+      <ResizeHandle
+        {...panel.handleProps}
+        active={panel.isDragging}
+        aria-label={`Largura da coluna — ${label}`}
+        title="Arraste para redimensionar. Duplo clique volta ao padrão."
+      />
+    </>
   );
 }

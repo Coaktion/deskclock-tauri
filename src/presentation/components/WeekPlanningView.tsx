@@ -254,6 +254,7 @@ export function WeekPlanningView() {
           collapsed={formColumn.value}
           onToggle={formColumn.toggle}
           label="Nova tarefa"
+          widthKey="planningFormWidth"
           tourId="planning-form"
         >
           <PlannedTaskForm
