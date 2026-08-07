@@ -59,8 +59,12 @@ export function useMondayProjectsTracker() {
         deskclockWorkspaceId,
         // Os vínculos atuais são a única fonte do quadro que foi preenchido à
         // mão: o Portfólio devolve a coluna vazia e, sem eles, a varredura
-        // apagaria a referência todo dia.
+        // apagaria a referência todo dia. São também o cache do schema de cada
+        // board, com a marca que decide quais precisam ser relidos.
         existingMappings,
+        nowISO: new Date().toISOString(),
+        // Sem `forceSchemaRead`: o ciclo automático respeita a validade do cache
+        // — quem quer o rótulo novo agora aperta "Atualizar" em Integrações.
       });
 
       await config.set("mondayProjectMapping", result.mappings);

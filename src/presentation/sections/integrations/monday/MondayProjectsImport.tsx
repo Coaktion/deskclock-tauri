@@ -155,7 +155,8 @@ export function MondayProjectsImport({
   async function handleSetBoardId(portfolioItemId: string, boardId: string) {
     const { destination, failure } = await resolveProjectDestination(
       factories.createMondayApi(),
-      boardId
+      boardId,
+      new Date().toISOString()
     );
     if (failure) {
       await showToast("error", failure);
@@ -182,6 +183,11 @@ export function MondayProjectsImport({
         // Sem isto, o quadro digitado à mão logo abaixo seria desfeito no
         // primeiro "Atualizar": o Portfólio devolve a coluna vazia.
         existingMappings: normalizeProjectMappings(config.get("mondayProjectMapping")),
+        nowISO: new Date().toISOString(),
+        // O clique relê o schema de todos os boards, ignorando a validade do
+        // cache — mesmo papel do `forceWrite` no envio manual de horas. É o
+        // caminho de quem acabou de criar um rótulo no board e quer vê-lo aqui.
+        forceSchemaRead: true,
         onProgress: (done, total) => setProgress({ done, total }),
       });
 

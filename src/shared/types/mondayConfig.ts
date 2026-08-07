@@ -132,4 +132,25 @@ export interface MondayProjectMapping {
    * exatamente o colapso que se quer evitar.
    */
   timelineColumnId?: string;
+  /**
+   * Instante da última leitura **bem-sucedida** do schema deste board.
+   *
+   * É a marca de validade que faltava para o mapeamento poder funcionar como
+   * cache: sem ela, a varredura diária não distinguia board novo de board lido há
+   * uma hora e relia o schema dos ~46 boards mapeados todo dia — a requisição
+   * mais cara da integração. Com ela, o caso comum depois da primeira varredura é
+   * **zero** leitura de schema (§ `shouldReadBoardSchema`).
+   *
+   * **Ausente significa "nunca lido", e é o que dispara a leitura** — mesma
+   * disciplina do `timelineColumnId` acima, e por isso `normalizeProjectMappings`
+   * também não lhe dá default: vínculo gravado antes deste cache precisa continuar
+   * pedindo a leitura.
+   *
+   * **Só sucesso estampa.** Board fora do template, ou que não voltou na consulta,
+   * fica sem marca e é relido na varredura seguinte. Estampar a falha faria duas
+   * coisas ruins: a recuperação de um board consertado no Monday levaria uma
+   * semana, e o board sumiria da lista de "fora do template" do card de Projetos —
+   * que só reporta o que foi lido nesta varredura.
+   */
+  schemaReadAtISO?: string;
 }

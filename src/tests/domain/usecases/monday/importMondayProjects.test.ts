@@ -9,6 +9,7 @@ import type { IProjectRepository } from "@domain/repositories/IProjectRepository
 import type { Project } from "@domain/entities/Project";
 import type { MondayBoardSchema, MondayItem } from "@shared/types/monday";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { localISO } from "../../../helpers/localTime";
 
 const PORTFOLIO_ID = "18418432045";
 const DESKCLOCK_WS = "ws-1";
@@ -99,14 +100,39 @@ function makeProjectRepo(existing: { id: string; name: string }[] = []): IProjec
   };
 }
 
+/** Instante da varredura nos testes; a marca de validade do cache parte dele. */
+const NOW = localISO(2026, 8, 6, 9);
+
 function run(api: IMondayApi, overrides: Record<string, unknown> = {}) {
   return importMondayProjects({
     api,
     projectRepo: makeProjectRepo(),
     portfolioBoardId: PORTFOLIO_ID,
     deskclockWorkspaceId: DESKCLOCK_WS,
+    nowISO: NOW,
     ...overrides,
   });
+}
+
+/** Vínculo já gravado, com o schema lido em `readAt`. */
+function cachedMapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMapping {
+  return {
+    deskclockProjectId: "p1",
+    portfolioItemId: "i1",
+    mondayBoardId: "b1",
+    mondayBoardName: "[BR] Cliente Produto 01-999",
+    scope: "cliente",
+    activitiesGroupId: "group_cacheado",
+    reportTypeGroupIds: { Activity: "group_cacheado" },
+    columnIds: { reportedHours: "num_cache", activityType: "color_cache", person: "person_cache" },
+    activityTypeLabels: ["Development"],
+    projectStageLabels: ["Discovery"],
+    projectStageTitle: "Project Stage",
+    nonBillableReasonLabels: ["Retrabalho"],
+    timelineColumnId: "tl_cache",
+    schemaReadAtISO: NOW,
+    ...overrides,
+  };
 }
 
 beforeEach(() => {
@@ -440,6 +466,180 @@ describe("importMondayProjects", () => {
 
     expect(projectRepo.save).toHaveBeenCalledTimes(1);
     expect(result.mappings[0].deskclockProjectId).toBe(result.mappings[1].deskclockProjectId);
+  });
+
+  // O mapeamento já era um cache do schema; o que faltava era marca de validade.
+  // Sem ela, a varredura diária relia o schema dos ~46 boards todo dia — a
+  // requisição mais cara da integração.
+  describe("cache do schema do board", () => {
+    it("estampa a leitura bem-sucedida com o instante da varredura", async () => {
+      const api = makeApi([item()], { b1: schema() });
+
+      const result = await run(api);
+
+      expect(result.mappings[0].schemaReadAtISO).toBe(NOW);
+    });
+
+    it("não lê o schema do board cuja marca ainda vale", async () => {
+      const api = makeApi([item()], { b1: schema() });
+      const existing = [cachedMapping({ schemaReadAtISO: localISO(2026, 8, 4, 9) })];
+
+      const result = await run(api, { existingMappings: existing });
+
+      expect(api.listBoardSchemas).not.toHaveBeenCalled();
+      // O destino cacheado sobrevive inteiro: sem isso, pular a leitura zeraria o
+      // grupo e as colunas, e o envio de horas pararia.
+      expect(result.mappings[0]).toMatchObject({
+        mondayBoardId: "b1",
+        activitiesGroupId: "group_cacheado",
+        columnIds: { reportedHours: "num_cache", activityType: "color_cache" },
+        activityTypeLabels: ["Development"],
+        projectStageLabels: ["Discovery"],
+        nonBillableReasonLabels: ["Retrabalho"],
+        timelineColumnId: "tl_cache",
+        schemaReadAtISO: localISO(2026, 8, 4, 9),
+      });
+    });
+
+    // O nome e o escopo continuam vindo do Portfólio a cada varredura: é ele que
+    // custa uma requisição de duas colunas e traz o cliente renomeado.
+    it("atualiza nome e escopo do vínculo cacheado a partir do Portfólio", async () => {
+      const api = makeApi([item({ name: "Cliente renomeado", offer: "Atividades Internas" })], {
+        b1: schema(),
+      });
+
+      const result = await run(api, { existingMappings: [cachedMapping()] });
+
+      expect(result.mappings[0]).toMatchObject({
+        mondayBoardName: "Cliente renomeado",
+        scope: "interno",
+        activitiesGroupId: "group_cacheado",
+      });
+    });
+
+    it("relê o schema quando a marca venceu", async () => {
+      const api = makeApi([item()], { b1: schema() });
+      const existing = [cachedMapping({ schemaReadAtISO: localISO(2026, 7, 28, 9) })];
+
+      const result = await run(api, { existingMappings: existing });
+
+      expect(api.listBoardSchemas).toHaveBeenCalledWith(["b1"]);
+      expect(result.mappings[0]).toMatchObject({
+        activitiesGroupId: "group_mm2e2g9j",
+        schemaReadAtISO: NOW,
+      });
+    });
+
+    it("relê o schema do vínculo gravado antes deste cache, que não tem marca", async () => {
+      const api = makeApi([item()], { b1: schema() });
+      const existing = [cachedMapping({ schemaReadAtISO: undefined })];
+
+      await run(api, { existingMappings: existing });
+
+      expect(api.listBoardSchemas).toHaveBeenCalledWith(["b1"]);
+    });
+
+    it("relê o schema quando o board de destino mudou", async () => {
+      const api = makeApi([item({ projectBoardId: "b-novo" })], {
+        "b-novo": schema({ id: "b-novo" }),
+      });
+
+      const result = await run(api, { existingMappings: [cachedMapping()] });
+
+      expect(api.listBoardSchemas).toHaveBeenCalledWith(["b-novo"]);
+      expect(result.mappings[0].activitiesGroupId).toBe("group_mm2e2g9j");
+    });
+
+    // O clique é a intenção, como o `forceWrite` do envio manual: é o caminho de
+    // quem acabou de criar um rótulo no board e quer vê-lo agora.
+    it("relê todos os schemas quando o import é forçado", async () => {
+      const api = makeApi([item()], { b1: schema() });
+
+      const result = await run(api, {
+        existingMappings: [cachedMapping()],
+        forceSchemaRead: true,
+      });
+
+      expect(api.listBoardSchemas).toHaveBeenCalledWith(["b1"]);
+      expect(result.mappings[0].activitiesGroupId).toBe("group_mm2e2g9j");
+    });
+
+    // Estampar a falha faria o board consertado no Monday levar uma semana para
+    // voltar, e o sumiria da lista de recusados do card de Projetos — que só
+    // reporta o que foi lido nesta varredura.
+    it("não estampa o board fora do template, que volta a ser lido na varredura seguinte", async () => {
+      const api = makeApi([item()], { b1: schema({ groups: [], views: [] }) });
+
+      const result = await run(api);
+
+      expect(result.mappings[0].schemaReadAtISO).toBeUndefined();
+      expect(result.skipped).toHaveLength(1);
+    });
+
+    it("não estampa o board que não voltou na consulta", async () => {
+      const api = makeApi([item({ projectBoardId: "b-sumido" })], {});
+
+      const result = await run(api);
+
+      expect(result.mappings[0].schemaReadAtISO).toBeUndefined();
+    });
+
+    // A ausência é o Monday dizendo que o id não existe mais ou saiu do alcance do
+    // token; insistir com o cache faria o envio escrever num board perdido. Falha
+    // de rede é outro caso — ela aborta a varredura antes deste ponto.
+    it("perde o destino cacheado quando o board relido não volta na consulta", async () => {
+      const api = makeApi([item()], {});
+      const existing = [cachedMapping({ schemaReadAtISO: localISO(2026, 7, 28, 9) })];
+
+      const result = await run(api, { existingMappings: existing });
+
+      expect(result.mappings[0].activitiesGroupId).toBe("");
+      expect(result.mappings[0].activityTypeLabels).toEqual([]);
+      expect(result.mappings[0].schemaReadAtISO).toBeUndefined();
+      expect(result.skipped[0].reason).toBe("Board não encontrado no Monday ou sem acesso.");
+    });
+
+    it("não consulta nada quando nenhum board precisa ser lido", async () => {
+      const api = makeApi(
+        [
+          item({ id: "i1", name: "Cliente A", projectBoardId: "b1" }),
+          item({ id: "i2", name: "Cliente B", projectBoardId: "b2" }),
+        ],
+        { b1: schema(), b2: schema({ id: "b2" }) }
+      );
+      const existing = [
+        cachedMapping({ portfolioItemId: "i1", mondayBoardId: "b1" }),
+        cachedMapping({ portfolioItemId: "i2", mondayBoardId: "b2", deskclockProjectId: "p2" }),
+      ];
+
+      await run(api, { existingMappings: existing });
+
+      expect(api.listBoardSchemas).not.toHaveBeenCalled();
+      expect(api.getBoardSchema).not.toHaveBeenCalled();
+    });
+
+    it("lê só os boards vencidos quando parte deles ainda vale", async () => {
+      const api = makeApi(
+        [
+          item({ id: "i1", name: "Cliente A", projectBoardId: "b1" }),
+          item({ id: "i2", name: "Cliente B", projectBoardId: "b2" }),
+        ],
+        { b1: schema(), b2: schema({ id: "b2" }) }
+      );
+      const existing = [
+        cachedMapping({ portfolioItemId: "i1", mondayBoardId: "b1" }),
+        cachedMapping({
+          portfolioItemId: "i2",
+          mondayBoardId: "b2",
+          deskclockProjectId: "p2",
+          schemaReadAtISO: localISO(2026, 7, 20, 9),
+        }),
+      ];
+
+      await run(api, { existingMappings: existing });
+
+      expect(api.listBoardSchemas).toHaveBeenCalledWith(["b2"]);
+    });
   });
 
   it("reporta progresso do início ao fim", async () => {
