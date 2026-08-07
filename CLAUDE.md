@@ -330,6 +330,14 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > ajustando de 16 em 16 px (consumir a seta do eixo alheio roubaria a tecla de quem navega a tela),
 > `Home` e duplo clique voltando ao padrão.
 - **Só dias úteis.** Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta — a antiga `showWeekend` foi removida. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia.
+
+> **A regra vale também na entrada, e o import da Agenda era o único lugar que ainda não a
+> cumpria.** Ele listava a semana inteira e oferecia os sete dias na recorrência, então o evento de
+> sábado nascia planejada sem dia onde aparecer. O descarte é **na origem** — a lista de eventos
+> logo depois da busca —, não só na renderização dos dias: escondido mas presente na lista, o evento
+> continuava selecionado por padrão, entrava na contagem do botão e era importado do mesmo jeito. Os
+> dias sugeridos pela recorrência do Google são aparados pela mesma régua, ou a série que repete às
+> segundas e aos sábados guardaria um `6` que a lista de dias não mostra nem permite desmarcar.
 - **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex, no topo da coluna da direita. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
 - **Barra de seleção:** "Selecionar tarefas" fica na **mesma linha dos botões de dia**, encostado à direita (`ml-auto`) — não no header, e só aparece havendo ao menos uma tarefa. Cabe ali desde que o fim de semana saiu do planejamento; uma linha só para a barra custava altura que é da lista. A rolagem horizontal fica no grupo das pílulas, não na linha: na linha, os botões de seleção sairiam da tela junto com os dias.
 - **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campos personalizados, agendamento e ações — empilhados na coluna.
