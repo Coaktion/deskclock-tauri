@@ -1,57 +1,86 @@
 import { useState } from "react";
-import { ChevronRight, ChevronLeft, Clock } from "lucide-react";
+import { ChevronRight, ChevronLeft, Clock, Plug } from "lucide-react";
+import type { ReactNode } from "react";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
-import { bulkImportProjects } from "@domain/usecases/projects/BulkImportProjects";
-import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
-import { notifyCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
+import type { Page } from "@presentation/components/Sidebar";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { GoogleLogo } from "@presentation/sections/integrations/google/GoogleLogo";
+import { ZendeskLogoSmall } from "@presentation/sections/integrations/ZendeskIntegrationSection";
+import { ClockifyLogo } from "@presentation/sections/integrations/clockify/ClockifyLogo";
+import { MondayLogo } from "@presentation/sections/integrations/monday/MondayLogo";
 
-const STEPS = ["Boas-vindas", "Projetos", "Categorias"] as const;
+const STEPS = ["Boas-vindas", "Integrações"] as const;
+
+/**
+ * As mesmas quatro integrações da tela de Integrações, na mesma ordem — aqui
+ * elas são só um cartaz: os modais de conexão vivem dentro do
+ * `IntegrationsModalsHost`, que só existe depois que o setup termina. Por isso o
+ * passo tem um destino só, o botão que leva à tela.
+ */
+const SUGGESTIONS: { logo: ReactNode; name: string; description: string }[] = [
+  {
+    logo: <GoogleLogo size={18} />,
+    name: "Google",
+    description: "Reuniões da Agenda viram planejadas; horas sobem para uma planilha",
+  },
+  {
+    logo: <MondayLogo size={18} />,
+    name: "Monday",
+    description: "Projetos e itens dos boards viram catálogo e planejadas",
+  },
+  {
+    logo: <ClockifyLogo size={18} />,
+    name: "Clockify",
+    description: "Projetos e tags viram catálogo; cada tarefa vira uma entrada de tempo",
+  },
+  {
+    logo: <ZendeskLogoSmall size={18} />,
+    name: "Zendesk",
+    description: "Tickets viram tarefas planejadas",
+  },
+];
 
 interface SetupModalProps {
   config: ConfigContextValue;
-  onComplete: () => void;
+  /** `page` é onde o app abre. Vazio abre onde sempre abriu, em Tarefas. */
+  onComplete: (page?: Page) => void;
 }
 
 export function SetupModal({ config, onComplete }: SetupModalProps) {
-  const { projectRepo, categoryRepo } = useRepositories();
   const [step, setStep] = useState(0);
   const [userName, setUserName] = useState("");
-  const [projectsText, setProjectsText] = useState("");
-  const [categoriesText, setCategoriesText] = useState("");
   const [saving, setSaving] = useState(false);
-  const workspaceId = useActiveWorkspaceId();
 
-  async function handleComplete() {
+  async function handleComplete(page?: Page) {
     setSaving(true);
     if (userName.trim()) await config.set("userName", userName.trim());
-    if (projectsText.trim()) {
-      await bulkImportProjects(projectRepo, projectsText, workspaceId);
-      await notifyProjectsChanged();
-    }
-    if (categoriesText.trim()) {
-      await bulkImportCategories(categoryRepo, categoriesText, workspaceId);
-      await notifyCategoriesChanged();
-    }
     await config.set("setupCompleted", true);
-    onComplete();
+    onComplete(page);
   }
 
   const isLast = step === STEPS.length - 1;
 
-  /** Avançar é o submit deste formulário — no último passo, concluir. */
+  /**
+   * Avançar é o submit deste formulário. No último passo ele segue o botão
+   * primário — que é ir para Integrações, o único caminho que o passo oferece.
+   */
   function advance() {
-    if (isLast) void handleComplete();
+    if (isLast) void handleComplete("integrations");
     else setStep((s) => s + 1);
   }
 
   const handleKeyDown = useSubmitOnEnter(advance, { disabled: saving });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950">
-      <div onKeyDown={handleKeyDown} className="w-full max-w-lg mx-4 flex flex-col gap-8">
+    // A lista de integrações fez o passo mais alto que a janela de 620 px em que
+    // o setup abre (`useStartupWindow`), então o conteúdo rola: `my-auto` centra
+    // quando cabe e vira 0 quando não cabe, sem cortar o topo como `items-center`
+    // cortaria.
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-gray-950">
+      <div
+        onKeyDown={handleKeyDown}
+        className="w-full max-w-lg mx-4 my-auto py-8 flex flex-col gap-8"
+      >
         {/* Logo + título */}
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="p-3 bg-blue-600/20 rounded-2xl">
@@ -110,39 +139,34 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
           {step === 1 && (
             <>
               <div>
-                <h2 className="text-base font-medium text-gray-100">Projetos</h2>
+                <h2 className="text-base font-medium text-gray-100">Conecte suas ferramentas</h2>
                 <p className="text-sm text-gray-400 mt-1">
-                  Um projeto por linha. Você pode adicionar mais depois em Dados.
+                  Uma integração traz projetos, categorias e tarefas planejadas prontos — e devolve
+                  as horas para onde o time já as consulta.
                 </p>
               </div>
-              <textarea
-                autoFocus
-                value={projectsText}
-                onChange={(e) => setProjectsText(e.target.value)}
-                placeholder={"Projeto Alpha\nCliente XYZ\nInterno"}
-                rows={6}
-                className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none font-mono"
-              />
-            </>
-          )}
 
-          {step === 2 && (
-            <>
-              <div>
-                <h2 className="text-base font-medium text-gray-100">Categorias</h2>
-                <p className="text-sm text-gray-400 mt-1">
-                  Uma categoria por linha. Prefixo{" "}
-                  <code className="text-gray-300 bg-gray-800 px-1 rounded">!</code> = non-billable.
-                </p>
-              </div>
-              <textarea
-                autoFocus
-                value={categoriesText}
-                onChange={(e) => setCategoriesText(e.target.value)}
-                placeholder={"Desenvolvimento\nDesign\n!Reunião\n!Administrativo"}
-                rows={6}
-                className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none font-mono"
-              />
+              <ul className="flex flex-col gap-2">
+                {SUGGESTIONS.map((s) => (
+                  <li
+                    key={s.name}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-800 bg-gray-800/30"
+                  >
+                    <span className="shrink-0 w-8 h-8 rounded-lg bg-gray-800/60 flex items-center justify-center text-gray-300">
+                      {s.logo}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-gray-100">{s.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{s.description}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="text-xs text-gray-500">
+                Sem integração nenhuma o app funciona igual: projetos e categorias se cadastram a
+                qualquer momento na tela de Dados.
+              </p>
             </>
           )}
         </div>
@@ -162,20 +186,31 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
           )}
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={advance}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              {isLast ? "Pular tudo e começar" : "Pular"}
-              {!isLast && <ChevronRight size={14} />}
-            </button>
+            {isLast && (
+              <button
+                onClick={() => void handleComplete()}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+              >
+                Agora não
+              </button>
+            )}
             <button
               onClick={advance}
               disabled={saving}
               className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
             >
-              {isLast ? "Começar" : "Próximo"}
-              {!isLast && <ChevronRight size={14} />}
+              {isLast ? (
+                <>
+                  <Plug size={14} />
+                  Configurar integrações
+                </>
+              ) : (
+                <>
+                  Próximo
+                  <ChevronRight size={14} />
+                </>
+              )}
             </button>
           </div>
         </div>

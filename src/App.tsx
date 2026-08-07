@@ -297,7 +297,15 @@ function AppInner() {
   useDeepLink(setPage);
 
   if (config.isLoaded && !config.loadError && !setupDone) {
-    return <SetupModal config={config} onComplete={() => setSetupDone(true)} />;
+    return (
+      <SetupModal
+        config={config}
+        onComplete={(landing) => {
+          if (landing) setPage(landing);
+          setSetupDone(true);
+        }}
+      />
+    );
   }
 
   if (config.isLoaded && config.loadError) {
