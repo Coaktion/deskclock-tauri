@@ -106,6 +106,21 @@ export function endOfDayISO(dateISO: string): string {
   return new Date(dateISO + "T23:59:59.999").toISOString();
 }
 
+/**
+ * Instante ISO de um "HH:MM" **local** num dia "AAAA-MM-DD".
+ *
+ * Existia copiado no `RetroactivePage` e no `useRetroactiveForm`, e o lançamento
+ * de planejada com horário precisa da terceira cópia — a hora do evento é local
+ * (§6.6), então montar o instante pelo UTC jogaria a tarefa para o dia vizinho
+ * em boa parte dos fusos.
+ */
+export function buildLocalISO(dateISO: string, hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(dateISO + "T00:00:00");
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+}
+
 export function addDaysISO(dateISO: string, days: number): string {
   const d = new Date(dateISO + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + days);

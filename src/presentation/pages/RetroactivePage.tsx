@@ -2,10 +2,9 @@ import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
-import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
-import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
+import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
@@ -25,8 +24,16 @@ import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  ListChecks,
+  Pencil,
+  Play,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const DAY_NAMES_PT = [
   "domingo",
@@ -64,13 +71,6 @@ function formatDateHeader(dateISO: string): string {
 function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildLocalISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(dateISO + "T00:00:00");
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 
 function formatTimeRange(startISO: string, endISO: string | null): string {
@@ -185,8 +185,21 @@ export function RetroactivePage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  const [launchingAll, setLaunchingAll] = useState(false);
+  const [launchError, setLaunchError] = useState("");
+
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
+
+  // Em ordem cronológica: é assim que o lote encadeia o início do formulário no
+  // fim da última, e é a ordem em que as reuniões aconteceram.
+  const timedPlannedTasks = useMemo(
+    () =>
+      plannedTasks
+        .filter((t) => t.startTime && t.endTime)
+        .sort((a, b) => a.startTime!.localeCompare(b.startTime!)),
+    [plannedTasks]
+  );
 
   // Pelos use cases, e sempre com o workspace ativo. Ir direto ao repositório
   // sem o terceiro argumento é o caminho das integrações (§6.7) e devolvia as
@@ -279,36 +292,68 @@ export function RetroactivePage() {
     await loadTasks();
   }
 
-  async function handleDirectLaunch(task: PlannedTask) {
-    const startISO = buildLocalISO(selectedDate, task.startTime!);
-    let endISO = buildLocalISO(selectedDate, task.endTime!);
-    if (new Date(endISO) <= new Date(startISO)) {
-      endISO = buildLocalISO(addDaysISO(selectedDate, 1), task.endTime!);
-    }
-    const durationSeconds = Math.round(
-      (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
-    );
-    await createRetroactiveTask(
-      taskRepo,
-      {
-        workspaceId,
-        name: task.name || null,
-        projectId: task.projectId,
-        categoryId: task.categoryId,
-        billable: task.billable,
-        startTime: startISO,
-        endTime: endISO,
-        durationSeconds,
-      },
-      new Date().toISOString()
-    );
-    await completePlannedTask(plannedTaskRepo, task.id, selectedDate);
+  // Avisar as outras janelas e recarregar a tela é o mesmo desfecho para um
+  // lançamento e para o lote inteiro — no lote, uma vez só no fim, em vez de uma
+  // recarga por tarefa lançada.
+  async function afterLaunch(lastEndHHMM: string | null) {
     void notifyTasksChanged();
     // O mesmo defeito na direção contrária: lançar direto conclui a planejada, e
     // sem o aviso ela seguia pendente no popup e no planejamento.
     void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-    form.advanceChainStart(task.endTime!);
+    // Nada lançado não move a cadeia — reaplicar o início atual só reescreveria
+    // o fim do formulário que o usuário talvez já tenha ajustado.
+    if (lastEndHHMM) form.advanceChainStart(lastEndHHMM);
     await Promise.all([loadTasks(), loadPlannedTasks()]);
+  }
+
+  async function handleDirectLaunch(task: PlannedTask) {
+    await launchPlannedTaskRetroactively(
+      taskRepo,
+      plannedTaskRepo,
+      task,
+      selectedDate,
+      new Date().toISOString()
+    );
+    await afterLaunch(task.endTime!);
+  }
+
+  /**
+   * Lança de uma vez todas as planejadas do dia que já trazem horário — na
+   * prática, as importadas do Google Agenda e do Monday. Elas não têm nada a
+   * revisar: o intervalo veio do evento, e o clique a clique só repetia a mesma
+   * confirmação por linha num dia cheio de reuniões.
+   *
+   * Falha de uma não interrompe as seguintes, pela mesma razão do envio de horas
+   * (§5.7): o que já foi gravado fica, e o que não deu certo continua pendente na
+   * lista para ser tentado de novo — abortar deixaria o resultado do lote
+   * dependendo de qual tarefa falhou primeiro.
+   */
+  async function handleLaunchAllTimed() {
+    if (launchingAll || timedPlannedTasks.length === 0) return;
+    setLaunchingAll(true);
+    setLaunchError("");
+
+    const nowISO = new Date().toISOString();
+    let lastEnd = "";
+    let failed = 0;
+    for (const task of timedPlannedTasks) {
+      try {
+        await launchPlannedTaskRetroactively(taskRepo, plannedTaskRepo, task, selectedDate, nowISO);
+        if (task.endTime! > lastEnd) lastEnd = task.endTime!;
+      } catch {
+        failed += 1;
+      }
+    }
+
+    setLaunchingAll(false);
+    if (failed > 0) {
+      setLaunchError(
+        failed === 1
+          ? "1 tarefa não pôde ser lançada."
+          : `${failed} tarefas não puderam ser lançadas.`
+      );
+    }
+    await afterLaunch(lastEnd || null);
   }
 
   function toggleSelectTask(id: string) {
@@ -345,6 +390,13 @@ export function RetroactivePage() {
 
   const totalSeconds = tasks.reduce((acc, t) => acc + (t.durationSeconds ?? 0), 0);
 
+  // O aviso do lote descreve a lista de um dia — trocar de dia o deixaria falando
+  // de tarefas que saíram da tela, como a mensagem do envio manual (§5.7).
+  function goToDate(dateISO: string) {
+    setLaunchError("");
+    setSelectedDate(dateISO);
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -353,19 +405,19 @@ export function RetroactivePage() {
         className="px-5 py-3 border-b border-gray-800 flex items-center gap-3"
       >
         <button
-          onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))}
+          onClick={() => goToDate(addDaysISO(selectedDate, -1))}
           className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors"
         >
           <ChevronLeft size={16} />
         </button>
         <DatePickerInput
           value={selectedDate}
-          onChange={setSelectedDate}
+          onChange={goToDate}
           className="text-sm font-medium text-gray-200 w-30"
           maxDate={new Date()}
         />
         <button
-          onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))}
+          onClick={() => goToDate(addDaysISO(selectedDate, 1))}
           disabled={selectedDate >= today}
           className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
@@ -407,9 +459,25 @@ export function RetroactivePage() {
           {/* Tarefas planejadas para o dia — sugestões para lançamento */}
           {plannedTasks.length > 0 && (
             <div className="border-b border-gray-800 shrink-0">
-              <p className="px-5 pt-2.5 pb-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                Planejadas para este dia
-              </p>
+              <div className="flex items-center gap-3 px-5 pt-2.5 pb-1">
+                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                  Planejadas para este dia
+                </p>
+                {/* Com uma só, o ▶ da própria linha já é este botão — o lote
+                    existe para o dia cheio de reuniões importadas. */}
+                {timedPlannedTasks.length > 1 && (
+                  <button
+                    onClick={() => void handleLaunchAllTimed()}
+                    disabled={launchingAll}
+                    title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
+                    className="ml-auto flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ListChecks size={13} />
+                    {launchingAll ? "Lançando…" : `Lançar ${timedPlannedTasks.length} com horário`}
+                  </button>
+                )}
+              </div>
+              {launchError && <p className="px-5 pb-1 text-xs text-red-400">{launchError}</p>}
               <div className="max-h-36 overflow-y-auto">
                 {plannedTasks.map((task) => {
                   const projectName = projects.find((p) => p.id === task.projectId)?.name;
@@ -431,8 +499,12 @@ export function RetroactivePage() {
                           formColumn.set(false);
                           form.prefill(task);
                         }}
+                        // Com o lote em curso, o clique aqui lançaria de novo o
+                        // que a fila já está lançando — a lista só se atualiza
+                        // no fim.
+                        disabled={launchingAll}
                         title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                        className={`shrink-0 p-1 rounded-lg transition-colors ${
+                        className={`shrink-0 p-1 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                           hasTime
                             ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
                             : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"

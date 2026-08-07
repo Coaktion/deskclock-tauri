@@ -8,7 +8,7 @@ import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
-import { addDaysISO, computeEndHHMM, parseDurationInput } from "@shared/utils/time";
+import { addDaysISO, buildLocalISO, computeEndHHMM, parseDurationInput } from "@shared/utils/time";
 import { useRef, useState } from "react";
 
 const DEFAULT_DURATION_SECS = 3600;
@@ -16,13 +16,6 @@ const DEFAULT_DURATION_SECS = 3600;
 function nowHHMM(): string {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(dateISO + "T00:00:00");
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 
 function isoToHHMM(iso: string): string {
@@ -90,10 +83,10 @@ export function useRetroactiveForm({
     setError("");
     const st = startTime || prevStart.current;
     const et = overrideEndHHMM ?? (endTime || prevEnd.current);
-    const startISO = buildISO(selectedDate, st);
-    let endISO = buildISO(selectedDate, et);
+    const startISO = buildLocalISO(selectedDate, st);
+    let endISO = buildLocalISO(selectedDate, et);
     if (new Date(endISO) < new Date(startISO)) {
-      endISO = buildISO(addDaysISO(selectedDate, 1), et);
+      endISO = buildLocalISO(addDaysISO(selectedDate, 1), et);
     }
     const durationSeconds = Math.round(
       (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
