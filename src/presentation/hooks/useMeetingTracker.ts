@@ -6,6 +6,7 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { computeMeetingPromptActions } from "@domain/usecases/calendar/computeMeetingPromptActions";
+import { resolveMeetingTaskDefaults } from "@domain/usecases/calendar/resolveMeetingTaskDefaults";
 import { syncTodayMeetings } from "@domain/usecases/calendar/syncTodayMeetings";
 import {
   OVERLAY_EVENTS,
@@ -210,19 +211,17 @@ export function useMeetingTracker() {
         if (prev) await trackedMeetingRepo.upsert({ ...prev, ended: true });
       }
 
-      // Copia projeto/categoria da planejada vinculada à reunião. O vínculo é
-      // gravado pelo sync (criada por ele ou adotada de quem já existia), então
-      // aqui não se adivinha por nome: renomear a planejada não desfaz o
-      // pareamento, e uma reunião que adotou a planejada do Monday herda também
-      // o Project Stage que o envio de horas exige.
-      const match = m.plannedTaskId ? await plannedTaskRepo.findById(m.plannedTaskId) : null;
-      const task = await switchRef.current({
-        name: m.title,
-        projectId: match?.projectId ?? null,
-        categoryId: match?.categoryId ?? null,
-        billable: match?.billable ?? false,
-        plannedTaskId: match?.id ?? null,
+      // Projeto, categoria e vínculo saem da planejada de origem — a vinculada
+      // pelo sync, ou, se ela for de outro workspace, a de mesmo nome no ativo.
+      // A regra vive num use case porque é ela que decide o que a tarefa herda,
+      // e aqui dentro do efeito não havia como testá-la.
+      const defaults = await resolveMeetingTaskDefaults(plannedTaskRepo, {
+        title: m.title,
+        plannedTaskId: m.plannedTaskId,
+        todayISO: today,
+        workspaceId: workspaceIdRef.current,
       });
+      const task = await switchRef.current({ name: m.title, ...defaults });
       // Escrita estreita: entre a leitura de `m` acima e este ponto houve uma
       // troca de tarefa (parada + início), tempo de sobra para um ciclo de sync
       // gravar o `plannedTaskId` que um upsert de linha inteira desfaria.
