@@ -4,6 +4,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { bareInputClass, boxClass, fieldClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import {
   usePlannedTaskEditor,
@@ -24,7 +25,19 @@ interface EditPlannedTaskModalProps {
   onClose: () => void;
 }
 
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+/**
+ * Só dias úteis (§5.3) — sábado e domingo não existem no planejamento, e
+ * marcá-los aqui criava uma recorrente que nunca aparecia na lista. Os valores
+ * continuam na escala do `Date` (1=Seg…5=Sex): reindexar para 0..4 mudaria o
+ * dia de toda tarefa recorrente já gravada.
+ */
+const WEEKDAYS = [
+  { value: 1, label: "Seg", title: "Segunda" },
+  { value: 2, label: "Ter", title: "Terça" },
+  { value: 3, label: "Qua", title: "Quarta" },
+  { value: 4, label: "Qui", title: "Quinta" },
+  { value: 5, label: "Sex", title: "Sexta" },
+];
 
 export function EditPlannedTaskModal({
   task,
@@ -103,7 +116,10 @@ export function EditPlannedTaskModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-6">
-          {/* Dados da tarefa */}
+          {/* Dados da tarefa — mesmo vocabulário visual do `EditTaskModal` e das
+              duas telas de entrada (`fieldStyles.ts`): campo comum desenha a
+              própria casca, e quem divide a linha com um botão vive dentro de
+              uma caixa. */}
           <div className="flex flex-col gap-3">
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tarefa</p>
             <input
@@ -113,43 +129,55 @@ export function EditPlannedTaskModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="Nome da tarefa"
               autoComplete="off"
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              className={fieldClass}
             />
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Autocomplete
                 value={projectName}
                 onChange={setProjectName}
                 onSelect={selectProject}
                 options={projects}
                 placeholder="Projeto"
-                className="flex-1"
               />
-              <Autocomplete
-                value={categoryName}
-                onChange={setCategoryName}
-                onSelect={selectCategory}
-                options={categoryOptions}
-                placeholder="Categoria"
-                className="flex-1"
-              />
-              <button
-                type="button"
-                onClick={() => setBillable((b) => !b)}
-                title={
-                  billable
-                    ? "Billable — clique para alternar"
-                    : "Non-billable — clique para alternar"
-                }
-                className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors shrink-0 ${
-                  billable
-                    ? "bg-green-900/40 border-green-700 text-green-400"
-                    : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
-                }`}
-              >
-                <DollarSign size={14} />
-                {billable ? "Billable" : "Non-billable"}
-              </button>
+              {/* Billable encostado na categoria, como no popup e nas duas telas
+                  de entrada: é a categoria que define o padrão (§6.2), e o
+                  ajuste manual pertence ao mesmo campo. */}
+              <div className={`${boxClass} flex items-center pr-2`}>
+                <Autocomplete
+                  value={categoryName}
+                  onChange={setCategoryName}
+                  onSelect={selectCategory}
+                  options={categoryOptions}
+                  placeholder="Categoria"
+                  className="flex-1 min-w-0"
+                  inputClassName={bareInputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => setBillable((b) => !b)}
+                  title={
+                    billable
+                      ? "Billable — clique para alternar"
+                      : "Non-billable — clique para alternar"
+                  }
+                  className={`flex items-center gap-1 shrink-0 transition-colors ${
+                    billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+                  }`}
+                >
+                  <DollarSign size={14} />
+                </button>
+              </div>
             </div>
+
+            {/* Campos personalizados logo depois de categoria e billable, antes
+                do agendamento (§5.1.2): são atributos do trabalho em si, e o
+                agendamento é o bloco que diz *quando* — intercalá-los partia os
+                dois grupos ao meio. */}
+            <CustomFieldInputs
+              fields={activeFields}
+              values={customValues}
+              onChange={setCustomValues}
+            />
           </div>
 
           <div className="border-t border-gray-800" />
@@ -201,18 +229,19 @@ export function EditPlannedTaskModal({
 
             {scheduleType === "recurring" && (
               <div className="flex gap-2">
-                {DAY_LABELS.map((label, idx) => (
+                {WEEKDAYS.map((day) => (
                   <button
-                    key={idx}
+                    key={day.value}
                     type="button"
-                    onClick={() => toggleDay(idx)}
+                    title={day.title}
+                    onClick={() => toggleDay(day.value)}
                     className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
-                      recurringDays.includes(idx)
+                      recurringDays.includes(day.value)
                         ? "bg-blue-900/40 border-blue-600 text-blue-300"
                         : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
                     }`}
                   >
-                    {label}
+                    {day.label}
                   </button>
                 ))}
               </div>
@@ -226,17 +255,6 @@ export function EditPlannedTaskModal({
               </div>
             )}
           </div>
-
-          {activeFields.length > 0 && (
-            <>
-              <div className="border-t border-gray-800" />
-              <CustomFieldInputs
-                fields={activeFields}
-                values={customValues}
-                onChange={setCustomValues}
-              />
-            </>
-          )}
 
           <div className="border-t border-gray-800" />
 
