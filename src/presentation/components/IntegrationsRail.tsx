@@ -43,7 +43,14 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
         />
       </button>
 
-      <div className="pointer-events-none absolute right-full top-1/2 -translate-y-1/2 z-50 min-w-[240px] pr-2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 group-hover:pointer-events-auto group-focus-within:pointer-events-auto hover:opacity-100 hover:translate-x-0 hover:pointer-events-auto transition-[opacity,transform] duration-150">
+      {/*
+        O flyout desce a partir do topo da placa, e não centrado nela: a linha
+        que contém o rail é `overflow-hidden` (App.tsx), então a metade de cima
+        de um flyout centrado nas primeiras placas cai acima da borda e é
+        cortada — parecia perder para a title bar. Descendo, ele fica sempre
+        dentro do rail, que ocupa a altura inteira.
+      */}
+      <div className="pointer-events-none absolute right-full top-0 z-50 min-w-[240px] pr-2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 group-hover:pointer-events-auto group-focus-within:pointer-events-auto hover:opacity-100 hover:translate-x-0 hover:pointer-events-auto transition-[opacity,transform] duration-150">
         <div className="relative rounded-lg border border-gray-700 bg-gray-900 p-2.5 shadow-2xl">
           <div className="flex items-baseline justify-between mb-1.5">
             <span className="text-[13px] font-semibold text-gray-100">{title}</span>
@@ -60,8 +67,9 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
               {a.label}
             </button>
           ))}
+          {/* Meia altura da placa (`h-11`), para a seta apontar o centro dela. */}
           <span
-            className="absolute right-[-5px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-gray-900 border-r border-t border-gray-700"
+            className="absolute right-[-5px] top-5.5 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-gray-900 border-r border-t border-gray-700"
             aria-hidden
           />
         </div>
