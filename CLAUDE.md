@@ -300,7 +300,8 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 
 > **Decisão de produto:** A visão "Hoje" foi removida. A visão Semana já permite selecionar qualquer data (incluindo hoje) e é suficiente para todos os fluxos de planejamento.
 
-- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← → + contador de concluídas.
+- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← → + pílula "Semana atual" + contador de concluídas.
+- **A pílula "Semana atual" é botão e indicador ao mesmo tempo**, no lugar que era do botão de importar da Agenda. Navegadas algumas semanas, o intervalo em dd/mm não responde sozinho "esta é a de hoje?" — a pílula **acesa** é a resposta, e **apagada** é o caminho de volta em um clique. Fica sempre visível, e não desabilita na semana atual: é a mesma pílula "Hoje" do formulário (§5.3, campo Data única), que já resolve o equivalente para o campo de data. Volta também o filtro de dia para "Todos", como as setas.
 - **Layout em duas colunas:** formulário fixo à esquerda (`PlannedTaskForm`), semana à direita — o mesmo arranjo do Lançamento Manual (§5.8). As duas telas de entrada compartilham o vocabulário visual dos campos em `presentation/components/fieldStyles.ts`; **não duplicar essas classes**, ou um ajuste numa tela desalinha a outra em silêncio.
 - **A coluna do formulário recolhe** (`CollapsibleFormColumn`, o mesmo componente do Lançamento Manual): sobra uma faixa de 36 px com o rótulo de pé, e a lista fica com a tela inteira. O estado é **persistido** por tela (`planningFormCollapsed`, `retroactiveFormCollapsed`) — quem recolheu quer espaço para trabalhar, e reabrir a cada navegação desfaria o pedido. Não há toggle em Configurações: o controle é o próprio botão da coluna. O `data-tour` vive na casca, não no formulário, para o tour ter alvo mesmo com a coluna recolhida.
 - **Só dias úteis.** Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta — a antiga `showWeekend` foi removida. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia.
@@ -316,7 +317,7 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 - **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
 - **Edição:** abre modal completo.
 - **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação). **Só aparecem no hover da linha, e sem hover não ocupam largura** (`w-0` + `overflow-hidden`, não apenas `opacity-0`): reservados, o espaço de cinco botões saía do nome da tarefa, que truncava numa linha vazia à direita. `focus-within` abre o bloco para quem navega pelo teclado.
-- **Importar Google Agenda:** Botão visível quando Google conectado. Modal com eventos agrupados por dia (accordion), seleção por dia, editor inline por evento (projeto, categoria, recorrência). Filtra `workingLocation` e `outOfOffice`. `focusTime` **não** é filtrado — blocos de foco viram tarefas, pois costumam representar trabalho real.
+- **Importar Google Agenda:** **não se entra por aqui.** O botão que ficava ao lado da navegação de semana foi removido — o modal abre pelo rail de integrações e pela tela de Integrações, que é onde está o seletor de workspace que governa o destino do import (§5.7). Ter dois caminhos para o mesmo modal era justamente o que fazia o import nascer num workspace diferente do que o Planejamento mostra na tela.
 
 #### Lógica de Concluir/Pendente
 - **Concluir:** Adiciona a data atual ao array `completed_dates`. Tarefa deixa de aparecer na lista de planejadas na Tela de Tarefas para aquele dia, mas permanece no planejamento.
@@ -558,9 +559,10 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 > **A Agenda é a exceção ao workspace por integração, e a exceção foi escolhida.** O seletor dela
 > vale só para o **"Importar eventos" manual**; o **rastreio automático de reuniões continua
 > criando no workspace ativo**. Foi apontado ao usuário, na pergunta, que o mesmo modal também
-> abre pelo Planejamento e passaria a importar para um workspace diferente do que a tela mostra —
-> ele escolheu assim mesmo. **Não "conserte" sem perguntar.** É por isso que só o
-> `useMeetingTracker` mantém o gate de `workspaceLoading` (§ acima).
+> abria pelo Planejamento e passaria a importar para um workspace diferente do que a tela mostra —
+> ele escolheu assim mesmo, e depois **removeu aquele botão** (§5.3): hoje o modal só abre pelo rail
+> e pela tela de Integrações, onde o seletor está à vista. **Não "conserte" sem perguntar.** É por
+> isso que só o `useMeetingTracker` mantém o gate de `workspaceLoading` (§ acima).
 
 > **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 2 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
 

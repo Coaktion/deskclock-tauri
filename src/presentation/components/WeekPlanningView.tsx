@@ -3,8 +3,6 @@ import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTa
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
-import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
@@ -13,11 +11,10 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTour } from "@presentation/hooks/useTour";
 import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
-import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -76,15 +73,12 @@ export function WeekPlanningView() {
   const { plannedTaskRepo } = useRepositories();
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
-  const [showImportModal, setShowImportModal] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { start, end, label } = getWeekBounds(weekOffset);
   const days = getDaysOfWeek(start);
   const today = todayISO();
 
-  const config = useAppConfig();
-  const factories = useIntegrations();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
@@ -92,16 +86,7 @@ export function WeekPlanningView() {
   const { startTask, runningTask } = useRunningTask();
   const { titles: trackedTitles, today: trackedToday } = useTrackedMeetingTitles();
 
-  const calendarConnected = config.isLoaded && !!config.get("googleRefreshToken");
   const formColumn = usePersistedFlag("planningFormCollapsed");
-
-  const calendarImporter = useMemo(
-    () => (config.isLoaded ? factories.createCalendarImporter() : null),
-    [config.isLoaded, factories]
-  );
-
-  const calendarFromISO = new Date(start + "T00:00:00").toISOString();
-  const calendarToISO = new Date(end + "T23:59:59").toISOString();
 
   // A semana é sempre útil: sábado e domingo saíram de vez, junto com a
   // configuração que os ligava. Tarefas recorrentes gravadas no fim de semana
@@ -160,14 +145,6 @@ export function WeekPlanningView() {
     await reload();
     await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
     exitSelectMode();
-  }
-
-  function handleImported(count: number) {
-    setShowImportModal(false);
-    if (count > 0) {
-      reload();
-      emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-    }
   }
 
   const { startTour, hasSeenTour } = useTour("planning");
@@ -231,15 +208,25 @@ export function WeekPlanningView() {
           <ChevronRight size={15} />
         </button>
 
-        {calendarConnected && !selectMode && (
-          <button
-            onClick={() => setShowImportModal(true)}
-            title="Importar do Google Calendar"
-            className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
-          >
-            <CalendarDays size={13} />
-          </button>
-        )}
+        {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:
+            navegando algumas semanas, o intervalo em dd/mm não responde sozinho
+            "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. Segue
+            o mesmo vocabulário da pílula "Hoje" do formulário, que faz o
+            equivalente para o campo de data. */}
+        <button
+          onClick={() => {
+            setWeekOffset(0);
+            setDayFilter("all");
+          }}
+          title="Voltar para a semana atual"
+          className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap shrink-0 ${
+            weekOffset === 0
+              ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
+              : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
+          }`}
+        >
+          Semana atual
+        </button>
 
         <div className="ml-auto flex items-center gap-3 shrink-0">
           <span className="text-xs text-gray-400 whitespace-nowrap">
@@ -290,7 +277,13 @@ export function WeekPlanningView() {
             data-tour="planning-day-filter"
             className="border-b border-gray-800 shrink-0 flex items-center gap-3 px-4 py-2.5"
           >
-            <div className="flex gap-1.5 min-w-0 overflow-x-auto">
+            {/* O padding de 2px acomoda o ponto de "hoje", que sai 2px para fora
+                da pílula: sendo hoje o último dia visível, esses 2px viravam
+                área rolável e a barra horizontal aparecia com a linha inteira
+                cabendo na tela. A margem negativa devolve o espaço, então nada
+                se desloca — e o padding no topo é o que impede o ponto de ser
+                cortado pelo próprio overflow. */}
+            <div className="flex gap-1.5 min-w-0 overflow-x-auto pt-0.5 pr-0.5 -mt-0.5 -mr-0.5">
               <button
                 onClick={() => setDayFilter("all")}
                 className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
@@ -368,20 +361,6 @@ export function WeekPlanningView() {
               </div>
             )}
           </div>
-
-          {/* ── Google Calendar import modal ─────────────────────────────────────── */}
-          {showImportModal && calendarImporter && (
-            <ImportCalendarModal
-              importer={calendarImporter}
-              repo={plannedTaskRepo}
-              defaultFromISO={calendarFromISO}
-              defaultToISO={calendarToISO}
-              projects={projects}
-              categories={categories}
-              onImported={handleImported}
-              onClose={() => setShowImportModal(false)}
-            />
-          )}
 
           {/* ── Task list grouped by day ────────────────────────────────────── */}
           <div data-tour="planning-task-list" className="flex-1 min-h-0 overflow-y-auto">

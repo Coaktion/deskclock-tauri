@@ -6,7 +6,7 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Visão semanal",
       description:
-        "Navegue entre semanas com as setas. O contador à direita mostra quantas tarefas já foram concluídas na semana.",
+        "Navegue entre semanas com as setas. A pílula 'Semana atual' fica acesa quando você está na semana de hoje e traz você de volta a ela de qualquer outra. O contador à direita mostra quantas tarefas já foram concluídas na semana.",
       side: "bottom",
       align: "start",
     },
