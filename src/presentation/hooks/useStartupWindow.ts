@@ -9,7 +9,7 @@ const appWindow = getCurrentWindow();
 
 /** Precisa acompanhar `main` em `tauri.conf.json`: é a partir dela que o
  *  posicionamento calcula o canto, e divergir joga a janela fora da área útil. */
-const MAIN_WINDOW_SIZE = { width: 1000, height: 700 };
+const MAIN_WINDOW_SIZE = { width: 1100, height: 700 };
 
 async function getOverlayCompact() {
   return WebviewWindow.getByLabel("overlay-compact");
