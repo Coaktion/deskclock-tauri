@@ -1563,13 +1563,30 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 > deles ficavam inexequíveis e travavam agentes na primeira mudança visual. Abaixo está o que
 > existe de fato.
 
-- **Tokens de cor:** vêm do **Tailwind v4** (`@import "tailwindcss"` em `src/index.css`), que expõe
-  a paleta inteira como CSS custom properties `--color-<slot>-<peso>` (26 slots: `blue`, `rose`,
-  `teal`, `violet`, `amber`…). **Não há um `tokens.css` no projeto** — a paleta é a do Tailwind.
-- **Overrides de tema:** `src/index.css` remapeia famílias por tema (`[data-theme="verde"]` troca
-  `blue` por `green`; `[data-theme="escuro"]` troca `gray` por `zinc`; `[data-theme="claro"]`
-  inverte a escala de `gray`). Por isso `blue`, `green`, `gray` e `zinc` são **reservados** e não
-  devem ser usados para colorir entidades.
+- **Tokens semânticos:** o bloco `@theme static` de `src/index.css` declara a camada semântica —
+  superfícies (`canvas`, `surface`, `raised`, `border-subtle`, `border`), texto (`fg`,
+  `fg-secondary`, `fg-muted`), acento (`accent`, `accent-text`), status (`billable`, `paused`,
+  `danger`), as seis cores de projeto e três raios (`chip` 6 · `control` 8 · `card` 12). Deles saem
+  utilitários normais do Tailwind: `bg-surface`, `text-fg-muted`, `border-border-subtle`,
+  `rounded-card`. **É esta a paleta a usar em código novo.**
+
+  > `static` é obrigatório e não é enfeite: sem ele o Tailwind descarta o token que nenhum
+  > utilitário referencia, e um token some do CSS gerado no dia em que a última tela deixa de
+  > usá-lo. `src/tests/conventions/designTokens.test.ts` guarda a declaração de cada um — derrubar
+  > um não gera erro, gera um `bg-surface` que não pinta nada.
+
+- **Modo e acento são eixos separados:** `[data-mode="claro"]` troca as superfícies por uma paleta
+  **própria**, não pela inversão da rampa; `[data-accent="verde"|"roxo"|"ambar"]` troca **só**
+  `--accent-hue`, de que `--color-accent` e `--color-accent-text` derivam. Os dois blocos ficam
+  **fora de `@layer`** de propósito: o `@theme` emite dentro de `@layer theme`, e regra sem layer
+  vence regra em layer no cascade, qualquer que seja a especificidade.
+- **Tema legado, em migração:** os três `[data-theme="verde"|"escuro"|"claro"]` continuam no arquivo
+  remapeando famílias do Tailwind (`blue`→`green`, `gray`→`zinc`, inversão da rampa de `gray`), e
+  por isso `blue`, `green`, `gray` e `zinc` **seguem reservados** e não devem colorir entidades.
+  Eles convivem com os tokens durante a migração — telas não migradas usam `bg-gray-900`, migradas
+  usam `bg-surface`, e os valores são próximos o bastante para as duas conviverem. **São o último
+  passo da migração a ser apagado**, junto com as cópias `--tw-gray-*`; não os remova antes de a
+  última tela e o CSS do tour saírem deles.
 - **Escala tipográfica:** `--app-font-size` em `:root`, controlada pela configuração de
   acessibilidade.
 - **Paleta de cores de entidade:** `src/domain/utils/workspaceColor.ts` define a lista curada de
@@ -1578,9 +1595,12 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 ## Regras obrigatórias
 
 1. **Zero hardcode visual.** Nunca crie cores, tamanhos, raios, sombras ou tipografias com valores
-   literais. Use sempre as custom properties do Tailwind (`var(--color-teal-500)`) ou as declaradas
-   em `src/index.css`. Se precisar de um valor que não existe na paleta do Tailwind, pare e
-   pergunte — não invente um novo.
+   literais. Em código novo use o **token semântico** (`bg-surface`, `text-fg-muted`,
+   `border-border-subtle`, `rounded-card`); a paleta crua do Tailwind (`var(--color-teal-500)`) é
+   legado em migração e só se justifica em tela ainda não migrada. Cor de significado tem token
+   próprio: `billable`, `paused` e `danger` — nunca `emerald`, `green`, `rose` ou `red` direto, e
+   `green` ainda por cima é família remapeada pelo tema Verde, o que torna hora billable
+   indistinguível do acento. Se precisar de um valor que a paleta não cobre, pare e pergunte.
 
 2. **Um componente por conversa.** Não refatore múltiplas telas/componentes na mesma mudança.
    Escopo pequeno é verificável.

@@ -1,6 +1,96 @@
 @import "tailwindcss";
 @import "driver.js/dist/driver.css";
 
+/* ── Tokens semânticos — direção 2a (frio, definido por borda) ────────────────
+ *
+ * Camada nova, puramente aditiva: as telas ainda não migradas seguem usando
+ * `bg-gray-900` e os três `[data-theme]` abaixo continuam valendo. Os valores
+ * são próximos o bastante para as duas convivências durarem a migração inteira.
+ *
+ * `static` não é enfeite: sem ele o Tailwind descarta o token que nenhum
+ * utilitário referencia — e este é exatamente o momento em que ninguém
+ * referencia nenhum. Verificado no Tailwind 4.3.2: com `static`, até o
+ * `--radius-control` sem consumidor sai no CSS gerado.
+ *
+ * Os blocos [data-accent] e [data-mode] ficam **fora de layer** de propósito.
+ * O @theme emite dentro de `@layer theme`, e regra sem layer vence regra em
+ * layer no cascade, qualquer que seja a especificidade — é o mesmo mecanismo em
+ * que os [data-theme] legados já se apoiam hoje.
+ */
+@theme static {
+  /* Superfícies — o modo escuro é o padrão */
+  --color-canvas: oklch(0.13 0.028 262);
+  --color-surface: oklch(0.185 0.031 264);
+  --color-raised: oklch(0.21 0.034 265);
+  --color-border-subtle: oklch(0.26 0.033 257);
+  --color-border: oklch(0.3 0.033 257);
+
+  /* Texto */
+  --color-fg: oklch(0.97 0.003 264);
+  --color-fg-secondary: oklch(0.75 0.02 261);
+  --color-fg-muted: oklch(0.6 0.02 264);
+
+  /* Acento — o hue é a única variável que o seletor de acento troca */
+  --color-accent: oklch(0.62 0.19 var(--accent-hue));
+  --color-accent-text: oklch(0.72 0.15 var(--accent-hue));
+
+  /* Status — um token por significado, não uma família do Tailwind por tela */
+  --color-billable: oklch(0.72 0.15 162);
+  --color-paused: oklch(0.75 0.15 70);
+  --color-danger: oklch(0.65 0.19 22);
+
+  /* Cores de projeto — mesma lightness e chroma, só o hue muda: na mesma lista
+     o âmbar hoje pesa mais que o slate justamente por não obedecerem a isso. */
+  --color-project-1: oklch(0.65 0.16 258);
+  --color-project-2: oklch(0.65 0.16 300);
+  --color-project-3: oklch(0.65 0.16 162);
+  --color-project-4: oklch(0.65 0.16 70);
+  --color-project-5: oklch(0.65 0.16 350);
+  --color-project-6: oklch(0.65 0.16 200);
+  --color-project-none: oklch(0.55 0.02 264);
+
+  --radius-chip: 0.375rem;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+}
+
+/* Fora do @theme de propósito: `hue` não é namespace do Tailwind — não geraria
+   utilitário nenhum — e precisa ser sobrescrito por [data-accent] no cascade. */
+:root {
+  --accent-hue: 258;
+}
+
+/* ── Acento: independente do modo. É isto que faz Verde deixar de ser tema. ── */
+[data-accent="verde"] {
+  --accent-hue: 155;
+}
+[data-accent="roxo"] {
+  --accent-hue: 300;
+}
+[data-accent="ambar"] {
+  --accent-hue: 45;
+}
+
+/* ── Modo claro: paleta própria, não inversão da rampa ── */
+[data-mode="claro"] {
+  color-scheme: light;
+  --color-canvas: oklch(0.985 0.002 248);
+  --color-surface: #ffffff;
+  --color-raised: oklch(0.967 0.003 265);
+  --color-border-subtle: oklch(0.93 0.005 264);
+  --color-border: oklch(0.9 0.006 264);
+  --color-fg: oklch(0.21 0.034 265);
+  --color-fg-secondary: oklch(0.446 0.03 257);
+  --color-fg-muted: oklch(0.551 0.018 264);
+  --color-accent: oklch(0.55 0.2 var(--accent-hue));
+  --color-accent-text: oklch(0.5 0.19 var(--accent-hue));
+  --color-billable: oklch(0.62 0.15 162);
+  /* Mais escuro que no modo escuro: o âmbar de pausa sobre branco, no mesmo
+     valor, fica ilegível. Valor do swatch claro de 2a. */
+  --color-paused: oklch(0.68 0.15 70);
+  --color-danger: oklch(0.58 0.19 22);
+}
+
 :root {
   font-size: var(--app-font-size, 14px);
 
