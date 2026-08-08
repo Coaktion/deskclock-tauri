@@ -182,9 +182,8 @@ export function WeekPlanningView() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Sem título: a identidade da tela é o intervalo navegado, e um "Planejamento"
-          ao lado dele só roubaria largura de quem já disputa espaço no cabeçalho. */}
       <PageHeader
+        title="Planejamento"
         tourId="planning-header"
         onStartTour={startTour}
         context={

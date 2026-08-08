@@ -1630,10 +1630,13 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > que vinha abaixo. O `data-tour` fica na **casca** do header — apontado para dentro, o tour
   > destacaria só o título, e são quatro tours que dependem disso.
   >
-  > **Planejamento e Lançamento Manual ficam sem título, de propósito.** A identidade dessas duas
-  > é o intervalo navegado e o dia navegado, que já estão no cabeçalho; um "Planejamento" ao lado
-  > roubaria largura de uma linha que já disputa espaço com navegação, pílula e contador. É o que
-  > a prop `title` opcional existe para permitir — não é omissão a corrigir.
+  > **Toda tela tem título, inclusive as de navegação por data.** Planejamento e Lançamento Manual
+  > nasceram sem — o argumento era que o intervalo e o dia navegados já identificam a tela, e que o
+  > título roubaria largura de um cabeçalho disputado. Foi rejeitado: o título é parte da
+  > padronização, e cabeçalho sem ele quebra o mesmo alinhamento que o `PageHeader` existe para
+  > garantir. Quem cede largura é o **rótulo por extenso** ("Terça, 5 de agosto de 2026"), que o
+  > seletor de data ao lado já repete — daí o `shrink-0` no bloco do título. A prop `title` segue
+  > opcional pelos testes do primitivo, não porque haja tela sem.
   >
   > **No Histórico as pílulas de período ficam numa linha própria, abaixo.** As cinco mais
   > "Filtros" e "Exportar" não cabem nos 56 px sem quebrar em duas linhas, e aí a altura fixa

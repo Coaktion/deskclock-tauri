@@ -47,7 +47,10 @@ export function PageHeader({
       className="shrink-0 h-14 px-4 flex items-center gap-3 border-b border-border-subtle"
     >
       {title && (
-        <div className="min-w-0">
+        // `shrink-0`: o título é a identidade da tela e não pode ser o que
+        // trunca quando o `context` cresce — nas telas de navegação por data,
+        // quem cede é o rótulo por extenso, que o próprio seletor já repete.
+        <div className="shrink-0 max-w-[45%]">
           <h1 className="text-base font-semibold text-fg truncate">{title}</h1>
           {subtitle && <p className="text-xs text-fg-muted truncate">{subtitle}</p>}
         </div>

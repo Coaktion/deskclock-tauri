@@ -433,8 +433,8 @@ export function RetroactivePage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Sem título, como o Planejamento: a identidade da tela é o dia navegado. */}
       <PageHeader
+        title="Lançamento manual"
         tourId="retroactive-header"
         onStartTour={startTour}
         context={
