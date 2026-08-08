@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import type { WorkspaceDeletionTarget } from "@domain/usecases/workspaces/DeleteWorkspace";
 import type { IntegrationWorkspaceBinding } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
-import { Select } from "@presentation/components/ui";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { Button, Modal, Select } from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface DeleteWorkspaceModalProps {
@@ -75,7 +74,6 @@ export function DeleteWorkspaceModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEscapeToClose(onClose);
   // Enter confirma também aqui, por decisão explícita do usuário — a guarda
   // deste modal continua sendo a escolha obrigatória do destino dos dados, não
   // a dificuldade de acionar o botão.
@@ -99,98 +97,90 @@ export function DeleteWorkspaceModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
-      <div
-        onKeyDown={handleKeyDown}
-        className="bg-surface border border-border-subtle rounded-card w-full max-w-md shadow-2xl"
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-sm font-semibold text-fg flex items-center gap-2">
-            <WorkspaceDot color={workspace.color} />
-            Excluir {workspace.name}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-fg-muted hover:text-fg-secondary rounded-control"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-5 py-4 flex flex-col gap-3">
-          {/* Antes do destino: é a consequência que a escolha de destino não
-              resolve — mover os dados não move a integração junto. */}
-          {boundIntegrations.length > 0 && <IntegrationsWarning bindings={boundIntegrations} />}
-
-          <p className="text-xs text-fg-secondary leading-relaxed">
-            Tarefas, planejadas, projetos, categorias e perfis de exportação deste workspace
-            precisam de um destino.
-          </p>
-
-          {others.length > 0 && (
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={mode === "move"}
-                onChange={() => setMode("move")}
-                className="mt-1 accent-accent"
-              />
-              <span className="flex-1">
-                <span className="block text-sm text-fg">Mover para outro workspace</span>
-                <Select
-                  aria-label="Workspace de destino"
-                  value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  onFocus={() => setMode("move")}
-                  className="mt-1.5 w-full"
-                >
-                  {others.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </Select>
-                <span className="block mt-1 text-xs text-fg-muted leading-snug">
-                  Projetos e categorias de mesmo nome no destino são reaproveitados, não duplicados.
-                </span>
-              </span>
-            </label>
-          )}
-
-          <label className="flex items-start gap-2 cursor-pointer">
-            <input
-              type="radio"
-              checked={mode === "delete"}
-              onChange={() => setMode("delete")}
-              className="mt-1 accent-danger"
-            />
-            <span className="flex-1">
-              <span className="block text-sm text-fg">Apagar todos os dados</span>
-              <span className="block mt-0.5 text-xs text-danger/80 leading-snug">
-                Todas as horas registradas neste workspace são perdidas. Não há desfazer.
-              </span>
-            </span>
-          </label>
-
-          {error && <p className="text-xs text-danger">{error}</p>}
-        </div>
-
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-border">
-          <button onClick={onClose} className="px-3 py-1.5 text-sm text-fg-secondary hover:text-fg">
+    <Modal
+      title={
+        <>
+          <WorkspaceDot color={workspace.color} />
+          Excluir {workspace.name}
+        </>
+      }
+      onClose={onClose}
+      onKeyDown={handleKeyDown}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          {/* O único botão cheio em `danger` do app — o `!` é o que o faz vencer
+              o `bg-accent` do `primary`, que é a mesma caixa. */}
+          <Button
+            variant="primary"
+            className={mode === "delete" ? "bg-danger!" : ""}
             onClick={() => void handleConfirm()}
-            disabled={busy || (mode === "move" && !targetId)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-control text-white transition-colors disabled:opacity-40 ${
-              mode === "delete" ? "bg-danger hover:opacity-90" : "bg-accent hover:opacity-90"
-            }`}
+            disabled={mode === "move" && !targetId}
+            loading={busy}
+            icon={mode === "delete" ? <AlertTriangle size={14} /> : undefined}
           >
-            {mode === "delete" && <AlertTriangle size={14} />}
             {busy ? "Excluindo..." : mode === "delete" ? "Excluir com os dados" : "Mover e excluir"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      {/* Antes do destino: é a consequência que a escolha de destino não
+          resolve — mover os dados não move a integração junto. */}
+      {boundIntegrations.length > 0 && <IntegrationsWarning bindings={boundIntegrations} />}
+
+      <p className="text-xs text-fg-secondary leading-relaxed">
+        Tarefas, planejadas, projetos, categorias e perfis de exportação deste workspace precisam de
+        um destino.
+      </p>
+
+      {others.length > 0 && (
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="radio"
+            checked={mode === "move"}
+            onChange={() => setMode("move")}
+            className="mt-1 accent-accent"
+          />
+          <span className="flex-1">
+            <span className="block text-sm text-fg">Mover para outro workspace</span>
+            <Select
+              aria-label="Workspace de destino"
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+              onFocus={() => setMode("move")}
+              className="mt-1.5 w-full"
+            >
+              {others.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </Select>
+            <span className="block mt-1 text-xs text-fg-muted leading-snug">
+              Projetos e categorias de mesmo nome no destino são reaproveitados, não duplicados.
+            </span>
+          </span>
+        </label>
+      )}
+
+      <label className="flex items-start gap-2 cursor-pointer">
+        <input
+          type="radio"
+          checked={mode === "delete"}
+          onChange={() => setMode("delete")}
+          className="mt-1 accent-danger"
+        />
+        <span className="flex-1">
+          <span className="block text-sm text-fg">Apagar todos os dados</span>
+          <span className="block mt-0.5 text-xs text-danger/80 leading-snug">
+            Todas as horas registradas neste workspace são perdidas. Não há desfazer.
+          </span>
+        </span>
+      </label>
+
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </Modal>
   );
 }

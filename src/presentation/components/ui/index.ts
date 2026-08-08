@@ -12,5 +12,6 @@ export { Input, type InputProps } from "./Input";
 export { Select, type SelectProps } from "./Select";
 export { Textarea, type TextareaProps } from "./Textarea";
 export { type ControlVariant, type ControlSize } from "./controlStyles";
+export { Modal, type ModalSize } from "./Modal";
 export { PageHeader } from "./PageHeader";
 export { SectionCard, SectionRow } from "./SectionCard";
