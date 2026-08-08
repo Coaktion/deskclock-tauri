@@ -6,7 +6,8 @@ interface TaskRowProps {
   subtitle?: ReactNode;
   /** Bloco à esquerda do nome — a faixa de horário do Histórico. */
   meta?: ReactNode;
-  duration: string;
+  /** Ausente na linha que não mede tempo — a tarefa planejada. */
+  duration?: string;
   /** Desenha a faixa de acento à esquerda da linha. */
   billable?: boolean;
   /** Cor do projeto; vem de `getProjectColor`, então é valor, não classe. */
@@ -75,7 +76,11 @@ export function TaskRow({
         {subtitle && <p className="text-xs text-fg-muted truncate mt-0.5">{subtitle}</p>}
       </div>
 
-      <span className="shrink-0 text-xs font-mono tabular-nums text-fg-secondary">{duration}</span>
+      {duration && (
+        <span className="shrink-0 text-xs font-mono tabular-nums text-fg-secondary">
+          {duration}
+        </span>
+      )}
       {badges}
 
       {actions && (

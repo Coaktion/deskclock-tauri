@@ -49,17 +49,17 @@ export function ClockifyWorkspaceSection() {
         configKey="clockifyDeskclockWorkspaceId"
         hint="Onde os projetos e as tags importados são criados, e de onde saem as horas enviadas."
       />
-      <div className="border-t border-gray-800 px-4 py-3">
+      <div className="border-t border-border-subtle px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           {/* "Clockify", não "ativo": agora há dois workspaces em jogo na mesma
               tela, e o de cima é o do DeskClock. */}
-          <span className="text-sm text-gray-300">Workspace Clockify</span>
+          <span className="text-sm text-fg-secondary">Workspace Clockify</span>
           <div className="flex items-center gap-2">
             {workspaces.length > 0 ? (
               <select
                 value={activeId}
                 onChange={(e) => handleChange(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[200px]"
+                className="bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg focus:outline-none focus:border-accent max-w-[200px]"
               >
                 {workspaces.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -68,13 +68,13 @@ export function ClockifyWorkspaceSection() {
                 ))}
               </select>
             ) : (
-              <span className="text-xs text-gray-500">{activeName || "—"}</span>
+              <span className="text-xs text-fg-muted">{activeName || "—"}</span>
             )}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
               title="Atualizar lista"
-              className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+              className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
             >
               <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
             </button>

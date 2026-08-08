@@ -12,13 +12,13 @@ export function ToggleBillable({ value, onChange, label }: ToggleBillableProps) 
       type="button"
       onClick={() => onChange(!value)}
       title={value ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
-      className={`flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded border transition-colors ${
+      className={`flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-chip border transition-colors ${
         value
-          ? "bg-green-900/40 border-green-700 text-green-400"
-          : "bg-gray-800 border-gray-600 text-gray-400 hover:text-gray-300"
+          ? "bg-billable/10 border-billable/30 text-billable"
+          : "bg-raised border-border text-fg-muted hover:text-fg-secondary"
       }`}
     >
-      <DollarSign size={12} />
+      <DollarSign size={14} />
       {label ?? (value ? "Billable" : "Non-billable")}
     </button>
   );

@@ -28,17 +28,17 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
   return (
     <div className="group relative">
       <button
-        className="w-11 h-11 rounded-xl flex items-center justify-center text-gray-400 hover:bg-white/5 hover:text-gray-100 transition-colors"
+        className="w-11 h-11 rounded-card flex items-center justify-center text-fg-muted hover:bg-raised hover:text-fg transition-colors"
         aria-label={title}
         title={title}
       >
         <span
-          className={`w-9 h-9 rounded-lg flex items-center justify-center text-white ${tileClassName}`}
+          className={`w-9 h-9 rounded-control flex items-center justify-center text-white ${tileClassName}`}
         >
           {icon}
         </span>
         <span
-          className="absolute right-1.5 bottom-1.5 w-2 h-2 rounded-full bg-green-500 border-[1.5px] border-gray-900"
+          className="absolute right-1.5 bottom-1.5 w-2 h-2 rounded-full bg-billable border-[1.5px] border-surface"
           aria-hidden
         />
       </button>
@@ -51,17 +51,17 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
         dentro do rail, que ocupa a altura inteira.
       */}
       <div className="pointer-events-none absolute right-full top-0 z-50 min-w-[240px] pr-2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 group-hover:pointer-events-auto group-focus-within:pointer-events-auto hover:opacity-100 hover:translate-x-0 hover:pointer-events-auto transition-[opacity,transform] duration-150">
-        <div className="relative rounded-lg border border-gray-700 bg-gray-900 p-2.5 shadow-2xl">
+        <div className="relative rounded-control border border-border bg-surface p-2.5 shadow-2xl">
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="text-sm font-semibold text-gray-100">{title}</span>
-            <span className="text-xs text-green-400">{status}</span>
+            <span className="text-sm font-semibold text-fg">{title}</span>
+            <span className="text-xs text-billable">{status}</span>
           </div>
-          <div className="h-px bg-gray-800 my-1" />
+          <div className="h-px bg-border-subtle my-1" />
           {actions.map((a) => (
             <button
               key={a.modal}
               onClick={() => onOpen(a.modal)}
-              className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-gray-300 rounded hover:bg-gray-800 hover:text-gray-100 transition-colors"
+              className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-fg-secondary rounded-chip hover:bg-raised hover:text-fg transition-colors"
             >
               {a.icon}
               {a.label}
@@ -69,7 +69,7 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
           ))}
           {/* Meia altura da placa (`h-11`), para a seta apontar o centro dela. */}
           <span
-            className="absolute right-[-5px] top-5.5 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-gray-900 border-r border-t border-gray-700"
+            className="absolute right-[-5px] top-5.5 -translate-y-1/2 w-2.5 h-2.5 rotate-45 bg-surface border-r border-t border-border"
             aria-hidden
           />
         </div>
@@ -104,7 +104,7 @@ export function IntegrationsRail() {
   return (
     <aside
       aria-label="Integrações conectadas"
-      className="w-[52px] shrink-0 h-full bg-gray-900 border-l border-gray-800 flex flex-col items-center py-3 gap-1 z-30"
+      className="w-[52px] shrink-0 h-full bg-surface border-l border-border-subtle flex flex-col items-center py-3 gap-1 z-30"
     >
       {sheetsConnected && (
         <RailTile
@@ -170,7 +170,7 @@ export function IntegrationsRail() {
           // Monday não traz fundo próprio, e inventar um aqui faria o mesmo
           // ícone ter dois visuais no app.
           icon={<MondayLogo size={18} />}
-          tileClassName="bg-gray-800/60"
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Enviar tarefas manualmente…",

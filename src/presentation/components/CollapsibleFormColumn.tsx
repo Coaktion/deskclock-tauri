@@ -57,9 +57,9 @@ export function CollapsibleFormColumn({
         data-tour={tourId}
         onClick={onToggle}
         title={`Expandir — ${label}`}
-        className="w-9 shrink-0 border-r border-gray-800 flex flex-col items-center gap-3 pt-2.5 text-gray-500 hover:text-gray-200 hover:bg-gray-900/50 transition-colors"
+        className="w-9 shrink-0 border-r border-border-subtle flex flex-col items-center gap-3 pt-2.5 text-fg-muted hover:text-fg hover:bg-raised transition-colors"
       >
-        <PanelLeftOpen size={15} className="shrink-0" />
+        <PanelLeftOpen size={16} className="shrink-0" />
         {/* De pé, lido de cima para baixo: virar o texto é o que permite manter
             o rótulo numa faixa dessa largura em vez de só um ícone sem nome. */}
         <span className="[writing-mode:vertical-rl] text-xs uppercase tracking-wide whitespace-nowrap">
@@ -72,17 +72,17 @@ export function CollapsibleFormColumn({
   return (
     <>
       <div data-tour={tourId} className={formColumnShellClass} style={{ width: panel.size }}>
-        <div className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-800">
+        <div className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 border-b border-border-subtle">
           {/* `leading-none`: com a entrelinha padrão, a caixa do texto fica mais
               alta que as letras e o rótulo desce em relação ao ícone ao lado. */}
-          <span className="flex-1 text-xs leading-none font-medium text-gray-500 uppercase tracking-wide truncate">
+          <span className="flex-1 text-overline leading-none uppercase text-fg-muted truncate">
             {label}
           </span>
           <button
             type="button"
             onClick={onToggle}
             title={`Recolher — ${label}`}
-            className="shrink-0 text-gray-600 hover:text-gray-200 transition-colors"
+            className="shrink-0 text-fg-muted hover:text-fg transition-colors"
           >
             <PanelLeftClose size={14} />
           </button>

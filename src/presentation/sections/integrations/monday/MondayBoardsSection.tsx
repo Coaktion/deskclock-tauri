@@ -2,7 +2,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useEffect, useState, type ReactNode } from "react";
 
 const INPUT_CLASS =
-  "shrink-0 w-36 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500";
+  "shrink-0 w-36 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
 
 /** Rótulo + descrição à esquerda, controle à direita — o arranjo de toda a seção. */
 function SettingRow({
@@ -17,8 +17,8 @@ function SettingRow({
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <span className="text-sm text-gray-300">{label}</span>
-        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
+        <span className="text-sm text-fg-secondary">{label}</span>
+        {hint && <p className="text-xs text-fg-muted mt-0.5">{hint}</p>}
       </div>
       {children}
     </div>
@@ -99,7 +99,7 @@ export function MondayBoardsSection() {
   }
 
   return (
-    <div className="border-t border-gray-800 px-4 py-3 space-y-3">
+    <div className="border-t border-border-subtle px-4 py-3 space-y-3">
       <SettingRow
         label="Board de Portfólio"
         hint="Lista os projetos. Cada item vira um projeto e diz em qual quadro as horas dele são gravadas."

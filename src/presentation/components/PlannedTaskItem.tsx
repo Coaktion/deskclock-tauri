@@ -71,12 +71,12 @@ export function PlannedTaskItem({
   return (
     <>
       <div
-        className={`flex items-center gap-3 pl-4 pr-3 py-3 border-b border-gray-800 transition-colors group ${
+        className={`flex items-center gap-3 pl-4 pr-3 py-3 border-b border-border-subtle transition-colors group ${
           isCompleted && !selectMode ? "opacity-50" : ""
         } ${
           selectMode
-            ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-800/40"}`
-            : "hover:bg-gray-800/40"
+            ? `cursor-pointer ${selected ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-raised"}`
+            : "hover:bg-raised"
         }`}
         onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
       >
@@ -86,14 +86,14 @@ export function PlannedTaskItem({
             checked={selected}
             onChange={() => onToggleSelect?.(task.id)}
             onClick={(e) => e.stopPropagation()}
-            className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+            className="shrink-0 accent-accent w-3.5 h-3.5 cursor-pointer"
           />
         )}
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <p
-              className={`text-sm text-gray-100 truncate leading-snug ${isCompleted ? "line-through text-gray-500" : ""}`}
+              className={`text-sm text-fg truncate leading-snug ${isCompleted ? "line-through text-fg-muted" : ""}`}
             >
               {task.name}
             </p>
@@ -102,35 +102,35 @@ export function PlannedTaskItem({
             <span
               className={`shrink-0 px-1.5 py-0.5 text-xs font-medium leading-none rounded-full border ${
                 task.billable
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                  : "bg-gray-800 border-gray-700 text-gray-500"
+                  ? "bg-billable/10 border-billable/30 text-billable"
+                  : "bg-raised border-border text-fg-muted"
               }`}
             >
               {task.billable ? "Billable" : "Non-billable"}
             </span>
             {task.scheduleType === "recurring" && (
-              <span className="shrink-0 flex items-center gap-0.5 text-xs text-blue-400/70 leading-none">
-                <RefreshCw size={9} />
+              <span className="shrink-0 flex items-center gap-0.5 text-xs text-accent-text/70 leading-none">
+                <RefreshCw size={14} />
               </span>
             )}
             {tracked && (
               <span
-                className="shrink-0 flex items-center text-blue-400/80 leading-none"
+                className="shrink-0 flex items-center text-accent-text/80 leading-none"
                 title="Rastreada — o app vai lembrar de iniciar esta reunião"
               >
-                <Bell size={10} />
+                <Bell size={14} />
               </span>
             )}
           </div>
           {(project || category || task.actions.length > 0) && (
-            <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1.5 leading-snug">
+            <p className="text-xs text-fg-muted truncate mt-0.5 flex items-center gap-1.5 leading-snug">
               {[project?.name, category?.name].filter(Boolean).join(" · ")}
               {task.scheduleType === "period" && task.periodEnd && (
-                <span className="text-gray-600">até {task.periodEnd}</span>
+                <span className="text-fg-muted">até {task.periodEnd}</span>
               )}
               {task.actions.length > 0 && (
-                <span className="inline-flex items-center gap-0.5 text-yellow-600/80">
-                  <Zap size={9} />
+                <span className="inline-flex items-center gap-0.5 text-amber-500/80">
+                  <Zap size={14} />
                   {task.actions.length}
                 </span>
               )}
@@ -151,18 +151,18 @@ export function PlannedTaskItem({
               <button
                 onClick={() => onPlay(task)}
                 title="Iniciar"
-                className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
+                className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
               >
-                <Play size={13} />
+                <Play size={14} />
               </button>
             )}
 
             <button
               onClick={() => setShowModal(true)}
               title="Editar"
-              className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
             >
-              <Pencil size={13} />
+              <Pencil size={14} />
             </button>
 
             <button
@@ -170,25 +170,25 @@ export function PlannedTaskItem({
                 isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
               }
               title={isCompleted ? "Marcar como pendente" : "Concluir"}
-              className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
             >
-              {isCompleted ? <RotateCcw size={13} /> : <Check size={13} />}
+              {isCompleted ? <RotateCcw size={14} /> : <Check size={14} />}
             </button>
 
             <button
               onClick={() => onDuplicate(task.id)}
               title="Duplicar"
-              className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors"
             >
-              <Copy size={13} />
+              <Copy size={14} />
             </button>
 
             <button
               onClick={() => onDelete(task.id)}
               title="Excluir"
-              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+              className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
             >
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             </button>
           </div>
         )}

@@ -269,7 +269,7 @@ export function WeekPlanningView() {
               seleção sairiam da tela junto. */}
           <div
             data-tour="planning-day-filter"
-            className="border-b border-gray-800 shrink-0 flex items-center gap-3 px-4 py-2.5"
+            className="border-b border-border-subtle shrink-0 flex items-center gap-3 px-4 py-2.5"
           >
             {/* O padding de 2px acomoda o ponto de "hoje", que sai 2px para fora
                 da pílula: sendo hoje o último dia visível, esses 2px viravam
@@ -278,36 +278,22 @@ export function WeekPlanningView() {
                 se desloca — e o padding no topo é o que impede o ponto de ser
                 cortado pelo próprio overflow. */}
             <div className="flex gap-1.5 min-w-0 overflow-x-auto pt-0.5 pr-0.5 -mt-0.5 -mr-0.5">
-              <button
-                onClick={() => setDayFilter("all")}
-                className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
-                  dayFilter === "all"
-                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                    : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-                }`}
-              >
+              <FilterPill active={dayFilter === "all"} onClick={() => setDayFilter("all")}>
                 Todos
-              </button>
+              </FilterPill>
               {visibleDays.map((day) => {
                 const isToday = day === today;
                 const dow = new Date(day + "T12:00:00Z").getUTCDay();
                 return (
-                  <button
+                  <FilterPill
                     key={day}
+                    active={dayFilter === day}
+                    highlighted={isToday}
+                    marker={isToday}
                     onClick={() => setDayFilter((prev) => (prev === day ? "all" : day))}
-                    className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap relative ${
-                      dayFilter === day
-                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                        : isToday
-                          ? "bg-transparent border-blue-500/20 text-gray-300 hover:border-blue-500/40"
-                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-                    }`}
                   >
                     {DAY_SHORT[dow]}
-                    {isToday && (
-                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                    )}
-                  </button>
+                  </FilterPill>
                 );
               })}
             </div>
@@ -324,7 +310,7 @@ export function WeekPlanningView() {
                           allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
                         setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                     >
                       {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
                         ? "Desmarcar todas"
@@ -333,13 +319,13 @@ export function WeekPlanningView() {
                     <button
                       onClick={() => void handleBulkDelete()}
                       disabled={selectedIds.size === 0}
-                      className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                      className="text-xs text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
                     </button>
                     <button
                       onClick={exitSelectMode}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                     >
                       Cancelar
                     </button>
@@ -347,7 +333,7 @@ export function WeekPlanningView() {
                 ) : (
                   <button
                     onClick={() => setSelectMode(true)}
-                    className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
+                    className="text-xs px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
                   >
                     Selecionar tarefas
                   </button>
@@ -370,14 +356,14 @@ export function WeekPlanningView() {
               return (
                 <div key={day}>
                   <div
-                    className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
+                    className={`flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle ${isToday ? "bg-accent/5" : "bg-surface"}`}
                   >
                     <span
-                      className={`text-xs font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
+                      className={`text-xs font-semibold uppercase tracking-widest ${isToday ? "text-accent-text" : "text-fg-secondary"}`}
                     >
                       {dayLabel}
                       {isToday && (
-                        <span className="ml-1.5 normal-case font-medium text-blue-400/70">
+                        <span className="ml-1.5 normal-case font-medium text-accent-text/70">
                           hoje
                         </span>
                       )}
@@ -386,7 +372,7 @@ export function WeekPlanningView() {
                       {selectMode && dayTasks.length > 0 && (
                         <button
                           onClick={() => toggleSelectAllForDay(day)}
-                          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                          className="text-xs text-fg-muted hover:text-fg transition-colors"
                         >
                           {dayTasks.every((t) => selectedIds.has(t.id))
                             ? "Desmarcar"
@@ -394,7 +380,7 @@ export function WeekPlanningView() {
                         </button>
                       )}
                       {dayTasks.length > 0 && (
-                        <span className="text-xs font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
+                        <span className="text-xs font-mono tabular-nums text-fg-muted bg-raised rounded-full px-1.5 py-0.5 leading-none">
                           {dayCompleted > 0
                             ? `${dayCompleted}/${dayTasks.length}`
                             : dayTasks.length}
@@ -403,7 +389,7 @@ export function WeekPlanningView() {
                     </div>
                   </div>
                   {dayTasks.length === 0 ? (
-                    <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
+                    <p className="px-4 py-3 text-xs text-fg-muted">Nenhuma tarefa planejada</p>
                   ) : (
                     dayTasks.map((task) => (
                       <PlannedTaskItem

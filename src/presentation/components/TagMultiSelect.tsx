@@ -61,41 +61,41 @@ export function TagMultiSelect({
       <button
         ref={triggerRef}
         onClick={() => (open ? setOpen(false) : openDropdown())}
-        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-left focus:outline-none focus:border-blue-500"
+        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-raised border border-border rounded px-2 py-1 text-xs text-left focus:outline-none focus:border-accent"
       >
         {selected.length === 0 ? (
-          <span className="text-gray-500">{placeholder}</span>
+          <span className="text-fg-muted">{placeholder}</span>
         ) : (
           selected.map((t) => (
-            <span key={t.id} className="bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded text-xs">
+            <span key={t.id} className="bg-border text-fg px-1.5 py-0.5 rounded text-xs">
               {t.name}
             </span>
           ))
         )}
-        <ChevronDown size={11} className="ml-auto shrink-0 text-gray-500" />
+        <ChevronDown size={11} className="ml-auto shrink-0 text-fg-muted" />
       </button>
       {open &&
         createPortal(
           <div
             ref={dropRef}
             style={dropStyle}
-            className="z-[9999] bg-gray-800 border border-gray-700 rounded-lg shadow-xl w-52 max-h-48 overflow-y-auto"
+            className="z-[9999] bg-raised border border-border rounded-control shadow-xl w-52 max-h-48 overflow-y-auto"
           >
             {allTags.length === 0 ? (
-              <p className="text-xs text-gray-500 px-3 py-2">Nenhuma tag disponível</p>
+              <p className="text-xs text-fg-muted px-3 py-2">Nenhuma tag disponível</p>
             ) : (
               allTags.map((t) => (
                 <label
                   key={t.id}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-700 cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-border cursor-pointer"
                 >
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(t.id)}
                     onChange={() => toggle(t.id)}
-                    className="accent-blue-500"
+                    className="accent-accent"
                   />
-                  <span className="text-xs text-gray-200">{t.name}</span>
+                  <span className="text-xs text-fg">{t.name}</span>
                 </label>
               ))
             )}

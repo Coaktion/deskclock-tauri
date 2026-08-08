@@ -21,26 +21,7 @@ const MEANING_COLOR =
 
 /** Congelado em 2026-08-07. Ao migrar uma tela, baixe ou apague a linha dela. */
 const BASELINE: Record<string, number> = {
-  "src/App.tsx": 2,
-  "src/presentation/components/DatePickerInput.tsx": 3,
-  "src/presentation/components/IntegrationsRail.tsx": 2,
-  "src/presentation/components/OmniboxCustomFieldsPanel.tsx": 1,
-  "src/presentation/components/OmniboxIdle.tsx": 4,
-  "src/presentation/components/OmniboxRunning.tsx": 18,
-  "src/presentation/components/PlannedTaskForm.tsx": 3,
-  "src/presentation/components/PlannedTaskItem.tsx": 7,
-  "src/presentation/components/PlannedTasksSection.tsx": 2,
-  "src/presentation/components/RetroactiveEntryForm.tsx": 2,
-  "src/presentation/components/RunningTaskEditForm.tsx": 3,
-  "src/presentation/components/RunningTaskSection.tsx": 5,
-  "src/presentation/components/TaskCard.tsx": 4,
-  "src/presentation/components/TaskGroupCard.tsx": 2,
-  "src/presentation/components/TitleBar.tsx": 1,
-  "src/presentation/components/ToggleBillable.tsx": 3,
-  "src/presentation/components/TotalsSection.tsx": 2,
-  "src/presentation/components/WeekPlanningView.tsx": 2,
   "src/presentation/components/WorkspaceDot.tsx": 6,
-  "src/presentation/components/WorkspaceSwitcher.tsx": 2,
   "src/presentation/modals/ClockifyConnectModal.tsx": 1,
   "src/presentation/modals/ClockifyEntriesModal.tsx": 6,
   "src/presentation/modals/DeleteWorkspaceModal.tsx": 5,
@@ -61,10 +42,6 @@ const BASELINE: Record<string, number> = {
   "src/presentation/overlays/PlanningOverlay.tsx": 2,
   "src/presentation/overlays/PopupOverlayContent.tsx": 15,
   "src/presentation/overlays/ToastApp.tsx": 6,
-  "src/presentation/pages/RetroactivePage.tsx": 10,
-  "src/presentation/sections/integrations/GoogleIntegrationSection.tsx": 1,
-  "src/presentation/sections/integrations/ZendeskIntegrationSection.tsx": 5,
-  "src/presentation/sections/integrations/shared.tsx": 6,
 };
 
 describe("convenção: cor de significado só por token", () => {

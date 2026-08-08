@@ -241,7 +241,7 @@ function MainContent({
   const showPin = config.isLoaded && config.get("closeOnFocusLoss");
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-gray-100 overflow-hidden">
+    <div className="flex flex-col h-screen bg-canvas text-fg overflow-hidden">
       <TitleBar page={page} showPin={showPin} isPinned={isPinned} onTogglePin={onTogglePin} />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
@@ -310,19 +310,19 @@ function AppInner() {
 
   if (config.isLoaded && config.loadError) {
     return (
-      <div className="flex flex-col h-screen bg-gray-950 text-gray-100 items-center justify-center gap-6 p-8">
+      <div className="flex flex-col h-screen bg-canvas text-fg items-center justify-center gap-6 p-8">
         <div className="flex flex-col items-center gap-2 text-center">
-          <span className="text-red-400 text-3xl">⚠</span>
+          <span className="text-danger text-3xl">⚠</span>
           <h1 className="text-base font-semibold">Falha ao carregar configurações</h1>
-          <p className="text-sm text-gray-400 max-w-xs">
+          <p className="text-sm text-fg-muted max-w-xs">
             Não foi possível inicializar o DeskClock. Reinicie o app para tentar novamente.
           </p>
         </div>
-        <pre className="bg-gray-900 rounded p-3 w-full max-w-sm text-xs text-red-300 whitespace-pre-wrap break-all">
+        <pre className="bg-surface rounded-control p-3 w-full max-w-sm text-xs text-danger whitespace-pre-wrap break-all">
           {config.loadError}
         </pre>
         <button
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors"
+          className="px-4 py-2 bg-accent hover:opacity-90 text-white rounded-control text-sm font-medium transition-opacity"
           onClick={() => invoke("relaunch_app").catch(() => {})}
         >
           Reiniciar DeskClock

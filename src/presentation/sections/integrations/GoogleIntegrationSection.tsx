@@ -58,8 +58,9 @@ import {
   StatusBadge,
   SubSection,
   SyncFeedbackLine,
-  Toggle,
+  integrationButtonClass,
 } from "./shared";
+import { Toggle } from "@presentation/components/ui";
 import { GoogleLogo } from "./google/GoogleLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
@@ -93,25 +94,29 @@ function SortableSheetColumn({ col, idx, onToggle, onRename }: SortableSheetColu
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 px-2 py-1.5 rounded ${col.enabled ? "bg-gray-800/50" : "bg-gray-900/30 opacity-60"}`}
+      className={`flex items-center gap-2 px-2 py-1.5 rounded ${col.enabled ? "bg-raised" : "bg-surface opacity-60"}`}
     >
       <button
         {...attributes}
         {...listeners}
-        className="text-gray-600 hover:text-gray-400 cursor-grab active:cursor-grabbing shrink-0"
+        className="text-fg-muted hover:text-fg cursor-grab active:cursor-grabbing shrink-0"
       >
         <GripVertical size={13} />
       </button>
-      <Toggle checked={col.enabled} onChange={() => onToggle(idx)} />
+      <Toggle
+        ariaLabel={`Exibir coluna ${col.label}`}
+        checked={col.enabled}
+        onChange={() => onToggle(idx)}
+      />
       <input
         type="text"
         value={col.label}
         onChange={(e) => onRename(idx, e.target.value)}
         disabled={!col.enabled}
-        className="flex-1 bg-transparent border-b border-gray-700 focus:border-blue-500 text-xs text-gray-200 outline-none py-0.5 disabled:text-gray-600"
+        className="flex-1 bg-transparent border-b border-border focus:border-accent text-xs text-fg outline-none py-0.5 disabled:text-fg-muted"
         autoComplete="off"
       />
-      <span className="text-xs text-gray-600 w-16 shrink-0">{col.field}</span>
+      <span className="text-xs text-fg-muted w-16 shrink-0">{col.field}</span>
     </div>
   );
 }
@@ -271,7 +276,7 @@ function SheetsSection({
         <DeskclockWorkspaceRow
           configKey="sheetsDeskclockWorkspaceId"
           hint="De qual workspace saem as tarefas enviadas à planilha."
-          className="py-2.5 border-b border-gray-800"
+          className="py-2.5 border-b border-border-subtle"
         />
         <Row label="ID da planilha">
           <input
@@ -280,7 +285,7 @@ function SheetsSection({
             onChange={(e) => setSpreadsheetId(e.target.value)}
             onBlur={() => config.set("integrationGoogleSheetsSpreadsheetId", spreadsheetId.trim())}
             placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-            className="w-64 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+            className="w-64 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
             autoComplete="off"
           />
         </Row>
@@ -295,26 +300,26 @@ function SheetsSection({
               await config.set("integrationGoogleSheetsSheetName", name);
             }}
             placeholder="DeskClock"
-            className="w-40 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+            className="w-40 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
             autoComplete="off"
           />
         </Row>
 
         {/* Mapeamento de colunas */}
-        <div data-tour="google-sheets-columns" className="py-2.5 border-b border-gray-800">
+        <div data-tour="google-sheets-columns" className="py-2.5 border-b border-border-subtle">
           <button
             onClick={() => setColsOpen((v) => !v)}
-            className="flex items-center gap-1.5 text-sm text-gray-300 hover:text-gray-100 w-full text-left"
+            className="flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg w-full text-left"
           >
             {colsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             Mapeamento de colunas
-            <span className="ml-auto text-xs text-gray-600">
+            <span className="ml-auto text-xs text-fg-muted">
               {columnMapping.filter((c) => c.enabled).length}/{columnMapping.length} ativas
             </span>
           </button>
           {colsOpen && (
             <div className="mt-2">
-              <p className="text-xs text-gray-500 mb-2">
+              <p className="text-xs text-fg-muted mb-2">
                 Ative/desative colunas, edite os rótulos e reordene conforme a planilha.
               </p>
               <ColumnMappingEditor mapping={columnMapping} onChange={handleColumnMappingChange} />
@@ -323,15 +328,13 @@ function SheetsSection({
         </div>
 
         <Row label="Formato da duração">
-          <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+          <div className="flex items-center gap-1 bg-raised rounded p-0.5">
             {(["HH:MM", "HH:MM:SS"] as const).map((fmt) => (
               <button
                 key={fmt}
                 onClick={() => handleDurationFormat(fmt)}
                 className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                  durationFormat === fmt
-                    ? "bg-blue-600 text-white"
-                    : "text-gray-400 hover:text-gray-200"
+                  durationFormat === fmt ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
                 }`}
               >
                 {fmt}
@@ -344,6 +347,7 @@ function SheetsSection({
         <div data-tour="google-sheets-autosync">
           <Row label="Sincronização automática">
             <Toggle
+              ariaLabel="Ativar sincronização automática"
               checked={autoSync}
               onChange={async (v) => {
                 setAutoSync(v);
@@ -353,12 +357,12 @@ function SheetsSection({
           </Row>
 
           {autoSync && (
-            <div className="pl-4 border-l border-gray-800 ml-1 mb-1">
+            <div className="pl-4 border-l border-border-subtle ml-1 mb-1">
               {/* Modo */}
-              <div className="py-2.5 border-b border-gray-800">
+              <div className="py-2.5 border-b border-border-subtle">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Modo</span>
-                  <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+                  <span className="text-sm text-fg-secondary">Modo</span>
+                  <div className="flex items-center gap-1 bg-raised rounded p-0.5">
                     {(["per-task", "daily"] as const).map((m) => (
                       <button
                         key={m}
@@ -367,9 +371,7 @@ function SheetsSection({
                           await config.set("sheetsAutoSyncMode", m);
                         }}
                         className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                          syncMode === m
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-400 hover:text-gray-200"
+                          syncMode === m ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
                         }`}
                       >
                         {m === "per-task" ? "Por tarefa" : "Diário"}
@@ -377,7 +379,7 @@ function SheetsSection({
                     ))}
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1.5">
+                <p className="text-xs text-fg-muted mt-1.5">
                   {syncMode === "per-task"
                     ? "Envia cada tarefa automaticamente ao ser concluída, em tempo real."
                     : "Agrupa e envia de uma vez, cobrindo fins de semana e dias perdidos."}
@@ -387,10 +389,10 @@ function SheetsSection({
               {syncMode === "daily" && (
                 <>
                   {/* Gatilho */}
-                  <div className="py-2.5 border-b border-gray-800">
+                  <div className="py-2.5 border-b border-border-subtle">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-300">Gatilho</span>
-                      <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
+                      <span className="text-sm text-fg-secondary">Gatilho</span>
+                      <div className="flex items-center gap-1 bg-raised rounded p-0.5">
                         {(["on-open", "fixed-time"] as const).map((t) => (
                           <button
                             key={t}
@@ -400,8 +402,8 @@ function SheetsSection({
                             }}
                             className={`px-2.5 py-1 text-xs rounded transition-colors ${
                               syncTrigger === t
-                                ? "bg-blue-600 text-white"
-                                : "text-gray-400 hover:text-gray-200"
+                                ? "bg-accent text-white"
+                                : "text-fg-muted hover:text-fg"
                             }`}
                           >
                             {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
@@ -409,7 +411,7 @@ function SheetsSection({
                         ))}
                       </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1.5">
+                    <p className="text-xs text-fg-muted mt-1.5">
                       {syncTrigger === "on-open"
                         ? "Envia ao abrir o app as tarefas de ontem para trás, desde o último envio automático."
                         : "Envia no horário definido as tarefas do dia corrente e dias anteriores não sincronizados."}
@@ -423,7 +425,7 @@ function SheetsSection({
                         value={syncTime}
                         onChange={(e) => setSyncTime(e.target.value)}
                         onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
-                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
+                        className="bg-raised border border-border rounded px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
                         autoComplete="off"
                       />
                     </Row>
@@ -431,15 +433,15 @@ function SheetsSection({
 
                   {/* Último envio + Sincronizar agora */}
                   <div className="py-2.5 flex items-center justify-between gap-3">
-                    <span className="text-xs text-gray-500 shrink-0">
+                    <span className="text-xs text-fg-muted shrink-0">
                       Último envio:{" "}
-                      <span className="text-gray-300">{formatLastSync(lastSyncTs)}</span>
+                      <span className="text-fg-secondary">{formatLastSync(lastSyncTs)}</span>
                     </span>
                     <button
                       onClick={handleSyncNow}
                       disabled={syncing || autoSyncing}
                       title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-                      className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-2.5 py-1.5 rounded transition-colors shrink-0"
+                      className={`${integrationButtonClass} shrink-0`}
                     >
                       {syncing || autoSyncing ? (
                         <Loader2 size={11} className="animate-spin" />
@@ -466,7 +468,7 @@ function SheetsSection({
             onClick={() => openModal("sheets-send")}
             disabled={autoSyncing}
             title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-            className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
+            className={`${integrationButtonClass} w-full`}
           >
             {autoSyncing ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
             {autoSyncing ? "Sincronização automática em andamento…" : "Enviar tarefas manualmente…"}
@@ -520,23 +522,24 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
       <DeskclockWorkspaceRow
         configKey="calendarDeskclockWorkspaceId"
         hint="Destino do 'Importar eventos'. O rastreio automático de reuniões continua criando no workspace aberto na tela."
-        className="py-2.5 border-b border-gray-800"
+        className="py-2.5 border-b border-border-subtle"
       />
       <div className="py-2.5 flex items-center justify-between">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-fg-muted">
           Importe eventos do Google Agenda como tarefas planejadas.
         </p>
         <button
           onClick={() => openModal("calendar-import")}
-          className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors shrink-0 ml-3 border border-gray-700"
+          className={`${integrationButtonClass} shrink-0 ml-3`}
         >
           <CalendarDays size={13} />
           Importar eventos
         </button>
       </div>
-      <div className="border-t border-gray-800">
+      <div className="border-t border-border-subtle">
         <Row label="Rastrear reuniões automaticamente">
           <Toggle
+            ariaLabel="Rastrear reuniões automaticamente"
             checked={autoTracking}
             onChange={async (v) => {
               setAutoTracking(v);
@@ -544,18 +547,14 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
             }}
           />
         </Row>
-        <p className="text-xs text-gray-500 leading-relaxed pb-2.5">
+        <p className="text-xs text-fg-muted leading-relaxed pb-2.5">
           Ao abrir o app e a cada 2 minutos, busca os eventos do dia e pergunta, no horário de
           início, se deseja iniciar cada reunião. Ao fim do evento, pergunta se ainda está em
           andamento.
         </p>
         {autoTracking && (
           <div className="pb-2.5">
-            <button
-              onClick={trigger}
-              disabled={searching}
-              className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors border border-gray-700"
-            >
+            <button onClick={trigger} disabled={searching} className={`${integrationButtonClass}`}>
               <RefreshCw size={12} className={searching ? "animate-spin" : ""} />
               {searching ? "Buscando…" : "Buscar eventos agora"}
             </button>
@@ -563,14 +562,14 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
           </div>
         )}
       </div>
-      <div className="flex items-start gap-2 mb-2 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
-        <Info size={12} className="text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-xs text-blue-300 leading-relaxed">
+      <div className="flex items-start gap-2 mb-2 p-2.5 bg-accent/5 border border-accent/20 rounded-control">
+        <Info size={12} className="text-accent-text shrink-0 mt-0.5" />
+        <p className="text-xs text-accent-text leading-relaxed">
           Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
           <br />
-          <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
+          <span className="font-mono text-accent-text">Projeto: Nome do Projeto</span>
           <br />
-          <span className="font-mono text-blue-200">Categoria: Nome da Categoria</span>
+          <span className="font-mono text-accent-text">Categoria: Nome da Categoria</span>
         </p>
       </div>
     </div>
@@ -626,38 +625,35 @@ export function GoogleIntegrationCard() {
   }
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+    <div className="rounded-card border border-border-subtle bg-surface overflow-hidden">
       {/* Header do card */}
       <div
         data-tour="google-header"
-        className="flex items-start gap-3 px-4 py-3 border-b border-gray-800"
+        className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle"
       >
         <div className="mt-0.5 shrink-0">
           <GoogleLogo size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-100">Google</h2>
+            <h2 className="text-sm font-semibold text-fg">Google</h2>
             <StatusBadge connected={connected} email={email} />
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-fg-muted mt-0.5">
             Acesse o Sheets e o Calendar com uma única conta.
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
-          {error && <span className="text-xs text-red-400">{error}</span>}
+          {error && <span className="text-xs text-danger">{error}</span>}
           <button
             onClick={() => startTour()}
             title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-xs font-medium flex items-center justify-center"
+            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-muted transition-colors text-xs font-medium flex items-center justify-center"
           >
             ?
           </button>
           {connected ? (
-            <button
-              onClick={handleDisconnect}
-              className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors"
-            >
+            <button onClick={handleDisconnect} className={`${integrationButtonClass}`}>
               <LogOut size={12} />
               Desconectar
             </button>
@@ -665,7 +661,7 @@ export function GoogleIntegrationCard() {
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded transition-colors"
+              className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded transition-colors"
             >
               {loading ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} />}
               {loading ? "Aguardando…" : "Conectar com Google"}

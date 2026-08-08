@@ -5,6 +5,8 @@ interface SectionCardProps {
   title?: string;
   /** Frase abaixo do título, para o que a lista de dentro não explica sozinha. */
   description?: ReactNode;
+  /** Encostado à direita do título — o total do dia, um atalho para outra tela. */
+  action?: ReactNode;
   /**
    * Linha entre os filhos — o arranjo de lista de configurações. Sem ela, o
    * cartão é uma caixa só, para conteúdo que já tem estrutura própria.
@@ -17,18 +19,22 @@ interface SectionCardProps {
 export function SectionCard({
   title,
   description,
+  action,
   divided = false,
   className = "",
   children,
 }: SectionCardProps) {
   return (
     <div className={`bg-surface border border-border-subtle rounded-card ${className}`}>
-      {(title || description) && (
-        <div className="px-4 pt-3 pb-2">
-          {title && <p className="text-overline uppercase text-fg-muted">{title}</p>}
-          {description && (
-            <p className="text-xs text-fg-muted mt-1 leading-relaxed">{description}</p>
-          )}
+      {(title || description || action) && (
+        <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            {title && <p className="text-overline uppercase text-fg-muted">{title}</p>}
+            {description && (
+              <p className="text-xs text-fg-muted mt-1 leading-relaxed">{description}</p>
+            )}
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
       <div className={divided ? "divide-y divide-border-subtle" : ""}>{children}</div>

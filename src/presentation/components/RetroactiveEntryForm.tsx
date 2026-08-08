@@ -8,9 +8,8 @@ import {
   boxClass,
   fieldClass,
   formColumnClass,
-  notchedBoxClass,
-  notchedLabelClass,
 } from "@presentation/components/fieldStyles";
+import { Field, fieldControlClass } from "@presentation/components/ui";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -92,7 +91,7 @@ export function RetroactiveEntryForm({
               : "Non-billable — clique para alternar"
           }
           className={`flex items-center gap-1 shrink-0 transition-colors ${
-            form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+            form.billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
           }`}
         >
           <DollarSign size={14} />
@@ -112,10 +111,7 @@ export function RetroactiveEntryForm({
           space-y em vez de somar — foi por isso que, no rascunho, a duração
           precisou de 16px enquanto início e fim se resolveram com 6px. */}
       <div>
-        <div className={`${boxClass} ${notchedBoxClass} mt-4.5 flex items-center`}>
-          <label htmlFor="retro-duration" className={notchedLabelClass}>
-            Duração
-          </label>
+        <Field label="Duração" htmlFor="retro-duration" className="mt-4.5 flex items-center">
           <input
             id="retro-duration"
             data-tour="retroactive-duration"
@@ -135,19 +131,16 @@ export function RetroactiveEntryForm({
             placeholder="HH:MM"
             autoComplete="off"
             title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className={`${bareInputClass} w-20! pt-3 text-gray-100 placeholder-gray-600`}
+            className={`${fieldControlClass} w-20! pt-3`}
           />
-          <span className="w-full pt-3 pb-1.5 pr-2.5 text-xs text-gray-600 truncate">
+          <span className="w-full pt-3 pb-1.5 pr-2.5 text-xs text-fg-muted truncate">
             Use: 1h30, 1h, 30...
           </span>
-        </div>
+        </Field>
       </div>
 
       <div data-tour="retroactive-timeinputs" className="flex gap-2">
-        <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
-          <label htmlFor="retro-start" className={notchedLabelClass}>
-            Início
-          </label>
+        <Field label="Início" htmlFor="retro-start" className="flex-1">
           <input
             id="retro-start"
             type="time"
@@ -162,13 +155,10 @@ export function RetroactiveEntryForm({
               form.handleStartCommit("");
             }}
             autoComplete="off"
-            className={`${bareInputClass} pt-3`}
+            className={`${fieldControlClass} pt-3`}
           />
-        </div>
-        <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
-          <label htmlFor="retro-end" className={notchedLabelClass}>
-            Fim
-          </label>
+        </Field>
+        <Field label="Fim" htmlFor="retro-end" className="flex-1">
           <input
             id="retro-end"
             type="time"
@@ -181,17 +171,17 @@ export function RetroactiveEntryForm({
               form.handleEndCommit("");
             }}
             autoComplete="off"
-            className={`${bareInputClass} pt-3`}
+            className={`${fieldControlClass} pt-3`}
           />
-        </div>
+        </Field>
       </div>
 
-      {form.error && <p className="text-xs text-red-400">{form.error}</p>}
+      {form.error && <p className="text-xs text-danger">{form.error}</p>}
 
       <button
         onClick={() => void form.handleAdd()}
         disabled={form.saving}
-        className="w-full px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
+        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 text-white rounded-control transition-opacity disabled:opacity-50"
       >
         Adicionar
       </button>

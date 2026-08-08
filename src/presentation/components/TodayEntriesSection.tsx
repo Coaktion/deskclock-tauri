@@ -8,6 +8,7 @@ import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { EditGroupModal } from "@presentation/modals/EditGroupModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
+import { SectionCard } from "@presentation/components/ui";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
@@ -96,18 +97,18 @@ export function TodayEntriesSection({
   }
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-gray-300">Entradas de hoje</h2>
-        <span className="text-xs font-mono tabular-nums text-gray-500">
+    <SectionCard
+      title="Entradas de hoje"
+      action={
+        <span className="text-xs font-mono tabular-nums text-fg-muted">
           {formatHHMMSS(totalSeconds)}
         </span>
-      </div>
-
+      }
+    >
       {groups.length === 0 ? (
-        <p className="text-sm text-gray-600 text-center py-6">Nenhuma entrada hoje.</p>
+        <p className="text-sm text-fg-muted text-center py-6">Nenhuma entrada hoje.</p>
       ) : (
-        <div className="space-y-2">
+        <div className="p-1.5 pt-0 flex flex-col gap-0.5">
           {groups.map((g) => (
             <TaskGroupCard
               key={g.key}
@@ -157,6 +158,6 @@ export function TodayEntriesSection({
           onClose={() => setEditingGroup(null)}
         />
       )}
-    </section>
+    </SectionCard>
   );
 }

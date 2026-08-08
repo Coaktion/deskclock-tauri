@@ -1,44 +1,12 @@
 import { formatHHMMSS, formatWeekTotal } from "@shared/utils/time";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { KpiCard } from "@presentation/components/ui";
 
 interface TotalsSectionProps {
   billableSeconds: number;
   nonBillableSeconds: number;
   weekSeconds: number;
   weekDays: number;
-}
-
-interface KpiCardProps {
-  label: string;
-  value: string;
-  barColor: string;
-  barPct: number;
-  hint?: string;
-  valueColor?: string;
-}
-
-function KpiCard({
-  label,
-  value,
-  barColor,
-  barPct,
-  hint,
-  valueColor = "text-gray-100",
-}: KpiCardProps) {
-  const pct = Math.min(100, Math.max(0, barPct));
-  return (
-    <div className="flex-1 bg-gray-900 border border-gray-800 rounded-lg p-3 flex flex-col gap-1 min-w-0">
-      <div className="text-overline uppercase text-gray-500">{label}</div>
-      <div className={`font-mono text-base font-medium tracking-tight ${valueColor}`}>{value}</div>
-      <div className="h-[3px] bg-gray-800 rounded-full overflow-hidden mt-1">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {hint && <div className="text-xs text-gray-500 mt-0.5">{hint}</div>}
-    </div>
-  );
 }
 
 export function TotalsSection({
@@ -74,30 +42,29 @@ export function TotalsSection({
       <KpiCard
         label="Billable hoje"
         value={formatHHMMSS(billableSeconds)}
-        barColor="bg-emerald-500"
+        tone="billable"
         barPct={billablePct}
-        valueColor="text-emerald-400"
         hint={totalToday > 0 ? `${Math.round(billablePct)}% do total` : undefined}
       />
       <KpiCard
         label="Non-billable"
         value={formatHHMMSS(nonBillableSeconds)}
-        barColor="bg-gray-500"
+        tone="muted"
         barPct={nonBillablePct}
         hint={totalToday > 0 ? `${Math.round(nonBillablePct)}% do total` : undefined}
       />
       <KpiCard
         label="Total hoje"
         value={formatHHMMSS(totalToday)}
-        barColor="bg-blue-500"
         barPct={todayPct}
+        barTone="accent"
         hint={dailyLabel}
       />
       <KpiCard
         label="Semana"
         value={formatWeekTotal(weekSeconds, weekDays)}
-        barColor="bg-blue-500"
         barPct={weekPct}
+        barTone="accent"
         hint={weeklyLabel}
       />
     </section>

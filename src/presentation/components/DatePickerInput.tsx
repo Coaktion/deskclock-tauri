@@ -3,12 +3,7 @@ import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "react-day-picker/locale";
 import "react-day-picker/style.css";
-import {
-  bareInputClass,
-  boxClass,
-  notchedBoxClass,
-  notchedLabelClass,
-} from "@presentation/components/fieldStyles";
+import { Field, fieldControlClass } from "@presentation/components/ui";
 
 interface DatePickerInputProps {
   value: string; // ISO date YYYY-MM-DD ou ""
@@ -134,10 +129,7 @@ export function DatePickerInput({
   }
 
   const field = label ? (
-    <div
-      className={`${boxClass} ${notchedBoxClass} ${invalid ? "border-red-500!" : ""} ${className}`}
-    >
-      <span className={notchedLabelClass}>{label}</span>
+    <Field label={label} className={`${invalid ? "border-danger!" : ""} ${className}`}>
       <input
         ref={inputRef}
         type="text"
@@ -147,9 +139,9 @@ export function DatePickerInput({
         onClick={handleOpen}
         onKeyDown={handleKeyDown}
         autoComplete="off"
-        className={`${bareInputClass} pt-3 cursor-pointer`}
+        className={`${fieldControlClass} pt-3 cursor-pointer`}
       />
-    </div>
+    </Field>
   ) : (
     <div className={className}>
       <input
@@ -161,8 +153,8 @@ export function DatePickerInput({
         onClick={handleOpen}
         onKeyDown={handleKeyDown}
         autoComplete="off"
-        className={`w-full px-2.5 py-1.5 text-sm bg-gray-800 border rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none cursor-pointer transition-colors ${
-          invalid ? "border-red-500 focus:border-red-500" : "border-gray-700 focus:border-blue-500"
+        className={`w-full px-2.5 py-1.5 text-sm bg-raised border rounded-control text-fg placeholder-fg-muted focus:outline-none cursor-pointer transition-colors ${
+          invalid ? "border-danger focus:border-danger" : "border-border focus:border-accent"
         }`}
       />
     </div>
@@ -177,7 +169,7 @@ export function DatePickerInput({
             ref={calendarRef}
             data-datepicker-portal
             style={{ position: "fixed", top: pos.top, left: pos.left, zIndex: 9999 }}
-            className="bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-2"
+            className="bg-surface border border-border rounded-card shadow-xl p-2"
           >
             <DayPicker
               mode="single"
@@ -189,21 +181,20 @@ export function DatePickerInput({
               endMonth={maxDate}
               classNames={{
                 root: "text-sm",
-                month_caption: "text-gray-200 font-medium text-sm mb-1",
+                month_caption: "text-fg-secondary font-medium text-sm mb-1",
                 nav: "flex items-center gap-1",
-                button_previous:
-                  "p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg",
-                button_next: "p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg",
+                button_previous: "p-1 text-fg-muted hover:text-fg hover:bg-raised rounded-control",
+                button_next: "p-1 text-fg-muted hover:text-fg hover:bg-raised rounded-control",
                 weeks: "mt-1",
                 weekdays: "flex",
                 weekday:
-                  "w-8 h-7 flex items-center justify-center text-xs text-gray-500 font-normal",
+                  "w-8 h-7 flex items-center justify-center text-xs text-fg-muted font-normal",
                 week: "flex",
                 day: "w-8 h-8 flex items-center justify-center",
                 day_button:
-                  "w-8 h-8 flex items-center justify-center text-xs text-gray-300 hover:bg-gray-700 rounded-lg transition-colors",
-                selected: "bg-blue-600 rounded-lg text-white",
-                today: "text-blue-400 font-semibold",
+                  "w-8 h-8 flex items-center justify-center text-xs font-mono tabular-nums text-fg-secondary hover:bg-raised rounded-control transition-colors",
+                selected: "bg-accent rounded-control text-white",
+                today: "text-accent-text font-semibold",
                 outside: "opacity-30",
                 disabled: "opacity-20 cursor-not-allowed",
               }}

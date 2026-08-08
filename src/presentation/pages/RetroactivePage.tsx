@@ -10,7 +10,7 @@ import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
-import { PageHeader } from "@presentation/components/ui";
+import { PageHeader, TaskRow } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -23,19 +23,12 @@ import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { getProjectColor } from "@shared/utils/projectColor";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import {
-  ChevronLeft,
-  ChevronRight,
-  DollarSign,
-  ListChecks,
-  Pencil,
-  Play,
-  Trash2,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ListChecks, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 /**
@@ -57,7 +50,7 @@ function formatTimeRange(startISO: string, endISO: string | null): string {
   return `${s} – ${isoToHHMM(endISO)}`;
 }
 
-interface TaskRowProps {
+interface DayTaskRowProps {
   task: Task;
   projects: Project[];
   categories: Category[];
@@ -68,7 +61,7 @@ interface TaskRowProps {
   onToggleSelect?: (id: string) => void;
 }
 
-function TaskRow({
+function DayTaskRow({
   task,
   projects,
   categories,
@@ -77,75 +70,58 @@ function TaskRow({
   selectMode = false,
   selected = false,
   onToggleSelect,
-}: TaskRowProps) {
+}: DayTaskRowProps) {
   const projectName = projects.find((p) => p.id === task.projectId)?.name;
   const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+  const subtitle = [projectName, categoryName].filter(Boolean).join(" · ");
 
   return (
-    <div
-      className={`flex items-center gap-3 px-5 py-3 border-b border-gray-800 transition-colors ${
-        selectMode
-          ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-900/50"}`
-          : "hover:bg-gray-900/50"
-      }`}
+    <TaskRow
+      title={task.name ?? "(sem nome)"}
+      subtitle={subtitle || undefined}
+      meta={
+        <span className="text-xs font-mono tabular-nums text-fg-muted">
+          {formatTimeRange(task.startTime, task.endTime)}
+        </span>
+      }
+      duration={formatHHMMSS(task.durationSeconds ?? 0)}
+      billable={task.billable}
+      dotColor={getProjectColor(task.projectId)}
+      selected={selected}
       onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-    >
-      {selectMode ? (
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => onToggleSelect?.(task.id)}
-          onClick={(e) => e.stopPropagation()}
-          className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
-        />
-      ) : (
-        <DollarSign
-          size={13}
-          className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
-        />
-      )}
-      {/* Nome em cima, sozinho e com a linha inteira: é por ele que se procura
-          um apontamento, e disputando espaço com horário, projeto e categoria
-          ele era o primeiro a ser truncado. Os demais campos descem para uma
-          segunda linha, lado a lado, como legenda do que está acima. */}
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-3">
-          <span className="flex-1 min-w-0 text-sm text-gray-200 truncate">
-            {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
-          </span>
-          {/* O horário sobe para a linha do nome e encosta na direita, alinhado
-              com a duração logo abaixo: os dois são a mesma informação vista de
-              dois jeitos, e juntos liberam a linha de baixo inteira para projeto
-              e categoria, que são os campos que truncavam. */}
-          <span className="shrink-0 text-xs text-gray-500 font-mono tabular-nums">
-            {formatTimeRange(task.startTime, task.endTime)}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          {projectName && <span className="truncate">{projectName}</span>}
-          {categoryName && <span className="truncate">{categoryName}</span>}
-          <span className="ml-auto shrink-0 font-mono tabular-nums">
-            {formatHHMMSS(task.durationSeconds ?? 0)}
-          </span>
-        </div>
-      </div>
-      {!selectMode && (
-        <>
-          <button
-            onClick={() => onEdit(task)}
-            className="text-gray-700 hover:text-gray-300 transition-colors shrink-0"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => onDelete(task.id)}
-            className="text-gray-700 hover:text-red-400 transition-colors shrink-0 mr-1"
-          >
-            <Trash2 size={14} />
-          </button>
-        </>
-      )}
-    </div>
+      leading={
+        selectMode ? (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(task.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
+            className="shrink-0 accent-accent w-3.5 h-3.5 cursor-pointer"
+          />
+        ) : undefined
+      }
+      actions={
+        selectMode ? undefined : (
+          <>
+            <button
+              onClick={() => onEdit(task)}
+              title="Editar"
+              className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={() => onDelete(task.id)}
+              title="Excluir"
+              className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </>
+        )
+      }
+    />
   );
 }
 
@@ -461,9 +437,7 @@ export function RetroactivePage() {
           {plannedTasks.length > 0 && (
             <div className="shrink-0">
               <div className="flex items-center gap-3 px-5 pt-2.5 pb-1">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  Planejadas para este dia
-                </p>
+                <p className="text-overline uppercase text-fg-muted">Planejadas para este dia</p>
                 {/* Com uma só, o ▶ da própria linha já é este botão — o lote
                     existe para o dia cheio de reuniões importadas. */}
                 {timedPlannedTasks.length > 1 && (
@@ -471,14 +445,14 @@ export function RetroactivePage() {
                     onClick={() => void handleLaunchAllTimed()}
                     disabled={launchingAll}
                     title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
-                    className="ml-auto flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                    className="ml-auto flex items-center gap-1.5 text-xs text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                   >
-                    <ListChecks size={13} />
+                    <ListChecks size={14} />
                     {launchingAll ? "Lançando…" : `Lançar ${timedPlannedTasks.length} com horário`}
                   </button>
                 )}
               </div>
-              {launchError && <p className="px-5 pb-1 text-xs text-red-400">{launchError}</p>}
+              {launchError && <p className="px-5 pb-1 text-xs text-danger">{launchError}</p>}
               {/* `maxHeight`, não `height`: com duas planejadas a seção encolhe
                   até o conteúdo, como fazia com o `max-h-36` que isto substitui
                   — altura fixa deixaria espaço vazio todo dia. */}
@@ -494,7 +468,7 @@ export function RetroactivePage() {
                   return (
                     <div
                       key={task.id}
-                      className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
+                      className="flex items-center gap-2 px-5 py-2 hover:bg-raised transition-colors"
                     >
                       <button
                         onClick={() => {
@@ -512,27 +486,27 @@ export function RetroactivePage() {
                         // no fim.
                         disabled={launchingAll}
                         title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                        className={`shrink-0 p-1 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                        className={`shrink-0 p-1.5 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                           hasTime
-                            ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                            : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+                            ? "text-accent-text hover:bg-accent/10"
+                            : "text-fg-muted hover:text-fg hover:bg-raised"
                         }`}
                       >
-                        <Play size={12} />
+                        <Play size={14} />
                       </button>
-                      <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
+                      <span className="flex-1 text-sm text-fg-secondary truncate">{task.name}</span>
                       {hasTime && (
-                        <span className="text-xs text-gray-500 font-mono shrink-0">
+                        <span className="text-xs text-fg-muted font-mono tabular-nums shrink-0">
                           {task.startTime}–{task.endTime}
                         </span>
                       )}
                       {projectName && (
-                        <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                        <span className="text-xs text-fg-muted truncate max-w-20 shrink-0">
                           {projectName}
                         </span>
                       )}
                       {categoryName && (
-                        <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
+                        <span className="text-xs text-fg-muted truncate max-w-20 shrink-0">
                           {categoryName}
                         </span>
                       )}
@@ -558,7 +532,7 @@ export function RetroactivePage() {
                 esta lista — e o header já estava disputando espaço com a
                 navegação de data. Sem tarefas não há o que selecionar. */}
             {tasks.length > 0 && (
-              <div className="shrink-0 flex items-center justify-end gap-3 px-5 py-2 border-b border-gray-800">
+              <div className="shrink-0 flex items-center justify-end gap-3 px-5 py-2 border-b border-border-subtle">
                 {selectMode ? (
                   <>
                     <button
@@ -566,7 +540,7 @@ export function RetroactivePage() {
                         const allSelected = selectedIds.size >= tasks.length;
                         setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                     >
                       {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
                     </button>
@@ -574,7 +548,7 @@ export function RetroactivePage() {
                       <button
                         onClick={() => setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))}
                         disabled={selectedIds.size === 0}
-                        className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                        className="text-xs text-fg-muted hover:text-fg disabled:text-fg-muted/50 disabled:cursor-not-allowed transition-colors"
                       >
                         Mover para workspace
                       </button>
@@ -582,13 +556,13 @@ export function RetroactivePage() {
                     <button
                       onClick={() => void handleBulkDelete()}
                       disabled={selectedIds.size === 0}
-                      className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                      className="text-xs text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
                     </button>
                     <button
                       onClick={exitSelectMode}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                     >
                       Cancelar
                     </button>
@@ -596,7 +570,7 @@ export function RetroactivePage() {
                 ) : (
                   <button
                     onClick={() => setSelectMode(true)}
-                    className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
+                    className="text-xs px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
                   >
                     Selecionar tarefas
                   </button>
@@ -604,14 +578,14 @@ export function RetroactivePage() {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto pr-2">
+            <div className="flex-1 overflow-y-auto p-1.5 flex flex-col gap-0.5">
               {tasks.length === 0 ? (
-                <p className="text-center text-gray-600 text-sm py-10">
+                <p className="text-center text-fg-muted text-sm py-10">
                   Nenhuma entrada para este dia
                 </p>
               ) : (
                 tasks.map((t) => (
-                  <TaskRow
+                  <DayTaskRow
                     key={t.id}
                     task={t}
                     projects={projects}

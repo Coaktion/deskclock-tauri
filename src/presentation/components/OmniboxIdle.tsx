@@ -2,6 +2,12 @@ import { Play } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "./Autocomplete";
+import {
+  chipBillableClass,
+  chipEmptyClass,
+  chipFilledClass,
+  chipNonBillableClass,
+} from "./chipStyles";
 import type { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import type { SuggestionItem } from "@presentation/hooks/useOmniboxSuggestions";
@@ -17,40 +23,16 @@ interface ChipProps {
 }
 
 function Chip({ label, filled, billable, isBillableChip, onClick }: ChipProps) {
-  if (isBillableChip) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`px-2 py-0.5 rounded text-xs border transition-colors cursor-pointer ${
-          billable
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-            : "bg-gray-800/60 border-gray-700/50 text-gray-500 hover:border-gray-600 hover:text-gray-400"
-        }`}
-      >
-        {label}
-      </button>
-    );
-  }
-
-  if (filled) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 cursor-pointer hover:bg-gray-700 transition-colors"
-      >
-        {label}
-      </button>
-    );
-  }
+  const className = isBillableChip
+    ? billable
+      ? chipBillableClass
+      : chipNonBillableClass
+    : filled
+      ? chipFilledClass
+      : chipEmptyClass;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 cursor-pointer hover:border-gray-500 hover:text-gray-400 transition-colors"
-    >
+    <button type="button" onClick={onClick} className={className}>
       {label}
     </button>
   );
@@ -92,8 +74,8 @@ export function OmniboxIdle({
   return (
     <div
       ref={containerRef}
-      className={`bg-gradient-to-b from-gray-800/80 to-gray-900/80 border rounded-xl overflow-visible transition-all ${
-        focused ? "border-blue-500/50 ring-2 ring-blue-500/20" : "border-gray-700"
+      className={`bg-surface border rounded-card overflow-visible transition-all ${
+        focused ? "border-accent ring-2 ring-accent/20" : "border-border"
       }`}
     >
       {/* Main input row */}
@@ -102,7 +84,7 @@ export function OmniboxIdle({
           type="button"
           onClick={() => void handleStart()}
           title="Iniciar tarefa"
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors"
+          className="shrink-0 w-10 h-10 rounded-full bg-accent hover:opacity-90 text-white flex items-center justify-center transition-opacity"
         >
           <Play size={18} />
         </button>
@@ -123,7 +105,7 @@ export function OmniboxIdle({
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
-          className="flex-1 bg-transparent text-base font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
+          className="flex-1 bg-transparent text-base font-medium text-fg placeholder-fg-muted focus:outline-none"
           autoComplete="off"
         />
       </div>
@@ -200,7 +182,7 @@ export function OmniboxIdle({
 
       {/* Suggestions dropdown */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="border-t border-gray-700/60 bg-gray-900/95 rounded-b-xl overflow-hidden">
+        <div className="border-t border-border-subtle bg-raised rounded-b-card overflow-hidden">
           <ul>
             {suggestions.map((s: SuggestionItem, idx: number) => (
               <li
@@ -208,23 +190,21 @@ export function OmniboxIdle({
                 onMouseDown={() => handleSuggestionSelect(s)}
                 onMouseEnter={() => setActiveSuggIdx(idx)}
                 className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                  idx === activeSuggIdx
-                    ? "bg-blue-600/20 text-gray-100"
-                    : "text-gray-300 hover:bg-gray-800/60"
+                  idx === activeSuggIdx ? "bg-accent/15 text-fg" : "text-fg-secondary"
                 }`}
               >
                 <span
-                  className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                    s.billable ? "bg-blue-400" : "bg-gray-500"
+                  className={`shrink-0 w-2 h-2 rounded-full ${
+                    s.billable ? "bg-billable" : "bg-fg-muted"
                   }`}
                 />
                 <span className="flex-1 text-sm truncate">{s.name}</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                   {s.isPlanned && (
-                    <span className="text-overline uppercase text-blue-400">planejada</span>
+                    <span className="text-overline uppercase text-accent-text">planejada</span>
                   )}
                   {s.projectName && (
-                    <span className="text-xs text-gray-500 truncate max-w-[80px]">
+                    <span className="text-xs text-fg-muted truncate max-w-[80px]">
                       {s.projectName}
                     </span>
                   )}

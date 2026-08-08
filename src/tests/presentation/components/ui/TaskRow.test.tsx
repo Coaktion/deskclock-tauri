@@ -10,6 +10,11 @@ describe("TaskRow", () => {
     expect(screen.getByText("0:15")).toBeTruthy();
   });
 
+  it("sem duração, não sobra o espaço dela", () => {
+    const { container } = render(<TaskRow title="Daily" />);
+    expect(container.querySelector(".tabular-nums")).toBeNull();
+  });
+
   it("o ponto do projeto só é botão quando há o que clicar", () => {
     const { rerender } = render(<TaskRow title="a" duration="1h" dotColor="#fff" />);
     expect(screen.queryByRole("button")).toBeNull();

@@ -27,7 +27,7 @@ export function OmniboxCustomFieldsPanel({
 
   return (
     <div
-      className="mx-4 mb-3 pt-3 border-t border-emerald-500/20 space-y-2"
+      className="mx-4 mb-3 pt-3 border-t border-border-subtle space-y-2"
       onKeyDown={(e) => {
         // ESC fecha só o painel: o omnibox inteiro reagindo ao ESC fecharia a
         // edição junto com o que foi digitado.
@@ -47,16 +47,16 @@ export function OmniboxCustomFieldsPanel({
       <div className="flex gap-2 justify-end">
         <button
           onClick={onClose}
-          className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+          className="px-3 py-1.5 text-xs text-fg-muted hover:text-fg transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 disabled:opacity-50 rounded-control transition-colors"
         >
-          <Check size={12} />
+          <Check size={14} />
           Salvar
         </button>
       </div>

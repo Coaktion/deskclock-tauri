@@ -14,7 +14,7 @@ interface MondayConnectedSectionsProps {
 }
 
 const ACTION_CLASS =
-  "w-full flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors justify-center border border-gray-700";
+  "w-full flex items-center gap-1.5 text-xs bg-raised hover:bg-border text-fg-secondary px-3 py-1.5 rounded transition-colors justify-center border border-border";
 
 export function MondayConnectedSections({
   reloadProjects,
@@ -33,7 +33,7 @@ export function MondayConnectedSections({
       <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
       <MondayAutoSyncSection />
       <MondayAutoImportSection />
-      <div className="border-t border-gray-800 px-4 py-3 space-y-2">
+      <div className="border-t border-border-subtle px-4 py-3 space-y-2">
         <button onClick={onShowSendModal} className={ACTION_CLASS}>
           <Send size={12} />
           Enviar tarefas manualmente…

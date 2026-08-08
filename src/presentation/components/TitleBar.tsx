@@ -38,12 +38,12 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
   const toggleMaximize = () => appWindow.toggleMaximize();
 
   return (
-    <div className="h-8 bg-gray-950 border-b border-gray-800 flex items-center shrink-0 select-none">
+    <div className="h-8 bg-canvas border-b border-border-subtle flex items-center shrink-0 select-none">
       {/* Área de arraste */}
       <div data-tauri-drag-region className="flex-1 flex items-center gap-2 px-3 h-full min-w-0">
-        <span className="text-xs font-semibold text-gray-500 tracking-wide">DeskClock</span>
-        <span className="text-gray-700 text-xs">·</span>
-        <span className="text-xs text-gray-400 truncate">{PAGE_LABELS[page]}</span>
+        <span className="text-xs font-semibold text-fg-muted tracking-wide">DeskClock</span>
+        <span className="text-fg-muted text-xs">·</span>
+        <span className="text-xs text-fg-secondary truncate">{PAGE_LABELS[page]}</span>
       </div>
 
       {/* Controles da janela */}
@@ -58,8 +58,8 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
             }
             className={`h-full px-3 transition-colors ${
               isPinned
-                ? "text-blue-400 hover:text-blue-300 hover:bg-gray-800"
-                : "text-gray-600 hover:text-gray-300 hover:bg-gray-800"
+                ? "text-accent-text hover:bg-raised"
+                : "text-fg-muted hover:text-fg-secondary hover:bg-raised"
             }`}
           >
             {isPinned ? <Pin size={12} /> : <PinOff size={12} />}
@@ -68,14 +68,14 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
         <button
           onClick={toggleMaximize}
           title={isMaximized ? "Restaurar" : "Maximizar"}
-          className="h-full px-3 text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+          className="h-full px-3 text-fg-muted hover:text-fg hover:bg-raised transition-colors"
         >
           {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
         </button>
         <button
           onClick={() => appWindow.hide()}
           title="Fechar (minimiza para o tray)"
-          className="h-full px-4 text-gray-500 hover:text-white hover:bg-red-600 transition-colors"
+          className="h-full px-4 text-fg-muted hover:text-white hover:bg-danger transition-colors"
         >
           <X size={12} />
         </button>

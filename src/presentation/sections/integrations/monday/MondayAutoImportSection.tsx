@@ -3,7 +3,8 @@ import { DownloadCloud, RefreshCw } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useSyncNowButton, type SyncFeedback } from "@presentation/hooks/useSyncNowButton";
 import { OVERLAY_EVENTS, type MondayImportSyncResultPayload } from "@shared/types/overlayEvents";
-import { Row, SubSection, SyncFeedbackLine, Toggle } from "../shared";
+import { Toggle } from "@presentation/components/ui";
+import { Row, SubSection, SyncFeedbackLine, integrationButtonClass } from "../shared";
 
 /** Payload do rastreador → frase mostrada abaixo do botão. */
 export function describeSyncResult(payload: MondayImportSyncResultPayload): SyncFeedback {
@@ -50,11 +51,14 @@ export function MondayAutoImportSection() {
       icon={<DownloadCloud size={15} />}
       title="Importação automática de itens"
       badge={
-        enabled ? <span className="ml-1 text-xs text-blue-400 font-medium">Ativa</span> : undefined
+        enabled ? (
+          <span className="ml-1 text-xs text-accent-text font-medium">Ativa</span>
+        ) : undefined
       }
     >
       <Row label="Ativar">
         <Toggle
+          ariaLabel="Ativar importação automática de itens"
           checked={enabled}
           onChange={async (v) => {
             setEnabled(v);
@@ -62,7 +66,7 @@ export function MondayAutoImportSection() {
           }}
         />
       </Row>
-      <p className="text-xs text-gray-500 leading-relaxed py-2.5">
+      <p className="text-xs text-fg-muted leading-relaxed py-2.5">
         Ao abrir o app e a cada 4 horas, importa as suas tarefas da semana nos boards vinculados
         como planejadas — para trazer alguma novidade na hora, use &quot;Buscar itens agora&quot;.
         Item já importado não vira tarefa de novo: o que mudar no Monday é atualizado aqui,
@@ -70,12 +74,8 @@ export function MondayAutoImportSection() {
       </p>
       {enabled && (
         <div className="pb-2.5">
-          <button
-            onClick={trigger}
-            disabled={searching}
-            className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-3 py-1.5 rounded transition-colors border border-gray-700"
-          >
-            <RefreshCw size={12} className={searching ? "animate-spin" : ""} />
+          <button onClick={trigger} disabled={searching} className={`${integrationButtonClass}`}>
+            <RefreshCw size={14} className={searching ? "animate-spin" : ""} />
             {searching ? "Buscando…" : "Buscar itens agora"}
           </button>
           {feedback && !searching && <SyncFeedbackLine feedback={feedback} />}

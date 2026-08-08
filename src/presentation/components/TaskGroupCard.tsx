@@ -6,6 +6,7 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { formatDurationCompact } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
+import { TaskRow } from "@presentation/components/ui";
 import { TaskCard } from "./TaskCard";
 
 interface TaskGroupCardProps {
@@ -81,101 +82,95 @@ export function TaskGroupCard({
     );
   }
 
+  const subParts = [project?.name, category?.name];
+  if (isGroup) subParts.push(`${tasks.length} registros`);
+  const subtitle = subParts.filter(Boolean).join(" · ");
+
   return (
     <div>
-      <div
-        className="relative flex items-center gap-2 pl-3 pr-2 py-2.5 cursor-pointer hover:bg-gray-800/50 rounded-lg transition-colors"
+      <TaskRow
+        title={displayName}
+        subtitle={subtitle || undefined}
+        duration={formatDurationCompact(group.totalSeconds)}
+        billable={first.billable}
+        dotColor={projectColor}
+        selected={selectable && selected}
         onClick={handleRowClick}
-      >
-        {/* Billable left accent */}
-        {first.billable && (
-          <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
-        )}
-
-        {selectable ? (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggleSelect?.(group);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            className="flex-shrink-0 accent-blue-500 cursor-pointer"
-          />
-        ) : (
-          isGroup && (
-            <span className="text-gray-500 flex-shrink-0">
-              {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        leading={
+          selectable ? (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onToggleSelect?.(group);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Selecionar ${displayName}`}
+              className="shrink-0 w-3.5 h-3.5 accent-accent cursor-pointer"
+            />
+          ) : (
+            isGroup && (
+              <span className="text-fg-muted shrink-0">
+                {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+            )
+          )
+        }
+        badges={
+          (allSent || someSent) && (
+            <span
+              title={allSent ? "Enviado para o Google Sheets" : "Enviado parcialmente"}
+              className={`shrink-0 ${allSent ? "text-billable" : "text-paused"}`}
+            >
+              <CheckCheck size={14} />
             </span>
           )
-        )}
-
-        {/* Project color dot */}
-        <span
-          className="shrink-0 w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: projectColor }}
-        />
-
-        <div className="flex-1 min-w-0">
-          <span className="text-sm text-gray-100 truncate block">{displayName}</span>
-          <div className="flex gap-2 text-xs text-gray-500 mt-0.5">
-            {project && <span>{project.name}</span>}
-            {category && <span>{category.name}</span>}
-            {isGroup && <span className="text-gray-600">{tasks.length} registros</span>}
-          </div>
-        </div>
-        <span className="text-sm font-mono tabular-nums text-gray-300 flex-shrink-0">
-          {formatDurationCompact(group.totalSeconds)}
-        </span>
-        {(allSent || someSent) && (
-          <span
-            title={allSent ? "Enviado para o Google Sheets" : "Enviado parcialmente"}
-            className={`flex-shrink-0 ${allSent ? "text-green-500" : "text-yellow-500"}`}
-          >
-            <CheckCheck size={13} />
-          </span>
-        )}
-        {onMoveToWorkspace && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveToWorkspace(tasks);
-            }}
-            title="Mover para workspace"
-            className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0 cursor-pointer"
-          >
-            <FolderInput size={14} />
-          </button>
-        )}
-        {isGroup && (
+        }
+        actions={
           <>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEditGroup?.(group);
-              }}
-              title="Editar grupo"
-              className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0 cursor-pointer"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onMerge(group);
-              }}
-              title="Unificar"
-              className="p-1 text-gray-500 hover:text-blue-400 flex-shrink-0 cursor-pointer"
-            >
-              <Merge size={14} />
-            </button>
+            {onMoveToWorkspace && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveToWorkspace(tasks);
+                }}
+                title="Mover para workspace"
+                className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+              >
+                <FolderInput size={14} />
+              </button>
+            )}
+            {isGroup && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditGroup?.(group);
+                  }}
+                  title="Editar grupo"
+                  className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMerge(group);
+                  }}
+                  title="Unificar"
+                  className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                >
+                  <Merge size={14} />
+                </button>
+              </>
+            )}
           </>
-        )}
-      </div>
+        }
+      />
 
       {expanded && (
-        <div className="pl-4 ml-3 border-l border-gray-800">
+        <div className="pl-4 ml-3 border-l border-border-subtle">
           {tasks.map((t) => (
             <TaskCard
               key={t.id}

@@ -1,3 +1,4 @@
+import { integrationButtonClass } from "../shared";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -258,7 +259,7 @@ export function ClockifyMappingsSection({
   }
 
   return (
-    <div className="border-t border-gray-800">
+    <div className="border-t border-border-subtle">
       <button
         onClick={() => {
           const next = !open;
@@ -268,13 +269,13 @@ export function ClockifyMappingsSection({
             if (clockifyTags.length === 0) fetchTags();
           }
         }}
-        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-800/30 transition-colors"
+        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-raised transition-colors"
       >
-        <span className="text-gray-500">
+        <span className="text-fg-muted">
           <ListChecks size={15} />
         </span>
-        <span className="text-sm font-medium text-gray-200">Mapeamentos</span>
-        <span className="ml-auto text-gray-600">
+        <span className="text-sm font-medium text-fg">Mapeamentos</span>
+        <span className="ml-auto text-fg-muted">
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </button>
@@ -282,30 +283,30 @@ export function ClockifyMappingsSection({
       {open && (
         <div className="px-4 pb-4 space-y-5">
           {/* Projetos */}
-          <div className="border border-gray-800 rounded-lg">
+          <div className="border border-border-subtle rounded-control">
             <button
               onClick={() => setProjectsOpen((v) => !v)}
-              className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-gray-800/40 hover:bg-gray-800/60 transition-colors"
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-raised hover:bg-border transition-colors"
             >
-              <span className="text-xs font-medium text-gray-300">Projetos</span>
-              <span className="text-xs text-gray-600 ml-1">
+              <span className="text-xs font-medium text-fg-secondary">Projetos</span>
+              <span className="text-xs text-fg-muted ml-1">
                 ({projectMapping.length}/{projects.length})
               </span>
-              <span className="ml-auto text-gray-600">
+              <span className="ml-auto text-fg-muted">
                 {projectsOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               </span>
             </button>
             {projectsOpen && (
               <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-fg-muted">
                     Importar cria projetos no DeskClock e os vincula automaticamente.
                   </p>
                   <div className="flex items-center gap-2 shrink-0 ml-3">
                     <button
                       onClick={() => fetchProjects()}
                       disabled={loadingProjects}
-                      className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                      className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
                       title="Atualizar lista"
                     >
                       <RefreshCw size={12} className={loadingProjects ? "animate-spin" : ""} />
@@ -313,7 +314,7 @@ export function ClockifyMappingsSection({
                     <button
                       onClick={handleImportProjects}
                       disabled={importingProjects}
-                      className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                      className={`${integrationButtonClass}`}
                     >
                       {importingProjects && <Loader2 size={10} className="animate-spin" />}
                       Importar do Clockify
@@ -321,7 +322,7 @@ export function ClockifyMappingsSection({
                   </div>
                 </div>
                 {projects.length === 0 ? (
-                  <p className="text-xs text-gray-600 italic">Nenhum projeto no DeskClock.</p>
+                  <p className="text-xs text-fg-muted italic">Nenhum projeto no DeskClock.</p>
                 ) : (
                   <div className="space-y-1">
                     {projects.map((p) => (
@@ -340,23 +341,23 @@ export function ClockifyMappingsSection({
           </div>
 
           {/* Categorias → Tags */}
-          <div className="border border-gray-800 rounded-lg overflow-visible">
+          <div className="border border-border-subtle rounded-control overflow-visible">
             <button
               onClick={() => setCategoriesOpen((v) => !v)}
-              className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-gray-800/40 hover:bg-gray-800/60 transition-colors rounded-lg"
+              className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-raised hover:bg-border transition-colors rounded-control"
             >
-              <span className="text-xs font-medium text-gray-300">Categorias para tags</span>
-              <span className="text-xs text-gray-600 ml-1">
+              <span className="text-xs font-medium text-fg-secondary">Categorias para tags</span>
+              <span className="text-xs text-fg-muted ml-1">
                 ({categoryMapping.length}/{categories.length})
               </span>
-              <span className="ml-auto text-gray-600">
+              <span className="ml-auto text-fg-muted">
                 {categoriesOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
               </span>
             </button>
             {categoriesOpen && (
               <div className="p-3 pt-0">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-fg-muted">
                     Importar cria categorias no DeskClock para cada tag e as vincula
                     automaticamente.
                   </p>
@@ -364,7 +365,7 @@ export function ClockifyMappingsSection({
                     <button
                       onClick={() => fetchTags()}
                       disabled={loadingTags}
-                      className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                      className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
                       title="Atualizar lista"
                     >
                       <RefreshCw size={12} className={loadingTags ? "animate-spin" : ""} />
@@ -372,7 +373,7 @@ export function ClockifyMappingsSection({
                     <button
                       onClick={handleImportTags}
                       disabled={importingTags}
-                      className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                      className={`${integrationButtonClass}`}
                     >
                       {importingTags && <Loader2 size={10} className="animate-spin" />}
                       Importar do Clockify
@@ -380,14 +381,16 @@ export function ClockifyMappingsSection({
                   </div>
                 </div>
                 {categories.length === 0 ? (
-                  <p className="text-xs text-gray-600 italic">Nenhuma categoria no DeskClock.</p>
+                  <p className="text-xs text-fg-muted italic">Nenhuma categoria no DeskClock.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {categories.map((c) => {
                       const mapped = categoryMapping.find((m) => m.deskclockCategoryId === c.id);
                       return (
                         <div key={c.id} className="flex items-center gap-3 py-1">
-                          <span className="text-xs text-gray-300 flex-1 truncate">{c.name}</span>
+                          <span className="text-xs text-fg-secondary flex-1 truncate">
+                            {c.name}
+                          </span>
                           <TagMultiSelect
                             allTags={clockifyTags}
                             selectedIds={mapped?.clockifyTagIds ?? []}
@@ -405,9 +408,9 @@ export function ClockifyMappingsSection({
           {/* Tags padrão */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-300">Tags padrão</span>
+              <span className="text-xs font-medium text-fg-secondary">Tags padrão</span>
             </div>
-            <p className="text-xs text-gray-500 mb-2">
+            <p className="text-xs text-fg-muted mb-2">
               Adicionadas em todos os envios, independente da categoria.
             </p>
             <TagMultiSelect

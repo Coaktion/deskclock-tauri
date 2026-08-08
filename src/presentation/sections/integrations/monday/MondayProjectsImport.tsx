@@ -73,7 +73,7 @@ function ProjectBoardIdInput({
             ? "Lendo o board no Monday…"
             : "Id do board onde as horas deste projeto serão gravadas"
         }
-        className={`w-28 bg-gray-800 border border-amber-500/40 rounded px-2 py-0.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 ${
+        className={`w-28 bg-raised border border-amber-500/40 rounded px-2 py-0.5 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent ${
           busy ? "pr-6 opacity-70" : ""
         }`}
         autoComplete="off"
@@ -83,7 +83,7 @@ function ProjectBoardIdInput({
       {busy && (
         <Loader2
           size={10}
-          className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-gray-400"
+          className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-fg-muted"
         />
       )}
     </span>
@@ -249,7 +249,7 @@ export function MondayProjectsImport({
       }
     >
       {progress && progress.total > 0 && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-fg-muted">
           Lendo projetos: {progress.done}/{progress.total}
         </p>
       )}
@@ -258,14 +258,14 @@ export function MondayProjectsImport({
           oferece. Sem esta linha a semeadura seria invisível: ela acontece no
           mesmo clique e só aparece na tela de Dados, projeto a projeto. */}
       {seededCategories && seededCategories.projects > 0 && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-fg-muted">
           {seededCategories.seeded} associação(ões) de categoria em {seededCategories.projects}{" "}
           projeto(s).
         </p>
       )}
 
       {linked.length === 0 ? (
-        <p className="text-xs text-gray-600 italic">Nenhum projeto vinculado ainda.</p>
+        <p className="text-xs text-fg-muted italic">Nenhum projeto vinculado ainda.</p>
       ) : (
         <>
           {/* A lista acompanha o Portfólio e já passa de 60 itens: aberta, ela
@@ -276,7 +276,7 @@ export function MondayProjectsImport({
           <button
             onClick={() => setListOpen((v) => !v)}
             aria-expanded={listOpen}
-            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
           >
             {listOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
             {linked.length} projeto(s) vinculado(s)
@@ -297,7 +297,7 @@ export function MondayProjectsImport({
                   ganha o campo no lugar onde o nome remoto ficava. */}
               {linked.map((m) => (
                 <div key={m.portfolioItemId} className="flex items-center gap-3 py-1">
-                  <span className="text-xs text-gray-300 flex-1 truncate">
+                  <span className="text-xs text-fg-secondary flex-1 truncate">
                     {namesById.get(m.deskclockProjectId)}
                   </span>
                   {!m.mondayBoardId && (
@@ -336,7 +336,7 @@ export function MondayProjectsImport({
       {/* Fica depois do import e não some com a lista recolhida: é a resposta à
           pergunta "o board tem 63 linhas, por que importou 61?". */}
       {ignored > 0 && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-fg-muted">
           {ignored} item(ns) do Portfólio sem &quot;Oferta&quot; preenchida — não viram projeto.
           Classifique a coluna no Monday e importe de novo.
         </p>
@@ -352,14 +352,14 @@ export function MondayProjectsImport({
       {/* O motivo de cada board recusado já existia no resultado do import e era
           descartado: o usuário via só o número e não tinha como agir. */}
       {skipped.length > 0 && (
-        <div className="border-t border-gray-800 pt-2 space-y-1">
-          <p className="text-xs text-gray-500">
+        <div className="border-t border-border-subtle pt-2 space-y-1">
+          <p className="text-xs text-fg-muted">
             {skipped.length} board(s) fora do template de Activities:
           </p>
           {skipped.map((s) => (
             <div key={s.portfolioItemId} className="flex items-baseline gap-2">
-              <span className="text-xs text-gray-400 truncate max-w-[45%]">{s.boardName}</span>
-              <span className="text-xs text-gray-600 truncate">{s.reason}</span>
+              <span className="text-xs text-fg-muted truncate max-w-[45%]">{s.boardName}</span>
+              <span className="text-xs text-fg-muted truncate">{s.reason}</span>
             </div>
           ))}
         </div>

@@ -56,14 +56,14 @@ export function WorkspaceSwitcher() {
       <button
         onClick={() => setOpen((v) => !v)}
         title={active ? `Workspace: ${active.name}` : "Workspace"}
-        className={`w-full flex flex-col items-center gap-2 py-2 px-1 rounded-lg border transition-colors ${
-          open ? classes.soft : "border-transparent hover:bg-gray-800/60"
+        className={`w-full flex flex-col items-center gap-2 py-2 px-1 rounded-control border transition-colors ${
+          open ? classes.soft : "border-transparent hover:bg-raised"
         }`}
       >
         {active ? <WorkspaceDot color={active.color} size={10} /> : <Layers size={14} />}
         <span
           className={`text-xs font-medium leading-none truncate max-w-full ${
-            open ? classes.text : "text-gray-500"
+            open ? classes.text : "text-fg-muted"
           }`}
         >
           {active?.name ?? "Workspace"}
@@ -71,50 +71,50 @@ export function WorkspaceSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute left-full top-0 ml-1 z-50 w-52 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-1">
-          <p className="px-3 py-1.5 text-overline uppercase text-gray-600">Workspace</p>
+        <div className="absolute left-full top-0 ml-1 z-50 w-52 bg-surface border border-border rounded-card shadow-2xl py-1">
+          <p className="px-3 py-1.5 text-overline uppercase text-fg-muted">Workspace</p>
           {workspaces.map((w) => (
             <button
               key={w.id}
               onClick={() => void handlePick(w.id)}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-fg-secondary hover:bg-raised transition-colors"
             >
               <WorkspaceDot color={w.color} />
               <span className="flex-1 text-left truncate">{w.name}</span>
-              {w.id === activeWorkspaceId && <Check size={12} className="text-gray-500" />}
+              {w.id === activeWorkspaceId && <Check size={14} className="text-fg-muted" />}
             </button>
           ))}
         </div>
       )}
 
       {pending && (
-        <div className="absolute left-full top-0 ml-1 z-50 w-60 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-3">
+        <div className="absolute left-full top-0 ml-1 z-50 w-60 bg-surface border border-border rounded-card shadow-2xl p-3">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-xs text-gray-300 leading-snug">
+            <p className="text-xs text-fg-secondary leading-snug">
               Há uma tarefa em execução. Parar e trocar para{" "}
-              <span className="text-gray-100 font-medium">{pending.name}</span>?
+              <span className="text-fg font-medium">{pending.name}</span>?
             </p>
             <button
               onClick={cancel}
-              className="p-0.5 text-gray-600 hover:text-gray-400 rounded shrink-0"
+              className="p-0.5 text-fg-muted hover:text-fg-secondary rounded-chip shrink-0"
             >
-              <X size={13} />
+              <X size={14} />
             </button>
           </div>
-          <span className="block text-xs text-gray-500 mb-1.5">Marcar a tarefa como:</span>
+          <span className="block text-xs text-fg-muted mb-1.5">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
             >
-              <CheckCircle2 size={12} />
+              <CheckCircle2 size={14} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
             >
-              <Clock size={12} />
+              <Clock size={14} />
               Pendente
             </button>
           </div>

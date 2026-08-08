@@ -6,7 +6,7 @@ import { useTour } from "@presentation/hooks/useTour";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
 import { Loader2, LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { StatusBadge } from "../shared";
+import { StatusBadge, integrationButtonClass } from "../shared";
 import { ClockifyConnectedSections } from "./ClockifyConnectedSections";
 import { ClockifyLogo } from "./ClockifyLogo";
 
@@ -55,20 +55,20 @@ export function ClockifyIntegrationCard() {
 
   return (
     <>
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50">
+      <div className="rounded-card border border-border-subtle bg-surface">
         <div
           data-tour="clockify-header"
-          className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden"
+          className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-xl overflow-hidden"
         >
           <div className="mt-0.5 shrink-0">
             <ClockifyLogo size={20} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-gray-100">Clockify</h2>
+              <h2 className="text-sm font-semibold text-fg">Clockify</h2>
               <StatusBadge connected={connected} email={email} />
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-fg-muted mt-0.5">
               Registre entradas de tempo diretamente no Clockify.
             </p>
           </div>
@@ -76,7 +76,7 @@ export function ClockifyIntegrationCard() {
             <button
               onClick={() => startTour()}
               title="Ver tour da integração"
-              className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-xs font-medium flex items-center justify-center"
+              className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-muted transition-colors text-xs font-medium flex items-center justify-center"
             >
               ?
             </button>
@@ -84,7 +84,7 @@ export function ClockifyIntegrationCard() {
               <button
                 onClick={handleDisconnect}
                 disabled={loading}
-                className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded transition-colors"
+                className={`${integrationButtonClass}`}
               >
                 {loading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
                 Desconectar
@@ -92,7 +92,7 @@ export function ClockifyIntegrationCard() {
             ) : (
               <button
                 onClick={() => setShowConnectModal(true)}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
+                className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent text-white px-3 py-1.5 rounded transition-colors"
               >
                 <LogIn size={12} />
                 Conectar

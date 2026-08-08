@@ -9,7 +9,7 @@
 
 /** Campo comum: desenha a própria casca e ocupa a linha inteira. */
 export const fieldClass =
-  "w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500";
+  "w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
 
 /**
  * Caixa que veste o visual de um input. Quando o campo divide a linha com um
@@ -19,11 +19,11 @@ export const fieldClass =
  * abrir mão da própria borda.
  */
 export const boxClass =
-  "bg-gray-800 border border-gray-700 rounded-lg focus-within:border-blue-500 transition-colors";
+  "bg-raised border border-border rounded-control focus-within:border-accent transition-colors";
 
 /** Input sem casca: quem desenha é o `boxClass` em volta. */
 export const bareInputClass =
-  "w-full px-2.5 py-1.5 text-sm bg-transparent border-none text-gray-100 placeholder-gray-500 focus:outline-none";
+  "w-full px-2.5 py-1.5 text-sm bg-transparent border-none text-fg placeholder-fg-muted focus:outline-none";
 
 /**
  * Rótulo encaixado na borda superior da caixa. O fundo do rótulo é o mesmo da
@@ -37,7 +37,7 @@ export const bareInputClass =
  */
 export const notchedBoxClass = "relative mt-1.5";
 export const notchedLabelClass =
-  "absolute -top-2 left-1.5 px-1 bg-gray-800 text-xs text-gray-500 rounded-sm";
+  "absolute -top-2 left-1.5 px-1 bg-raised text-xs text-fg-muted rounded-sm";
 
 /**
  * Rótulo que começa **dentro** do campo, como placeholder, e sobe para a borda
@@ -63,15 +63,15 @@ export const notchedLabelClass =
  */
 export const floatingFieldClass = "group/cf relative mt-1.5";
 export const floatingLabelClass = [
-  "pointer-events-none absolute left-2.5 top-1.5 text-sm text-gray-500 transition-all duration-150",
+  "pointer-events-none absolute left-2.5 top-1.5 text-sm text-fg-muted transition-all duration-150",
   "group-focus-within/cf:-top-2 group-focus-within/cf:left-1.5 group-focus-within/cf:px-1",
-  "group-focus-within/cf:text-xs group-focus-within/cf:bg-gray-800 group-focus-within/cf:rounded-sm",
+  "group-focus-within/cf:text-xs group-focus-within/cf:bg-raised group-focus-within/cf:rounded-sm",
   "group-has-[input:not(:placeholder-shown)]/cf:-top-2 group-has-[input:not(:placeholder-shown)]/cf:left-1.5",
   "group-has-[input:not(:placeholder-shown)]/cf:px-1 group-has-[input:not(:placeholder-shown)]/cf:text-xs",
-  "group-has-[input:not(:placeholder-shown)]/cf:bg-gray-800 group-has-[input:not(:placeholder-shown)]/cf:rounded-sm",
+  "group-has-[input:not(:placeholder-shown)]/cf:bg-raised group-has-[input:not(:placeholder-shown)]/cf:rounded-sm",
   "group-has-[textarea:not(:placeholder-shown)]/cf:-top-2 group-has-[textarea:not(:placeholder-shown)]/cf:left-1.5",
   "group-has-[textarea:not(:placeholder-shown)]/cf:px-1 group-has-[textarea:not(:placeholder-shown)]/cf:text-xs",
-  "group-has-[textarea:not(:placeholder-shown)]/cf:bg-gray-800 group-has-[textarea:not(:placeholder-shown)]/cf:rounded-sm",
+  "group-has-[textarea:not(:placeholder-shown)]/cf:bg-raised group-has-[textarea:not(:placeholder-shown)]/cf:rounded-sm",
 ].join(" ");
 
 /**

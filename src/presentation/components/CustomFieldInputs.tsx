@@ -62,13 +62,13 @@ export function CustomFieldInputs({
         // lugar do "Sim/Não" que a caixa marcada já comunica.
         if (field.type === "checkbox") {
           return (
-            <div key={field.id} className="flex items-center gap-2 py-1 text-sm text-gray-300">
+            <div key={field.id} className="flex items-center gap-2 py-1 text-sm text-fg-secondary">
               <input
                 id={inputId}
                 type="checkbox"
                 checked={value === "1"}
                 onChange={(e) => commit(field, serializeCustomValue(field, e.target.checked))}
-                className="accent-blue-500 cursor-pointer"
+                className="accent-accent cursor-pointer"
               />
               <label htmlFor={inputId} className="cursor-pointer">
                 {field.label}

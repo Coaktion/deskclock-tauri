@@ -1,3 +1,4 @@
+import { integrationButtonClass } from "../shared";
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -20,11 +21,11 @@ export function ImportCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="border border-gray-800 rounded-lg p-3 space-y-2">
+    <div className="border border-border-subtle rounded-control p-3 space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-xs font-medium text-gray-300">{title}</span>
-          <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
+          <span className="text-xs font-medium text-fg-secondary">{title}</span>
+          <p className="text-xs text-fg-muted mt-0.5">{hint}</p>
         </div>
         {action}
       </div>
@@ -51,7 +52,7 @@ export function ImportActionButton({
       onClick={onClick}
       disabled={busy || disabled}
       title={title}
-      className="shrink-0 flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+      className={`${integrationButtonClass} shrink-0`}
     >
       {busy && <Loader2 size={10} className="animate-spin" />}
       {label}

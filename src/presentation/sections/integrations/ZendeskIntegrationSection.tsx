@@ -8,7 +8,14 @@ import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenMan
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
 import { CalendarDays, CheckCircle2, Key, Loader2, LogIn, LogOut, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { DeskclockWorkspaceRow, IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
+import {
+  DeskclockWorkspaceRow,
+  IntegrationTile,
+  Row,
+  StatusBadge,
+  SubSection,
+  integrationButtonClass,
+} from "./shared";
 
 /* ── SVG Zendesk ── */
 
@@ -107,38 +114,35 @@ export function ZendeskIntegrationCard() {
   const ticketImporter = connected ? factories.createTicketImporter() : null;
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden">
+    <div className="rounded-card border border-border-subtle bg-surface overflow-hidden">
       {/* Header do card */}
       <div
         data-tour="zendesk-header"
-        className="flex items-start gap-3 px-4 py-3 border-b border-gray-800"
+        className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle"
       >
         <div className="mt-0.5 shrink-0">
           <ZendeskLogoSmall size={20} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-100">Zendesk</h2>
+            <h2 className="text-sm font-semibold text-fg">Zendesk</h2>
             <StatusBadge connected={connected} email={email} />
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-fg-muted mt-0.5">
             Importe tickets atribuídos a você como tarefas planejadas.
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
-          {error && <span className="text-xs text-red-400 max-w-[180px] text-right">{error}</span>}
+          {error && <span className="text-xs text-danger max-w-[180px] text-right">{error}</span>}
           <button
             onClick={() => startTour()}
             title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-xs font-medium flex items-center justify-center"
+            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-muted transition-colors text-xs font-medium flex items-center justify-center"
           >
             ?
           </button>
           {connected ? (
-            <button
-              onClick={handleDisconnect}
-              className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors"
-            >
+            <button onClick={handleDisconnect} className={`${integrationButtonClass}`}>
               <LogOut size={12} />
               Desconectar
             </button>
@@ -146,7 +150,7 @@ export function ZendeskIntegrationCard() {
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded transition-colors"
+              className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded transition-colors"
             >
               {loading ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} />}
               {loading ? "Aguardando…" : "Conectar"}
@@ -159,31 +163,32 @@ export function ZendeskIntegrationCard() {
       <div data-tour="zendesk-credentials">
         <SubSection icon={<Key size={15} />} title="Credenciais OAuth" defaultOpen={!connected}>
           {!connected && (
-            <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 px-4 py-3 space-y-2 mb-1">
-              <p className="text-xs font-medium text-gray-300">
+            <div className="rounded-control bg-raised border border-border px-4 py-3 space-y-2 mb-1">
+              <p className="text-xs font-medium text-fg-secondary">
                 Como criar um OAuth client no Zendesk:
               </p>
-              <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+              <ol className="text-xs text-fg-muted space-y-1 list-decimal list-inside">
                 <li>
                   Acesse{" "}
-                  <span className="text-gray-300 font-medium">
+                  <span className="text-fg-secondary font-medium">
                     Admin Center → Apps e integrações → APIs → APIs do Zendesk → Clientes OAuth
                   </span>
                 </li>
                 <li>
                   Clique em{" "}
-                  <span className="text-gray-300 font-medium">Adicionar cliente OAuth</span>
+                  <span className="text-fg-secondary font-medium">Adicionar cliente OAuth</span>
                 </li>
                 <li>
-                  Em <span className="text-gray-300 font-medium">URLs de redirecionamento</span>,
-                  adicione exatamente:{" "}
-                  <code className="text-blue-400 font-mono text-xs">
+                  Em <span className="text-fg-secondary font-medium">URLs de redirecionamento</span>
+                  , adicione exatamente:{" "}
+                  <code className="text-accent-text font-mono text-xs">
                     http://localhost:27422/callback
                   </code>
                 </li>
                 <li>
-                  Copie o <span className="text-gray-300 font-medium">Identificador único</span>{" "}
-                  (Client ID) e o <span className="text-gray-300 font-medium">Secret</span> gerado
+                  Copie o <span className="text-fg-secondary font-medium">Identificador único</span>{" "}
+                  (Client ID) e o <span className="text-fg-secondary font-medium">Secret</span>{" "}
+                  gerado
                 </li>
               </ol>
             </div>
@@ -196,10 +201,10 @@ export function ZendeskIntegrationCard() {
                 onChange={(e) => setSubdomain(e.target.value)}
                 disabled={connected}
                 placeholder="minha-empresa"
-                className="w-36 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-36 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
                 autoComplete="off"
               />
-              <span className="text-xs text-gray-600 shrink-0">.zendesk.com</span>
+              <span className="text-xs text-fg-muted shrink-0">.zendesk.com</span>
             </div>
           </Row>
           <Row label="Client ID">
@@ -209,7 +214,7 @@ export function ZendeskIntegrationCard() {
               onChange={(e) => setClientId(e.target.value)}
               disabled={connected}
               placeholder="OAuth client identifier"
-              className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-52 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
               autoComplete="off"
             />
           </Row>
@@ -220,7 +225,7 @@ export function ZendeskIntegrationCard() {
               onChange={(e) => setClientSecret(e.target.value)}
               disabled={connected}
               placeholder="Vazio para cliente público"
-              className="w-52 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-52 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
               autoComplete="off"
             />
           </Row>
@@ -235,9 +240,9 @@ export function ZendeskIntegrationCard() {
             <DeskclockWorkspaceRow
               configKey="zendeskDeskclockWorkspaceId"
               hint="Onde os tickets importados viram tarefas planejadas."
-              className="pb-2.5 mb-3 border-b border-gray-800"
+              className="pb-2.5 mb-3 border-b border-border-subtle"
             />
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-fg-muted mb-3">
               Importe tickets abertos atribuídos a você como tarefas planejadas.
             </p>
             <button
@@ -245,22 +250,22 @@ export function ZendeskIntegrationCard() {
                 setImportedCount(null);
                 setShowImportModal(true);
               }}
-              className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors w-full justify-center border border-gray-700"
+              className={`${integrationButtonClass} w-full`}
             >
               <CalendarDays size={13} />
               Importar tickets…
             </button>
 
             {importedCount !== null && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <CheckCircle2 size={14} className="text-green-400 shrink-0" />
-                <span className="text-xs text-green-300 flex-1">
+              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-billable/10 border border-billable/20 rounded-control">
+                <CheckCircle2 size={14} className="text-billable shrink-0" />
+                <span className="text-xs text-billable flex-1">
                   {importedCount} ticket{importedCount !== 1 ? "s" : ""} importado
                   {importedCount !== 1 ? "s" : ""}.
                 </span>
                 <button
                   onClick={() => setImportedCount(null)}
-                  className="text-gray-600 hover:text-gray-400 transition-colors"
+                  className="text-fg-muted hover:text-fg transition-colors"
                 >
                   <X size={12} />
                 </button>

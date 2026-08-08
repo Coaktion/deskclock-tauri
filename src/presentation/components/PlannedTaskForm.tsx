@@ -5,6 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { FilterPill } from "@presentation/components/ui";
 import {
   bareInputClass,
   boxClass,
@@ -71,7 +72,7 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 
 /** Título das seções que quebram a coluna em blocos (Ações, Agendamento). */
 const sectionLabelClass =
-  "text-xs font-medium text-gray-500 uppercase tracking-wide pt-1 border-t border-gray-800";
+  "text-overline uppercase text-fg-muted pt-1 border-t border-border-subtle";
 
 interface PlannedTaskFormProps {
   projects: Project[];
@@ -261,7 +262,7 @@ export function PlannedTaskForm({
               : "Non-billable — clique para alternar"
           }
           className={`flex items-center gap-1 shrink-0 transition-colors ${
-            form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+            form.billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
           }`}
         >
           <DollarSign size={14} />
@@ -281,16 +282,16 @@ export function PlannedTaskForm({
         <>
           <p className={sectionLabelClass}>Agendamento</p>
 
-          <div className="flex bg-gray-800 p-1 rounded-lg gap-1">
+          <div className="flex bg-raised p-1 rounded-control gap-1">
             {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => set("scheduleType", type)}
-                className={`flex-1 py-1 text-xs rounded-md transition-colors ${
+                className={`flex-1 py-1 text-xs font-medium rounded-chip transition-colors ${
                   form.scheduleType === type
-                    ? "bg-blue-500 text-white"
-                    : "bg-transparent text-gray-400 hover:text-gray-200"
+                    ? "bg-accent text-white"
+                    : "bg-transparent text-fg-muted hover:text-fg"
                 }`}
               >
                 {SCHEDULE_LABELS[type]}
@@ -300,17 +301,13 @@ export function PlannedTaskForm({
 
           {form.scheduleType === "specific_date" && (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <FilterPill
+                size="sm"
+                active={form.scheduleDate === todayISO()}
                 onClick={() => set("scheduleDate", todayISO())}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
-                  form.scheduleDate === todayISO()
-                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                    : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-                }`}
               >
                 Hoje
-              </button>
+              </FilterPill>
               <DatePickerInput
                 value={form.scheduleDate}
                 onChange={(v) => set("scheduleDate", v)}
@@ -326,10 +323,10 @@ export function PlannedTaskForm({
                   key={value}
                   type="button"
                   onClick={() => toggleDay(value)}
-                  className={`flex-1 py-1.5 text-xs rounded-full border transition-colors ${
+                  className={`flex-1 py-1.5 text-xs font-medium rounded-full border transition-colors ${
                     form.recurringDays.includes(value)
-                      ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                      : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
+                      ? "bg-accent/10 border-accent/40 text-accent-text"
+                      : "bg-transparent border-border text-fg-muted hover:border-fg-muted hover:text-fg"
                   }`}
                 >
                   {label}
@@ -352,7 +349,7 @@ export function PlannedTaskForm({
                 invalid={isPeriodInverted}
               />
               {isPeriodInverted && (
-                <p className="text-xs text-red-400">O fim não pode ser antes do início.</p>
+                <p className="text-xs text-danger">O fim não pode ser antes do início.</p>
               )}
             </div>
           )}
@@ -365,13 +362,13 @@ export function PlannedTaskForm({
       {form.actions.length > 0 && (
         <ul className="flex flex-col gap-1">
           {form.actions.map((action, i) => (
-            <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg">
+            <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-raised rounded-control">
               <span
-                className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
+                className={`shrink-0 ${action.type === "open_url" ? "text-accent-text" : "text-fg-secondary"}`}
               >
-                {action.type === "open_url" ? <ExternalLink size={13} /> : <FolderOpen size={13} />}
+                {action.type === "open_url" ? <ExternalLink size={14} /> : <FolderOpen size={14} />}
               </span>
-              <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
+              <span className="flex-1 text-xs text-fg-secondary truncate" title={action.value}>
                 {action.value}
               </span>
               <button
@@ -382,10 +379,10 @@ export function PlannedTaskForm({
                     form.actions.filter((_, j) => j !== i)
                   )
                 }
-                className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                className="shrink-0 text-fg-muted hover:text-danger transition-colors"
                 title="Remover"
               >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
               </button>
             </li>
           ))}
@@ -395,7 +392,7 @@ export function PlannedTaskForm({
       <select
         value={newActionType}
         onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-        className="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
+        className="w-full px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg-secondary focus:outline-none focus:border-accent"
       >
         <option value="open_url">URL</option>
         <option value="open_file">Arquivo</option>
@@ -422,7 +419,7 @@ export function PlannedTaskForm({
           onClick={handleAddAction}
           disabled={!newActionValue.trim()}
           title="Adicionar ação"
-          className="shrink-0 p-1 text-gray-500 hover:text-gray-200 disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
+          className="shrink-0 p-1 text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted transition-colors"
         >
           <Plus size={14} />
         </button>
@@ -431,7 +428,7 @@ export function PlannedTaskForm({
       <button
         type="submit"
         disabled={!form.name.trim() || !isScheduleValid() || submitting}
-        className="w-full px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-sm transition-colors"
+        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 disabled:opacity-40 text-white rounded-control transition-opacity"
       >
         Adicionar
       </button>

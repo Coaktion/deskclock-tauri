@@ -9,6 +9,14 @@ import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 /* ── helpers ── */
 
 /**
+ * Botão secundário das seções de integração — importar, buscar agora,
+ * desconectar. São dezesseis, e escritos à mão divergiam no raio, no padding e
+ * no que acontece ao passar o cursor.
+ */
+export const integrationButtonClass =
+  "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-fg-secondary bg-raised border border-border hover:border-fg-muted disabled:opacity-50 disabled:cursor-not-allowed rounded-control transition-colors";
+
+/**
  * Workspace do DeskClock em que a integração trabalha — o topo do escopo que
  * ela governa.
  *
@@ -33,7 +41,7 @@ export function DeskclockWorkspaceRow({
   // SubSection o `px-4` já veio do pai, e repeti-lo indentaria a linha duas
   // vezes — daí o wrapper ser do componente, e não do chamador: com um
   // workspace só ele some inteiro, sem deixar uma borda vazia para trás.
-  className = "border-t border-gray-800 px-4 py-3",
+  className = "border-t border-border-subtle px-4 py-3",
 }: {
   configKey: IntegrationWorkspaceKey;
   hint: string;
@@ -61,13 +69,13 @@ export function DeskclockWorkspaceRow({
     <div className={className}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-sm text-gray-300">Workspace DeskClock</span>
-          <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
+          <span className="text-sm text-fg-secondary">Workspace DeskClock</span>
+          <p className="text-xs text-fg-muted mt-0.5">{hint}</p>
         </div>
         <select
           value={selected}
           onChange={(e) => void handleChange(e.target.value)}
-          className="shrink-0 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[180px]"
+          className="shrink-0 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg-secondary focus:outline-none focus:border-accent max-w-[180px]"
         >
           {workspaces.map((w) => (
             <option key={w.id} value={w.id}>
@@ -94,7 +102,7 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
   return (
     <p
       className={`flex items-start gap-1.5 mt-2 text-xs leading-relaxed ${
-        feedback.ok ? "text-green-400" : "text-rose-400"
+        feedback.ok ? "text-billable" : "text-danger"
       }`}
     >
       {feedback.ok ? (
@@ -116,38 +124,15 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
 
 export function StatusBadge({ connected, email }: { connected: boolean; email?: string }) {
   return connected ? (
-    <span className="flex items-center gap-1 text-xs text-green-400">
+    <span className="flex items-center gap-1 text-xs text-billable">
       <CheckCircle2 size={12} />
       {email ? `Conectado como ${email}` : "Conectado"}
     </span>
   ) : (
-    <span className="flex items-center gap-1 text-xs text-gray-500">
+    <span className="flex items-center gap-1 text-xs text-fg-muted">
       <Circle size={12} />
       Não configurado
     </span>
-  );
-}
-
-export function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        checked ? "bg-blue-600" : "bg-gray-700"
-      }`}
-    >
-      <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-          checked ? "translate-x-5" : "translate-x-1"
-        }`}
-      />
-    </button>
   );
 }
 
@@ -162,9 +147,9 @@ export function Row({
 }) {
   return (
     <div
-      className={`flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0 ${disabled ? "opacity-40 pointer-events-none" : ""}`}
+      className={`flex items-center justify-between py-2.5 border-b border-border-subtle last:border-0 ${disabled ? "opacity-40 pointer-events-none" : ""}`}
     >
-      <span className="text-sm text-gray-300">{label}</span>
+      <span className="text-sm text-fg-secondary">{label}</span>
       <div className="flex items-center gap-2">{children}</div>
     </div>
   );
@@ -185,15 +170,15 @@ export function SubSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-t border-gray-800">
+    <div className="border-t border-border-subtle">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-800/30 transition-colors"
+        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-raised transition-colors"
       >
-        <span className="text-gray-500">{icon}</span>
-        <span className="text-sm font-medium text-gray-200">{title}</span>
+        <span className="text-fg-muted">{icon}</span>
+        <span className="text-sm font-medium text-fg">{title}</span>
         {badge}
-        <span className="ml-auto text-gray-600">
+        <span className="ml-auto text-fg-muted">
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </button>
@@ -224,14 +209,14 @@ export function IntegrationTile({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border border-gray-800 bg-gray-900/50 hover:bg-gray-800/40 transition-colors text-left group"
+      className="w-full flex items-center gap-4 px-4 py-3.5 rounded-card border border-border-subtle bg-surface hover:bg-raised transition-colors text-left group"
     >
-      <div className="shrink-0 w-9 h-9 rounded-lg bg-gray-800/60 flex items-center justify-center">
+      <div className="shrink-0 w-9 h-9 rounded-control bg-raised flex items-center justify-center">
         {logo}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-gray-100">{name}</div>
-        <div className="text-xs text-gray-500 mt-0.5">{description}</div>
+        <div className="text-sm font-semibold text-fg">{name}</div>
+        <div className="text-xs text-fg-muted mt-0.5">{description}</div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0 mr-1">
         <StatusBadge connected={connected} email={email} />
@@ -240,10 +225,10 @@ export function IntegrationTile({
             {subBadges.map((b) => (
               <span
                 key={b.label}
-                className={`text-xs px-1.5 py-0.5 rounded border ${
+                className={`text-xs px-1.5 py-0.5 rounded-chip border ${
                   b.active
-                    ? "bg-green-500/10 border-green-500/20 text-green-400"
-                    : "bg-gray-800/50 border-gray-700/50 text-gray-600"
+                    ? "bg-billable/10 border-billable/20 text-billable"
+                    : "bg-raised border-border text-fg-muted"
                 }`}
               >
                 {b.label}
@@ -254,7 +239,7 @@ export function IntegrationTile({
       </div>
       <ChevronRight
         size={14}
-        className="text-gray-600 shrink-0 group-hover:text-gray-400 transition-colors"
+        className="text-fg-muted shrink-0 group-hover:text-fg-secondary transition-colors"
       />
     </button>
   );

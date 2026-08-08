@@ -1,10 +1,15 @@
+/**
+ * Devolve `var(--color-project-N)`, não um valor de cor: o retorno vai em
+ * `style={{ backgroundColor }}`, onde a variável resolve como qualquer outra —
+ * e é isso que faz a cor acompanhar o modo claro sem segunda tabela.
+ */
 const PROJECT_COLORS = [
-  "#3b82f6", // blue
-  "#a855f7", // purple
-  "#10b981", // green
-  "#f59e0b", // amber
-  "#ec4899", // pink
-  "#64748b", // slate
+  "var(--color-project-1)",
+  "var(--color-project-2)",
+  "var(--color-project-3)",
+  "var(--color-project-4)",
+  "var(--color-project-5)",
+  "var(--color-project-6)",
 ];
 
 function hashString(str: string): number {
@@ -16,6 +21,6 @@ function hashString(str: string): number {
 }
 
 export function getProjectColor(projectId: string | null | undefined): string {
-  if (!projectId) return "#4b5563"; // gray-600
+  if (!projectId) return "var(--color-project-none)";
   return PROJECT_COLORS[hashString(projectId) % PROJECT_COLORS.length];
 }

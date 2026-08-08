@@ -86,11 +86,11 @@ export function MondayCategoriesImport({
       }
     >
       {labels.length === 0 ? (
-        <p className="text-xs text-gray-600 italic">
+        <p className="text-xs text-fg-muted italic">
           Leia os catálogos, ou importe os projetos, para carregar os Activity Types.
         </p>
       ) : (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-fg-muted">
           {known} de {labels.length} Activity Type(s) já existem como categoria no destino.
         </p>
       )}

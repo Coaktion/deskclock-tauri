@@ -48,8 +48,8 @@ export function IntegrationsPage() {
     return (
       <div className="h-full flex flex-col">
         <PageHeader title="Integrações" />
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="p-6 max-w-2xl mx-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5">
+          <div className="max-w-[720px] mx-auto">
             {backButton}
             {detail === "google" && <GoogleIntegrationCard />}
             {detail === "clockify" && <ClockifyIntegrationCard />}
@@ -68,8 +68,8 @@ export function IntegrationsPage() {
         subtitle="Conecte o DeskClock a ferramentas externas para exportar e importar dados."
         onStartTour={startTour}
       />
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="p-6 max-w-2xl mx-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5">
+        <div className="max-w-[720px] mx-auto">
           <div data-tour="integrations-list" className="space-y-3">
             <div data-tour="integrations-google-tile">
               <GoogleTile onClick={() => setDetail("google")} />

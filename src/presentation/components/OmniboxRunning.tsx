@@ -6,6 +6,12 @@ import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
 import { ActionChip } from "./ActionChip";
 import { Autocomplete } from "./Autocomplete";
+import {
+  chipBillableClass,
+  chipEmptyClass,
+  chipFilledClass,
+  chipNonBillableClass,
+} from "./chipStyles";
 import { OmniboxCustomFieldsPanel } from "./OmniboxCustomFieldsPanel";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
@@ -86,7 +92,9 @@ export function OmniboxRunning({
   return (
     <div
       ref={containerRef}
-      className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-visible"
+      className={`border rounded-card overflow-visible ${
+        isRunning ? "border-accent/40 bg-accent/5" : "border-paused/40 bg-paused/5"
+      }`}
     >
       {/* Main row */}
       <div className="flex items-center gap-3 px-4 py-3">
@@ -94,10 +102,8 @@ export function OmniboxRunning({
         <button
           onClick={handlePlayPause}
           title={isRunning ? "Pausar" : "Retomar"}
-          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-            isRunning
-              ? "bg-emerald-600 hover:bg-emerald-500 text-white animate-pulse"
-              : "bg-gray-700 hover:bg-gray-600 text-gray-200"
+          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-opacity text-white hover:opacity-90 ${
+            isRunning ? "bg-accent animate-pulse" : "bg-paused"
           }`}
         >
           {isRunning ? <Pause size={16} /> : <Play size={16} />}
@@ -123,7 +129,7 @@ export function OmniboxRunning({
               }}
               autoFocus
               placeholder="Nome da tarefa"
-              className="w-full text-sm font-medium bg-transparent border-b border-blue-500 text-gray-100 placeholder-gray-500 focus:outline-none pb-0.5"
+              className="w-full text-sm font-medium bg-transparent border-b border-accent text-fg placeholder-fg-muted focus:outline-none pb-0.5"
               autoComplete="off"
             />
           ) : (
@@ -137,13 +143,13 @@ export function OmniboxRunning({
               className="flex items-center gap-1 w-full text-left group"
             >
               <span
-                className={`text-sm font-medium truncate ${runningTask.name ? "text-gray-100" : "text-gray-500 italic"}`}
+                className={`text-sm font-medium truncate ${runningTask.name ? "text-fg" : "text-fg-muted italic"}`}
               >
                 {runningTask.name ?? "(sem nome)"}
               </span>
               <Pen
-                size={10}
-                className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity"
+                size={14}
+                className="shrink-0 opacity-0 group-hover:opacity-40 transition-opacity"
               />
             </button>
           )}
@@ -176,11 +182,7 @@ export function OmniboxRunning({
                   setRunningChipValue(runProject?.name ?? "");
                   setEditingRunningChip("project");
                 }}
-                className={
-                  runProject
-                    ? "bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
-                    : "border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors"
-                }
+                className={runProject ? chipFilledClass : chipEmptyClass}
               >
                 {runProject?.name ?? "Projeto"}
               </button>
@@ -216,11 +218,7 @@ export function OmniboxRunning({
                   setRunningChipValue(runCategory?.name ?? "");
                   setEditingRunningChip("category");
                 }}
-                className={
-                  runCategory
-                    ? "bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
-                    : "border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors"
-                }
+                className={runCategory ? chipFilledClass : chipEmptyClass}
               >
                 {runCategory?.name ?? "Categoria"}
               </button>
@@ -230,11 +228,7 @@ export function OmniboxRunning({
             <button
               type="button"
               onClick={() => void handleBillableToggle(runningTask.billable)}
-              className={`px-2 py-0.5 rounded text-xs border transition-colors ${
-                runningTask.billable
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-                  : "bg-gray-800/60 border-gray-700/50 text-gray-500 hover:border-gray-600"
-              }`}
+              className={runningTask.billable ? chipBillableClass : chipNonBillableClass}
             >
               {runningTask.billable ? "Billable" : "Non-billable"}
             </button>
@@ -248,13 +242,11 @@ export function OmniboxRunning({
                 type="button"
                 onClick={() => setEditingCustomFields(!editingCustomFields)}
                 title="Campos personalizados"
-                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs border transition-colors ${
-                  filledCustomValues > 0
-                    ? "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700"
-                    : "border-dashed border-gray-600 text-gray-500 hover:border-gray-500 hover:text-gray-400"
+                className={`inline-flex items-center gap-1 ${
+                  filledCustomValues > 0 ? chipFilledClass : chipEmptyClass
                 }`}
               >
-                <ListChecks size={11} />
+                <ListChecks size={14} />
                 Campos · {filledCustomValues}/{activeFields.length}
               </button>
             )}
@@ -274,49 +266,53 @@ export function OmniboxRunning({
                   }
                 }}
                 autoFocus
-                className="w-24 bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-24 bg-raised border border-accent rounded-chip px-2 py-0.5 text-fg text-xs focus:outline-none focus:ring-1 focus:ring-accent"
                 autoComplete="off"
               />
             ) : (
               <button
                 onClick={handleStartTimeClick}
                 title="Editar hora de início"
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg border border-transparent hover:border-gray-600 hover:bg-gray-800 hover:text-gray-200 text-gray-500 text-xs transition-colors group"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-chip border border-transparent hover:border-border hover:bg-raised hover:text-fg-secondary text-fg-muted text-xs transition-colors group"
               >
                 início {formatTimeOfDay(runningTask.startTime)}
-                <Pen size={9} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+                <Pen size={14} className="opacity-0 group-hover:opacity-60 transition-opacity" />
               </button>
             )}
           </div>
         </div>
 
         {/* Timer + controls */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <span className="font-mono tabular-nums text-2xl text-emerald-400 tracking-tight leading-none">
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <span
+            className={`font-mono tabular-nums text-2xl tracking-tight leading-none ${
+              isRunning ? "text-accent-text" : "text-paused"
+            }`}
+          >
             {formatHHMMSS(seconds)}
           </span>
           {confirmingStop ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Concluída?</span>
+              <span className="text-xs text-fg-muted">Concluída?</span>
               <button
                 onClick={() => handleStopConfirm(true)}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
               >
-                <CheckCircle2 size={12} />
+                <CheckCircle2 size={14} />
                 Sim
               </button>
               <button
                 onClick={() => handleStopConfirm(false)}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
               >
-                <Clock size={12} />
+                <Clock size={14} />
                 Não
               </button>
               <button
                 onClick={() => setConfirmingStop(false)}
-                className="p-1 text-gray-600 hover:text-gray-400 rounded-lg"
+                className="p-1 text-fg-muted hover:text-fg-secondary rounded-control transition-colors"
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             </div>
           ) : (
@@ -324,16 +320,16 @@ export function OmniboxRunning({
               <button
                 onClick={handleStopClick}
                 title="Parar tarefa"
-                className="px-3 py-1 text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
+                className="px-3 py-1 text-xs font-medium bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 rounded-control transition-colors"
               >
                 Parar
               </button>
               <button
                 onClick={() => void cancelTask()}
                 title="Cancelar tarefa"
-                className="p-1.5 text-gray-600 hover:text-red-400 rounded-lg hover:bg-gray-800 transition-colors"
+                className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
               >
-                <X size={13} />
+                <X size={14} />
               </button>
             </div>
           )}
@@ -352,8 +348,8 @@ export function OmniboxRunning({
 
       {/* Actions section */}
       {actions.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap px-4 pb-3 pt-2 border-t border-emerald-500/20">
-          <span className="text-overline uppercase text-gray-600 shrink-0">Ações</span>
+        <div className="flex items-center gap-2 flex-wrap px-4 pb-3 pt-2 border-t border-border-subtle">
+          <span className="text-overline uppercase text-fg-muted shrink-0">Ações</span>
           {actions.map((action, i) => (
             <ActionChip key={i} action={action} />
           ))}
@@ -362,15 +358,15 @@ export function OmniboxRunning({
 
       {/* Fill required form */}
       {fillingRequired && (
-        <div className="mx-4 mb-3 pt-3 border-t border-emerald-500/20 space-y-2">
-          <p className="text-xs text-yellow-400">Preencha antes de concluir:</p>
+        <div className="mx-4 mb-3 pt-3 border-t border-border-subtle space-y-2">
+          <p className="text-xs text-amber-400">Preencha antes de concluir:</p>
           <input
             type="text"
             value={fillName}
             onChange={(e) => setFillName(e.target.value)}
             placeholder="Nome da tarefa"
             autoFocus
-            className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
             autoComplete="off"
           />
           <Autocomplete
@@ -394,15 +390,15 @@ export function OmniboxRunning({
           <div className="flex gap-2 justify-end">
             <button
               onClick={() => setFillingRequired(false)}
-              className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              className="px-3 py-1.5 text-xs text-fg-muted hover:text-fg transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleFillSubmit}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
             >
-              <ArrowRight size={12} />
+              <ArrowRight size={14} />
               Continuar
             </button>
           </div>
