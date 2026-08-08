@@ -1634,9 +1634,11 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > nasceram sem — o argumento era que o intervalo e o dia navegados já identificam a tela, e que o
   > título roubaria largura de um cabeçalho disputado. Foi rejeitado: o título é parte da
   > padronização, e cabeçalho sem ele quebra o mesmo alinhamento que o `PageHeader` existe para
-  > garantir. Quem cede largura é o **rótulo por extenso** ("Terça, 5 de agosto de 2026"), que o
-  > seletor de data ao lado já repete — daí o `shrink-0` no bloco do título. A prop `title` segue
-  > opcional pelos testes do primitivo, não porque haja tela sem.
+  > garantir. O bloco do título leva `shrink-0` para não ser ele o que trunca quando o `context`
+  > cresce. A prop `title` segue opcional pelos testes do primitivo, não porque haja tela sem.
+  >
+  > **A data por extenso saiu do Lançamento Manual** ("Terça, 5 de agosto de 2026"), e com ela as
+  > tabelas de nomes de dia e mês que só a serviam. O seletor de data ao lado já diz que dia é.
   >
   > **No Histórico as pílulas de período ficam numa linha própria, abaixo.** As cinco mais
   > "Filtros" e "Exportar" não cabem nos 56 px sem quebrar em duas linhas, e aí a altura fixa

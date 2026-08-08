@@ -48,8 +48,8 @@ export function PageHeader({
     >
       {title && (
         // `shrink-0`: o título é a identidade da tela e não pode ser o que
-        // trunca quando o `context` cresce — nas telas de navegação por data,
-        // quem cede é o rótulo por extenso, que o próprio seletor já repete.
+        // trunca quando o `context` cresce. O teto existe para o subtítulo, que
+        // é frase e não caberia inteiro num cabeçalho de altura fixa.
         <div className="shrink-0 max-w-[45%]">
           <h1 className="text-base font-semibold text-fg truncate">{title}</h1>
           {subtitle && <p className="text-xs text-fg-muted truncate">{subtitle}</p>}

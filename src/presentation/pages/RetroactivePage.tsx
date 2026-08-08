@@ -46,39 +46,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
  */
 const PLANNED_LIST_HEIGHT = { min: 72, max: 480, default: 144 } as const;
 
-const DAY_NAMES_PT = [
-  "domingo",
-  "segunda-feira",
-  "terça-feira",
-  "quarta-feira",
-  "quinta-feira",
-  "sexta-feira",
-  "sábado",
-];
-const MONTH_NAMES_PT = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-];
-
-function formatDateHeader(dateISO: string): string {
-  const d = new Date(dateISO + "T12:00:00Z");
-  const day = DAY_NAMES_PT[d.getUTCDay()];
-  const num = d.getUTCDate();
-  const month = MONTH_NAMES_PT[d.getUTCMonth()];
-  const year = d.getUTCFullYear();
-  return `${day.charAt(0).toUpperCase() + day.slice(1)}, ${num} de ${month} de ${year}`;
-}
-
 function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -458,9 +425,6 @@ export function RetroactivePage() {
             >
               <ChevronRight size={16} />
             </button>
-            <span className="ml-4 text-sm text-fg-secondary truncate">
-              {formatDateHeader(selectedDate)}
-            </span>
           </div>
         }
         actions={
