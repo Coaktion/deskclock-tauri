@@ -1695,9 +1695,10 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   `shared/utils/projectColor.ts` devolve **`var(--color-project-N)`**, não um hex: o retorno vai em
   `style={{ backgroundColor }}`, onde a variável resolve como qualquer outra — e é isso que faz a
   cor do projeto acompanhar o modo claro sem uma segunda tabela.
-- **Primitivos canônicos:** `src/presentation/components/ui/` — `Button`, `IconButton`, `Toggle`,
-  `KpiCard`, `TaskRow`, `FilterPill`, `SearchInput`, `Field` (com `fieldControlClass`),
-  `PageHeader` e `SectionCard` (com `SectionRow`). Cada um existe porque a mesma coisa estava
+- **Primitivos canônicos:** `src/presentation/components/ui/` — `Button`, `IconButton`,
+  `SegmentedControl`, `TourButton`, `Toggle`, `KpiCard`, `TaskRow`, `FilterPill`, `SearchInput`,
+  `Field` (com `fieldControlClass`), `PageHeader` e `SectionCard` (com `SectionRow`). Cada um
+  existe porque a mesma coisa estava
   escrita em duas ou três versões que discordavam entre si. **Código novo usa estes**; as versões
   antigas seguem em pé enquanto as telas não migram, e são apagadas ao migrar o último consumidor
   de cada uma — foi assim que `components/SearchInput.tsx`, o `ToggleRow`/`SettingsCard`/`CardRow`
@@ -1706,10 +1707,15 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   atributo do omnibox).
 
   > **O que o `Button` trava é a caixa, não a cor.** As cinco variantes saíram de uma contagem dos
-  > call sites, não de um catálogo: `primary` (acento cheio), `secondary` (fundo `raised` + borda —
-  > o antigo `integrationButtonClass`), `outline` (só borda), `ghost` (texto) e `danger` (texto em
-  > `danger`). **`secondary` e `outline` são a mesma intenção escrita de dois jeitos**, e estão
-  > preservadas assim de propósito: colapsá-las é decisão de design, e o handoff não a responde.
+  > call sites, não de um catálogo: `primary` (acento cheio), `accent` (acento suave), `secondary`
+  > (fundo `raised` + borda — o antigo `integrationButtonClass`), `ghost` (texto) e `danger` (texto
+  > em `danger`).
+  >
+  > **Existiu uma `outline`** — só borda, sem fundo — que era o mesmo secundário escrito de outro
+  > jeito no cabeçalho do Histórico. Foi colapsada em `secondary` por decisão do usuário. A conta a
+  > pagar apareceu no botão "Filtros", cujo estado ligado *era* o fundo `raised`: com um secundário
+  > só, ligado e desligado ficariam idênticos, e ele passou a alternar entre `accent` e `secondary`
+  > — que é a mesma língua do `FilterPill` aceso.
   >
   > Três coisas moram no primitivo porque escritas à mão divergiam em silêncio: `type="button"`
   > (sem ele, dentro de um `<form>` o botão de alternância vira submit, §8.2), o `font-medium` que
@@ -1720,14 +1726,33 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > `ghost` e `danger` **não** recebem o padding do `size`: são texto puro dentro das barras de
   > seleção, que alinham por `gap` — com caixa, a barra cresceria.
   >
+  > `expanded` vira `aria-expanded`, e é o que faz o botão que abre um bloco anunciar o estado: o
+  > chevron só o diz a quem enxerga.
+  >
   > No `IconButton` a cor é o **destino** da ação, não o repouso: todos nascem `fg-muted` e é o
   > hover que diz se aquilo edita (`accent`), navega (`neutral`) ou apaga (`danger`). O `title` é
   > obrigatório porque é o nome acessível — sem texto, é a única coisa que o botão anuncia.
   >
-  > **Ficam de fora, e não por esquecimento:** o controle segmentado (modo/gatilho do auto-sync),
-  > os cabeçalhos de seção recolhível, o `IntegrationTile`, o `?` redondo do tour e o botão de
-  > acento suave ("Buscar" do Histórico, "Manual" das Configurações). Os quatro primeiros são
-  > outros primitivos; o último é uma sexta variante que só dois call sites pedem.
+  > **O `SegmentedControl` não é um grupo de `FilterPill`**: aqui as opções são duas ou três,
+  > sempre visíveis, e uma **está sempre** escolhida — não existe o "nenhum filtro aplicado" que a
+  > pílula expressa. Eram cinco cópias à mão nas integrações, e elas já divergiam: as do Google
+  > tinham perdido o `font-medium` que as do `AutoSyncControls` mantinham.
+  >
+  > **O `TourButton` não é um `IconButton`**: o glifo é texto (`?`), não ícone, e a caixa é um
+  > círculo de medida fixa, não o padding de uma escala. Ele vivia privado dentro do `PageHeader` e
+  > estava copiado caractere por caractere nos cabeçalhos de Google, Zendesk e Clockify.
+  >
+  > **Cabeçalho recolhível não virou primitivo único**, porque são duas famílias e não uma. O
+  > chevron **à direita** é cabeçalho de seção, e tem dois donos: o `SubSection` das integrações
+  > (que ganhou `onOpen` — o gancho de quem só busca dados quando alguém olha, e cuja falta fazia a
+  > seção de Mapeamentos do Clockify reimplementar o cabeçalho inteiro à mão) e o `MappingBox`
+  > local daquele arquivo. O chevron **à esquerda** é só um `Button variant="ghost"` com ícone.
+  >
+  > **Sobram seis `<button>` literais** em Integrações e nas páginas, de 68 que eram, e cada um é a
+  > definição única de um componente (`SubSection`, `MappingBox`, `IntegrationTile`) ou um caso que
+  > nenhum primitivo expressa: a alça de arraste (`cursor-grab`), o ▶ do Lançamento Manual (cuja
+  > cor em repouso muda com a planejada ter horário) e o "Lançar N com horário" (ghost em acento,
+  > um call site só).
 
   > **A janela principal abre em 1100×700**, e não mais em 800×620. Foi o que fez as abas caberem
   > no cabeçalho de 56 px: descontados a sidebar (68 px) e o rail (52 px), 800 px deixavam 648 px

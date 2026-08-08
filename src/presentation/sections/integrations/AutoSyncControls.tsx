@@ -5,7 +5,7 @@ import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, Toggle } from "@presentation/components/ui";
+import { Button, SegmentedControl, Toggle } from "@presentation/components/ui";
 import { Row, SubSection } from "./shared";
 
 /**
@@ -37,8 +37,14 @@ export interface AutoSyncNow {
   successMessage: (count: number) => string;
 }
 
-const MODES = ["per-task", "daily"] as const;
-const TRIGGERS = ["on-open", "fixed-time"] as const;
+const MODES = [
+  { value: "per-task", label: "Por tarefa" },
+  { value: "daily", label: "Diário" },
+] as const;
+const TRIGGERS = [
+  { value: "on-open", label: "Ao abrir o app" },
+  { value: "fixed-time", label: "Horário fixo" },
+] as const;
 
 export function AutoSyncControls({
   keys,
@@ -125,22 +131,15 @@ export function AutoSyncControls({
           <div className="py-2.5 border-b border-border-subtle">
             <div className="flex items-center justify-between">
               <span className="text-sm text-fg-secondary">Modo</span>
-              <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
-                {MODES.map((m) => (
-                  <button
-                    key={m}
-                    onClick={async () => {
-                      setSyncMode(m);
-                      await config.set(keys.mode, m);
-                    }}
-                    className={`px-2.5 py-1 text-xs font-medium rounded-chip transition-colors ${
-                      syncMode === m ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
-                    }`}
-                  >
-                    {m === "per-task" ? "Por tarefa" : "Diário"}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                value={syncMode}
+                options={MODES}
+                ariaLabel="Modo de sincronização"
+                onChange={async (m) => {
+                  setSyncMode(m);
+                  await config.set(keys.mode, m);
+                }}
+              />
             </div>
             <p className="text-xs text-fg-muted mt-1.5">
               {syncMode === "per-task"
@@ -154,22 +153,15 @@ export function AutoSyncControls({
               <div className="py-2.5 border-b border-border-subtle">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-fg-secondary">Gatilho</span>
-                  <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
-                    {TRIGGERS.map((t) => (
-                      <button
-                        key={t}
-                        onClick={async () => {
-                          setSyncTrigger(t);
-                          await config.set(keys.trigger, t);
-                        }}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-chip transition-colors ${
-                          syncTrigger === t ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
-                        }`}
-                      >
-                        {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
-                      </button>
-                    ))}
-                  </div>
+                  <SegmentedControl
+                    value={syncTrigger}
+                    options={TRIGGERS}
+                    ariaLabel="Gatilho da sincronização"
+                    onChange={async (t) => {
+                      setSyncTrigger(t);
+                      await config.set(keys.trigger, t);
+                    }}
+                  />
                 </div>
               </div>
 

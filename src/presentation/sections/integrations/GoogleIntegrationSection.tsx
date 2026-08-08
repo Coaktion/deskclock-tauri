@@ -58,9 +58,22 @@ import {
   SubSection,
   SyncFeedbackLine,
 } from "./shared";
-import { Button, Toggle } from "@presentation/components/ui";
+import { Button, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
 import { GoogleLogo } from "./google/GoogleLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
+
+const DURATION_FORMATS = [
+  { value: "HH:MM", label: "HH:MM" },
+  { value: "HH:MM:SS", label: "HH:MM:SS" },
+] as const;
+const SYNC_MODES = [
+  { value: "per-task", label: "Por tarefa" },
+  { value: "daily", label: "Diário" },
+] as const;
+const SYNC_TRIGGERS = [
+  { value: "on-open", label: "Ao abrir o app" },
+  { value: "fixed-time", label: "Horário fixo" },
+] as const;
 
 // Escopos unificados — uma única conexão Google para todos os serviços
 export const ALL_GOOGLE_SCOPES = [
@@ -305,16 +318,18 @@ function SheetsSection({
 
         {/* Mapeamento de colunas */}
         <div data-tour="google-sheets-columns" className="py-2.5 border-b border-border-subtle">
-          <button
+          <Button
+            variant="ghost"
+            expanded={colsOpen}
             onClick={() => setColsOpen((v) => !v)}
-            className="flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg w-full text-left"
+            icon={colsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            className="w-full justify-start text-sm text-fg-secondary hover:text-fg"
           >
-            {colsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             Mapeamento de colunas
             <span className="ml-auto text-xs text-fg-muted">
               {columnMapping.filter((c) => c.enabled).length}/{columnMapping.length} ativas
             </span>
-          </button>
+          </Button>
           {colsOpen && (
             <div className="mt-2">
               <p className="text-xs text-fg-muted mb-2">
@@ -326,19 +341,12 @@ function SheetsSection({
         </div>
 
         <Row label="Formato da duração">
-          <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
-            {(["HH:MM", "HH:MM:SS"] as const).map((fmt) => (
-              <button
-                key={fmt}
-                onClick={() => handleDurationFormat(fmt)}
-                className={`px-2.5 py-1 text-xs rounded-chip transition-colors ${
-                  durationFormat === fmt ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
-                }`}
-              >
-                {fmt}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={durationFormat}
+            options={DURATION_FORMATS}
+            ariaLabel="Formato da duração"
+            onChange={handleDurationFormat}
+          />
         </Row>
 
         {/* Sincronização automática */}
@@ -360,22 +368,15 @@ function SheetsSection({
               <div className="py-2.5 border-b border-border-subtle">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-fg-secondary">Modo</span>
-                  <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
-                    {(["per-task", "daily"] as const).map((m) => (
-                      <button
-                        key={m}
-                        onClick={async () => {
-                          setSyncMode(m);
-                          await config.set("sheetsAutoSyncMode", m);
-                        }}
-                        className={`px-2.5 py-1 text-xs rounded-chip transition-colors ${
-                          syncMode === m ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
-                        }`}
-                      >
-                        {m === "per-task" ? "Por tarefa" : "Diário"}
-                      </button>
-                    ))}
-                  </div>
+                  <SegmentedControl
+                    value={syncMode}
+                    options={SYNC_MODES}
+                    ariaLabel="Modo de sincronização"
+                    onChange={async (m) => {
+                      setSyncMode(m);
+                      await config.set("sheetsAutoSyncMode", m);
+                    }}
+                  />
                 </div>
                 <p className="text-xs text-fg-muted mt-1.5">
                   {syncMode === "per-task"
@@ -390,24 +391,15 @@ function SheetsSection({
                   <div className="py-2.5 border-b border-border-subtle">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-fg-secondary">Gatilho</span>
-                      <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
-                        {(["on-open", "fixed-time"] as const).map((t) => (
-                          <button
-                            key={t}
-                            onClick={async () => {
-                              setSyncTrigger(t);
-                              await config.set("sheetsAutoSyncTrigger", t);
-                            }}
-                            className={`px-2.5 py-1 text-xs rounded-chip transition-colors ${
-                              syncTrigger === t
-                                ? "bg-accent text-white"
-                                : "text-fg-muted hover:text-fg"
-                            }`}
-                          >
-                            {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
-                          </button>
-                        ))}
-                      </div>
+                      <SegmentedControl
+                        value={syncTrigger}
+                        options={SYNC_TRIGGERS}
+                        ariaLabel="Gatilho da sincronização"
+                        onChange={async (t) => {
+                          setSyncTrigger(t);
+                          await config.set("sheetsAutoSyncTrigger", t);
+                        }}
+                      />
                     </div>
                     <p className="text-xs text-fg-muted mt-1.5">
                       {syncTrigger === "on-open"
@@ -642,13 +634,7 @@ export function GoogleIntegrationCard() {
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {error && <span className="text-xs text-danger">{error}</span>}
-          <button
-            onClick={() => startTour()}
-            title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
-          >
-            ?
-          </button>
+          <TourButton onClick={() => startTour()} label="Ver tour da integração" />
           {connected ? (
             <Button onClick={handleDisconnect} icon={<LogOut size={14} />}>
               Desconectar

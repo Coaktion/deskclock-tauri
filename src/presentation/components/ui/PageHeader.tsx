@@ -1,18 +1,5 @@
 import type { ReactNode } from "react";
-
-function TourButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title="Ver tour da página"
-      aria-label="Ver tour da página"
-      className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
-    >
-      ?
-    </button>
-  );
-}
+import { TourButton } from "./TourButton";
 
 /**
  * Cabeçalho de página, com altura fixa: é ela que faz a troca de tela pela

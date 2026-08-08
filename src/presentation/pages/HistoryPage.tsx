@@ -228,19 +228,19 @@ export function HistoryPage() {
         title="Histórico"
         actions={
           <>
-            <button
-              onClick={() => setAdvancedOpen((o) => !o)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-control transition-colors ${
-                advancedOpen
-                  ? "bg-raised border-border text-fg"
-                  : "bg-transparent border-border text-fg-muted hover:text-fg hover:border-fg-muted"
-              }`}
-            >
-              <Filter size={14} />
-              Filtros
-            </button>
+            {/* Aberto vira `accent`: com um `secondary` só, ligado e desligado
+                ficariam indistinguíveis — era a borda sem fundo que dizia
+                "desligado", e ela saiu com a unificação da variante. */}
             <Button
-              variant="outline"
+              variant={advancedOpen ? "accent" : "secondary"}
+              expanded={advancedOpen}
+              onClick={() => setAdvancedOpen((o) => !o)}
+              icon={<Filter size={14} />}
+            >
+              Filtros
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => setExportOpen(true)}
               icon={<FileDown size={14} />}
             >
@@ -325,13 +325,9 @@ export function HistoryPage() {
               <option value="no">Não</option>
             </select>
           </div>
-          <button
-            onClick={handleSearch}
-            className="flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-accent-text bg-accent/10 border border-accent/30 hover:bg-accent/20 hover:border-accent/50 rounded-control transition-colors"
-          >
-            <Search size={14} />
+          <Button variant="accent" onClick={handleSearch} icon={<Search size={14} />}>
             Buscar
-          </button>
+          </Button>
         </div>
       )}
 
@@ -415,7 +411,7 @@ export function HistoryPage() {
                   </Button>
                 </div>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => setSelectMode(true)}>
+                <Button variant="secondary" size="sm" onClick={() => setSelectMode(true)}>
                   Selecionar tarefas
                 </Button>
               )}

@@ -153,18 +153,32 @@ export function SubSection({
   children,
   defaultOpen = false,
   badge,
+  onOpen,
 }: {
   icon: React.ReactNode;
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
   badge?: React.ReactNode;
+  /**
+   * Disparado ao **abrir**, nunca ao fechar — é o gancho da seção que só busca
+   * dados quando alguém olha para ela. Sem ele, a de Mapeamentos do Clockify
+   * reimplementava este cabeçalho inteiro à mão, caractere por caractere, só
+   * para poder disparar as duas buscas.
+   */
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border-t border-border-subtle">
       <button
-        onClick={() => setOpen((v) => !v)}
+        type="button"
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) onOpen?.();
+        }}
+        aria-expanded={open}
         className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-raised transition-colors"
       >
         <span className="text-fg-muted">{icon}</span>

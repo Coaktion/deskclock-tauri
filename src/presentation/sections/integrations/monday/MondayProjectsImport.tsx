@@ -14,6 +14,7 @@ import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyProjectCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
+import { Button } from "@presentation/components/ui";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -273,17 +274,17 @@ export function MondayProjectsImport({
               de Projetos virava a seção inteira. O contador e o aviso de quadro
               faltando ficam de fora do recolhimento — são eles que dizem se vale
               abrir. */}
-          <button
+          <Button
+            variant="ghost"
+            expanded={listOpen}
             onClick={() => setListOpen((v) => !v)}
-            aria-expanded={listOpen}
-            className="flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
+            icon={listOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           >
-            {listOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             {linked.length} projeto(s) vinculado(s)
             {missingBoard > 0 && (
               <span className="text-amber-500/80">· {missingBoard} sem quadro</span>
             )}
-          </button>
+          </Button>
 
           {listOpen && (
             // O teto é o que mantém o resto da seção alcançável; a rolagem, o que

@@ -8,7 +8,7 @@ import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenMan
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
 import { CalendarDays, CheckCircle2, Key, LogIn, LogOut, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, IconButton } from "@presentation/components/ui";
+import { Button, IconButton, TourButton } from "@presentation/components/ui";
 import { DeskclockWorkspaceRow, IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
 
 /* ── SVG Zendesk ── */
@@ -128,13 +128,7 @@ export function ZendeskIntegrationCard() {
         </div>
         <div className="shrink-0 flex items-center gap-2">
           {error && <span className="text-xs text-danger max-w-[180px] text-right">{error}</span>}
-          <button
-            onClick={() => startTour()}
-            title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
-          >
-            ?
-          </button>
+          <TourButton onClick={() => startTour()} label="Ver tour da integração" />
           {connected ? (
             <Button onClick={handleDisconnect} icon={<LogOut size={14} />}>
               Desconectar

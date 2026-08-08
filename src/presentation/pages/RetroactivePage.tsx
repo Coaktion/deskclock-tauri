@@ -560,7 +560,7 @@ export function RetroactivePage() {
                     </Button>
                   </>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => setSelectMode(true)}>
+                  <Button variant="secondary" size="sm" onClick={() => setSelectMode(true)}>
                     Selecionar tarefas
                   </Button>
                 )}

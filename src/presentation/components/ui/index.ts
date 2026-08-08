@@ -1,5 +1,7 @@
 export { Button, type ButtonVariant, type ButtonSize } from "./Button";
 export { IconButton, type IconButtonVariant, type IconButtonSize } from "./IconButton";
+export { SegmentedControl } from "./SegmentedControl";
+export { TourButton } from "./TourButton";
 export { Toggle } from "./Toggle";
 export { KpiCard, type KpiTone } from "./KpiCard";
 export { TaskRow } from "./TaskRow";

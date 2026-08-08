@@ -6,7 +6,7 @@ import { useTour } from "@presentation/hooks/useTour";
 import { ClockifyConnectModal } from "@presentation/modals/ClockifyConnectModal";
 import { LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@presentation/components/ui";
+import { Button, TourButton } from "@presentation/components/ui";
 import { StatusBadge } from "../shared";
 import { ClockifyConnectedSections } from "./ClockifyConnectedSections";
 import { ClockifyLogo } from "./ClockifyLogo";
@@ -74,13 +74,7 @@ export function ClockifyIntegrationCard() {
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-2">
-            <button
-              onClick={() => startTour()}
-              title="Ver tour da integração"
-              className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
-            >
-              ?
-            </button>
+            <TourButton onClick={() => startTour()} label="Ver tour da integração" />
             {connected ? (
               <Button onClick={handleDisconnect} loading={loading} icon={<LogOut size={14} />}>
                 Desconectar

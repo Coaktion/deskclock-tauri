@@ -43,6 +43,27 @@ describe("Button", () => {
     expect(screen.getByRole("button").hasAttribute("aria-busy")).toBe(false);
   });
 
+  it("anuncia o estado quando abre e fecha um bloco — o chevron só o diz a quem enxerga", () => {
+    const { rerender } = render(
+      <Button onClick={vi.fn()} expanded={false}>
+        Filtros
+      </Button>
+    );
+    expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("false");
+
+    rerender(
+      <Button onClick={vi.fn()} expanded>
+        Filtros
+      </Button>
+    );
+    expect(screen.getByRole("button").getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("o botão que não abre nada não finge ser um expansor", () => {
+    render(<Button onClick={vi.fn()}>Exportar</Button>);
+    expect(screen.getByRole("button").hasAttribute("aria-expanded")).toBe(false);
+  });
+
   it("o ícone dá lugar ao spinner enquanto carrega", () => {
     const icon = <svg data-testid="icone" />;
     const { rerender } = render(

@@ -6,7 +6,7 @@ import { AparenciaTab } from "@presentation/sections/settings/AparenciaTab";
 import { OverlayTab } from "@presentation/sections/settings/OverlayTab";
 import { ApiTab } from "@presentation/sections/settings/ApiTab";
 import { AtualizacoesTab } from "@presentation/sections/settings/AtualizacoesTab";
-import { FilterPill, PageHeader } from "@presentation/components/ui";
+import { Button, FilterPill, PageHeader } from "@presentation/components/ui";
 import { openInBrowser } from "@shared/utils/shell";
 import { BookOpen } from "lucide-react";
 
@@ -50,13 +50,13 @@ export function SettingsPage() {
           </FilterPill>
         ))}
         actions={
-          <button
+          <Button
+            variant="accent"
             onClick={() => void openInBrowser(MANUAL_URL)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-text bg-accent/10 border border-accent/30 rounded-control hover:bg-accent/20 hover:border-accent/50 transition-colors cursor-pointer"
+            icon={<BookOpen size={14} />}
           >
-            <BookOpen size={14} />
             Manual
-          </button>
+          </Button>
         }
       />
       <div className="flex-1 min-h-0 overflow-y-auto p-5">

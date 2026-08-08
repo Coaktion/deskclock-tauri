@@ -2,15 +2,20 @@ import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 /**
- * Ação com texto. As cinco variantes não são um catálogo: cada uma saiu de um
- * agrupamento medido nos call sites, e o que as separa é a **caixa**, não a cor
- * — foi por não haver primitivo que o mesmo botão secundário nasceu com fundo em
- * `sections/integrations/` e sem fundo no cabeçalho do Histórico.
+ * Ação com texto. As variantes não são um catálogo: cada uma saiu de um
+ * agrupamento medido nos call sites.
  *
- * `secondary` e `outline` são exatamente essa divergência, preservada aqui em
- * vez de resolvida: colapsá-las é decisão de design, não de refatoração.
+ * **Existiu uma `outline`** — só borda, sem fundo —, que era o mesmo botão
+ * secundário escrito de outro jeito no cabeçalho do Histórico. Ela foi colapsada
+ * em `secondary` por decisão do usuário: um botão secundário só, com fundo
+ * `raised`. Voltar a distinguir os dois exige o documento de design, não o
+ * contrário.
+ *
+ * `accent` é o degrau entre `primary` e `secondary` — a ação que convida sem
+ * disputar com a principal ("Buscar" do Histórico, "Manual" das Configurações),
+ * e o estado ligado de um botão de alternância ("Filtros").
  */
-export type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 /**
@@ -25,10 +30,10 @@ export type ButtonSize = "sm" | "md";
 const VARIANT: Record<ButtonVariant, string> = {
   primary:
     "bg-accent text-white border border-transparent hover:opacity-90 transition disabled:opacity-50",
+  accent:
+    "bg-accent/10 text-accent-text border border-accent/30 hover:bg-accent/20 hover:border-accent/50 transition-colors disabled:opacity-50",
   secondary:
     "bg-raised text-fg-secondary border border-border hover:border-fg-muted transition-colors disabled:opacity-50",
-  outline:
-    "bg-transparent text-fg-muted border border-border hover:text-fg hover:border-fg-muted transition-colors disabled:opacity-50",
   ghost: "text-fg-muted hover:text-fg transition-colors disabled:text-fg-muted/50",
   danger: "text-danger hover:opacity-80 transition disabled:text-fg-muted/50 disabled:opacity-100",
 };
@@ -40,7 +45,7 @@ const SIZE: Record<ButtonSize, string> = {
 
 /** `ghost` e `danger` são texto puro: padding os alargaria dentro das barras de
  *  seleção em que hoje vivem, que alinham por `gap`. */
-const BOXED: readonly ButtonVariant[] = ["primary", "secondary", "outline"];
+const BOXED: readonly ButtonVariant[] = ["primary", "accent", "secondary"];
 
 interface ButtonProps {
   children: ReactNode;
@@ -60,6 +65,11 @@ interface ButtonProps {
   loading?: boolean;
   /** À esquerda do texto, 14px pela escala de ícones (§8.4). */
   icon?: ReactNode;
+  /**
+   * Botão que abre e fecha um bloco. Vira `aria-expanded`, que é o que faz o
+   * leitor de tela anunciar o estado — o chevron só o diz a quem enxerga.
+   */
+  expanded?: boolean;
   title?: string;
   className?: string;
 }
@@ -73,6 +83,7 @@ export function Button({
   disabled = false,
   loading = false,
   icon,
+  expanded,
   title,
   className = "",
 }: ButtonProps) {
@@ -84,6 +95,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
+      aria-expanded={expanded}
       title={title}
       className={`inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-control whitespace-nowrap disabled:cursor-not-allowed ${VARIANT[variant]} ${padding} ${className}`}
     >
