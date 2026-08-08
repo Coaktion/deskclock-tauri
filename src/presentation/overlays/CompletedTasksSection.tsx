@@ -31,7 +31,7 @@ export function CompletedTasksSection({
   if (groups.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-center text-gray-600 text-[11px]">Nenhuma tarefa executada hoje</p>
+        <p className="text-center text-gray-600 text-xs">Nenhuma tarefa executada hoje</p>
       </div>
     );
   }
@@ -40,8 +40,8 @@ export function CompletedTasksSection({
     <div className="h-full flex flex-col">
       {/* Resumo do total do dia */}
       <div className="flex items-center px-3 py-1 border-b border-gray-800/70 shrink-0">
-        <span className="text-[10px] text-gray-500">Total do dia</span>
-        <span className="ml-auto text-[10px] tabular-nums text-gray-400 font-mono">
+        <span className="text-xs text-gray-500">Total do dia</span>
+        <span className="ml-auto text-xs tabular-nums text-gray-400 font-mono">
           {formatDurationCompact(totalSeconds)}
         </span>
       </div>
@@ -67,17 +67,15 @@ export function CompletedTasksSection({
                 style={{ backgroundColor: railColor }}
               />
               <div className="flex-1 min-w-0 pl-1.5">
-                <p className="text-[12px] font-medium text-gray-300 truncate leading-tight">
+                <p className="text-xs font-medium text-gray-300 truncate leading-tight">
                   {first.name || <span className="text-gray-500 italic">(sem nome)</span>}
                   {count > 1 && <span className="font-normal text-gray-500"> ·{count}x</span>}
                 </p>
                 {subtitle && (
-                  <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
-                    {subtitle}
-                  </p>
+                  <p className="text-xs text-gray-500 truncate leading-tight mt-0.5">{subtitle}</p>
                 )}
               </div>
-              <span className="text-[10px] tabular-nums text-gray-400 font-mono shrink-0">
+              <span className="text-xs tabular-nums text-gray-400 font-mono shrink-0">
                 {formatDurationCompact(group.totalSeconds)}
               </span>
               <button

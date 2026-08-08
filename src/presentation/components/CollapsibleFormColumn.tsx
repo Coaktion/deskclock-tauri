@@ -62,7 +62,7 @@ export function CollapsibleFormColumn({
         <PanelLeftOpen size={15} className="shrink-0" />
         {/* De pé, lido de cima para baixo: virar o texto é o que permite manter
             o rótulo numa faixa dessa largura em vez de só um ícone sem nome. */}
-        <span className="[writing-mode:vertical-rl] text-[11px] uppercase tracking-wide whitespace-nowrap">
+        <span className="[writing-mode:vertical-rl] text-xs uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
       </button>
@@ -75,7 +75,7 @@ export function CollapsibleFormColumn({
         <div className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 border-b border-gray-800">
           {/* `leading-none`: com a entrelinha padrão, a caixa do texto fica mais
               alta que as letras e o rótulo desce em relação ao ícone ao lado. */}
-          <span className="flex-1 text-[11px] leading-none font-medium text-gray-500 uppercase tracking-wide truncate">
+          <span className="flex-1 text-xs leading-none font-medium text-gray-500 uppercase tracking-wide truncate">
             {label}
           </span>
           <button

@@ -544,7 +544,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
             }}
           />
         </Row>
-        <p className="text-[11px] text-gray-500 leading-relaxed pb-2.5">
+        <p className="text-xs text-gray-500 leading-relaxed pb-2.5">
           Ao abrir o app e a cada 2 minutos, busca os eventos do dia e pergunta, no horário de
           início, se deseja iniciar cada reunião. Ao fim do evento, pergunta se ainda está em
           andamento.
@@ -565,7 +565,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
       </div>
       <div className="flex items-start gap-2 mb-2 p-2.5 bg-blue-950/40 border border-blue-800/50 rounded-lg">
         <Info size={12} className="text-blue-400 shrink-0 mt-0.5" />
-        <p className="text-[11px] text-blue-300 leading-relaxed">
+        <p className="text-xs text-blue-300 leading-relaxed">
           Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
           <br />
           <span className="font-mono text-blue-200">Projeto: Nome do Projeto</span>
@@ -649,7 +649,7 @@ export function GoogleIntegrationCard() {
           <button
             onClick={() => startTour()}
             title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-xs font-medium flex items-center justify-center"
           >
             ?
           </button>

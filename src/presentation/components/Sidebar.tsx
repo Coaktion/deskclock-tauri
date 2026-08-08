@@ -62,7 +62,7 @@ export function Sidebar({ current, onChange }: SidebarProps) {
               <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-500 rounded-r-full" />
             )}
             {icon}
-            <span className="text-[9px] font-medium leading-none truncate max-w-full">{short}</span>
+            <span className="text-xs font-medium leading-none truncate max-w-full">{short}</span>
           </button>
         ))}
       </div>
@@ -73,7 +73,7 @@ export function Sidebar({ current, onChange }: SidebarProps) {
         className="w-12 flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-gray-800 transition-colors"
       >
         <MessageSquare size={16} />
-        <span className="text-[9px] font-medium leading-none">Feedback</span>
+        <span className="text-xs font-medium leading-none">Feedback</span>
       </button>
     </nav>
   );

@@ -14,19 +14,17 @@ import { listSourceFiles } from "../helpers/sourceFiles";
  * ver que a lista abaixo existe: sem ela, a classe voltaria a se espalhar sem
  * nada denunciando.
  *
- * As ocorrências que restam vivem todas em overlay ou modal, território do
- * último PR da migração. A lista só pode encolher.
+ * A única que resta é o badge do contador do overlay compacto, território do
+ * último PR da migração. As outras quatro eram o mesmo overline de 9–10px e
+ * saíram junto com o `text-overline`, que já carrega o peso. A lista só pode
+ * encolher.
  */
 
 const FONT_BOLD = /\bfont-bold\b/g;
 
 /** Congelado em 2026-08-08. Ao migrar uma tela, baixe ou apague a linha dela. */
 const BASELINE: Record<string, number> = {
-  "src/presentation/components/OmniboxRunning.tsx": 1,
-  "src/presentation/modals/ImportCalendarModal.tsx": 1,
   "src/presentation/overlays/CompactOverlay.tsx": 1,
-  "src/presentation/overlays/PlannedTaskEditSheet.tsx": 1,
-  "src/presentation/overlays/PopupOverlayContent.tsx": 1,
 };
 
 describe("convenção: a escala de peso para em 600", () => {

@@ -51,7 +51,7 @@ function ResolutionRow({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-xs uppercase tracking-wide text-gray-500">{label}</span>
       {sourceName ? (
         <>
           <span className="text-xs text-gray-400">
@@ -228,7 +228,7 @@ export function MoveToWorkspaceModal({
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] uppercase tracking-wide text-gray-500">Destino</span>
+              <span className="text-xs uppercase tracking-wide text-gray-500">Destino</span>
               <div className="flex items-center gap-2">
                 {target && <WorkspaceDot color={target.color} />}
                 <select

@@ -53,8 +53,8 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
       <div className="pointer-events-none absolute right-full top-0 z-50 min-w-[240px] pr-2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 group-focus-within:opacity-100 group-focus-within:translate-x-0 group-hover:pointer-events-auto group-focus-within:pointer-events-auto hover:opacity-100 hover:translate-x-0 hover:pointer-events-auto transition-[opacity,transform] duration-150">
         <div className="relative rounded-lg border border-gray-700 bg-gray-900 p-2.5 shadow-2xl">
           <div className="flex items-baseline justify-between mb-1.5">
-            <span className="text-[13px] font-semibold text-gray-100">{title}</span>
-            <span className="text-[10px] text-green-400">{status}</span>
+            <span className="text-sm font-semibold text-gray-100">{title}</span>
+            <span className="text-xs text-green-400">{status}</span>
           </div>
           <div className="h-px bg-gray-800 my-1" />
           {actions.map((a) => (

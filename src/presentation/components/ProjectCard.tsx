@@ -115,7 +115,7 @@ export function ProjectCard({
                   ? "Sem associação: este projeto oferece todas as categorias"
                   : `${associatedCount} categoria(s) associada(s)`
               }
-              className={`flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-[11px] rounded-chip border transition-colors ${
+              className={`flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-xs rounded-chip border transition-colors ${
                 showCategories
                   ? "text-accent-text bg-accent/10 border-accent/40"
                   : associatedCount > 0
@@ -159,7 +159,7 @@ export function ProjectCard({
         >
           {/* O estado vazio precisa se explicar, ou parece que a associação se
               perdeu — é o estado de todo projeto até alguém marcar algo. */}
-          <p className="text-[11px] text-fg-muted mb-1.5">
+          <p className="text-xs text-fg-muted mb-1.5">
             {associatedCount === 0
               ? "Sem associação: este projeto oferece todas as categorias. Marque alguma para restringir."
               : "Só as marcadas aparecem no campo de categoria deste projeto."}

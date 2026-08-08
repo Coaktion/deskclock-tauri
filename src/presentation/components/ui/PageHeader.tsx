@@ -7,7 +7,7 @@ function TourButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       title="Ver tour da página"
       aria-label="Ver tour da página"
-      className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-[11px] font-medium flex items-center justify-center"
+      className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
     >
       ?
     </button>

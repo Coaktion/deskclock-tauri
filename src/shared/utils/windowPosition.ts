@@ -25,6 +25,16 @@ export async function centerOnWorkArea(
   setTimeout(() => win.setPosition(new PhysicalPosition(x, y)).catch(() => {}), 150);
 }
 
+/**
+ * Tamanho lógico do popup, em px.
+ *
+ * As duas janelas que o posicionam precisam concordar: quem abre o popup é o
+ * overlay compacto, e quem o reposiciona depois é ele mesmo. Divergindo, o
+ * popup nasce ancorado por uma altura e se desenha com outra — aparecendo
+ * deslocado do canto em que o usuário deixou o compacto.
+ */
+export const POPUP_SIZE: { width: number; height: number } = { width: 288, height: 434 };
+
 /** Positions the overlay popup adjacent to the compact overlay, screen-quadrant-aware. */
 export async function positionPopupNearCompact(
   popup: Window | WebviewWindow,

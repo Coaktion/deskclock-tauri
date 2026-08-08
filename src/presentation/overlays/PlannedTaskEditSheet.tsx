@@ -42,9 +42,9 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 };
 
 const chipClass =
-  "flex items-center justify-center gap-1 px-2 py-1 text-[11px] rounded-lg border transition-colors";
+  "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors";
 const inputClass =
-  "w-full px-2 py-1.5 text-[12px] bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500";
+  "w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500";
 
 /**
  * Edição da tarefa planejada **dentro** do popup, sem crescer a janela: painel
@@ -104,7 +104,7 @@ export function PlannedTaskEditSheet({
           onSelect={editor.selectProject}
           options={projects}
           placeholder="Projeto"
-          className="w-full text-[12px]"
+          className="w-full text-xs"
         />
 
         {/* Billable encostado na categoria, como no Lançamento Manual e no
@@ -117,7 +117,7 @@ export function PlannedTaskEditSheet({
             onSelect={editor.selectCategory}
             options={editor.categoryOptions}
             placeholder="Categoria"
-            className="flex-1 min-w-0 text-[12px]"
+            className="flex-1 min-w-0 text-xs"
             inputClassName="w-full px-2 py-1.5 bg-transparent text-gray-100 placeholder-gray-500 focus:outline-none"
           />
           <button
@@ -188,7 +188,7 @@ export function PlannedTaskEditSheet({
             <DatePickerInput
               value={editor.scheduleDate}
               onChange={editor.setScheduleDate}
-              className="flex-1 text-[12px]"
+              className="flex-1 text-xs"
             />
           </div>
         )}
@@ -201,7 +201,7 @@ export function PlannedTaskEditSheet({
                 type="button"
                 title={day.title}
                 onClick={() => editor.toggleDay(day.value)}
-                className={`flex-1 py-1 text-[11px] rounded-lg border transition-colors ${
+                className={`flex-1 py-1 text-xs rounded-lg border transition-colors ${
                   editor.recurringDays.includes(day.value)
                     ? "bg-blue-900/40 border-blue-600 text-blue-300"
                     : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
@@ -218,13 +218,13 @@ export function PlannedTaskEditSheet({
             <DatePickerInput
               value={editor.periodStart}
               onChange={editor.setPeriodStart}
-              className="w-full text-[12px]"
+              className="w-full text-xs"
               label="Início"
             />
             <DatePickerInput
               value={editor.periodEnd}
               onChange={editor.setPeriodEnd}
-              className="w-full text-[12px]"
+              className="w-full text-xs"
               label="Fim"
             />
           </div>
@@ -233,7 +233,7 @@ export function PlannedTaskEditSheet({
         <div className="border-t border-gray-800 mt-0.5" />
 
         {/* Ações */}
-        <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600">Ações</p>
+        <p className="text-overline uppercase text-gray-600">Ações</p>
 
         {editor.actions.length > 0 && (
           <ul className="flex flex-col gap-1">
@@ -248,7 +248,7 @@ export function PlannedTaskEditSheet({
                     <FolderOpen size={11} />
                   )}
                 </span>
-                <span className="flex-1 text-[11px] text-gray-300 truncate" title={action.value}>
+                <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
                   {action.value}
                 </span>
                 <button
@@ -267,7 +267,7 @@ export function PlannedTaskEditSheet({
           <select
             value={editor.newActionType}
             onChange={(e) => editor.setNewActionType(e.target.value as PlannedTaskAction["type"])}
-            className="shrink-0 px-1.5 py-1 text-[11px] bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
+            className="shrink-0 px-1.5 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
           >
             <option value="open_url">URL</option>
             <option value="open_file">Arquivo</option>
@@ -284,7 +284,7 @@ export function PlannedTaskEditSheet({
             }}
             placeholder={editor.newActionType === "open_url" ? "https://..." : "/caminho"}
             autoComplete="off"
-            className="flex-1 min-w-0 px-2 py-1 text-[11px] bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 min-w-0 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <button
             onClick={editor.addAction}
@@ -301,14 +301,14 @@ export function PlannedTaskEditSheet({
       <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-gray-700/60">
         <button
           onClick={onClose}
-          className="px-2.5 py-1 text-[11px] text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+          className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
         >
           <Check size={11} />
           Salvar

@@ -367,7 +367,7 @@ export function MondayImportModal({
             <DownloadCloud size={16} className="text-blue-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <h2 className="text-sm font-semibold text-gray-100">Importar itens do Monday</h2>
-              <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+              <p className="text-xs text-gray-500 mt-0.5 truncate">
                 Somente os seus, nos {availableBoards.length} board(s) vinculados
               </p>
             </div>
@@ -476,18 +476,18 @@ export function MondayImportModal({
         {visibleRows.length > 0 && (
           <div className="flex flex-col gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
             {unavailableCount > 0 && (
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-gray-600">
                 {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
                 desta lista.
               </p>
             )}
             {hiddenImported > 0 && (
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-gray-600">
                 {hiddenImported} item(ns) já importado(s) estão fora desta lista.
               </p>
             )}
             {!stageField && (
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-gray-600">
                 Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna
                 do board, em Integrações → Monday → Importação de dados.
               </p>
@@ -588,7 +588,7 @@ function ItemRow({
             {isDuplicate && (
               <span
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-[10px] leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
+                className="flex items-center gap-0.5 px-1 py-0.5 text-xs leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
               >
                 <AlertTriangle size={9} />
                 já existe

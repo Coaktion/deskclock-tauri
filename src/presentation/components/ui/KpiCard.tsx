@@ -31,11 +31,9 @@ export function KpiCard({ label, value, hint, tone = "default", barPct, barTone 
 
   return (
     <div className="flex-1 min-w-0 bg-surface border border-border-subtle rounded-card p-3 flex flex-col gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-fg-muted">
-        {label}
-      </span>
+      <span className="text-overline uppercase text-fg-muted">{label}</span>
       <span
-        className={`font-mono text-[17px] font-medium tracking-tight tabular-nums ${VALUE_TONE[tone]}`}
+        className={`font-mono text-base font-medium tracking-tight tabular-nums ${VALUE_TONE[tone]}`}
       >
         {value}
       </span>
@@ -47,7 +45,7 @@ export function KpiCard({ label, value, hint, tone = "default", barPct, barTone 
           />
         </div>
       )}
-      {hint && <span className="text-[10.5px] text-fg-muted mt-0.5">{hint}</span>}
+      {hint && <span className="text-xs text-fg-muted mt-0.5">{hint}</span>}
     </div>
   );
 }

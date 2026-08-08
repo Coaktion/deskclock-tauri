@@ -18,7 +18,7 @@ function SettingRow({
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
         <span className="text-sm text-gray-300">{label}</span>
-        {hint && <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
       </div>
       {children}
     </div>

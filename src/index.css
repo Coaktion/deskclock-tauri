@@ -131,6 +131,14 @@
   --font-weight-normal: 400; /* texto lido */
   --font-weight-medium: 500; /* clicável ou numérico */
   --font-weight-semibold: 600; /* título, seção, overline */
+
+  /* O degrau de 10px não existe na escala do Tailwind e é o único que carrega
+     peso e tracking junto. Sem token ele volta como `text-[10px] font-semibold
+     tracking-wider` copiado de outra tela — que é como as três variantes
+     anteriores nasceram. */
+  --text-overline: 0.625rem;
+  --text-overline--font-weight: 600;
+  --text-overline--letter-spacing: 0.1em;
 }
 
 /* Fora do @theme de propósito: `hue` não é namespace do Tailwind — não geraria
@@ -171,7 +179,7 @@
 }
 
 :root {
-  font-size: var(--app-font-size, 14px);
+  font-size: 16px;
 
   /* Cópias fixas dos grays do Tailwind — usadas pelo tema Claro sem criar referências circulares */
   --tw-gray-50: oklch(0.985 0.002 247.858);

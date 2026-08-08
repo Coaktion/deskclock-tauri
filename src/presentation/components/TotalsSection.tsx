@@ -28,19 +28,15 @@ function KpiCard({
   const pct = Math.min(100, Math.max(0, barPct));
   return (
     <div className="flex-1 bg-gray-900 border border-gray-800 rounded-lg p-3 flex flex-col gap-1 min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-        {label}
-      </div>
-      <div className={`font-mono text-[17px] font-medium tracking-tight ${valueColor}`}>
-        {value}
-      </div>
+      <div className="text-overline uppercase text-gray-500">{label}</div>
+      <div className={`font-mono text-base font-medium tracking-tight ${valueColor}`}>{value}</div>
       <div className="h-[3px] bg-gray-800 rounded-full overflow-hidden mt-1">
         <div
           className={`h-full rounded-full transition-all duration-300 ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      {hint && <div className="text-[10.5px] text-gray-500 mt-0.5">{hint}</div>}
+      {hint && <div className="text-xs text-gray-500 mt-0.5">{hint}</div>}
     </div>
   );
 }

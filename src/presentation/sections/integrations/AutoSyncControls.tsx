@@ -103,9 +103,7 @@ export function AutoSyncControls({
       icon={<RefreshCw size={15} />}
       title="Sincronização automática"
       badge={
-        autoSync ? (
-          <span className="ml-1 text-[10.5px] text-blue-400 font-medium">Ativa</span>
-        ) : undefined
+        autoSync ? <span className="ml-1 text-xs text-blue-400 font-medium">Ativa</span> : undefined
       }
     >
       <Row label="Ativar">

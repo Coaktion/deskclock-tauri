@@ -473,9 +473,14 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 #### Acessibilidade
 | Configuração | Tipo | Status | Descrição |
 |---|---|---|---|
-| Tamanho da fonte | select: P, M, G, GG | ✅ implementado | Escala texto via `--app-font-size` CSS custom property |
 | Modo | select: Escuro, Claro | ✅ implementado | Claridade das superfícies (`mode`) |
 | Cor de destaque | select: Azul, Verde, Roxo, Âmbar | ✅ implementado | Hue do acento (`accent`) |
+
+> **O seletor de tamanho da fonte saiu**, e com ele a chave `fontSize` e o
+> `shared/utils/fontSize.ts`. A raiz é constante em **16 px** (§8.4): era ela que o controle
+> variava, e é dela que dependem os três raios, o ritmo de espaçamento e a escala inteira caírem
+> nos valores que o design especifica. A chave gravada em `config` fica órfã e inerte — é
+> chave-valor (§4.7), e escrever migration só para apagá-la custaria mais que o registro morto.
 
 #### Atalhos globais
 | Ação | Tipo | Descrição |
@@ -1641,9 +1646,38 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   dentro de modal. É o que impede o cronômetro de tremer a cada segundo e o que alinha as colunas
   das listas.
 
-- **Escala tipográfica:** `--app-font-size` em `:root`, controlada pela configuração de
-  acessibilidade. Os valores são em rem sobre a raiz de 14px, então a escala P/M/G/GG continua
-  valendo sem exceção.
+- **A raiz é 16 px, e é constante.** Ela não cresceu o app — parou de encolhê-lo: os três raios
+  (`0.375` · `0.5` · `0.75rem`) só rendem os **6 · 8 · 12** desenhados em raiz 16, o `h-14` do
+  `PageHeader` só mede os 56 px que esta seção afirma em raiz 16, e o ritmo do design (4 · 8 · 12 ·
+  16 · 24 · 32) é a escala padrão do Tailwind, que também é rem. Em raiz 14 tudo isso rendia 12,5%
+  menor, e daí vinham os `text-[10.5px]` escritos à mão. **Consequência aceita:** no Tailwind v4 o
+  espaçamento também é rem, então padding, gap e larguras crescem junto — `--spacing` **não** é
+  reancorado para compensar.
+
+- **A escala tipográfica é um conjunto fechado de cinco degraus**, e o sexto é exceção declarada:
+
+  | Papel | Utilitário | px | Peso |
+  |---|---|---|---|
+  | `title/page` | `text-xl` | 20 | 600 — um por página, no `PageHeader` |
+  | `title/section` | `text-base` | 16 | 600 — cabeçalho de `SectionCard` |
+  | `body` / `body/ui` | `text-sm` | 14 | 400, ou 500 se clicável ou numérico |
+  | `caption` | `text-xs` | 12 | 400 — metadado de linha |
+  | `overline` | `text-overline` | 10 | 600, `0.1em` |
+  | `display/timer` | `text-2xl` | 24 | cronômetro da tarefa em execução |
+
+  **O overline tem token próprio** (`--text-overline` e seus dois modificadores) porque 10 px não
+  existe na escala do Tailwind e é o único degrau que carrega peso e tracking junto — sem token ele
+  volta como `text-[10px] font-semibold tracking-wider` copiado de outra tela, que é como as três
+  variantes anteriores nasceram. `uppercase` continua na classe: é transformação, não tamanho.
+
+  **Tamanho em px arbitrário não existe mais** — as 176 ocorrências foram convertidas de uma vez e
+  `src/tests/conventions/fontSizes.test.ts` falha em qualquer `text-[…]` novo, sem baseline: um
+  resto congelado recriaria a dívida que a varredura fecha. Ficam de fora, por dimensionarem
+  **glifo** e não texto, o `⚠` do `App.tsx` e a inicial do avatar em `GeralTab`.
+
+- **Ritmo:** padding de página **`p-5`**, linha de lista **`py-2.5 px-4`** (o `TaskRow`), e valores
+  de espaçamento fechados em 1 / 2 / 3 / 4 / 6 / 8. Fora disso, pare e pergunte (§"Zero hardcode
+  visual").
 - **Paleta de cores de entidade:** `src/domain/utils/workspaceColor.ts` define a lista curada de
   slots usada para colorir workspaces, junto com a justificativa de cada exclusão.
 - **Primitivos canônicos:** `src/presentation/components/ui/` — `Toggle`, `KpiCard`, `TaskRow`,
@@ -1680,7 +1714,7 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > "Filtros" e "Exportar" não cabem nos 56 px sem quebrar em duas linhas, e aí a altura fixa
   > deixaria de valer justamente na tela que a migração usa de referência.
 
-  > **No Histórico o full-bleed deu lugar a um cartão por dia**, com o corpo da tela em `p-4` e as
+  > **No Histórico o full-bleed deu lugar a um cartão por dia**, com o corpo da tela em `p-5` e as
   > entradas como `TaskRow`. Era a tela com **dois** `grid-template-columns` de linha — um para o
   > `selectMode`, outro fora dele —, e é a flex do `TaskRow` que os dispensa: a caixa de seleção
   > entra em `leading` e a faixa de horário em `meta`, sem segundo layout a manter em sincronia. A
@@ -1694,7 +1728,7 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > cabeçalho (`rounded-t-card`), não recortado pelo cartão.
 
   > **Em Dados e Configurações as abas moram no cabeçalho** (`PageHeader.tabs`) e o conteúdo é uma
-  > **coluna de 720 px centrada**, dentro de um corpo em `p-4`. Configurações era `max-w-xl` (576),
+  > **coluna de 720 px centrada**, dentro de um corpo em `p-5`. Configurações era `max-w-xl` (576),
   > Dados era largura cheia em `p-5` — trocar de aba mudava a medida da linha de leitura no mesmo
   > app. É a única tela de leitura que não usa a largura toda, e de propósito: linha de
   > configuração é rótulo à esquerda e controle à direita, e esticá-la separa os dois pelo vazio.

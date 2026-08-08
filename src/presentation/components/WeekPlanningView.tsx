@@ -373,7 +373,7 @@ export function WeekPlanningView() {
                     className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
                   >
                     <span
-                      className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
+                      className={`text-xs font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
                     >
                       {dayLabel}
                       {isToday && (
@@ -386,7 +386,7 @@ export function WeekPlanningView() {
                       {selectMode && dayTasks.length > 0 && (
                         <button
                           onClick={() => toggleSelectAllForDay(day)}
-                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                          className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
                         >
                           {dayTasks.every((t) => selectedIds.has(t.id))
                             ? "Desmarcar"
@@ -394,7 +394,7 @@ export function WeekPlanningView() {
                         </button>
                       )}
                       {dayTasks.length > 0 && (
-                        <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
+                        <span className="text-xs font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
                           {dayCompleted > 0
                             ? `${dayCompleted}/${dayTasks.length}`
                             : dayTasks.length}

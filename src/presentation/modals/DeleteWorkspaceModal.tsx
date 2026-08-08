@@ -40,7 +40,7 @@ function IntegrationsWarning({ bindings }: { bindings: IntegrationWorkspaceBindi
         </p>
         <ul className="mt-1.5 flex flex-col gap-1">
           {bindings.map((b) => (
-            <li key={b.key} className="text-[11px] text-amber-200/80 leading-snug">
+            <li key={b.key} className="text-xs text-amber-200/80 leading-snug">
               <span className="font-medium text-amber-200">{b.label}</span> {b.consequence}
               {/* A chave está vazia: a tela de Integrações não nomeia este
                   workspace, e sem a ressalva o aviso pareceria engano. */}
@@ -48,7 +48,7 @@ function IntegrationsWarning({ bindings }: { bindings: IntegrationWorkspaceBindi
             </li>
           ))}
         </ul>
-        <p className="mt-1.5 text-[11px] text-amber-200/60 leading-snug">
+        <p className="mt-1.5 text-xs text-amber-200/60 leading-snug">
           Para voltar a funcionar, escolha outro workspace em Integrações depois de excluir.
         </p>
       </div>
@@ -145,7 +145,7 @@ export function DeleteWorkspaceModal({
                     </option>
                   ))}
                 </select>
-                <span className="block mt-1 text-[11px] text-gray-500 leading-snug">
+                <span className="block mt-1 text-xs text-gray-500 leading-snug">
                   Projetos e categorias de mesmo nome no destino são reaproveitados, não duplicados.
                 </span>
               </span>
@@ -161,7 +161,7 @@ export function DeleteWorkspaceModal({
             />
             <span className="flex-1">
               <span className="block text-sm text-gray-200">Apagar todos os dados</span>
-              <span className="block mt-0.5 text-[11px] text-red-400/80 leading-snug">
+              <span className="block mt-0.5 text-xs text-red-400/80 leading-snug">
                 Todas as horas registradas neste workspace são perdidas. Não há desfazer.
               </span>
             </span>

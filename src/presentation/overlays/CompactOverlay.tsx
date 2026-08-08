@@ -32,7 +32,7 @@ export function CompactOverlay({ onExpand }: CompactOverlayProps) {
     >
       <Clock size={18} className="text-gray-300" />
       {pendingCount > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
           {pendingCount > 9 ? "9+" : pendingCount}
         </span>
       )}

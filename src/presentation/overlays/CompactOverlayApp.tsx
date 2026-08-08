@@ -9,7 +9,7 @@ import {
   type RunningTaskChangedPayload,
 } from "@shared/types/overlayEvents";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
-import { positionPopupNearCompact } from "@shared/utils/windowPosition";
+import { positionPopupNearCompact, POPUP_SIZE } from "@shared/utils/windowPosition";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
@@ -134,7 +134,7 @@ function CompactOverlayAppInner() {
   const openPopup = useCallback(async () => {
     const popup = await getPopup();
     if (!popup) return;
-    await positionPopupNearCompact(popup, { width: 288, height: 380 });
+    await positionPopupNearCompact(popup, { width: POPUP_SIZE.width, height: POPUP_SIZE.height });
     await popup.show();
     await popup.setFocus();
     syncPopupOpen(true);

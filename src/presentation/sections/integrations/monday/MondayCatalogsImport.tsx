@@ -72,7 +72,7 @@ export function MondayCatalogsImport({
       {total === 0 ? (
         <p className="text-xs text-gray-600 italic">Catálogos ainda não lidos.</p>
       ) : (
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           {catalogs.activityType.length} Activity Type · {catalogs.projectStage.length} Project
           Stage · {catalogs.nonBillableReason.length} motivo de non-billable
         </p>

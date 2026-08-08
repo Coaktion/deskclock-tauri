@@ -18,6 +18,7 @@ import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSect
 import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
 import { RunningCustomFieldsSheet } from "@presentation/overlays/RunningCustomFieldsSheet";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
+import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChip";
 import { getProjectColor } from "@shared/utils/projectColor";
@@ -41,24 +42,26 @@ import {
 import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
 import { useEffect, useRef, useState } from "react";
 
-const POPUP_W = 288;
-const HEADER_H = 37;
-const FOOTER_H = 34;
+// Alturas em px de um conteúdo que é todo em rem: qualquer mudança na raiz do
+// documento as desatualiza por inteiro, e a janela passa a cortar o rodapé.
+const POPUP_W = POPUP_SIZE.width;
+const HEADER_H = 42;
+const FOOTER_H = 39;
 
 // Idle state layout
-const NEW_TASK_H = 45;
-const TABS_H = 32;
-const CONTENT_H = 188; // área da aba ativa (altura fixa; a lista rola internamente)
-const ROW_H = 44;
+const NEW_TASK_H = 51;
+const TABS_H = 37;
+const CONTENT_H = 215; // área da aba ativa (altura fixa; a lista rola internamente)
+const ROW_H = 50;
 
 // Running state layout (execution section fills popup body)
-const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
-const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
-const ACTIONS_SECTION_H = 48; // section label + one row of action chips
+const EXEC_H = 300; // status + name + timer + start-time + project + category + billable + divider + controls
+const EXEC_H_CONFIRMING = 345; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
+const ACTIONS_SECTION_H = 55; // section label + one row of action chips
 // Uma linha só, com o chip que abre o painel — e por isso constante: os campos
 // personalizados são quantos o usuário quiser, e empilhá-los aqui faria a altura
 // da janela depender do cadastro dele.
-const CUSTOM_FIELDS_ROW_H = 36; // chip (28) + o gap-2 da coluna
+const CUSTOM_FIELDS_ROW_H = 41; // chip (32) + o gap-2 da coluna
 
 /**
  * Typeahead dos chips de Projeto e Categoria: com o chip focado pelo teclado,
@@ -286,7 +289,7 @@ function ExecSection({
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-blue-500" : "bg-amber-500"}`}
         />
         <span
-          className={`text-[9px] font-semibold uppercase tracking-[0.12em] ${isRunning ? "text-blue-400" : "text-amber-400"}`}
+          className={`text-overline uppercase ${isRunning ? "text-blue-400" : "text-amber-400"}`}
         >
           {isRunning ? "Rodando" : "Pausada"}
         </span>
@@ -309,13 +312,13 @@ function ExecSection({
             }
           }}
           placeholder="Nome da tarefa"
-          className="w-full px-0 text-[13px] font-medium bg-transparent border-b border-gray-600 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-0 text-sm font-medium bg-transparent border-b border-gray-600 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
           autoComplete="off"
         />
       ) : (
         <button
           onClick={() => setEditingName(true)}
-          className="group flex items-center gap-1 text-left text-[13px] font-medium text-gray-100 hover:text-white leading-snug transition-colors cursor-text w-full"
+          className="group flex items-center gap-1 text-left text-sm font-medium text-gray-100 hover:text-white leading-snug transition-colors cursor-text w-full"
         >
           <span className="truncate">
             {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
@@ -326,7 +329,7 @@ function ExecSection({
 
       {/* Timer */}
       <p
-        className={`font-mono text-[22px] font-semibold tabular-nums leading-none ${isRunning ? "text-blue-400" : "text-amber-400"}`}
+        className={`font-mono text-xl font-semibold tabular-nums leading-none ${isRunning ? "text-blue-400" : "text-amber-400"}`}
       >
         {formatHHMMSS(seconds)}
       </p>
@@ -359,7 +362,7 @@ function ExecSection({
             }}
             options={projects}
             placeholder="Projeto"
-            className="w-full text-[12px]"
+            className="w-full text-xs"
             dropUp
           />
         </div>
@@ -367,7 +370,7 @@ function ExecSection({
         <button
           onClick={() => openProjectEdit()}
           onKeyDown={chipTypeahead(openProjectEdit)}
-          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
+          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
             projectName
               ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
               : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
@@ -404,7 +407,7 @@ function ExecSection({
             }}
             options={categoryOptions}
             placeholder="Categoria"
-            className="w-full text-[12px]"
+            className="w-full text-xs"
             dropUp
           />
         </div>
@@ -412,7 +415,7 @@ function ExecSection({
         <button
           onClick={() => openCategoryEdit()}
           onKeyDown={chipTypeahead(openCategoryEdit)}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
             categoryName
               ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
               : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
@@ -426,7 +429,7 @@ function ExecSection({
         {/* Billable */}
         <button
           onClick={() => void onUpdateTask({ billable: !task.billable })}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-medium rounded-lg border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
             task.billable
               ? "bg-green-900/40 border-green-700 text-green-400 hover:bg-green-900/60"
               : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
@@ -454,14 +457,14 @@ function ExecSection({
                   setEditingStartTime(false);
                 }
               }}
-              className="flex-1 bg-transparent border-b border-gray-600 focus:outline-none focus:border-blue-500 text-[12px] text-gray-300"
+              className="flex-1 bg-transparent border-b border-gray-600 focus:outline-none focus:border-blue-500 text-xs text-gray-300"
               autoComplete="off"
             />
           </div>
         ) : (
           <button
             onClick={() => setEditingStartTime(true)}
-            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-500 transition-colors"
+            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-500 transition-colors"
           >
             <Clock size={11} className="text-gray-500 shrink-0" />
             {fmtTime(task.startTime)}
@@ -475,7 +478,7 @@ function ExecSection({
       {customFields.length > 0 && (
         <button
           onClick={onOpenCustomFields}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
             countFilledCustomValues(customFields, task.customValues) > 0
               ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
               : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
@@ -489,9 +492,7 @@ function ExecSection({
       {/* Actions section */}
       {actions.length > 0 && (
         <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mb-1.5">
-            Ações
-          </p>
+          <p className="text-overline uppercase text-gray-600 mb-1.5">Ações</p>
           <div className="flex flex-wrap gap-1.5">
             {actions.map((action, i) => (
               <ActionChip key={i} action={action} />
@@ -510,7 +511,7 @@ function ExecSection({
         // alternativa, e continua exigindo o clique que a diferencia.
         <div className="flex flex-col gap-1.5" onKeyDown={handleConfirmStopKeyDown}>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-gray-400">Encerrar às</span>
+            <span className="text-xs text-gray-400">Encerrar às</span>
             <div className="flex items-center gap-1.5 flex-1">
               <Clock size={11} className="text-gray-500 shrink-0" />
               <input
@@ -520,7 +521,7 @@ function ExecSection({
                   setEndTimeInput(e.target.value);
                   setEndTimeTouched(true);
                 }}
-                className={`flex-1 bg-transparent border-b focus:outline-none text-[12px] text-gray-200 ${
+                className={`flex-1 bg-transparent border-b focus:outline-none text-xs text-gray-200 ${
                   endTimeResolved.error
                     ? "border-red-500 focus:border-red-400"
                     : "border-gray-600 focus:border-blue-500"
@@ -537,7 +538,7 @@ function ExecSection({
             </button>
           </div>
           {endTimeResolved.error && (
-            <span className="text-[10px] text-red-400">{endTimeResolved.error}</span>
+            <span className="text-xs text-red-400">{endTimeResolved.error}</span>
           )}
           <div className="flex items-center gap-1.5">
             <button
@@ -546,7 +547,7 @@ function ExecSection({
                 setConfirmingStop(false);
                 void onStop(true, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] bg-green-700/80 hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700/80 hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
             >
               <CheckCircle2 size={10} /> Concluída
             </button>
@@ -556,7 +557,7 @@ function ExecSection({
                 setConfirmingStop(false);
                 void onStop(false, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-gray-200 rounded-lg transition-colors"
             >
               <Clock size={10} /> Pendente
             </button>
@@ -566,7 +567,7 @@ function ExecSection({
         <div className="flex items-center gap-1.5">
           <button
             onClick={isRunning ? onPause : onResume}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
             {isRunning ? (
               <>
@@ -580,13 +581,13 @@ function ExecSection({
           </button>
           <button
             onClick={openConfirmStop}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <Square size={11} /> Parar
           </button>
           <button
             onClick={onCancel}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg border border-red-900/40 transition-colors"
+            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg border border-red-900/40 transition-colors"
           >
             <X size={10} /> Cancelar
           </button>
@@ -756,7 +757,7 @@ export function PopupOverlayContent({
           <div className="flex border-b border-gray-800 shrink-0" style={{ height: TABS_H }}>
             <button
               onClick={() => setActiveTab("planned")}
-              className={`flex-1 text-[11px] font-medium border-b-2 transition-colors ${
+              className={`flex-1 text-xs font-medium border-b-2 transition-colors ${
                 activeTab === "planned"
                   ? "text-gray-200 border-blue-500"
                   : "text-gray-500 border-transparent hover:text-gray-300"
@@ -766,7 +767,7 @@ export function PopupOverlayContent({
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`flex-1 text-[11px] font-medium border-b-2 transition-colors ${
+              className={`flex-1 text-xs font-medium border-b-2 transition-colors ${
                 activeTab === "completed"
                   ? "text-gray-200 border-blue-500"
                   : "text-gray-500 border-transparent hover:text-gray-300"
@@ -782,7 +783,7 @@ export function PopupOverlayContent({
               <div className="h-full overflow-y-auto">
                 {pending.length === 0 ? (
                   <div className="h-full flex items-center justify-center">
-                    <p className="text-center text-gray-600 text-[11px]">Nenhuma tarefa pendente</p>
+                    <p className="text-center text-gray-600 text-xs">Nenhuma tarefa pendente</p>
                   </div>
                 ) : (
                   pending.map((task) => {
@@ -803,7 +804,7 @@ export function PopupOverlayContent({
                         />
                         <div className="flex-1 min-w-0 pl-1.5">
                           <div className="flex items-center gap-1 min-w-0">
-                            <p className="text-[12px] font-medium text-gray-200 truncate leading-tight">
+                            <p className="text-xs font-medium text-gray-200 truncate leading-tight">
                               {task.name}
                             </p>
                             {trackedTitles.has((task.name ?? "").toLowerCase().trim()) && (
@@ -816,7 +817,7 @@ export function PopupOverlayContent({
                             )}
                           </div>
                           {subtitle && (
-                            <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
+                            <p className="text-xs text-gray-500 truncate leading-tight mt-0.5">
                               {subtitle}
                             </p>
                           )}
@@ -867,7 +868,7 @@ export function PopupOverlayContent({
       >
         <button
           onClick={handleOpenApp}
-          className="ml-auto flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+          className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
         >
           Abrir app
           <ArrowRight size={11} />

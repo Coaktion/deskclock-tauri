@@ -60,7 +60,7 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
         className="flex items-center gap-1 max-w-[92px] px-1.5 py-0.5 rounded-lg hover:bg-gray-700 transition-colors"
       >
         <WorkspaceDot color={activeWorkspace.color} size={7} />
-        <span className="text-[10px] text-gray-400 truncate">{activeWorkspace.name}</span>
+        <span className="text-xs text-gray-400 truncate">{activeWorkspace.name}</span>
       </button>
 
       {open && (
@@ -72,7 +72,7 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
             <button
               key={w.id}
               onClick={() => void handlePick(w.id)}
-              className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+              className="w-full flex items-center gap-1.5 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
             >
               <WorkspaceDot color={w.color} size={7} />
               <span className="flex-1 text-left truncate">{w.name}</span>
@@ -87,27 +87,27 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
           style={MENU_POS}
           className="fixed z-50 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-2"
         >
-          <p className="text-[11px] text-gray-300 leading-snug mb-1.5">
+          <p className="text-xs text-gray-300 leading-snug mb-1.5">
             Parar a tarefa e trocar para <span className="text-gray-100">{pending.name}</span>?
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] bg-green-700 hover:bg-green-600 text-white rounded transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-green-700 hover:bg-green-600 text-white rounded transition-colors"
             >
               <CheckCircle2 size={11} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
             >
               <Clock size={11} />
               Pendente
             </button>
             <button
               onClick={cancel}
-              className="ml-auto px-1 text-[11px] text-gray-500 hover:text-gray-300"
+              className="ml-auto px-1 text-xs text-gray-500 hover:text-gray-300"
             >
               ✕
             </button>

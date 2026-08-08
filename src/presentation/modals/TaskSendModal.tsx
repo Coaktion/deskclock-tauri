@@ -127,25 +127,25 @@ function GroupRow({
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-100 truncate">{first.name ?? "(sem nome)"}</span>
           {isInvalid && (
-            <span className="flex items-center gap-0.5 text-[10px] text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+            <span className="flex items-center gap-0.5 text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <AlertTriangle size={10} />
               Faltando: {validation.missing.join(", ")}
             </span>
           )}
           {!isInvalid && allSent && (
-            <span className="flex items-center gap-0.5 text-[10px] text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+            <span className="flex items-center gap-0.5 text-xs text-green-400 bg-green-500/10 border border-green-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <CheckCheck size={10} />
               Enviado
             </span>
           )}
           {!isInvalid && someSent && (
-            <span className="flex items-center gap-0.5 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded-full shrink-0">
+            <span className="flex items-center gap-0.5 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded-full shrink-0">
               <AlertTriangle size={10} />
               Parcial
             </span>
           )}
         </div>
-        <div className="flex gap-2 text-[11px] text-gray-500 mt-0.5">
+        <div className="flex gap-2 text-xs text-gray-500 mt-0.5">
           {project && <span>{project.name}</span>}
           {category && <span>{category.name}</span>}
           {group.tasks.length > 1 && (
@@ -363,7 +363,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
                         {formatDayLabel(date)}
                       </span>
 
-                      <span className="text-[11px] text-gray-500">
+                      <span className="text-xs text-gray-500">
                         {selectedCount}/{groups.length}
                       </span>
 

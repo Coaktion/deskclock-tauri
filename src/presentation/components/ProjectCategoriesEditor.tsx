@@ -58,7 +58,7 @@ export function ProjectCategoriesEditor({
         <button
           type="button"
           onClick={onClearAll}
-          className="self-start px-2 py-1 text-[11px] bg-raised border border-border hover:border-fg-muted text-fg-secondary hover:text-fg rounded-control transition-colors"
+          className="self-start px-2 py-1 text-xs bg-raised border border-border hover:border-fg-muted text-fg-secondary hover:text-fg rounded-control transition-colors"
         >
           Desmarcar todas ({sourceById.size})
         </button>
@@ -85,7 +85,7 @@ export function ProjectCategoriesEditor({
                 {source === "monday" && (
                   <span
                     title="Veio da varredura do Monday. Desmarcar vale até a próxima varredura — para tirar de vez, remova o Activity Type do quadro."
-                    className="shrink-0 px-1 py-0.5 text-[10px] leading-none rounded-chip bg-raised border border-border text-fg-muted"
+                    className="shrink-0 px-1 py-0.5 text-xs leading-none rounded-chip bg-raised border border-border text-fg-muted"
                   >
                     Monday
                   </span>

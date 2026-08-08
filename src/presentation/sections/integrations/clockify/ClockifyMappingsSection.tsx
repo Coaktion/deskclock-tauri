@@ -298,7 +298,7 @@ export function ClockifyMappingsSection({
             {projectsOpen && (
               <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-xs text-gray-500">
                     Importar cria projetos no DeskClock e os vincula automaticamente.
                   </p>
                   <div className="flex items-center gap-2 shrink-0 ml-3">
@@ -313,7 +313,7 @@ export function ClockifyMappingsSection({
                     <button
                       onClick={handleImportProjects}
                       disabled={importingProjects}
-                      className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                      className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
                     >
                       {importingProjects && <Loader2 size={10} className="animate-spin" />}
                       Importar do Clockify
@@ -356,7 +356,7 @@ export function ClockifyMappingsSection({
             {categoriesOpen && (
               <div className="p-3 pt-0">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] text-gray-500">
+                  <p className="text-xs text-gray-500">
                     Importar cria categorias no DeskClock para cada tag e as vincula
                     automaticamente.
                   </p>
@@ -372,7 +372,7 @@ export function ClockifyMappingsSection({
                     <button
                       onClick={handleImportTags}
                       disabled={importingTags}
-                      className="flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+                      className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
                     >
                       {importingTags && <Loader2 size={10} className="animate-spin" />}
                       Importar do Clockify
@@ -407,7 +407,7 @@ export function ClockifyMappingsSection({
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-gray-300">Tags padrão</span>
             </div>
-            <p className="text-[11px] text-gray-500 mb-2">
+            <p className="text-xs text-gray-500 mb-2">
               Adicionadas em todos os envios, independente da categoria.
             </p>
             <TagMultiSelect

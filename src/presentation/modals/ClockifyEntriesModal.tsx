@@ -326,7 +326,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
               {dayGroups.map((group) => (
                 <div key={group.dateISO}>
                   <div className="flex items-center justify-between px-5 py-2.5 bg-gray-900/60 border-b border-gray-800 sticky top-0 z-10">
-                    <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                       {formatHistoryDayHeader(group.dateISO)}
                     </span>
                     <span className="text-xs font-mono tabular-nums text-gray-500">
@@ -403,7 +403,7 @@ function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
         {(projectLabel || (entry.tags && entry.tags.length > 0)) && (
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {projectLabel && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
+              <span className="inline-flex items-center gap-1 text-xs text-gray-400">
                 <span
                   className="inline-block w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: projectColor }}
@@ -412,10 +412,7 @@ function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
               </span>
             )}
             {entry.tags?.map((t) => (
-              <span
-                key={t.id}
-                className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[10px]"
-              >
+              <span key={t.id} className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-xs">
                 {t.name}
               </span>
             ))}

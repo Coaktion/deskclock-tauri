@@ -26,7 +26,6 @@ const DEFAULTS: AppConfig = {
   planningFormWidth: 256,
   retroactiveFormWidth: 256,
   retroactivePlannedHeight: 144,
-  fontSize: "M" as const,
   mode: "" as const,
   accent: "" as const,
   theme: "azul" as const,

@@ -353,9 +353,7 @@ export function OmniboxRunning({
       {/* Actions section */}
       {actions.length > 0 && (
         <div className="flex items-center gap-2 flex-wrap px-4 pb-3 pt-2 border-t border-emerald-500/20">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 shrink-0">
-            Ações
-          </span>
+          <span className="text-overline uppercase text-gray-600 shrink-0">Ações</span>
           {actions.map((action, i) => (
             <ActionChip key={i} action={action} />
           ))}

@@ -50,10 +50,10 @@ export function CompactOverlayContent({
   const rounded = isSmall ? "rounded-[6px]" : "rounded-xl";
   const roundedTop = isSmall ? "rounded-t-[6px]" : "rounded-t-xl";
   const roundedBottom = isSmall ? "rounded-b-[6px]" : "rounded-b-xl";
-  const timerSize = isSmall ? "text-[12px]" : "text-[14px]";
+  const timerSize = isSmall ? "text-xs" : "text-sm";
   // O contador é um dígito só na maioria das vezes: pode ser maior que o timer
   // sem estourar a caixa, e é o que o torna legível de relance.
-  const countSize = isSmall ? "text-[15px]" : "text-[17px]";
+  const countSize = "text-base";
 
   // Disco atrás do ícone/timer: é ele que abre o vazio entre as duas crescentes,
   // dispensando uma camada de recorte. Só existe quando há cor para separar —

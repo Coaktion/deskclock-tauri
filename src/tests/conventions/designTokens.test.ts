@@ -74,6 +74,10 @@ const LIGHT_MODE_TOKENS = [
  * `--default-font-family` aplicado no `html`, então derrubá-lo não apaga um
  * utilitário — devolve o app inteiro para a stack de sistema, que é o estado
  * de antes desta migração e não se anuncia como erro.
+ *
+ * O `--text-overline` e seus dois modificadores são o quinto degrau da escala:
+ * sem eles, `text-overline` deixa de dimensionar e o rótulo de seção volta ao
+ * tamanho herdado, sem nada quebrar.
  */
 const TYPOGRAPHY_TOKENS = [
   "--font-sans",
@@ -81,6 +85,9 @@ const TYPOGRAPHY_TOKENS = [
   "--font-weight-normal",
   "--font-weight-medium",
   "--font-weight-semibold",
+  "--text-overline",
+  "--text-overline--font-weight",
+  "--text-overline--letter-spacing",
 ];
 
 /** Cada família tem duas faces: latin e latin-ext. */
@@ -134,7 +141,7 @@ describe("convenção: tokens semânticos do design system", () => {
     expect(declaredIn(body, THEME_TOKENS)).toEqual(THEME_TOKENS);
   });
 
-  it("declara as duas famílias e os três pesos", () => {
+  it("declara as duas famílias, os três pesos e o overline", () => {
     const body = blockBody(css, "@theme static {");
     expect(declaredIn(body, TYPOGRAPHY_TOKENS)).toEqual(TYPOGRAPHY_TOKENS);
   });

@@ -23,14 +23,14 @@ import {
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
-import { positionPopupNearCompact } from "@shared/utils/windowPosition";
+import { positionPopupNearCompact, POPUP_SIZE } from "@shared/utils/windowPosition";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { PopupOverlayContent } from "./PopupOverlayContent";
 import { MeetingPromptView } from "./MeetingPromptView";
 import { useMeetingPrompt } from "./useMeetingPrompt";
 
-const POPUP_W = 288;
-const POPUP_H_ESTIMATE = 380;
+const POPUP_W = POPUP_SIZE.width;
+const POPUP_H_ESTIMATE = POPUP_SIZE.height;
 
 const appWindow = getCurrentWindow();
 

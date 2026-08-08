@@ -25,11 +25,7 @@ export function SectionCard({
     <div className={`bg-surface border border-border-subtle rounded-card ${className}`}>
       {(title || description) && (
         <div className="px-4 pt-3 pb-2">
-          {title && (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-fg-muted">
-              {title}
-            </p>
-          )}
+          {title && <p className="text-overline uppercase text-fg-muted">{title}</p>}
           {description && (
             <p className="text-xs text-fg-muted mt-1 leading-relaxed">{description}</p>
           )}

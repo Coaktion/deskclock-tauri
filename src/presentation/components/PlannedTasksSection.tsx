@@ -35,7 +35,7 @@ export function PlannedTasksSection({
         {onNavigatePlanning && (
           <button
             onClick={onNavigatePlanning}
-            className="text-[10px] text-gray-600 hover:text-blue-400 transition-colors"
+            className="text-xs text-gray-600 hover:text-blue-400 transition-colors"
           >
             Ver semana →
           </button>
@@ -79,7 +79,7 @@ export function PlannedTasksSection({
                   {task.name || "(sem nome)"}
                 </p>
                 {subParts.length > 0 && (
-                  <p className="text-[10px] text-gray-500 truncate leading-snug">
+                  <p className="text-xs text-gray-500 truncate leading-snug">
                     {subParts.join(" · ")}
                   </p>
                 )}

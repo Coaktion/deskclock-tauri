@@ -159,11 +159,11 @@ export function WorkspacesPanel() {
 
                 {!isEditing &&
                   (isActive ? (
-                    <span className="text-[10px] uppercase tracking-wide text-fg-muted">ativo</span>
+                    <span className="text-overline uppercase text-fg-muted">ativo</span>
                   ) : (
                     <button
                       onClick={() => void request(w.id)}
-                      className="text-[10px] uppercase tracking-wide text-fg-muted hover:text-accent-text transition-colors"
+                      className="text-overline uppercase text-fg-muted hover:text-accent-text transition-colors"
                     >
                       tornar ativo
                     </button>
@@ -223,7 +223,7 @@ export function WorkspacesPanel() {
             Há uma tarefa em execução. Parar e trocar para{" "}
             <span className="text-fg font-medium">{pending.name}</span>?
           </p>
-          <span className="text-[10px] text-fg-muted">Marcar a tarefa como:</span>
+          <span className="text-xs text-fg-muted">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => void confirm(true)}

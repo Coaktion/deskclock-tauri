@@ -130,7 +130,7 @@ export function ZendeskIntegrationCard() {
           <button
             onClick={() => startTour()}
             title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
+            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-xs font-medium flex items-center justify-center"
           >
             ?
           </button>
@@ -177,7 +177,7 @@ export function ZendeskIntegrationCard() {
                 <li>
                   Em <span className="text-gray-300 font-medium">URLs de redirecionamento</span>,
                   adicione exatamente:{" "}
-                  <code className="text-blue-400 font-mono text-[11px]">
+                  <code className="text-blue-400 font-mono text-xs">
                     http://localhost:27422/callback
                   </code>
                 </li>

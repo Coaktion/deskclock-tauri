@@ -24,7 +24,7 @@ export function ImportCard({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <span className="text-xs font-medium text-gray-300">{title}</span>
-          <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
         </div>
         {action}
       </div>
@@ -51,7 +51,7 @@ export function ImportActionButton({
       onClick={onClick}
       disabled={busy || disabled}
       title={title}
-      className="shrink-0 flex items-center gap-1 text-[11px] bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
+      className="shrink-0 flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-2 py-1 rounded transition-colors"
     >
       {busy && <Loader2 size={10} className="animate-spin" />}
       {label}

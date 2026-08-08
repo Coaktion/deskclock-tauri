@@ -119,7 +119,7 @@ export function TaskGroupCard({
 
         <div className="flex-1 min-w-0">
           <span className="text-sm text-gray-100 truncate block">{displayName}</span>
-          <div className="flex gap-2 text-[11px] text-gray-500 mt-0.5">
+          <div className="flex gap-2 text-xs text-gray-500 mt-0.5">
             {project && <span>{project.name}</span>}
             {category && <span>{category.name}</span>}
             {isGroup && <span className="text-gray-600">{tasks.length} registros</span>}

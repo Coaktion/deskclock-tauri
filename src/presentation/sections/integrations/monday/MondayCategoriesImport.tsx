@@ -90,7 +90,7 @@ export function MondayCategoriesImport({
           Leia os catálogos, ou importe os projetos, para carregar os Activity Types.
         </p>
       ) : (
-        <p className="text-[11px] text-gray-500">
+        <p className="text-xs text-gray-500">
           {known} de {labels.length} Activity Type(s) já existem como categoria no destino.
         </p>
       )}

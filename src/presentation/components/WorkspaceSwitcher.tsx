@@ -62,7 +62,7 @@ export function WorkspaceSwitcher() {
       >
         {active ? <WorkspaceDot color={active.color} size={10} /> : <Layers size={14} />}
         <span
-          className={`text-[9px] font-medium leading-none truncate max-w-full ${
+          className={`text-xs font-medium leading-none truncate max-w-full ${
             open ? classes.text : "text-gray-500"
           }`}
         >
@@ -72,7 +72,7 @@ export function WorkspaceSwitcher() {
 
       {open && (
         <div className="absolute left-full top-0 ml-1 z-50 w-52 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-1">
-          <p className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-gray-600">Workspace</p>
+          <p className="px-3 py-1.5 text-overline uppercase text-gray-600">Workspace</p>
           {workspaces.map((w) => (
             <button
               key={w.id}
@@ -101,7 +101,7 @@ export function WorkspaceSwitcher() {
               <X size={13} />
             </button>
           </div>
-          <span className="block text-[10px] text-gray-500 mb-1.5">Marcar a tarefa como:</span>
+          <span className="block text-xs text-gray-500 mb-1.5">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => void confirm(true)}

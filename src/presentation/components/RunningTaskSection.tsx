@@ -192,7 +192,7 @@ export function RunningTaskSection({
         </div>
 
         <div className="flex items-center gap-1 flex-shrink-0">
-          <span className="text-lg font-mono tabular-nums text-gray-100 mr-2">
+          <span className="text-2xl font-mono tabular-nums text-gray-100 mr-2">
             {formatHHMMSS(seconds)}
           </span>
           {confirmingStop ? (

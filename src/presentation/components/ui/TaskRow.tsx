@@ -41,7 +41,7 @@ export function TaskRow({
   return (
     <div
       onClick={onClick}
-      className={`group relative flex items-center gap-2 px-3 py-2 rounded-control transition-colors ${
+      className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-control transition-colors ${
         selected ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-raised"
       } ${onClick ? "cursor-pointer" : ""}`}
     >

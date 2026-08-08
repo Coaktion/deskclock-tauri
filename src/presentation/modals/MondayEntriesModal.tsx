@@ -205,7 +205,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
           {dayGroups.map((group) => (
             <div key={group.dayISO}>
               <div className="flex items-center justify-between px-5 py-2.5 bg-gray-900/60 border-b border-gray-800 sticky top-0 z-10">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
+                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
                   {group.dayISO ? formatHistoryDayHeader(group.dayISO) : "Sem data"}
                 </span>
                 <span className="text-xs font-mono tabular-nums text-gray-500">
@@ -270,7 +270,7 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
       <div className="min-w-0">
         <p className="text-sm text-gray-100 truncate">{entry.name}</p>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          <span className="text-[11px] text-gray-500 truncate">{entry.boardName}</span>
+          <span className="text-xs text-gray-500 truncate">{entry.boardName}</span>
           {/* A `key` é o campo, não o rótulo: os dois catálogos saem do mesmo
               board de Report e têm rótulos em comum ("Development" é Activity
               Type *e* etapa), então keyar pelo texto colidia sempre que a
@@ -283,10 +283,7 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
           )
             .filter(([, label]) => label.length > 0)
             .map(([field, label]) => (
-              <span
-                key={field}
-                className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-[10px]"
-              >
+              <span key={field} className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-xs">
                 {label}
               </span>
             ))}
@@ -304,7 +301,7 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
       >
         {confirming || deleting ? (
           <>
-            <span className="text-[11px] text-gray-400 mr-1">Excluir do Monday?</span>
+            <span className="text-xs text-gray-400 mr-1">Excluir do Monday?</span>
             <button
               onClick={() => setConfirming(false)}
               disabled={deleting}
@@ -478,7 +475,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
         </div>
       </div>
 
-      <p className="text-[11px] text-gray-600">
+      <p className="text-xs text-gray-600">
         As datas vêm da tarefa no DeskClock e não são editáveis aqui — quem manda nas horas é o
         DeskClock.
       </p>

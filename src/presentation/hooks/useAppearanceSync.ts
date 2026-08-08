@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { ConfigContextValue } from "@shared/types/appConfig";
-import { applyFontSize } from "@shared/utils/fontSize";
 import { applyAppearance, readAppliedAppearance, resolveAppearance } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 
@@ -14,7 +13,6 @@ import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/
 export function useAppearanceSync(config: ConfigContextValue) {
   useEffect(() => {
     if (!config.isLoaded) return;
-    applyFontSize(config.get("fontSize"));
     applyAppearance(
       resolveAppearance({
         mode: config.get("mode"),
@@ -28,8 +26,7 @@ export function useAppearanceSync(config: ConfigContextValue) {
     const unlisten = listen<OverlayConfigChangedPayload>(
       OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED,
       ({ payload }) => {
-        if (payload.key === "fontSize") applyFontSize(payload.value as string);
-        else if (payload.key === "mode" || payload.key === "accent") {
+        if (payload.key === "mode" || payload.key === "accent") {
           applyAppearance(
             resolveAppearance({ ...readAppliedAppearance(), [payload.key]: payload.value })
           );

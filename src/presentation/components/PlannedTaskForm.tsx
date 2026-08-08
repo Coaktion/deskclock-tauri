@@ -71,7 +71,7 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 
 /** Título das seções que quebram a coluna em blocos (Ações, Agendamento). */
 const sectionLabelClass =
-  "text-[11px] font-medium text-gray-500 uppercase tracking-wide pt-1 border-t border-gray-800";
+  "text-xs font-medium text-gray-500 uppercase tracking-wide pt-1 border-t border-gray-800";
 
 interface PlannedTaskFormProps {
   projects: Project[];
@@ -287,7 +287,7 @@ export function PlannedTaskForm({
                 key={type}
                 type="button"
                 onClick={() => set("scheduleType", type)}
-                className={`flex-1 py-1 text-[11px] rounded-md transition-colors ${
+                className={`flex-1 py-1 text-xs rounded-md transition-colors ${
                   form.scheduleType === type
                     ? "bg-blue-500 text-white"
                     : "bg-transparent text-gray-400 hover:text-gray-200"
@@ -326,7 +326,7 @@ export function PlannedTaskForm({
                   key={value}
                   type="button"
                   onClick={() => toggleDay(value)}
-                  className={`flex-1 py-1.5 text-[11px] rounded-full border transition-colors ${
+                  className={`flex-1 py-1.5 text-xs rounded-full border transition-colors ${
                     form.recurringDays.includes(value)
                       ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
                       : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"

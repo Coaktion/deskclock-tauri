@@ -461,7 +461,7 @@ export function RetroactivePage() {
           {plannedTasks.length > 0 && (
             <div className="shrink-0">
               <div className="flex items-center gap-3 px-5 pt-2.5 pb-1">
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                   Planejadas para este dia
                 </p>
                 {/* Com uma só, o ▶ da própria linha já é este botão — o lote

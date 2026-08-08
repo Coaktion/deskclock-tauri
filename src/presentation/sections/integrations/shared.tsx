@@ -62,7 +62,7 @@ export function DeskclockWorkspaceRow({
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <span className="text-sm text-gray-300">Workspace DeskClock</span>
-          <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
+          <p className="text-xs text-gray-500 mt-0.5">{hint}</p>
         </div>
         <select
           value={selected}
@@ -93,7 +93,7 @@ export function DeskclockWorkspaceRow({
 export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
   return (
     <p
-      className={`flex items-start gap-1.5 mt-2 text-[11px] leading-relaxed ${
+      className={`flex items-start gap-1.5 mt-2 text-xs leading-relaxed ${
         feedback.ok ? "text-green-400" : "text-rose-400"
       }`}
     >
@@ -240,7 +240,7 @@ export function IntegrationTile({
             {subBadges.map((b) => (
               <span
                 key={b.label}
-                className={`text-[10.5px] px-1.5 py-0.5 rounded border ${
+                className={`text-xs px-1.5 py-0.5 rounded border ${
                   b.active
                     ? "bg-green-500/10 border-green-500/20 text-green-400"
                     : "bg-gray-800/50 border-gray-700/50 text-gray-600"

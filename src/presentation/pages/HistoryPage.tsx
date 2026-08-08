@@ -25,7 +25,7 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
 };
 
 const cardClass = "bg-surface border border-border-subtle rounded-card";
-const eyebrowClass = "text-[10px] font-semibold uppercase tracking-widest text-fg-muted";
+const eyebrowClass = "text-overline uppercase text-fg-muted";
 
 function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
   const parseMinutes = (iso: string) => {
@@ -51,7 +51,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
           {projects
             .filter((p) => tasks.some((t) => t.projectId === p.id))
             .map((p) => (
-              <span key={p.id} className="flex items-center gap-1 text-[11px] text-fg-secondary">
+              <span key={p.id} className="flex items-center gap-1 text-xs text-fg-secondary">
                 <span
                   className="inline-block w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: getProjectColor(p.id) }}
@@ -91,7 +91,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
       </div>
       <div className="flex justify-between mt-1">
         {[6, 8, 10, 12, 14, 16, 18, 20, 22].map((h) => (
-          <span key={h} className="text-[9px] font-mono tabular-nums text-fg-muted">
+          <span key={h} className="text-xs font-mono tabular-nums text-fg-muted">
             {String(h).padStart(2, "0")}h
           </span>
         ))}
@@ -336,7 +336,7 @@ export function HistoryPage() {
         />
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-3">
         {searched && allTasks.length > 0 && (
           <div className="grid grid-cols-[1.5fr_1fr] gap-3">
             <Timeline tasks={allTasks} projects={projects} />
@@ -424,7 +424,7 @@ export function HistoryPage() {
                 {/* Sem `overflow-hidden` no cartão: ele viraria o scrollport do
                     `sticky` abaixo, que então nunca sairia do lugar. */}
                 <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-surface border-b border-border-subtle rounded-t-card">
-                  <span className="text-[11px] font-semibold uppercase tracking-widest text-fg-secondary">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
                     {formatHistoryDayHeader(group.dateISO)}
                   </span>
                   <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ export function HistoryPage() {
                             return next;
                           });
                         }}
-                        className="text-[10px] text-fg-muted hover:text-fg transition-colors"
+                        className="text-xs text-fg-muted hover:text-fg transition-colors"
                       >
                         {group.tasks.every((t) => selectedIds.has(t.id))
                           ? "Desmarcar"

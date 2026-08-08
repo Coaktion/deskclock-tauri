@@ -348,9 +348,7 @@ export function CommandPalette({
 
         {groups.map(([groupLabel, items]) => (
           <div key={groupLabel}>
-            <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-              {groupLabel}
-            </div>
+            <div className="px-4 py-1.5 text-overline uppercase text-gray-500">{groupLabel}</div>
             {items.map((item) => {
               const idx = flatItems.indexOf(item);
               const isFocused = idx === focusedIndex;
@@ -379,7 +377,7 @@ export function CommandPalette({
                     </span>
                   )}
                   {item.kbd && (
-                    <kbd className="text-[10px] font-mono text-gray-600 px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded">
+                    <kbd className="text-xs font-mono text-gray-600 px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded">
                       {item.kbd}
                     </kbd>
                   )}
@@ -391,7 +389,7 @@ export function CommandPalette({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-gray-800 flex items-center gap-4 text-[10.5px] text-gray-600">
+      <div className="px-4 py-2 border-t border-gray-800 flex items-center gap-4 text-xs text-gray-600">
         <span>
           <kbd className="font-mono">↑↓</kbd> navegar
         </span>

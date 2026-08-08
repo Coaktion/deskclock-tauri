@@ -50,9 +50,7 @@ export function MondayAutoImportSection() {
       icon={<DownloadCloud size={15} />}
       title="Importação automática de itens"
       badge={
-        enabled ? (
-          <span className="ml-1 text-[10.5px] text-blue-400 font-medium">Ativa</span>
-        ) : undefined
+        enabled ? <span className="ml-1 text-xs text-blue-400 font-medium">Ativa</span> : undefined
       }
     >
       <Row label="Ativar">
@@ -64,7 +62,7 @@ export function MondayAutoImportSection() {
           }}
         />
       </Row>
-      <p className="text-[11px] text-gray-500 leading-relaxed py-2.5">
+      <p className="text-xs text-gray-500 leading-relaxed py-2.5">
         Ao abrir o app e a cada 4 horas, importa as suas tarefas da semana nos boards vinculados
         como planejadas — para trazer alguma novidade na hora, use &quot;Buscar itens agora&quot;.
         Item já importado não vira tarefa de novo: o que mudar no Monday é atualizado aqui,

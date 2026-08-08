@@ -100,7 +100,7 @@ export function PlannedTaskItem({
             {/* O billable era duas cores sem legenda — barra à esquerda e ponto —, e
                 cor sozinha não diz o que significa. O chip escreve. */}
             <span
-              className={`shrink-0 px-1.5 py-0.5 text-[10px] font-medium leading-none rounded-full border ${
+              className={`shrink-0 px-1.5 py-0.5 text-xs font-medium leading-none rounded-full border ${
                 task.billable
                   ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                   : "bg-gray-800 border-gray-700 text-gray-500"
@@ -109,7 +109,7 @@ export function PlannedTaskItem({
               {task.billable ? "Billable" : "Non-billable"}
             </span>
             {task.scheduleType === "recurring" && (
-              <span className="shrink-0 flex items-center gap-0.5 text-[10px] text-blue-400/70 leading-none">
+              <span className="shrink-0 flex items-center gap-0.5 text-xs text-blue-400/70 leading-none">
                 <RefreshCw size={9} />
               </span>
             )}
@@ -123,7 +123,7 @@ export function PlannedTaskItem({
             )}
           </div>
           {(project || category || task.actions.length > 0) && (
-            <p className="text-[11px] text-gray-500 truncate mt-0.5 flex items-center gap-1.5 leading-snug">
+            <p className="text-xs text-gray-500 truncate mt-0.5 flex items-center gap-1.5 leading-snug">
               {[project?.name, category?.name].filter(Boolean).join(" · ")}
               {task.scheduleType === "period" && task.periodEnd && (
                 <span className="text-gray-600">até {task.periodEnd}</span>

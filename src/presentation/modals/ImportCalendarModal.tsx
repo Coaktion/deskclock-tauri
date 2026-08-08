@@ -285,7 +285,7 @@ function EventRow({
             {isDeduped && (
               <span
                 title="Mesma tarefa recorrente já incluída — não criará tarefa separada"
-                className="px-1 py-0.5 text-[10px] leading-none rounded bg-gray-700 text-gray-400 shrink-0"
+                className="px-1 py-0.5 text-xs leading-none rounded bg-gray-700 text-gray-400 shrink-0"
               >
                 recorrente
               </span>
@@ -293,7 +293,7 @@ function EventRow({
             {isDuplicateOfExisting && (
               <span
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-[10px] leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
+                className="flex items-center gap-0.5 px-1 py-0.5 text-xs leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
               >
                 <AlertTriangle size={9} />
                 já existe
@@ -695,7 +695,7 @@ export function ImportCalendarModal({
           <div className="flex flex-1 overflow-hidden">
             {/* Sidebar — lista de semanas */}
             <div className="w-48 shrink-0 border-r border-gray-800 overflow-y-auto bg-gray-900/50 flex flex-col">
-              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 border-b border-gray-800">
+              <div className="px-3 py-2 text-overline uppercase text-gray-600 border-b border-gray-800">
                 Semanas
               </div>
               {allWeekKeys.map((weekKey) => {
@@ -720,19 +720,17 @@ export function ImportCalendarModal({
                       >
                         {weekRangeLabel(weekKey)}
                       </div>
-                      <div className="text-[10px] text-gray-600 mt-0.5">seg a sex</div>
+                      <div className="text-xs text-gray-600 mt-0.5">seg a sex</div>
                     </div>
                     <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
                       <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        className={`text-xs px-1.5 py-0.5 rounded-full ${
                           isActive ? "bg-blue-900/50 text-blue-400" : "bg-gray-800 text-gray-600"
                         }`}
                       >
                         {count} ev.
                       </span>
-                      {selCount > 0 && (
-                        <span className="text-[10px] text-green-500">{selCount} ✓</span>
-                      )}
+                      {selCount > 0 && <span className="text-xs text-green-500">{selCount} ✓</span>}
                     </div>
                   </button>
                 );

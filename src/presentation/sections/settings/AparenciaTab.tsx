@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { emit } from "@tauri-apps/api/event";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { applyFontSize } from "@shared/utils/fontSize";
 import { applyAppearance, resolveAppearance, MODES, ACCENTS } from "@shared/utils/theme";
 import type { Appearance, Mode, Accent } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
@@ -23,12 +22,10 @@ const ACCENT_LABELS: Record<Accent, string> = {
 export function AparenciaTab() {
   const config = useAppConfig();
 
-  const [fontSize, setFontSize] = useState<"P" | "M" | "G" | "GG">("M");
   const [appearance, setAppearance] = useState<Appearance>({ mode: "escuro", accent: "azul" });
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    setFontSize(config.get("fontSize"));
     setAppearance(
       resolveAppearance({
         mode: config.get("mode"),
@@ -46,17 +43,6 @@ export function AparenciaTab() {
     await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
       key,
       value,
-    } satisfies OverlayConfigChangedPayload);
-  }
-
-  async function handleFontSize(value: string) {
-    const size = value as "P" | "M" | "G" | "GG";
-    setFontSize(size);
-    applyFontSize(size);
-    await config.set("fontSize", size);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "fontSize",
-      value: size,
     } satisfies OverlayConfigChangedPayload);
   }
 
@@ -78,20 +64,6 @@ export function AparenciaTab() {
           value={appearance.accent}
           options={ACCENTS.map((a) => ({ value: a, label: ACCENT_LABELS[a] }))}
           onChange={(v) => handleAppearance("accent", v as Accent)}
-        />
-      </SectionRow>
-      <SectionRow>
-        <SelectRow
-          label="Tamanho da fonte"
-          description="Escala o texto em toda a interface"
-          value={fontSize}
-          options={[
-            { value: "P", label: "P — Pequeno" },
-            { value: "M", label: "M — Médio (padrão)" },
-            { value: "G", label: "G — Grande" },
-            { value: "GG", label: "GG — Extra grande" },
-          ]}
-          onChange={handleFontSize}
         />
       </SectionRow>
     </SectionCard>

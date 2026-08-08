@@ -123,7 +123,7 @@ export function OmniboxIdle({
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
-          className="flex-1 bg-transparent text-[15px] font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
+          className="flex-1 bg-transparent text-base font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
           autoComplete="off"
         />
       </div>
@@ -221,9 +221,7 @@ export function OmniboxIdle({
                 <span className="flex-1 text-sm truncate">{s.name}</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {s.isPlanned && (
-                    <span className="text-[10px] text-blue-400 font-medium uppercase tracking-wide">
-                      planejada
-                    </span>
+                    <span className="text-overline uppercase text-blue-400">planejada</span>
                   )}
                   {s.projectName && (
                     <span className="text-xs text-gray-500 truncate max-w-[80px]">
