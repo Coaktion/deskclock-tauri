@@ -10,7 +10,7 @@ import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
-import { PageHeader, TaskRow } from "@presentation/components/ui";
+import { Button, IconButton, PageHeader, TaskRow } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -104,20 +104,13 @@ function DayTaskRow({
       actions={
         selectMode ? undefined : (
           <>
-            <button
-              onClick={() => onEdit(task)}
-              title="Editar"
-              className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              onClick={() => onDelete(task.id)}
+            <IconButton icon={<Pencil size={14} />} title="Editar" onClick={() => onEdit(task)} />
+            <IconButton
+              icon={<Trash2 size={14} />}
               title="Excluir"
-              className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
-            >
-              <Trash2 size={14} />
-            </button>
+              variant="danger"
+              onClick={() => onDelete(task.id)}
+            />
           </>
         )
       }
@@ -382,25 +375,27 @@ export function RetroactivePage() {
         onStartTour={startTour}
         context={
           <div className="flex items-center gap-3 min-w-0">
-            <button
+            <IconButton
+              icon={<ChevronLeft size={16} />}
+              title="Dia anterior"
+              variant="neutral"
+              size="sm"
               onClick={() => goToDate(addDaysISO(selectedDate, -1))}
-              className="text-fg-muted hover:text-fg p-1 rounded-control hover:bg-raised transition-colors"
-            >
-              <ChevronLeft size={16} />
-            </button>
+            />
             <DatePickerInput
               value={selectedDate}
               onChange={goToDate}
               className="text-sm font-medium text-fg w-30"
               maxDate={new Date()}
             />
-            <button
+            <IconButton
+              icon={<ChevronRight size={16} />}
+              title="Dia seguinte"
+              variant="neutral"
+              size="sm"
               onClick={() => goToDate(addDaysISO(selectedDate, 1))}
               disabled={selectedDate >= today}
-              className="text-fg-muted hover:text-fg p-1 rounded-control hover:bg-raised transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight size={16} />
-            </button>
+            />
           </div>
         }
         actions={
@@ -535,45 +530,39 @@ export function RetroactivePage() {
               <div className="shrink-0 flex items-center justify-end gap-3 px-5 py-2 border-b border-border-subtle">
                 {selectMode ? (
                   <>
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => {
                         const allSelected = selectedIds.size >= tasks.length;
                         setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
                       }}
-                      className="text-xs text-fg-muted hover:text-fg transition-colors"
                     >
                       {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
-                    </button>
+                    </Button>
                     {workspaces.length > 1 && (
-                      <button
+                      <Button
+                        variant="ghost"
                         onClick={() => setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))}
                         disabled={selectedIds.size === 0}
-                        className="text-xs text-fg-muted hover:text-fg disabled:text-fg-muted/50 disabled:cursor-not-allowed transition-colors"
                       >
                         Mover para workspace
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
+                      variant="danger"
                       onClick={() => void handleBulkDelete()}
                       disabled={selectedIds.size === 0}
-                      className="text-xs text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-                    </button>
-                    <button
-                      onClick={exitSelectMode}
-                      className="text-xs text-fg-muted hover:text-fg transition-colors"
-                    >
+                    </Button>
+                    <Button variant="ghost" onClick={exitSelectMode}>
                       Cancelar
-                    </button>
+                    </Button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => setSelectMode(true)}
-                    className="text-xs px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setSelectMode(true)}>
                     Selecionar tarefas
-                  </button>
+                  </Button>
                 )}
               </div>
             )}

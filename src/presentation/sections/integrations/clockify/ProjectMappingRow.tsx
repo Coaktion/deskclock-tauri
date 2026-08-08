@@ -1,4 +1,5 @@
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { IconButton } from "@presentation/components/ui";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -41,16 +42,16 @@ export function ProjectMappingRow({
           />
         </div>
         {mapped?.clockifyProjectId && (
-          <button
+          <IconButton
+            icon={<X size={14} />}
+            title="Remover mapeamento"
+            variant="neutral"
+            size="sm"
             onClick={() => {
               setInputValue("");
               onUpdate(project.id, "");
             }}
-            title="Remover mapeamento"
-            className="text-fg-muted hover:text-fg transition-colors shrink-0"
-          >
-            <X size={14} />
-          </button>
+          />
         )}
       </div>
     </div>

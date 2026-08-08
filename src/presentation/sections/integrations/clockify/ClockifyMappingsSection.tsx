@@ -1,4 +1,4 @@
-import { integrationButtonClass } from "../shared";
+import { Button, IconButton } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -7,7 +7,7 @@ import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import { notifyCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { showToast } from "@shared/utils/toast";
 import type { ClockifyCategoryMapping, ClockifyProjectMapping } from "@shared/types/clockifyConfig";
-import { ChevronDown, ChevronRight, ListChecks, Loader2, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight, ListChecks, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProjectMappingRow } from "./ProjectMappingRow";
 
@@ -303,22 +303,19 @@ export function ClockifyMappingsSection({
                     Importar cria projetos no DeskClock e os vincula automaticamente.
                   </p>
                   <div className="flex items-center gap-2 shrink-0 ml-3">
-                    <button
+                    <IconButton
+                      icon={
+                        <RefreshCw size={14} className={loadingProjects ? "animate-spin" : ""} />
+                      }
+                      title="Atualizar lista"
+                      variant="neutral"
+                      size="sm"
                       onClick={() => fetchProjects()}
                       disabled={loadingProjects}
-                      className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
-                      title="Atualizar lista"
-                    >
-                      <RefreshCw size={14} className={loadingProjects ? "animate-spin" : ""} />
-                    </button>
-                    <button
-                      onClick={handleImportProjects}
-                      disabled={importingProjects}
-                      className={`${integrationButtonClass}`}
-                    >
-                      {importingProjects && <Loader2 size={14} className="animate-spin" />}
+                    />
+                    <Button onClick={handleImportProjects} loading={importingProjects}>
                       Importar do Clockify
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {projects.length === 0 ? (
@@ -362,22 +359,17 @@ export function ClockifyMappingsSection({
                     automaticamente.
                   </p>
                   <div className="flex items-center gap-2 shrink-0 ml-3">
-                    <button
+                    <IconButton
+                      icon={<RefreshCw size={14} className={loadingTags ? "animate-spin" : ""} />}
+                      title="Atualizar lista"
+                      variant="neutral"
+                      size="sm"
                       onClick={() => fetchTags()}
                       disabled={loadingTags}
-                      className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
-                      title="Atualizar lista"
-                    >
-                      <RefreshCw size={14} className={loadingTags ? "animate-spin" : ""} />
-                    </button>
-                    <button
-                      onClick={handleImportTags}
-                      disabled={importingTags}
-                      className={`${integrationButtonClass}`}
-                    >
-                      {importingTags && <Loader2 size={14} className="animate-spin" />}
+                    />
+                    <Button onClick={handleImportTags} loading={importingTags}>
                       Importar do Clockify
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {categories.length === 0 ? (

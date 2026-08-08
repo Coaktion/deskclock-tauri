@@ -43,7 +43,6 @@ import {
   ChevronRight,
   GripVertical,
   Info,
-  Loader2,
   LogIn,
   LogOut,
   RefreshCw,
@@ -58,9 +57,8 @@ import {
   StatusBadge,
   SubSection,
   SyncFeedbackLine,
-  integrationButtonClass,
 } from "./shared";
-import { Toggle } from "@presentation/components/ui";
+import { Button, Toggle } from "@presentation/components/ui";
 import { GoogleLogo } from "./google/GoogleLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
@@ -437,23 +435,19 @@ function SheetsSection({
                       Último envio:{" "}
                       <span className="text-fg-secondary">{formatLastSync(lastSyncTs)}</span>
                     </span>
-                    <button
+                    <Button
                       onClick={handleSyncNow}
-                      disabled={syncing || autoSyncing}
+                      loading={syncing || autoSyncing}
                       title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-                      className={`${integrationButtonClass} shrink-0`}
+                      icon={<RefreshCw size={14} />}
+                      className="shrink-0"
                     >
-                      {syncing || autoSyncing ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : (
-                        <RefreshCw size={14} />
-                      )}
                       {autoSyncing
                         ? "Sincronização automática…"
                         : syncing
                           ? "Sincronizando…"
                           : "Sincronizar agora"}
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
@@ -464,15 +458,15 @@ function SheetsSection({
 
         {/* Envio manual */}
         <div className="pt-2.5">
-          <button
+          <Button
             onClick={() => openModal("sheets-send")}
-            disabled={autoSyncing}
+            loading={autoSyncing}
             title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-            className={`${integrationButtonClass} w-full`}
+            icon={<Send size={14} />}
+            className="w-full"
           >
-            {autoSyncing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             {autoSyncing ? "Sincronização automática em andamento…" : "Enviar tarefas manualmente…"}
-          </button>
+          </Button>
         </div>
       </div>
     </>
@@ -528,13 +522,13 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
         <p className="text-xs text-fg-muted">
           Importe eventos do Google Agenda como tarefas planejadas.
         </p>
-        <button
+        <Button
           onClick={() => openModal("calendar-import")}
-          className={`${integrationButtonClass} shrink-0 ml-3`}
+          icon={<CalendarDays size={14} />}
+          className="shrink-0 ml-3"
         >
-          <CalendarDays size={14} />
           Importar eventos
-        </button>
+        </Button>
       </div>
       <div className="border-t border-border-subtle">
         <Row label="Rastrear reuniões automaticamente">
@@ -554,10 +548,13 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
         </p>
         {autoTracking && (
           <div className="pb-2.5">
-            <button onClick={trigger} disabled={searching} className={`${integrationButtonClass}`}>
-              <RefreshCw size={14} className={searching ? "animate-spin" : ""} />
+            <Button
+              onClick={trigger}
+              disabled={searching}
+              icon={<RefreshCw size={14} className={searching ? "animate-spin" : ""} />}
+            >
               {searching ? "Buscando…" : "Buscar eventos agora"}
-            </button>
+            </Button>
             {feedback && !searching && <SyncFeedbackLine feedback={feedback} />}
           </div>
         )}
@@ -653,19 +650,18 @@ export function GoogleIntegrationCard() {
             ?
           </button>
           {connected ? (
-            <button onClick={handleDisconnect} className={`${integrationButtonClass}`}>
-              <LogOut size={14} />
+            <Button onClick={handleDisconnect} icon={<LogOut size={14} />}>
               Desconectar
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="primary"
               onClick={handleConnect}
-              disabled={loading}
-              className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-chip transition"
+              loading={loading}
+              icon={<LogIn size={14} />}
             >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <LogIn size={14} />}
               {loading ? "Aguardando…" : "Conectar com Google"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

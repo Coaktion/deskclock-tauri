@@ -4,7 +4,8 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useSyncNowButton, type SyncFeedback } from "@presentation/hooks/useSyncNowButton";
 import { OVERLAY_EVENTS, type MondayImportSyncResultPayload } from "@shared/types/overlayEvents";
 import { Toggle } from "@presentation/components/ui";
-import { Row, SubSection, SyncFeedbackLine, integrationButtonClass } from "../shared";
+import { Button } from "@presentation/components/ui";
+import { Row, SubSection, SyncFeedbackLine } from "../shared";
 
 /** Payload do rastreador → frase mostrada abaixo do botão. */
 export function describeSyncResult(payload: MondayImportSyncResultPayload): SyncFeedback {
@@ -74,10 +75,13 @@ export function MondayAutoImportSection() {
       </p>
       {enabled && (
         <div className="pb-2.5">
-          <button onClick={trigger} disabled={searching} className={`${integrationButtonClass}`}>
-            <RefreshCw size={14} className={searching ? "animate-spin" : ""} />
+          <Button
+            onClick={trigger}
+            disabled={searching}
+            icon={<RefreshCw size={14} className={searching ? "animate-spin" : ""} />}
+          >
             {searching ? "Buscando…" : "Buscar itens agora"}
-          </button>
+          </Button>
           {feedback && !searching && <SyncFeedbackLine feedback={feedback} />}
         </div>
       )}

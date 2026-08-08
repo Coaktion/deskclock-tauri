@@ -6,7 +6,15 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { FilterPill, KpiCard, PageHeader, SearchInput, TaskRow } from "@presentation/components/ui";
+import {
+  Button,
+  FilterPill,
+  IconButton,
+  KpiCard,
+  PageHeader,
+  SearchInput,
+  TaskRow,
+} from "@presentation/components/ui";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
@@ -231,13 +239,13 @@ export function HistoryPage() {
               <Filter size={14} />
               Filtros
             </button>
-            <button
+            <Button
+              variant="outline"
               onClick={() => setExportOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-transparent border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
+              icon={<FileDown size={14} />}
             >
-              <FileDown size={14} />
               Exportar
-            </button>
+            </Button>
           </>
         }
       />
@@ -378,44 +386,38 @@ export function HistoryPage() {
               </span>
               {selectMode ? (
                 <div className="flex items-center gap-3">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() =>
                       setSelectedIds(allSelected ? new Set() : new Set(allTasks.map((t) => t.id)))
                     }
-                    className="text-xs text-fg-muted hover:text-fg transition-colors"
                   >
                     {allSelected ? "Desmarcar todas" : "Selecionar todas"}
-                  </button>
+                  </Button>
                   {workspaces.length > 1 && (
-                    <button
+                    <Button
+                      variant="ghost"
                       onClick={() => setMovingTasks(allTasks.filter((t) => selectedIds.has(t.id)))}
                       disabled={selectedIds.size === 0}
-                      className="text-xs text-fg-muted hover:text-fg disabled:text-fg-muted/50 disabled:cursor-not-allowed transition-colors"
                     >
                       Mover para workspace
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
+                    variant="danger"
                     onClick={() => void handleBulkDelete()}
                     disabled={selectedIds.size === 0}
-                    className="text-xs text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                   >
                     Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-                  </button>
-                  <button
-                    onClick={exitSelectMode}
-                    className="text-xs text-fg-muted hover:text-fg transition-colors"
-                  >
+                  </Button>
+                  <Button variant="ghost" onClick={exitSelectMode}>
                     Cancelar
-                  </button>
+                  </Button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setSelectMode(true)}
-                  className="text-xs px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
-                >
+                <Button variant="outline" size="sm" onClick={() => setSelectMode(true)}>
                   Selecionar tarefas
-                </button>
+                </Button>
               )}
             </div>
 
@@ -429,7 +431,8 @@ export function HistoryPage() {
                   </span>
                   <div className="flex items-center gap-2">
                     {selectMode && group.tasks.length > 0 && (
-                      <button
+                      <Button
+                        variant="ghost"
                         onClick={() => {
                           const groupIds = group.tasks.map((t) => t.id);
                           const groupSelected = groupIds.every((id) => selectedIds.has(id));
@@ -440,12 +443,11 @@ export function HistoryPage() {
                             return next;
                           });
                         }}
-                        className="text-xs text-fg-muted hover:text-fg transition-colors"
                       >
                         {group.tasks.every((t) => selectedIds.has(t.id))
                           ? "Desmarcar"
                           : "Selecionar"}
-                      </button>
+                      </Button>
                     )}
                     <span className="text-xs font-mono tabular-nums text-fg-muted">
                       {formatHHMM(group.totalSeconds)}
@@ -500,20 +502,17 @@ export function HistoryPage() {
                         actions={
                           selectMode ? undefined : (
                             <>
-                              <button
-                                onClick={() => setEditingTask(task)}
-                                className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                              <IconButton
+                                icon={<Pencil size={14} />}
                                 title="Editar"
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              <button
-                                onClick={() => void remove(task.id)}
-                                className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
+                                onClick={() => setEditingTask(task)}
+                              />
+                              <IconButton
+                                icon={<Trash2 size={14} />}
                                 title="Excluir"
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                                variant="danger"
+                                onClick={() => void remove(task.id)}
+                              />
                             </>
                           )
                         }

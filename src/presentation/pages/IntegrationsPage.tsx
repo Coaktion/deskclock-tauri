@@ -1,7 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTour } from "@presentation/hooks/useTour";
-import { PageHeader } from "@presentation/components/ui";
+import { Button, PageHeader } from "@presentation/components/ui";
 import {
   GoogleIntegrationCard,
   GoogleTile,
@@ -35,13 +35,14 @@ export function IntegrationsPage() {
   }, [hasSeenTour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const backButton = (
-    <button
+    <Button
+      variant="ghost"
       onClick={() => setDetail(null)}
-      className="flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg-secondary transition-colors mb-5"
+      icon={<ArrowLeft size={14} />}
+      className="mb-5"
     >
-      <ArrowLeft size={14} />
       Integrações
-    </button>
+    </Button>
   );
 
   if (detail) {

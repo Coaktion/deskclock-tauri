@@ -1695,15 +1695,39 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   `shared/utils/projectColor.ts` devolve **`var(--color-project-N)`**, não um hex: o retorno vai em
   `style={{ backgroundColor }}`, onde a variável resolve como qualquer outra — e é isso que faz a
   cor do projeto acompanhar o modo claro sem uma segunda tabela.
-- **Primitivos canônicos:** `src/presentation/components/ui/` — `Toggle`, `KpiCard`, `TaskRow`,
-  `FilterPill`, `SearchInput`, `Field` (com `fieldControlClass`), `PageHeader` e `SectionCard`
-  (com `SectionRow`). Cada um existe porque a mesma coisa estava escrita em duas ou três versões
-  que discordavam entre si. **Código novo usa estes**; as versões antigas seguem em pé enquanto as
-  telas não migram, e são apagadas ao migrar o último consumidor de cada uma — foi assim que
-  `components/SearchInput.tsx`, o `ToggleRow`/`SettingsCard`/`CardRow` do `SettingsShared` e o
-  `Toggle` de `integrations/shared` saíram. Ao lado deles ficam dois vocabulários de classe, não
-  componentes: `components/chipStyles.ts` (os chips de atributo do omnibox) e
-  `integrationButtonClass` (o botão secundário das seções de integração, que eram dezesseis à mão).
+- **Primitivos canônicos:** `src/presentation/components/ui/` — `Button`, `IconButton`, `Toggle`,
+  `KpiCard`, `TaskRow`, `FilterPill`, `SearchInput`, `Field` (com `fieldControlClass`),
+  `PageHeader` e `SectionCard` (com `SectionRow`). Cada um existe porque a mesma coisa estava
+  escrita em duas ou três versões que discordavam entre si. **Código novo usa estes**; as versões
+  antigas seguem em pé enquanto as telas não migram, e são apagadas ao migrar o último consumidor
+  de cada uma — foi assim que `components/SearchInput.tsx`, o `ToggleRow`/`SettingsCard`/`CardRow`
+  do `SettingsShared`, o `Toggle` de `integrations/shared` e o `integrationButtonClass` saíram. Ao
+  lado deles fica um vocabulário de classe, não componente: `components/chipStyles.ts` (os chips de
+  atributo do omnibox).
+
+  > **O que o `Button` trava é a caixa, não a cor.** As cinco variantes saíram de uma contagem dos
+  > call sites, não de um catálogo: `primary` (acento cheio), `secondary` (fundo `raised` + borda —
+  > o antigo `integrationButtonClass`), `outline` (só borda), `ghost` (texto) e `danger` (texto em
+  > `danger`). **`secondary` e `outline` são a mesma intenção escrita de dois jeitos**, e estão
+  > preservadas assim de propósito: colapsá-las é decisão de design, e o handoff não a responde.
+  >
+  > Três coisas moram no primitivo porque escritas à mão divergiam em silêncio: `type="button"`
+  > (sem ele, dentro de um `<form>` o botão de alternância vira submit, §8.2), o `font-medium` que
+  > a §8.4 manda em tudo que é clicável, e o par `loading` — spinner **e** `disabled`, que os
+  > botões de envio repetiam separados, deixando clicável o que já estava enviando. O `primary`
+  > leva `border border-transparent` para ter a mesma altura do `secondary` ao lado.
+  >
+  > `ghost` e `danger` **não** recebem o padding do `size`: são texto puro dentro das barras de
+  > seleção, que alinham por `gap` — com caixa, a barra cresceria.
+  >
+  > No `IconButton` a cor é o **destino** da ação, não o repouso: todos nascem `fg-muted` e é o
+  > hover que diz se aquilo edita (`accent`), navega (`neutral`) ou apaga (`danger`). O `title` é
+  > obrigatório porque é o nome acessível — sem texto, é a única coisa que o botão anuncia.
+  >
+  > **Ficam de fora, e não por esquecimento:** o controle segmentado (modo/gatilho do auto-sync),
+  > os cabeçalhos de seção recolhível, o `IntegrationTile`, o `?` redondo do tour e o botão de
+  > acento suave ("Buscar" do Histórico, "Manual" das Configurações). Os quatro primeiros são
+  > outros primitivos; o último é uma sexta variante que só dois call sites pedem.
 
   > **A janela principal abre em 1100×700**, e não mais em 800×620. Foi o que fez as abas caberem
   > no cabeçalho de 56 px: descontados a sidebar (68 px) e o rail (52 px), 800 px deixavam 648 px

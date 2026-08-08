@@ -1,4 +1,4 @@
-import { integrationButtonClass } from "../shared";
+import { Button } from "@presentation/components/ui";
 import { ListChecks, Send } from "lucide-react";
 import { ClockifyAutoSyncSection } from "./ClockifyAutoSyncSection";
 import { ClockifyMappingsSection } from "./ClockifyMappingsSection";
@@ -32,14 +32,12 @@ export function ClockifyConnectedSections({
       />
       <ClockifyAutoSyncSection />
       <div className="border-t border-border-subtle px-4 py-3 flex items-center gap-2">
-        <button onClick={onShowEntriesModal} className={`${integrationButtonClass} flex-1`}>
-          <ListChecks size={14} />
+        <Button onClick={onShowEntriesModal} icon={<ListChecks size={14} />} className="flex-1">
           Gerenciar apontamentos…
-        </button>
-        <button onClick={onShowSendModal} className={`${integrationButtonClass} flex-1`}>
-          <Send size={14} />
+        </Button>
+        <Button onClick={onShowSendModal} icon={<Send size={14} />} className="flex-1">
           Enviar tarefas manualmente…
-        </button>
+        </Button>
       </div>
     </>
   );

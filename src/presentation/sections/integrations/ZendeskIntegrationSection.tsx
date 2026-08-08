@@ -6,16 +6,10 @@ import { useTour } from "@presentation/hooks/useTour";
 import { startZendeskOAuth } from "@infra/integrations/zendesk/ZendeskOAuth";
 import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenManager";
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
-import { CalendarDays, CheckCircle2, Key, Loader2, LogIn, LogOut, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, Key, LogIn, LogOut, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  DeskclockWorkspaceRow,
-  IntegrationTile,
-  Row,
-  StatusBadge,
-  SubSection,
-  integrationButtonClass,
-} from "./shared";
+import { Button, IconButton } from "@presentation/components/ui";
+import { DeskclockWorkspaceRow, IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
 
 /* ── SVG Zendesk ── */
 
@@ -142,19 +136,18 @@ export function ZendeskIntegrationCard() {
             ?
           </button>
           {connected ? (
-            <button onClick={handleDisconnect} className={`${integrationButtonClass}`}>
-              <LogOut size={14} />
+            <Button onClick={handleDisconnect} icon={<LogOut size={14} />}>
               Desconectar
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="primary"
               onClick={handleConnect}
-              disabled={loading}
-              className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-chip transition"
+              loading={loading}
+              icon={<LogIn size={14} />}
             >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <LogIn size={14} />}
               {loading ? "Aguardando…" : "Conectar"}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -245,16 +238,16 @@ export function ZendeskIntegrationCard() {
             <p className="text-xs text-fg-muted mb-3">
               Importe tickets abertos atribuídos a você como tarefas planejadas.
             </p>
-            <button
+            <Button
               onClick={() => {
                 setImportedCount(null);
                 setShowImportModal(true);
               }}
-              className={`${integrationButtonClass} w-full`}
+              icon={<CalendarDays size={14} />}
+              className="w-full"
             >
-              <CalendarDays size={14} />
               Importar tickets…
-            </button>
+            </Button>
 
             {importedCount !== null && (
               <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-billable/10 border border-billable/20 rounded-control">
@@ -263,12 +256,13 @@ export function ZendeskIntegrationCard() {
                   {importedCount} ticket{importedCount !== 1 ? "s" : ""} importado
                   {importedCount !== 1 ? "s" : ""}.
                 </span>
-                <button
+                <IconButton
+                  icon={<X size={14} />}
+                  title="Dispensar aviso"
+                  variant="neutral"
+                  size="sm"
                   onClick={() => setImportedCount(null)}
-                  className="text-fg-muted hover:text-fg transition-colors"
-                >
-                  <X size={14} />
-                </button>
+                />
               </div>
             )}
           </div>

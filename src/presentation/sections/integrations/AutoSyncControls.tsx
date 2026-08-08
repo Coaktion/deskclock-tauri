@@ -3,9 +3,9 @@ import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import type { AppConfig } from "@shared/types/appConfig";
 import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
-import { Loader2, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Toggle } from "@presentation/components/ui";
+import { Button, Toggle } from "@presentation/components/ui";
 import { Row, SubSection } from "./shared";
 
 /**
@@ -194,23 +194,19 @@ export function AutoSyncControls({
                   </span>
                 </span>
                 {syncNow && (
-                  <button
+                  <Button
                     onClick={handleSyncNow}
-                    disabled={syncing || autoSyncing}
+                    loading={syncing || autoSyncing}
                     title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-                    className="flex items-center gap-1.5 text-xs bg-raised border border-border hover:border-fg-muted disabled:opacity-50 disabled:cursor-not-allowed text-fg-secondary px-2.5 py-1.5 rounded-control transition-colors shrink-0"
+                    icon={<RefreshCw size={14} />}
+                    className="shrink-0"
                   >
-                    {syncing || autoSyncing ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <RefreshCw size={14} />
-                    )}
                     {autoSyncing
                       ? "Sincronização automática…"
                       : syncing
                         ? "Sincronizando…"
                         : "Sincronizar agora"}
-                  </button>
+                  </Button>
                 )}
               </div>
             </>

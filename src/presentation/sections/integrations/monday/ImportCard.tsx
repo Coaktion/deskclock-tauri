@@ -1,5 +1,4 @@
-import { integrationButtonClass } from "../shared";
-import { Loader2 } from "lucide-react";
+import { Button } from "@presentation/components/ui";
 import type { ReactNode } from "react";
 
 /**
@@ -48,14 +47,8 @@ export function ImportActionButton({
   onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={busy || disabled}
-      title={title}
-      className={`${integrationButtonClass} shrink-0`}
-    >
-      {busy && <Loader2 size={14} className="animate-spin" />}
+    <Button onClick={onClick} loading={busy} disabled={disabled} title={title} className="shrink-0">
       {label}
-    </button>
+    </Button>
   );
 }

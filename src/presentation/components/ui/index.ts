@@ -1,3 +1,5 @@
+export { Button, type ButtonVariant, type ButtonSize } from "./Button";
+export { IconButton, type IconButtonVariant, type IconButtonSize } from "./IconButton";
 export { Toggle } from "./Toggle";
 export { KpiCard, type KpiTone } from "./KpiCard";
 export { TaskRow } from "./TaskRow";

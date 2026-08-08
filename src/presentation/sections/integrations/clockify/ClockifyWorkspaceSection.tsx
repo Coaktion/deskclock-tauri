@@ -2,6 +2,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
+import { IconButton } from "@presentation/components/ui";
 import { DeskclockWorkspaceRow } from "../shared";
 
 export function ClockifyWorkspaceSection() {
@@ -70,14 +71,14 @@ export function ClockifyWorkspaceSection() {
             ) : (
               <span className="text-xs text-fg-muted">{activeName || "—"}</span>
             )}
-            <button
+            <IconButton
+              icon={<RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />}
+              title="Atualizar lista"
+              variant="neutral"
+              size="sm"
               onClick={handleRefresh}
               disabled={refreshing}
-              title="Atualizar lista"
-              className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
-            >
-              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-            </button>
+            />
           </div>
         </div>
       </div>

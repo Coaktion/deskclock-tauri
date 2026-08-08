@@ -3,9 +3,10 @@ import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext"
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { MondayConnectModal } from "@presentation/modals/MondayConnectModal";
-import { Loader2, LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { StatusBadge, integrationButtonClass } from "../shared";
+import { Button } from "@presentation/components/ui";
+import { StatusBadge } from "../shared";
 import { MondayConnectedSections } from "./MondayConnectedSections";
 import { MondayLogo } from "./MondayLogo";
 
@@ -65,22 +66,17 @@ export function MondayIntegrationCard() {
           </div>
           <div className="shrink-0 flex items-center gap-2">
             {connected ? (
-              <button
-                onClick={handleDisconnect}
-                disabled={loading}
-                className={`${integrationButtonClass}`}
-              >
-                {loading ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
+              <Button onClick={handleDisconnect} loading={loading} icon={<LogOut size={14} />}>
                 Desconectar
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="primary"
                 onClick={() => setShowConnectModal(true)}
-                className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-chip transition"
+                icon={<LogIn size={14} />}
               >
-                <LogIn size={14} />
                 Conectar
-              </button>
+              </Button>
             )}
           </div>
         </div>

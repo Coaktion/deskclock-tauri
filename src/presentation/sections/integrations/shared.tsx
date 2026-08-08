@@ -9,14 +9,6 @@ import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 /* ── helpers ── */
 
 /**
- * Botão secundário das seções de integração — importar, buscar agora,
- * desconectar. São dezesseis, e escritos à mão divergiam no raio, no padding e
- * no que acontece ao passar o cursor.
- */
-export const integrationButtonClass =
-  "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-fg-secondary bg-raised border border-border hover:border-fg-muted disabled:opacity-50 disabled:cursor-not-allowed rounded-control transition-colors";
-
-/**
  * Workspace do DeskClock em que a integração trabalha — o topo do escopo que
  * ela governa.
  *
