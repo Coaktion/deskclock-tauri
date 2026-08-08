@@ -1457,6 +1457,13 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 - `shared/utils/` — funções utilitárias sem side-effects
 - `presentation/hooks/` — hooks cuja lógica decide dados, com `renderHook` (ex:
   `useMultiSelect`, que define o que uma exclusão sem confirmação apaga)
+- `presentation/components/ui/` — os primitivos canônicos, com `render`, e **só eles**. É exceção
+  explícita à regra abaixo: são contrato compartilhado por dezenas de call sites, e a asserção é
+  sobre o contrato (papel ARIA, nome acessível, o que a prop ausente deixa de desenhar), nunca
+  sobre classe ou markup. Componente de tela continua sem teste de renderização.
+
+> Não há `@testing-library/jest-dom` no setup — `toBeInTheDocument` não existe. Use
+> `expect(...).toBeTruthy()` e os atributos direto do elemento.
 
 > **Corrigido em 2026-07-31.** Esta seção afirmava que `@testing-library/react` "não está
 > configurado". Ele está no `package.json` desde antes e já era usado em
@@ -1591,6 +1598,15 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   acessibilidade.
 - **Paleta de cores de entidade:** `src/domain/utils/workspaceColor.ts` define a lista curada de
   slots usada para colorir workspaces, junto com a justificativa de cada exclusão.
+- **Primitivos canônicos:** `src/presentation/components/ui/` — `Toggle`, `KpiCard`, `TaskRow`,
+  `FilterPill`, `SearchInput`, `Field` (com `fieldControlClass`) e `PageHeader`. Cada um existe
+  porque a mesma coisa estava escrita em duas ou três versões que discordavam entre si. **Código
+  novo usa estes**; as versões antigas seguem em pé enquanto as telas não migram, e são apagadas
+  ao migrar o último consumidor de cada uma.
+- **Cor de significado só por token.** `billable`, `paused` e `danger` — nunca `emerald`, `green`,
+  `rose` ou `red`. O que ainda resta está congelado em
+  `src/tests/conventions/meaningColors.test.ts`, e o teste falha nos dois sentidos: subir é
+  regressão, e descer sem atualizar a lista deixa folga onde a próxima regressão se esconde.
 
 ## Regras obrigatórias
 
