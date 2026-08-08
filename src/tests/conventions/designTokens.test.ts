@@ -67,6 +67,28 @@ const LIGHT_MODE_TOKENS = [
   "--color-danger",
 ];
 
+/**
+ * A camada tipográfica.
+ *
+ * `--font-sans` carrega mais peso que os outros: o Preflight deriva dele o
+ * `--default-font-family` aplicado no `html`, então derrubá-lo não apaga um
+ * utilitário — devolve o app inteiro para a stack de sistema, que é o estado
+ * de antes desta migração e não se anuncia como erro.
+ */
+const TYPOGRAPHY_TOKENS = [
+  "--font-sans",
+  "--font-mono",
+  "--font-weight-normal",
+  "--font-weight-medium",
+  "--font-weight-semibold",
+];
+
+/** Cada família tem duas faces: latin e latin-ext. */
+const FONT_FACES = [
+  ["Source Sans 3", "400 600"],
+  ["Source Code Pro", "400 500"],
+] as const;
+
 const ACCENTS = ["verde", "roxo", "ambar"];
 
 /**
@@ -110,6 +132,37 @@ describe("convenção: tokens semânticos do design system", () => {
     const body = blockBody(css, "@theme static {");
     expect(body).not.toBe("");
     expect(declaredIn(body, THEME_TOKENS)).toEqual(THEME_TOKENS);
+  });
+
+  it("declara as duas famílias e os três pesos", () => {
+    const body = blockBody(css, "@theme static {");
+    expect(declaredIn(body, TYPOGRAPHY_TOKENS)).toEqual(TYPOGRAPHY_TOKENS);
+  });
+
+  // `@font-face` não aninha bloco, então aqui `[^}]*` não corta nada pela metade.
+  const faces = css.match(/@font-face\s*\{[^}]*\}/g) ?? [];
+
+  it("empacota as duas famílias em latin e latin-ext", () => {
+    expect(faces).toHaveLength(FONT_FACES.length * 2);
+  });
+
+  it.each(FONT_FACES)("%s carrega do binário, sem rede e sem troca à vista", (family, weight) => {
+    const own = faces.filter((face) => face.includes(`font-family: "${family}"`));
+    expect(own).toHaveLength(2);
+
+    for (const face of own) {
+      // `block` em vez de `swap`: o arquivo está no bundle e carrega em
+      // milissegundos, então o salto de fonte do `swap` seria puro custo — e
+      // aconteceria nas cinco janelas do app.
+      expect(face).toContain("font-display: block");
+      // O intervalo é o teto da escala, não o da fonte (200–900). É ele que faz
+      // um `font-bold` esquecido renderizar 600 em vez de reintroduzir o peso.
+      expect(face).toContain(`font-weight: ${weight}`);
+      // url() de pacote, resolvida pelo Vite no build: nenhuma requisição sai
+      // em runtime, e o woff2 não fica versionado no repositório.
+      expect(face).toMatch(/url\("@fontsource-variable\/[^"]+\.woff2"\)/);
+      expect(face).toContain("unicode-range:");
+    }
   });
 
   it("declara --accent-hue fora do @theme, onde [data-accent] alcança", () => {

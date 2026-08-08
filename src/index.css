@@ -1,6 +1,70 @@
 @import "tailwindcss";
 @import "driver.js/dist/driver.css";
 
+/* ── Famílias empacotadas ─────────────────────────────────────────────────────
+ *
+ * Sem `font-family` declarada, a app herda a stack de sistema do Preflight — é
+ * por isso que Windows e Linux desenham telas diferentes. Os woff2 vêm dos
+ * pacotes Fontsource, mas o `@font-face` é escrito aqui de propósito: o CSS
+ * deles usa `font-display: swap` e nomeia a família "… Variable", e traz sete
+ * subsets, dos quais cinco esta app nunca usa.
+ *
+ * `block` em vez de `swap` porque o arquivo está no binário e carrega em
+ * milissegundos: o texto some por um quadro em vez de aparecer na fonte errada
+ * e saltar de lugar — e aqui esse salto aconteceria nas cinco janelas.
+ *
+ * O intervalo de peso é o teto da escala (§ tokens abaixo), não o da fonte, que
+ * vai de 200 a 900. Peso pedido fora do intervalo é limitado ao mais próximo,
+ * então um `font-bold` esquecido renderiza como 600 em vez de reintroduzir a
+ * hierarquia que a escala tirou.
+ */
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: block;
+  src: url("@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: block;
+  src: url("@fontsource-variable/source-sans-3/files/source-sans-3-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: block;
+  src: url("@fontsource-variable/source-code-pro/files/source-code-pro-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: block;
+  src: url("@fontsource-variable/source-code-pro/files/source-code-pro-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
 /* ── Tokens semânticos — direção 2a (frio, definido por borda) ────────────────
  *
  * Camada nova, puramente aditiva: as telas ainda não migradas seguem usando
@@ -52,6 +116,21 @@
   --radius-chip: 0.375rem;
   --radius-control: 0.5rem;
   --radius-card: 0.75rem;
+
+  /* Tipografia. `--font-sans` não gera só o utilitário `font-sans`: o Preflight
+     do Tailwind deriva dele o `--default-font-family` que aplica no `html`, e é
+     isso que troca a fonte do app inteiro sem tocar em componente nenhum.
+     A stack de sistema fica como segundo item — rede para o quadro anterior ao
+     carregamento, não mais a fonte de fato. */
+  --font-sans:
+    "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Três pesos, e 600 é o teto: em 12px sobre fundo escuro o 700 engorda o
+     texto sem criar hierarquia nenhuma. */
+  --font-weight-normal: 400; /* texto lido */
+  --font-weight-medium: 500; /* clicável ou numérico */
+  --font-weight-semibold: 600; /* título, seção, overline */
 }
 
 /* Fora do @theme de propósito: `hue` não é namespace do Tailwind — não geraria

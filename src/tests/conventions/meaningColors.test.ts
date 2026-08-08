@@ -1,6 +1,8 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+
+import { listSourceFiles } from "../helpers/sourceFiles";
 
 /**
  * Cor de significado — billable, pausa, erro — tem token próprio (`bg-billable`,
@@ -72,25 +74,6 @@ const BASELINE: Record<string, number> = {
   "src/presentation/sections/settings/AtualizacoesTab.tsx": 4,
   "src/presentation/sections/settings/ShortcutRow.tsx": 1,
 };
-
-function listSourceFiles(root: string): string[] {
-  const found: string[] = [];
-  const testsDir = resolve(root, "src/tests");
-
-  function walk(dir: string) {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (full !== testsDir) walk(full);
-      } else if (entry.name.endsWith(".tsx") || entry.name.endsWith(".ts")) {
-        found.push(relative(root, full));
-      }
-    }
-  }
-
-  walk(resolve(root, "src"));
-  return found.sort();
-}
 
 describe("convenção: cor de significado só por token", () => {
   it("nenhum arquivo passa da sua linha do baseline", () => {

@@ -1615,8 +1615,35 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   usam `bg-surface`, e os valores são próximos o bastante para as duas conviverem. **São o último
   passo da migração a ser apagado**, junto com as cópias `--tw-gray-*`; não os remova antes de a
   última tela e o CSS do tour saírem deles.
+- **Famílias:** **Source Sans 3** (`--font-sans`) e **Source Code Pro** (`--font-mono`), a mesma
+  superfamília — título e cronômetro têm o mesmo esqueleto. Vêm empacotadas: os woff2 saem dos
+  pacotes `@fontsource-variable/*` e o `@font-face` é escrito à mão no topo de `src/index.css`,
+  em latin e latin-ext, com `font-display: block`. **Nenhuma requisição de rede em runtime.**
+
+  > Declarar `--font-sans` não gera só o utilitário `font-sans`: o Preflight do Tailwind deriva
+  > dele o `--default-font-family` que aplica no `html`. É isso que troca a fonte do app inteiro
+  > sem tocar em componente nenhum — e é isso que se perde ao derrubar o token, devolvendo tudo
+  > para a stack de sistema sem nada denunciando. A stack continua na lista, como **segundo**
+  > item: rede para o quadro anterior ao carregamento, não mais a fonte de fato.
+  >
+  > O `@font-face` é próprio, e não o CSS dos pacotes, por três divergências: eles usam
+  > `font-display: swap` (que faria a fonte saltar de lugar nas cinco janelas), nomeiam a família
+  > "… Variable" e trazem sete subsets, dos quais cinco esta app nunca usa.
+
+- **Três pesos, e 600 é o teto:** 400 para texto lido, 500 para o que é clicável ou numérico, 600
+  para título, cabeçalho de seção e overline. **Nada acima disso** — em 12px sobre fundo escuro o
+  700 engorda o texto sem criar hierarquia; o que separa título de corpo é tamanho e cor. O
+  intervalo declarado no `@font-face` é o da escala, não o da fonte (200–900), então um
+  `font-bold` esquecido renderiza como 600 — e, por não se ver na tela, é
+  `src/tests/conventions/fontWeights.test.ts` que o denuncia.
+
+- **Todo número é `font-mono` + `tabular-nums`** — duração, hora, contagem, percentual, inclusive
+  dentro de modal. É o que impede o cronômetro de tremer a cada segundo e o que alinha as colunas
+  das listas.
+
 - **Escala tipográfica:** `--app-font-size` em `:root`, controlada pela configuração de
-  acessibilidade.
+  acessibilidade. Os valores são em rem sobre a raiz de 14px, então a escala P/M/G/GG continua
+  valendo sem exceção.
 - **Paleta de cores de entidade:** `src/domain/utils/workspaceColor.ts` define a lista curada de
   slots usada para colorir workspaces, junto com a justificativa de cada exclusão.
 - **Primitivos canônicos:** `src/presentation/components/ui/` — `Toggle`, `KpiCard`, `TaskRow`,
