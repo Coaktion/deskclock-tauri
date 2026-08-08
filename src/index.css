@@ -67,19 +67,14 @@
 
 /* ── Tokens semânticos — direção 2a (frio, definido por borda) ────────────────
  *
- * Camada nova, puramente aditiva: as telas ainda não migradas seguem usando
- * `bg-gray-900` e os três `[data-theme]` abaixo continuam valendo. Os valores
- * são próximos o bastante para as duas convivências durarem a migração inteira.
- *
  * `static` não é enfeite: sem ele o Tailwind descarta o token que nenhum
- * utilitário referencia — e este é exatamente o momento em que ninguém
- * referencia nenhum. Verificado no Tailwind 4.3.2: com `static`, até o
+ * utilitário referencia, e um token sumiria do CSS gerado no dia em que a última
+ * tela deixasse de usá-lo. Verificado no Tailwind 4.3.2: com `static`, até o
  * `--radius-control` sem consumidor sai no CSS gerado.
  *
  * Os blocos [data-accent] e [data-mode] ficam **fora de layer** de propósito.
  * O @theme emite dentro de `@layer theme`, e regra sem layer vence regra em
- * layer no cascade, qualquer que seja a especificidade — é o mesmo mecanismo em
- * que os [data-theme] legados já se apoiam hoje.
+ * layer no cascade, qualquer que seja a especificidade.
  */
 @theme static {
   /* Superfícies — o modo escuro é o padrão */
@@ -145,6 +140,10 @@
    utilitário nenhum — e precisa ser sobrescrito por [data-accent] no cascade. */
 :root {
   --accent-hue: 258;
+
+  /* Constante, e é dela que dependem os três raios, o ritmo de espaçamento e a
+     escala tipográfica caírem nos valores que o design especifica. */
+  font-size: 16px;
 }
 
 /* ── Acento: independente do modo. É isto que faz Verde deixar de ser tema. ── */
@@ -178,69 +177,6 @@
   --color-danger: oklch(0.58 0.19 22);
 }
 
-:root {
-  font-size: 16px;
-
-  /* Cópias fixas dos grays do Tailwind — usadas pelo tema Claro sem criar referências circulares */
-  --tw-gray-50: oklch(0.985 0.002 247.858);
-  --tw-gray-100: oklch(0.967 0.003 264.542);
-  --tw-gray-200: oklch(0.928 0.006 264.531);
-  --tw-gray-300: oklch(0.872 0.01 258.338);
-  --tw-gray-400: oklch(0.707 0.022 261.325);
-  --tw-gray-500: oklch(0.551 0.018 264.364);
-  --tw-gray-600: oklch(0.446 0.03 256.802);
-  --tw-gray-700: oklch(0.373 0.034 259.733);
-  --tw-gray-800: oklch(0.278 0.033 256.848);
-  --tw-gray-900: oklch(0.21 0.034 264.665);
-  --tw-gray-950: oklch(0.13 0.028 261.692);
-}
-
-/* ── Tema Verde: troca accent azul por verde ── */
-[data-theme="verde"] {
-  --color-blue-50: var(--color-green-50);
-  --color-blue-100: var(--color-green-100);
-  --color-blue-200: var(--color-green-200);
-  --color-blue-300: var(--color-green-300);
-  --color-blue-400: var(--color-green-400);
-  --color-blue-500: var(--color-green-500);
-  --color-blue-600: var(--color-green-600);
-  --color-blue-700: var(--color-green-700);
-  --color-blue-800: var(--color-green-800);
-  --color-blue-900: var(--color-green-900);
-  --color-blue-950: var(--color-green-950);
-}
-
-/* ── Tema Escuro: fundos gray → zinc (neutro mais profundo) ── */
-[data-theme="escuro"] {
-  --color-gray-50: var(--color-zinc-50);
-  --color-gray-100: var(--color-zinc-100);
-  --color-gray-200: var(--color-zinc-200);
-  --color-gray-300: var(--color-zinc-300);
-  --color-gray-400: var(--color-zinc-400);
-  --color-gray-500: var(--color-zinc-500);
-  --color-gray-600: var(--color-zinc-600);
-  --color-gray-700: var(--color-zinc-700);
-  --color-gray-800: var(--color-zinc-800);
-  --color-gray-900: var(--color-zinc-900);
-  --color-gray-950: var(--color-zinc-950);
-}
-
-/* ── Tema Claro: inverte o mapa de gray usando cópias fixas (sem referências circulares) ── */
-[data-theme="claro"] {
-  color-scheme: light;
-  --color-gray-950: var(--tw-gray-50);
-  --color-gray-900: var(--tw-gray-50);
-  --color-gray-800: var(--tw-gray-100);
-  --color-gray-700: var(--tw-gray-200);
-  --color-gray-600: var(--tw-gray-300);
-  --color-gray-500: var(--tw-gray-500);
-  --color-gray-400: var(--tw-gray-600);
-  --color-gray-300: var(--tw-gray-700);
-  --color-gray-200: var(--tw-gray-800);
-  --color-gray-100: var(--tw-gray-900);
-  --color-gray-50: var(--tw-gray-950);
-}
-
 /* ── Cursor de arraste em regiões drag ── */
 [data-tauri-drag-region] {
   cursor: grab;
@@ -270,7 +206,7 @@
 .zendesk-logo {
   color: oklch(0.72 0.08 190);
 }
-[data-theme="claro"] .zendesk-logo {
+[data-mode="claro"] .zendesk-logo {
   color: #03363d;
 }
 
@@ -282,12 +218,14 @@
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Pelo token, e não por um cinza fixo: era o único cromo que ficava escuro
+   dentro do modo claro. */
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.373 0.034 259.733 / 0.6);
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.446 0.03 256.802 / 0.8);
+  background: color-mix(in srgb, var(--color-fg-muted) 80%, transparent);
 }
 
 select {
@@ -300,16 +238,16 @@ select {
   padding-right: 2rem !important;
 }
 
-[data-theme="claro"] select {
+[data-mode="claro"] select {
   color-scheme: light;
 }
 
-/* ── Driver.js tour — tema DeskClock dark ── */
+/* ── Driver.js tour: pelos tokens, para acompanhar modo e acento ── */
 .deskclock-tour.driver-popover {
-  background-color: var(--tw-gray-900);
-  border: 1px solid var(--tw-gray-700);
-  border-radius: 12px;
-  color: var(--tw-gray-100);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  color: var(--color-fg);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.8);
   min-width: 280px;
   max-width: 320px;
@@ -319,19 +257,19 @@ select {
 .deskclock-tour .driver-popover-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--tw-gray-100);
+  color: var(--color-fg);
   margin-bottom: 4px;
 }
 
 .deskclock-tour .driver-popover-description {
   font-size: 0.75rem;
-  color: var(--tw-gray-400);
+  color: var(--color-fg-secondary);
   line-height: 1.5;
 }
 
 .deskclock-tour .driver-popover-progress-text {
   font-size: 0.6875rem;
-  color: var(--tw-gray-500);
+  color: var(--color-fg-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -342,11 +280,11 @@ select {
 
 .deskclock-tour .driver-popover-navigation-btns button {
   font-size: 0.75rem;
-  border-radius: 6px;
+  border-radius: var(--radius-chip);
   padding: 4px 10px;
-  border: 1px solid var(--tw-gray-700);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--tw-gray-400);
+  color: var(--color-fg-secondary);
   cursor: pointer;
   transition: all 0.15s;
   text-shadow: none;
@@ -354,7 +292,7 @@ select {
 
 .deskclock-tour .driver-tour-skip-btn {
   font-size: 0.6875rem;
-  color: var(--tw-gray-600);
+  color: var(--color-fg-muted);
   background: transparent;
   border: none;
   padding: 4px 6px;
@@ -365,40 +303,40 @@ select {
 }
 
 .deskclock-tour .driver-tour-skip-btn:hover {
-  color: var(--tw-gray-400);
+  color: var(--color-fg-secondary);
 }
 
 .deskclock-tour .driver-popover-next-btn,
 .deskclock-tour .driver-popover-done-btn {
-  background-color: var(--color-blue-600) !important;
-  border-color: var(--color-blue-600) !important;
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
   color: #fff !important;
 }
 
 .deskclock-tour .driver-popover-next-btn:hover,
 .deskclock-tour .driver-popover-done-btn:hover {
-  background-color: var(--color-blue-500) !important;
-  border-color: var(--color-blue-500) !important;
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .deskclock-tour .driver-popover-close-btn {
-  color: var(--tw-gray-600);
+  color: var(--color-fg-muted);
   font-size: 1rem;
 }
 
 .deskclock-tour .driver-popover-close-btn:hover {
-  color: var(--tw-gray-300);
+  color: var(--color-fg-secondary);
 }
 
 .deskclock-tour .driver-popover-arrow-side-bottom .driver-popover-arrow {
-  border-bottom-color: var(--tw-gray-700);
+  border-bottom-color: var(--color-border);
 }
 .deskclock-tour .driver-popover-arrow-side-top .driver-popover-arrow {
-  border-top-color: var(--tw-gray-700);
+  border-top-color: var(--color-border);
 }
 .deskclock-tour .driver-popover-arrow-side-left .driver-popover-arrow {
-  border-left-color: var(--tw-gray-700);
+  border-left-color: var(--color-border);
 }
 .deskclock-tour .driver-popover-arrow-side-right .driver-popover-arrow {
-  border-right-color: var(--tw-gray-700);
+  border-right-color: var(--color-border);
 }

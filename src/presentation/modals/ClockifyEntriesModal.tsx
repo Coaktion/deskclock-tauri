@@ -183,14 +183,14 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   if (!apiKey || !workspaceId || !userId) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
-          <p className="text-sm text-gray-200 mb-4">
+        <div className="w-full max-w-md bg-surface border border-border rounded-card shadow-2xl p-6">
+          <p className="text-sm text-fg mb-4">
             Configure o Clockify (API Key + workspace) na tela de Integrações antes de abrir esta
             janela.
           </p>
           <button
             onClick={onClose}
-            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded transition-colors"
+            className="text-xs bg-raised hover:bg-border text-fg px-3 py-1.5 rounded-chip transition-colors"
           >
             Fechar
           </button>
@@ -201,12 +201,12 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl flex flex-col">
+      <div className="w-full max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] bg-surface border border-border rounded-card shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-gray-100">Apontamentos do Clockify</h2>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">
+            <h2 className="text-sm font-semibold text-fg">Apontamentos do Clockify</h2>
+            <p className="text-xs text-fg-muted mt-0.5 truncate">
               {workspaceName ? `Workspace: ${workspaceName}` : "Workspace ativo"}
             </p>
           </div>
@@ -215,14 +215,14 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
               onClick={refresh}
               disabled={loading}
               title="Recarregar"
-              className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+              className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             </button>
             <button
               onClick={onClose}
               title="Fechar"
-              className="text-gray-500 hover:text-gray-300 transition-colors"
+              className="text-fg-muted hover:text-fg-secondary transition-colors"
             >
               <X size={16} />
             </button>
@@ -230,16 +230,14 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
         </div>
 
         {/* Filtros */}
-        <div className="px-5 py-3 border-b border-gray-800 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="px-5 py-3 border-b border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(QUICK_LABELS) as QuickFilter[]).map((q) => (
               <button
                 key={q}
                 onClick={() => setQuick(q)}
                 className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  quick === q
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  quick === q ? "bg-accent text-white" : "bg-raised text-fg-secondary hover:text-fg"
                 }`}
               >
                 {QUICK_LABELS[q]}
@@ -250,19 +248,19 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
           {quick === "custom" && (
             <div className="flex items-center gap-2">
               <DatePickerInput value={customStart} onChange={setCustomStart} className="text-xs" />
-              <span className="text-xs text-gray-600">até</span>
+              <span className="text-xs text-fg-muted">até</span>
               <DatePickerInput value={customEnd} onChange={setCustomEnd} className="text-xs" />
             </div>
           )}
 
           <div className="ml-auto flex items-center gap-3">
             {defaultTagIds.length > 0 && (
-              <label className="flex items-center gap-1.5 text-xs text-gray-300 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs text-fg-secondary cursor-pointer">
                 <input
                   type="checkbox"
                   checked={onlyDefaultTags}
                   onChange={(e) => setOnlyDefaultTags(e.target.checked)}
-                  className="accent-blue-500"
+                  className="accent-accent"
                 />
                 Apenas com tags padrão
               </label>
@@ -270,9 +268,9 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
             <button
               onClick={() => setCreateOpen((v) => !v)}
               disabled={createOpen}
-              className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-full transition-colors"
+              className="flex items-center gap-1 px-3 py-1 text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-full transition"
             >
-              <Plus size={12} />
+              <Plus size={14} />
               Novo apontamento
             </button>
           </div>
@@ -292,29 +290,29 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
           )}
 
           {!rangeValid && (
-            <p className="text-center text-gray-500 text-sm py-12">Selecione um período válido.</p>
+            <p className="text-center text-fg-muted text-sm py-12">Selecione um período válido.</p>
           )}
 
           {rangeValid && showLoading && (
-            <div className="flex items-center justify-center py-12 text-gray-600">
+            <div className="flex items-center justify-center py-12 text-fg-muted">
               <Loader2 size={20} className="animate-spin" />
             </div>
           )}
 
           {rangeValid && showEmpty && (
-            <p className="text-center text-gray-500 text-sm py-12">
+            <p className="text-center text-fg-muted text-sm py-12">
               Nenhum apontamento encontrado neste período.
             </p>
           )}
 
           {rangeValid && filteredOutByTags && (
             <div className="text-center py-12">
-              <p className="text-sm text-gray-500 mb-2">
+              <p className="text-sm text-fg-muted mb-2">
                 Nenhum apontamento com as tags padrão neste período.
               </p>
               <button
                 onClick={() => setOnlyDefaultTags(false)}
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                className="text-xs text-accent-text hover:text-fg transition-colors"
               >
                 Mostrar todos
               </button>
@@ -325,11 +323,11 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
             <div>
               {dayGroups.map((group) => (
                 <div key={group.dateISO}>
-                  <div className="flex items-center justify-between px-5 py-2.5 bg-gray-900/60 border-b border-gray-800 sticky top-0 z-10">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+                  <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
+                    <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
                       {formatHistoryDayHeader(group.dateISO)}
                     </span>
-                    <span className="text-xs font-mono tabular-nums text-gray-500">
+                    <span className="text-xs font-mono tabular-nums text-fg-muted">
                       {formatHHMM(group.totalSeconds)}
                     </span>
                   </div>
@@ -377,33 +375,35 @@ function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
   const endStr = entry.timeInterval.end ? formatTimeLocal(entry.timeInterval.end) : "—";
   const duration = entryDurationSeconds(entry);
   const projectLabel = entry.project ? projectDisplayName(entry.project) : null;
-  const projectColor = entry.project?.color ?? "#6b7280";
+  // A cor vem do Clockify, então é hex de terceiro; o que falta é que precisa
+  // ser nosso, ou o ponto do projeto sem cor fica cinza fixo no modo claro.
+  const projectColor = entry.project?.color ?? "var(--color-project-none)";
 
   return (
-    <div className="grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group">
+    <div className="grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-border-subtle hover:bg-raised/40 transition-colors group">
       <div className="flex items-center gap-1.5 shrink-0">
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            entry.billable ? "bg-emerald-500" : "bg-gray-600"
+            entry.billable ? "bg-billable" : "bg-border"
           }`}
         />
-        <span className="text-xs font-mono text-gray-400 tabular-nums">
+        <span className="text-xs font-mono text-fg-secondary tabular-nums">
           {startStr}–{endStr}
         </span>
       </div>
 
       <div className="min-w-0">
-        <p className="text-sm text-gray-100 truncate">
+        <p className="text-sm text-fg truncate">
           {entry.description?.trim() ? (
             entry.description
           ) : (
-            <span className="italic text-gray-500">(sem descrição)</span>
+            <span className="italic text-fg-muted">(sem descrição)</span>
           )}
         </p>
         {(projectLabel || (entry.tags && entry.tags.length > 0)) && (
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {projectLabel && (
-              <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+              <span className="inline-flex items-center gap-1 text-xs text-fg-secondary">
                 <span
                   className="inline-block w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: projectColor }}
@@ -412,7 +412,10 @@ function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
               </span>
             )}
             {entry.tags?.map((t) => (
-              <span key={t.id} className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-xs">
+              <span
+                key={t.id}
+                className="bg-raised text-fg-secondary px-1.5 py-0.5 rounded-chip text-xs"
+              >
                 {t.name}
               </span>
             ))}
@@ -420,24 +423,24 @@ function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
         )}
       </div>
 
-      <span className="text-sm font-mono tabular-nums text-gray-300 shrink-0">
+      <span className="text-sm font-mono tabular-nums text-fg-secondary shrink-0">
         {formatDurationCompact(duration)}
       </span>
 
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <button
           onClick={onStartEdit}
-          className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+          className="p-1.5 text-fg-secondary hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
           title="Editar"
         >
-          <Pencil size={13} />
+          <Pencil size={14} />
         </button>
         <button
           onClick={() => void onDelete()}
-          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+          className="p-1.5 text-fg-secondary hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
           title="Excluir"
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>
@@ -560,7 +563,7 @@ function EntryForm({
   return (
     <div
       onKeyDown={handleKeyDown}
-      className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2"
+      className="px-5 py-3 border-b border-border-subtle bg-raised/30 space-y-2"
     >
       <input
         type="text"
@@ -569,7 +572,7 @@ function EntryForm({
         placeholder="Descrição *"
         autoFocus
         autoComplete="off"
-        className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+        className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
       />
 
       <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-start">
@@ -590,49 +593,49 @@ function EntryForm({
           title={
             billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
           }
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-control border transition-colors shrink-0 ${
             billable
-              ? "bg-green-900/40 border-green-700 text-green-400"
-              : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
+              ? "bg-billable/10 border-billable/40 text-billable"
+              : "bg-raised border-border text-fg-secondary hover:text-fg"
           }`}
         >
-          <DollarSign size={13} />
+          <DollarSign size={14} />
           {billable ? "Faturável" : "Não-faturável"}
         </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <DatePickerInput value={dateISO} onChange={setDateISO} />
-        <span className="text-xs text-gray-500">Início</span>
+        <span className="text-xs text-fg-muted">Início</span>
         <input
           type="time"
           value={startHHMM}
           onChange={(e) => setStartHHMM(e.target.value)}
-          className="w-24 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+          className="w-24 px-2 py-1 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
           autoComplete="off"
         />
-        <span className="text-xs text-gray-500">Fim</span>
+        <span className="text-xs text-fg-muted">Fim</span>
         <input
           type="time"
           value={endHHMM}
           onChange={(e) => setEndHHMM(e.target.value)}
-          className="w-24 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
+          className="w-24 px-2 py-1 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
           autoComplete="off"
         />
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+            className="px-3 py-1.5 text-xs text-fg-secondary hover:text-fg disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !canSave}
-            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
-            {saving && <Loader2 size={11} className="animate-spin" />}
+            {saving && <Loader2 size={14} className="animate-spin" />}
             {saveLabel}
           </button>
         </div>

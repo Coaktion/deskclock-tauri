@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   applyAppearance,
-  legacyThemeFor,
   readAppliedAppearance,
   resolveAppearance,
   MODES,
@@ -51,20 +50,6 @@ describe("resolveAppearance", () => {
   });
 });
 
-describe("legacyThemeFor", () => {
-  it("o modo claro ganha do acento — telas não migradas precisam clarear junto", () => {
-    expect(legacyThemeFor({ mode: "claro", accent: "verde" })).toBe("claro");
-    expect(legacyThemeFor({ mode: "claro", accent: "azul" })).toBe("claro");
-  });
-
-  it("no escuro, só o acento verde tem equivalente legado", () => {
-    expect(legacyThemeFor({ mode: "escuro", accent: "verde" })).toBe("verde");
-    expect(legacyThemeFor({ mode: "escuro", accent: "azul" })).toBeNull();
-    expect(legacyThemeFor({ mode: "escuro", accent: "roxo" })).toBeNull();
-    expect(legacyThemeFor({ mode: "escuro", accent: "ambar" })).toBeNull();
-  });
-});
-
 describe("applyAppearance", () => {
   beforeEach(() => {
     const { dataset } = document.documentElement;
@@ -73,19 +58,18 @@ describe("applyAppearance", () => {
     delete dataset.theme;
   });
 
-  it("grava os dois eixos e o tema legado", () => {
+  it("grava os dois eixos", () => {
     applyAppearance({ mode: "claro", accent: "verde" });
     const { dataset } = document.documentElement;
     expect(dataset.mode).toBe("claro");
     expect(dataset.accent).toBe("verde");
-    expect(dataset.theme).toBe("claro");
   });
 
-  it("remove o tema legado quando a combinação não tem equivalente", () => {
-    applyAppearance({ mode: "escuro", accent: "verde" });
-    applyAppearance({ mode: "escuro", accent: "roxo" });
+  // O CSS legado não existe mais; escrever o atributo agora seria só um resto
+  // no DOM, e um resto que alguém acabaria estilizando de novo.
+  it("não escreve mais o tema legado", () => {
+    applyAppearance({ mode: "claro", accent: "verde" });
     expect(document.documentElement.dataset.theme).toBeUndefined();
-    expect(document.documentElement.dataset.accent).toBe("roxo");
   });
 
   it("readAppliedAppearance devolve o que foi aplicado", () => {

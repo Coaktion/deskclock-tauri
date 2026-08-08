@@ -94,14 +94,14 @@ function SortableSheetColumn({ col, idx, onToggle, onRename }: SortableSheetColu
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 px-2 py-1.5 rounded ${col.enabled ? "bg-raised" : "bg-surface opacity-60"}`}
+      className={`flex items-center gap-2 px-2 py-1.5 rounded-chip ${col.enabled ? "bg-raised" : "bg-surface opacity-60"}`}
     >
       <button
         {...attributes}
         {...listeners}
         className="text-fg-muted hover:text-fg cursor-grab active:cursor-grabbing shrink-0"
       >
-        <GripVertical size={13} />
+        <GripVertical size={14} />
       </button>
       <Toggle
         ariaLabel={`Exibir coluna ${col.label}`}
@@ -285,7 +285,7 @@ function SheetsSection({
             onChange={(e) => setSpreadsheetId(e.target.value)}
             onBlur={() => config.set("integrationGoogleSheetsSpreadsheetId", spreadsheetId.trim())}
             placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-            className="w-64 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
+            className="w-64 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
             autoComplete="off"
           />
         </Row>
@@ -300,7 +300,7 @@ function SheetsSection({
               await config.set("integrationGoogleSheetsSheetName", name);
             }}
             placeholder="DeskClock"
-            className="w-40 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
+            className="w-40 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
             autoComplete="off"
           />
         </Row>
@@ -328,12 +328,12 @@ function SheetsSection({
         </div>
 
         <Row label="Formato da duração">
-          <div className="flex items-center gap-1 bg-raised rounded p-0.5">
+          <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
             {(["HH:MM", "HH:MM:SS"] as const).map((fmt) => (
               <button
                 key={fmt}
                 onClick={() => handleDurationFormat(fmt)}
-                className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                className={`px-2.5 py-1 text-xs rounded-chip transition-colors ${
                   durationFormat === fmt ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
                 }`}
               >
@@ -362,7 +362,7 @@ function SheetsSection({
               <div className="py-2.5 border-b border-border-subtle">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-fg-secondary">Modo</span>
-                  <div className="flex items-center gap-1 bg-raised rounded p-0.5">
+                  <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
                     {(["per-task", "daily"] as const).map((m) => (
                       <button
                         key={m}
@@ -370,7 +370,7 @@ function SheetsSection({
                           setSyncMode(m);
                           await config.set("sheetsAutoSyncMode", m);
                         }}
-                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                        className={`px-2.5 py-1 text-xs rounded-chip transition-colors ${
                           syncMode === m ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
                         }`}
                       >
@@ -392,7 +392,7 @@ function SheetsSection({
                   <div className="py-2.5 border-b border-border-subtle">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-fg-secondary">Gatilho</span>
-                      <div className="flex items-center gap-1 bg-raised rounded p-0.5">
+                      <div className="flex items-center gap-1 bg-raised rounded-chip p-0.5">
                         {(["on-open", "fixed-time"] as const).map((t) => (
                           <button
                             key={t}
@@ -400,7 +400,7 @@ function SheetsSection({
                               setSyncTrigger(t);
                               await config.set("sheetsAutoSyncTrigger", t);
                             }}
-                            className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                            className={`px-2.5 py-1 text-xs rounded-chip transition-colors ${
                               syncTrigger === t
                                 ? "bg-accent text-white"
                                 : "text-fg-muted hover:text-fg"
@@ -425,7 +425,7 @@ function SheetsSection({
                         value={syncTime}
                         onChange={(e) => setSyncTime(e.target.value)}
                         onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
-                        className="bg-raised border border-border rounded px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
+                        className="bg-raised border border-border rounded-chip px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
                         autoComplete="off"
                       />
                     </Row>
@@ -444,9 +444,9 @@ function SheetsSection({
                       className={`${integrationButtonClass} shrink-0`}
                     >
                       {syncing || autoSyncing ? (
-                        <Loader2 size={11} className="animate-spin" />
+                        <Loader2 size={14} className="animate-spin" />
                       ) : (
-                        <RefreshCw size={11} />
+                        <RefreshCw size={14} />
                       )}
                       {autoSyncing
                         ? "Sincronização automática…"
@@ -470,7 +470,7 @@ function SheetsSection({
             title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
             className={`${integrationButtonClass} w-full`}
           >
-            {autoSyncing ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            {autoSyncing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             {autoSyncing ? "Sincronização automática em andamento…" : "Enviar tarefas manualmente…"}
           </button>
         </div>
@@ -532,7 +532,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
           onClick={() => openModal("calendar-import")}
           className={`${integrationButtonClass} shrink-0 ml-3`}
         >
-          <CalendarDays size={13} />
+          <CalendarDays size={14} />
           Importar eventos
         </button>
       </div>
@@ -555,7 +555,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
         {autoTracking && (
           <div className="pb-2.5">
             <button onClick={trigger} disabled={searching} className={`${integrationButtonClass}`}>
-              <RefreshCw size={12} className={searching ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={searching ? "animate-spin" : ""} />
               {searching ? "Buscando…" : "Buscar eventos agora"}
             </button>
             {feedback && !searching && <SyncFeedbackLine feedback={feedback} />}
@@ -563,7 +563,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
         )}
       </div>
       <div className="flex items-start gap-2 mb-2 p-2.5 bg-accent/5 border border-accent/20 rounded-control">
-        <Info size={12} className="text-accent-text shrink-0 mt-0.5" />
+        <Info size={14} className="text-accent-text shrink-0 mt-0.5" />
         <p className="text-xs text-accent-text leading-relaxed">
           Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
           <br />
@@ -648,22 +648,22 @@ export function GoogleIntegrationCard() {
           <button
             onClick={() => startTour()}
             title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-muted transition-colors text-xs font-medium flex items-center justify-center"
+            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
           >
             ?
           </button>
           {connected ? (
             <button onClick={handleDisconnect} className={`${integrationButtonClass}`}>
-              <LogOut size={12} />
+              <LogOut size={14} />
               Desconectar
             </button>
           ) : (
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded transition-colors"
+              className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-chip transition"
             >
-              {loading ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} />}
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <LogIn size={14} />}
               {loading ? "Aguardando…" : "Conectar com Google"}
             </button>
           )}
@@ -672,12 +672,12 @@ export function GoogleIntegrationCard() {
 
       {/* Sub-seções */}
       <div data-tour="google-sheets-section">
-        <SubSection icon={<TableProperties size={15} />} title="Google Sheets">
+        <SubSection icon={<TableProperties size={14} />} title="Google Sheets">
           <SheetsSection disabled={!connected} projects={projects} categories={categories} />
         </SubSection>
       </div>
       <div data-tour="google-calendar-section">
-        <SubSection icon={<Calendar size={15} />} title="Google Calendar">
+        <SubSection icon={<Calendar size={14} />} title="Google Calendar">
           <CalendarSection disabled={!connected} />
         </SubSection>
       </div>

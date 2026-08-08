@@ -54,48 +54,51 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div
         onKeyDown={handleKeyDown}
-        className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-xl shadow-xl"
+        className="w-full max-w-md bg-surface border border-border rounded-card shadow-xl"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <h2 className="text-sm font-semibold text-gray-100">Conectar ao Clockify</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+          <h2 className="text-sm font-semibold text-fg">Conectar ao Clockify</h2>
+          <button
+            onClick={onClose}
+            className="text-fg-muted hover:text-fg-secondary transition-colors"
+          >
             <X size={16} />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          <div className="rounded-lg bg-gray-800/60 border border-gray-700/50 px-4 py-3 space-y-2">
-            <p className="text-xs font-medium text-gray-300">Como gerar sua API Key:</p>
-            <ol className="text-xs text-gray-400 space-y-1 list-decimal list-inside">
+          <div className="rounded-control bg-raised/60 border border-border/50 px-4 py-3 space-y-2">
+            <p className="text-xs font-medium text-fg-secondary">Como gerar sua API Key:</p>
+            <ol className="text-xs text-fg-secondary space-y-1 list-decimal list-inside">
               <li>
                 Acesse{" "}
                 <a
                   href="https://app.clockify.me/user/preferences#advanced"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-blue-400 hover:text-blue-300 inline-flex items-center gap-0.5"
+                  className="text-accent-text hover:text-fg inline-flex items-center gap-0.5"
                 >
                   Clockify → Preferências → Avançado
-                  <ExternalLink size={10} className="shrink-0" />
+                  <ExternalLink size={14} className="shrink-0" />
                 </a>
               </li>
               <li>
-                Role até a seção <strong className="text-gray-300">API</strong>
+                Role até a seção <strong className="text-fg-secondary">API</strong>
               </li>
               <li>
-                Clique em <strong className="text-gray-300">Generate</strong> e copie a chave
+                Clique em <strong className="text-fg-secondary">Generate</strong> e copie a chave
               </li>
             </ol>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs text-gray-400" htmlFor="clockify-api-key">
+            <label className="text-xs text-fg-secondary" htmlFor="clockify-api-key">
               API Key
             </label>
             <div className="relative">
               <KeyRound
-                size={13}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted"
               />
               <input
                 id="clockify-api-key"
@@ -104,28 +107,28 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Cole sua API Key aqui"
                 autoComplete="off"
-                className="w-full pl-8 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                className="w-full pl-8 pr-3 py-2 bg-raised border border-border rounded-control text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
                 autoFocus
               />
             </div>
           </div>
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-800">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border-subtle">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+            className="px-3 py-1.5 text-xs text-fg-secondary hover:text-fg transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={handleConnect}
             disabled={loading || !apiKey.trim()}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            className="flex items-center gap-1.5 px-4 py-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-control transition"
           >
-            {loading && <Loader2 size={12} className="animate-spin" />}
+            {loading && <Loader2 size={14} className="animate-spin" />}
             {loading ? "Validando…" : "Validar e conectar"}
           </button>
         </div>

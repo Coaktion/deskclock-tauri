@@ -49,7 +49,7 @@ export function ProjectMappingRow({
             title="Remover mapeamento"
             className="text-fg-muted hover:text-fg transition-colors shrink-0"
           >
-            <X size={11} />
+            <X size={14} />
           </button>
         )}
       </div>

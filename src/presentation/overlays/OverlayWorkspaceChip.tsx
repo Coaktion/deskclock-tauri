@@ -57,26 +57,26 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
       <button
         onClick={() => setOpen((v) => !v)}
         title={`Workspace: ${activeWorkspace.name}`}
-        className="flex items-center gap-1 max-w-[92px] px-1.5 py-0.5 rounded-lg hover:bg-gray-700 transition-colors"
+        className="flex items-center gap-1 max-w-[92px] px-1.5 py-0.5 rounded-control hover:bg-border transition-colors"
       >
         <WorkspaceDot color={activeWorkspace.color} size={7} />
-        <span className="text-xs text-gray-400 truncate">{activeWorkspace.name}</span>
+        <span className="text-xs text-fg-secondary truncate">{activeWorkspace.name}</span>
       </button>
 
       {open && (
         <div
           style={MENU_POS}
-          className="fixed z-50 w-44 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl py-1"
+          className="fixed z-50 w-44 bg-surface border border-border rounded-control shadow-2xl py-1"
         >
           {workspaces.map((w) => (
             <button
               key={w.id}
               onClick={() => void handlePick(w.id)}
-              className="w-full flex items-center gap-1.5 px-2 py-1 text-xs text-gray-300 hover:bg-gray-800 transition-colors"
+              className="w-full flex items-center gap-1.5 px-2 py-1 text-xs text-fg-secondary hover:bg-raised transition-colors"
             >
               <WorkspaceDot color={w.color} size={7} />
               <span className="flex-1 text-left truncate">{w.name}</span>
-              {w.id === activeWorkspaceId && <Check size={11} className="text-gray-500" />}
+              {w.id === activeWorkspaceId && <Check size={14} className="text-fg-muted" />}
             </button>
           ))}
         </div>
@@ -85,29 +85,29 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
       {pending && (
         <div
           style={MENU_POS}
-          className="fixed z-50 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-2"
+          className="fixed z-50 w-52 bg-surface border border-border rounded-control shadow-2xl p-2"
         >
-          <p className="text-xs text-gray-300 leading-snug mb-1.5">
-            Parar a tarefa e trocar para <span className="text-gray-100">{pending.name}</span>?
+          <p className="text-xs text-fg-secondary leading-snug mb-1.5">
+            Parar a tarefa e trocar para <span className="text-fg">{pending.name}</span>?
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-green-700 hover:bg-green-600 text-white rounded transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-billable hover:opacity-90 text-white rounded-chip transition"
             >
-              <CheckCircle2 size={11} />
+              <CheckCircle2 size={14} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-border hover:opacity-90 text-fg rounded-chip transition"
             >
-              <Clock size={11} />
+              <Clock size={14} />
               Pendente
             </button>
             <button
               onClick={cancel}
-              className="ml-auto px-1 text-xs text-gray-500 hover:text-gray-300"
+              className="ml-auto px-1 text-xs text-fg-muted hover:text-fg-secondary"
             >
               ✕
             </button>

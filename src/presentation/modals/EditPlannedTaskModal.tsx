@@ -101,14 +101,14 @@ export function EditPlannedTaskModal({
     >
       <div
         onKeyDown={handleKeyDown}
-        className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl mx-4"
+        className="bg-surface border border-border rounded-card w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl mx-4"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 shrink-0">
-          <h2 className="text-base font-semibold text-gray-100">Editar tarefa planejada</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h2 className="text-base font-semibold text-fg">Editar tarefa planejada</h2>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-1.5 text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
           >
             <X size={18} />
           </button>
@@ -121,7 +121,7 @@ export function EditPlannedTaskModal({
               própria casca, e quem divide a linha com um botão vive dentro de
               uma caixa. */}
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tarefa</p>
+            <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">Tarefa</p>
             <input
               autoFocus
               type="text"
@@ -161,7 +161,7 @@ export function EditPlannedTaskModal({
                       : "Non-billable — clique para alternar"
                   }
                   className={`flex items-center gap-1 shrink-0 transition-colors ${
-                    billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+                    billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
                   }`}
                 >
                   <DollarSign size={14} />
@@ -180,21 +180,21 @@ export function EditPlannedTaskModal({
             />
           </div>
 
-          <div className="border-t border-gray-800" />
+          <div className="border-t border-border-subtle" />
 
           {/* Agendamento */}
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Agendamento</p>
+            <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">Agendamento</p>
             <div className="flex gap-2">
               {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
                 <button
                   key={type}
                   type="button"
                   onClick={() => setScheduleType(type)}
-                  className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                  className={`flex-1 py-2 text-sm rounded-control border transition-colors ${
                     scheduleType === type
-                      ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                      : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                      ? "bg-accent/10 border-accent text-accent-text"
+                      : "bg-raised border-border text-fg-secondary hover:text-fg"
                   }`}
                 >
                   {type === "specific_date"
@@ -211,10 +211,10 @@ export function EditPlannedTaskModal({
                 <button
                   type="button"
                   onClick={() => setScheduleDate(todayISO())}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors whitespace-nowrap ${
+                  className={`px-3 py-2 text-sm rounded-control border transition-colors whitespace-nowrap ${
                     scheduleDate === todayISO()
-                      ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                      : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                      ? "bg-accent/10 border-accent text-accent-text"
+                      : "bg-raised border-border text-fg-secondary hover:text-fg"
                   }`}
                 >
                   Hoje
@@ -235,10 +235,10 @@ export function EditPlannedTaskModal({
                     type="button"
                     title={day.title}
                     onClick={() => toggleDay(day.value)}
-                    className={`flex-1 py-2 text-sm rounded-lg border transition-colors ${
+                    className={`flex-1 py-2 text-sm rounded-control border transition-colors ${
                       recurringDays.includes(day.value)
-                        ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                        : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                        ? "bg-accent/10 border-accent text-accent-text"
+                        : "bg-raised border-border text-fg-secondary hover:text-fg"
                     }`}
                   >
                     {day.label}
@@ -250,26 +250,29 @@ export function EditPlannedTaskModal({
             {scheduleType === "period" && (
               <div className="flex items-center gap-3">
                 <DatePickerInput value={periodStart} onChange={setPeriodStart} className="flex-1" />
-                <span className="text-gray-500 text-sm shrink-0">→</span>
+                <span className="text-fg-muted text-sm shrink-0">→</span>
                 <DatePickerInput value={periodEnd} onChange={setPeriodEnd} className="flex-1" />
               </div>
             )}
           </div>
 
-          <div className="border-t border-gray-800" />
+          <div className="border-t border-border-subtle" />
 
           {/* Ações */}
           <div className="flex flex-col gap-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+            <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">
               Ações ao iniciar
             </p>
 
             {actions.length > 0 && (
               <ul className="flex flex-col gap-1.5">
                 {actions.map((action, i) => (
-                  <li key={i} className="flex items-center gap-3 px-3 py-2 bg-gray-800 rounded-lg">
+                  <li
+                    key={i}
+                    className="flex items-center gap-3 px-3 py-2 bg-raised rounded-control"
+                  >
                     <span
-                      className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
+                      className={`shrink-0 ${action.type === "open_url" ? "text-accent-text" : "text-purple-400"}`}
                     >
                       {action.type === "open_url" ? (
                         <ExternalLink size={14} />
@@ -277,12 +280,15 @@ export function EditPlannedTaskModal({
                         <FolderOpen size={14} />
                       )}
                     </span>
-                    <span className="flex-1 text-sm text-gray-300 truncate" title={action.value}>
+                    <span
+                      className="flex-1 text-sm text-fg-secondary truncate"
+                      title={action.value}
+                    >
                       {action.value}
                     </span>
                     <button
                       onClick={() => removeAction(i)}
-                      className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                      className="shrink-0 text-fg-muted hover:text-danger transition-colors"
                       title="Remover"
                     >
                       <Trash2 size={14} />
@@ -296,7 +302,7 @@ export function EditPlannedTaskModal({
               <select
                 value={newActionType}
                 onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-                className="px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
+                className="px-3 py-2 text-sm bg-raised border border-border rounded-control text-fg-secondary focus:outline-none focus:border-accent"
               >
                 <option value="open_url">URL</option>
                 <option value="open_file">Arquivo</option>
@@ -314,12 +320,12 @@ export function EditPlannedTaskModal({
                 }}
                 placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
                 autoComplete="off"
-                className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                className="flex-1 px-3 py-2 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
               />
               <button
                 onClick={addAction}
                 disabled={!newActionValue.trim()}
-                className="px-3 py-2 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg transition-colors"
+                className="px-3 py-2 text-sm bg-border hover:opacity-90 disabled:opacity-40 text-fg rounded-control transition"
               >
                 <Plus size={16} />
               </button>
@@ -328,17 +334,17 @@ export function EditPlannedTaskModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-700 shrink-0">
+        <div className="flex justify-end gap-3 px-6 py-4 border-t border-border shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+            className="px-4 py-2 text-sm text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={() => void handleSave()}
             disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+            className="px-4 py-2 text-sm bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
           >
             Salvar
           </button>

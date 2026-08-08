@@ -14,7 +14,7 @@ interface MondayConnectedSectionsProps {
 }
 
 const ACTION_CLASS =
-  "w-full flex items-center gap-1.5 text-xs bg-raised hover:bg-border text-fg-secondary px-3 py-1.5 rounded transition-colors justify-center border border-border";
+  "w-full flex items-center gap-1.5 text-xs bg-raised hover:bg-border text-fg-secondary px-3 py-1.5 rounded-chip transition-colors justify-center border border-border";
 
 export function MondayConnectedSections({
   reloadProjects,
@@ -35,15 +35,15 @@ export function MondayConnectedSections({
       <MondayAutoImportSection />
       <div className="border-t border-border-subtle px-4 py-3 space-y-2">
         <button onClick={onShowSendModal} className={ACTION_CLASS}>
-          <Send size={12} />
+          <Send size={14} />
           Enviar tarefas manualmente…
         </button>
         <button onClick={onShowImportModal} className={ACTION_CLASS}>
-          <DownloadCloud size={12} />
+          <DownloadCloud size={14} />
           Importar itens como planejadas…
         </button>
         <button onClick={onShowEntriesModal} className={ACTION_CLASS}>
-          <ListChecks size={12} />
+          <ListChecks size={14} />
           Gerenciar atividades…
         </button>
       </div>

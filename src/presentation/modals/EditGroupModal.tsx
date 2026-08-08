@@ -76,19 +76,19 @@ export function EditGroupModal({
   const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
       <div
         onKeyDown={handleKeyDown}
-        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md p-5 shadow-xl"
+        className="bg-surface border border-border-subtle rounded-card w-full max-w-md p-5 shadow-xl"
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-100">Editar grupo</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <h2 className="text-sm font-semibold text-fg">Editar grupo</h2>
+            <p className="text-xs text-fg-muted mt-0.5">
               {group.tasks.length} tarefas serão atualizadas
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
+          <button onClick={onClose} className="text-fg-muted hover:text-fg-secondary">
             <X size={16} />
           </button>
         </div>
@@ -101,7 +101,7 @@ export function EditGroupModal({
             placeholder="Nome (opcional)"
             autoFocus
             autoComplete="off"
-            className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
           />
 
           <div className="grid grid-cols-2 gap-2">
@@ -140,10 +140,10 @@ export function EditGroupModal({
             title={
               billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
             }
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg border transition-colors ${
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm rounded-control border transition-colors ${
               billable
-                ? "bg-green-900/40 border-green-700 text-green-400"
-                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
+                ? "bg-billable/10 border-billable/40 text-billable"
+                : "bg-raised border-border text-fg-secondary hover:text-fg"
             }`}
           >
             <DollarSign size={14} />
@@ -158,16 +158,13 @@ export function EditGroupModal({
         </div>
 
         <div className="flex justify-end gap-2 mt-5">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200"
-          >
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-fg-secondary hover:text-fg">
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50"
           >
             Salvar
           </button>

@@ -62,7 +62,7 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
                 : "text-fg-muted hover:text-fg-secondary hover:bg-raised"
             }`}
           >
-            {isPinned ? <Pin size={12} /> : <PinOff size={12} />}
+            {isPinned ? <Pin size={14} /> : <PinOff size={14} />}
           </button>
         )}
         <button
@@ -70,14 +70,14 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
           title={isMaximized ? "Restaurar" : "Maximizar"}
           className="h-full px-3 text-fg-muted hover:text-fg hover:bg-raised transition-colors"
         >
-          {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+          {isMaximized ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
         </button>
         <button
           onClick={() => appWindow.hide()}
           title="Fechar (minimiza para o tray)"
           className="h-full px-4 text-fg-muted hover:text-white hover:bg-danger transition-colors"
         >
-          <X size={12} />
+          <X size={14} />
         </button>
       </div>
     </div>

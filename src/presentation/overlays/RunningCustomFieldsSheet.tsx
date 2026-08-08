@@ -38,17 +38,19 @@ export function RunningCustomFieldsSheet({
     <div
       data-modal-open
       onKeyDown={handleKeyDown}
-      className="absolute inset-0 z-40 flex flex-col bg-gray-900 rounded-xl overflow-hidden"
+      className="absolute inset-0 z-40 flex flex-col bg-surface rounded-card overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-[37px] shrink-0 bg-gray-800 border-b border-gray-700">
-        <span className="text-xs font-medium text-gray-300 truncate">Campos personalizados</span>
+      <div className="flex items-center justify-between px-3 h-[37px] shrink-0 bg-raised border-b border-border">
+        <span className="text-xs font-medium text-fg-secondary truncate">
+          Campos personalizados
+        </span>
         <button
           onClick={onClose}
           title="Cancelar"
-          className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors shrink-0"
+          className="p-1 text-fg-secondary hover:text-fg hover:bg-border rounded-control transition-colors shrink-0"
         >
-          <X size={13} />
+          <X size={14} />
         </button>
       </div>
 
@@ -64,19 +66,19 @@ export function RunningCustomFieldsSheet({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-gray-700/60">
+      <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-border/60">
         <button
           onClick={onClose}
-          className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+          className="px-2.5 py-1 text-xs text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
         >
-          <Check size={11} />
+          <Check size={14} />
           Salvar
         </button>
       </div>

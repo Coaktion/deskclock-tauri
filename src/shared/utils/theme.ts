@@ -9,9 +9,12 @@ export interface Appearance {
   accent: Accent;
 }
 
-/** Vocabulário antigo: uma chave só para os dois eixos. */
-export const THEMES = ["azul", "verde", "escuro", "claro"] as const;
-export type Theme = (typeof THEMES)[number];
+/**
+ * Vocabulário antigo: uma chave só para os dois eixos. Não é mais escrito em
+ * lugar nenhum — sobrevive porque `config` guarda o valor de quem escolheu tema
+ * antes da separação, e é dele que a aparência é migrada na leitura.
+ */
+type Theme = "azul" | "verde" | "escuro" | "claro";
 
 const DEFAULT_APPEARANCE: Appearance = { mode: "escuro", accent: "azul" };
 
@@ -43,26 +46,10 @@ export function resolveAppearance(stored: {
   };
 }
 
-/**
- * O `data-theme` legado expressa **um** eixo de cada vez, então o modo ganha: um
- * app claro com metade das telas escuras é pior que um acento azul onde se pediu
- * roxo. `roxo` e `ambar` não têm equivalente nenhum — ali as telas não migradas
- * ficam com o cromo azul até a última migrar.
- */
-export function legacyThemeFor({ mode, accent }: Appearance): Theme | null {
-  if (mode === "claro") return "claro";
-  if (accent === "verde") return "verde";
-  return null;
-}
-
 export function applyAppearance({ mode, accent }: Appearance): void {
   const root = document.documentElement;
   root.dataset.mode = mode;
   root.dataset.accent = accent;
-
-  const legacy = legacyThemeFor({ mode, accent });
-  if (legacy) root.dataset.theme = legacy;
-  else delete root.dataset.theme;
 }
 
 /** Lê de volta o que `applyAppearance` gravou no documento. */

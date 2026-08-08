@@ -59,7 +59,7 @@ export function ClockifyWorkspaceSection() {
               <select
                 value={activeId}
                 onChange={(e) => handleChange(e.target.value)}
-                className="bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg focus:outline-none focus:border-accent max-w-[200px]"
+                className="bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg focus:outline-none focus:border-accent max-w-[200px]"
               >
                 {workspaces.map((w) => (
                   <option key={w.id} value={w.id}>
@@ -76,7 +76,7 @@ export function ClockifyWorkspaceSection() {
               title="Atualizar lista"
               className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
             >
-              <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
             </button>
           </div>
         </div>

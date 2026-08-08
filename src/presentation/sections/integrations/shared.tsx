@@ -106,7 +106,7 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
       }`}
     >
       {feedback.ok ? (
-        <CheckCircle2 size={12} className="mt-px shrink-0" />
+        <CheckCircle2 size={14} className="mt-px shrink-0" />
       ) : (
         // O `title` vai no wrapper, não no ícone: em SVG inline o atributo não
         // vira tooltip — o navegador só o reconhece como elemento filho.
@@ -114,7 +114,7 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
           className={`mt-px shrink-0 ${feedback.detail ? "cursor-help" : ""}`}
           title={feedback.detail}
         >
-          <AlertCircle size={12} />
+          <AlertCircle size={14} />
         </span>
       )}
       {feedback.text}
@@ -125,12 +125,12 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
 export function StatusBadge({ connected, email }: { connected: boolean; email?: string }) {
   return connected ? (
     <span className="flex items-center gap-1 text-xs text-billable">
-      <CheckCircle2 size={12} />
+      <CheckCircle2 size={14} />
       {email ? `Conectado como ${email}` : "Conectado"}
     </span>
   ) : (
     <span className="flex items-center gap-1 text-xs text-fg-muted">
-      <Circle size={12} />
+      <Circle size={14} />
       Não configurado
     </span>
   );

@@ -35,21 +35,21 @@ export function CompactOverlayContent({
   const hasTask = !!runningTask;
 
   const borderClass = isRunning
-    ? "border-blue-500 overlay-ring-pulse"
+    ? "border-accent overlay-ring-pulse"
     : isPaused
-      ? "border-amber-500"
+      ? "border-paused"
       : isPopupOpen
-        ? "border-blue-500"
-        : "border-gray-700";
+        ? "border-accent"
+        : "border-border";
 
-  const timerColor = isPaused ? "text-amber-400" : "text-blue-400";
+  const timerColor = isPaused ? "text-paused" : "text-accent-text";
 
   const isSmall = overlaySize === "small";
   const maxW = isSmall ? "max-w-[68px]" : "max-w-[78px]";
   const maxH = isSmall ? "max-h-[44px]" : "max-h-[52px]";
-  const rounded = isSmall ? "rounded-[6px]" : "rounded-xl";
-  const roundedTop = isSmall ? "rounded-t-[6px]" : "rounded-t-xl";
-  const roundedBottom = isSmall ? "rounded-b-[6px]" : "rounded-b-xl";
+  const rounded = isSmall ? "rounded-chip" : "rounded-card";
+  const roundedTop = isSmall ? "rounded-t-chip" : "rounded-t-card";
+  const roundedBottom = isSmall ? "rounded-b-chip" : "rounded-b-card";
   const timerSize = isSmall ? "text-xs" : "text-sm";
   // O contador é um dígito só na maioria das vezes: pode ser maior que o timer
   // sem estourar a caixa, e é o que o torna legível de relance.
@@ -60,7 +60,7 @@ export function CompactOverlayContent({
   // sem crescentes, o disco seria invisível em repouso e ainda assim criaria um
   // segundo blend no hover do botão.
   const centerBackdrop = showWorkspace
-    ? "box-content p-1 rounded-full bg-gray-900 group-hover:bg-gray-800/60 transition-colors"
+    ? "box-content p-1 rounded-full bg-surface group-hover:bg-raised/60 transition-colors"
     : "";
 
   return (
@@ -68,7 +68,7 @@ export function CompactOverlayContent({
     // max-w/max-h limitam a área visível ao tamanho correto.
     <div
       data-tauri-drag-region
-      className={`flex flex-col w-full h-full ${maxW} ${maxH} m-auto absolute inset-0 cursor-move bg-gray-900 border shadow-xl transition-colors duration-200 ${rounded} ${borderClass}`}
+      className={`flex flex-col w-full h-full ${maxW} ${maxH} m-auto absolute inset-0 cursor-move bg-surface border shadow-xl transition-colors duration-200 ${rounded} ${borderClass}`}
       title={
         (hasTask ? "Ver tarefa em execução" : "Ver tarefas planejadas") +
         (showWorkspace ? ` — ${activeWorkspace!.name}` : "")
@@ -77,7 +77,7 @@ export function CompactOverlayContent({
       <button
         onMouseDown={onMouseDown}
         onClick={onTogglePopup}
-        className={`group relative flex items-center justify-center hover:bg-gray-800/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
+        className={`group relative flex items-center justify-center hover:bg-raised/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
       >
         {/* Só sobre o botão, nunca sobre a barra do grip. */}
         {showWorkspace && <WorkspaceEdge color={activeWorkspace!.color} className={roundedTop} />}
@@ -92,35 +92,35 @@ export function CompactOverlayContent({
           // overlay já é. Fica no centro, no lugar do ícone, e não como badge de
           // canto: a 68px o badge era pequeno demais para se ler de relance.
           <span
-            className={`relative ${centerBackdrop} ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-blue-400`}
+            className={`relative ${centerBackdrop} ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-accent-text`}
           >
             {pendingCount > 99 ? "99+" : pendingCount}
           </span>
         ) : (
           <ListTodo
             size={18}
-            className={`relative ${centerBackdrop} text-blue-400 pointer-events-none`}
+            className={`relative ${centerBackdrop} text-accent-text pointer-events-none`}
           />
         )}
       </button>
 
       <div
         data-tauri-drag-region
-        className={`p-1 gap-0.5 pointer-events-none flex flex-col items-center justify-center bg-gray-800 ${roundedBottom}`}
+        className={`p-1 gap-0.5 pointer-events-none flex flex-col items-center justify-center bg-raised ${roundedBottom}`}
       >
         <div className="flex gap-0.5">
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
         </div>
         <div className="flex gap-0.5">
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
-          <span className="w-[3px] h-[3px] bg-gray-200 rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
+          <span className="w-[3px] h-[3px] bg-fg-secondary rounded-full" />
         </div>
       </div>
     </div>

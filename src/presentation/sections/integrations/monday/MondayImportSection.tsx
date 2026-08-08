@@ -59,7 +59,7 @@ export function MondayImportSection({
   const stageLabels = mergeLabels(catalogs.projectStage, stageSource?.projectStageLabels ?? []);
 
   return (
-    <SubSection icon={<DownloadCloud size={15} />} title="Importação de dados">
+    <SubSection icon={<DownloadCloud size={14} />} title="Importação de dados">
       <div className="pb-2 space-y-3">
         <MondayProjectsImport
           mappings={mappings}

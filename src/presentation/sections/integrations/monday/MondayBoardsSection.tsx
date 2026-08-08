@@ -2,7 +2,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useEffect, useState, type ReactNode } from "react";
 
 const INPUT_CLASS =
-  "shrink-0 w-36 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
+  "shrink-0 w-36 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
 
 /** Rótulo + descrição à esquerda, controle à direita — o arranjo de toda a seção. */
 function SettingRow({

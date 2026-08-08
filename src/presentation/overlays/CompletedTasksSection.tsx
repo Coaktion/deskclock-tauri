@@ -31,7 +31,7 @@ export function CompletedTasksSection({
   if (groups.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-center text-gray-600 text-xs">Nenhuma tarefa executada hoje</p>
+        <p className="text-center text-fg-muted text-xs">Nenhuma tarefa executada hoje</p>
       </div>
     );
   }
@@ -39,9 +39,9 @@ export function CompletedTasksSection({
   return (
     <div className="h-full flex flex-col">
       {/* Resumo do total do dia */}
-      <div className="flex items-center px-3 py-1 border-b border-gray-800/70 shrink-0">
-        <span className="text-xs text-gray-500">Total do dia</span>
-        <span className="ml-auto text-xs tabular-nums text-gray-400 font-mono">
+      <div className="flex items-center px-3 py-1 border-b border-border-subtle/70 shrink-0">
+        <span className="text-xs text-fg-muted">Total do dia</span>
+        <span className="ml-auto text-xs tabular-nums text-fg-secondary font-mono">
           {formatDurationCompact(totalSeconds)}
         </span>
       </div>
@@ -59,7 +59,7 @@ export function CompletedTasksSection({
           return (
             <div
               key={group.key}
-              className="relative flex items-center gap-2 px-3 border-b border-gray-800/70 hover:bg-gray-800/40 transition-colors"
+              className="relative flex items-center gap-2 px-3 border-b border-border-subtle/70 hover:bg-raised/40 transition-colors"
               style={{ height: COMPLETED_ROW_H }}
             >
               <span
@@ -67,23 +67,23 @@ export function CompletedTasksSection({
                 style={{ backgroundColor: railColor }}
               />
               <div className="flex-1 min-w-0 pl-1.5">
-                <p className="text-xs font-medium text-gray-300 truncate leading-tight">
-                  {first.name || <span className="text-gray-500 italic">(sem nome)</span>}
-                  {count > 1 && <span className="font-normal text-gray-500"> ·{count}x</span>}
+                <p className="text-xs font-medium text-fg-secondary truncate leading-tight">
+                  {first.name || <span className="text-fg-muted italic">(sem nome)</span>}
+                  {count > 1 && <span className="font-normal text-fg-muted"> ·{count}x</span>}
                 </p>
                 {subtitle && (
-                  <p className="text-xs text-gray-500 truncate leading-tight mt-0.5">{subtitle}</p>
+                  <p className="text-xs text-fg-muted truncate leading-tight mt-0.5">{subtitle}</p>
                 )}
               </div>
-              <span className="text-xs tabular-nums text-gray-400 font-mono shrink-0">
+              <span className="text-xs tabular-nums text-fg-secondary font-mono shrink-0">
                 {formatDurationCompact(group.totalSeconds)}
               </span>
               <button
                 onClick={() => onRepeat(group)}
                 title="Repetir tarefa"
-                className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
+                className="p-1 text-fg-muted hover:text-billable hover:bg-billable/10 rounded-control transition-colors shrink-0"
               >
-                <Play size={11} fill="currentColor" />
+                <Play size={14} fill="currentColor" />
               </button>
             </div>
           );

@@ -195,7 +195,7 @@ export function WeekPlanningView() {
               }}
               className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors shrink-0"
             >
-              <ChevronLeft size={15} />
+              <ChevronLeft size={14} />
             </button>
 
             <span className="text-sm font-medium text-fg truncate">{label}</span>
@@ -207,7 +207,7 @@ export function WeekPlanningView() {
               }}
               className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors shrink-0"
             >
-              <ChevronRight size={15} />
+              <ChevronRight size={14} />
             </button>
 
             {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:

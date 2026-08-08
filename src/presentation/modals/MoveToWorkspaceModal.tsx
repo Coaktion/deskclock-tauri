@@ -51,16 +51,16 @@ function ResolutionRow({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-xs uppercase tracking-wide text-fg-muted">{label}</span>
       {sourceName ? (
         <>
-          <span className="text-xs text-gray-400">
-            Na origem: <span className="text-gray-200">{sourceName}</span>
+          <span className="text-xs text-fg-secondary">
+            Na origem: <span className="text-fg">{sourceName}</span>
           </span>
           <select
             value={kind}
             onChange={(e) => onKindChange(e.target.value as Kind)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-raised border border-border rounded-control px-2 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {options.map(([k, text]) => (
               <option key={k} value={k}>
@@ -70,7 +70,7 @@ function ResolutionRow({
           </select>
         </>
       ) : (
-        <span className="text-xs text-gray-600">Sem {label.toLowerCase()} na origem.</span>
+        <span className="text-xs text-fg-muted">Sem {label.toLowerCase()} na origem.</span>
       )}
     </div>
   );
@@ -184,23 +184,26 @@ export function MoveToWorkspaceModal({
   const target = workspaces.find((w) => w.id === targetId) ?? null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
       <div
         onKeyDown={handleKeyDown}
-        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl"
+        className="bg-surface border border-border-subtle rounded-card w-full max-w-md shadow-2xl"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <h2 className="text-sm font-semibold text-fg">
             {mode === "move" ? "Mover" : "Copiar"} {tasks.length}{" "}
             {tasks.length === 1 ? "tarefa" : "tarefas"}
           </h2>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
+          <button
+            onClick={onClose}
+            className="p-1 text-fg-muted hover:text-fg-secondary rounded-control"
+          >
             <X size={16} />
           </button>
         </div>
 
         {others.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-gray-500 text-center">
+          <p className="px-5 py-6 text-sm text-fg-muted text-center">
             Não há outro workspace para onde mover. Crie um em Dados → Workspaces.
           </p>
         ) : (
@@ -208,17 +211,17 @@ export function MoveToWorkspaceModal({
             <div className="flex gap-1.5">
               {(
                 [
-                  ["move", "Mover", <ArrowRight key="m" size={13} />],
-                  ["copy", "Copiar", <Copy key="c" size={13} />],
+                  ["move", "Mover", <ArrowRight key="m" size={14} />],
+                  ["copy", "Copiar", <Copy key="c" size={14} />],
                 ] as const
               ).map(([k, label, icon]) => (
                 <button
                   key={k}
                   onClick={() => setMode(k)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-control text-xs font-medium border transition-colors ${
                     mode === k
-                      ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                      : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200"
+                      ? "bg-accent/10 border-accent/40 text-accent-text"
+                      : "bg-surface border-border text-fg-secondary hover:text-fg"
                   }`}
                 >
                   {icon}
@@ -228,13 +231,13 @@ export function MoveToWorkspaceModal({
             </div>
 
             <div className="flex flex-col gap-1">
-              <span className="text-xs uppercase tracking-wide text-gray-500">Destino</span>
+              <span className="text-xs uppercase tracking-wide text-fg-muted">Destino</span>
               <div className="flex items-center gap-2">
                 {target && <WorkspaceDot color={target.color} />}
                 <select
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 bg-raised border border-border rounded-control px-2 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent"
                 >
                   {others.map((w) => (
                     <option key={w.id} value={w.id}>
@@ -246,7 +249,7 @@ export function MoveToWorkspaceModal({
             </div>
 
             {loading ? (
-              <p className="text-xs text-gray-500">Carregando catálogo do destino...</p>
+              <p className="text-xs text-fg-muted">Carregando catálogo do destino...</p>
             ) : (
               <>
                 <ResolutionRow
@@ -278,21 +281,18 @@ export function MoveToWorkspaceModal({
               </>
             )}
 
-            {error && <p className="text-xs text-red-400">{error}</p>}
+            {error && <p className="text-xs text-danger">{error}</p>}
           </div>
         )}
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-700">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200"
-          >
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-border">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm text-fg-secondary hover:text-fg">
             Cancelar
           </button>
           <button
             onClick={() => void handleConfirm()}
             disabled={busy || loading || others.length === 0}
-            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg transition-colors"
+            className="px-3 py-1.5 text-sm bg-accent hover:opacity-90 disabled:opacity-40 text-white rounded-control transition"
           >
             {busy ? "Aplicando..." : mode === "move" ? "Mover" : "Copiar"}
           </button>

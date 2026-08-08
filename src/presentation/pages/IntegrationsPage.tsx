@@ -39,7 +39,7 @@ export function IntegrationsPage() {
       onClick={() => setDetail(null)}
       className="flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg-secondary transition-colors mb-5"
     >
-      <ArrowLeft size={12} />
+      <ArrowLeft size={14} />
       Integrações
     </button>
   );

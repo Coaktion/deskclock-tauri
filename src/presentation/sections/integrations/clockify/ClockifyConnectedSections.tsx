@@ -33,11 +33,11 @@ export function ClockifyConnectedSections({
       <ClockifyAutoSyncSection />
       <div className="border-t border-border-subtle px-4 py-3 flex items-center gap-2">
         <button onClick={onShowEntriesModal} className={`${integrationButtonClass} flex-1`}>
-          <ListChecks size={12} />
+          <ListChecks size={14} />
           Gerenciar apontamentos…
         </button>
         <button onClick={onShowSendModal} className={`${integrationButtonClass} flex-1`}>
-          <Send size={12} />
+          <Send size={14} />
           Enviar tarefas manualmente…
         </button>
       </div>

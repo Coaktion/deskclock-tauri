@@ -61,18 +61,18 @@ export function TagMultiSelect({
       <button
         ref={triggerRef}
         onClick={() => (open ? setOpen(false) : openDropdown())}
-        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-raised border border-border rounded px-2 py-1 text-xs text-left focus:outline-none focus:border-accent"
+        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-raised border border-border rounded-chip px-2 py-1 text-xs text-left focus:outline-none focus:border-accent"
       >
         {selected.length === 0 ? (
           <span className="text-fg-muted">{placeholder}</span>
         ) : (
           selected.map((t) => (
-            <span key={t.id} className="bg-border text-fg px-1.5 py-0.5 rounded text-xs">
+            <span key={t.id} className="bg-border text-fg px-1.5 py-0.5 rounded-chip text-xs">
               {t.name}
             </span>
           ))
         )}
-        <ChevronDown size={11} className="ml-auto shrink-0 text-fg-muted" />
+        <ChevronDown size={14} className="ml-auto shrink-0 text-fg-muted" />
       </button>
       {open &&
         createPortal(

@@ -50,7 +50,7 @@ export function MondayIntegrationCard() {
   return (
     <>
       <div className="rounded-card border border-border-subtle bg-surface">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-xl overflow-hidden">
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-card overflow-hidden">
           <div className="mt-0.5 shrink-0">
             <MondayLogo size={20} />
           </div>
@@ -70,15 +70,15 @@ export function MondayIntegrationCard() {
                 disabled={loading}
                 className={`${integrationButtonClass}`}
               >
-                {loading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
                 Desconectar
               </button>
             ) : (
               <button
                 onClick={() => setShowConnectModal(true)}
-                className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent text-white px-3 py-1.5 rounded transition-colors"
+                className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-chip transition"
               >
-                <LogIn size={12} />
+                <LogIn size={14} />
                 Conectar
               </button>
             )}

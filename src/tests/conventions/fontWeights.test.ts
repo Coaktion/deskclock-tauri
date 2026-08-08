@@ -13,19 +13,12 @@ import { listSourceFiles } from "../helpers/sourceFiles";
  * esquecido renderiza como 600 e **não se vê na tela**. É justamente por não se
  * ver que a lista abaixo existe: sem ela, a classe voltaria a se espalhar sem
  * nada denunciando.
- *
- * A única que resta é o badge do contador do overlay compacto, território do
- * último PR da migração. As outras quatro eram o mesmo overline de 9–10px e
- * saíram junto com o `text-overline`, que já carrega o peso. A lista só pode
- * encolher.
  */
 
 const FONT_BOLD = /\bfont-bold\b/g;
 
-/** Congelado em 2026-08-08. Ao migrar uma tela, baixe ou apague a linha dela. */
-const BASELINE: Record<string, number> = {
-  "src/presentation/overlays/CompactOverlay.tsx": 1,
-};
+/** Vazio desde 2026-08-08. A lista só pode encolher — aqui, permanecer vazia. */
+const BASELINE: Record<string, number> = {};
 
 describe("convenção: a escala de peso para em 600", () => {
   it("nenhum arquivo passa da sua linha do baseline", () => {

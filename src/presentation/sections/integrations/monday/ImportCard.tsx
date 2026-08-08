@@ -54,7 +54,7 @@ export function ImportActionButton({
       title={title}
       className={`${integrationButtonClass} shrink-0`}
     >
-      {busy && <Loader2 size={10} className="animate-spin" />}
+      {busy && <Loader2 size={14} className="animate-spin" />}
       {label}
     </button>
   );

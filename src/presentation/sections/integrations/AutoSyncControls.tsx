@@ -101,7 +101,7 @@ export function AutoSyncControls({
 
   return (
     <SubSection
-      icon={<RefreshCw size={15} />}
+      icon={<RefreshCw size={14} />}
       title="Sincronização automática"
       badge={
         autoSync ? (

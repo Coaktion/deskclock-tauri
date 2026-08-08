@@ -1594,14 +1594,9 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   **fora de `@layer`** de propósito: o `@theme` emite dentro de `@layer theme`, e regra sem layer
   vence regra em layer no cascade, qualquer que seja a especificidade.
 
-  > **`applyAppearance` grava três atributos**, não dois: `data-mode`, `data-accent` e o
-  > `data-theme` legado. Enquanto houver tela não migrada, os dois vocabulários precisam estar
-  > ligados ao mesmo tempo — sem o terceiro, quem estivesse no Claro veria as telas migradas claras
-  > dentro de um app escuro. **Não apague o legado antes da última tela migrar.**
-  >
-  > O `data-theme` expressa **um** eixo de cada vez, então o modo ganha (`legacyThemeFor`): app
-  > claro com metade das telas escuras é pior que um acento azul onde se pediu roxo. `roxo` e
-  > `ambar` não têm equivalente nenhum — nas telas não migradas eles aparecem como azul.
+  > **`applyAppearance` grava dois atributos**: `data-mode` e `data-accent`. O `data-theme` legado
+  > saiu junto com o CSS que o lia — escrevê-lo agora seria um resto no DOM, e um resto que alguém
+  > acabaria estilizando de novo.
   >
   > **A migração do `theme` acontece na leitura, eixo a eixo** (`resolveAppearance`), com vazio
   > significando "nunca escolhido": `azul`/`escuro`→`escuro+azul`, `verde`→`escuro+verde`,
@@ -1613,13 +1608,23 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > o toast (`showToast` → `readAppliedAppearance`). Era a única janela que não aplicava tema
   > nenhum, e ficava escura dentro do app claro. Dar-lhe um `ConfigProvider` custaria uma quinta
   > janela abrindo o banco no boot, que é justamente onde mora a corrida de migration já conhecida.
-- **Tema legado, em migração:** os três `[data-theme="verde"|"escuro"|"claro"]` continuam no arquivo
-  remapeando famílias do Tailwind (`blue`→`green`, `gray`→`zinc`, inversão da rampa de `gray`), e
-  por isso `blue`, `green`, `gray` e `zinc` **seguem reservados** e não devem colorir entidades.
-  Eles convivem com os tokens durante a migração — telas não migradas usam `bg-gray-900`, migradas
-  usam `bg-surface`, e os valores são próximos o bastante para as duas conviverem. **São o último
-  passo da migração a ser apagado**, junto com as cópias `--tw-gray-*`; não os remova antes de a
-  última tela e o CSS do tour saírem deles.
+- **O tema legado acabou.** Os três `[data-theme="verde"|"escuro"|"claro"]` e as cópias
+  `--tw-gray-*` saíram de `src/index.css`, e com eles a paleta crua deixou de ter qualquer papel:
+  não há mais "tela não migrada". `bg-gray-800` hoje não é legado tolerado — é cinza fixo, que
+  **parece certo no escuro e ignora modo e acento**, e é a regressão mais fácil de não notar. Dois
+  testes de convenção guardam isso: `designTokens.test.ts` afirma que nem o seletor nem as cópias
+  voltaram, e `meaningColors.test.ts` chegou a zero fora da paleta de workspace.
+
+  > **A paleta de workspace é a exceção, e não é dívida.** `WorkspaceDot` continua escrevendo
+  > `rose`, `amber`, `teal` e as demais por extenso: ali a cor é **entidade** — o usuário a escolhe
+  > num seletor —, não significado. Um token de significado seria a tradução errada, e classe
+  > montada em runtime (`bg-${slot}-500`) o Tailwind não vê. A lista curada vive em
+  > `domain/utils/workspaceColor.ts`.
+
+  > **`rounded-sm` sobrevive fora da escala de três raios**, em cinco lugares. Todos são marcas de
+  > 2 a 8 px — o tique do checkbox, a barra da linha do tempo, o retalho que o rótulo encaixado usa
+  > para apagar a borda. Com o raio de chip (6 px) elas viram bolhas: os três raios governam caixa,
+  > não micromarca.
 - **Famílias:** **Source Sans 3** (`--font-sans`) e **Source Code Pro** (`--font-mono`), a mesma
   superfamília — título e cronômetro têm o mesmo esqueleto. Vêm empacotadas: os woff2 saem dos
   pacotes `@fontsource-variable/*` e o `@font-face` é escrito à mão no topo de `src/index.css`,
@@ -1678,6 +1683,13 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 - **Ritmo:** padding de página **`p-5`**, linha de lista **`py-2.5 px-4`** (o `TaskRow`), e valores
   de espaçamento fechados em 1 / 2 / 3 / 4 / 6 / 8. Fora disso, pare e pergunte (§"Zero hardcode
   visual").
+
+- **Ícone tem três tamanhos: 14 · 16 · 18.** Eram nove, com `size={13}` liderando em 85 usos — e a
+  diferença entre 13 e 14 não se vê, só se acumula em ícones que não alinham entre listas. **Os
+  overlays entraram na regra, e a decisão foi consciente**: o popup tem 264 px úteis e usava 30
+  ícones de 11 px, então subir para 14 muda a densidade do flyout. Foi escolha do usuário em
+  2026-08-08, contra o alerta de que a verificação manual estava pendente. Fica **de fora** o
+  `size` do `WorkspaceDot`, que é diâmetro do ponto em px e não tamanho de glifo.
 - **Paleta de cores de entidade:** `src/domain/utils/workspaceColor.ts` define a lista curada de
   slots usada para colorir workspaces, junto com a justificativa de cada exclusão.
   `shared/utils/projectColor.ts` devolve **`var(--color-project-N)`**, não um hex: o retorno vai em
@@ -1766,7 +1778,20 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > e "envio concluído" usam `billable` por falta de um `--color-success`, e o aviso segue em `amber-*`
   > cru — os dois entram na revisão final. Botão primário preenchido usa `text-white` sobre `bg-accent`
   > pelo mesmo buraco: não há token de texto sobre acento (`accent-text` é o acento claro, ilegível
-  > sobre ele).
+  > sobre ele). **É o único `text-white` que sobra**: onde ele estava sobre superfície comum — três
+  > `hover:text-white` e dois botões neutros — o texto sumia no modo claro, e virou `text-fg`.
+
+  > **A escala de três degraus colapsa pares, e é isso que a tradução tem de vigiar.** Seis tons de
+  > cinza de texto viram três tokens, então `gray-400` envolvendo um `gray-200` — o padrão de
+  > ênfase "rótulo: **valor**" — cai nos dois no mesmo token e a ênfase some sem erro nenhum. A
+  > régua é **100/200 → `fg`**, 300/400 → `fg-secondary`, 500+ → `fg-muted`.
+  >
+  > O mesmo vale para hover: `bg-blue-600 hover:bg-blue-500` e `text-gray-400 hover:text-gray-200`
+  > colapsam em `X hover:X`, um hover que não faz nada. Num botão cheio o degrau vira
+  > **`hover:opacity-90`** (com `transition`, que `transition-colors` não anima); num de texto, o
+  > tom seguinte da escala. Eram **96** desses no fim do PR 8 — 10 herdados do PR 7 e 86 criados
+  > pela varredura — e o custo de achá-los foi zero: um script compara as classes base e as `hover:`
+  > da mesma linha. Vale repetir a checagem em qualquer varredura de cor futura.
   >
   > Três arquivos que ninguém importava desde o commit do omnibox foram apagados aqui
   > (`RunningTaskSection`, `RunningTaskEditForm`, `BulkImportTextarea`): cada varredura desta migração
@@ -1781,11 +1806,12 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 
 1. **Zero hardcode visual.** Nunca crie cores, tamanhos, raios, sombras ou tipografias com valores
    literais. Em código novo use o **token semântico** (`bg-surface`, `text-fg-muted`,
-   `border-border-subtle`, `rounded-card`); a paleta crua do Tailwind (`var(--color-teal-500)`) é
-   legado em migração e só se justifica em tela ainda não migrada. Cor de significado tem token
-   próprio: `billable`, `paused` e `danger` — nunca `emerald`, `green`, `rose` ou `red` direto, e
-   `green` ainda por cima é família remapeada pelo tema Verde, o que torna hora billable
-   indistinguível do acento. Se precisar de um valor que a paleta não cobre, pare e pergunte.
+   `border-border-subtle`, `rounded-card`). **A paleta crua do Tailwind não tem mais uso legítimo
+   em cromo** — `bg-gray-800` é cinza fixo, que parece certo no escuro e ignora modo e acento. Cor
+   de significado tem token próprio: `billable`, `paused` e `danger` — nunca `emerald`, `green`,
+   `rose` ou `red` direto. As duas exceções são cor de **entidade** (paleta de workspace, cor de
+   projeto) e cor de **marca** (os logos e ladrilhos de integração). Se precisar de um valor que a
+   paleta não cobre, pare e pergunte.
 
 2. **Um componente por conversa.** Não refatore múltiplas telas/componentes na mesma mudança.
    Escopo pequeno é verificável.
@@ -1805,7 +1831,7 @@ Todo PR visual deve passar em:
 - [ ] Zero valores de espaçamento literal (px) fora das escalas do Tailwind
 - [ ] Testes existentes passam
 - [ ] Sem console warnings novos
-- [ ] Comportamento verificado nos quatro temas (Azul, Verde, Escuro, Claro)
+- [ ] Comportamento verificado nos dois modos (Escuro, Claro) e nos quatro acentos
 
 ## Tom e linguagem
 
@@ -1913,7 +1939,7 @@ Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). An
 
 ---
 
-*Última atualização: 2026-08-08 (§8.4: Tarefas, Planejamento, Lançamento Manual e Integrações padronizadas — toda linha de tarefa é o `TaskRow` (com `duration` opcional e `SectionCard.action`), estado de execução passa a ser o acento, `projectColor` devolve `var(--color-project-N)`, e a moldura do app entrou junto; sucesso e aviso seguem sem token; §8.4: Dados e Configurações padronizadas — abas no cabeçalho, coluna de 720 px e grupos em `SectionCard` com nome, o oitavo primitivo canônico; a janela principal passa a abrir em 1100×700, que é o que fez as seis abas caberem nos 56 px; §5.3 e §5.8: as colunas de formulário do Planejamento e do Lançamento Manual passam a ser arrastáveis, e a lista de planejadas do Lançamento Manual redimensiona na vertical, com `useResizablePanel` + `ResizeHandle` como base genérica — geometria numa prop só (`anchor`) e o handle lendo o eixo do próprio `aria-orientation`; §5.7: o `ITaskSender` devolve `TaskSendOutcome` — envio parcial deixa de ser marcado como tudo ou nada, recusa de um grupo não aborta os seguintes e a tela ganha o tom de envio parcial; §5.9: o onboarding deixou de cadastrar projetos e categorias e passou a sugerir conectar uma integração, abrindo o app na tela de Integrações; §6.4: a lista do autocomplete se dimensiona pelo conteúdo, com o teto medido contra a borda da janela; §5.7: arredondamento de duração documentado, e a duração gravada passa a mandar sobre o intervalo início→fim na edição de tarefa — vale também para tarefa pausada; §8.2 e §6.4: Enter em qualquer campo submete o formulário, via `useSubmitOnEnter` no container, com `preventDefault` como o aviso de "já consumi esta tecla" que faz a lista aberta selecionar sem submeter junto; §8.2: todo `<input>` com `autoComplete="off"`, guardado por teste de convenção; §5.7: o alerta de reunião leva também os campos personalizados da planejada, entre eles o Project Stage; §5.7: o vínculo da reunião com a planejada só vale dentro do workspace em que a tarefa nasce, com casamento por nome no ativo como rede — era o que fazia o alerta iniciar sem projeto nem categoria; §4.1 e §5.1.2: configurar a tarefa depois de iniciada configura também a planejada de origem; §5.7: schema de board cacheado por 7 dias na varredura do Monday, com "Atualizar" ignorando a validade e só sucesso estampando a marca; §5.7: catálogo de projetos lido numa consulta só na varredura do Monday, com o nome comparado aparado; §5.7: piso de data na busca do gerenciador de atividades do Monday, e causa técnica do erro no tooltip do ícone; §5.7: otimização da API do Monday — lotes de board em paralelo com teto, e nova tentativa nas recusas temporárias, com a `mutation` fora do 5xx e da falha de rede para não duplicar atividade; §5.7: otimização da API do Monday — schemas dos boards lidos em lote na varredura de projetos (~46 requisições sequenciais → 3, e falha de token deixa de zerar o mapeamento) e coluna de cronograma cacheada em `timelineColumnId`, que tira a leitura de schema do ciclo de importação; §5.7: importação automática de itens passa de 30 min para 4 h, com o "Buscar itens agora" como caminho pontual; §5.6, §6.4 e §5.7: categorias por projeto — o autocomplete de categoria oferece só as associadas, conjunto vazio devolve o catálogo inteiro, a associação se edita na linha do projeto na tela de Dados e o import do Monday a semeia pelos Activity Types do board; §6.7: o modal de exclusão de workspace avisa quais integrações param junto, incluindo as que usam o "Padrão" sem tê-lo escolhido; §5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
+*Última atualização: 2026-08-08 (§8.4: **a migração do design system terminou** — overlays, modais, tour e a limpeza final: o tema legado (`[data-theme]` e as cópias `--tw-gray-*`) saiu de `src/index.css` e o `applyAppearance` deixou de escrevê-lo, o tour passou aos tokens, a paleta crua zerou fora das cores de entidade e de marca, a escala de ícone fechou em 14/16/18 (overlays inclusos, por decisão do usuário) e o raio de 4 px sumiu; no caminho, 96 hovers que não faziam nada — 10 herdados do PR 7 — e cinco `text-white` que sumiam no modo claro; §8.4: Tarefas, Planejamento, Lançamento Manual e Integrações padronizadas — toda linha de tarefa é o `TaskRow` (com `duration` opcional e `SectionCard.action`), estado de execução passa a ser o acento, `projectColor` devolve `var(--color-project-N)`, e a moldura do app entrou junto; sucesso e aviso seguem sem token; §8.4: Dados e Configurações padronizadas — abas no cabeçalho, coluna de 720 px e grupos em `SectionCard` com nome, o oitavo primitivo canônico; a janela principal passa a abrir em 1100×700, que é o que fez as seis abas caberem nos 56 px; §5.3 e §5.8: as colunas de formulário do Planejamento e do Lançamento Manual passam a ser arrastáveis, e a lista de planejadas do Lançamento Manual redimensiona na vertical, com `useResizablePanel` + `ResizeHandle` como base genérica — geometria numa prop só (`anchor`) e o handle lendo o eixo do próprio `aria-orientation`; §5.7: o `ITaskSender` devolve `TaskSendOutcome` — envio parcial deixa de ser marcado como tudo ou nada, recusa de um grupo não aborta os seguintes e a tela ganha o tom de envio parcial; §5.9: o onboarding deixou de cadastrar projetos e categorias e passou a sugerir conectar uma integração, abrindo o app na tela de Integrações; §6.4: a lista do autocomplete se dimensiona pelo conteúdo, com o teto medido contra a borda da janela; §5.7: arredondamento de duração documentado, e a duração gravada passa a mandar sobre o intervalo início→fim na edição de tarefa — vale também para tarefa pausada; §8.2 e §6.4: Enter em qualquer campo submete o formulário, via `useSubmitOnEnter` no container, com `preventDefault` como o aviso de "já consumi esta tecla" que faz a lista aberta selecionar sem submeter junto; §8.2: todo `<input>` com `autoComplete="off"`, guardado por teste de convenção; §5.7: o alerta de reunião leva também os campos personalizados da planejada, entre eles o Project Stage; §5.7: o vínculo da reunião com a planejada só vale dentro do workspace em que a tarefa nasce, com casamento por nome no ativo como rede — era o que fazia o alerta iniciar sem projeto nem categoria; §4.1 e §5.1.2: configurar a tarefa depois de iniciada configura também a planejada de origem; §5.7: schema de board cacheado por 7 dias na varredura do Monday, com "Atualizar" ignorando a validade e só sucesso estampando a marca; §5.7: catálogo de projetos lido numa consulta só na varredura do Monday, com o nome comparado aparado; §5.7: piso de data na busca do gerenciador de atividades do Monday, e causa técnica do erro no tooltip do ícone; §5.7: otimização da API do Monday — lotes de board em paralelo com teto, e nova tentativa nas recusas temporárias, com a `mutation` fora do 5xx e da falha de rede para não duplicar atividade; §5.7: otimização da API do Monday — schemas dos boards lidos em lote na varredura de projetos (~46 requisições sequenciais → 3, e falha de token deixa de zerar o mapeamento) e coluna de cronograma cacheada em `timelineColumnId`, que tira a leitura de schema do ciclo de importação; §5.7: importação automática de itens passa de 30 min para 4 h, com o "Buscar itens agora" como caminho pontual; §5.6, §6.4 e §5.7: categorias por projeto — o autocomplete de categoria oferece só as associadas, conjunto vazio devolve o catálogo inteiro, a associação se edita na linha do projeto na tela de Dados e o import do Monday a semeia pelos Activity Types do board; §6.7: o modal de exclusão de workspace avisa quais integrações param junto, incluindo as que usam o "Padrão" sem tê-lo escolhido; §5.7, §6.7 e §9.5: cada integração trabalha num workspace do DeskClock escolhido nela mesma — **o item 7 do §9.5 passou a dizer o contrário do que dizia**, e o rastreio automático de reuniões é a exceção deliberada; §5.7: Report Type adormecido — toda atividade vai como `Activity`, com o roteamento por grupo pronto em volta; §5.7: Report Type vira o grupo de destino da atividade, motivo de não faturável obrigatório em cliente e recusa que não aborta o envio; §7.6: instante de teste nunca é literal UTC — `localISO`; §5.7: as datas da atividade do Monday vão só com o dia, sem hora; §5.1.2: campos personalizados antes do agendamento na edição de planejada pelo popup; §5.7: uma leitura do board de Report semeia os quatro catálogos de rótulos, `dropdown` tem formato próprio, e os três campos de atividade são campos personalizados irmãos, sem default de motivo por categoria; §5.7: a configuração do Monday são dois ids de board — Portfólio e Report de Horas — no lugar de workspace, duas pastas, board interno e mapeamento manual; §5.7: um item do Portfólio é um Project, classificado pela coluna Oferta, e item sem "ID Quadro Projeto" vira projeto sem destino em vez de ser recusado; §5.7: board ilegível deixa de custar o Project; §5.7: lista de projetos do Monday se relê sozinha uma vez por dia; §5.7: excluir atividade do Monday pede confirmação e a linha sai da lista na hora; §5.7: Start Date e End Date da atividade do Monday vêm do intervalo trabalhado, não do envio; §4.1: reexecutar uma entrada leva a origem junto, a parada cai no vínculo da própria tarefa, e campo ausente no evento entre janelas deixou de zerar o vínculo; §4.1: origem da execução persistida na tarefa, restaurada ao reabrir o app; §5.7: reunião iniciada à mão é reconhecida em vez de re-perguntada; §5.7: rastrear e planejar reunião são etapas separadas, com vínculo explícito da planejada, auto-cura e erro registrado; §5.7: reunião adota a planejada do Monday de mesmo nome em vez de duplicar; §5.7: rastreadores esperam o workspace resolver; §5.7: item na lixeira do Monday é detectado pelo `state` e recriado; §5.7: envio manual ao Monday escreve sempre e o aviso de reenvio não impede; §5.7: gerenciador de atividades do Monday com uma busca só e sem filtro personalizado; §5.7: "Sincronizar agora" no Monday; §5.7: rail de integrações também na tela de Integrações; §5.3 e §5.8: colunas de formulário recolhíveis; §5.3: "Selecionar tarefas" na linha dos dias; §5.7: Monday no rail de integrações só configurado ponta a ponta; §5.7: o modal de importação do Monday esconde item que já tem planejada viva; §5.1.2: edição de planejada dentro do popup, no tamanho atual; §9.2: aviso obrigatório de mudança no catálogo de projetos e categorias entre janelas)*
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence

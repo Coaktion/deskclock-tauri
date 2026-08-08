@@ -201,6 +201,16 @@ describe("convenção: tokens semânticos do design system", () => {
     expect(body).not.toContain("--tw-gray-");
   });
 
+  it("não sobrou nada do tema legado", () => {
+    // Os três `[data-theme]` remapeavam famílias inteiras do Tailwind
+    // (`blue`→`green`, a rampa de `gray` invertida), e as `--tw-gray-*` eram as
+    // cópias fixas de que o modo claro legado dependia. Enquanto existirem,
+    // `bg-gray-800` continua "funcionando" numa tela nova — parecendo certo e
+    // ignorando o modo e o acento, que é a regressão mais fácil de não notar.
+    expect(css).not.toContain("[data-theme=");
+    expect(css).not.toContain("--tw-gray-");
+  });
+
   it.each(['[data-mode="claro"]', '[data-accent="verde"]'])(
     "%s fica no topo do arquivo, fora de qualquer bloco",
     (selector) => {

@@ -58,7 +58,7 @@ export function ClockifyIntegrationCard() {
       <div className="rounded-card border border-border-subtle bg-surface">
         <div
           data-tour="clockify-header"
-          className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-xl overflow-hidden"
+          className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-card overflow-hidden"
         >
           <div className="mt-0.5 shrink-0">
             <ClockifyLogo size={20} />
@@ -76,7 +76,7 @@ export function ClockifyIntegrationCard() {
             <button
               onClick={() => startTour()}
               title="Ver tour da integração"
-              className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-muted transition-colors text-xs font-medium flex items-center justify-center"
+              className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
             >
               ?
             </button>
@@ -86,15 +86,15 @@ export function ClockifyIntegrationCard() {
                 disabled={loading}
                 className={`${integrationButtonClass}`}
               >
-                {loading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
                 Desconectar
               </button>
             ) : (
               <button
                 onClick={() => setShowConnectModal(true)}
-                className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent text-white px-3 py-1.5 rounded transition-colors"
+                className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 text-white px-3 py-1.5 rounded-chip transition"
               >
-                <LogIn size={12} />
+                <LogIn size={14} />
                 Conectar
               </button>
             )}

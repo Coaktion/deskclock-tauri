@@ -28,11 +28,11 @@ export function CompactOverlay({ onExpand }: CompactOverlayProps) {
     <button
       onClick={handleClick}
       title={pendingCount > 0 ? "Ver tarefas planejadas" : "Iniciar nova tarefa"}
-      className="fixed bottom-4 right-4 z-40 w-10 h-10 bg-gray-900 border border-gray-700 rounded-full shadow-xl flex items-center justify-center hover:bg-gray-800 transition-colors"
+      className="fixed bottom-4 right-4 z-40 w-10 h-10 bg-surface border border-border rounded-full shadow-xl flex items-center justify-center hover:bg-raised transition-colors"
     >
-      <Clock size={18} className="text-gray-300" />
+      <Clock size={18} className="text-fg-secondary" />
       {pendingCount > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent text-white text-xs font-semibold rounded-full flex items-center justify-center">
           {pendingCount > 9 ? "9+" : pendingCount}
         </span>
       )}

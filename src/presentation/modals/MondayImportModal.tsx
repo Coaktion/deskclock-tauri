@@ -360,18 +360,21 @@ export function MondayImportModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
+      <div className="bg-surface border border-border rounded-card shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
+        <div className="flex flex-col gap-2 px-4 py-3 border-b border-border-subtle shrink-0">
           <div className="flex items-center gap-3">
-            <DownloadCloud size={16} className="text-blue-400 shrink-0" />
+            <DownloadCloud size={16} className="text-accent-text shrink-0" />
             <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-semibold text-gray-100">Importar itens do Monday</h2>
-              <p className="text-xs text-gray-500 mt-0.5 truncate">
+              <h2 className="text-sm font-semibold text-fg">Importar itens do Monday</h2>
+              <p className="text-xs text-fg-muted mt-0.5 truncate">
                 Somente os seus, nos {availableBoards.length} board(s) vinculados
               </p>
             </div>
-            <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
+            <button
+              onClick={onClose}
+              className="p-1 text-fg-muted hover:text-fg-secondary rounded-control"
+            >
               <X size={16} />
             </button>
           </div>
@@ -383,8 +386,8 @@ export function MondayImportModal({
                 onClick={() => setPeriod(p)}
                 className={`px-3 py-1 text-xs rounded-full transition-colors ${
                   period === p
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                    ? "bg-accent text-white"
+                    : "bg-raised text-fg-secondary hover:text-fg"
                 }`}
               >
                 {PERIOD_LABELS[p]}
@@ -395,7 +398,7 @@ export function MondayImportModal({
 
         <div className="flex-1 overflow-y-auto">
           {availableBoards.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-12 px-4">
+            <p className="text-sm text-fg-muted text-center py-12 px-4">
               {mappings.length === 0
                 ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
                 : "Os boards vinculados apontam para projetos de outro workspace. Confira o workspace escolhido na integração ou importe os projetos nele."}
@@ -403,21 +406,21 @@ export function MondayImportModal({
           )}
 
           {loading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
+            <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
               <Loader2 size={16} className="animate-spin" />
               <span className="text-sm">Buscando itens…</span>
             </div>
           )}
 
           {!loading && error && (
-            <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-              <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-300">{error}</p>
+            <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
+              <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+              <p className="text-xs text-danger">{error}</p>
             </div>
           )}
 
           {!loading && !error && availableBoards.length > 0 && visibleRows.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-12 px-4">
+            <p className="text-sm text-fg-muted text-center py-12 px-4">
               {rows.length === 0
                 ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
                 : hiddenImported > 0
@@ -431,23 +434,23 @@ export function MondayImportModal({
               const allSelected = groupRows.every((r) => selected.has(r.item.id));
               const someSelected = !allSelected && groupRows.some((r) => selected.has(r.item.id));
               return (
-                <div key={projectName} className="border-b border-gray-800 last:border-0">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/40 sticky top-0 z-10">
+                <div key={projectName} className="border-b border-border-subtle last:border-0">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-raised/40 sticky top-0 z-10">
                     <button
                       type="button"
                       onClick={() => toggleGroup(groupRows)}
-                      className="shrink-0 text-gray-400 hover:text-gray-200"
+                      className="shrink-0 text-fg-secondary hover:text-fg"
                     >
                       {allSelected ? (
-                        <CheckSquare size={13} />
+                        <CheckSquare size={14} />
                       ) : (
-                        <Square size={13} className={someSelected ? "opacity-50" : ""} />
+                        <Square size={14} className={someSelected ? "opacity-50" : ""} />
                       )}
                     </button>
-                    <span className="text-xs font-semibold text-gray-300 flex-1 truncate">
+                    <span className="text-xs font-semibold text-fg-secondary flex-1 truncate">
                       {projectName}
                     </span>
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-fg-muted">
                       {groupRows.filter((r) => selected.has(r.item.id)).length}/{groupRows.length}
                     </span>
                   </div>
@@ -474,20 +477,20 @@ export function MondayImportModal({
         </div>
 
         {visibleRows.length > 0 && (
-          <div className="flex flex-col gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
+          <div className="flex flex-col gap-2 px-4 py-3 border-t border-border-subtle shrink-0">
             {unavailableCount > 0 && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-fg-muted">
                 {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
                 desta lista.
               </p>
             )}
             {hiddenImported > 0 && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-fg-muted">
                 {hiddenImported} item(ns) já importado(s) estão fora desta lista.
               </p>
             )}
             {!stageField && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-fg-muted">
                 Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna
                 do board, em Integrações → Monday → Importação de dados.
               </p>
@@ -498,7 +501,7 @@ export function MondayImportModal({
             >
               <div
                 className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                  addOpenUrlAction ? "bg-blue-600" : "bg-gray-700"
+                  addOpenUrlAction ? "bg-accent" : "bg-border"
                 }`}
               >
                 <span
@@ -507,7 +510,7 @@ export function MondayImportModal({
                   }`}
                 />
               </div>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-fg-secondary">
                 Adicionar uma ação de abrir o item no Monday
               </span>
             </label>
@@ -515,18 +518,18 @@ export function MondayImportModal({
             <div className="flex items-center justify-between">
               <button
                 onClick={onClose}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                className="text-xs text-fg-muted hover:text-fg-secondary transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleImport}
                 disabled={importing || selectedVisible.length === 0}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-control transition"
               >
                 {importing ? (
                   <>
-                    <Loader2 size={12} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                     Importando…
                   </>
                 ) : (
@@ -571,7 +574,7 @@ function ItemRow({
     : "";
   return (
     <div
-      className="border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors"
+      className="border-b border-border-subtle last:border-0 cursor-pointer hover:bg-raised/30 transition-colors"
       onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
     >
       <div className="flex items-start gap-2 px-4 py-2.5">
@@ -580,31 +583,31 @@ function ItemRow({
           checked={selected}
           onChange={onToggleSelect}
           onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 accent-blue-500 shrink-0"
+          className="mt-0.5 accent-accent shrink-0"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-gray-100 truncate">{row.item.name}</span>
+            <span className="text-sm text-fg truncate">{row.item.name}</span>
             {isDuplicate && (
               <span
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-xs leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
+                className="flex items-center gap-0.5 px-1 py-0.5 text-xs leading-none rounded-chip bg-yellow-900/50 text-yellow-400 shrink-0"
               >
-                <AlertTriangle size={9} />
+                <AlertTriangle size={14} />
                 já existe
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-fg-muted mt-0.5">
             {periodLabel(row.period)}
             {editState.categoryName && (
-              <span className="ml-2 text-blue-400">{editState.categoryName}</span>
+              <span className="ml-2 text-accent-text">{editState.categoryName}</span>
             )}
-            {stageLabel && <span className="ml-2 text-gray-400">{stageLabel}</span>}
+            {stageLabel && <span className="ml-2 text-fg-secondary">{stageLabel}</span>}
           </p>
         </div>
-        <span className="p-1 text-gray-600 shrink-0">
-          {editState.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        <span className="p-1 text-fg-muted shrink-0">
+          {editState.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </div>
 

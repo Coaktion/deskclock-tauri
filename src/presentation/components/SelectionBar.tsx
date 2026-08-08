@@ -41,7 +41,7 @@ export function SelectionBar({ count, allSelected, onToggleAll, onDelete }: Sele
           hasSelection ? "" : "invisible pointer-events-none"
         }`}
       >
-        <Trash2 size={12} />
+        <Trash2 size={14} />
         Excluir selecionados
       </button>
     </div>

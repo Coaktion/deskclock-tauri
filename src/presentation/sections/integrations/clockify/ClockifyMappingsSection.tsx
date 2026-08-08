@@ -272,7 +272,7 @@ export function ClockifyMappingsSection({
         className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-raised transition-colors"
       >
         <span className="text-fg-muted">
-          <ListChecks size={15} />
+          <ListChecks size={14} />
         </span>
         <span className="text-sm font-medium text-fg">Mapeamentos</span>
         <span className="ml-auto text-fg-muted">
@@ -293,7 +293,7 @@ export function ClockifyMappingsSection({
                 ({projectMapping.length}/{projects.length})
               </span>
               <span className="ml-auto text-fg-muted">
-                {projectsOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                {projectsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </span>
             </button>
             {projectsOpen && (
@@ -309,14 +309,14 @@ export function ClockifyMappingsSection({
                       className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
                       title="Atualizar lista"
                     >
-                      <RefreshCw size={12} className={loadingProjects ? "animate-spin" : ""} />
+                      <RefreshCw size={14} className={loadingProjects ? "animate-spin" : ""} />
                     </button>
                     <button
                       onClick={handleImportProjects}
                       disabled={importingProjects}
                       className={`${integrationButtonClass}`}
                     >
-                      {importingProjects && <Loader2 size={10} className="animate-spin" />}
+                      {importingProjects && <Loader2 size={14} className="animate-spin" />}
                       Importar do Clockify
                     </button>
                   </div>
@@ -351,7 +351,7 @@ export function ClockifyMappingsSection({
                 ({categoryMapping.length}/{categories.length})
               </span>
               <span className="ml-auto text-fg-muted">
-                {categoriesOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                {categoriesOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </span>
             </button>
             {categoriesOpen && (
@@ -368,14 +368,14 @@ export function ClockifyMappingsSection({
                       className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
                       title="Atualizar lista"
                     >
-                      <RefreshCw size={12} className={loadingTags ? "animate-spin" : ""} />
+                      <RefreshCw size={14} className={loadingTags ? "animate-spin" : ""} />
                     </button>
                     <button
                       onClick={handleImportTags}
                       disabled={importingTags}
                       className={`${integrationButtonClass}`}
                     >
-                      {importingTags && <Loader2 size={10} className="animate-spin" />}
+                      {importingTags && <Loader2 size={14} className="animate-spin" />}
                       Importar do Clockify
                     </button>
                   </div>

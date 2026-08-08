@@ -73,7 +73,7 @@ function ProjectBoardIdInput({
             ? "Lendo o board no Monday…"
             : "Id do board onde as horas deste projeto serão gravadas"
         }
-        className={`w-28 bg-raised border border-amber-500/40 rounded px-2 py-0.5 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent ${
+        className={`w-28 bg-raised border border-amber-500/40 rounded-chip px-2 py-0.5 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent ${
           busy ? "pr-6 opacity-70" : ""
         }`}
         autoComplete="off"
@@ -82,7 +82,7 @@ function ProjectBoardIdInput({
           largura enquanto a leitura corre, ou a lista se mexe sob o cursor. */}
       {busy && (
         <Loader2
-          size={10}
+          size={14}
           className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-fg-muted"
         />
       )}
@@ -278,7 +278,7 @@ export function MondayProjectsImport({
             aria-expanded={listOpen}
             className="flex items-center gap-1.5 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
           >
-            {listOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            {listOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             {linked.length} projeto(s) vinculado(s)
             {missingBoard > 0 && (
               <span className="text-amber-500/80">· {missingBoard} sem quadro</span>

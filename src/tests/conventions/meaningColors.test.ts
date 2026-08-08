@@ -7,41 +7,22 @@ import { listSourceFiles } from "../helpers/sourceFiles";
 /**
  * Cor de significado — billable, pausa, erro — tem token próprio (`bg-billable`,
  * `text-danger`). A paleta crua não serve para isso por um motivo de correção, e
- * não de gosto: `green-*` é justamente a família que o tema Verde remapeia, então
- * hora faturável pintada de verde fica indistinguível do acento nesse tema.
+ * não de gosto: enquanto `green-*` era remapeada por tema, hora faturável
+ * pintada de verde ficava indistinguível do acento.
  *
- * As ocorrências que ainda existem estão congeladas abaixo, e a lista só pode
- * encolher. É o que impede a migração de ganhar violação nova no meio do
- * caminho: sem ela, a varredura do último PR seria a única rede, e o que ela
- * encontrasse já teria semanas de idade.
+ * A migração acabou e a lista chegou a zero, tirando um caso: a paleta de
+ * workspace. Ali `rose` e as irmãs são **cor de entidade**, escolhida pelo
+ * usuário num seletor — não significam faturável nem erro, e um token de
+ * significado seria justamente a tradução errada. A lista curada e o porquê de
+ * cada exclusão vivem em `domain/utils/workspaceColor.ts`.
  */
 
 const MEANING_COLOR =
   /\b(bg|text|border|ring|fill|stroke|accent|from|to|via|divide|placeholder|shadow|decoration|outline)-(emerald|green|rose|red)-\d+/g;
 
-/** Congelado em 2026-08-07. Ao migrar uma tela, baixe ou apague a linha dela. */
+/** Zerado em 2026-08-08, no fim da migração. A lista só pode encolher. */
 const BASELINE: Record<string, number> = {
   "src/presentation/components/WorkspaceDot.tsx": 6,
-  "src/presentation/modals/ClockifyConnectModal.tsx": 1,
-  "src/presentation/modals/ClockifyEntriesModal.tsx": 6,
-  "src/presentation/modals/DeleteWorkspaceModal.tsx": 5,
-  "src/presentation/modals/EditGroupModal.tsx": 3,
-  "src/presentation/modals/EditPlannedTaskModal.tsx": 2,
-  "src/presentation/modals/EditTaskModal.tsx": 1,
-  "src/presentation/modals/ExportModal.tsx": 4,
-  "src/presentation/modals/ImportCalendarModal.tsx": 5,
-  "src/presentation/modals/ImportZendeskModal.tsx": 6,
-  "src/presentation/modals/MondayConnectModal.tsx": 1,
-  "src/presentation/modals/MondayEntriesModal.tsx": 10,
-  "src/presentation/modals/MondayImportModal.tsx": 4,
-  "src/presentation/modals/MoveToWorkspaceModal.tsx": 1,
-  "src/presentation/modals/TaskSendModal.tsx": 5,
-  "src/presentation/overlays/CompletedTasksSection.tsx": 2,
-  "src/presentation/overlays/OverlayWorkspaceChip.tsx": 2,
-  "src/presentation/overlays/PlannedTaskEditSheet.tsx": 2,
-  "src/presentation/overlays/PlanningOverlay.tsx": 2,
-  "src/presentation/overlays/PopupOverlayContent.tsx": 15,
-  "src/presentation/overlays/ToastApp.tsx": 6,
 };
 
 describe("convenção: cor de significado só por token", () => {

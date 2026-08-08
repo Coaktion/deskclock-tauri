@@ -95,7 +95,7 @@ function highlightFuzzy(text: string, query: string): React.ReactNode {
   for (let i = 0; i < text.length; i++) {
     if (matched.has(i)) {
       parts.push(
-        <span key={i} className="text-blue-300 font-semibold">
+        <span key={i} className="text-accent-text font-semibold">
           {text[i]}
         </span>
       );
@@ -311,12 +311,12 @@ export function CommandPalette({
 
   const box = (
     <div
-      className="w-[520px] bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-hidden"
+      className="w-[520px] bg-surface border border-border rounded-card shadow-2xl overflow-hidden"
       onMouseDown={(e) => standalone && e.stopPropagation()}
     >
       {/* Search bar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
-        <Search size={16} className="text-gray-500 shrink-0" />
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border-subtle">
+        <Search size={16} className="text-fg-muted shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -327,13 +327,13 @@ export function CommandPalette({
           }}
           onKeyDown={onKeyDown}
           placeholder="Buscar ação, tela, ou tarefa planejada…"
-          className="flex-1 bg-transparent text-sm text-gray-100 outline-none placeholder-gray-500"
+          className="flex-1 bg-transparent text-sm text-fg outline-none placeholder-fg-muted"
           autoComplete="off"
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="text-xs text-gray-600 hover:text-gray-400 transition-colors"
+            className="text-xs text-fg-muted hover:text-fg-secondary transition-colors"
           >
             Limpar
           </button>
@@ -343,12 +343,12 @@ export function CommandPalette({
       {/* Results list */}
       <div ref={listRef} className="max-h-80 overflow-y-auto py-1.5">
         {filtered.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-gray-500">Nenhum resultado encontrado</p>
+          <p className="px-4 py-6 text-center text-sm text-fg-muted">Nenhum resultado encontrado</p>
         )}
 
         {groups.map(([groupLabel, items]) => (
           <div key={groupLabel}>
-            <div className="px-4 py-1.5 text-overline uppercase text-gray-500">{groupLabel}</div>
+            <div className="px-4 py-1.5 text-overline uppercase text-fg-muted">{groupLabel}</div>
             {items.map((item) => {
               const idx = flatItems.indexOf(item);
               const isFocused = idx === focusedIndex;
@@ -357,7 +357,7 @@ export function CommandPalette({
                   key={item.id}
                   data-index={idx}
                   className={`flex items-center gap-3 px-4 py-2.5 text-sm cursor-pointer transition-colors ${
-                    isFocused ? "bg-blue-500/15" : "hover:bg-gray-800/60"
+                    isFocused ? "bg-accent/15" : "hover:bg-raised/60"
                   }`}
                   onMouseEnter={() => setFocusedIndex(idx)}
                   onMouseDown={(e) => {
@@ -366,18 +366,18 @@ export function CommandPalette({
                   }}
                 >
                   <span
-                    className={`w-4 h-4 shrink-0 ${isFocused ? "text-blue-400" : "text-gray-400"}`}
+                    className={`w-4 h-4 shrink-0 ${isFocused ? "text-accent-text" : "text-fg-secondary"}`}
                   >
                     {item.icon}
                   </span>
-                  <span className="flex-1 text-gray-200">{highlightFuzzy(item.label, query)}</span>
+                  <span className="flex-1 text-fg">{highlightFuzzy(item.label, query)}</span>
                   {item.subtitle && (
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-fg-muted">
                       {highlightFuzzy(item.subtitle, query)}
                     </span>
                   )}
                   {item.kbd && (
-                    <kbd className="text-xs font-mono text-gray-600 px-1.5 py-0.5 bg-gray-800 border border-gray-700 rounded">
+                    <kbd className="text-xs font-mono text-fg-muted px-1.5 py-0.5 bg-raised border border-border rounded-chip">
                       {item.kbd}
                     </kbd>
                   )}
@@ -389,7 +389,7 @@ export function CommandPalette({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-gray-800 flex items-center gap-4 text-xs text-gray-600">
+      <div className="px-4 py-2 border-t border-border-subtle flex items-center gap-4 text-xs text-fg-muted">
         <span>
           <kbd className="font-mono">↑↓</kbd> navegar
         </span>

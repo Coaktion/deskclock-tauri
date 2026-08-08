@@ -137,22 +137,22 @@ export function ZendeskIntegrationCard() {
           <button
             onClick={() => startTour()}
             title="Ver tour da integração"
-            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-muted transition-colors text-xs font-medium flex items-center justify-center"
+            className="w-5 h-5 shrink-0 rounded-full border border-border text-fg-muted hover:border-fg-muted hover:text-fg-secondary transition-colors text-xs font-medium flex items-center justify-center"
           >
             ?
           </button>
           {connected ? (
             <button onClick={handleDisconnect} className={`${integrationButtonClass}`}>
-              <LogOut size={12} />
+              <LogOut size={14} />
               Desconectar
             </button>
           ) : (
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="flex items-center gap-1.5 text-xs bg-accent hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded transition-colors"
+              className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-chip transition"
             >
-              {loading ? <Loader2 size={12} className="animate-spin" /> : <LogIn size={12} />}
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <LogIn size={14} />}
               {loading ? "Aguardando…" : "Conectar"}
             </button>
           )}
@@ -161,7 +161,7 @@ export function ZendeskIntegrationCard() {
 
       {/* Credenciais OAuth */}
       <div data-tour="zendesk-credentials">
-        <SubSection icon={<Key size={15} />} title="Credenciais OAuth" defaultOpen={!connected}>
+        <SubSection icon={<Key size={14} />} title="Credenciais OAuth" defaultOpen={!connected}>
           {!connected && (
             <div className="rounded-control bg-raised border border-border px-4 py-3 space-y-2 mb-1">
               <p className="text-xs font-medium text-fg-secondary">
@@ -201,7 +201,7 @@ export function ZendeskIntegrationCard() {
                 onChange={(e) => setSubdomain(e.target.value)}
                 disabled={connected}
                 placeholder="minha-empresa"
-                className="w-36 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-36 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
                 autoComplete="off"
               />
               <span className="text-xs text-fg-muted shrink-0">.zendesk.com</span>
@@ -214,7 +214,7 @@ export function ZendeskIntegrationCard() {
               onChange={(e) => setClientId(e.target.value)}
               disabled={connected}
               placeholder="OAuth client identifier"
-              className="w-52 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-52 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
               autoComplete="off"
             />
           </Row>
@@ -225,7 +225,7 @@ export function ZendeskIntegrationCard() {
               onChange={(e) => setClientSecret(e.target.value)}
               disabled={connected}
               placeholder="Vazio para cliente público"
-              className="w-52 bg-raised border border-border rounded px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-52 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
               autoComplete="off"
             />
           </Row>
@@ -235,7 +235,7 @@ export function ZendeskIntegrationCard() {
 
       {/* Importar tickets */}
       {connected && (
-        <SubSection icon={<CalendarDays size={15} />} title="Importar tickets" defaultOpen>
+        <SubSection icon={<CalendarDays size={14} />} title="Importar tickets" defaultOpen>
           <div className="pt-1">
             <DeskclockWorkspaceRow
               configKey="zendeskDeskclockWorkspaceId"
@@ -252,7 +252,7 @@ export function ZendeskIntegrationCard() {
               }}
               className={`${integrationButtonClass} w-full`}
             >
-              <CalendarDays size={13} />
+              <CalendarDays size={14} />
               Importar tickets…
             </button>
 
@@ -267,7 +267,7 @@ export function ZendeskIntegrationCard() {
                   onClick={() => setImportedCount(null)}
                   className="text-fg-muted hover:text-fg transition-colors"
                 >
-                  <X size={12} />
+                  <X size={14} />
                 </button>
               </div>
             )}

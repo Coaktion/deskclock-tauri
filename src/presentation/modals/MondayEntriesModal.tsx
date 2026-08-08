@@ -118,14 +118,14 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
   if (!apiKey || !userId || mappings.length === 0) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="w-full max-w-md bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-6">
-          <p className="text-sm text-gray-200 mb-4">
+        <div className="w-full max-w-md bg-surface border border-border rounded-card shadow-2xl p-6">
+          <p className="text-sm text-fg mb-4">
             Conecte o Monday e importe os projetos na tela de Integrações antes de abrir esta
             janela.
           </p>
           <button
             onClick={onClose}
-            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded transition-colors"
+            className="text-xs bg-raised hover:bg-border text-fg px-3 py-1.5 rounded-chip transition-colors"
           >
             Fechar
           </button>
@@ -136,17 +136,17 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+      <div className="w-full max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] bg-surface border border-border rounded-card shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-gray-100">Atividades no Monday</h2>
-            <p className="text-xs text-gray-500 mt-0.5 truncate">
+            <h2 className="text-sm font-semibold text-fg">Atividades no Monday</h2>
+            <p className="text-xs text-fg-muted mt-0.5 truncate">
               Somente as suas, nos {mappings.length} board(s) vinculados
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             {entries.length > 0 && (
-              <span className="text-xs font-mono tabular-nums text-gray-400">
+              <span className="text-xs font-mono tabular-nums text-fg-secondary">
                 {formatDurationCompact(Math.round(totalHours * 3600))}
               </span>
             )}
@@ -154,21 +154,21 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
               onClick={refresh}
               disabled={busy}
               title="Recarregar"
-              className="text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+              className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
             </button>
             <button
               onClick={onClose}
               title="Fechar"
-              className="text-gray-500 hover:text-gray-300 transition-colors"
+              className="text-fg-muted hover:text-fg-secondary transition-colors"
             >
               <X size={16} />
             </button>
           </div>
         </div>
 
-        <div className="px-5 py-3 border-b border-gray-800 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="px-5 py-3 border-b border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {/* Travados enquanto a busca corre: sem isso dá para pular de janela
                 em janela e cada clique reordena a lista sob o cursor. */}
@@ -178,9 +178,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
                 onClick={() => setQuick(q)}
                 disabled={busy}
                 className={`px-3 py-1 text-xs rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  quick === q
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  quick === q ? "bg-accent text-white" : "bg-raised text-fg-secondary hover:text-fg"
                 }`}
               >
                 {QUICK_LABELS[q]}
@@ -191,24 +189,24 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex-1 overflow-y-auto">
           {loading && entries.length === 0 && (
-            <div className="flex items-center justify-center py-12 text-gray-600">
+            <div className="flex items-center justify-center py-12 text-fg-muted">
               <Loader2 size={20} className="animate-spin" />
             </div>
           )}
 
           {!loading && mappings.length > 0 && dayGroups.length === 0 && (
-            <p className="text-center text-gray-500 text-sm py-12">
+            <p className="text-center text-fg-muted text-sm py-12">
               Nenhuma atividade sua neste período.
             </p>
           )}
 
           {dayGroups.map((group) => (
             <div key={group.dayISO}>
-              <div className="flex items-center justify-between px-5 py-2.5 bg-gray-900/60 border-b border-gray-800 sticky top-0 z-10">
-                <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+              <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
+                <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
                   {group.dayISO ? formatHistoryDayHeader(group.dayISO) : "Sem data"}
                 </span>
-                <span className="text-xs font-mono tabular-nums text-gray-500">
+                <span className="text-xs font-mono tabular-nums text-fg-muted">
                   {formatDurationCompact(Math.round(group.totalHours * 3600))}
                 </span>
               </div>
@@ -254,23 +252,25 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
 
   return (
     <div
-      className={`grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-gray-800 hover:bg-gray-800/40 transition-colors group ${
+      className={`grid grid-cols-[110px_1fr_auto_auto] items-center gap-3 px-5 py-3 border-b border-border-subtle hover:bg-raised/40 transition-colors group ${
         deleting ? "opacity-50" : ""
       }`}
     >
       <div className="flex items-center gap-1.5 shrink-0">
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            entry.billable ? "bg-emerald-500" : "bg-gray-600"
+            entry.billable ? "bg-billable" : "bg-border"
           }`}
         />
-        <span className="text-xs font-mono text-gray-400 tabular-nums">{periodLabel(entry)}</span>
+        <span className="text-xs font-mono text-fg-secondary tabular-nums">
+          {periodLabel(entry)}
+        </span>
       </div>
 
       <div className="min-w-0">
-        <p className="text-sm text-gray-100 truncate">{entry.name}</p>
+        <p className="text-sm text-fg truncate">{entry.name}</p>
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          <span className="text-xs text-gray-500 truncate">{entry.boardName}</span>
+          <span className="text-xs text-fg-muted truncate">{entry.boardName}</span>
           {/* A `key` é o campo, não o rótulo: os dois catálogos saem do mesmo
               board de Report e têm rótulos em comum ("Development" é Activity
               Type *e* etapa), então keyar pelo texto colidia sempre que a
@@ -283,14 +283,17 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
           )
             .filter(([, label]) => label.length > 0)
             .map(([field, label]) => (
-              <span key={field} className="bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded text-xs">
+              <span
+                key={field}
+                className="bg-raised text-fg-secondary px-1.5 py-0.5 rounded-chip text-xs"
+              >
                 {label}
               </span>
             ))}
         </div>
       </div>
 
-      <span className="text-sm font-mono tabular-nums text-gray-300 shrink-0">
+      <span className="text-sm font-mono tabular-nums text-fg-secondary shrink-0">
         {formatDurationCompact(Math.round(entry.hoursDecimal * 3600))}
       </span>
 
@@ -301,20 +304,20 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
       >
         {confirming || deleting ? (
           <>
-            <span className="text-xs text-gray-400 mr-1">Excluir do Monday?</span>
+            <span className="text-xs text-fg-secondary mr-1">Excluir do Monday?</span>
             <button
               onClick={() => setConfirming(false)}
               disabled={deleting}
-              className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50 rounded-lg transition-colors"
+              className="px-2 py-1 text-xs text-fg-secondary hover:text-fg disabled:opacity-50 rounded-control transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={() => void onDelete()}
               disabled={deleting}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-red-900/40 border border-red-800 text-red-300 hover:bg-red-900/60 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-danger/10 border border-danger text-danger hover:bg-danger/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-control transition-colors"
             >
-              {deleting && <Loader2 size={11} className="animate-spin" />}
+              {deleting && <Loader2 size={14} className="animate-spin" />}
               Excluir
             </button>
           </>
@@ -322,17 +325,17 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
           <>
             <button
               onClick={onStartEdit}
-              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
+              className="p-1.5 text-fg-secondary hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
               title="Editar no Monday"
             >
-              <Pencil size={13} />
+              <Pencil size={14} />
             </button>
             <button
               onClick={() => setConfirming(true)}
-              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+              className="p-1.5 text-fg-secondary hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
               title="Excluir do Monday"
             >
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             </button>
           </>
         )}
@@ -378,12 +381,12 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
   const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving || !canSave });
 
   const selectClass =
-    "px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500";
+    "px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent";
 
   return (
     <div
       onKeyDown={handleKeyDown}
-      className="px-5 py-3 border-b border-gray-800 bg-gray-800/30 space-y-2"
+      className="px-5 py-3 border-b border-border-subtle bg-raised/30 space-y-2"
     >
       <input
         type="text"
@@ -392,17 +395,17 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
         placeholder="Nome da atividade"
         autoFocus
         autoComplete="off"
-        className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+        className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs text-gray-500">Horas</label>
+        <label className="text-xs text-fg-muted">Horas</label>
         <input
           type="text"
           inputMode="decimal"
           value={hours}
           onChange={(e) => setHours(e.target.value)}
-          className="w-20 px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 tabular-nums focus:outline-none focus:border-blue-500"
+          className="w-20 px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg tabular-nums focus:outline-none focus:border-accent"
           autoComplete="off"
         />
 
@@ -445,13 +448,13 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
             title={
               billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
             }
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-control border transition-colors shrink-0 ${
               billable
-                ? "bg-green-900/40 border-green-700 text-green-400"
-                : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-300"
+                ? "bg-billable/10 border-billable/40 text-billable"
+                : "bg-raised border-border text-fg-secondary hover:text-fg"
             }`}
           >
-            <DollarSign size={13} />
+            <DollarSign size={14} />
             {billable ? "Faturável" : "Não-faturável"}
           </button>
         )}
@@ -460,22 +463,22 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
           <button
             onClick={onCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 disabled:opacity-50"
+            className="px-3 py-1.5 text-xs text-fg-secondary hover:text-fg disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !canSave}
-            className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="px-3 py-1.5 text-xs bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
-            {saving && <Loader2 size={11} className="animate-spin" />}
+            {saving && <Loader2 size={14} className="animate-spin" />}
             Salvar
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-gray-600">
+      <p className="text-xs text-fg-muted">
         As datas vêm da tarefa no DeskClock e não são editáveis aqui — quem manda nas horas é o
         DeskClock.
       </p>

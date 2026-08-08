@@ -42,9 +42,9 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 };
 
 const chipClass =
-  "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-lg border transition-colors";
+  "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-control border transition-colors";
 const inputClass =
-  "w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500";
+  "w-full px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
 
 /**
  * Edição da tarefa planejada **dentro** do popup, sem crescer a janela: painel
@@ -71,17 +71,17 @@ export function PlannedTaskEditSheet({
     <div
       data-modal-open
       onKeyDown={handleKeyDown}
-      className="absolute inset-0 z-40 flex flex-col bg-gray-900 rounded-xl overflow-hidden"
+      className="absolute inset-0 z-40 flex flex-col bg-surface rounded-card overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-[37px] shrink-0 bg-gray-800 border-b border-gray-700">
-        <span className="text-xs font-medium text-gray-300 truncate">Editar planejada</span>
+      <div className="flex items-center justify-between px-3 h-[37px] shrink-0 bg-raised border-b border-border">
+        <span className="text-xs font-medium text-fg-secondary truncate">Editar planejada</span>
         <button
           onClick={onClose}
           title="Cancelar"
-          className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors shrink-0"
+          className="p-1 text-fg-secondary hover:text-fg hover:bg-border rounded-control transition-colors shrink-0"
         >
-          <X size={13} />
+          <X size={14} />
         </button>
       </div>
 
@@ -110,7 +110,7 @@ export function PlannedTaskEditSheet({
         {/* Billable encostado na categoria, como no Lançamento Manual e no
             Planejamento: é a categoria que define o padrão (§6.2), e o ajuste
             manual pertence ao mesmo campo. */}
-        <div className="flex items-center gap-1 pr-2 bg-gray-800 border border-gray-700 rounded-lg focus-within:border-blue-500 transition-colors">
+        <div className="flex items-center gap-1 pr-2 bg-raised border border-border rounded-control focus-within:border-accent transition-colors">
           <Autocomplete
             value={editor.categoryName}
             onChange={editor.setCategoryName}
@@ -118,7 +118,7 @@ export function PlannedTaskEditSheet({
             options={editor.categoryOptions}
             placeholder="Categoria"
             className="flex-1 min-w-0 text-xs"
-            inputClassName="w-full px-2 py-1.5 bg-transparent text-gray-100 placeholder-gray-500 focus:outline-none"
+            inputClassName="w-full px-2 py-1.5 bg-transparent text-fg placeholder-fg-muted focus:outline-none"
           />
           <button
             type="button"
@@ -129,10 +129,10 @@ export function PlannedTaskEditSheet({
                 : "Non-billable — clique para alternar"
             }
             className={`flex items-center shrink-0 transition-colors ${
-              editor.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
+              editor.billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
             }`}
           >
-            <DollarSign size={13} />
+            <DollarSign size={14} />
           </button>
         </div>
 
@@ -142,7 +142,7 @@ export function PlannedTaskEditSheet({
             deixava os dois grupos intercalados. */}
         {activeFields.length > 0 && (
           <>
-            <div className="border-t border-gray-800 mt-0.5" />
+            <div className="border-t border-border-subtle mt-0.5" />
             <CustomFieldInputs
               fields={activeFields}
               values={editor.customValues}
@@ -152,7 +152,7 @@ export function PlannedTaskEditSheet({
           </>
         )}
 
-        <div className="border-t border-gray-800 mt-0.5" />
+        <div className="border-t border-border-subtle mt-0.5" />
 
         {/* Agendamento */}
         <div className="flex gap-1">
@@ -163,8 +163,8 @@ export function PlannedTaskEditSheet({
               onClick={() => editor.setScheduleType(type)}
               className={`flex-1 ${chipClass} ${
                 editor.scheduleType === type
-                  ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                  : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                  ? "bg-accent/10 border-accent text-accent-text"
+                  : "bg-raised border-border text-fg-secondary hover:text-fg"
               }`}
             >
               {SCHEDULE_LABELS[type]}
@@ -179,8 +179,8 @@ export function PlannedTaskEditSheet({
               onClick={() => editor.setScheduleDate(todayISO())}
               className={`shrink-0 ${chipClass} ${
                 editor.scheduleDate === todayISO()
-                  ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                  : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                  ? "bg-accent/10 border-accent text-accent-text"
+                  : "bg-raised border-border text-fg-secondary hover:text-fg"
               }`}
             >
               Hoje
@@ -201,10 +201,10 @@ export function PlannedTaskEditSheet({
                 type="button"
                 title={day.title}
                 onClick={() => editor.toggleDay(day.value)}
-                className={`flex-1 py-1 text-xs rounded-lg border transition-colors ${
+                className={`flex-1 py-1 text-xs rounded-control border transition-colors ${
                   editor.recurringDays.includes(day.value)
-                    ? "bg-blue-900/40 border-blue-600 text-blue-300"
-                    : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200"
+                    ? "bg-accent/10 border-accent text-accent-text"
+                    : "bg-raised border-border text-fg-secondary hover:text-fg"
                 }`}
               >
                 {day.label}
@@ -230,33 +230,33 @@ export function PlannedTaskEditSheet({
           </div>
         )}
 
-        <div className="border-t border-gray-800 mt-0.5" />
+        <div className="border-t border-border-subtle mt-0.5" />
 
         {/* Ações */}
-        <p className="text-overline uppercase text-gray-600">Ações</p>
+        <p className="text-overline uppercase text-fg-muted">Ações</p>
 
         {editor.actions.length > 0 && (
           <ul className="flex flex-col gap-1">
             {editor.actions.map((action, i) => (
-              <li key={i} className="flex items-center gap-1.5 px-2 py-1 bg-gray-800 rounded-lg">
+              <li key={i} className="flex items-center gap-1.5 px-2 py-1 bg-raised rounded-control">
                 <span
-                  className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
+                  className={`shrink-0 ${action.type === "open_url" ? "text-accent-text" : "text-purple-400"}`}
                 >
                   {action.type === "open_url" ? (
-                    <ExternalLink size={11} />
+                    <ExternalLink size={14} />
                   ) : (
-                    <FolderOpen size={11} />
+                    <FolderOpen size={14} />
                   )}
                 </span>
-                <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
+                <span className="flex-1 text-xs text-fg-secondary truncate" title={action.value}>
                   {action.value}
                 </span>
                 <button
                   onClick={() => editor.removeAction(i)}
                   title="Remover"
-                  className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                  className="shrink-0 text-fg-muted hover:text-danger transition-colors"
                 >
-                  <Trash2 size={11} />
+                  <Trash2 size={14} />
                 </button>
               </li>
             ))}
@@ -267,7 +267,7 @@ export function PlannedTaskEditSheet({
           <select
             value={editor.newActionType}
             onChange={(e) => editor.setNewActionType(e.target.value as PlannedTaskAction["type"])}
-            className="shrink-0 px-1.5 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
+            className="shrink-0 px-1.5 py-1 text-xs bg-raised border border-border rounded-control text-fg-secondary focus:outline-none focus:border-accent"
           >
             <option value="open_url">URL</option>
             <option value="open_file">Arquivo</option>
@@ -284,33 +284,33 @@ export function PlannedTaskEditSheet({
             }}
             placeholder={editor.newActionType === "open_url" ? "https://..." : "/caminho"}
             autoComplete="off"
-            className="flex-1 min-w-0 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            className="flex-1 min-w-0 px-2 py-1 text-xs bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
           />
           <button
             onClick={editor.addAction}
             disabled={!editor.newActionValue.trim()}
             title="Adicionar ação"
-            className="shrink-0 px-1.5 py-1 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg transition-colors"
+            className="shrink-0 px-1.5 py-1 bg-border hover:opacity-90 disabled:opacity-40 text-fg rounded-control transition"
           >
-            <Plus size={12} />
+            <Plus size={14} />
           </button>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-gray-700/60">
+      <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-border/60">
         <button
           onClick={onClose}
-          className="px-2.5 py-1 text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors"
+          className="px-2.5 py-1 text-xs text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
         >
-          <Check size={11} />
+          <Check size={14} />
           Salvar
         </button>
       </div>

@@ -48,7 +48,7 @@ export function MondayAutoImportSection() {
 
   return (
     <SubSection
-      icon={<DownloadCloud size={15} />}
+      icon={<DownloadCloud size={14} />}
       title="Importação automática de itens"
       badge={
         enabled ? (

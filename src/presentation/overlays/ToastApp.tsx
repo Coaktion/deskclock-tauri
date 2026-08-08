@@ -29,19 +29,19 @@ const VARIANT_STYLES: Record<
   { border: string; icon: React.ReactNode; text: string }
 > = {
   success: {
-    border: "border-green-500",
-    icon: <CheckCircle2 size={18} className="text-green-400 shrink-0" />,
-    text: "text-green-100",
+    border: "border-billable",
+    icon: <CheckCircle2 size={18} className="text-billable shrink-0" />,
+    text: "text-fg",
   },
   error: {
-    border: "border-red-500",
-    icon: <XCircle size={18} className="text-red-400 shrink-0" />,
-    text: "text-red-100",
+    border: "border-danger",
+    icon: <XCircle size={18} className="text-danger shrink-0" />,
+    text: "text-fg",
   },
   info: {
-    border: "border-blue-500",
-    icon: <Info size={18} className="text-blue-400 shrink-0" />,
-    text: "text-blue-100",
+    border: "border-accent",
+    icon: <Info size={18} className="text-accent-text shrink-0" />,
+    text: "text-accent-text",
   },
   update: {
     border: "border-violet-500",
@@ -124,7 +124,7 @@ export function ToastApp() {
     <div
       className={`
         w-screen h-screen flex items-center gap-3 px-4
-        bg-gray-900 border border-gray-700 border-l-4 rounded-xl shadow-2xl
+        bg-surface border border-border border-l-4 rounded-card shadow-2xl
         transition-all duration-300 ease-out
         ${styles.border}
         ${animating ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}
@@ -135,14 +135,14 @@ export function ToastApp() {
       {toast.actionLabel && toast.actionEvent && (
         <button
           onClick={() => handleAction(toast.actionEvent!)}
-          className="text-xs font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded-lg border border-violet-700 hover:border-violet-500"
+          className="text-xs font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded-control border border-violet-700 hover:border-violet-500"
         >
           {toast.actionLabel}
         </button>
       )}
       <button
         onClick={handleDismiss}
-        className="text-gray-500 hover:text-gray-300 shrink-0 transition-colors"
+        className="text-fg-muted hover:text-fg-secondary shrink-0 transition-colors"
       >
         <X size={14} />
       </button>

@@ -286,10 +286,10 @@ function ExecSection({
       {/* Status */}
       <div className="flex items-center gap-1.5">
         <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-blue-500" : "bg-amber-500"}`}
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-accent" : "bg-paused"}`}
         />
         <span
-          className={`text-overline uppercase ${isRunning ? "text-blue-400" : "text-amber-400"}`}
+          className={`text-overline uppercase ${isRunning ? "text-accent-text" : "text-paused"}`}
         >
           {isRunning ? "Rodando" : "Pausada"}
         </span>
@@ -312,24 +312,24 @@ function ExecSection({
             }
           }}
           placeholder="Nome da tarefa"
-          className="w-full px-0 text-sm font-medium bg-transparent border-b border-gray-600 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="w-full px-0 text-sm font-medium bg-transparent border-b border-border text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
           autoComplete="off"
         />
       ) : (
         <button
           onClick={() => setEditingName(true)}
-          className="group flex items-center gap-1 text-left text-sm font-medium text-gray-100 hover:text-white leading-snug transition-colors cursor-text w-full"
+          className="group flex items-center gap-1 text-left text-sm font-medium text-fg hover:text-fg leading-snug transition-colors cursor-text w-full"
         >
           <span className="truncate">
-            {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
+            {task.name ?? <span className="text-fg-muted italic">(sem nome)</span>}
           </span>
-          <Pen size={11} className="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
+          <Pen size={14} className="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
         </button>
       )}
 
       {/* Timer */}
       <p
-        className={`font-mono text-xl font-semibold tabular-nums leading-none ${isRunning ? "text-blue-400" : "text-amber-400"}`}
+        className={`font-mono text-xl font-semibold tabular-nums leading-none ${isRunning ? "text-accent-text" : "text-paused"}`}
       >
         {formatHHMMSS(seconds)}
       </p>
@@ -370,10 +370,10 @@ function ExecSection({
         <button
           onClick={() => openProjectEdit()}
           onKeyDown={chipTypeahead(openProjectEdit)}
-          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border transition-colors ${
             projectName
-              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
+              ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
+              : "text-fg-muted bg-raised/50 border-dashed border-border/50 hover:border-border"
           }`}
         >
           {projectName ?? "+ Projeto"}
@@ -415,10 +415,10 @@ function ExecSection({
         <button
           onClick={() => openCategoryEdit()}
           onKeyDown={chipTypeahead(openCategoryEdit)}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border transition-colors ${
             categoryName
-              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
+              ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
+              : "text-fg-muted bg-raised/50 border-dashed border-border/50 hover:border-border"
           }`}
         >
           {categoryName ?? "+ Categoria"}
@@ -429,20 +429,20 @@ function ExecSection({
         {/* Billable */}
         <button
           onClick={() => void onUpdateTask({ billable: !task.billable })}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-control border transition-colors ${
             task.billable
-              ? "bg-green-900/40 border-green-700 text-green-400 hover:bg-green-900/60"
-              : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
+              ? "bg-billable/10 border-billable/40 text-billable hover:bg-billable/20"
+              : "bg-raised border-border text-fg-secondary hover:border-fg-muted"
           }`}
         >
-          <DollarSign size={11} />
+          <DollarSign size={14} />
           {task.billable ? "Billable" : "Non-billable"}
         </button>
 
         {/* Start time */}
         {editingStartTime ? (
           <div className="flex items-center gap-2">
-            <Clock size={11} className="text-gray-500 shrink-0" />
+            <Clock size={14} className="text-fg-muted shrink-0" />
             <input
               autoFocus
               type="time"
@@ -457,16 +457,16 @@ function ExecSection({
                   setEditingStartTime(false);
                 }
               }}
-              className="flex-1 bg-transparent border-b border-gray-600 focus:outline-none focus:border-blue-500 text-xs text-gray-300"
+              className="flex-1 bg-transparent border-b border-border focus:outline-none focus:border-accent text-xs text-fg-secondary"
               autoComplete="off"
             />
           </div>
         ) : (
           <button
             onClick={() => setEditingStartTime(true)}
-            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-xs text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-500 transition-colors"
+            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-xs text-fg-secondary bg-raised border border-border rounded-control hover:border-fg-muted transition-colors"
           >
-            <Clock size={11} className="text-gray-500 shrink-0" />
+            <Clock size={14} className="text-fg-muted shrink-0" />
             {fmtTime(task.startTime)}
           </button>
         )}
@@ -478,13 +478,13 @@ function ExecSection({
       {customFields.length > 0 && (
         <button
           onClick={onOpenCustomFields}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-lg border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border transition-colors ${
             countFilledCustomValues(customFields, task.customValues) > 0
-              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
+              ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
+              : "text-fg-muted bg-raised/50 border-dashed border-border/50 hover:border-border"
           }`}
         >
-          <ListChecks size={11} className="shrink-0" />
+          <ListChecks size={14} className="shrink-0" />
           Campos · {countFilledCustomValues(customFields, task.customValues)}/{customFields.length}
         </button>
       )}
@@ -492,7 +492,7 @@ function ExecSection({
       {/* Actions section */}
       {actions.length > 0 && (
         <div>
-          <p className="text-overline uppercase text-gray-600 mb-1.5">Ações</p>
+          <p className="text-overline uppercase text-fg-muted mb-1.5">Ações</p>
           <div className="flex flex-wrap gap-1.5">
             {actions.map((action, i) => (
               <ActionChip key={i} action={action} />
@@ -502,7 +502,7 @@ function ExecSection({
       )}
 
       {/* Divider */}
-      <div className="border-t border-gray-800 mt-auto" />
+      <div className="border-t border-border-subtle mt-auto" />
 
       {/* Controls */}
       {confirmingStop ? (
@@ -511,9 +511,9 @@ function ExecSection({
         // alternativa, e continua exigindo o clique que a diferencia.
         <div className="flex flex-col gap-1.5" onKeyDown={handleConfirmStopKeyDown}>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">Encerrar às</span>
+            <span className="text-xs text-fg-secondary">Encerrar às</span>
             <div className="flex items-center gap-1.5 flex-1">
-              <Clock size={11} className="text-gray-500 shrink-0" />
+              <Clock size={14} className="text-fg-muted shrink-0" />
               <input
                 type="time"
                 value={endTimeInput}
@@ -521,24 +521,24 @@ function ExecSection({
                   setEndTimeInput(e.target.value);
                   setEndTimeTouched(true);
                 }}
-                className={`flex-1 bg-transparent border-b focus:outline-none text-xs text-gray-200 ${
+                className={`flex-1 bg-transparent border-b focus:outline-none text-xs text-fg ${
                   endTimeResolved.error
-                    ? "border-red-500 focus:border-red-400"
-                    : "border-gray-600 focus:border-blue-500"
+                    ? "border-danger focus:border-danger"
+                    : "border-border focus:border-accent"
                 }`}
                 autoComplete="off"
               />
             </div>
             <button
               onClick={() => setConfirmingStop(false)}
-              className="p-1 text-gray-500 hover:text-blue-400 rounded-lg transition-colors"
+              className="p-1 text-fg-muted hover:text-accent-text rounded-control transition-colors"
               title="Retomar"
             >
-              <Play size={11} />
+              <Play size={14} />
             </button>
           </div>
           {endTimeResolved.error && (
-            <span className="text-xs text-red-400">{endTimeResolved.error}</span>
+            <span className="text-xs text-danger">{endTimeResolved.error}</span>
           )}
           <div className="flex items-center gap-1.5">
             <button
@@ -547,9 +547,9 @@ function ExecSection({
                 setConfirmingStop(false);
                 void onStop(true, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700/80 hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-billable/80 hover:bg-billable disabled:bg-border disabled:text-fg-muted disabled:cursor-not-allowed text-white rounded-control transition-colors"
             >
-              <CheckCircle2 size={10} /> Concluída
+              <CheckCircle2 size={14} /> Concluída
             </button>
             <button
               disabled={!!endTimeResolved.error}
@@ -557,9 +557,9 @@ function ExecSection({
                 setConfirmingStop(false);
                 void onStop(false, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-border hover:opacity-90 disabled:bg-raised disabled:text-fg-muted disabled:cursor-not-allowed text-fg rounded-control transition"
             >
-              <Clock size={10} /> Pendente
+              <Clock size={14} /> Pendente
             </button>
           </div>
         </div>
@@ -567,29 +567,29 @@ function ExecSection({
         <div className="flex items-center gap-1.5">
           <button
             onClick={isRunning ? onPause : onResume}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
           >
             {isRunning ? (
               <>
-                <Pause size={11} /> Pausar
+                <Pause size={14} /> Pausar
               </>
             ) : (
               <>
-                <Play size={11} /> Retomar
+                <Play size={14} /> Retomar
               </>
             )}
           </button>
           <button
             onClick={openConfirmStop}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
           >
-            <Square size={11} /> Parar
+            <Square size={14} /> Parar
           </button>
           <button
             onClick={onCancel}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg border border-red-900/40 transition-colors"
+            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger/10 rounded-control border border-danger/40 transition-colors"
           >
-            <X size={10} /> Cancelar
+            <X size={14} /> Cancelar
           </button>
         </div>
       )}
@@ -691,13 +691,13 @@ export function PopupOverlayContent({
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-visible">
+    <div className="relative w-full h-full flex flex-col bg-surface border border-border rounded-card shadow-2xl overflow-visible">
       {/* Header */}
       <div
-        className="flex items-center justify-between px-3 bg-gray-800 border-b border-gray-700 shrink-0 rounded-t-xl overflow-hidden"
+        className="flex items-center justify-between px-3 bg-raised border-b border-border shrink-0 rounded-t-card overflow-hidden"
         style={{ height: HEADER_H }}
       >
-        <span className="text-xs font-medium text-gray-300 select-none pointer-events-none truncate">
+        <span className="text-xs font-medium text-fg-secondary select-none pointer-events-none truncate">
           {runningTask ? "Em execução" : "Tarefas de Hoje"}
         </span>
         <div className="flex items-center gap-1">
@@ -705,16 +705,16 @@ export function PopupOverlayContent({
           <button
             onClick={onNavigatePlanning}
             title="Ir para planejamento"
-            className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-1 text-fg-secondary hover:text-fg hover:bg-border rounded-control transition-colors"
           >
-            <CalendarDays size={13} />
+            <CalendarDays size={14} />
           </button>
           <button
             onClick={onClose}
             title="Fechar"
-            className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-1 text-fg-secondary hover:text-fg hover:bg-border rounded-control transition-colors"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         </div>
       </div>
@@ -743,24 +743,24 @@ export function PopupOverlayContent({
           {/* ── Idle state: new task + planned list ── */}
 
           {/* New task button */}
-          <div className="p-2 border-b border-gray-700/60 shrink-0" style={{ height: NEW_TASK_H }}>
+          <div className="p-2 border-b border-border/60 shrink-0" style={{ height: NEW_TASK_H }}>
             <button
               onClick={() => onStartTask({ billable: true })}
-              className="w-full h-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700/80 rounded-lg transition-colors"
+              className="w-full h-full flex items-center justify-center gap-1.5 text-xs text-fg-secondary hover:text-fg bg-raised hover:bg-border/80 rounded-control transition-colors"
             >
-              <Play size={11} fill="currentColor" />
+              <Play size={14} fill="currentColor" />
               Nova tarefa
             </button>
           </div>
 
           {/* Tab bar */}
-          <div className="flex border-b border-gray-800 shrink-0" style={{ height: TABS_H }}>
+          <div className="flex border-b border-border-subtle shrink-0" style={{ height: TABS_H }}>
             <button
               onClick={() => setActiveTab("planned")}
               className={`flex-1 text-xs font-medium border-b-2 transition-colors ${
                 activeTab === "planned"
-                  ? "text-gray-200 border-blue-500"
-                  : "text-gray-500 border-transparent hover:text-gray-300"
+                  ? "text-fg border-accent"
+                  : "text-fg-muted border-transparent hover:text-fg-secondary"
               }`}
             >
               Planejadas · {pending.length}
@@ -769,8 +769,8 @@ export function PopupOverlayContent({
               onClick={() => setActiveTab("completed")}
               className={`flex-1 text-xs font-medium border-b-2 transition-colors ${
                 activeTab === "completed"
-                  ? "text-gray-200 border-blue-500"
-                  : "text-gray-500 border-transparent hover:text-gray-300"
+                  ? "text-fg border-accent"
+                  : "text-fg-muted border-transparent hover:text-fg-secondary"
               }`}
             >
               Executadas · {completedGroups.length}
@@ -783,7 +783,7 @@ export function PopupOverlayContent({
               <div className="h-full overflow-y-auto">
                 {pending.length === 0 ? (
                   <div className="h-full flex items-center justify-center">
-                    <p className="text-center text-gray-600 text-xs">Nenhuma tarefa pendente</p>
+                    <p className="text-center text-fg-muted text-xs">Nenhuma tarefa pendente</p>
                   </div>
                 ) : (
                   pending.map((task) => {
@@ -795,7 +795,7 @@ export function PopupOverlayContent({
                     return (
                       <div
                         key={task.id}
-                        className="relative flex items-center gap-2 px-3 border-b border-gray-800/70 hover:bg-gray-800/40 transition-colors"
+                        className="relative flex items-center gap-2 px-3 border-b border-border-subtle/70 hover:bg-raised/40 transition-colors"
                         style={{ height: ROW_H }}
                       >
                         <span
@@ -804,20 +804,20 @@ export function PopupOverlayContent({
                         />
                         <div className="flex-1 min-w-0 pl-1.5">
                           <div className="flex items-center gap-1 min-w-0">
-                            <p className="text-xs font-medium text-gray-200 truncate leading-tight">
+                            <p className="text-xs font-medium text-fg truncate leading-tight">
                               {task.name}
                             </p>
                             {trackedTitles.has((task.name ?? "").toLowerCase().trim()) && (
                               <span
-                                className="shrink-0 flex items-center text-blue-400/80"
+                                className="shrink-0 flex items-center text-accent-text/80"
                                 title="Rastreada — o app vai lembrar de iniciar esta reunião"
                               >
-                                <Bell size={10} />
+                                <Bell size={14} />
                               </span>
                             )}
                           </div>
                           {subtitle && (
-                            <p className="text-xs text-gray-500 truncate leading-tight mt-0.5">
+                            <p className="text-xs text-fg-muted truncate leading-tight mt-0.5">
                               {subtitle}
                             </p>
                           )}
@@ -825,23 +825,23 @@ export function PopupOverlayContent({
                         <button
                           onClick={() => setEditingTask(task)}
                           title="Editar"
-                          className="p-1 text-gray-500 hover:text-gray-200 hover:bg-gray-700/40 rounded-lg transition-colors shrink-0"
+                          className="p-1 text-fg-muted hover:text-fg hover:bg-border/40 rounded-control transition-colors shrink-0"
                         >
-                          <Pen size={11} />
+                          <Pen size={14} />
                         </button>
                         <button
                           onClick={() => void complete(task.id, today)}
                           title="Concluir"
-                          className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
+                          className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors shrink-0"
                         >
-                          <Check size={11} />
+                          <Check size={14} />
                         </button>
                         <button
                           onClick={() => handlePlay(task)}
                           title="Iniciar"
-                          className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
+                          className="p-1 text-fg-muted hover:text-billable hover:bg-billable/10 rounded-control transition-colors shrink-0"
                         >
-                          <Play size={11} fill="currentColor" />
+                          <Play size={14} fill="currentColor" />
                         </button>
                       </div>
                     );
@@ -863,15 +863,15 @@ export function PopupOverlayContent({
 
       {/* Footer */}
       <div
-        className="flex items-center px-3 border-t border-gray-700/60 shrink-0"
+        className="flex items-center px-3 border-t border-border/60 shrink-0"
         style={{ height: FOOTER_H }}
       >
         <button
           onClick={handleOpenApp}
-          className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          className="ml-auto flex items-center gap-1 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
         >
           Abrir app
-          <ArrowRight size={11} />
+          <ArrowRight size={14} />
         </button>
       </div>
 
