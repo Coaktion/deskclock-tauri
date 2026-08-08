@@ -6,6 +6,7 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { FilterPill, PageHeader } from "@presentation/components/ui";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
@@ -213,43 +214,40 @@ export function HistoryPage() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Filter bar: pills + Filtros + Exportar */}
-      <div className="flex items-center gap-1.5 px-4 pt-3 pb-3 border-b border-gray-800 flex-wrap">
-        <div className="flex gap-1.5 flex-wrap">
-          {(["today", "7days", "30days", "month", "custom"] as QuickFilter[]).map((q) => (
+      <PageHeader
+        title="Histórico"
+        actions={
+          <>
             <button
-              key={q}
-              onClick={() => handleQuick(q)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                filters.quick === q
-                  ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                  : "bg-transparent border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-control transition-colors ${
+                advancedOpen
+                  ? "bg-raised border-border text-fg"
+                  : "bg-transparent border-border text-fg-muted hover:text-fg hover:border-fg-muted"
               }`}
             >
-              {QUICK_LABELS[q]}
+              <Filter size={11} />
+              Filtros
             </button>
-          ))}
-        </div>
-        <div className="ml-auto flex gap-1.5">
-          <button
-            onClick={() => setAdvancedOpen((o) => !o)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border rounded-lg transition-colors ${
-              advancedOpen
-                ? "bg-gray-800 border-gray-600 text-gray-200"
-                : "bg-transparent border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
-            }`}
-          >
-            <Filter size={11} />
-            Filtros
-          </button>
-          <button
-            onClick={() => setExportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-transparent border border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600 rounded-lg transition-colors"
-          >
-            <FileDown size={11} />
-            Exportar
-          </button>
-        </div>
+            <button
+              onClick={() => setExportOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-transparent border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
+            >
+              <FileDown size={11} />
+              Exportar
+            </button>
+          </>
+        }
+      />
+
+      {/* Recorte do período: fica fora do cabeçalho porque as cinco pílulas e os
+          dois botões, juntos, não cabem nos 56 px sem quebrar em duas linhas. */}
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border-subtle flex-wrap">
+        {(["today", "7days", "30days", "month", "custom"] as QuickFilter[]).map((q) => (
+          <FilterPill key={q} active={filters.quick === q} onClick={() => handleQuick(q)}>
+            {QUICK_LABELS[q]}
+          </FilterPill>
+        ))}
       </div>
 
       {/* Advanced filters panel */}

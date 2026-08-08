@@ -4,6 +4,7 @@ import { Omnibox } from "@presentation/components/Omnibox";
 import { PlannedTasksSection } from "@presentation/components/PlannedTasksSection";
 import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
 import { TotalsSection } from "@presentation/components/TotalsSection";
+import { PageHeader } from "@presentation/components/ui";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTour } from "@presentation/hooks/useTour";
@@ -74,65 +75,56 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
   const totalToday = totals.billableSeconds + totals.nonBillableSeconds;
 
   return (
-    <div className="h-full flex flex-col gap-4 p-5 overflow-y-auto">
-      {/* Greeting */}
-      <div data-tour="tasks-greeting" className="flex items-start justify-between gap-2">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-base font-semibold text-gray-100">
-            {greet}
-            {userName ? `, ${userName}` : ""}!
-          </h1>
-          <p className="text-xs text-gray-500">No que iremos trabalhar hoje?</p>
+    <div className="h-full flex flex-col">
+      <PageHeader
+        title={`${greet}${userName ? `, ${userName}` : ""}!`}
+        subtitle="No que iremos trabalhar hoje?"
+        onStartTour={startTour}
+        tourId="tasks-greeting"
+      />
+
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 p-5">
+        {/* Omnibox — idle or running */}
+        <div data-tour="tasks-omnibox">
+          <Omnibox
+            plannedTasks={plannedTasks}
+            recentTasks={recentTasks}
+            projects={projects}
+            categories={categories}
+            onStarted={reloadPlanned}
+            focusTaskEdit={focusTaskEdit}
+            onFocusTaskEditHandled={onFocusTaskEditHandled}
+          />
         </div>
-        <button
-          onClick={() => startTour()}
-          title="Ver tour da página"
-          className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center mt-0.5"
-        >
-          ?
-        </button>
-      </div>
 
-      {/* Omnibox — idle or running */}
-      <div data-tour="tasks-omnibox">
-        <Omnibox
-          plannedTasks={plannedTasks}
-          recentTasks={recentTasks}
-          projects={projects}
-          categories={categories}
-          onStarted={reloadPlanned}
-          focusTaskEdit={focusTaskEdit}
-          onFocusTaskEditHandled={onFocusTaskEditHandled}
-        />
-      </div>
+        <div data-tour="tasks-planned-section">
+          <PlannedTasksSection
+            tasks={plannedTasks}
+            projects={projects}
+            dateISO={today}
+            playDisabled={!!runningTask}
+            onPlay={handlePlayPlanned}
+          />
+        </div>
 
-      <div data-tour="tasks-planned-section">
-        <PlannedTasksSection
-          tasks={plannedTasks}
-          projects={projects}
-          dateISO={today}
-          playDisabled={!!runningTask}
-          onPlay={handlePlayPlanned}
-        />
-      </div>
+        <div data-tour="tasks-totals">
+          <TotalsSection
+            billableSeconds={totals.billableSeconds}
+            nonBillableSeconds={totals.nonBillableSeconds}
+            weekSeconds={totals.weekSeconds}
+            weekDays={totals.weekDays}
+          />
+        </div>
 
-      <div data-tour="tasks-totals">
-        <TotalsSection
-          billableSeconds={totals.billableSeconds}
-          nonBillableSeconds={totals.nonBillableSeconds}
-          weekSeconds={totals.weekSeconds}
-          weekDays={totals.weekDays}
-        />
-      </div>
-
-      <div data-tour="tasks-entries">
-        <TodayEntriesSection
-          groups={groups}
-          projects={projects}
-          categories={categories}
-          reload={reload}
-          totalSeconds={totalToday}
-        />
+        <div data-tour="tasks-entries">
+          <TodayEntriesSection
+            groups={groups}
+            projects={projects}
+            categories={categories}
+            reload={reload}
+            totalSeconds={totalToday}
+          />
+        </div>
       </div>
     </div>
   );

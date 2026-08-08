@@ -10,6 +10,7 @@ import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
+import { PageHeader } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -432,44 +433,44 @@ export function RetroactivePage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div
-        data-tour="retroactive-header"
-        className="px-5 py-3 border-b border-gray-800 flex items-center gap-3"
-      >
-        <button
-          onClick={() => goToDate(addDaysISO(selectedDate, -1))}
-          className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <DatePickerInput
-          value={selectedDate}
-          onChange={goToDate}
-          className="text-sm font-medium text-gray-200 w-30"
-          maxDate={new Date()}
-        />
-        <button
-          onClick={() => goToDate(addDaysISO(selectedDate, 1))}
-          disabled={selectedDate >= today}
-          className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronRight size={16} />
-        </button>
-        <span className="ml-7 flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
-        {totalSeconds > 0 && (
-          <span className="text-xs text-gray-500 font-mono tabular-nums">
-            {formatHHMMSS(totalSeconds)} total
-          </span>
-        )}
-        <button
-          onClick={() => startTour()}
-          title="Ver tour da página"
-          className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
-        >
-          ?
-        </button>
-      </div>
+      {/* Sem título, como o Planejamento: a identidade da tela é o dia navegado. */}
+      <PageHeader
+        tourId="retroactive-header"
+        onStartTour={startTour}
+        context={
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => goToDate(addDaysISO(selectedDate, -1))}
+              className="text-fg-muted hover:text-fg p-1 rounded-control hover:bg-raised transition-colors"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <DatePickerInput
+              value={selectedDate}
+              onChange={goToDate}
+              className="text-sm font-medium text-fg w-30"
+              maxDate={new Date()}
+            />
+            <button
+              onClick={() => goToDate(addDaysISO(selectedDate, 1))}
+              disabled={selectedDate >= today}
+              className="text-fg-muted hover:text-fg p-1 rounded-control hover:bg-raised transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={16} />
+            </button>
+            <span className="ml-4 text-sm text-fg-secondary truncate">
+              {formatDateHeader(selectedDate)}
+            </span>
+          </div>
+        }
+        actions={
+          totalSeconds > 0 ? (
+            <span className="text-xs text-fg-muted font-mono tabular-nums">
+              {formatHHMMSS(totalSeconds)} total
+            </span>
+          ) : undefined
+        }
+      />
 
       {/* Formulário à esquerda, dia à direita: com campos personalizados o
           formulário cresce e, empilhado, empurrava a lista para fora da tela. */}

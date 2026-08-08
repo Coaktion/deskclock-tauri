@@ -3,6 +3,7 @@ import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTa
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
+import { FilterPill, PageHeader } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
@@ -181,66 +182,59 @@ export function WeekPlanningView() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* ── Header: week selector + completed count ─────────────────────────── */}
-      <div
-        data-tour="planning-header"
-        className="flex items-center gap-2 px-5 py-3 border-b border-gray-800 h-[52px]"
-      >
-        <button
-          onClick={() => {
-            setWeekOffset((o) => o - 1);
-            setDayFilter("all");
-          }}
-          className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
-        >
-          <ChevronLeft size={15} />
-        </button>
+      {/* Sem título: a identidade da tela é o intervalo navegado, e um "Planejamento"
+          ao lado dele só roubaria largura de quem já disputa espaço no cabeçalho. */}
+      <PageHeader
+        tourId="planning-header"
+        onStartTour={startTour}
+        context={
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => {
+                setWeekOffset((o) => o - 1);
+                setDayFilter("all");
+              }}
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors shrink-0"
+            >
+              <ChevronLeft size={15} />
+            </button>
 
-        <span className="text-sm font-medium text-gray-100 truncate">{label}</span>
+            <span className="text-sm font-medium text-fg truncate">{label}</span>
 
-        <button
-          onClick={() => {
-            setWeekOffset((o) => o + 1);
-            setDayFilter("all");
-          }}
-          className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
-        >
-          <ChevronRight size={15} />
-        </button>
+            <button
+              onClick={() => {
+                setWeekOffset((o) => o + 1);
+                setDayFilter("all");
+              }}
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors shrink-0"
+            >
+              <ChevronRight size={15} />
+            </button>
 
-        {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:
-            navegando algumas semanas, o intervalo em dd/mm não responde sozinho
-            "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. Segue
-            o mesmo vocabulário da pílula "Hoje" do formulário, que faz o
-            equivalente para o campo de data. */}
-        <button
-          onClick={() => {
-            setWeekOffset(0);
-            setDayFilter("all");
-          }}
-          title="Voltar para a semana atual"
-          className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap shrink-0 ${
-            weekOffset === 0
-              ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-              : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-          }`}
-        >
-          Semana atual
-        </button>
-
-        <div className="ml-auto flex items-center gap-3 shrink-0">
-          <span className="text-xs text-gray-400 whitespace-nowrap">
+            {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:
+                navegando algumas semanas, o intervalo em dd/mm não responde sozinho
+                "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. Segue
+                o mesmo vocabulário da pílula "Hoje" do formulário, que faz o
+                equivalente para o campo de data. */}
+            <FilterPill
+              size="sm"
+              active={weekOffset === 0}
+              onClick={() => {
+                setWeekOffset(0);
+                setDayFilter("all");
+              }}
+              title="Voltar para a semana atual"
+            >
+              Semana atual
+            </FilterPill>
+          </div>
+        }
+        actions={
+          <span className="text-xs text-fg-secondary whitespace-nowrap">
             {completedCount} de {totalCount} concluídas
           </span>
-          <button
-            onClick={() => startTour()}
-            title="Ver tour da página"
-            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
-          >
-            ?
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Formulário à esquerda, semana à direita — mesmo arranjo do Lançamento
           Manual, para as duas telas de entrada não parecerem coisas distintas. */}

@@ -3,6 +3,7 @@ import { ProjectsPanel } from "@presentation/components/ProjectsPanel";
 import { CategoriesPanel } from "@presentation/components/CategoriesPanel";
 import { WorkspacesPanel } from "@presentation/components/WorkspacesPanel";
 import { CustomFieldsPanel } from "@presentation/components/CustomFieldsPanel";
+import { FilterPill, PageHeader } from "@presentation/components/ui";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -27,36 +28,32 @@ export function DataPage() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto p-5">
-      <h1 className="text-lg font-semibold text-gray-100 mb-4">Dados</h1>
-      <div className="flex gap-2 mb-5">
-        {tabs.map(([key, label, count]) => (
-          <button
-            key={key}
-            onClick={() => setSection(key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-              section === key
-                ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
-            }`}
-          >
-            {label}
-            <span className={`ml-1.5 ${section === key ? "text-blue-400/60" : "text-gray-600"}`}>
-              {count}
-            </span>
-          </button>
-        ))}
+    <div className="h-full flex flex-col">
+      <PageHeader title="Dados" />
+      <div className="flex-1 min-h-0 overflow-y-auto p-5">
+        <div className="flex gap-2 mb-5">
+          {tabs.map(([key, label, count]) => (
+            <FilterPill
+              key={key}
+              active={section === key}
+              onClick={() => setSection(key)}
+              count={count}
+            >
+              {label}
+            </FilterPill>
+          ))}
+        </div>
+        {section === "projetos" && (
+          <ProjectsPanel
+            showTitle={false}
+            data={projectsData}
+            categories={categoriesData.categories}
+          />
+        )}
+        {section === "categorias" && <CategoriesPanel showTitle={false} data={categoriesData} />}
+        {section === "workspaces" && <WorkspacesPanel showTitle={false} />}
+        {section === "campos" && <CustomFieldsPanel showTitle={false} data={customFieldsData} />}
       </div>
-      {section === "projetos" && (
-        <ProjectsPanel
-          showTitle={false}
-          data={projectsData}
-          categories={categoriesData.categories}
-        />
-      )}
-      {section === "categorias" && <CategoriesPanel showTitle={false} data={categoriesData} />}
-      {section === "workspaces" && <WorkspacesPanel showTitle={false} />}
-      {section === "campos" && <CustomFieldsPanel showTitle={false} data={customFieldsData} />}
     </div>
   );
 }
