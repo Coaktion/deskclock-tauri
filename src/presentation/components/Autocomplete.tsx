@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
-import { fieldClass } from "./fieldStyles";
+import { Input } from "@presentation/components/ui";
+import type { ControlSize, ControlVariant } from "@presentation/components/ui";
 
 interface Option {
   id: string;
@@ -67,11 +68,15 @@ interface AutocompleteProps {
   placeholder?: string;
   className?: string;
   /**
-   * Substitui — não complementa — o visual do input. Existe para quem embute o
-   * autocomplete dentro de uma caixa que já desenha fundo, borda e raio, caso em
-   * que o input precisa ficar transparente para os dois parecerem um só campo.
+   * `bare` para quem embute o autocomplete numa caixa que já desenha fundo,
+   * borda e raio — o input fica transparente e os dois leem como um campo só.
+   *
+   * Isto era um `inputClassName` que **substituía** o visual inteiro do campo:
+   * cinco call sites passavam a mesma constante e um sexto reescreveu a classe
+   * à mão, que foi como o campo do popup perdeu o tamanho de fonte dos demais.
    */
-  inputClassName?: string;
+  variant?: ControlVariant;
+  size?: ControlSize;
   autoFocus?: boolean;
   dropUp?: boolean;
 }
@@ -85,7 +90,8 @@ export function Autocomplete({
   options,
   placeholder = "",
   className = "",
-  inputClassName = fieldClass,
+  variant = "boxed",
+  size = "md",
   autoFocus = false,
   dropUp = false,
 }: AutocompleteProps) {
@@ -173,9 +179,8 @@ export function Autocomplete({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      <input
+      <Input
         id={id}
-        type="text"
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -186,8 +191,8 @@ export function Autocomplete({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className={inputClassName}
-        autoComplete="off"
+        variant={variant}
+        size={size}
       />
       {open && filtered.length > 0 && (
         <ul

@@ -1,6 +1,7 @@
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Page } from "@presentation/components/Sidebar";
+import { Input } from "@presentation/components/ui";
 import {
   CalendarDays,
   Database,
@@ -317,9 +318,9 @@ export function CommandPalette({
       {/* Search bar */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border-subtle">
         <Search size={16} className="text-fg-muted shrink-0" />
-        <input
+        <Input
           ref={inputRef}
-          type="text"
+          variant="plain"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -327,8 +328,7 @@ export function CommandPalette({
           }}
           onKeyDown={onKeyDown}
           placeholder="Buscar ação, tela, ou tarefa planejada…"
-          className="flex-1 bg-transparent text-sm text-fg outline-none placeholder-fg-muted"
-          autoComplete="off"
+          className="flex-1"
         />
         {query && (
           <button

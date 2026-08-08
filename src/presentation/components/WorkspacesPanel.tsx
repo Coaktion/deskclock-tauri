@@ -10,7 +10,7 @@ import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchG
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
-import { SectionCard } from "@presentation/components/ui";
+import { Input, SectionCard } from "@presentation/components/ui";
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
@@ -102,13 +102,12 @@ export function WorkspacesPanel() {
       >
         <div className="flex items-center gap-2">
           <WorkspaceDot color={previewColor} size={10} />
-          <input
-            type="text"
+          <Input
+            variant="plain"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Adicionar novo workspace (Enter para salvar)"
-            autoComplete="off"
-            className="flex-1 text-sm bg-transparent text-fg placeholder-fg-muted focus:outline-none"
+            className="flex-1"
           />
           <button
             type="button"
@@ -141,8 +140,8 @@ export function WorkspacesPanel() {
                 <WorkspaceDot color={isEditing ? editColor : w.color} size={10} />
 
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <Input
+                    variant="plain"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => {
@@ -150,8 +149,7 @@ export function WorkspacesPanel() {
                       if (e.key === "Escape") setEditingId(null);
                     }}
                     autoFocus
-                    className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
-                    autoComplete="off"
+                    className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
                   />
                 ) : (
                   <span className="flex-1 text-sm text-fg truncate">{w.name}</span>

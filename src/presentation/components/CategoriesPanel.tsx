@@ -3,7 +3,7 @@ import { Plus, Upload } from "lucide-react";
 import type { UseCategoriesResult } from "@presentation/hooks/useCategories";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { SectionCard, SearchInput } from "@presentation/components/ui";
+import { Input, SectionCard, SearchInput } from "@presentation/components/ui";
 import { ToggleBillable } from "./ToggleBillable";
 import { CategoryCard } from "./CategoryCard";
 import { SelectionBar } from "./SelectionBar";
@@ -85,13 +85,12 @@ export function CategoriesPanel({ data }: CategoriesPanelProps) {
         className="flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-control hover:border-fg-muted transition-colors"
       >
         <Plus size={14} className="text-fg-muted shrink-0" />
-        <input
-          type="text"
+        <Input
+          variant="plain"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Adicionar nova categoria (Enter para salvar)"
-          autoComplete="off"
-          className="flex-1 text-sm bg-transparent text-fg placeholder-fg-muted focus:outline-none"
+          className="flex-1"
         />
         <ToggleBillable value={newBillable} onChange={setNewBillable} />
       </div>

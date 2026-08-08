@@ -3,13 +3,8 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import {
-  bareInputClass,
-  boxClass,
-  fieldClass,
-  formColumnClass,
-} from "@presentation/components/fieldStyles";
-import { Field, fieldControlClass } from "@presentation/components/ui";
+import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
+import { Field, Input } from "@presentation/components/ui";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -43,14 +38,11 @@ export function RetroactiveEntryForm({
 
   return (
     <div className={formColumnClass} onKeyDown={handleKeyDown}>
-      <input
+      <Input
         ref={form.nameRef}
-        type="text"
         value={form.name}
         onChange={(e) => form.setName(e.target.value)}
         placeholder="Nome da tarefa"
-        autoComplete="off"
-        className={fieldClass}
       />
 
       <Autocomplete
@@ -80,7 +72,7 @@ export function RetroactiveEntryForm({
           options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
-          inputClassName={bareInputClass}
+          variant="bare"
         />
         <button
           type="button"
@@ -112,10 +104,10 @@ export function RetroactiveEntryForm({
           precisou de 16px enquanto início e fim se resolveram com 6px. */}
       <div>
         <Field label="Duração" htmlFor="retro-duration" className="mt-4.5 flex items-center">
-          <input
+          <Input
             id="retro-duration"
             data-tour="retroactive-duration"
-            type="text"
+            variant="bare"
             value={form.durationInput}
             onChange={(e) => form.setDurationInput(e.target.value)}
             onBlur={form.commitDuration}
@@ -129,9 +121,8 @@ export function RetroactiveEntryForm({
               void form.handleAdd(newEnd || undefined);
             }}
             placeholder="HH:MM"
-            autoComplete="off"
             title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className={`${fieldControlClass} w-20! pt-3`}
+            className="w-20! pt-3"
           />
           <span className="w-full pt-3 pb-1.5 pr-2.5 text-xs text-fg-muted truncate">
             Use: 1h30, 1h, 30...
@@ -141,9 +132,10 @@ export function RetroactiveEntryForm({
 
       <div data-tour="retroactive-timeinputs" className="flex gap-2">
         <Field label="Início" htmlFor="retro-start" className="flex-1">
-          <input
+          <Input
             id="retro-start"
             type="time"
+            variant="bare"
             value={form.startTime}
             onChange={(e) => form.handleStartChange(e.target.value)}
             onBlur={(e) => form.handleStartCommit(e.target.value)}
@@ -154,14 +146,14 @@ export function RetroactiveEntryForm({
               e.preventDefault();
               form.handleStartCommit("");
             }}
-            autoComplete="off"
-            className={`${fieldControlClass} pt-3`}
+            className="pt-3"
           />
         </Field>
         <Field label="Fim" htmlFor="retro-end" className="flex-1">
-          <input
+          <Input
             id="retro-end"
             type="time"
+            variant="bare"
             value={form.endTime}
             onChange={(e) => form.handleEndChange(e.target.value)}
             onBlur={(e) => form.handleEndCommit(e.target.value)}
@@ -170,8 +162,7 @@ export function RetroactiveEntryForm({
               e.preventDefault();
               form.handleEndCommit("");
             }}
-            autoComplete="off"
-            className={`${fieldControlClass} pt-3`}
+            className="pt-3"
           />
         </Field>
       </div>

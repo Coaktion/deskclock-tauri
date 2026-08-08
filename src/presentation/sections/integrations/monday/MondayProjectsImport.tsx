@@ -14,7 +14,7 @@ import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyProjectCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
-import { Button } from "@presentation/components/ui";
+import { Button, Input } from "@presentation/components/ui";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -62,7 +62,8 @@ function ProjectBoardIdInput({
 
   return (
     <span className="relative shrink-0">
-      <input
+      <Input
+        size="sm"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
@@ -74,10 +75,7 @@ function ProjectBoardIdInput({
             ? "Lendo o board no Monday…"
             : "Id do board onde as horas deste projeto serão gravadas"
         }
-        className={`w-28 bg-raised border border-amber-500/40 rounded-chip px-2 py-0.5 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent ${
-          busy ? "pr-6 opacity-70" : ""
-        }`}
-        autoComplete="off"
+        className={`w-28 border-amber-500/40! ${busy ? "pr-6 opacity-70" : ""}`}
       />
       {/* Dentro do campo, e não ao lado: a linha inteira não pode mudar de
           largura enquanto a leitura corre, ou a lista se mexe sob o cursor. */}

@@ -4,6 +4,7 @@ import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resol
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import type { SyncFeedback } from "@presentation/hooks/useSyncNowButton";
+import { Select } from "@presentation/components/ui";
 import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 
 /* ── helpers ── */
@@ -64,17 +65,19 @@ export function DeskclockWorkspaceRow({
           <span className="text-sm text-fg-secondary">Workspace DeskClock</span>
           <p className="text-xs text-fg-muted mt-0.5">{hint}</p>
         </div>
-        <select
+        <Select
+          aria-label="Workspace DeskClock"
+          size="sm"
           value={selected}
           onChange={(e) => void handleChange(e.target.value)}
-          className="shrink-0 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg-secondary focus:outline-none focus:border-accent max-w-[180px]"
+          className="shrink-0 max-w-[180px]"
         >
           {workspaces.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
     </div>
   );

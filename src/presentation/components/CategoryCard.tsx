@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Pencil, Trash2, Check, X, DollarSign } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { UUID } from "@shared/types";
+import { Input } from "@presentation/components/ui";
 
 interface CategoryCardProps {
   category: Category;
@@ -68,13 +69,13 @@ export function CategoryCard({
 
       {editing ? (
         <>
-          <input
+          <Input
             ref={inputRef}
+            variant="plain"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
-            autoComplete="off"
+            className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
           <button
             onClick={() => setEditBillable((b) => !b)}

@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { AlertCircle, ExternalLink } from "lucide-react";
 import { SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
-import { NumberInputWithCommit, settingsInputClass } from "./SettingsShared";
+import { NumberInputWithCommit } from "./SettingsShared";
 
 interface ApiStatus {
   running: boolean;
@@ -97,7 +97,7 @@ export function ApiTab() {
               max={65535}
               committed={localApiPort}
               onCommit={handlePortCommit}
-              inputClassName={`w-32 font-mono tabular-nums ${settingsInputClass}`}
+              inputClassName="w-32 font-mono tabular-nums"
             />
           </SectionRow>
         )}

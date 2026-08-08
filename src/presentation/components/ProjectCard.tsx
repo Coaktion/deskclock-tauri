@@ -5,6 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { UUID } from "@shared/types";
 import { getProjectColor } from "@shared/utils/projectColor";
+import { Input } from "@presentation/components/ui";
 import { ProjectCategoriesEditor } from "./ProjectCategoriesEditor";
 
 interface ProjectCardProps {
@@ -84,13 +85,13 @@ export function ProjectCard({
 
         {editing ? (
           <>
-            <input
+            <Input
               ref={inputRef}
+              variant="plain"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
-              autoComplete="off"
+              className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
             />
             <button onClick={confirmEdit} className="p-1 text-billable hover:opacity-80 shrink-0">
               <Check size={14} />

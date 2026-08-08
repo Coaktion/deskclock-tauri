@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { DayPicker } from "react-day-picker";
 import { ptBR } from "react-day-picker/locale";
 import "react-day-picker/style.css";
-import { Field, fieldControlClass } from "@presentation/components/ui";
+import { Field, Input } from "@presentation/components/ui";
 
 interface DatePickerInputProps {
   value: string; // ISO date YYYY-MM-DD ou ""
@@ -130,32 +130,28 @@ export function DatePickerInput({
 
   const field = label ? (
     <Field label={label} className={`${invalid ? "border-danger!" : ""} ${className}`}>
-      <input
+      <Input
         ref={inputRef}
-        type="text"
+        variant="bare"
         readOnly
         value={formatDisplay(value)}
         placeholder={placeholder}
         onClick={handleOpen}
         onKeyDown={handleKeyDown}
-        autoComplete="off"
-        className={`${fieldControlClass} pt-3 cursor-pointer`}
+        className="pt-3 cursor-pointer"
       />
     </Field>
   ) : (
     <div className={className}>
-      <input
+      <Input
         ref={inputRef}
-        type="text"
         readOnly
+        invalid={invalid}
         value={formatDisplay(value)}
         placeholder={placeholder}
         onClick={handleOpen}
         onKeyDown={handleKeyDown}
-        autoComplete="off"
-        className={`w-full px-2.5 py-1.5 text-sm bg-raised border rounded-control text-fg placeholder-fg-muted focus:outline-none cursor-pointer transition-colors ${
-          invalid ? "border-danger focus:border-danger" : "border-border focus:border-accent"
-        }`}
+        className="cursor-pointer"
       />
     </div>
   );

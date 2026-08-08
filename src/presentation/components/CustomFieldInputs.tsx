@@ -1,11 +1,8 @@
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import { serializeCustomValue } from "@domain/usecases/customFields/customValueCodec";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import {
-  fieldClass,
-  floatingFieldClass,
-  floatingLabelClass,
-} from "@presentation/components/fieldStyles";
+import { floatingFieldClass, floatingLabelClass } from "@presentation/components/fieldStyles";
+import { Input, Textarea } from "@presentation/components/ui";
 import { useEffect, useRef, useState } from "react";
 
 interface CustomFieldInputsProps {
@@ -162,7 +159,7 @@ function TextCustomField({ inputId, field, value, onCommit, onEnter, rows }: Tex
 
   if (field.type === "multiline") {
     return (
-      <textarea
+      <Textarea
         id={inputId}
         value={text}
         onChange={(e) => handle(e.target.value)}
@@ -171,15 +168,13 @@ function TextCustomField({ inputId, field, value, onCommit, onEnter, rows }: Tex
         // rótulo flutuante saber que o campo está vazio. Quem "escreve" aqui é
         // o próprio rótulo, em repouso.
         placeholder=" "
-        className={`${fieldClass} resize-y`}
       />
     );
   }
 
   return (
-    <input
+    <Input
       id={inputId}
-      type="text"
       value={text}
       onChange={(e) => handle(e.target.value)}
       onKeyDown={(e) => {
@@ -192,8 +187,6 @@ function TextCustomField({ inputId, field, value, onCommit, onEnter, rows }: Tex
         }
       }}
       placeholder=" "
-      autoComplete="off"
-      className={fieldClass}
     />
   );
 }

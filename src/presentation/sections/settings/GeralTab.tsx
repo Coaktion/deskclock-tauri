@@ -3,7 +3,7 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
-import { SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
+import { Input, SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
 import { NumberInputWithCommit } from "./SettingsShared";
 
 /** Escolha dentro de um grupo — retangular, ao contrário da pílula de filtro. */
@@ -123,15 +123,14 @@ export function GeralTab() {
             <label htmlFor="settings-user-name" className="block text-xs text-fg-muted">
               Como quer ser chamado?
             </label>
-            <input
+            <Input
               id="settings-user-name"
-              type="text"
+              variant="plain"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               onBlur={handleUserNameBlur}
               placeholder="Seu nome"
-              className="w-full bg-transparent text-sm font-medium text-fg placeholder-fg-muted focus:outline-none"
-              autoComplete="off"
+              className="font-medium"
             />
           </div>
         </SectionRow>

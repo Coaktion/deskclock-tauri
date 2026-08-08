@@ -199,7 +199,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
                 options={categoryOptions}
                 placeholder="Categoria"
                 className="flex-1 min-w-0"
-                inputClassName={bareInputClass}
+                variant="bare"
               />
               <button
                 type="button"

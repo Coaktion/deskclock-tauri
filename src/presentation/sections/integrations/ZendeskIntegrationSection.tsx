@@ -8,7 +8,7 @@ import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenMan
 import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
 import { CalendarDays, CheckCircle2, Key, LogIn, LogOut, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, IconButton, TourButton } from "@presentation/components/ui";
+import { Button, IconButton, Input, TourButton } from "@presentation/components/ui";
 import { DeskclockWorkspaceRow, IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
 
 /* ── SVG Zendesk ── */
@@ -182,38 +182,36 @@ export function ZendeskIntegrationCard() {
           )}
           <Row label="Subdomínio">
             <div className="flex items-center gap-1.5">
-              <input
-                type="text"
+              <Input
+                size="sm"
                 value={subdomain}
                 onChange={(e) => setSubdomain(e.target.value)}
                 disabled={connected}
                 placeholder="minha-empresa"
-                className="w-36 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                autoComplete="off"
+                className="w-36"
               />
               <span className="text-xs text-fg-muted shrink-0">.zendesk.com</span>
             </div>
           </Row>
           <Row label="Client ID">
-            <input
-              type="text"
+            <Input
+              size="sm"
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
               disabled={connected}
               placeholder="OAuth client identifier"
-              className="w-52 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              autoComplete="off"
+              className="w-52"
             />
           </Row>
           <Row label="Secret">
-            <input
+            <Input
               type="password"
+              size="sm"
               value={clientSecret}
               onChange={(e) => setClientSecret(e.target.value)}
               disabled={connected}
               placeholder="Vazio para cliente público"
-              className="w-52 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed"
-              autoComplete="off"
+              className="w-52"
             />
           </Row>
         </SubSection>

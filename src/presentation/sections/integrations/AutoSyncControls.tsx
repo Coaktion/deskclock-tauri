@@ -5,7 +5,7 @@ import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, SegmentedControl, Toggle } from "@presentation/components/ui";
+import { Button, Input, SegmentedControl, Toggle } from "@presentation/components/ui";
 import { Row, SubSection } from "./shared";
 
 /**
@@ -167,13 +167,13 @@ export function AutoSyncControls({
 
               {syncTrigger === "fixed-time" && (
                 <Row label="Horário">
-                  <input
+                  <Input
                     type="time"
+                    size="sm"
                     value={syncTime}
                     onChange={(e) => setSyncTime(e.target.value)}
                     onBlur={() => config.set(keys.time, syncTime)}
-                    className="bg-raised border border-border rounded-chip px-2 py-1 text-xs text-fg-secondary focus:outline-none focus:border-accent"
-                    autoComplete="off"
+                    className="w-auto!"
                   />
                 </Row>
               )}

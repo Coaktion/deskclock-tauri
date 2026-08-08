@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, Upload } from "lucide-react";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { Textarea } from "@presentation/components/ui";
 
 interface BulkImportModalProps {
   title: string;
@@ -41,13 +42,13 @@ export function BulkImportModal({ title, placeholder, onImport, onClose }: BulkI
           </button>
         </div>
 
-        <textarea
+        <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
           rows={8}
           autoFocus
-          className="w-full px-3 py-2 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent resize-none"
+          className="resize-none"
         />
 
         <div className="flex justify-end gap-2 mt-4">

@@ -12,6 +12,7 @@ import {
   chipFilledClass,
   chipNonBillableClass,
 } from "./chipStyles";
+import { Input } from "@presentation/components/ui";
 import { OmniboxCustomFieldsPanel } from "./OmniboxCustomFieldsPanel";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
@@ -112,8 +113,8 @@ export function OmniboxRunning({
         {/* Task info */}
         <div className="flex-1 min-w-0">
           {editingRunningName ? (
-            <input
-              type="text"
+            <Input
+              variant="plain"
               value={runningNameValue}
               onChange={(e) => setRunningNameValue(e.target.value)}
               onBlur={() => void handleNameCommit()}
@@ -129,8 +130,7 @@ export function OmniboxRunning({
               }}
               autoFocus
               placeholder="Nome da tarefa"
-              className="w-full text-sm font-medium bg-transparent border-b border-accent text-fg placeholder-fg-muted focus:outline-none pb-0.5"
-              autoComplete="off"
+              className="font-medium border-b border-accent pb-0.5"
             />
           ) : (
             <button
@@ -253,8 +253,10 @@ export function OmniboxRunning({
 
             {/* Start time */}
             {editingStartTime ? (
-              <input
+              <Input
                 type="time"
+                variant="plain"
+                size="sm"
                 value={startTimeInput}
                 onChange={(e) => setStartTimeInput(e.target.value)}
                 onBlur={() => void handleStartTimeCommit()}
@@ -266,8 +268,7 @@ export function OmniboxRunning({
                   }
                 }}
                 autoFocus
-                className="w-24 bg-raised border border-accent rounded-chip px-2 py-0.5 text-fg text-xs focus:outline-none focus:ring-1 focus:ring-accent"
-                autoComplete="off"
+                className="w-24 bg-raised border border-accent rounded-chip px-2 py-0.5"
               />
             ) : (
               <button
@@ -360,14 +361,11 @@ export function OmniboxRunning({
       {fillingRequired && (
         <div className="mx-4 mb-3 pt-3 border-t border-border-subtle space-y-2">
           <p className="text-xs text-amber-400">Preencha antes de concluir:</p>
-          <input
-            type="text"
+          <Input
             value={fillName}
             onChange={(e) => setFillName(e.target.value)}
             placeholder="Nome da tarefa"
             autoFocus
-            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
-            autoComplete="off"
           />
           <Autocomplete
             value={fillProjectName}

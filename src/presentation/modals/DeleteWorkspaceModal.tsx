@@ -4,6 +4,7 @@ import type { Workspace } from "@domain/entities/Workspace";
 import type { WorkspaceDeletionTarget } from "@domain/usecases/workspaces/DeleteWorkspace";
 import type { IntegrationWorkspaceBinding } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
+import { Select } from "@presentation/components/ui";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
@@ -136,18 +137,19 @@ export function DeleteWorkspaceModal({
               />
               <span className="flex-1">
                 <span className="block text-sm text-fg">Mover para outro workspace</span>
-                <select
+                <Select
+                  aria-label="Workspace de destino"
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
                   onFocus={() => setMode("move")}
-                  className="mt-1.5 w-full bg-raised border border-border rounded-control px-2 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="mt-1.5 w-full"
                 >
                   {others.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <span className="block mt-1 text-xs text-fg-muted leading-snug">
                   Projetos e categorias de mesmo nome no destino são reaproveitados, não duplicados.
                 </span>

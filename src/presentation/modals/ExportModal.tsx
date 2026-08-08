@@ -19,6 +19,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { Select } from "@presentation/components/ui";
 import { buildExportRows, customColumnField, toCSV, toJSON } from "@domain/utils/exportFormatter";
 import type { CustomField } from "@domain/entities/CustomField";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -175,53 +176,57 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
 
         <div>
           <label className="text-xs text-fg-secondary mb-1 block">Formato</label>
-          <select
+          <Select
+            aria-label="Formato"
             value={format}
             onChange={(e) => setFormat(e.target.value as ExportFormat)}
-            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+            className="w-full"
           >
             <option value="csv">CSV</option>
             <option value="json">JSON</option>
-          </select>
+          </Select>
         </div>
 
         {format === "csv" && (
           <div>
             <label className="text-xs text-fg-secondary mb-1 block">Separador</label>
-            <select
+            <Select
+              aria-label="Separador"
               value={separator}
               onChange={(e) => setSeparator(e.target.value as CsvSeparator)}
-              className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+              className="w-full"
             >
               <option value="comma">Vírgula</option>
               <option value="semicolon">Ponto-e-vírgula</option>
-            </select>
+            </Select>
           </div>
         )}
 
         <div>
           <label className="text-xs text-fg-secondary mb-1 block">Duração</label>
-          <select
+          <Select
+            aria-label="Duração"
             value={durationFormat}
             onChange={(e) => setDurationFormat(e.target.value as DurationFormat)}
-            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+            className="w-full"
           >
             <option value="hh:mm:ss">HH:MM:SS</option>
             <option value="decimal">Decimal (horas)</option>
             <option value="minutes">Minutos</option>
-          </select>
+          </Select>
         </div>
 
         <div>
           <label className="text-xs text-fg-secondary mb-1 block">Formato de data</label>
-          <select
+          <Select
+            aria-label="Formato de data"
             value={dateFormat}
             onChange={(e) => setDateFormat(e.target.value as DateFormat)}
-            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+            className="w-full"
           >
             <option value="iso">ISO (AAAA-MM-DD)</option>
             <option value="dd/mm/yyyy">DD/MM/AAAA</option>
-          </select>
+          </Select>
         </div>
 
         <div className="col-span-2">
@@ -435,10 +440,11 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
               {/* Perfil */}
               <div>
                 <label className="text-xs text-fg-secondary mb-1 block">Perfil de exportação</label>
-                <select
+                <Select
+                  aria-label="Perfil de exportação"
                   value={selectedProfileId}
                   onChange={(e) => setSelectedProfileId(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+                  className="w-full"
                 >
                   {profiles.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -446,7 +452,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
                       {p.isDefault ? " (padrão)" : ""}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
 
               {/* Período */}

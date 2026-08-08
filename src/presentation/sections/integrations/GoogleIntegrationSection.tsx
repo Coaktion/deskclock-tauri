@@ -58,7 +58,7 @@ import {
   SubSection,
   SyncFeedbackLine,
 } from "./shared";
-import { Button, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
+import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
 import { GoogleLogo } from "./google/GoogleLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
@@ -119,13 +119,13 @@ function SortableSheetColumn({ col, idx, onToggle, onRename }: SortableSheetColu
         checked={col.enabled}
         onChange={() => onToggle(idx)}
       />
-      <input
-        type="text"
+      <Input
+        variant="plain"
+        size="sm"
         value={col.label}
         onChange={(e) => onRename(idx, e.target.value)}
         disabled={!col.enabled}
-        className="flex-1 bg-transparent border-b border-border focus:border-accent text-xs text-fg outline-none py-0.5 disabled:text-fg-muted"
-        autoComplete="off"
+        className="flex-1 border-b border-border focus:border-accent py-0.5"
       />
       <span className="text-xs text-fg-muted w-16 shrink-0">{col.field}</span>
     </div>
@@ -290,19 +290,18 @@ function SheetsSection({
           className="py-2.5 border-b border-border-subtle"
         />
         <Row label="ID da planilha">
-          <input
-            type="text"
+          <Input
+            size="sm"
             value={spreadsheetId}
             onChange={(e) => setSpreadsheetId(e.target.value)}
             onBlur={() => config.set("integrationGoogleSheetsSpreadsheetId", spreadsheetId.trim())}
             placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-            className="w-64 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
-            autoComplete="off"
+            className="w-64"
           />
         </Row>
         <Row label="Nome da aba">
-          <input
-            type="text"
+          <Input
+            size="sm"
             value={sheetName}
             onChange={(e) => setSheetName(e.target.value)}
             onBlur={async () => {
@@ -311,8 +310,7 @@ function SheetsSection({
               await config.set("integrationGoogleSheetsSheetName", name);
             }}
             placeholder="DeskClock"
-            className="w-40 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
-            autoComplete="off"
+            className="w-40"
           />
         </Row>
 
@@ -410,13 +408,13 @@ function SheetsSection({
 
                   {syncTrigger === "fixed-time" && (
                     <Row label="Horário">
-                      <input
+                      <Input
                         type="time"
+                        size="sm"
                         value={syncTime}
                         onChange={(e) => setSyncTime(e.target.value)}
                         onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
-                        className="bg-raised border border-border rounded-chip px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
-                        autoComplete="off"
+                        className="w-auto!"
                       />
                     </Row>
                   )}

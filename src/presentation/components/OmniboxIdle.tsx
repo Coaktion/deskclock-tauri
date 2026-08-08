@@ -1,6 +1,7 @@
 import { Play } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import { Input } from "@presentation/components/ui";
 import { Autocomplete } from "./Autocomplete";
 import {
   chipBillableClass,
@@ -89,9 +90,9 @@ export function OmniboxIdle({
           <Play size={18} />
         </button>
 
-        <input
+        <Input
           ref={inputRef}
-          type="text"
+          variant="plain"
           value={draft.name}
           onChange={(e) => {
             setDraft((d) => ({ ...d, name: e.target.value }));
@@ -105,8 +106,7 @@ export function OmniboxIdle({
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
-          className="flex-1 bg-transparent text-base font-medium text-fg placeholder-fg-muted focus:outline-none"
-          autoComplete="off"
+          className="flex-1 text-base! font-medium"
         />
       </div>
 

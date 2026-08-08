@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-
-/** Casca de campo autônomo — o `fieldControlClass` é o oposto: sem casca. */
-export const settingsInputClass =
-  "px-3 py-2 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent transition-colors";
+import { Input, Select } from "@presentation/components/ui";
 
 export function SliderRow({
   label,
@@ -64,17 +61,18 @@ export function SelectRow({
         <p className="text-sm text-fg">{label}</p>
         {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
       </div>
-      <select
+      <Select
+        aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="shrink-0 px-3 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent transition-colors cursor-pointer"
+        className="shrink-0"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }
@@ -112,15 +110,14 @@ export function NumberInputWithCommit({
   return (
     <div>
       {label && <label className="block text-xs text-fg-muted mb-1.5">{label}</label>}
-      <input
+      <Input
         type="number"
         min={min}
         max={max}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onBlur={handleBlur}
-        className={inputClassName ?? `w-full font-mono tabular-nums ${settingsInputClass}`}
-        autoComplete="off"
+        className={inputClassName ?? "w-full font-mono tabular-nums"}
       />
     </div>
   );

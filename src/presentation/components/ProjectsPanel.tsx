@@ -6,7 +6,7 @@ import type { UseProjectsResult } from "@presentation/hooks/useProjects";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { SectionCard, SearchInput } from "@presentation/components/ui";
+import { Input, SectionCard, SearchInput } from "@presentation/components/ui";
 import { ProjectCard } from "./ProjectCard";
 import { SelectionBar } from "./SelectionBar";
 import { BulkImportModal } from "@presentation/modals/BulkImportModal";
@@ -116,13 +116,12 @@ export function ProjectsPanel({ data, categories }: ProjectsPanelProps) {
         className="flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-control hover:border-fg-muted transition-colors"
       >
         <Plus size={14} className="text-fg-muted shrink-0" />
-        <input
-          type="text"
+        <Input
+          variant="plain"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Adicionar novo projeto (Enter para salvar)"
-          autoComplete="off"
-          className="flex-1 text-sm bg-transparent text-fg placeholder-fg-muted focus:outline-none"
+          className="flex-1"
         />
       </div>
 

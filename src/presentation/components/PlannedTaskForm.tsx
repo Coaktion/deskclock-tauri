@@ -5,13 +5,8 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { FilterPill } from "@presentation/components/ui";
-import {
-  bareInputClass,
-  boxClass,
-  fieldClass,
-  formColumnClass,
-} from "@presentation/components/fieldStyles";
+import { FilterPill, Input, Select } from "@presentation/components/ui";
+import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -204,14 +199,11 @@ export function PlannedTaskForm({
     // navegador cobriria só parte dos campos, e é ele que o hook cancela para o
     // Enter ter uma regra só em todo o app (`useSubmitOnEnter`).
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className={formColumnClass}>
-      <input
+      <Input
         ref={nameRef}
-        type="text"
         value={form.name}
         onChange={(e) => set("name", e.target.value)}
         placeholder="Nome da tarefa"
-        autoComplete="off"
-        className={fieldClass}
       />
 
       <Autocomplete
@@ -251,7 +243,7 @@ export function PlannedTaskForm({
           options={categoryOptions}
           placeholder="Categoria"
           className="flex-1"
-          inputClassName={bareInputClass}
+          variant="bare"
         />
         <button
           type="button"
@@ -389,18 +381,21 @@ export function PlannedTaskForm({
         </ul>
       )}
 
-      <select
+      <Select
+        aria-label="Tipo da ação"
+        size="sm"
         value={newActionType}
         onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-        className="w-full px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg-secondary focus:outline-none focus:border-accent"
+        className="w-full"
       >
         <option value="open_url">URL</option>
         <option value="open_file">Arquivo</option>
-      </select>
+      </Select>
 
       <div className={`${boxClass} flex items-center pr-1`}>
-        <input
-          type="text"
+        <Input
+          variant="bare"
+          size="sm"
           value={newActionValue}
           onChange={(e) => setNewActionValue(e.target.value)}
           onKeyDown={(e) => {
@@ -411,8 +406,6 @@ export function PlannedTaskForm({
             handleAddAction();
           }}
           placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
-          autoComplete="off"
-          className={`${bareInputClass} text-xs`}
         />
         <button
           type="button"

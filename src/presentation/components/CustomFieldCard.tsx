@@ -4,6 +4,7 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { UpdateCustomFieldInput } from "@domain/usecases/customFields/UpdateCustomField";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import type { UUID } from "@shared/types";
+import { Input, Textarea } from "@presentation/components/ui";
 
 interface CustomFieldCardProps {
   field: CustomField;
@@ -60,15 +61,15 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
         className="flex flex-col gap-2 px-3 py-2 rounded-control bg-raised"
       >
         <div className="flex items-center gap-2">
-          <input
+          <Input
             ref={inputRef}
+            variant="plain"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Escape") cancelEdit();
             }}
-            autoComplete="off"
-            className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
+            className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
           <button
             onClick={() => void confirmEdit()}
@@ -86,13 +87,12 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
           </button>
         </div>
         {field.type === "select" && (
-          <textarea
+          <Textarea
             value={options}
             onChange={(e) => setOptions(e.target.value)}
             rows={3}
             placeholder="Uma opção por linha"
             title="Renomear uma opção preserva o valor já gravado nas tarefas; remover a linha apaga a opção."
-            className="text-sm bg-raised border border-border rounded-control px-2 py-1 text-fg placeholder-fg-muted focus:outline-none focus:border-accent transition-colors resize-y"
           />
         )}
       </div>

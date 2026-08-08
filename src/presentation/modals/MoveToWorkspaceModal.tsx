@@ -11,6 +11,7 @@ import { moveTasksToWorkspace } from "@domain/usecases/tasks/MoveTasksToWorkspac
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
+import { Select } from "@presentation/components/ui";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
@@ -57,17 +58,17 @@ function ResolutionRow({
           <span className="text-xs text-fg-secondary">
             Na origem: <span className="text-fg">{sourceName}</span>
           </span>
-          <select
+          <Select
+            aria-label={label}
             value={kind}
             onChange={(e) => onKindChange(e.target.value as Kind)}
-            className="bg-raised border border-border rounded-control px-2 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {options.map(([k, text]) => (
               <option key={k} value={k}>
                 {text}
               </option>
             ))}
-          </select>
+          </Select>
         </>
       ) : (
         <span className="text-xs text-fg-muted">Sem {label.toLowerCase()} na origem.</span>
@@ -234,17 +235,18 @@ export function MoveToWorkspaceModal({
               <span className="text-xs uppercase tracking-wide text-fg-muted">Destino</span>
               <div className="flex items-center gap-2">
                 {target && <WorkspaceDot color={target.color} />}
-                <select
+                <Select
+                  aria-label="Workspace de destino"
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="flex-1 bg-raised border border-border rounded-control px-2 py-1.5 text-sm text-fg focus:outline-none focus:ring-1 focus:ring-accent"
+                  className="flex-1"
                 >
                   {others.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
 

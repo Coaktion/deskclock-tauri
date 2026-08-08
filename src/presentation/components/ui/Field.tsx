@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 /**
  * Campo com rótulo encaixado na borda. O controle vai como filho, sem casca
  * própria — quem desenha fundo, borda e raio é a caixa, e é por isso que o
- * campo lê como uma coisa só quando divide a linha com um botão. Use
- * `fieldControlClass` no controle.
+ * campo lê como uma coisa só quando divide a linha com um botão. O controle é
+ * um `<Input variant="bare">` (ou `Select`/`Textarea` no mesmo variante).
  *
  * **Sob `space-y-*`:** o `mt-1.5` que compensa a subida do rótulo é escrito no
  * próprio elemento, então *substitui* a margem do `space-y` em vez de somar.
@@ -17,10 +17,6 @@ interface FieldProps {
   children: ReactNode;
   className?: string;
 }
-
-/** Controle sem casca: quem desenha é o `Field` em volta. */
-export const fieldControlClass =
-  "w-full px-2.5 py-1.5 text-sm bg-transparent border-none text-fg placeholder-fg-muted focus:outline-none";
 
 export function Field({ label, htmlFor, children, className = "" }: FieldProps) {
   return (

@@ -7,6 +7,7 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { Input } from "@presentation/components/ui";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -297,9 +298,9 @@ function ExecSection({
 
       {/* Name */}
       {editingName ? (
-        <input
+        <Input
           autoFocus
-          type="text"
+          variant="plain"
           value={nameValue}
           onChange={(e) => setNameValue(e.target.value)}
           onBlur={saveName}
@@ -312,8 +313,7 @@ function ExecSection({
             }
           }}
           placeholder="Nome da tarefa"
-          className="w-full px-0 text-sm font-medium bg-transparent border-b border-border text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
-          autoComplete="off"
+          className="font-medium border-b border-border focus:border-accent"
         />
       ) : (
         <button
@@ -443,9 +443,11 @@ function ExecSection({
         {editingStartTime ? (
           <div className="flex items-center gap-2">
             <Clock size={14} className="text-fg-muted shrink-0" />
-            <input
+            <Input
               autoFocus
               type="time"
+              variant="plain"
+              size="sm"
               value={startTimeValue}
               onChange={(e) => setStartTimeValue(e.target.value)}
               onBlur={saveStartTime}
@@ -457,8 +459,7 @@ function ExecSection({
                   setEditingStartTime(false);
                 }
               }}
-              className="flex-1 bg-transparent border-b border-border focus:outline-none focus:border-accent text-xs text-fg-secondary"
-              autoComplete="off"
+              className="flex-1 border-b border-border focus:border-accent text-fg-secondary!"
             />
           </div>
         ) : (
@@ -514,19 +515,20 @@ function ExecSection({
             <span className="text-xs text-fg-secondary">Encerrar às</span>
             <div className="flex items-center gap-1.5 flex-1">
               <Clock size={14} className="text-fg-muted shrink-0" />
-              <input
+              <Input
                 type="time"
+                variant="plain"
+                size="sm"
                 value={endTimeInput}
                 onChange={(e) => {
                   setEndTimeInput(e.target.value);
                   setEndTimeTouched(true);
                 }}
-                className={`flex-1 bg-transparent border-b focus:outline-none text-xs text-fg ${
+                className={`flex-1 border-b ${
                   endTimeResolved.error
                     ? "border-danger focus:border-danger"
                     : "border-border focus:border-accent"
                 }`}
-                autoComplete="off"
               />
             </div>
             <button

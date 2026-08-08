@@ -5,6 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { Input, Select } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -43,8 +44,6 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 
 const chipClass =
   "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-control border transition-colors";
-const inputClass =
-  "w-full px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
 
 /**
  * Edição da tarefa planejada **dentro** do popup, sem crescer a janela: painel
@@ -88,14 +87,12 @@ export function PlannedTaskEditSheet({
       {/* Corpo rolável: é ele que absorve campos personalizados e ações sem
           mexer no tamanho da janela. */}
       <div className="flex-1 min-h-0 overflow-y-auto px-3 py-2.5 flex flex-col gap-2">
-        <input
+        <Input
           autoFocus
-          type="text"
+          size="sm"
           value={editor.name}
           onChange={(e) => editor.setName(e.target.value)}
           placeholder="Nome da tarefa"
-          autoComplete="off"
-          className={inputClass}
         />
 
         <Autocomplete
@@ -104,7 +101,8 @@ export function PlannedTaskEditSheet({
           onSelect={editor.selectProject}
           options={projects}
           placeholder="Projeto"
-          className="w-full text-xs"
+          size="sm"
+          className="w-full"
         />
 
         {/* Billable encostado na categoria, como no Lançamento Manual e no
@@ -117,8 +115,9 @@ export function PlannedTaskEditSheet({
             onSelect={editor.selectCategory}
             options={editor.categoryOptions}
             placeholder="Categoria"
-            className="flex-1 min-w-0 text-xs"
-            inputClassName="w-full px-2 py-1.5 bg-transparent text-fg placeholder-fg-muted focus:outline-none"
+            className="flex-1 min-w-0"
+            variant="bare"
+            size="sm"
           />
           <button
             type="button"
@@ -264,16 +263,18 @@ export function PlannedTaskEditSheet({
         )}
 
         <div className="flex gap-1">
-          <select
+          <Select
+            aria-label="Tipo da ação"
+            size="sm"
             value={editor.newActionType}
             onChange={(e) => editor.setNewActionType(e.target.value as PlannedTaskAction["type"])}
-            className="shrink-0 px-1.5 py-1 text-xs bg-raised border border-border rounded-control text-fg-secondary focus:outline-none focus:border-accent"
+            className="shrink-0"
           >
             <option value="open_url">URL</option>
             <option value="open_file">Arquivo</option>
-          </select>
-          <input
-            type="text"
+          </Select>
+          <Input
+            size="sm"
             value={editor.newActionValue}
             onChange={(e) => editor.setNewActionValue(e.target.value)}
             onKeyDown={(e) => {
@@ -283,8 +284,7 @@ export function PlannedTaskEditSheet({
               editor.addAction();
             }}
             placeholder={editor.newActionType === "open_url" ? "https://..." : "/caminho"}
-            autoComplete="off"
-            className="flex-1 min-w-0 px-2 py-1 text-xs bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
+            className="flex-1 min-w-0"
           />
           <button
             onClick={editor.addAction}

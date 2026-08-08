@@ -13,6 +13,7 @@ import {
   KpiCard,
   PageHeader,
   SearchInput,
+  Select,
   TaskRow,
 } from "@presentation/components/ui";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
@@ -315,15 +316,16 @@ export function HistoryPage() {
               placeholder="Categoria"
               className="flex-1"
             />
-            <select
+            <Select
+              aria-label="Billable"
+              size="sm"
               value={filters.billable}
               onChange={(e) => updateFilter("billable", e.target.value as "all" | "yes" | "no")}
-              className="px-2.5 py-1.5 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent transition-colors cursor-pointer"
             >
               <option value="all">Billable: Todos</option>
               <option value="yes">Sim</option>
               <option value="no">Não</option>
-            </select>
+            </Select>
           </div>
           <Button variant="accent" onClick={handleSearch} icon={<Search size={14} />}>
             Buscar

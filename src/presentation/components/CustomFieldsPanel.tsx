@@ -4,7 +4,7 @@ import type { CustomFieldType } from "@domain/entities/CustomField";
 import type { UseCustomFieldsResult } from "@presentation/hooks/useCustomFields";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { CustomFieldCard } from "./CustomFieldCard";
-import { SectionCard } from "@presentation/components/ui";
+import { Input, SectionCard, Select, Textarea } from "@presentation/components/ui";
 
 interface CustomFieldsPanelProps {
   /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
@@ -61,35 +61,35 @@ export function CustomFieldsPanel({ data }: CustomFieldsPanelProps) {
       >
         <div className="flex items-center gap-2">
           <Plus size={14} className="text-fg-muted shrink-0" />
-          <input
-            type="text"
+          <Input
+            variant="plain"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Adicionar novo campo (Enter para salvar)"
-            autoComplete="off"
-            className="flex-1 text-sm bg-transparent text-fg placeholder-fg-muted focus:outline-none"
+            className="flex-1"
           />
-          <select
+          <Select
+            aria-label="Tipo do campo"
             value={type}
             onChange={(e) => setType(e.target.value as CustomFieldType)}
             title="Tipo do campo"
-            className="shrink-0 text-sm bg-raised border border-border rounded-control px-2 py-1 text-fg focus:outline-none focus:border-accent transition-colors cursor-pointer"
+            className="shrink-0"
           >
             {TYPES.map(([value, text]) => (
               <option key={value} value={value}>
                 {text}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {type === "select" && (
           <div className="flex items-end gap-2">
-            <textarea
+            <Textarea
               value={optionsText}
               onChange={(e) => setOptionsText(e.target.value)}
               rows={3}
               placeholder="Uma opção por linha"
-              className="flex-1 text-sm bg-raised border border-border rounded-control px-2 py-1 text-fg placeholder-fg-muted focus:outline-none focus:border-accent transition-colors resize-y"
+              className="flex-1"
             />
             <button
               type="button"

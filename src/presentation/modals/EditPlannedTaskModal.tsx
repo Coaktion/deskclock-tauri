@@ -4,7 +4,8 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { bareInputClass, boxClass, fieldClass } from "@presentation/components/fieldStyles";
+import { boxClass, fieldClass } from "@presentation/components/fieldStyles";
+import { Select } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import {
   usePlannedTaskEditor,
@@ -150,7 +151,7 @@ export function EditPlannedTaskModal({
                   options={categoryOptions}
                   placeholder="Categoria"
                   className="flex-1 min-w-0"
-                  inputClassName={bareInputClass}
+                  variant="bare"
                 />
                 <button
                   type="button"
@@ -299,14 +300,14 @@ export function EditPlannedTaskModal({
             )}
 
             <div className="flex gap-2">
-              <select
+              <Select
+                aria-label="Tipo da ação"
                 value={newActionType}
                 onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-                className="px-3 py-2 text-sm bg-raised border border-border rounded-control text-fg-secondary focus:outline-none focus:border-accent"
               >
                 <option value="open_url">URL</option>
                 <option value="open_file">Arquivo</option>
-              </select>
+              </Select>
               <input
                 type="text"
                 value={newActionValue}

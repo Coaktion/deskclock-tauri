@@ -1,8 +1,6 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useEffect, useState, type ReactNode } from "react";
-
-const INPUT_CLASS =
-  "shrink-0 w-36 bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
+import { Input } from "@presentation/components/ui";
 
 /** Rótulo + descrição à esquerda, controle à direita — o arranjo de toda a seção. */
 function SettingRow({
@@ -53,15 +51,15 @@ function BoardIdInput({
   }
 
   return (
-    <input
+    <Input
+      size="sm"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
       placeholder={placeholder}
       inputMode="numeric"
-      className={INPUT_CLASS}
-      autoComplete="off"
+      className="shrink-0 w-36"
     />
   );
 }

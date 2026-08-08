@@ -9,6 +9,7 @@ import {
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { Select } from "@presentation/components/ui";
 import {
   addDaysISO,
   formatDurationCompact,
@@ -380,9 +381,6 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
   // O submit desta linha é salvar a própria atividade — não a lista em volta.
   const handleKeyDown = useSubmitOnEnter(() => void handleSave(), { disabled: saving || !canSave });
 
-  const selectClass =
-    "px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent";
-
   return (
     <div
       onKeyDown={handleKeyDown}
@@ -409,10 +407,11 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
           autoComplete="off"
         />
 
-        <select
+        <Select
+          aria-label="Activity Type"
+          size="sm"
           value={activityType}
           onChange={(e) => setActivityType(e.target.value)}
-          className={selectClass}
         >
           <option value="">Activity Type…</option>
           {entry.mapping.activityTypeLabels.map((label) => (
@@ -420,13 +419,14 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
               {label}
             </option>
           ))}
-        </select>
+        </Select>
 
         {entry.mapping.projectStageLabels.length > 0 && (
-          <select
+          <Select
+            aria-label="Project Stage"
+            size="sm"
             value={projectStage}
             onChange={(e) => setProjectStage(e.target.value)}
-            className={selectClass}
           >
             <option value="">Project Stage…</option>
             {entry.mapping.projectStageLabels.map((label) => (
@@ -434,7 +434,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
         )}
 
         {/* Só quando o board tem a coluna Billing type. Ela é opcional desde que

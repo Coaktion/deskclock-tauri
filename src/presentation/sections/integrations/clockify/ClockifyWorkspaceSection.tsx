@@ -2,7 +2,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { IconButton } from "@presentation/components/ui";
+import { IconButton, Select } from "@presentation/components/ui";
 import { DeskclockWorkspaceRow } from "../shared";
 
 export function ClockifyWorkspaceSection() {
@@ -57,17 +57,19 @@ export function ClockifyWorkspaceSection() {
           <span className="text-sm text-fg-secondary">Workspace Clockify</span>
           <div className="flex items-center gap-2">
             {workspaces.length > 0 ? (
-              <select
+              <Select
+                aria-label="Workspace Clockify"
+                size="sm"
                 value={activeId}
                 onChange={(e) => handleChange(e.target.value)}
-                className="bg-raised border border-border rounded-chip px-2.5 py-1 text-xs text-fg focus:outline-none focus:border-accent max-w-[200px]"
+                className="max-w-[200px]"
               >
                 {workspaces.map((w) => (
                   <option key={w.id} value={w.id}>
                     {w.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <span className="text-xs text-fg-muted">{activeName || "—"}</span>
             )}

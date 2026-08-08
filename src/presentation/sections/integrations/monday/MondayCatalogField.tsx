@@ -2,6 +2,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import type { AppConfig } from "@shared/types/appConfig";
 import { showToast } from "@shared/utils/toast";
+import { Select } from "@presentation/components/ui";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useEffect, useState } from "react";
 
@@ -125,10 +126,12 @@ export function MondayCatalogField({
   return (
     <ImportCard title={title} hint={hint}>
       <div className="flex items-center gap-2">
-        <select
+        <Select
+          aria-label={title}
+          size="sm"
           value={fieldId}
           onChange={(e) => handleSelect(e.target.value)}
-          className="flex-1 bg-raised border border-border rounded-chip px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
+          className="flex-1"
         >
           <option value="">Nenhum campo vinculado</option>
           {options.map((f) => (
@@ -136,7 +139,7 @@ export function MondayCatalogField({
               {f.label}
             </option>
           ))}
-        </select>
+        </Select>
         {linked ? (
           <ImportActionButton
             label={missingOptions > 0 ? `Atualizar (+${missingOptions})` : "Atualizar"}
