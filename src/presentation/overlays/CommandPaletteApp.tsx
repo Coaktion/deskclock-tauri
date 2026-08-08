@@ -9,15 +9,13 @@ import { CommandPalette } from "@presentation/components/CommandPalette";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { todayISO } from "@shared/utils/time";
-import { applyFontSize } from "@shared/utils/fontSize";
-import { applyTheme } from "@shared/utils/theme";
+import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import { formatShortcut } from "@shared/utils/shortcuts";
 import {
   OVERLAY_EVENTS,
   type CommandPaletteNavigatePayload,
   type CommandPaletteStartTaskPayload,
 } from "@shared/types/overlayEvents";
-import type { Theme } from "@shared/utils/theme";
 import type { Page } from "@presentation/components/Sidebar";
 
 const appWindow = getCurrentWindow();
@@ -28,12 +26,7 @@ function CommandPaletteAppInner() {
   const { tasks: plannedTasks } = usePlannedTasksForDate(today);
   const { projects } = useProjects();
 
-  // Apply theme/font from config
-  useEffect(() => {
-    if (!config.isLoaded) return;
-    applyFontSize(config.get("fontSize"));
-    applyTheme(config.get("theme") as Theme);
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+  useAppearanceSync(config);
 
   // Trava o tamanho — resizable:true é necessário no GTK para eventos de mouse,
   // mas o usuário não deve conseguir redimensionar a palette.

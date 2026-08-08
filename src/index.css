@@ -175,11 +175,8 @@
   }
 }
 .overlay-ring-pulse {
-  --overlay-ring-clr: #3b82f6;
+  --overlay-ring-clr: var(--color-accent);
   animation: overlay-ring-pulse 2s ease-in-out infinite;
-}
-[data-theme="verde"] .overlay-ring-pulse {
-  --overlay-ring-clr: #10b981;
 }
 
 /* ── Zendesk logo: teal legível nos temas escuros; cor da marca no tema claro ── */

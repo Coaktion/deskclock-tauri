@@ -22,10 +22,8 @@ import {
   type OverlayConfigChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
-import { applyFontSize } from "@shared/utils/fontSize";
-import { applyTheme } from "@shared/utils/theme";
+import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import { positionPopupNearCompact } from "@shared/utils/windowPosition";
-import type { Theme } from "@shared/utils/theme";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { PopupOverlayContent } from "./PopupOverlayContent";
 import { MeetingPromptView } from "./MeetingPromptView";
@@ -38,6 +36,7 @@ const appWindow = getCurrentWindow();
 
 function PopupOverlayAppInner() {
   const config = useAppConfig();
+  useAppearanceSync(config);
   const { taskRepo, plannedTaskRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
@@ -111,8 +110,6 @@ function PopupOverlayAppInner() {
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    applyFontSize(config.get("fontSize"));
-    applyTheme(config.get("theme") as Theme);
     setOverlayOpacity(config.get("overlayOpacity") as number);
     void appWindow.setMinSize(new LogicalSize(POPUP_W, 100));
     void appWindow.setMaxSize(new LogicalSize(POPUP_W, POPUP_H_ESTIMATE));
@@ -143,8 +140,6 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED,
       ({ payload }) => {
         if (payload.key === "overlayOpacity") setOverlayOpacity(payload.value as number);
-        else if (payload.key === "fontSize") applyFontSize(payload.value as string);
-        else if (payload.key === "theme") applyTheme(payload.value as Theme);
       }
     );
     return () => {

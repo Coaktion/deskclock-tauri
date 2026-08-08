@@ -1,4 +1,5 @@
 import type { Task } from "@domain/entities/Task";
+import type { Appearance } from "@shared/utils/theme";
 
 export const OVERLAY_EVENTS = {
   RUNNING_TASK_CHANGED: "running-task-changed",
@@ -139,4 +140,9 @@ export interface ToastMessagePayload {
   duration?: number;
   actionLabel?: string;
   actionEvent?: string;
+  /**
+   * A janela do toast não lê config nem banco — a aparência vem de quem levantou
+   * o toast, que já a tem aplicada no próprio documento.
+   */
+  appearance?: Appearance;
 }

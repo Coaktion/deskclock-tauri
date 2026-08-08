@@ -27,6 +27,8 @@ const DEFAULTS: AppConfig = {
   retroactiveFormWidth: 256,
   retroactivePlannedHeight: 144,
   fontSize: "M" as const,
+  mode: "" as const,
+  accent: "" as const,
   theme: "azul" as const,
   shortcutToggleTask: "",
   shortcutStopTask: "",

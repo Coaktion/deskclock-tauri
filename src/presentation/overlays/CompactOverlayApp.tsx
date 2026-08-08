@@ -8,9 +8,7 @@ import {
   type OverlayConfigChangedPayload,
   type RunningTaskChangedPayload,
 } from "@shared/types/overlayEvents";
-import { applyFontSize } from "@shared/utils/fontSize";
-import type { Theme } from "@shared/utils/theme";
-import { applyTheme } from "@shared/utils/theme";
+import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import { positionPopupNearCompact } from "@shared/utils/windowPosition";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { listen } from "@tauri-apps/api/event";
@@ -38,6 +36,7 @@ const OVERLAY_WINDOW_HEIGHT = { big: 52, small: 44 } as const;
 
 function CompactOverlayAppInner() {
   const config = useAppConfig();
+  useAppearanceSync(config);
   const { taskRepo } = useRepositories();
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
@@ -73,8 +72,6 @@ function CompactOverlayAppInner() {
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    applyFontSize(config.get("fontSize"));
-    applyTheme(config.get("theme") as Theme);
     setOverlayOpacity(config.get("overlayOpacity") as number);
     setSnapToGrid(!!config.get("overlaySnapToGrid"));
     const size = (config.get("overlaySize") as "big" | "small") ?? "big";
@@ -97,8 +94,6 @@ function CompactOverlayAppInner() {
       ({ payload }) => {
         if (payload.key === "overlayOpacity") setOverlayOpacity(payload.value as number);
         else if (payload.key === "overlaySnapToGrid") setSnapToGrid(!!payload.value);
-        else if (payload.key === "fontSize") applyFontSize(payload.value as string);
-        else if (payload.key === "theme") applyTheme(payload.value as Theme);
         else if (payload.key === "overlaySize") {
           const size = payload.value as "big" | "small";
           setOverlaySize(size);

@@ -474,7 +474,8 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | Configuração | Tipo | Status | Descrição |
 |---|---|---|---|
 | Tamanho da fonte | select: P, M, G, GG | ✅ implementado | Escala texto via `--app-font-size` CSS custom property |
-| Tema | select: Azul, Verde, Escuro, Claro | ✅ implementado | Paleta de cores via CSS custom properties |
+| Modo | select: Escuro, Claro | ✅ implementado | Claridade das superfícies (`mode`) |
+| Cor de destaque | select: Azul, Verde, Roxo, Âmbar | ✅ implementado | Hue do acento (`accent`) |
 
 #### Atalhos globais
 | Ação | Tipo | Descrição |
@@ -1587,6 +1588,26 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   `--accent-hue`, de que `--color-accent` e `--color-accent-text` derivam. Os dois blocos ficam
   **fora de `@layer`** de propósito: o `@theme` emite dentro de `@layer theme`, e regra sem layer
   vence regra em layer no cascade, qualquer que seja a especificidade.
+
+  > **`applyAppearance` grava três atributos**, não dois: `data-mode`, `data-accent` e o
+  > `data-theme` legado. Enquanto houver tela não migrada, os dois vocabulários precisam estar
+  > ligados ao mesmo tempo — sem o terceiro, quem estivesse no Claro veria as telas migradas claras
+  > dentro de um app escuro. **Não apague o legado antes da última tela migrar.**
+  >
+  > O `data-theme` expressa **um** eixo de cada vez, então o modo ganha (`legacyThemeFor`): app
+  > claro com metade das telas escuras é pior que um acento azul onde se pediu roxo. `roxo` e
+  > `ambar` não têm equivalente nenhum — nas telas não migradas eles aparecem como azul.
+  >
+  > **A migração do `theme` acontece na leitura, eixo a eixo** (`resolveAppearance`), com vazio
+  > significando "nunca escolhido": `azul`/`escuro`→`escuro+azul`, `verde`→`escuro+verde`,
+  > `claro`→`claro+azul`. Nada é gravado na montagem, como em `resolveIntegrationWorkspaceId`
+  > (§6.7). **O tema `escuro` não sobrevive** — ele trocava a rampa de cinza por zinc, e o modelo
+  > de dois eixos não tem esse eixo; quem estava nele perde o tom.
+  >
+  > **A janela do toast não lê config nem banco** — a aparência viaja no payload de quem levantou
+  > o toast (`showToast` → `readAppliedAppearance`). Era a única janela que não aplicava tema
+  > nenhum, e ficava escura dentro do app claro. Dar-lhe um `ConfigProvider` custaria uma quinta
+  > janela abrindo o banco no boot, que é justamente onde mora a corrida de migration já conhecida.
 - **Tema legado, em migração:** os três `[data-theme="verde"|"escuro"|"claro"]` continuam no arquivo
   remapeando famílias do Tailwind (`blue`→`green`, `gray`→`zinc`, inversão da rampa de `gray`), e
   por isso `blue`, `green`, `gray` e `zinc` **seguem reservados** e não devem colorir entidades.

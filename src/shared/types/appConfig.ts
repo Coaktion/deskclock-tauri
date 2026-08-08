@@ -71,6 +71,14 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   retroactivePlannedHeight: number;
   // Acessibilidade
   fontSize: "P" | "M" | "G" | "GG";
+  /**
+   * Modo e acento são eixos independentes. Vazio significa "nunca escolhido" e
+   * é migrado do `theme` legado na leitura (`resolveAppearance`), sem gravar
+   * nada — quem nunca abrir Aparência não percebe a mudança.
+   */
+  mode: "" | "escuro" | "claro";
+  accent: "" | "azul" | "verde" | "roxo" | "ambar";
+  /** @deprecated Substituído por `mode` + `accent`; só é lido para migrar. */
   theme: "azul" | "verde" | "escuro" | "claro";
   // Atalhos globais
   shortcutToggleTask: string;

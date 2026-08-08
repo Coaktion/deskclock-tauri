@@ -9,6 +9,7 @@ import {
   type ToastMessagePayload,
   type ToastVariant,
 } from "@shared/types/overlayEvents";
+import { applyAppearance } from "@shared/utils/theme";
 
 const TOAST_WIDTH = 320;
 const TOAST_HEIGHT = 88;
@@ -68,6 +69,7 @@ export function ToastApp() {
   // Escuta eventos de toast
   useEffect(() => {
     const unlisten = listen<ToastMessagePayload>(OVERLAY_EVENTS.TOAST_MESSAGE, ({ payload }) => {
+      if (payload.appearance) applyAppearance(payload.appearance);
       positionNearTaskbar(appWindow, { width: TOAST_WIDTH, height: TOAST_HEIGHT }).catch(() => {});
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
 
