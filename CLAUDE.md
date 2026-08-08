@@ -1643,6 +1643,19 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > **No Histórico as pílulas de período ficam numa linha própria, abaixo.** As cinco mais
   > "Filtros" e "Exportar" não cabem nos 56 px sem quebrar em duas linhas, e aí a altura fixa
   > deixaria de valer justamente na tela que a migração usa de referência.
+
+  > **No Histórico o full-bleed deu lugar a um cartão por dia**, com o corpo da tela em `p-4` e as
+  > entradas como `TaskRow`. Era a tela com **dois** `grid-template-columns` de linha — um para o
+  > `selectMode`, outro fora dele —, e é a flex do `TaskRow` que os dispensa: a caixa de seleção
+  > entra em `leading` e a faixa de horário em `meta`, sem segundo layout a manter em sincronia. A
+  > faixa esquerda passa a ser o indicador de billable (contrato do primitivo), no lugar do ponto que
+  > era verde ou cinza; o ponto agora carrega a **cor do projeto**, a mesma da linha do tempo e da
+  > distribuição logo acima.
+  >
+  > **O cartão do dia não leva `overflow-hidden`.** Ele viraria o scrollport do cabeçalho `sticky`
+  > de dentro, que então nunca sairia do lugar — o cabeçalho do dia ficaria preso ao topo do próprio
+  > cartão, que é o oposto do que `sticky` existe para fazer. O canto de cima é arredondado no
+  > cabeçalho (`rounded-t-card`), não recortado pelo cartão.
 - **Cor de significado só por token.** `billable`, `paused` e `danger` — nunca `emerald`, `green`,
   `rose` ou `red`. O que ainda resta está congelado em
   `src/tests/conventions/meaningColors.test.ts`, e o teste falha nos dois sentidos: subir é

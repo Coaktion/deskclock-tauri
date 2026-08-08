@@ -64,7 +64,6 @@ const BASELINE: Record<string, number> = {
   "src/presentation/overlays/PlanningOverlay.tsx": 2,
   "src/presentation/overlays/PopupOverlayContent.tsx": 15,
   "src/presentation/overlays/ToastApp.tsx": 6,
-  "src/presentation/pages/HistoryPage.tsx": 6,
   "src/presentation/pages/RetroactivePage.tsx": 10,
   "src/presentation/sections/integrations/GoogleIntegrationSection.tsx": 1,
   "src/presentation/sections/integrations/ZendeskIntegrationSection.tsx": 5,

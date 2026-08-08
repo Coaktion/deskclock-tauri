@@ -6,7 +6,7 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { FilterPill, PageHeader } from "@presentation/components/ui";
+import { FilterPill, KpiCard, PageHeader, SearchInput, TaskRow } from "@presentation/components/ui";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
@@ -24,6 +24,9 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
   custom: "Personalizado",
 };
 
+const cardClass = "bg-surface border border-border-subtle rounded-card";
+const eyebrowClass = "text-[10px] font-semibold uppercase tracking-widest text-fg-muted";
+
 function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
   const parseMinutes = (iso: string) => {
     const d = new Date(iso);
@@ -36,13 +39,11 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
   const totalSeconds = tasks.reduce((s, t) => s + (t.durationSeconds ?? 0), 0);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-3">
+    <div className={`${cardClass} p-3`}>
       <div className="flex justify-between items-start mb-2">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-            Linha do tempo
-          </div>
-          <div className="font-mono tabular-nums text-base text-gray-100 mt-0.5">
+          <div className={eyebrowClass}>Linha do tempo</div>
+          <div className="font-mono tabular-nums text-base text-fg mt-0.5">
             {formatHHMMSS(totalSeconds)}
           </div>
         </div>
@@ -50,7 +51,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
           {projects
             .filter((p) => tasks.some((t) => t.projectId === p.id))
             .map((p) => (
-              <span key={p.id} className="flex items-center gap-1 text-[11px] text-gray-400">
+              <span key={p.id} className="flex items-center gap-1 text-[11px] text-fg-secondary">
                 <span
                   className="inline-block w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: getProjectColor(p.id) }}
@@ -60,7 +61,9 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
             ))}
         </div>
       </div>
-      <div className="relative h-11 bg-gray-950 rounded overflow-hidden">
+      {/* A pista é `raised` e não `canvas` porque tem de destacar do cartão nos
+          dois modos: no claro a superfície é branca e o canvas quase branco. */}
+      <div className="relative h-11 bg-raised rounded-control overflow-hidden">
         {tasks.map((task) => {
           if (!task.endTime) return null;
           const start = parseMinutes(task.startTime);
@@ -88,7 +91,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
       </div>
       <div className="flex justify-between mt-1">
         {[6, 8, 10, 12, 14, 16, 18, 20, 22].map((h) => (
-          <span key={h} className="text-[9px] font-mono tabular-nums text-gray-600">
+          <span key={h} className="text-[9px] font-mono tabular-nums text-fg-muted">
             {String(h).padStart(2, "0")}h
           </span>
         ))}
@@ -114,10 +117,8 @@ function ProjectDistribution({ groups, projects }: { groups: DayGroup[]; project
   const max = Math.max(...list.map((x) => x.seconds));
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-3">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-2">
-        Por projeto
-      </div>
+    <div className={`${cardClass} p-3`}>
+      <div className={`${eyebrowClass} mb-2`}>Por projeto</div>
       <div className="flex flex-col gap-2">
         {list.map((x) => {
           const h = Math.floor(x.seconds / 3600);
@@ -134,12 +135,12 @@ function ProjectDistribution({ groups, projects }: { groups: DayGroup[]; project
               />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-gray-200 truncate pr-2">{x.name}</span>
-                  <span className="font-mono tabular-nums text-gray-400 shrink-0">
+                  <span className="text-fg truncate pr-2">{x.name}</span>
+                  <span className="font-mono tabular-nums text-fg-secondary shrink-0">
                     {h}h{String(m).padStart(2, "0")}
                   </span>
                 </div>
-                <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div className="h-1 bg-raised rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${(x.seconds / max) * 100}%`, backgroundColor: color }}
@@ -190,6 +191,7 @@ export function HistoryPage() {
   }
 
   const allTasks = groups.flatMap((g) => g.tasks);
+  const allSelected = allTasks.length > 0 && selectedIds.size >= allTasks.length;
 
   function toggleSelectTask(id: string) {
     setSelectedIds((prev) => {
@@ -226,14 +228,14 @@ export function HistoryPage() {
                   : "bg-transparent border-border text-fg-muted hover:text-fg hover:border-fg-muted"
               }`}
             >
-              <Filter size={11} />
+              <Filter size={14} />
               Filtros
             </button>
             <button
               onClick={() => setExportOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-transparent border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
             >
-              <FileDown size={11} />
+              <FileDown size={14} />
               Exportar
             </button>
           </>
@@ -242,7 +244,7 @@ export function HistoryPage() {
 
       {/* Recorte do período: fica fora do cabeçalho porque as cinco pílulas e os
           dois botões, juntos, não cabem nos 56 px sem quebrar em duas linhas. */}
-      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border-subtle flex-wrap">
+      <div className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 border-b border-border-subtle flex-wrap">
         {(["today", "7days", "30days", "month", "custom"] as QuickFilter[]).map((q) => (
           <FilterPill key={q} active={filters.quick === q} onClick={() => handleQuick(q)}>
             {QUICK_LABELS[q]}
@@ -250,11 +252,10 @@ export function HistoryPage() {
         ))}
       </div>
 
-      {/* Advanced filters panel */}
       {advancedOpen && (
         <div
           onKeyDown={handleKeyDown}
-          className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800"
+          className="shrink-0 flex flex-col gap-2 px-4 py-3 border-b border-border-subtle"
         >
           <div className="flex gap-2">
             <DatePickerInput
@@ -266,7 +267,7 @@ export function HistoryPage() {
               placeholder="Início"
               className="flex-1"
             />
-            <span className="self-center text-gray-500 text-sm">→</span>
+            <span className="self-center text-fg-muted text-sm">→</span>
             <DatePickerInput
               value={filters.endDate}
               onChange={(v) => {
@@ -309,7 +310,7 @@ export function HistoryPage() {
             <select
               value={filters.billable}
               onChange={(e) => updateFilter("billable", e.target.value as "all" | "yes" | "no")}
-              className="px-2.5 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500 cursor-pointer"
+              className="px-2.5 py-1.5 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent transition-colors cursor-pointer"
             >
               <option value="all">Billable: Todos</option>
               <option value="yes">Sim</option>
@@ -318,243 +319,212 @@ export function HistoryPage() {
           </div>
           <button
             onClick={handleSearch}
-            className="flex items-center justify-center gap-1.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium transition-colors"
+            className="flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-accent-text bg-accent/10 border border-accent/30 hover:bg-accent/20 hover:border-accent/50 rounded-control transition-colors"
           >
-            <Search size={12} />
+            <Search size={14} />
             Buscar
           </button>
         </div>
       )}
 
-      {/* Search input */}
-      <div onKeyDown={handleKeyDown} className="relative px-4 py-2.5 border-b border-gray-800">
-        <Search
-          size={13}
-          className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-        />
-        <input
-          type="text"
+      <div onKeyDown={handleKeyDown} className="shrink-0 px-4 py-2.5 border-b border-border-subtle">
+        <SearchInput
           value={filters.name}
-          onChange={(e) => updateFilter("name", e.target.value)}
+          onChange={(v) => updateFilter("name", v)}
           placeholder="Buscar por nome…"
-          autoComplete="off"
-          className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          ariaLabel="Buscar por nome"
         />
       </div>
 
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
-        {/* Timeline + ProjectDistribution grid */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3">
         {searched && allTasks.length > 0 && (
-          <div className="grid grid-cols-[1.5fr_1fr] gap-2.5 p-4 border-b border-gray-800">
+          <div className="grid grid-cols-[1.5fr_1fr] gap-3">
             <Timeline tasks={allTasks} projects={projects} />
             <ProjectDistribution groups={groups} projects={projects} />
           </div>
         )}
 
-        {/* KPIs */}
         {searched && (
-          <div className="grid grid-cols-4 gap-2 px-4 py-3 border-b border-gray-800">
-            {[
-              { label: "Total", value: formatHHMMSS(totals.totalSeconds), color: "text-gray-100" },
-              {
-                label: "Billable",
-                value: formatHHMMSS(totals.billableSeconds),
-                color: "text-emerald-400",
-              },
-              {
-                label: "Non-billable",
-                value: formatHHMMSS(totals.nonBillableSeconds),
-                color: "text-gray-300",
-              },
-              { label: "Registros", value: String(totals.count), color: "text-gray-300" },
-            ].map(({ label, value, color }) => (
-              <div
-                key={label}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-col gap-0.5"
-              >
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-                  {label}
-                </span>
-                <span className={`text-sm font-mono tabular-nums font-medium ${color}`}>
-                  {value}
-                </span>
-              </div>
-            ))}
+          <div className="flex gap-2">
+            <KpiCard label="Total" value={formatHHMMSS(totals.totalSeconds)} />
+            <KpiCard
+              label="Billable"
+              value={formatHHMMSS(totals.billableSeconds)}
+              tone="billable"
+            />
+            <KpiCard
+              label="Non-billable"
+              value={formatHHMMSS(totals.nonBillableSeconds)}
+              tone="muted"
+            />
+            <KpiCard label="Registros" value={String(totals.count)} tone="muted" />
           </div>
         )}
 
-        {/* Empty states */}
         {searched && groups.length === 0 && (
-          <p className="text-center text-gray-500 text-sm py-12">Nenhum registro encontrado</p>
+          <p className="text-center text-fg-muted text-sm py-12">Nenhum registro encontrado</p>
         )}
         {!searched && (
-          <p className="text-center text-gray-600 text-sm py-12">
+          <p className="text-center text-fg-muted text-sm py-12">
             Use os filtros acima para buscar registros
           </p>
         )}
 
-        {/* Entries section head */}
         {searched && groups.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-800">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
-              Entradas
-            </span>
-            {selectMode ? (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    const allSelected = allTasks.length > 0 && selectedIds.size >= allTasks.length;
-                    setSelectedIds(allSelected ? new Set() : new Set(allTasks.map((t) => t.id)));
-                  }}
-                  className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
-                >
-                  {allTasks.length > 0 && selectedIds.size >= allTasks.length
-                    ? "Desmarcar todas"
-                    : "Selecionar todas"}
-                </button>
-                {workspaces.length > 1 && (
-                  <button
-                    onClick={() => setMovingTasks(allTasks.filter((t) => selectedIds.has(t.id)))}
-                    disabled={selectedIds.size === 0}
-                    className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Mover para workspace
-                  </button>
-                )}
-                <button
-                  onClick={() => void handleBulkDelete()}
-                  disabled={selectedIds.size === 0}
-                  className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                >
-                  Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-                </button>
-                <button
-                  onClick={exitSelectMode}
-                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  Cancelar
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setSelectMode(true)}
-                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
-              >
-                Selecionar tarefas
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Day groups */}
-        {groups.map((group) => (
-          <div key={group.dateISO}>
-            <div className="flex items-center justify-between px-4 py-2.5 bg-gray-900/60 border-b border-gray-800 sticky top-0 z-10">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                {formatHistoryDayHeader(group.dateISO)}
+          <>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
+                Entradas
               </span>
-              <div className="flex items-center gap-2">
-                {selectMode && group.tasks.length > 0 && (
+              {selectMode ? (
+                <div className="flex items-center gap-3">
                   <button
-                    onClick={() => {
-                      const groupIds = group.tasks.map((t) => t.id);
-                      const allSelected = groupIds.every((id) => selectedIds.has(id));
-                      setSelectedIds((prev) => {
-                        const next = new Set(prev);
-                        if (allSelected) groupIds.forEach((id) => next.delete(id));
-                        else groupIds.forEach((id) => next.add(id));
-                        return next;
-                      });
-                    }}
-                    className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                    onClick={() =>
+                      setSelectedIds(allSelected ? new Set() : new Set(allTasks.map((t) => t.id)))
+                    }
+                    className="text-xs text-fg-muted hover:text-fg transition-colors"
                   >
-                    {group.tasks.every((t) => selectedIds.has(t.id)) ? "Desmarcar" : "Selecionar"}
+                    {allSelected ? "Desmarcar todas" : "Selecionar todas"}
                   </button>
-                )}
-                <span className="text-xs font-mono tabular-nums text-gray-500">
-                  {formatHHMM(group.totalSeconds)}
-                </span>
-              </div>
+                  {workspaces.length > 1 && (
+                    <button
+                      onClick={() => setMovingTasks(allTasks.filter((t) => selectedIds.has(t.id)))}
+                      disabled={selectedIds.size === 0}
+                      className="text-xs text-fg-muted hover:text-fg disabled:text-fg-muted/50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Mover para workspace
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void handleBulkDelete()}
+                    disabled={selectedIds.size === 0}
+                    className="text-xs text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                  </button>
+                  <button
+                    onClick={exitSelectMode}
+                    className="text-xs text-fg-muted hover:text-fg transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setSelectMode(true)}
+                  className="text-xs px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
+                >
+                  Selecionar tarefas
+                </button>
+              )}
             </div>
 
-            {group.tasks.map((task) => {
-              const project = projects.find((p) => p.id === task.projectId);
-              const category = categories.find((c) => c.id === task.categoryId);
-              const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-              const endStr = task.endTime
-                ? new Date(task.endTime).toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
-                : "—";
-              const isSelected = selectedIds.has(task.id);
-              return (
-                <div
-                  key={task.id}
-                  className={`grid items-center gap-2 px-4 py-3 border-b border-gray-800 transition-colors ${
-                    selectMode
-                      ? `cursor-pointer grid-cols-[20px_88px_1fr_auto] ${isSelected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-800/40"}`
-                      : "grid-cols-[88px_1fr_auto_auto] group hover:bg-gray-800/40"
-                  }`}
-                  onClick={selectMode ? () => toggleSelectTask(task.id) : undefined}
-                >
-                  {selectMode ? (
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleSelectTask(task.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-3.5 h-3.5 accent-blue-500 cursor-pointer"
-                    />
-                  ) : null}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        task.billable ? "bg-emerald-500" : "bg-gray-600"
-                      }`}
-                    />
-                    <span className="text-xs font-mono text-gray-400 tabular-nums">
-                      {startStr}–{endStr}
+            {groups.map((group) => (
+              <div key={group.dateISO} className={cardClass}>
+                {/* Sem `overflow-hidden` no cartão: ele viraria o scrollport do
+                    `sticky` abaixo, que então nunca sairia do lugar. */}
+                <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-surface border-b border-border-subtle rounded-t-card">
+                  <span className="text-[11px] font-semibold uppercase tracking-widest text-fg-secondary">
+                    {formatHistoryDayHeader(group.dateISO)}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {selectMode && group.tasks.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const groupIds = group.tasks.map((t) => t.id);
+                          const groupSelected = groupIds.every((id) => selectedIds.has(id));
+                          setSelectedIds((prev) => {
+                            const next = new Set(prev);
+                            if (groupSelected) groupIds.forEach((id) => next.delete(id));
+                            else groupIds.forEach((id) => next.add(id));
+                            return next;
+                          });
+                        }}
+                        className="text-[10px] text-fg-muted hover:text-fg transition-colors"
+                      >
+                        {group.tasks.every((t) => selectedIds.has(t.id))
+                          ? "Desmarcar"
+                          : "Selecionar"}
+                      </button>
+                    )}
+                    <span className="text-xs font-mono tabular-nums text-fg-muted">
+                      {formatHHMM(group.totalSeconds)}
                     </span>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-100 truncate">{task.name ?? "(sem nome)"}</p>
-                    {(project || category) && (
-                      <p className="text-xs text-gray-500 truncate mt-0.5">
-                        {[project?.name, category?.name].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-sm font-mono tabular-nums text-gray-400 shrink-0">
-                    {formatHHMMSS(task.durationSeconds ?? 0)}
-                  </span>
-                  {!selectMode && (
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <button
-                        onClick={() => setEditingTask(task)}
-                        className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-                        title="Editar"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        onClick={() => void remove(task.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  )}
                 </div>
-              );
-            })}
-          </div>
-        ))}
+
+                <div className="p-1.5 flex flex-col gap-0.5">
+                  {group.tasks.map((task) => {
+                    const project = projects.find((p) => p.id === task.projectId);
+                    const category = categories.find((c) => c.id === task.categoryId);
+                    const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    });
+                    const endStr = task.endTime
+                      ? new Date(task.endTime).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "—";
+                    const isSelected = selectedIds.has(task.id);
+                    const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+
+                    return (
+                      <TaskRow
+                        key={task.id}
+                        title={task.name ?? "(sem nome)"}
+                        subtitle={subtitle || undefined}
+                        meta={
+                          <span className="text-xs font-mono tabular-nums text-fg-muted">
+                            {startStr}–{endStr}
+                          </span>
+                        }
+                        duration={formatHHMMSS(task.durationSeconds ?? 0)}
+                        billable={task.billable}
+                        dotColor={getProjectColor(task.projectId)}
+                        selected={isSelected}
+                        onClick={selectMode ? () => toggleSelectTask(task.id) : undefined}
+                        leading={
+                          selectMode ? (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectTask(task.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
+                              className="w-3.5 h-3.5 accent-accent cursor-pointer"
+                            />
+                          ) : undefined
+                        }
+                        actions={
+                          selectMode ? undefined : (
+                            <>
+                              <button
+                                onClick={() => setEditingTask(task)}
+                                className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                                title="Editar"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => void remove(task.id)}
+                                className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
+                                title="Excluir"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {exportOpen && (
