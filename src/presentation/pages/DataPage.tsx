@@ -29,30 +29,28 @@ export function DataPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <PageHeader title="Dados" />
-      <div className="flex-1 min-h-0 overflow-y-auto p-5">
-        <div className="flex gap-2 mb-5">
-          {tabs.map(([key, label, count]) => (
-            <FilterPill
-              key={key}
-              active={section === key}
-              onClick={() => setSection(key)}
-              count={count}
-            >
-              {label}
-            </FilterPill>
-          ))}
+      <PageHeader
+        title="Dados"
+        tabs={tabs.map(([key, label, count]) => (
+          <FilterPill
+            key={key}
+            active={section === key}
+            onClick={() => setSection(key)}
+            count={count}
+          >
+            {label}
+          </FilterPill>
+        ))}
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="max-w-[720px] mx-auto">
+          {section === "projetos" && (
+            <ProjectsPanel data={projectsData} categories={categoriesData.categories} />
+          )}
+          {section === "categorias" && <CategoriesPanel data={categoriesData} />}
+          {section === "workspaces" && <WorkspacesPanel />}
+          {section === "campos" && <CustomFieldsPanel data={customFieldsData} />}
         </div>
-        {section === "projetos" && (
-          <ProjectsPanel
-            showTitle={false}
-            data={projectsData}
-            categories={categoriesData.categories}
-          />
-        )}
-        {section === "categorias" && <CategoriesPanel showTitle={false} data={categoriesData} />}
-        {section === "workspaces" && <WorkspacesPanel showTitle={false} />}
-        {section === "campos" && <CustomFieldsPanel showTitle={false} data={customFieldsData} />}
       </div>
     </div>
   );

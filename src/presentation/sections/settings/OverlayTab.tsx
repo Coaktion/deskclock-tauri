@@ -3,7 +3,8 @@ import { emit } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
-import { ToggleRow, SliderRow, SettingsCard, CardRow } from "./SettingsShared";
+import { SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
+import { SliderRow } from "./SettingsShared";
 
 export function OverlayTab() {
   const config = useAppConfig();
@@ -54,22 +55,23 @@ export function OverlayTab() {
   }
 
   return (
-    <SettingsCard>
-      <CardRow>
+    <SectionCard title="Overlay compacto" divided>
+      <SectionRow>
         <div className="flex flex-1 items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-200">Tamanho</p>
-            <p className="text-xs text-gray-400">Tamanho visual do overlay compacto</p>
+            <p className="text-sm text-fg">Tamanho</p>
+            <p className="text-xs text-fg-muted mt-0.5">Tamanho visual do overlay compacto</p>
           </div>
-          <div className="flex rounded-lg overflow-hidden border border-gray-700 shrink-0">
+          <div className="flex rounded-control overflow-hidden border border-border shrink-0">
             {(["big", "small"] as const).map((size) => (
               <button
                 key={size}
+                aria-pressed={overlaySize === size}
                 onClick={() => handleSize(size)}
                 className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                   overlaySize === size
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                    ? "bg-accent/15 text-accent-text"
+                    : "bg-raised text-fg-muted hover:text-fg"
                 }`}
               >
                 {size === "big" ? "Grande" : "Pequeno"}
@@ -77,8 +79,8 @@ export function OverlayTab() {
             ))}
           </div>
         </div>
-      </CardRow>
-      <CardRow>
+      </SectionRow>
+      <SectionRow>
         <SliderRow
           label="Opacidade em repouso"
           description="Opacidade quando o cursor não está sobre o overlay"
@@ -88,19 +90,19 @@ export function OverlayTab() {
           unit="%"
           onChange={handleSlider}
         />
-      </CardRow>
-      <CardRow>
-        <ToggleRow
+      </SectionRow>
+      <SectionRow>
+        <Toggle
           label="Snap to grid"
           description={
             displayServer === "wayland"
               ? "Não disponível no Wayland — o compositor controla o posicionamento das janelas"
               : "Encaixa o overlay em grade ao soltar o arraste"
           }
-          value={overlaySnapToGrid}
+          checked={overlaySnapToGrid}
           onChange={handleSnapToGrid}
         />
-      </CardRow>
-    </SettingsCard>
+      </SectionRow>
+    </SectionCard>
   );
 }

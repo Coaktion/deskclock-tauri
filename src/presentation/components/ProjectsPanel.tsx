@@ -6,7 +6,7 @@ import type { UseProjectsResult } from "@presentation/hooks/useProjects";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { SearchInput } from "./SearchInput";
+import { SectionCard, SearchInput } from "@presentation/components/ui";
 import { ProjectCard } from "./ProjectCard";
 import { SelectionBar } from "./SelectionBar";
 import { BulkImportModal } from "@presentation/modals/BulkImportModal";
@@ -16,14 +16,13 @@ import { fuzzyMatch } from "@shared/utils/fuzzySearch";
 const EMPTY_SOURCES: Map<string, ProjectCategorySource> = new Map();
 
 interface ProjectsPanelProps {
-  showTitle?: boolean;
   /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
   data: UseProjectsResult;
   /** Catálogo do workspace, para associar categorias na linha do projeto. */
   categories: Category[];
 }
 
-export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPanelProps) {
+export function ProjectsPanel({ data, categories }: ProjectsPanelProps) {
   const {
     projects,
     loading,
@@ -92,9 +91,7 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
   const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
 
   return (
-    <div className="flex flex-col gap-3">
-      {showTitle && <h2 className="text-base font-semibold text-gray-100">Projetos</h2>}
-
+    <SectionCard title="Projetos" className="p-3 flex flex-col gap-3">
       <div className="flex gap-2">
         <SearchInput
           value={search}
@@ -105,7 +102,7 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
         <button
           type="button"
           onClick={() => setBulkOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-gray-100 rounded-lg transition-colors shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary hover:text-fg rounded-control transition-colors shrink-0"
         >
           <Upload size={14} />
           Importar em massa
@@ -116,16 +113,16 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
           acima é busca ao vivo e um Enter ali não deve cadastrar nada. */}
       <div
         onKeyDown={handleAddKeyDown}
-        className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-control hover:border-fg-muted transition-colors"
       >
-        <Plus size={14} className="text-gray-500 shrink-0" />
+        <Plus size={14} className="text-fg-muted shrink-0" />
         <input
           type="text"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Adicionar novo projeto (Enter para salvar)"
           autoComplete="off"
-          className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
+          className="flex-1 text-sm bg-transparent text-fg placeholder-fg-muted focus:outline-none"
         />
       </div>
 
@@ -140,9 +137,9 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
 
       <div className="flex flex-col">
         {loading ? (
-          <p className="text-sm text-gray-500 py-4 text-center">Carregando...</p>
+          <p className="text-sm text-fg-muted py-4 text-center">Carregando...</p>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-500 py-4 text-center">
+          <p className="text-sm text-fg-muted py-4 text-center">
             {search ? "Nenhum projeto encontrado." : "Nenhum projeto cadastrado."}
           </p>
         ) : (
@@ -171,6 +168,6 @@ export function ProjectsPanel({ showTitle = true, data, categories }: ProjectsPa
           onClose={() => setBulkOpen(false)}
         />
       )}
-    </div>
+    </SectionCard>
   );
 }

@@ -68,7 +68,7 @@ export function ProjectCard({
     <div className="flex flex-col">
       <div
         onClick={editing ? undefined : () => onToggleSelect(project.id)}
-        className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors ${
+        className={`flex items-center gap-2.5 px-3 py-2 rounded-control hover:bg-raised group transition-colors ${
           editing ? "" : "cursor-pointer"
         }`}
       >
@@ -78,7 +78,7 @@ export function ProjectCard({
           onChange={() => onToggleSelect(project.id)}
           onClick={(e) => e.stopPropagation()}
           title="Selecionar projeto"
-          className="shrink-0 accent-blue-500 cursor-pointer"
+          className="shrink-0 accent-accent cursor-pointer"
         />
         <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
 
@@ -89,22 +89,19 @@ export function ProjectCard({
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+              className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
               autoComplete="off"
             />
-            <button
-              onClick={confirmEdit}
-              className="p-1 text-green-400 hover:text-green-300 shrink-0"
-            >
-              <Check size={13} />
+            <button onClick={confirmEdit} className="p-1 text-billable hover:opacity-80 shrink-0">
+              <Check size={14} />
             </button>
-            <button onClick={cancelEdit} className="p-1 text-gray-500 hover:text-gray-300 shrink-0">
-              <X size={13} />
+            <button onClick={cancelEdit} className="p-1 text-fg-muted hover:text-fg shrink-0">
+              <X size={14} />
             </button>
           </>
         ) : (
           <>
-            <span className="flex-1 text-sm text-gray-100 truncate">{project.name}</span>
+            <span className="flex-1 text-sm text-fg truncate">{project.name}</span>
             {/* Fica sempre visível, ao contrário dos dois botões ao lado: carrega
               estado — quantas categorias o projeto oferece —, e esconder no
               hover esconderia a informação junto com o controle. */}
@@ -118,15 +115,15 @@ export function ProjectCard({
                   ? "Sem associação: este projeto oferece todas as categorias"
                   : `${associatedCount} categoria(s) associada(s)`
               }
-              className={`flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-[11px] rounded-lg border transition-colors ${
+              className={`flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-[11px] rounded-chip border transition-colors ${
                 showCategories
-                  ? "text-blue-400 bg-blue-500/10 border-blue-500/40"
+                  ? "text-accent-text bg-accent/10 border-accent/40"
                   : associatedCount > 0
-                    ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-                    : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
+                    ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
+                    : "text-fg-muted bg-raised/50 border-dashed border-border hover:border-fg-muted"
               }`}
             >
-              <Tags size={11} className="shrink-0" />
+              <Tags size={14} className="shrink-0" />
               {associatedCount > 0 ? associatedCount : "todas"}
             </button>
             <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
@@ -136,9 +133,9 @@ export function ProjectCard({
                   startEdit();
                 }}
                 title="Renomear projeto"
-                className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
+                className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
               >
-                <Pencil size={13} />
+                <Pencil size={14} />
               </button>
               <button
                 onClick={(e) => {
@@ -146,9 +143,9 @@ export function ProjectCard({
                   onDelete(project.id);
                 }}
                 title="Excluir projeto"
-                className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
+                className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
               >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
               </button>
             </div>
           </>
@@ -158,11 +155,11 @@ export function ProjectCard({
       {showCategories && !editing && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="mx-3 mb-2 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800"
+          className="mx-3 mb-2 px-3 py-2 rounded-control bg-canvas border border-border-subtle"
         >
           {/* O estado vazio precisa se explicar, ou parece que a associação se
               perdeu — é o estado de todo projeto até alguém marcar algo. */}
-          <p className="text-[11px] text-gray-500 mb-1.5">
+          <p className="text-[11px] text-fg-muted mb-1.5">
             {associatedCount === 0
               ? "Sem associação: este projeto oferece todas as categorias. Marque alguma para restringir."
               : "Só as marcadas aparecem no campo de categoria deste projeto."}

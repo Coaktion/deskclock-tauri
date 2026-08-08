@@ -23,9 +23,9 @@ export function SelectionBar({ count, allSelected, onToggleAll, onDelete }: Sele
             if (el) el.indeterminate = hasSelection && !allSelected;
           }}
           onChange={onToggleAll}
-          className="shrink-0 accent-blue-500 cursor-pointer"
+          className="shrink-0 accent-accent cursor-pointer"
         />
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-fg-muted">
           {hasSelection
             ? `${count} ${count === 1 ? "item selecionado" : "itens selecionados"}`
             : "Selecionar todos"}
@@ -37,7 +37,7 @@ export function SelectionBar({ count, allSelected, onToggleAll, onDelete }: Sele
         type="button"
         onClick={onDelete}
         disabled={!hasSelection}
-        className={`ml-auto flex items-center gap-1 px-2 py-1 text-xs text-red-400 hover:text-red-300 bg-gray-800 border border-gray-700 hover:border-red-500/40 rounded-lg transition-colors ${
+        className={`ml-auto flex items-center gap-1 px-2 py-1 text-xs text-danger hover:opacity-80 bg-raised border border-border hover:border-danger/40 rounded-control transition-colors ${
           hasSelection ? "" : "invisible pointer-events-none"
         }`}
       >

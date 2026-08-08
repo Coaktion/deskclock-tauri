@@ -74,8 +74,8 @@ export function ShortcutRow({
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-200">{label}</p>
-        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+        <p className="text-sm text-fg">{label}</p>
+        {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {failed && (
@@ -87,7 +87,7 @@ export function ShortcutRow({
         )}
         {value && !recording && (
           <span
-            className={`font-mono text-xs bg-gray-800 border px-2 py-1 rounded ${failed ? "border-amber-600 text-amber-300" : "border-gray-700 text-gray-300"}`}
+            className={`font-mono text-xs bg-raised border px-2 py-1 rounded-chip ${failed ? "border-amber-600 text-amber-300" : "border-border text-fg-secondary"}`}
           >
             {value}
           </span>
@@ -97,10 +97,10 @@ export function ShortcutRow({
           onClick={startRecording}
           onKeyDown={handleKeyDown}
           onBlur={() => setRecording(false)}
-          className={`px-3 py-1.5 text-xs rounded border transition-colors focus:outline-none ${
+          className={`px-3 py-1.5 text-xs rounded-control border transition-colors focus:outline-none ${
             recording
-              ? "bg-blue-900/40 border-blue-500 text-blue-300 animate-pulse"
-              : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500"
+              ? "bg-accent/15 border-accent text-accent-text animate-pulse"
+              : "bg-raised border-border text-fg-muted hover:text-fg hover:border-fg-muted"
           }`}
         >
           {recording ? "Pressione a combinação…" : value ? "Alterar" : "Gravar"}
@@ -108,7 +108,7 @@ export function ShortcutRow({
         {value && !recording && (
           <button
             onClick={() => onSave("")}
-            className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+            className="text-xs text-fg-muted hover:text-danger transition-colors"
             title="Remover atalho"
           >
             ✕

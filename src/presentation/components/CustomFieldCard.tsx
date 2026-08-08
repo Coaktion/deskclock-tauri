@@ -57,7 +57,7 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
     return (
       <div
         onKeyDown={handleKeyDown}
-        className="flex flex-col gap-2 px-3 py-2.5 rounded-lg bg-gray-800/50"
+        className="flex flex-col gap-2 px-3 py-2 rounded-control bg-raised"
       >
         <div className="flex items-center gap-2">
           <input
@@ -68,21 +68,21 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
               if (e.key === "Escape") cancelEdit();
             }}
             autoComplete="off"
-            className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+            className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
           />
           <button
             onClick={() => void confirmEdit()}
             title="Salvar"
-            className="p-1 text-green-400 hover:text-green-300 shrink-0"
+            className="p-1 text-billable hover:opacity-80 shrink-0"
           >
-            <Check size={13} />
+            <Check size={14} />
           </button>
           <button
             onClick={cancelEdit}
             title="Cancelar"
-            className="p-1 text-gray-500 hover:text-gray-300 shrink-0"
+            className="p-1 text-fg-muted hover:text-fg shrink-0"
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         </div>
         {field.type === "select" && (
@@ -92,7 +92,7 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
             rows={3}
             placeholder="Uma opção por linha"
             title="Renomear uma opção preserva o valor já gravado nas tarefas; remover a linha apaga a opção."
-            className="text-sm bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-y"
+            className="text-sm bg-raised border border-border rounded-control px-2 py-1 text-fg placeholder-fg-muted focus:outline-none focus:border-accent transition-colors resize-y"
           />
         )}
       </div>
@@ -100,24 +100,24 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors">
-      <span
-        className={`flex-1 text-sm truncate ${field.archived ? "text-gray-500" : "text-gray-100"}`}
-      >
+    <div className="flex items-center gap-2.5 px-3 py-2 rounded-control hover:bg-raised group transition-colors">
+      <span className={`flex-1 text-sm truncate ${field.archived ? "text-fg-muted" : "text-fg"}`}>
         {field.label}
       </span>
-      <span className="shrink-0 text-xs text-gray-600">{TYPE_LABEL[field.type]}</span>
+      <span className="shrink-0 text-xs text-fg-muted">{TYPE_LABEL[field.type]}</span>
       {field.type === "select" && (
-        <span className="shrink-0 text-xs text-gray-600">{field.options.length} opções</span>
+        <span className="shrink-0 text-xs font-mono tabular-nums text-fg-muted">
+          {field.options.length} opções
+        </span>
       )}
       {field.archived && <span className="shrink-0 text-xs text-amber-500">Arquivado</span>}
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
         <button
           onClick={startEdit}
           title="Editar campo"
-          className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
+          className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
         >
-          <Pencil size={13} />
+          <Pencil size={14} />
         </button>
         <button
           onClick={() => void onUpdate(field.id, { archived: !field.archived })}
@@ -126,16 +126,16 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
               ? "Reativar campo"
               : "Arquivar: some dos formulários, mas os valores já gravados continuam valendo"
           }
-          className="p-1 text-gray-500 hover:text-amber-400 rounded-lg"
+          className="p-1 text-fg-muted hover:text-amber-400 rounded-control transition-colors"
         >
-          {field.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
+          {field.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
         </button>
         <button
           onClick={() => onDelete(field.id)}
           title="Excluir campo e todos os valores gravados"
-          className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
+          className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       </div>
     </div>

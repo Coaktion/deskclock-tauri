@@ -29,7 +29,7 @@ export function SettingsPage() {
 
   if (!config.isLoaded) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-full text-fg-muted text-sm">
         Carregando…
       </div>
     );
@@ -39,6 +39,16 @@ export function SettingsPage() {
     <div className="h-full flex flex-col">
       <PageHeader
         title="Configurações"
+        tabs={SETTINGS_TABS.map((tab) => (
+          <FilterPill
+            key={tab.id}
+            active={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            size="sm"
+          >
+            {tab.label}
+          </FilterPill>
+        ))}
         actions={
           <button
             onClick={() => void openInBrowser(MANUAL_URL)}
@@ -49,20 +59,8 @@ export function SettingsPage() {
           </button>
         }
       />
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="max-w-xl mx-auto px-6 py-6">
-          <div className="flex gap-1.5 flex-wrap mb-6">
-            {SETTINGS_TABS.map((tab) => (
-              <FilterPill
-                key={tab.id}
-                active={activeTab === tab.id}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </FilterPill>
-            ))}
-          </div>
-
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="max-w-[720px] mx-auto">
           {activeTab === "geral" && <GeralTab />}
           {activeTab === "atalhos" && <AtalhosTab />}
           {activeTab === "aparencia" && <AparenciaTab />}

@@ -5,7 +5,8 @@ import { applyFontSize } from "@shared/utils/fontSize";
 import { applyAppearance, resolveAppearance, MODES, ACCENTS } from "@shared/utils/theme";
 import type { Appearance, Mode, Accent } from "@shared/utils/theme";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
-import { SelectRow, SettingsCard, CardRow } from "./SettingsShared";
+import { SectionCard, SectionRow } from "@presentation/components/ui";
+import { SelectRow } from "./SettingsShared";
 
 const MODE_LABELS: Record<Mode, string> = {
   escuro: "Escuro",
@@ -60,8 +61,8 @@ export function AparenciaTab() {
   }
 
   return (
-    <SettingsCard>
-      <CardRow>
+    <SectionCard title="Aparência" divided>
+      <SectionRow>
         <SelectRow
           label="Modo"
           description="Claridade das superfícies da interface"
@@ -69,8 +70,8 @@ export function AparenciaTab() {
           options={MODES.map((m) => ({ value: m, label: MODE_LABELS[m] }))}
           onChange={(v) => handleAppearance("mode", v as Mode)}
         />
-      </CardRow>
-      <CardRow>
+      </SectionRow>
+      <SectionRow>
         <SelectRow
           label="Cor de destaque"
           description="Tinge botões, links e o anel do overlay"
@@ -78,8 +79,8 @@ export function AparenciaTab() {
           options={ACCENTS.map((a) => ({ value: a, label: ACCENT_LABELS[a] }))}
           onChange={(v) => handleAppearance("accent", v as Accent)}
         />
-      </CardRow>
-      <CardRow>
+      </SectionRow>
+      <SectionRow>
         <SelectRow
           label="Tamanho da fonte"
           description="Escala o texto em toda a interface"
@@ -92,7 +93,7 @@ export function AparenciaTab() {
           ]}
           onChange={handleFontSize}
         />
-      </CardRow>
-    </SettingsCard>
+      </SectionRow>
+    </SectionCard>
   );
 }

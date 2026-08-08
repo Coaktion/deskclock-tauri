@@ -53,7 +53,7 @@ export function CategoryCard({
   return (
     <div
       onClick={editing ? undefined : () => onToggleSelect(category.id)}
-      className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors ${
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-control hover:bg-raised group transition-colors ${
         editing ? "" : "cursor-pointer"
       }`}
     >
@@ -63,7 +63,7 @@ export function CategoryCard({
         onChange={() => onToggleSelect(category.id)}
         onClick={(e) => e.stopPropagation()}
         title="Selecionar categoria"
-        className="shrink-0 accent-blue-500 cursor-pointer"
+        className="shrink-0 accent-accent cursor-pointer"
       />
 
       {editing ? (
@@ -73,39 +73,34 @@ export function CategoryCard({
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+            className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
             autoComplete="off"
           />
           <button
             onClick={() => setEditBillable((b) => !b)}
             title={editBillable ? "Billable" : "Non-billable"}
-            className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-lg border transition-colors shrink-0 ${
+            className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-chip border transition-colors shrink-0 ${
               editBillable
-                ? "bg-emerald-900/40 border-emerald-700 text-emerald-400"
-                : "bg-gray-800 border-gray-700 text-gray-400"
+                ? "bg-billable/10 border-billable/40 text-billable"
+                : "bg-raised border-border text-fg-muted"
             }`}
           >
-            <DollarSign size={11} />
+            <DollarSign size={14} />
             {editBillable ? "Bill." : "Non."}
           </button>
-          <button
-            onClick={confirmEdit}
-            className="p-1 text-green-400 hover:text-green-300 shrink-0"
-          >
-            <Check size={13} />
+          <button onClick={confirmEdit} className="p-1 text-billable hover:opacity-80 shrink-0">
+            <Check size={14} />
           </button>
-          <button onClick={cancelEdit} className="p-1 text-gray-500 hover:text-gray-300 shrink-0">
-            <X size={13} />
+          <button onClick={cancelEdit} className="p-1 text-fg-muted hover:text-fg shrink-0">
+            <X size={14} />
           </button>
         </>
       ) : (
         <>
-          <span className="flex-1 text-sm text-gray-100 truncate">{category.name}</span>
+          <span className="flex-1 text-sm text-fg truncate">{category.name}</span>
           <span
-            className={`shrink-0 text-xs px-1.5 py-0.5 rounded-lg ${
-              category.defaultBillable
-                ? "bg-emerald-900/40 text-emerald-400"
-                : "bg-gray-800 text-gray-500"
+            className={`shrink-0 text-xs px-1.5 py-0.5 rounded-chip ${
+              category.defaultBillable ? "bg-billable/10 text-billable" : "bg-raised text-fg-muted"
             }`}
           >
             {category.defaultBillable ? "Bill." : "Non."}
@@ -117,9 +112,9 @@ export function CategoryCard({
                 startEdit();
               }}
               title="Editar categoria"
-              className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
+              className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
             >
-              <Pencil size={13} />
+              <Pencil size={14} />
             </button>
             <button
               onClick={(e) => {
@@ -127,9 +122,9 @@ export function CategoryCard({
                 onDelete(category.id);
               }}
               title="Excluir categoria"
-              className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
+              className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
             >
-              <Trash2 size={13} />
+              <Trash2 size={14} />
             </button>
           </div>
         </>

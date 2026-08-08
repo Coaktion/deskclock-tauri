@@ -7,6 +7,10 @@ import type { ConfigContextValue } from "@shared/types/appConfig";
 
 const appWindow = getCurrentWindow();
 
+/** Precisa acompanhar `main` em `tauri.conf.json`: é a partir dela que o
+ *  posicionamento calcula o canto, e divergir joga a janela fora da área útil. */
+const MAIN_WINDOW_SIZE = { width: 1000, height: 700 };
+
 async function getOverlayCompact() {
   return WebviewWindow.getByLabel("overlay-compact");
 }
@@ -26,7 +30,7 @@ export function useStartupWindow(
       if (saved.x >= 0 && saved.y >= 0) {
         await appWindow.setPosition(new PhysicalPosition(saved.x, saved.y));
       } else {
-        await positionNearTaskbar(appWindow, { width: 800, height: 620 });
+        await positionNearTaskbar(appWindow, MAIN_WINDOW_SIZE);
       }
       await appWindow.show();
       if (focusToo) await appWindow.setFocus();
@@ -90,7 +94,7 @@ export function useStartupWindow(
   useEffect(() => {
     if (!config.isLoaded) return;
     if (config.loadError) {
-      positionNearTaskbar(appWindow, { width: 800, height: 620 })
+      positionNearTaskbar(appWindow, MAIN_WINDOW_SIZE)
         .catch(() => {})
         .finally(() => appWindow.show());
       return;
@@ -110,7 +114,7 @@ export function useStartupWindow(
     }
 
     if (!config.get("setupCompleted")) {
-      positionNearTaskbar(appWindow, { width: 800, height: 620 })
+      positionNearTaskbar(appWindow, MAIN_WINDOW_SIZE)
         .catch(() => {})
         .finally(() => appWindow.show());
       return;

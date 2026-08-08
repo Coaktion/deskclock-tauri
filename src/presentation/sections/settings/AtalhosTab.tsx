@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { AlertTriangle } from "lucide-react";
 import { ShortcutRow } from "./ShortcutRow";
-import { SettingsCard, CardRow } from "./SettingsShared";
+import { SectionCard, SectionRow } from "@presentation/components/ui";
 
 export function AtalhosTab() {
   const config = useAppConfig();
@@ -63,9 +63,9 @@ export function AtalhosTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {displayServer === "wayland" && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
+        <div className="flex items-start gap-2 rounded-control bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
           <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
           <p className="text-xs text-amber-300">
             Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou
@@ -74,7 +74,7 @@ export function AtalhosTab() {
         </div>
       )}
       {failedShortcuts.length > 0 && displayServer !== "wayland" && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
+        <div className="flex items-start gap-2 rounded-control bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
           <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
           <p className="text-xs text-amber-300">
             {failedShortcuts.length === 1
@@ -84,8 +84,8 @@ export function AtalhosTab() {
         </div>
       )}
 
-      <SettingsCard>
-        <CardRow>
+      <SectionCard title="Acesso rápido">
+        <SectionRow>
           <ShortcutRow
             label="Acesso rápido (Command Palette)"
             description="Abre o painel de ações de qualquer lugar, mesmo com a janela fechada"
@@ -96,11 +96,11 @@ export function AtalhosTab() {
               applyShortcuts({ commandPalette: v });
             }}
           />
-        </CardRow>
-      </SettingsCard>
+        </SectionRow>
+      </SectionCard>
 
-      <SettingsCard>
-        <CardRow>
+      <SectionCard title="Tarefa e janelas" divided>
+        <SectionRow>
           <ShortcutRow
             label="Iniciar / Pausar / Retomar"
             description="Alterna execução da tarefa atual"
@@ -111,8 +111,8 @@ export function AtalhosTab() {
               applyShortcuts({ toggleTask: v });
             }}
           />
-        </CardRow>
-        <CardRow>
+        </SectionRow>
+        <SectionRow>
           <ShortcutRow
             label="Parar"
             description="Para a tarefa em execução"
@@ -123,8 +123,8 @@ export function AtalhosTab() {
               applyShortcuts({ stopTask: v });
             }}
           />
-        </CardRow>
-        <CardRow>
+        </SectionRow>
+        <SectionRow>
           <ShortcutRow
             label="Mostrar / Ocultar overlay"
             description="Alterna visibilidade do overlay"
@@ -135,8 +135,8 @@ export function AtalhosTab() {
               applyShortcuts({ toggleOverlay: v });
             }}
           />
-        </CardRow>
-        <CardRow>
+        </SectionRow>
+        <SectionRow>
           <ShortcutRow
             label="Mostrar / Ocultar janela"
             description="Alterna visibilidade da janela principal"
@@ -147,8 +147,8 @@ export function AtalhosTab() {
               applyShortcuts({ toggleWindow: v });
             }}
           />
-        </CardRow>
-      </SettingsCard>
+        </SectionRow>
+      </SectionCard>
     </div>
   );
 }

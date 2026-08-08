@@ -10,6 +10,7 @@ import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchG
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
+import { SectionCard } from "@presentation/components/ui";
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
@@ -22,16 +23,16 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
           title={c}
           className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform ${
             workspaceClasses(c).dot
-          } ${value === c ? "ring-2 ring-offset-2 ring-offset-gray-900 ring-gray-300 scale-105" : "opacity-60 hover:opacity-100"}`}
+          } ${value === c ? "ring-2 ring-offset-2 ring-offset-surface ring-fg-secondary scale-105" : "opacity-60 hover:opacity-100"}`}
         >
-          {value === c && <Check size={11} className="text-gray-900" />}
+          {value === c && <Check size={11} className="text-canvas" />}
         </button>
       ))}
     </div>
   );
 }
 
-export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
+export function WorkspacesPanel() {
   const { workspaces, activeWorkspaceId, create, update, remove } = useWorkspaceAdmin();
   const config = useAppConfig();
   const { runningTask, stopTask } = useRunningTask();
@@ -89,18 +90,15 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {showTitle && <h2 className="text-base font-semibold text-gray-100">Workspaces</h2>}
-
-      <p className="text-xs text-gray-500 leading-relaxed">
-        Cada workspace tem seus próprios projetos, categorias, tarefas, planejadas e perfis de
-        exportação. As integrações continuam enxergando todos.
-      </p>
-
+    <SectionCard
+      title="Workspaces"
+      description="Cada workspace tem seus próprios projetos, categorias, tarefas, planejadas e perfis de exportação. Cada integração escolhe em qual deles trabalha."
+      className="p-3 pt-0 flex flex-col gap-3"
+    >
       {/* Criação */}
       <div
         onKeyDown={handleAddKeyDown}
-        className="flex flex-col gap-2 px-3 py-2.5 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+        className="flex flex-col gap-2 px-3 py-2.5 border border-dashed border-border rounded-control hover:border-fg-muted transition-colors"
       >
         <div className="flex items-center gap-2">
           <WorkspaceDot color={previewColor} size={10} />
@@ -110,13 +108,13 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Adicionar novo workspace (Enter para salvar)"
             autoComplete="off"
-            className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
+            className="flex-1 text-sm bg-transparent text-fg placeholder-fg-muted focus:outline-none"
           />
           <button
             type="button"
             onClick={() => void handleAdd()}
             disabled={!newName.trim()}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-300 rounded-lg disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control disabled:opacity-40 transition-colors"
           >
             <Plus size={13} />
             Criar
@@ -125,7 +123,7 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
         <ColorPicker value={previewColor} onChange={setNewColor} />
       </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
 
       <div className="flex flex-col gap-1.5">
         {workspaces.map((w) => {
@@ -136,7 +134,7 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
             <div
               key={w.id}
               className={`flex flex-col gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                isActive ? workspaceClasses(w.color).soft : "bg-gray-900 border-gray-800"
+                isActive ? workspaceClasses(w.color).soft : "bg-canvas border-border-subtle"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -152,20 +150,20 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                       if (e.key === "Escape") setEditingId(null);
                     }}
                     autoFocus
-                    className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+                    className="flex-1 text-sm bg-raised border border-accent rounded-control px-2 py-0.5 text-fg focus:outline-none"
                     autoComplete="off"
                   />
                 ) : (
-                  <span className="flex-1 text-sm text-gray-200 truncate">{w.name}</span>
+                  <span className="flex-1 text-sm text-fg truncate">{w.name}</span>
                 )}
 
                 {!isEditing &&
                   (isActive ? (
-                    <span className="text-[10px] uppercase tracking-wide text-gray-500">ativo</span>
+                    <span className="text-[10px] uppercase tracking-wide text-fg-muted">ativo</span>
                   ) : (
                     <button
                       onClick={() => void request(w.id)}
-                      className="text-[10px] uppercase tracking-wide text-gray-500 hover:text-blue-400 transition-colors"
+                      className="text-[10px] uppercase tracking-wide text-fg-muted hover:text-accent-text transition-colors"
                     >
                       tornar ativo
                     </button>
@@ -176,14 +174,14 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                     <button
                       onClick={() => void commitEdit()}
                       title="Salvar"
-                      className="p-1 text-green-400 hover:text-green-300 rounded-lg"
+                      className="p-1 text-billable hover:opacity-80 rounded-control"
                     >
                       <Check size={14} />
                     </button>
                     <button
                       onClick={() => setEditingId(null)}
                       title="Cancelar"
-                      className="p-1 text-gray-500 hover:text-gray-300 rounded-lg"
+                      className="p-1 text-fg-muted hover:text-fg rounded-control"
                     >
                       <X size={14} />
                     </button>
@@ -193,9 +191,9 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                     <button
                       onClick={() => startEdit(w)}
                       title="Editar"
-                      className="p-1 text-gray-500 hover:text-gray-200 rounded-lg"
+                      className="p-1 text-fg-muted hover:text-fg rounded-control transition-colors"
                     >
-                      <Pen size={13} />
+                      <Pen size={14} />
                     </button>
                     <button
                       onClick={() => setDeleting(w)}
@@ -205,9 +203,9 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                           ? "Não é possível excluir o último workspace"
                           : "Excluir"
                       }
-                      className="p-1 text-gray-500 hover:text-red-400 rounded-lg disabled:opacity-30 disabled:hover:text-gray-500"
+                      className="p-1 text-fg-muted hover:text-danger rounded-control transition-colors disabled:opacity-30 disabled:hover:text-fg-muted"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
                   </>
                 )}
@@ -220,32 +218,32 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
       </div>
 
       {pending && (
-        <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/5">
-          <p className="text-xs text-gray-300 leading-snug">
+        <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-control border border-paused/40 bg-paused/5">
+          <p className="text-xs text-fg-secondary leading-snug">
             Há uma tarefa em execução. Parar e trocar para{" "}
-            <span className="text-gray-100 font-medium">{pending.name}</span>?
+            <span className="text-fg font-medium">{pending.name}</span>?
           </p>
-          <span className="text-[10px] text-gray-500">Marcar a tarefa como:</span>
+          <span className="text-[10px] text-fg-muted">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-billable bg-billable/10 border border-billable/30 hover:bg-billable/20 rounded-control transition-colors"
             >
               <CheckCircle2 size={12} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control transition-colors"
             >
               <Clock size={12} />
               Pendente
             </button>
             <button
               onClick={cancel}
-              className="ml-auto p-1 text-gray-600 hover:text-gray-400 rounded-lg"
+              className="ml-auto p-1 text-fg-muted hover:text-fg rounded-control transition-colors"
             >
-              <X size={13} />
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -260,6 +258,6 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
           onClose={() => setDeleting(null)}
         />
       )}
-    </div>
+    </SectionCard>
   );
 }

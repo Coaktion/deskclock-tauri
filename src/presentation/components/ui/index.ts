@@ -5,3 +5,4 @@ export { FilterPill } from "./FilterPill";
 export { SearchInput } from "./SearchInput";
 export { Field, fieldControlClass } from "./Field";
 export { PageHeader } from "./PageHeader";
+export { SectionCard, SectionRow } from "./SectionCard";
