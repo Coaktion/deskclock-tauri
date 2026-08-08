@@ -37,10 +37,34 @@ interface ModalProps {
   /** Frase abaixo do título, para a consequência que o título não cabe. */
   description?: ReactNode;
   /**
+   * Faixa fixa entre o cabeçalho e o corpo — o recorte de período do envio, as
+   * abas da exportação. Fica fora do corpo porque não deve rolar junto com a
+   * lista que ela filtra.
+   */
+  toolbar?: ReactNode;
+  /**
    * Ações, encostadas à direita. A secundária vai sem casca (`ghost`): dois
    * botões cheios lado a lado não dizem qual é a ação principal.
    */
   footer?: ReactNode;
+  /**
+   * Canto esquerdo do rodapé — "Todas" / "Nenhuma" e afins. Não é ação sobre o
+   * diálogo, é controle da lista, e por isso não disputa lugar com o `footer`.
+   */
+  footerStart?: ReactNode;
+  /**
+   * Faixa fixa logo acima das ações — o aviso de reenvio, o resultado do envio.
+   * Dentro do corpo, ela rolaria para fora justamente quando descreve o que
+   * acabou de acontecer.
+   */
+  notice?: ReactNode;
+  /**
+   * Corpo até onde a janela deixar, em vez do teto de 60vh do design. É o que
+   * as listas longas pedem — envio, importação, perfis de exportação —, e o
+   * limite passa a ser a própria janela menos a margem do véu, sem medida nova
+   * inventada no caminho.
+   */
+  tall?: boolean;
   /**
    * O `useSubmitOnEnter` de quem chama. Fica no painel, não no corpo, para
    * cobrir também os campos que morem no cabeçalho ou no rodapé (§8.2).
@@ -60,7 +84,11 @@ export function Modal({
   children,
   size = "md",
   description,
+  toolbar,
   footer,
+  footerStart,
+  notice,
+  tall = false,
   onKeyDown,
   bodyClassName = "flex flex-col gap-3",
 }: ModalProps) {
@@ -74,7 +102,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         onKeyDown={onKeyDown}
-        className={`w-full ${SIZE[size]} flex flex-col bg-surface border border-border-subtle rounded-card shadow-2xl`}
+        className={`w-full ${SIZE[size]} ${tall ? "max-h-full" : ""} flex flex-col bg-surface border border-border-subtle rounded-card shadow-2xl`}
       >
         {/* 48 px de mínimo, não de altura: com descrição o cabeçalho tem duas
             linhas, e travá-lo cortaria a segunda. */}
@@ -95,12 +123,24 @@ export function Modal({
           />
         </div>
 
-        <div className={`min-h-0 max-h-[60vh] overflow-y-auto p-5 ${bodyClassName}`}>
+        {toolbar && (
+          <div className="shrink-0 px-5 py-2.5 border-b border-border-subtle">{toolbar}</div>
+        )}
+
+        <div
+          className={`min-h-0 overflow-y-auto p-5 ${tall ? "flex-1" : "max-h-[60vh]"} ${bodyClassName}`}
+        >
           {children}
         </div>
 
-        {footer && (
-          <div className="shrink-0 flex items-center justify-end gap-2 min-h-13 px-5 py-2.5 border-t border-border-subtle">
+        {notice && <div className="shrink-0 px-5 pb-2 flex flex-col gap-2">{notice}</div>}
+
+        {(footer || footerStart) && (
+          <div className="shrink-0 flex items-center gap-2 min-h-13 px-5 py-2.5 border-t border-border-subtle">
+            {footerStart}
+            {/* Empurra as ações para a direita mesmo com o canto esquerdo
+                ocupado — `justify-end` sozinho colaria os dois grupos. */}
+            <div className="flex-1" />
             {footer}
           </div>
         )}

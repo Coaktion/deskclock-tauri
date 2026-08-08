@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { X, Download, Copy, Check, Star, Pencil, Trash2, Plus, GripVertical } from "lucide-react";
+import { Download, Copy, Check, Star, Pencil, Trash2, Plus, GripVertical } from "lucide-react";
 import { save as tauriSaveDialog } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -19,7 +19,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { Select } from "@presentation/components/ui";
+import {
+  Button,
+  IconButton,
+  Input,
+  Modal,
+  SegmentedControl,
+  Select,
+} from "@presentation/components/ui";
 import { buildExportRows, customColumnField, toCSV, toJSON } from "@domain/utils/exportFormatter";
 import type { CustomField } from "@domain/entities/CustomField";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -40,7 +47,6 @@ import { DEFAULT_COLUMNS } from "@domain/entities/ExportProfile";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { Task } from "@domain/entities/Task";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 type Tab = "export" | "profiles" | "edit-profile";
 type PeriodMode = "today" | "custom";
@@ -88,11 +94,12 @@ function SortableColumn({ col, idx, onToggle, onRename }: SortableColumnProps) {
         onChange={() => onToggle(idx)}
         className="accent-accent shrink-0"
       />
-      <input
+      <Input
+        variant="plain"
+        aria-label={`Rótulo da coluna ${col.field}`}
         value={col.label}
         onChange={(e) => onRename(idx, e.target.value)}
-        autoComplete="off"
-        className="flex-1 bg-transparent text-sm text-fg focus:outline-none"
+        className="flex-1"
       />
     </div>
   );
@@ -165,13 +172,10 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
     <div onKeyDown={handleKeyDown} className="flex flex-col gap-4 h-full overflow-y-auto">
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
-          <label className="text-xs text-fg-secondary mb-1 block">Nome do perfil</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="off"
-            className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
-          />
+          <label className="text-xs text-fg-secondary mb-1 block" htmlFor="export-profile-name">
+            Nome do perfil
+          </label>
+          <Input id="export-profile-name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
         <div>
@@ -268,18 +272,18 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
       </div>
 
       <div className="flex justify-end gap-2 pt-2 border-t border-border">
-        <button onClick={onCancel} className="px-3 py-1.5 text-sm text-fg-secondary hover:text-fg">
+        <Button variant="ghost" onClick={onCancel}>
           Cancelar
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="primary"
           onClick={() =>
             onSave({ name, isDefault, format, separator, durationFormat, dateFormat, columns })
           }
           disabled={!name.trim()}
-          className="px-3 py-1.5 text-sm bg-accent hover:opacity-90 disabled:opacity-40 text-white rounded-control"
         >
           Salvar perfil
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -295,8 +299,6 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
   // `loading` importa: `ProfileForm` lê os campos uma única vez, no inicializador
   // do seu state. Montá-lo antes da carga salvaria o perfil sem as colunas custom.
   const { fields: customFields, activeFields, loading: customFieldsLoading } = useCustomFields();
-
-  useEscapeToClose(onClose);
 
   const [tab, setTab] = useState<Tab>("export");
   const [editingProfile, setEditingProfile] = useState<ExportProfile | null>(null);
@@ -405,247 +407,229 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
-      <div
-        className="bg-surface border border-border-subtle rounded-card w-full max-w-lg shadow-2xl flex flex-col"
-        style={{ maxHeight: "90vh" }}
+    <>
+      <Modal
+        title="Exportar tarefas"
+        size="lg"
+        tall
+        onClose={onClose}
+        bodyClassName=""
+        toolbar={
+          // As abas eram o cabeçalho inteiro, sem título — o design pede título e
+          // as abas são recorte de conteúdo, não nome do diálogo.
+          <SegmentedControl
+            ariaLabel="Seção da exportação"
+            value={tab === "edit-profile" ? "profiles" : tab}
+            onChange={setTab}
+            options={[
+              { value: "export", label: "Exportar" },
+              { value: "profiles", label: "Perfis" },
+            ]}
+          />
+        }
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
-          <div className="flex gap-1">
-            {(
-              [
-                ["export", "Exportar"],
-                ["profiles", "Perfis"],
-              ] as [Tab, string][]
-            ).map(([t, label]) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-3 py-1.5 text-sm rounded-control transition-colors ${tab === t ? "bg-accent text-white" : "text-fg-secondary hover:text-fg"}`}
+        {/* ── Aba Exportar ── */}
+        {tab === "export" && (
+          <div className="flex flex-col gap-4">
+            {/* Perfil */}
+            <div>
+              <label className="text-xs text-fg-secondary mb-1 block">Perfil de exportação</label>
+              <Select
+                aria-label="Perfil de exportação"
+                value={selectedProfileId}
+                onChange={(e) => setSelectedProfileId(e.target.value)}
+                className="w-full"
               >
-                {label}
-              </button>
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.isDefault ? " (padrão)" : ""}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Período */}
+            <div>
+              <label className="text-xs text-fg-secondary mb-1 block">Período</label>
+              <div className="flex gap-2 mb-2">
+                {(["today", "custom"] as PeriodMode[]).map((m) => (
+                  <Button
+                    key={m}
+                    variant={periodMode === m ? "accent" : "secondary"}
+                    onClick={() => setPeriodMode(m)}
+                  >
+                    {m === "today" ? "Hoje" : "Personalizado"}
+                  </Button>
+                ))}
+              </div>
+              {periodMode === "custom" && (
+                <div className="flex items-center gap-2">
+                  <DatePickerInput value={startDate} onChange={setStartDate} className="flex-1" />
+                  <span className="text-fg-muted text-sm shrink-0">→</span>
+                  <DatePickerInput value={endDate} onChange={setEndDate} className="flex-1" />
+                </div>
+              )}
+            </div>
+
+            <Button variant="secondary" onClick={loadTasks} className="self-start">
+              Carregar tarefas
+            </Button>
+
+            {/* Lista de seleção */}
+            {loaded && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-fg-secondary">
+                    {selected.size} de {tasks.length} selecionadas
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setSelected(new Set(tasks.map((t) => t.id)))}
+                    >
+                      Todas
+                    </Button>
+                    <Button variant="ghost" onClick={() => setSelected(new Set())}>
+                      Nenhuma
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 max-h-40 overflow-y-auto border border-border rounded-control p-2">
+                  {tasks.length === 0 && (
+                    <p className="text-xs text-fg-muted text-center py-2">
+                      Nenhuma tarefa no período
+                    </p>
+                  )}
+                  {tasks.map((t) => {
+                    const proj = projects.find((p) => p.id === t.projectId);
+                    return (
+                      <label
+                        key={t.id}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-raised px-1 py-0.5 rounded-control"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected.has(t.id)}
+                          onChange={() =>
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(t.id)) next.delete(t.id);
+                              else next.add(t.id);
+                              return next;
+                            })
+                          }
+                          className="accent-accent shrink-0"
+                        />
+                        <span className="text-xs text-fg-secondary truncate">
+                          {t.name ?? "(sem nome)"}
+                        </span>
+                        {proj && (
+                          <span className="text-xs text-fg-muted truncate">{proj.name}</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Dois destinos igualmente válidos, e nenhum é a ação principal
+                  (§8.2) — por isso ficam no corpo, e não no rodapé. */}
+            {loaded && selected.size > 0 && (
+              <div className="flex gap-2 pt-2 border-t border-border">
+                <Button
+                  variant="primary"
+                  onClick={() => void handleExport("file")}
+                  disabled={exporting}
+                  icon={<Download size={14} />}
+                  className="flex-1"
+                >
+                  Salvar arquivo
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => void handleExport("clipboard")}
+                  disabled={exporting}
+                  icon={copied ? <Check size={14} /> : <Copy size={14} />}
+                  className={`flex-1 ${copied ? "text-billable!" : ""}`}
+                >
+                  {copied ? "Copiado!" : "Copiar"}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Aba Perfis ── */}
+        {tab === "profiles" && (
+          <div className="flex flex-col gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setEditingProfile(null);
+                setTab("edit-profile");
+              }}
+              icon={<Plus size={14} />}
+              className="w-full"
+            >
+              Novo perfil
+            </Button>
+            {profiles.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center gap-2 px-3 py-2 bg-raised rounded-control border border-border"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-fg truncate">{p.name}</p>
+                  <p className="text-xs text-fg-muted">{p.format.toUpperCase()}</p>
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <IconButton
+                    icon={<Star size={14} fill={p.isDefault ? "currentColor" : "none"} />}
+                    title="Definir padrão"
+                    onClick={() => void setDefault(p.id)}
+                    className={p.isDefault ? "text-yellow-400" : "hover:text-yellow-400"}
+                  />
+                  <IconButton
+                    icon={<Pencil size={14} />}
+                    title="Editar perfil"
+                    onClick={() => {
+                      setEditingProfile(p);
+                      setTab("edit-profile");
+                    }}
+                  />
+                  <IconButton
+                    icon={<Trash2 size={14} />}
+                    title="Excluir perfil"
+                    variant="danger"
+                    onClick={() => void remove(p.id)}
+                    disabled={profiles.length <= 1}
+                  />
+                </div>
+              </div>
             ))}
           </div>
-          <button onClick={onClose} className="text-fg-muted hover:text-fg-secondary">
-            <X size={16} />
-          </button>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto p-5">
-          {/* ── Aba Exportar ── */}
-          {tab === "export" && (
-            <div className="flex flex-col gap-4">
-              {/* Perfil */}
-              <div>
-                <label className="text-xs text-fg-secondary mb-1 block">Perfil de exportação</label>
-                <Select
-                  aria-label="Perfil de exportação"
-                  value={selectedProfileId}
-                  onChange={(e) => setSelectedProfileId(e.target.value)}
-                  className="w-full"
-                >
-                  {profiles.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                      {p.isDefault ? " (padrão)" : ""}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+        {/* ── Aba Configurar Perfil ── */}
+        {tab === "edit-profile" && !customFieldsLoading && (
+          <ProfileForm
+            initial={editingProfile ?? {}}
+            customFields={activeFields}
+            onSave={(data) => void handleSaveProfile(data)}
+            onCancel={() => setTab("profiles")}
+          />
+        )}
+      </Modal>
 
-              {/* Período */}
-              <div>
-                <label className="text-xs text-fg-secondary mb-1 block">Período</label>
-                <div className="flex gap-2 mb-2">
-                  {(["today", "custom"] as PeriodMode[]).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => setPeriodMode(m)}
-                      className={`px-3 py-1.5 text-xs rounded-control border transition-colors ${periodMode === m ? "bg-accent/10 border-accent text-accent-text" : "bg-raised border-border text-fg-secondary hover:text-fg"}`}
-                    >
-                      {m === "today" ? "Hoje" : "Personalizado"}
-                    </button>
-                  ))}
-                </div>
-                {periodMode === "custom" && (
-                  <div className="flex items-center gap-2">
-                    <DatePickerInput value={startDate} onChange={setStartDate} className="flex-1" />
-                    <span className="text-fg-muted text-sm shrink-0">→</span>
-                    <DatePickerInput value={endDate} onChange={setEndDate} className="flex-1" />
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={loadTasks}
-                className="px-4 py-2 text-sm bg-border hover:opacity-90 text-fg rounded-control transition"
-              >
-                Carregar tarefas
-              </button>
-
-              {/* Lista de seleção */}
-              {loaded && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs text-fg-secondary">
-                      {selected.size} de {tasks.length} selecionadas
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setSelected(new Set(tasks.map((t) => t.id)))}
-                        className="text-xs text-accent-text hover:text-fg"
-                      >
-                        Todas
-                      </button>
-                      <button
-                        onClick={() => setSelected(new Set())}
-                        className="text-xs text-fg-secondary hover:text-fg"
-                      >
-                        Nenhuma
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1 max-h-40 overflow-y-auto border border-border rounded-control p-2">
-                    {tasks.length === 0 && (
-                      <p className="text-xs text-fg-muted text-center py-2">
-                        Nenhuma tarefa no período
-                      </p>
-                    )}
-                    {tasks.map((t) => {
-                      const proj = projects.find((p) => p.id === t.projectId);
-                      return (
-                        <label
-                          key={t.id}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-raised px-1 py-0.5 rounded-control"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected.has(t.id)}
-                            onChange={() =>
-                              setSelected((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(t.id)) next.delete(t.id);
-                                else next.add(t.id);
-                                return next;
-                              })
-                            }
-                            className="accent-accent shrink-0"
-                          />
-                          <span className="text-xs text-fg-secondary truncate">
-                            {t.name ?? "(sem nome)"}
-                          </span>
-                          {proj && (
-                            <span className="text-xs text-fg-muted truncate">{proj.name}</span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Ações */}
-              {loaded && selected.size > 0 && (
-                <div className="flex gap-2 pt-2 border-t border-border">
-                  <button
-                    onClick={() => void handleExport("file")}
-                    disabled={exporting}
-                    className="flex-1 flex items-center justify-center gap-2 py-2 text-sm bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
-                  >
-                    <Download size={14} /> Salvar arquivo
-                  </button>
-                  <button
-                    onClick={() => void handleExport("clipboard")}
-                    disabled={exporting}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm rounded-control transition disabled:opacity-50 ${copied ? "bg-billable text-billable" : "bg-border hover:opacity-90 text-fg"}`}
-                  >
-                    {copied ? (
-                      <>
-                        <Check size={14} /> Copiado!
-                      </>
-                    ) : (
-                      <>
-                        <Copy size={14} /> Copiar
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Aba Perfis ── */}
-          {tab === "profiles" && (
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  setEditingProfile(null);
-                  setTab("edit-profile");
-                }}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-raised hover:bg-border text-fg rounded-control border border-border transition-colors w-full justify-center"
-              >
-                <Plus size={14} /> Novo perfil
-              </button>
-              {profiles.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-2 px-3 py-2 bg-raised rounded-control border border-border"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-fg truncate">{p.name}</p>
-                    <p className="text-xs text-fg-muted">{p.format.toUpperCase()}</p>
-                  </div>
-                  <div className="flex gap-1 shrink-0">
-                    <button
-                      onClick={() => void setDefault(p.id)}
-                      title="Definir padrão"
-                      className={`p-1.5 rounded-control transition-colors ${p.isDefault ? "text-yellow-400" : "text-fg-muted hover:text-yellow-400"}`}
-                    >
-                      <Star size={14} fill={p.isDefault ? "currentColor" : "none"} />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setEditingProfile(p);
-                        setTab("edit-profile");
-                      }}
-                      className="p-1.5 text-fg-muted hover:text-accent-text rounded-control transition-colors"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      onClick={() => void remove(p.id)}
-                      disabled={profiles.length <= 1}
-                      className="p-1.5 text-fg-muted hover:text-danger disabled:opacity-30 rounded-control transition-colors"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ── Aba Configurar Perfil ── */}
-          {tab === "edit-profile" && !customFieldsLoading && (
-            <ProfileForm
-              initial={editingProfile ?? {}}
-              customFields={activeFields}
-              onSave={(data) => void handleSaveProfile(data)}
-              onCancel={() => setTab("profiles")}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Toast: arquivo salvo */}
+      {/* Fora do modal: é aviso de janela, não conteúdo do diálogo. */}
       {savedPath && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2.5 bg-raised border border-border rounded-control shadow-xl text-xs text-fg max-w-sm">
           <Check size={14} className="text-billable shrink-0" />
           <span className="truncate">Salvo em: {savedPath}</span>
         </div>
       )}
-    </div>
+    </>
   );
 }

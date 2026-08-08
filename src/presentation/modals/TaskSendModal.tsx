@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  X,
   Send,
   Loader2,
   CheckSquare,
@@ -25,7 +24,7 @@ import {
 } from "@domain/usecases/tasks/SendTasks";
 import { formatDurationCompact, todayISO } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { Button, FilterPill, Input, Modal } from "@presentation/components/ui";
 import {
   useTaskSendSelection,
   buildResultMessage,
@@ -186,8 +185,6 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
 
   const [sending, setSending] = useState(false);
 
-  useEscapeToClose(onClose);
-
   async function handleSend() {
     if (sel.selectedKeys.size === 0) return;
     sel.setMessage(null);
@@ -251,219 +248,193 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-lg bg-surface border border-border rounded-card shadow-2xl flex flex-col max-h-[80vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <div>
-            <h2 className="text-sm font-semibold text-fg">{adapter.title}</h2>
-            <p className="text-xs text-fg-muted mt-0.5">
-              Selecione o período e as tarefas a enviar
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-fg-muted hover:text-fg-secondary transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Período */}
-        <div className="px-5 py-3 border-b border-border-subtle">
+    <Modal
+      title={adapter.title}
+      description="Selecione o período e as tarefas a enviar"
+      size="lg"
+      tall
+      onClose={onClose}
+      bodyClassName="px-2 py-2"
+      toolbar={
+        <>
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(QUICK_LABELS) as QuickPeriod[]).map((q) => (
-              <button
+              <FilterPill
                 key={q}
+                size="sm"
+                active={sel.quick === q}
                 onClick={() => sel.setQuick(q)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  sel.quick === q
-                    ? "bg-accent text-white"
-                    : "bg-raised text-fg-secondary hover:text-fg"
-                }`}
               >
                 {QUICK_LABELS[q]}
-              </button>
+              </FilterPill>
             ))}
           </div>
 
           {sel.quick === "custom" && (
             <div className="flex items-center gap-2 mt-2.5">
-              <input
+              <Input
                 type="date"
+                size="sm"
+                aria-label="Início do período"
                 value={sel.customStart}
                 max={sel.customEnd}
                 onChange={(e) => sel.setCustomStart(e.target.value)}
-                className="bg-raised border border-border rounded-chip px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
-                autoComplete="off"
+                className="w-auto"
               />
               <span className="text-xs text-fg-muted">até</span>
-              <input
+              <Input
                 type="date"
+                size="sm"
+                aria-label="Fim do período"
                 value={sel.customEnd}
                 min={sel.customStart}
                 max={todayISO()}
                 onChange={(e) => sel.setCustomEnd(e.target.value)}
-                className="bg-raised border border-border rounded-chip px-2 py-1 text-xs text-fg focus:outline-none focus:border-accent"
-                autoComplete="off"
+                className="w-auto"
               />
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={sel.triggerReload}
-                disabled={sel.loading}
-                className="flex items-center gap-1 text-xs bg-border hover:opacity-90 text-fg-secondary px-2.5 py-1 rounded-chip transition"
+                loading={sel.loading}
               >
-                {sel.loading ? <Loader2 size={14} className="animate-spin" /> : "Carregar"}
-              </button>
+                Carregar
+              </Button>
             </div>
           )}
-        </div>
-
-        {/* Lista */}
-        <div className="flex-1 overflow-y-auto px-2 py-2">
-          {sel.loading && !sel.loaded ? (
-            <div className="flex items-center justify-center py-10 text-fg-muted">
-              <Loader2 size={18} className="animate-spin" />
-            </div>
-          ) : sel.dayGroups.length === 0 ? (
-            <p className="text-sm text-fg-muted text-center py-10">
-              Nenhuma tarefa concluída no período.
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {sel.dayGroups.map(({ date, groups }) => {
-                const dayKeys = groups.map((g) => selKey(date, g.key));
-                const selectedCount = dayKeys.filter((k) => sel.selectedKeys.has(k)).length;
-                const allSelected = selectedCount === groups.length;
-                const someSelected = selectedCount > 0 && !allSelected;
-                const isCollapsed = sel.collapsedDays.has(date);
-                const dayTotal = groups.reduce((s, g) => s + g.totalSeconds, 0);
-
-                return (
-                  <div key={date} className="rounded-control overflow-hidden">
-                    {/* Day header */}
-                    <div
-                      className="flex items-center gap-2 px-3 py-2 bg-raised/60 cursor-pointer hover:bg-raised transition-colors select-none"
-                      onClick={() => sel.toggleDayCollapse(date)}
-                    >
-                      <div
-                        className={`w-4 h-4 border rounded-chip flex items-center justify-center transition-colors flex-shrink-0 ${
-                          allSelected
-                            ? "bg-accent border-accent"
-                            : someSelected
-                              ? "bg-accent/30 border-accent/50"
-                              : "border-border bg-transparent"
-                        }`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          sel.toggleDay(date, groups);
-                        }}
-                      >
-                        {allSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
-                        {someSelected && <div className="w-2 h-0.5 bg-accent rounded-sm" />}
-                      </div>
-
-                      <span className="flex-1 text-xs font-medium text-fg-secondary capitalize">
-                        {formatDayLabel(date)}
-                      </span>
-
-                      <span className="text-xs text-fg-muted">
-                        {selectedCount}/{groups.length}
-                      </span>
-
-                      <span className="text-xs font-mono tabular-nums text-fg-muted mr-1">
-                        {formatDurationCompact(dayTotal)}
-                      </span>
-
-                      {isCollapsed ? (
-                        <ChevronRight size={14} className="text-fg-muted shrink-0" />
-                      ) : (
-                        <ChevronDown size={14} className="text-fg-muted shrink-0" />
-                      )}
-                    </div>
-
-                    {/* Group rows */}
-                    {!isCollapsed && (
-                      <div className="pl-2 space-y-0.5 py-1">
-                        {groups.map((g) => (
-                          <GroupRow
-                            key={g.key}
-                            group={g}
-                            projects={projects}
-                            categories={categories}
-                            sentIds={sel.sentIds}
-                            selected={sel.selectedKeys.has(selKey(date, g.key))}
-                            onToggle={() => sel.toggleGroup(date, g.key, g)}
-                            validateTask={adapter.validateTask}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Aviso re-envio */}
-        {sel.hasSentSelected && (
-          <div className="mx-4 mb-2 flex items-start gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-control">
-            <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-yellow-300">
-              {adapter.resendWarning ?? DEFAULT_RESEND_WARNING}
-            </p>
-          </div>
-        )}
-
-        {/* Mensagem de resultado */}
-        {sel.message && (
-          <p className={`mx-5 mb-2 text-xs whitespace-pre-line ${TONE_CLASS[sel.message.tone]}`}>
-            {sel.message.text}
-          </p>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center gap-2 px-5 py-3 border-t border-border-subtle">
-          <button
-            onClick={sel.selectAll}
-            className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
-          >
-            <CheckSquare size={14} />
-            Todas
-          </button>
-          <button
-            onClick={sel.deselectAll}
-            className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
-          >
-            <Square size={14} />
-            Nenhuma
-          </button>
-          <div className="flex-1" />
-          <button
-            onClick={onClose}
-            className="text-xs text-fg-muted hover:text-fg-secondary px-3 py-1.5 rounded-control transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSend}
-            disabled={sending || sel.selectedKeys.size === 0}
-            className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-control transition"
-          >
-            {sending ? (
-              <>
-                <Loader2 size={14} className="animate-spin" />
-                Enviando…
-              </>
-            ) : (
-              <>
-                <Send size={14} />
-                Enviar ({sel.selectedKeys.size})
-              </>
+        </>
+      }
+      // Sem aviso nem resultado a faixa não existe — um fragmento vazio é um nó
+      // verdadeiro e deixaria a folga do bloco desenhada à toa.
+      notice={
+        sel.hasSentSelected || sel.message ? (
+          <>
+            {sel.hasSentSelected && (
+              <div className="flex items-start gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-control">
+                <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-yellow-300">
+                  {adapter.resendWarning ?? DEFAULT_RESEND_WARNING}
+                </p>
+              </div>
             )}
-          </button>
+            {sel.message && (
+              <p className={`text-xs whitespace-pre-line ${TONE_CLASS[sel.message.tone]}`}>
+                {sel.message.text}
+              </p>
+            )}
+          </>
+        ) : undefined
+      }
+      footerStart={
+        <>
+          <Button variant="ghost" onClick={sel.selectAll} icon={<CheckSquare size={14} />}>
+            Todas
+          </Button>
+          <Button variant="ghost" onClick={sel.deselectAll} icon={<Square size={14} />}>
+            Nenhuma
+          </Button>
+        </>
+      }
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleSend}
+            disabled={sel.selectedKeys.size === 0}
+            loading={sending}
+            icon={<Send size={14} />}
+          >
+            {sending ? "Enviando…" : `Enviar (${sel.selectedKeys.size})`}
+          </Button>
+        </>
+      }
+    >
+      {sel.loading && !sel.loaded ? (
+        <div className="flex items-center justify-center py-10 text-fg-muted">
+          <Loader2 size={18} className="animate-spin" />
         </div>
-      </div>
-    </div>
+      ) : sel.dayGroups.length === 0 ? (
+        <p className="text-sm text-fg-muted text-center py-10">
+          Nenhuma tarefa concluída no período.
+        </p>
+      ) : (
+        <div className="space-y-1">
+          {sel.dayGroups.map(({ date, groups }) => {
+            const dayKeys = groups.map((g) => selKey(date, g.key));
+            const selectedCount = dayKeys.filter((k) => sel.selectedKeys.has(k)).length;
+            const allSelected = selectedCount === groups.length;
+            const someSelected = selectedCount > 0 && !allSelected;
+            const isCollapsed = sel.collapsedDays.has(date);
+            const dayTotal = groups.reduce((s, g) => s + g.totalSeconds, 0);
+
+            return (
+              <div key={date} className="rounded-control overflow-hidden">
+                {/* Day header */}
+                <div
+                  className="flex items-center gap-2 px-3 py-2 bg-raised/60 cursor-pointer hover:bg-raised transition-colors select-none"
+                  onClick={() => sel.toggleDayCollapse(date)}
+                >
+                  <div
+                    className={`w-4 h-4 border rounded-chip flex items-center justify-center transition-colors flex-shrink-0 ${
+                      allSelected
+                        ? "bg-accent border-accent"
+                        : someSelected
+                          ? "bg-accent/30 border-accent/50"
+                          : "border-border bg-transparent"
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sel.toggleDay(date, groups);
+                    }}
+                  >
+                    {allSelected && <div className="w-2 h-2 bg-white rounded-sm" />}
+                    {someSelected && <div className="w-2 h-0.5 bg-accent rounded-sm" />}
+                  </div>
+
+                  <span className="flex-1 text-xs font-medium text-fg-secondary capitalize">
+                    {formatDayLabel(date)}
+                  </span>
+
+                  <span className="text-xs text-fg-muted">
+                    {selectedCount}/{groups.length}
+                  </span>
+
+                  <span className="text-xs font-mono tabular-nums text-fg-muted mr-1">
+                    {formatDurationCompact(dayTotal)}
+                  </span>
+
+                  {isCollapsed ? (
+                    <ChevronRight size={14} className="text-fg-muted shrink-0" />
+                  ) : (
+                    <ChevronDown size={14} className="text-fg-muted shrink-0" />
+                  )}
+                </div>
+
+                {/* Group rows */}
+                {!isCollapsed && (
+                  <div className="pl-2 space-y-0.5 py-1">
+                    {groups.map((g) => (
+                      <GroupRow
+                        key={g.key}
+                        group={g}
+                        projects={projects}
+                        categories={categories}
+                        sentIds={sel.sentIds}
+                        selected={sel.selectedKeys.has(selKey(date, g.key))}
+                        onToggle={() => sel.toggleGroup(date, g.key, g)}
+                        validateTask={adapter.validateTask}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
   );
 }
