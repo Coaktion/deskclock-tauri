@@ -1576,6 +1576,11 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 > deles ficavam inexequíveis e travavam agentes na primeira mudança visual. Abaixo está o que
 > existe de fato.
 
+> **A rodada de fidelidade em curso está em `docs/specs/design-system-fidelity.md`** — etapas,
+> o que já foi feito, as decisões pendentes do usuário e as regras de processo que ela
+> deliberadamente contraria (branch única, reviewer só no fim). Antes de qualquer mudança visual
+> nova, conferir se ela não é uma etapa de lá.
+
 - **Tokens semânticos:** o bloco `@theme static` de `src/index.css` declara a camada semântica —
   superfícies (`canvas`, `surface`, `raised`, `border-subtle`, `border`), texto (`fg`,
   `fg-secondary`, `fg-muted`), acento (`accent`, `accent-text`), status (`billable`, `paused`,
