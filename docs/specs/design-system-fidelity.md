@@ -322,28 +322,47 @@ acima de uma lista que se reordena a cada tecla, e ali a troca de cor da borda s
 meio do movimento. Os dois utilitários são escritos com `focus:` — só a cor, sem a largura, não
 desenha anel nenhum.
 
-### Fase D · Travas
+### Fase D · Travas — ✅ **feita** (D1 + D2, commit único)
 
-**D1 · Teste de convenção de componente** — o que hoje não existe. Falha quando um `<button>`
-carrega `px-*` + `py-*` + `rounded-*` inline em vez de usar `Button`/`IconButton`; idem
-`<input>`/`<select>` fora de `ui/`. Com **baseline que só pode encolher**, falhando nos dois
-sentidos, como `meaningColors.test.ts` já faz — descer sem atualizar a lista deixa folga onde a
-próxima regressão se esconde. É isto, e não boa intenção, que impede a dívida de voltar em três
-meses.
+D2 é documentação do que a D1 acabou de medir; separá-las custaria uma sessão para editar o
+CLAUDE.md.
 
-> **Exceções a registrar na baseline** (já conhecidas, todas justificadas no §8.4): a alça de
-> arraste do `ExportModal` (`cursor-grab`), o ▶ do Lançamento Manual, o "Lançar N com horário",
-> as definições de `SubSection`/`MappingBox`/`IntegrationTile`, o toggle de billable — do
-> `EditGroupModal`, do `EditTaskModal` e do `EditPlannedTaskModal`, os três pelo mesmo motivo: o
-> estado ligado **é** a cor do próprio significado, e no `IconButton` a cor é o destino do hover
-> com repouso sempre em `fg-muted` — e o `PlannedTaskItem`.
->
-> **Sobram 26 `<button>` nos 19 modais**, três deles no `SetupModal`. É o número a fazer encolher,
-> e o piso não é zero: o toggle de billable e as linhas de seleção com caixa própria ficam.
+**D1 · `componentPrimitives.test.ts`** — duas varreduras com **baseline per-arquivo que só pode
+encolher**, falhando nos dois sentidos como `meaningColors` já faz:
 
-**D2 · Registrar as exceções declaradas** na §8.4 do CLAUDE.md, em vez de deixá-las implícitas:
-overlay compacto abaixo de 12,25px, cores de workspace e de marca fora dos tokens de significado,
-`rounded-sm` nas cinco micromarcas.
+- **`<button>` com caixa própria** (padding **e** raio na mesma tag): **121**, em 44 arquivos.
+- **`<input>`/`<select>`/`<textarea>` cru**: **6**, em 3 arquivos.
+
+`components/ui/` é a **única isenção por caminho**, nas duas listas — é lá que a caixa é
+*definida*; em qualquer outro lugar ela é cópia. Isso tirou do baseline o `SegmentedControl`, que
+escreve a própria caixa inline (os demais primitivos a tiram de `controlStyles`).
+
+Três decisões que a implementação obrigou:
+
+- **O parser de tag saiu para `tests/helpers/jsxTags.ts`**, com o apagador de comentário junto. O
+  `inputAutocomplete` já tinha uma cópia de 30 linhas do mesmo parser brace-aware, e uma segunda
+  cópia era exatamente a duplicação que o §9.4 manda checar antes de escrever. Ele foi refeito
+  sobre o helper — e ganhou de brinde a imunidade a comentário, que não tinha.
+- **Comentário é apagado antes da varredura.** Sem isso o JSDoc que **cita** um `<select>` conta
+  como um (dois falsos positivos reais: `CustomFieldInputs` e `PopupOverlayContent`), e — pior — o
+  bloco comentado sai da varredura no dia em que alguém o comenta, que é quando ele deixa de ser
+  dívida a cobrar.
+- **121 é piso, não total.** `className` montada numa constante fora da tag escapa do regex, a
+  mesma ressalva que a medição de abertura já fazia.
+
+O baseline **não** foi reduzido nesta etapa, e é deliberado: migrar mesmo os 6 campos crus (que
+são mecânicos) muda três modais na tela, e a verificação manual já está represada desde o A3.
+Trava primeiro, redução depois.
+
+**Verificado que falha nos dois sentidos**, com sonda temporária: `0 → 1` num arquivo fora do
+baseline, e `baixe para N` ao inflar uma linha existente.
+
+**D2 · Exceções registradas na §8.4.** Três das quatro já estavam escritas — paleta de workspace
+("é a exceção, e não é dívida"), cor de marca (nas Regras obrigatórias) e `rounded-sm` nas cinco
+micromarcas. Faltava a do **overlay compacto**, que a fase B tinha deixado como afirmação solta
+deste handoff: a janela tem 78 px e escreve **número monoespaçado**, não texto lido, então a régua
+`body/ui` vs. `caption` não tem o que dizer ali. Entrou junto o parágrafo da trava nova, ao lado
+da contagem de `<button>` que a §8.4 já mantinha.
 
 ### Fase E · Produto — **precisa de confirmação do usuário antes de começar**
 
@@ -422,6 +441,10 @@ Depois da fase B (2026-08-10), a escala em `.tsx`:
 
 Depois da fase C (2026-08-10): `text-metric` em **1** (o valor do `KpiCard`), `text-base` em
 **6** e `text-xl` em **3** — o `PageHeader` mudou de coluna.
+
+Depois da fase D (2026-08-10), agora congelado em `componentPrimitives.test.ts`: `<button>` com
+caixa própria em **121** / 44 arquivos (era 131 com `className` literal na abertura, por outro
+critério) e campo cru fora de `ui/` em **6** / 3 arquivos.
 
 Os seis `text-base` que sobram, e o que fazer com eles: os dois `<h2>` do `SetupModal` e o
 `<h1>` de falha de config do `App.tsx` são `title/section` legítimos; o contador do overlay
