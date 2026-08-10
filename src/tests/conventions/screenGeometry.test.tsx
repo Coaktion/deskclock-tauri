@@ -1,9 +1,10 @@
 import { render } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { ReactElement } from "react";
-import { describe, expect, it } from "vitest";
+import { createRef, type ReactElement } from "react";
+import { describe, expect, it, vi } from "vitest";
 
+import { OmniboxIdle } from "@presentation/components/OmniboxIdle";
 import { Badge } from "@presentation/components/ui/Badge";
 import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { PageHeader } from "@presentation/components/ui/PageHeader";
@@ -57,12 +58,21 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  * `divergente` é a tela fiel.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
- * renderizam sem provider, mais a composição do corpo da `TasksPage`, que é
- * lida do código-fonte (ver o bloco dela). `Sidebar` e `Omnibox` dependem de
- * contexto e entram nas etapas que já os tocam — F4 e F5. Enquanto não
- * entrarem, **eles não estão cobertos**, e dizer isso aqui é o que impede a
- * lista de parecer completa.
+ * renderizam sem provider — mais o `OmniboxIdle`, que pede um só (ver o bloco
+ * dele) — e a composição do corpo da `TasksPage`, que é lida do código-fonte. A
+ * `Sidebar` depende de contexto e entra na etapa que já a toca, a F5. Enquanto
+ * não entrar, **ela não está coberta**, e dizer isso aqui é o que impede a lista
+ * de parecer completa.
  */
+
+/**
+ * O único provider que o omnibox pede: o mapa projeto↔categoria abre o banco e
+ * escuta evento do Tauri. Mockar o hook inteiro é uma linha; montar o
+ * `RepositoriesContext` seria montar o app para medir um padding.
+ */
+vi.mock("@presentation/hooks/useProjectCategoryMap", () => ({
+  useProjectCategoryMap: () => ({ categoriesFor: () => [] }),
+}));
 
 const s3a = screen("3a");
 
@@ -79,6 +89,12 @@ const SPEC = {
   kpiValue: s3a.byText("04:12:38"),
   kpiTrack: s3a.byPath("1/1/1/1/0/2"),
   kpiHint: s3a.byPath("1/1/1/1/0/3"),
+  omnibox: s3a.byPath("1/1/1/0"),
+  omniboxRow: s3a.byPath("1/1/1/0/0"),
+  omniboxPlay: s3a.byPath("1/1/1/0/0/0"),
+  omniboxPlaceholder: s3a.byText("Em que você está trabalhando?"),
+  omniboxChips: s3a.byPath("1/1/1/0/1"),
+  omniboxChip: s3a.byPath("1/1/1/0/1/0"),
   sectionCard: s3a.byPath("1/1/1/2"),
   sectionHeader: s3a.byPath("1/1/1/2/0"),
   sectionTitle: s3a.byText("Planejadas para hoje"),
@@ -163,6 +179,84 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(actual.width).toBe(numberOf(SPEC.tourButton, "width"));
       expect(actual.height).toBe(numberOf(SPEC.tourButton, "height"));
       expect(actual.fontSize).toBe(numberOf(SPEC.tourButton, "font-size"));
+    });
+  });
+
+  /**
+   * O omnibox em repouso — a peça que abre a tela. O rascunho é fixture porque
+   * o que se mede aqui é a caixa, não o comportamento: `useOmniboxDraft` tem
+   * teste próprio, e um estado de verdade só traria o banco junto.
+   */
+  describe("OmniboxIdle", () => {
+    const draft = {
+      name: "",
+      projectName: "",
+      projectId: null,
+      categoryName: "",
+      categoryId: null,
+      billable: true,
+      plannedTaskId: null,
+      customValues: {},
+    };
+    const box = shellOf(
+      <OmniboxIdle
+        projects={[]}
+        categories={[]}
+        containerRef={createRef<HTMLDivElement>()}
+        draft={draft}
+        setDraft={() => {}}
+        focused={false}
+        setFocused={() => {}}
+        showSuggestions={false}
+        setShowSuggestions={() => {}}
+        activeSuggIdx={0}
+        setActiveSuggIdx={() => {}}
+        editingChip={null}
+        setEditingChip={() => {}}
+        inputRef={createRef<HTMLInputElement>()}
+        suggestions={[]}
+        handleStart={() => Promise.resolve()}
+        handleSuggestionSelect={() => {}}
+        handleInputKeyDown={() => {}}
+        reset={() => {}}
+      />
+    );
+    const [mainRow, chipsRow] = Array.from(box.children);
+
+    it("a casca é o cartão de raio 12 com fundo próprio", () => {
+      expect(geometryOf(box.className).borderRadius).toBe(radiusOf(SPEC.omnibox));
+      expectBackground(box, SPEC.omnibox);
+    });
+
+    it("a linha do campo tem o padding e o gap do spec", () => {
+      expectPadding(mainRow, SPEC.omniboxRow);
+      expect(geometryOf(mainRow.className).gap).toBe(numberOf(SPEC.omniboxRow, "gap"));
+    });
+
+    it("o botão de iniciar é o círculo de 40px", () => {
+      const actual = geometryOf(mainRow.querySelector("button")!.className);
+      expect(actual.width).toBe(numberOf(SPEC.omniboxPlay, "width"));
+      expect(actual.height).toBe(numberOf(SPEC.omniboxPlay, "height"));
+      expect(actual.borderRadius).toBe(radiusOf(SPEC.omniboxPlay));
+    });
+
+    it("o campo lê no degrau de 15px, e não no de 16", () => {
+      const actual = geometryOf(box.querySelector("input")!.className);
+      expect(actual.fontSize).toBe(numberOf(SPEC.omniboxPlaceholder, "font-size"));
+      expect(actual.fontWeight).toBe(Number(SPEC.omniboxPlaceholder.style["font-weight"]));
+    });
+
+    it("a faixa de chips alinha com o botão, e não 4px para dentro", () => {
+      expectPadding(chipsRow, SPEC.omniboxChips);
+      expect(geometryOf(chipsRow.className).gap).toBe(numberOf(SPEC.omniboxChips, "gap"));
+    });
+
+    it("o chip é o degrau de 12,25px no padding 3/8", () => {
+      const chip = chipsRow.querySelector("button")!;
+      const actual = geometryOf(chip.className);
+      expect(actual.fontSize).toBe(numberOf(SPEC.omniboxChip, "font-size"));
+      expect(actual.borderRadius).toBe(radiusOf(SPEC.omniboxChip));
+      expectPadding(chip, SPEC.omniboxChip);
     });
   });
 
@@ -436,11 +530,11 @@ describe("geometria: tela 3a contra o spec do design", () => {
   describe("Badge", () => {
     const chip = shellOf(<Badge tone="billable">Billable</Badge>);
 
-    divergente("é pílula, não retângulo de raio 6 — divergente, F4", () => {
+    it("é pílula, não retângulo de raio 6", () => {
       expect(geometryOf(chip.className).borderRadius).toBe(radiusOf(SPEC.rowChip));
     });
 
-    divergente("tem o tamanho, o peso e o padding do chip de linha — divergente, F4", () => {
+    it("tem o tamanho, o peso e o padding do chip de linha", () => {
       const actual = geometryOf(chip.className);
       expect(actual.fontSize).toBe(numberOf(SPEC.rowChip, "font-size"));
       expect(actual.fontWeight).toBe(Number(SPEC.rowChip.style["font-weight"]));

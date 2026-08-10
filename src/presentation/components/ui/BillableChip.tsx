@@ -33,7 +33,7 @@ export function BillableChip({ billable, onToggle }: BillableChipProps) {
         onToggle();
       }}
       title={billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"}
-      className="shrink-0 flex rounded-chip hover:opacity-80 transition-opacity"
+      className="shrink-0 flex rounded-full hover:opacity-80 transition-opacity"
     >
       {chip}
     </button>

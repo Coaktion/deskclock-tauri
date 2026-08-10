@@ -205,7 +205,9 @@ ações à direita, secundária sem casca, **nunca dois botões cheios**. Largur
 **A4 · `Badge`** — ✅ **feito**. O rótulo curto que **não** responde ao clique: 15 grafias
 distintas viraram um `<span>` de `rounded-chip` com borda, `text-xs`/500, `leading-none`. O raio e
 a borda saem de `chipStyles.ts` e da direção de cor 2a ("definida por borda"); `rounded-full` era
-minoria (6 contra 9) e não sobreviveu.
+minoria (6 contra 9) e não sobreviveu. **A F4 desfez essa parte:** o spec extraído mede 99px, e o
+`Badge` de hoje é a pílula de 10px — a contagem de call sites tinha decidido o que só a medida
+decide.
 
 Seis tons, tirados dos call sites: `neutral`, `billable`, `success`, `accent`, `warning`, `danger`.
 `billable` e `success` compartilham o verde e mesmo assim são tons separados — coincidem na cor,
@@ -989,8 +991,50 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   `gap-4` dá `esperado 20, atual 16`, e trocar duas seções de lugar reprova a ordem. Com a §7.5.8, a
   assertiva de ordem passou a afirmar **as duas pontas pelo JSON** e o par do meio pela decisão — a
   exceção está escrita na própria assertiva, e é o que a impede de virar licença para reordenar.
-- **F4 · Omnibox + `chipStyles` + `Badge`** — pílula, 12,25px nos chips, alinhamento da faixa,
-  placeholder em `text-lead`.
+- **F4 · Omnibox + `chipStyles` + `Badge`** — ✅ **feita (2026-08-10)**. As duas peças que o chip
+  significa deixaram de ser a mesma: **o `Badge` rotula e é pílula; o chip do omnibox edita e é
+  chip.**
+
+  **O `Badge` é o segundo caso fiel da bancada: 48×20 contra 48×20, zero divergência de propriedade,
+  0,00% de pixel.** `rounded-full` no lugar do `rounded-chip`, e o degrau de 10px em peso 500 —
+  `text-overline tracking-normal font-medium leading-[1.4]`. O padding (2/6) já era o do spec. A
+  entrelinha declarada é o que fecha os 20px: `leading-none` dava 16,5, e sem entrelinha própria a
+  altura do chip passaria a depender do que ele herda da linha em volta. Toca **20 call sites em 13
+  arquivos**, e o `BillableChip` acompanhou o raio no invólucro clicável.
+
+  > O `rounded-chip` do `Badge` era decisão escrita na skill, com argumento ("o raio de chip é a
+  > escala documentada"). O spec extraído mede 99px. **Onde prosa e JSON discordam, vale o JSON** —
+  > é a mesma regra que a F1 aplicou ao fundo da pílula do contador, e a skill foi corrigida junto.
+
+  - `chipStyles.ts`: `text-xs` → `text-sm` (12,25) e `py-0.5` → **`py-0.75`** (3px). O passo de 0,75
+    é a escala, não valor arbitrário: no Tailwind v4 ele multiplica `--spacing`, e o build emite
+    `.py-0\.75{padding-block:calc(var(--spacing) * .75)}`. Como o módulo é vocabulário compartilhado,
+    o `OmniboxRunning` recebeu os 12,25px junto.
+  - `OmniboxIdle`: a faixa de chips foi de `px-4` para **`px-3`** — são os 4px da §7.4, e é o que
+    põe o primeiro chip no eixo do botão de play. O campo foi de `text-base!` para **`text-lead!`**,
+    o degrau de 15px que a F0 criou e que até aqui **não tinha consumidor nenhum**.
+  - **A trava passou a cobrir o omnibox**, que era a lacuna que a F0 declarou para esta etapa: seis
+    assertivas sobre o componente **renderizado** (casca, linha do campo, botão de 40px, degrau do
+    campo, faixa de chips, chip). Ele pede **um** provider — `useProjectCategoryMap`, que abre banco
+    e escuta evento do Tauri —, e mockar o hook é uma linha; montar o contexto seria montar o app
+    para medir um padding. **Verificado que reprova**, com sonda: `px-4` dá padding esquerdo 16
+    contra 12, `text-base` dá 16 contra 15, e o chip antigo dá 10,5 contra 12,25. Os dois
+    `divergente` do `Badge` viraram `it`; **sobra um na 3a**, o `TourButton`, que é a F5.
+  - **Bancada:** dois casos novos (chip vazio e chip billable) e uma correção no comparador —
+    `rounded-full` computa `calc(infinity * 1px)`, que o Chromium devolve como `3.35544e+07px`,
+    contra os `99px` do mock. É a mesma normalização que o `radiusOf` do teste já fazia do outro
+    lado; sem ela o badge **fiel** aparecia como divergente, que é o tipo de ruído que faz uma
+    bancada perder credibilidade.
+
+  **O que resta medido, e não é desta etapa:** os chips do omnibox fecham em **24,53 contra 26 de
+  altura**, com todas as propriedades batendo. É o mesmo `--text-sm--line-height` (1.35 declarado
+  contra o `normal` herdado do mock) que segura as linhas em 53,22 contra 55 desde a F2 — calibrar
+  os dois tokens globais é etapa própria, por decisão do usuário.
+
+  **Observação registrada, fora de escopo:** o `OmniboxRunning` tem `px-4 py-3` na linha principal
+  contra o `px-3 py-3` do repouso, então o botão anda 4px quando a tarefa começa. **O mock não
+  desenha o omnibox em execução em nenhuma das 7 telas**, então não há número para decidir — e sem
+  número esta rodada não mexe.
 - **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.
 - **F6 · Fechamento** — exceções declaradas (§7.5.5, §7.5.6 e §7.5.8) na skill `design-system`
   (`.claude/skills/design-system/SKILL.md`, que é onde a §8.4 do CLAUDE.md passou a morar desde

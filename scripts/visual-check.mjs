@@ -96,6 +96,15 @@ function noDoSpec(screenId, path) {
   return no;
 }
 
+/**
+ * Raio total: o mock escreve `99px` e o Tailwind emite `calc(infinity * 1px)`,
+ * que o browser computa como `3.35544e+07px`. São a mesma intenção — é a mesma
+ * normalização que o `radiusOf` do `screenGeometry` faz do outro lado.
+ */
+function pilula(valor) {
+  return Number.parseFloat(valor) >= 99;
+}
+
 /** Só a primeira família importa: o resto é lista de fallback. */
 function primeiraFamilia(v) {
   return v
@@ -260,6 +269,7 @@ for (const caso of casos) {
       esperado = primeiraFamilia(esperado);
       atual = primeiraFamilia(atual);
     }
+    if (m === "borderTopLeftRadius" && pilula(esperado) && pilula(atual)) continue;
     if (esperado !== atual) divergencias.push(`${m}: "${atual}" ≠ "${esperado}"`);
   }
 

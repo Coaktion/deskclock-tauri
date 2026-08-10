@@ -3,7 +3,7 @@
  * tracejado é o que diz "ainda vazio"; preenchido, o chip ganha fundo.
  */
 const base =
-  "px-2 py-0.5 rounded-chip text-xs border transition-colors cursor-pointer whitespace-nowrap";
+  "px-2 py-0.75 rounded-chip text-sm border transition-colors cursor-pointer whitespace-nowrap";
 
 export const chipFilledClass = `${base} bg-raised border-border text-fg-secondary hover:text-fg`;
 

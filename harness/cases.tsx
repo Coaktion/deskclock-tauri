@@ -1,6 +1,7 @@
 import { ChevronRight, Play } from "lucide-react";
 import type { ReactElement } from "react";
 
+import { chipBillableClass, chipEmptyClass } from "@presentation/components/chipStyles";
 import { Badge } from "@presentation/components/ui/Badge";
 import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { PageHeader } from "@presentation/components/ui/PageHeader";
@@ -162,5 +163,30 @@ export const CASES: VisualCase[] = [
     anchor: "1/1/1/2/1/2",
     width: 48,
     element: <Badge tone="billable">Billable</Badge>,
+  },
+  {
+    // Os chips do omnibox não têm componente próprio: são o vocabulário de
+    // classe de `chipStyles.ts`, e o `<button>` aqui é o mesmo que o `Chip`
+    // privado do `OmniboxIdle` escreve em volta deles.
+    id: "omnibox-chip-vazio",
+    screen: "3a",
+    anchor: "1/1/1/0/1/0",
+    width: 60,
+    element: (
+      <button type="button" className={chipEmptyClass}>
+        Projeto
+      </button>
+    ),
+  },
+  {
+    id: "omnibox-chip-billable",
+    screen: "3a",
+    anchor: "1/1/1/0/1/2",
+    width: 62,
+    element: (
+      <button type="button" className={chipBillableClass}>
+        Billable
+      </button>
+    ),
   },
 ];

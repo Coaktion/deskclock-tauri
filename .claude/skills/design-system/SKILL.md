@@ -248,10 +248,19 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   >
   > **O que separa o `Badge` do `FilterPill` é o clique, não o desenho.** O `Badge` é rótulo curto
   > que **não** responde — "Billable", "Enviado", "já existe", o nome de uma tag —, e eram 15 grafias
-  > distintas para isso, em duas famílias de raio e cinco de cor. Ele fecha em `rounded-chip`, e não
-  > no `rounded-full` da pílula: o raio de chip é a escala documentada aqui, o `chipStyles.ts` já a
-  > usava, e `rounded-full` era minoria. **Todo badge tem borda** — a direção de cor é "definida por
-  > borda", e sem ela o tom neutro sobre `raised` não se separa da linha.
+  > distintas para isso, em duas famílias de raio e cinco de cor. **Ele é pílula** — `rounded-full`,
+  > 10px em peso 500, padding 2/6 e `leading-[1.4]`, medida a medida do spec (`1/1/1/2/1/2` da tela
+  > 3a). Nasceu em `rounded-chip` pelo argumento de que o raio de chip era a escala documentada aqui;
+  > o spec extraído mostrou 99px, e o número desempata prosa. O `tracking-normal` e a entrelinha
+  > declarada são deliberados: `text-overline` é o único degrau de 10px da escala e carrega `0.1em`
+  > e peso 600 junto, e sem entrelinha própria a altura do chip dependeria do que ele herda da linha
+  > em volta. **Todo badge tem borda** — a direção de cor é "definida por borda", e sem ela o tom
+  > neutro sobre `raised` não se separa da linha.
+  >
+  > **Os chips do omnibox não são `Badge`, e o vocabulário deles é outro**: `chipStyles.ts` é o
+  > controle que se clica para editar um atributo do rascunho — raio de chip (6), `body/ui` (12,25px)
+  > e padding 3/8, também do spec (`1/1/1/0/1/*`). Badge e chip do omnibox coincidirem em cor não os
+  > torna a mesma peça: um rotula, o outro edita.
   >
   > Seis tons, tirados de uma contagem dos call sites: `neutral`, `billable`, `success`, `accent`,
   > `warning` e `danger`. `billable` e `success` **compartilham o verde e mesmo assim são tons

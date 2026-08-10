@@ -106,12 +106,12 @@ export function OmniboxIdle({
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
-          className="flex-1 text-base! font-medium"
+          className="flex-1 text-lead! font-medium"
         />
       </div>
 
       {/* Chips row */}
-      <div className="flex gap-2 px-4 pb-3 flex-wrap">
+      <div className="flex gap-2 px-3 pb-3 flex-wrap">
         {editingChip === "project" ? (
           <div className="w-40">
             <Autocomplete

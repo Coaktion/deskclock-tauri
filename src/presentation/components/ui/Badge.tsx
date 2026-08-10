@@ -31,11 +31,18 @@ interface BadgeProps {
   className?: string;
 }
 
+/**
+ * A caixa é medida do spec (`1/1/1/2/1/2` da tela 3a): pílula de 10px em peso
+ * 500, padding 2/6. O `tracking-normal` e o `leading-[1.4]` são deliberados —
+ * `text-overline` é o único degrau de 10px da escala e carrega `0.1em` e peso
+ * 600 junto, e sem a entrelinha declarada a altura do chip dependeria do que ele
+ * herda da linha em volta.
+ */
 export function Badge({ tone = "neutral", icon, children, title, className = "" }: BadgeProps) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 border rounded-chip text-xs font-medium leading-none ${TONE[tone]} ${className}`}
+      className={`inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 border rounded-full text-overline tracking-normal font-medium leading-[1.4] ${TONE[tone]} ${className}`}
     >
       {icon}
       {children}
