@@ -159,7 +159,9 @@ export function TaskRow({
         {duration && (
           <span
             className={`col-start-1 row-start-1 text-sm font-mono tabular-nums text-fg-secondary ${
-              actions ? "transition-opacity group-hover:opacity-0 group-focus-within:opacity-0" : ""
+              actions
+                ? "pointer-events-none transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
+                : ""
             }`}
           >
             {duration}

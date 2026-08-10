@@ -68,6 +68,22 @@ describe("TaskRow", () => {
     expect(geometryOf(linha.className).paddingLeft).toBe(paddingDoPai! * 2);
   });
 
+  /**
+   * Duração e ações dividem a mesma célula, e no hover a duração vai a
+   * `opacity-0` — que **cria contexto de empilhamento** e a joga para a camada de
+   * cima, acima das ações. Invisível ela continua sendo alvo de clique, e como
+   * está alinhada à direita, cobre justamente os últimos botões: era por isso que
+   * o "Excluir" da linha não respondia. O jsdom não faz hit-test, então o que dá
+   * para amarrar aqui é a classe que tira a duração do caminho.
+   */
+  it("a duração não intercepta o clique das ações que ela cobre", () => {
+    const { container } = render(
+      <TaskRow title="a" duration="1h" actions={<button type="button">x</button>} />
+    );
+    const duracao = container.querySelector(".tabular-nums")!;
+    expect(duracao.className).toContain("pointer-events-none");
+  });
+
   it("o chip só alterna quando a linha entrega o clique", () => {
     const { rerender } = render(<TaskRow title="a" duration="1h" billable />);
     expect(screen.queryByRole("button")).toBeNull();
