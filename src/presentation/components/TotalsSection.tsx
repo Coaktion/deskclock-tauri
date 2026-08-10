@@ -41,7 +41,10 @@ export function TotalsSection({
   const weekPct = (weekSeconds / weeklyGoalSec) * 100;
 
   const dailyLabel = `meta ${config.isLoaded ? config.get("dailyGoalHours") : 8}h`;
-  const weeklyLabel = `meta ${config.isLoaded ? config.get("weeklyGoalHours") : 40}h`;
+  // Os dias moram na dica, e não colados ao valor — é onde o design os escreve.
+  const weeklyLabel = `meta ${config.isLoaded ? config.get("weeklyGoalHours") : 40}h · ${weekDays} ${
+    weekDays === 1 ? "dia" : "dias"
+  }`;
 
   return (
     <section className={layout === "grid" ? "grid grid-cols-2 gap-3" : "flex gap-3"}>
@@ -55,7 +58,7 @@ export function TotalsSection({
       <KpiCard
         label="Non-billable"
         value={formatHHMMSS(nonBillableSeconds)}
-        tone="muted"
+        barTone="muted"
         barPct={nonBillablePct}
         hint={totalToday > 0 ? `${Math.round(nonBillablePct)}% do total` : undefined}
       />
@@ -68,7 +71,7 @@ export function TotalsSection({
       />
       <KpiCard
         label="Semana"
-        value={formatWeekTotal(weekSeconds, weekDays)}
+        value={formatWeekTotal(weekSeconds)}
         barPct={weekPct}
         barTone="accent"
         hint={weeklyLabel}

@@ -510,6 +510,14 @@ Depois da fase D (2026-08-10), agora congelado em `componentPrimitives.test.ts`:
 caixa própria em **121** / 44 arquivos (era 131 com `className` literal na abertura, por outro
 critério) e campo cru fora de `ui/` em **6** / 3 arquivos.
 
+Depois da F5 (2026-08-10): **zero `divergente` na 3a** — as 15 que a F0 mediu foram fechadas entre
+a F1 e a F5 —, e **3 dos 10 casos da bancada em zero divergência de propriedade e pixel**
+(`page-header`, `tour-button`, `badge-billable`). Os 7 restantes divergem **só em altura**, todos
+pelo mesmo `--text-sm--line-height`/`--text-xs--line-height` (1.35/1.4 declarados na B1 como
+valores de partida, contra o `normal` que o mock herda): linha 53,22 contra 55 · KPI 97,08 contra
+98 · chip do omnibox 24,53 contra 26. **Calibrá-los é etapa própria**, por decisão do usuário — são
+dois tokens globais que mudam todo texto de 10,5 e 12,25px do app.
+
 Depois da F2 (2026-08-10), medido na bancada visual: as **três formas** da linha em zero divergência
 de propriedade, e altura de **53,22 contra 55** nas três — 1,78px que são o line-height, não a linha.
 O `SectionCard` de três linhas fecha em **198,66 contra 204**, que é exatamente 3 × 1,78: a conta que
@@ -554,6 +562,12 @@ translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-b
 
 **Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B, C e E foram
 conferidos na tela). Por ordem de risco:
+
+-5. **A sidebar nas 7 telas** (F5) — o rótulo caiu de 12,25px para **9px**, e é a peça que aparece
+    em toda tela. Conferir se ele ainda **se lê** — 9px é o menor texto do app, e no **modo claro**
+    é onde o contraste some primeiro. Olhar "Integrações" e "Histórico", que eram os que truncavam,
+    e o item **ativo**, cujo rótulo é `accent-text` e não `fg-muted`. Os cartões de KPI mudaram
+    junto: o valor de "Non-billable" ficou branco (era cinza) e o trilho ficou um degrau mais claro.
 
 -4. **A linha de tarefa nas 5 telas** (F2) — é a mudança de maior alcance depois da escala: **toda**
     lista perdeu o respiro entre linhas e ganhou régua, e a linha deixou de ser pílula para ser
@@ -1047,7 +1061,62 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   > estados**. O início ganhou slot fixo de 128×24 porque o `input[type=time]` do Chromium mede
   > 26,86 com o `py-0.75` que fecha o chip em 24,53: o `-webkit-datetime-edit` traz caixa própria e
   > ignora entrelinha, então a altura vem de `h-6`, não de padding.
-- **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.
+- **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — ✅ **feita (2026-08-10)**. É a
+  etapa que **zera os `divergente` da 3a**: o utilitário saiu do `screenGeometry.test.tsx`, e volta
+  com a F6, que estende a trava às outras 6 telas.
+
+  **O `tour-button` é o terceiro caso fiel da bancada: 22×22 contra 22×22, zero divergência de
+  propriedade, 4 pixels.** Ele era o que sobrava do diff do `page-header` desde a F3 — o `?` em
+  `w-5 h-5`/`text-xs` virou `size-5.5`/`text-micro`, que é o degrau de 11px da F0. Toca os quatro
+  call sites (as 7 telas mais os cabeçalhos de Google, Zendesk e Clockify).
+
+  **A `Sidebar` entrou na trava**, que era a lacuna que a F0 declarou para esta etapa. Ela só pede
+  contexto por causa do `WorkspaceSwitcher` (que puxa três), e o mock **não desenha o seletor** —
+  ele é exceção declarada (§7.5.6) —, então mockar o componente para `null` é medir exatamente o nó
+  do spec, não uma versão amputada dele. Seis assertivas: coluna, pilha, item, barra do ativo,
+  rótulo e o botão de feedback. **Verificado que reprova**, com sonda: `gap-0.5` dá `esperado 4,
+  atual 2` e `text-sm` dá `esperado 9, atual 12,25`.
+
+  O que mudou nela: o rótulo foi para **`text-nav`** (9px, lh 1 — o `leading-none` escrito à mão
+  saiu, porque o token o traz), e o gap ícone↔rótulo de 2 para **4**, nos sete itens e no Feedback.
+  O `text-nav` também não tinha consumidor nenhum desde a F0. É o degrau que resolve o "Integra…"
+  cortado: em 12,25px o rótulo não cabia nos 68px da coluna.
+
+  **`KpiCard`**, três acertos, e nenhum deles é de geometria — a trava mede classe e o resolvedor
+  ignora cor de propósito, então quem os viu foi a bancada:
+  - **O trilho é `bg-border-subtle`, não `bg-raised`.** O spec mede `oklch(0.26 0.033 257)`, que é
+    `border-subtle` exato — a mesma correção, pelo mesmo motivo, que a F1 fez na pílula do contador
+    do `SectionCard`. No modo claro o `raised` (0.967) era quase invisível sobre o `surface` do
+    cartão.
+  - **O valor de Non-billable volta a `fg`.** Ele era `tone="muted"` (`fg-secondary`), o que o
+    deixava um degrau abaixo de "Total hoje" ao lado sem que nada no design pedisse isso. O tom
+    desceu para a barra (`barTone="muted"`), que é onde o mock de fato apaga.
+  - **O número da dica sai em mono**, e só ele: `72% do total`, `meta 8h`, `meta 40h · 4 dias`. A
+    quebra mora no primitivo — a dica continua sendo texto simples no call site, e é isso que
+    impede os quatro cartões a escreverem `font-mono tabular-nums` cada um por si. A assertiva
+    também sai do JSON: o spec declara `font-family` no nó do número e **não** no da frase.
+
+  **`formatWeekTotal` perdeu o parâmetro `days`** e passou a devolver `27h12` — não `HH:MM:SS`. O
+  segundo não diz nada sobre uma semana, e o `2d` colado ao valor era um segundo dado disputando o
+  degrau de 17px. **Os dias foram para a dica** (§7.5.4), com plural resolvido (`1 dia`/`4 dias`).
+
+  **A barra de Non-billable fica em `fg-muted`, e é exceção declarada** (decisão do usuário,
+  2026-08-10). O spec mede `oklch(0.55 0.02 264)`, que no `index.css` é `--color-project-none` —
+  **cor de entidade**. São 0,05 de luminosidade contra o `fg-muted` de hoje, diferença que não se vê
+  na tela, e emprestar o token de projeto para o cromo faria a barra mudar de cor no dia em que a
+  paleta de projeto mudasse. A assertiva não cobra a barra.
+
+  **Fora, e registrado:** a `Sidebar` **não** ganhou caso na bancada visual — ela pede três
+  providers de verdade, e o `vi.mock` que a trava usa não existe ali. A composição
+  `tasks-corpo*` acompanhou os dois acertos do KPI, mas segue com a casca antiga das Entradas
+  (`flex-1` + rolagem por dentro), que a §7.5.8 reverteu na app; corrigi-la é da F6.
 - **F6 · Fechamento** — exceções declaradas (§7.5.5, §7.5.6 e §7.5.8) na skill `design-system`
   (`.claude/skills/design-system/SKILL.md`, que é onde a §8.4 do CLAUDE.md passou a morar desde
   2026-08-10) e a trava estendida às outras 6 telas.
+
+  **Três dívidas de documento a fechar junto, achadas na F5:** a tabela da escala na skill ainda
+  descreve **sete** degraus e não os **dez** da §7.5.1 — `text-nav`, `text-micro` e `text-lead`
+  nasceram na F0 e hoje têm consumidor (sidebar, faixa de horário e slot de ação, campo do omnibox),
+  mas quem lê a skill não os encontra. O `divergente` do `screenGeometry.test.tsx` volta com esta
+  etapa, e volta com a mesma regra. E a composição `tasks-corpo*` da bancada segue com a casca
+  antiga das Entradas, que a §7.5.8 já reverteu na app.

@@ -22,8 +22,17 @@ export function formatDurationCompact(totalSeconds: number): string {
   return `${m}m`;
 }
 
-export function formatWeekTotal(totalSeconds: number, days: number): string {
-  return `${formatHHMMSS(totalSeconds)} ${days}d`;
+/**
+ * O total da semana no cartão de KPI — `27h12`. Ele não é `HH:MM:SS`: o segundo
+ * não diz nada sobre uma semana, e o `2d` que vinha colado ao valor era um
+ * segundo dado disputando o degrau de 17px. **Os dias passaram para a dica**
+ * (`meta 40h · 4 dias`), que é onde o design os escreve.
+ */
+export function formatWeekTotal(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}h${String(m).padStart(2, "0")}`;
 }
 
 export function formatTimeOfDay(isoString: string): string {

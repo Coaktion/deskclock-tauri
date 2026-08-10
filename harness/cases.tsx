@@ -7,6 +7,7 @@ import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { PageHeader } from "@presentation/components/ui/PageHeader";
 import { SectionCard } from "@presentation/components/ui/SectionCard";
 import { TaskRow } from "@presentation/components/ui/TaskRow";
+import { TourButton } from "@presentation/components/ui/TourButton";
 
 /**
  * Os casos da bancada visual: o mesmo componente que a app renderiza, com os
@@ -156,6 +157,15 @@ export const CASES: VisualCase[] = [
         onStartTour={() => {}}
       />
     ),
+  },
+  {
+    // O `?` sozinho: dentro do `page-header` ele é o único resto do diff de
+    // pixel daquele caso, e num círculo de 22px é o raio e a borda que denunciam.
+    id: "tour-button",
+    screen: "3a",
+    anchor: "1/1/0/2/0",
+    width: 22,
+    element: <TourButton onClick={() => {}} />,
   },
   {
     id: "badge-billable",

@@ -52,7 +52,7 @@ export function Sidebar({ current, onChange }: SidebarProps) {
             key={page}
             onClick={() => onChange(page)}
             title={label}
-            className={`relative w-full flex flex-col items-center gap-0.5 py-2 px-1 rounded-control transition-colors ${
+            className={`relative w-full flex flex-col items-center gap-1 py-2 px-1 rounded-control transition-colors ${
               current === page
                 ? "bg-accent/10 text-accent-text"
                 : "text-fg-muted hover:text-fg hover:bg-raised"
@@ -62,7 +62,7 @@ export function Sidebar({ current, onChange }: SidebarProps) {
               <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-r-full" />
             )}
             {icon}
-            <span className="text-sm font-medium leading-none truncate max-w-full">{short}</span>
+            <span className="text-nav font-medium truncate max-w-full">{short}</span>
           </button>
         ))}
       </div>
@@ -70,10 +70,10 @@ export function Sidebar({ current, onChange }: SidebarProps) {
       <button
         onClick={() => openFeedback().catch(() => {})}
         title="Enviar feedback"
-        className="w-12 flex flex-col items-center gap-0.5 py-1.5 rounded-control text-fg-muted hover:text-fg-secondary hover:bg-raised transition-colors"
+        className="w-12 flex flex-col items-center gap-1 py-1.5 rounded-control text-fg-muted hover:text-fg-secondary hover:bg-raised transition-colors"
       >
         <MessageSquare size={16} />
-        <span className="text-sm font-medium leading-none">Feedback</span>
+        <span className="text-nav font-medium">Feedback</span>
       </button>
     </nav>
   );

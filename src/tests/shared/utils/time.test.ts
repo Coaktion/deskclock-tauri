@@ -41,9 +41,11 @@ describe("formatDurationCompact", () => {
 });
 
 describe("formatWeekTotal", () => {
-  it("formata total de semana com dias", () =>
-    expect(formatWeekTotal(54000, 2)).toBe("15:00:00 2d"));
-  it("formata 0 segundos", () => expect(formatWeekTotal(0, 0)).toBe("00:00:00 0d"));
+  it("formata o total compacto, sem segundos", () => expect(formatWeekTotal(97920)).toBe("27h12"));
+  it("mantém a hora sem zero à esquerda e o minuto com dois dígitos", () =>
+    expect(formatWeekTotal(32700)).toBe("9h05"));
+  it("passa das 99h sem quebrar", () => expect(formatWeekTotal(468000)).toBe("130h00"));
+  it("formata 0 segundos", () => expect(formatWeekTotal(0)).toBe("0h00"));
 });
 
 describe("parseDurationInput", () => {

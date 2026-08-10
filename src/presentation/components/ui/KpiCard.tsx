@@ -15,6 +15,24 @@ const BAR_TONE: Record<KpiTone, string> = {
   muted: "bg-fg-muted",
 };
 
+/**
+ * A dica mistura palavra e número — `72% do total`, `meta 40h · 4 dias` —, e o
+ * design escreve o número em mono dentro da frase em sans. A quebra mora aqui,
+ * e não no call site, porque é o que impede os quatro cartões a escreverem
+ * `font-mono tabular-nums` cada um por si.
+ */
+function withMonoNumbers(hint: string) {
+  return hint.split(/(\d[^\s·]*)/g).map((part, i) =>
+    i % 2 === 1 ? (
+      <span key={i} className="font-mono tabular-nums">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+}
+
 interface KpiCardProps {
   label: string;
   value: string;
@@ -40,7 +58,7 @@ export function KpiCard({ label, value, hint, tone = "default", barPct, barTone 
       {/* O trilho é desenhado sempre, e é ele que mantém os cartões da mesma
           altura: os quatro do Histórico ficam lado a lado, e dois deles não têm
           percentual nenhum a mostrar. Sem `barPct`, fica vazio. */}
-      <div className="h-[3px] bg-raised rounded-full overflow-hidden mt-1">
+      <div className="h-[3px] bg-border-subtle rounded-full overflow-hidden mt-1">
         {pct !== undefined && (
           <div
             className={`h-full rounded-full transition-all duration-300 ${BAR_TONE[barTone ?? tone]}`}
@@ -48,7 +66,7 @@ export function KpiCard({ label, value, hint, tone = "default", barPct, barTone 
           />
         )}
       </div>
-      {hint && <span className="text-xs text-fg-muted mt-0.5">{hint}</span>}
+      {hint && <span className="text-xs text-fg-muted mt-0.5">{withMonoNumbers(hint)}</span>}
     </div>
   );
 }

@@ -184,9 +184,15 @@ function Kpis({ layout }: { layout: "row" | "grid" }) {
       className={`flex-1 min-w-0 ${layout === "grid" ? "grid grid-cols-2 gap-3" : "flex gap-3"}`}
     >
       <KpiCard label="Billable hoje" value="04:12:38" tone="billable" barPct={72} hint="72% do total" />
-      <KpiCard label="Non-billable" value="01:36:02" tone="muted" barPct={28} hint="28% do total" />
+      <KpiCard
+        label="Non-billable"
+        value="01:36:02"
+        barTone="muted"
+        barPct={28}
+        hint="28% do total"
+      />
       <KpiCard label="Total hoje" value="05:48:40" barPct={72} barTone="accent" hint="meta 8h" />
-      <KpiCard label="Semana" value="27h12" barPct={68} barTone="accent" hint="meta 40h" />
+      <KpiCard label="Semana" value="27h12" barPct={68} barTone="accent" hint="meta 40h · 4 dias" />
     </section>
   );
 }

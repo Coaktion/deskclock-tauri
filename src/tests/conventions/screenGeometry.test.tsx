@@ -5,6 +5,7 @@ import { createRef, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { OmniboxIdle } from "@presentation/components/OmniboxIdle";
+import { Sidebar } from "@presentation/components/Sidebar";
 import { Badge } from "@presentation/components/ui/Badge";
 import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { PageHeader } from "@presentation/components/ui/PageHeader";
@@ -42,27 +43,26 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  *    congela o que já está — foi assim que as cinco travas anteriores nasceram
  *    verdes sobre um layout aproximado.
  *
- * ## `divergente` — a catraca
+ * ## `divergente` — a catraca, e por que ela não aparece aqui
  *
  * A regra 2 pede um teste que reprova hoje, mas commitar 15 falhas soltas
  * deixaria o CI vermelho por cinco sessões e, com ele vermelho, ninguém
- * distingue a divergência conhecida da regressão nova. Então cada divergência
- * medida entra como `divergente(...)`, que é `it.fails`: **passa enquanto a
- * assertiva reprova**.
+ * distingue a divergência conhecida da regressão nova. Cada divergência medida
+ * entrava então como `divergente(...)`, que é `it.fails`: passa **enquanto** a
+ * assertiva reprova. Corrigir o componente faz o `it.fails` reprovar, e a única
+ * saída é trocar `divergente` por `it` — corrigir sem declarar é impossível, e
+ * declarar sem corrigir também.
  *
- * O efeito é uma catraca que falha nos dois sentidos, como o
- * `meaningColors.test.ts` já faz com a lista dele. Quando a etapa corrige o
- * componente, a assertiva passa, o `it.fails` reprova, e a única saída é trocar
- * `divergente` por `it` — ou seja, **corrigir sem declarar é impossível, e
- * declarar sem corrigir também**. `divergente` que sobra é dívida visível; zero
- * `divergente` é a tela fiel.
+ * **A tela 3a está em zero**, e é por isso que o utilitário não existe mais no
+ * arquivo: as 15 divergências que a F0 mediu foram fechadas entre a F1 e a F5.
+ * Ele volta com a F6, que estende a trava às outras 6 telas — e volta com a
+ * mesma regra, não como licença para deixar assertiva vermelha em paz.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
- * renderizam sem provider — mais o `OmniboxIdle`, que pede um só (ver o bloco
- * dele) — e a composição do corpo da `TasksPage`, que é lida do código-fonte. A
- * `Sidebar` depende de contexto e entra na etapa que já a toca, a F5. Enquanto
- * não entrar, **ela não está coberta**, e dizer isso aqui é o que impede a lista
- * de parecer completa.
+ * renderizam sem provider — mais o `OmniboxIdle` e a `Sidebar`, que pedem um
+ * mock cada (ver os blocos deles) — e a composição do corpo da `TasksPage`, que
+ * é lida do código-fonte. As outras 6 telas **não estão cobertas**, e dizer isso
+ * aqui é o que impede a lista de parecer completa.
  */
 
 /**
@@ -72,6 +72,17 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  */
 vi.mock("@presentation/hooks/useProjectCategoryMap", () => ({
   useProjectCategoryMap: () => ({ categoriesFor: () => [] }),
+}));
+
+/**
+ * A `Sidebar` só depende de contexto por causa do `WorkspaceSwitcher`, que puxa
+ * três (workspaces, tarefa em execução, guarda de troca). Mockar o componente é
+ * mais honesto que montar os três: o mock do design **não desenha o seletor** —
+ * ele é exceção declarada (§7.5.6) —, então o que a trava mede é a nav sem ele,
+ * que é exatamente o nó do spec.
+ */
+vi.mock("@presentation/components/WorkspaceSwitcher", () => ({
+  WorkspaceSwitcher: () => null,
 }));
 
 const s3a = screen("3a");
@@ -89,6 +100,15 @@ const SPEC = {
   kpiValue: s3a.byText("04:12:38"),
   kpiTrack: s3a.byPath("1/1/1/1/0/2"),
   kpiHint: s3a.byPath("1/1/1/1/0/3"),
+  kpiHintNumber: s3a.byPath("1/1/1/1/0/3/0"),
+  sidebar: s3a.byPath("1/0"),
+  sidebarItems: s3a.byPath("1/0/0"),
+  sidebarItem: s3a.byPath("1/0/0/0"),
+  sidebarActiveBar: s3a.byPath("1/0/0/0/0"),
+  // Por caminho, não por texto: "Tarefas" é também o título da página.
+  sidebarLabel: s3a.byPath("1/0/0/0/2"),
+  sidebarFeedback: s3a.byPath("1/0/1"),
+  sidebarFeedbackLabel: s3a.byText("Feedback"),
   omnibox: s3a.byPath("1/1/1/0"),
   omniboxRow: s3a.byPath("1/1/1/0/0"),
   omniboxPlay: s3a.byPath("1/1/1/0/0/0"),
@@ -117,13 +137,6 @@ function shellOf(element: ReactElement): HTMLElement {
   if (!(shell instanceof HTMLElement)) throw new Error("componente não renderizou elemento");
   return shell;
 }
-
-/**
- * Divergência medida e ainda não corrigida: passa **enquanto** a assertiva
- * reprova. A etapa que corrige o componente troca `divergente` por `it` — ver o
- * bloco "catraca" no topo do arquivo.
- */
-const divergente = it.fails;
 
 /**
  * Padding é a única propriedade onde ausência **é** zero: o valor inicial do CSS
@@ -159,6 +172,56 @@ function expectBottomRule(el: Element, node: SpecNode) {
 }
 
 describe("geometria: tela 3a contra o spec do design", () => {
+  /**
+   * A moldura da esquerda — a única peça que aparece nas 7 telas e cujo rótulo
+   * tem degrau próprio (9px): em `body/ui` ele cortava "Integra…" numa coluna
+   * de 68px.
+   */
+  describe("Sidebar", () => {
+    const nav = shellOf(<Sidebar current="tasks" onChange={() => {}} />);
+    const [items, feedback] = Array.from(nav.children);
+    const active = items.children[0];
+
+    it("tem a largura e o padding da coluna", () => {
+      expect(geometryOf(nav.className).width).toBe(numberOf(SPEC.sidebar, "width"));
+      expectPadding(nav, SPEC.sidebar);
+    });
+
+    it("a pilha de itens tem o gap e o padding do spec", () => {
+      expect(geometryOf(items.className).gap).toBe(numberOf(SPEC.sidebarItems, "gap"));
+      expectPadding(items, SPEC.sidebarItems);
+    });
+
+    it("o item tem o gap ícone↔rótulo, o padding e o raio do spec", () => {
+      const actual = geometryOf(active.className);
+      expect(actual.gap).toBe(numberOf(SPEC.sidebarItem, "gap"));
+      expect(actual.borderRadius).toBe(radiusOf(SPEC.sidebarItem));
+      expectPadding(active, SPEC.sidebarItem);
+    });
+
+    it("a barra do item ativo tem os 2px do spec", () => {
+      const bar = active.children[0];
+      expect(geometryOf(bar.className).width).toBe(numberOf(SPEC.sidebarActiveBar, "width"));
+    });
+
+    it("o rótulo é o degrau de 9px em peso 500, sem entrelinha sobrando", () => {
+      const actual = geometryOf(active.lastElementChild!.className);
+      expect(actual.fontSize).toBe(numberOf(SPEC.sidebarLabel, "font-size"));
+      expect(actual.fontWeight).toBe(Number(SPEC.sidebarLabel.style["font-weight"]));
+      expect(actual.lineHeight).toBe(Number(SPEC.sidebarLabel.style["line-height"]));
+    });
+
+    it("o botão de feedback tem a largura, o gap e o padding do spec", () => {
+      const actual = geometryOf(feedback.className);
+      expect(actual.width).toBe(numberOf(SPEC.sidebarFeedback, "width"));
+      expect(actual.gap).toBe(numberOf(SPEC.sidebarFeedback, "gap"));
+      expectPadding(feedback, SPEC.sidebarFeedback);
+      expect(geometryOf(feedback.lastElementChild!.className).fontSize).toBe(
+        numberOf(SPEC.sidebarFeedbackLabel, "font-size")
+      );
+    });
+  });
+
   describe("PageHeader", () => {
     const header = shellOf(<PageHeader title="Tarefas" onStartTour={() => {}} />);
 
@@ -172,7 +235,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expectPadding(header, SPEC.pageHeader);
     });
 
-    divergente("o botão de tour é o círculo de 22px com glifo de 11px — divergente, F5", () => {
+    it("o botão de tour é o círculo de 22px com glifo de 11px", () => {
       const button = header.querySelector("button");
       expect(button).not.toBeNull();
       const actual = geometryOf(button!.className);
@@ -303,6 +366,19 @@ describe("geometria: tela 3a contra o spec do design", () => {
       const actual = geometryOf(hint.className);
       expect(actual.fontSize).toBe(numberOf(SPEC.kpiHint, "font-size"));
       expect(actual.marginTop).toBe(numberOf(SPEC.kpiHint, "margin-top"));
+    });
+
+    it("o número da dica sai em mono, e só ele", () => {
+      // Família não é medida, então o resolvedor de geometria a ignora — mas a
+      // afirmação continua saindo do JSON: o spec declara `font-family` no nó
+      // do número e **não** no da frase em volta.
+      expect(stringOf(SPEC.kpiHintNumber, "font-family")).toContain("Source Code Pro");
+      expect(SPEC.kpiHint.style["font-family"]).toBeUndefined();
+
+      const [mono] = Array.from(hint.children);
+      expect(mono.className).toMatch(/(?:^|\s)font-mono(?:\s|$)/);
+      expect(mono.textContent).toBe("72%");
+      expect(hint.textContent).toBe("72% do total");
     });
   });
 
