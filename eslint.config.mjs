@@ -7,6 +7,12 @@ import prettierConfig from "eslint-config-prettier";
 export default tseslint.config(
   { ignores: ["dist/", "src-tauri/"] },
   js.configs.recommended,
+  {
+    // Os scripts de build rodam no Node, fora do bundle: sem isto o `console`
+    // do extrator de spec lê como global indefinido.
+    files: ["scripts/**/*.mjs"],
+    languageOptions: { globals: { console: "readonly", process: "readonly" } },
+  },
   ...tseslint.configs.recommended,
   {
     files: ["**/*.{ts,tsx}"],

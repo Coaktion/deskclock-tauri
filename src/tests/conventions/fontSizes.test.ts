@@ -6,9 +6,16 @@ import { listSourceFiles } from "../helpers/sourceFiles";
 
 /**
  * A escala tipográfica é um conjunto fechado: `text-xl` (20), `text-metric`
- * (17), `text-base` (16), `text-body` (14), `text-sm` (12,25), `text-xs` (10,5)
- * e `text-overline` (10, com peso e tracking próprios). Tamanho em px
- * arbitrário fica de fora.
+ * (17), `text-base` (16), `text-lead` (15), `text-body` (14), `text-sm`
+ * (12,25), `text-micro` (11), `text-xs` (10,5), `text-overline` (10, com peso e
+ * tracking próprios) e `text-nav` (9). Tamanho em px arbitrário fica de fora.
+ *
+ * Os três últimos degraus a entrar — `nav`, `micro`, `lead` — vieram do censo
+ * de `font-size` no spec extraído dos wireframes: 9px em 56 lugares, 11px em
+ * 40, 15px em 2. Enquanto não existiam, **este teste era o que impedia a
+ * fidelidade neles** — proibia `text-[11px]` sem haver token para pôr no lugar,
+ * e cada um desses 96 pontos renderizava um degrau vizinho. O conjunto ser
+ * fechado é a regra certa; fechá-lo antes de medir o design foi o erro.
  *
  * Ao contrário dos outros testes de convenção desta pasta, este nasce **sem
  * baseline**: as 176 ocorrências que existiam foram convertidas de uma vez, e

@@ -105,6 +105,12 @@ const TYPOGRAPHY_TOKENS = [
   "--text-body--line-height",
   "--text-metric",
   "--text-metric--line-height",
+  "--text-nav",
+  "--text-nav--line-height",
+  "--text-micro",
+  "--text-micro--line-height",
+  "--text-lead",
+  "--text-lead--line-height",
 ];
 
 /**
@@ -121,6 +127,11 @@ const REANCHORED_SIZES: [token: string, rem: string, px: string][] = [
   ["--text-xs", "0.65625rem", "10,5px"],
   ["--text-body", "0.875rem", "14px"],
   ["--text-metric", "1.0625rem", "17px"],
+  // Os três degraus medidos no spec extraído: 9px aparece 56 vezes nos
+  // wireframes e 11px outras 40, e nenhum dos dois existia aqui.
+  ["--text-nav", "0.5625rem", "9px"],
+  ["--text-micro", "0.6875rem", "11px"],
+  ["--text-lead", "0.9375rem", "15px"],
 ];
 
 /** Cada família tem duas faces: latin e latin-ext. */

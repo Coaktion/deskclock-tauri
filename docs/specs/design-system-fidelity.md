@@ -521,8 +521,13 @@ número em `font-mono`, ou seja `mono/tempo` — deveria ser `text-metric`, como
 Tokens de cor (batem valor a valor com o bloco `@theme` do guia), os dois eixos modo × acento, a
 paleta clara própria, as fontes empacotadas com `font-display: block`, `Toggle` 40×20 / knob 16 /
 translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-bold`, cabeçalho de
-56px, `SectionCard` com cabeçalho em overline (confere com o documento _Telas redesenhadas_, não
-com a tabela de escala).
+56px.
+
+> ⚠ **Corrigido em 2026-08-10:** esta seção afirmava que o `SectionCard` estava fiel, "confere com
+> o documento _Telas redesenhadas_". Era falso — a auditoria conferiu que o título está em overline
+> e parou aí. A casca, o fundo do cabeçalho, a régua inferior e os paddings divergem todos (§7.4).
+> Serve de aviso ao resto desta seção: "confere com o documento" sem número medido não é
+> verificação.
 
 ---
 
@@ -590,3 +595,163 @@ conferidos na tela). Por ordem de risco:
 6. `EditTaskModal` no modo claro (o mais alto, e o único `md` que rola) e o `EditPlannedTaskModal`,
    onde os botões de agendamento viraram `Button` e ficaram 2 px mais baixos.
 7. Em todos: **ESC não deve esconder a janela do app** — é o `data-modal-open` novo na casca.
+
+---
+
+## 7. Rodada 3 — composição de tela (2026-08-10)
+
+Terceira tentativa de pixel perfect. As duas anteriores entregaram layout aproximado, e esta seção
+existe porque a **causa é de método**, não de esforço.
+
+### 7.1 Por que as rodadas 1 e 2 falharam
+
+1. **Trabalhamos a partir de prosa.** As auditorias descreviam ("cabeçalho de seção em overline"), e
+   prosa não tem número. O que não estava escrito em nenhum documento — fundo próprio do cabeçalho,
+   régua inferior, grid de colunas fixas — nunca entrou em plano nenhum. Foi assim que a §5 passou a
+   afirmar uma falsidade sobre o `SectionCard`.
+2. **As travas nasceram depois da correção, para congelar o que já estava.** Por construção não
+   podiam reprovar o que sobrou: `gap-4` onde o design pede 20px, chip à esquerda em vez de à
+   direita, ação escondida no hover — tudo passa verde.
+3. **Nenhuma fase olhou para composição.** A/B/C/D/E cobrem primitivo, escala, três correções
+   pontuais, travas e o chip. Ordem de seção, anatomia do cartão e grid da linha não estão em
+   nenhuma delas.
+
+### 7.2 A causa estrutural que o censo revelou
+
+Censo mecânico de `font-size` nas 7 telas do documento _Telas redesenhadas_:
+
+| px no design | ocorrências | token                                                     |
+| ------------ | ----------- | --------------------------------------------------------- |
+| 12,25        | 92          | `text-sm` ✓                                               |
+| 10           | 63          | `text-overline` ✓ (peso/tracking sobrescritos no chip)     |
+| **9**        | **56**      | **não existia**                                           |
+| **11**       | **40**      | **não existia**                                           |
+| 10,5         | 38          | `text-xs` ✓                                               |
+| 12           | 21          | `text-sm` (0,25px — aceito)                               |
+| 14 / 17 / 20 | 14 / 9 / 7  | `text-body` / `text-metric` / `text-xl` ✓                 |
+| **15**       | 2           | **não existia** (placeholder do omnibox)                  |
+
+**96 ocorrências usam dois degraus que a escala fechada não tinha** — e o `fontSizes.test.ts` proíbe
+escrevê-los inline, sem baseline nem exceção. A B1 reancorou `sm`/`xs` e criou `body`/`metric`, mas
+não mediu que faltavam 9px (rótulo da sidebar) e 11px (todo o micro-mono: hora, contagem, total,
+link, glifo do `?`). **Não é descuido acumulado: é a escala do micro-texto renderizando um degrau
+errado em todas as telas** — a explicação mecânica do "quase certo".
+
+Segundo achado: `grid-template-columns` aparece **17×** em três formas — `auto 1fr auto auto` (7),
+`88px 1fr auto auto` (7), `auto 88px 1fr auto auto` (3). A linha de tarefa é **grid de colunas fixas
+no sistema inteiro**. `TaskRow` ser flex é divergência sistêmica, não da tela 3a.
+
+### 7.3 O mecanismo de garantia
+
+1. **Spec mecânico versionado** — `scripts/extract-design-spec.mjs` lê os 5 documentos via MCP
+   `DesignSync` e emite `docs/design-spec/*.json`: um nó por elemento, com toda propriedade
+   geométrica (font-size, weight, line-height, color, padding, gap, radius, border, medida fixa,
+   `grid-template-columns`, display). Protótipo validado em 2026-08-10 — produziu §7.2 e §7.4.
+   **Toda decisão daqui em diante cita `spec[...]`, não prosa.**
+2. **Trava escrita antes da correção** — `src/tests/conventions/screenGeometry.test.ts` renderiza o
+   componente real com RTL, lê o `className`, resolve cada utilitário para px por uma tabela
+   derivada de `index.css` + escala do Tailwind, e compara com o JSON. Mensagem:
+   `esperado 10px · atual 8px · TaskRow.gap`. **Nasce vermelha**; cada etapa esverdeia sua fatia.
+3. **Cobertura honesta** — a trava garante tudo que vem de classe ou token: tamanho, peso, cor,
+   padding, gap, raio, borda, medida fixa, colunas do grid, presença e ordem dos nós. Todas as
+   divergências de §7.4 vivem aí. Ela **não** vê layout de verdade (quebra de linha, overflow,
+   subpixel, rasterização) — isso segue na inspeção visual 1100×700 nos 2 modos × 4 acentos.
+
+**Pergunta aberta:** diff de pixel automatizado (screenshot da app sobreposto ao do mock) exige
+**Playwright** — fora da lista homologada e vetado por nome no CLAUDE.md §6. Perguntado ao usuário
+em 2026-08-10, **sem resposta ainda**. O plano funciona sem ele.
+
+### 7.4 Deltas medidos da tela 3a
+
+Só o que tem delta ≠ 0.
+
+**`SectionCard`** — fundo da casca: nenhum (só borda + `overflow-hidden`) vs `bg-surface` no cartão
+inteiro · fundo do cabeçalho: `surface` vs nenhum · régua sob o cabeçalho: `1px border-subtle` vs
+ausente · padding do cabeçalho: 10/12 vs 16/12/8 · alinhamento: `center` vs `items-start` · gap: 8
+vs 12 · contador: pílula própria (10px/600 mono, `bg-raised`, raio total, 2/6, lh 1.3) vs
+concatenado no título · ação-link: 11px `accent-text` vs `text-sm text-fg-muted` · ação-total: 11px
+mono `fg-secondary` vs `text-xs` mono `fg-muted`.
+
+**`TaskRow`** — display: `grid` com as colunas do censo vs `flex` · gap: 10 (`gap-2.5`) vs 8 ·
+padding: 10/12 (`py-2.5 px-3`) vs 10/16 · separador: `border-b border-subtle` (ausente na última) vs
+nenhum · casca: full-bleed sem raio vs `rounded-control` + `gap-0.5` no container · ponto: 6px
+(`w-1.5`) vs 8px · subtítulo: `mt-px` vs `mt-0.5` · chip billable: **coluna própria à direita** vs
+colado ao título · duração: `text-sm` vs `text-xs` · ações: gap 2px / padding 4px vs gap 4px /
+`p-1.5` · linha filha expandida: `bg-surface` (conferir no `TaskCard`).
+
+**Cabeçalho e corpo** — `PageHeader` padding-x: 20 vs 16 · título: `Tarefas` 20/600 + contexto
+inline 12,25 com timer mono `fg-secondary` vs saudação como título e subtítulo empilhado ·
+`TourButton`: 22×22 (`size-5.5`) e glifo 11px vs 20×20 e 10,5px · gap do corpo: 20 (`gap-5`) vs 16 ·
+ordem: Omnibox → **KPI** → Planejadas → Entradas vs Omnibox → **Planejadas** → KPI → Entradas.
+
+**Omnibox / KPI / Sidebar** — faixa de chips padding-x: 12 vs 16 (desalinha 4px do botão play) ·
+chip: 3/8 e 12,25px vs 2/8 e 10,5px · placeholder: 15px/500 vs 16px · KPI Non-billable valor: `fg`
+vs `fg-secondary` · barra: `project-none` (0.55) vs `fg-muted` (0.60) · dica: o número em mono vs
+tudo em sans · rótulo da sidebar: **9px**/500 lh 1 vs 12,25px (é o que corta "Integra…") · gap
+ícone/rótulo: 4 vs 2.
+
+**Exato, não tocar:** trilho de integrações (valor a valor), `TitleBar`, o resto do `KpiCard` (17px,
+trilho 3px, todos os offsets), sidebar 68px / barra ativa 2px / paddings, tokens de cor, fontes,
+raios, `p-5` do corpo.
+
+### 7.5 Decisões do usuário — 2026-08-10
+
+1. **Escala ganha três degraus.** `--text-nav` 9px (rótulo da sidebar), `--text-micro` 11px (mono
+   curto, link, contagem, glifo do `?`), `--text-lead` 15px (placeholder do omnibox).
+   `fontSizes.test.ts` passa a aceitar o conjunto de 10.
+2. **Cabeçalho da Tarefas volta ao design** — `Tarefas` + saudação inline com o cronômetro.
+3. **Ação↔duração no mesmo slot, revelada no hover, nas Entradas.** Nas Planejadas não há duração e
+   o mock mostra o play nas três linhas: ali o play fica **sempre visível**. (O mock congelou uma
+   linha filha em hover — daí a aparência de contradição.)
+4. **`formatWeekTotal` segue o design:** valor compacto (`27h12`), dias na dica
+   (`meta 40h · 4 dias`).
+5. **`Ctrl K` fica fora** — o mock é anterior à remoção do command palette (`bcf09ff`). Exceção
+   declarada; a trava não cobra a pílula.
+6. **`WorkspaceSwitcher` permanece na sidebar** e o **teto de 176px das Planejadas permanece** — as
+   duas divergem do mock e entram como exceções declaradas.
+
+### 7.6 Etapas
+
+Uma por sessão, como o resto da rodada (§0). `pnpm lint && pnpm test && pnpm build` + inspeção
+visual 2 modos × 4 acentos ao fim de cada uma.
+
+- **F0 · Spec + escala + trava** — ✅ **feita (2026-08-10)**. O que entrou:
+  - `docs/design-spec/raw/telas-redesenhadas.html` — o export do Claude Design, versionado: é a
+    entrada do extrator, e é o que torna o spec reproduzível sem MCP.
+  - `scripts/extract-design-spec.mjs` → `docs/design-spec/telas-redesenhadas.json`: **7 telas, 920
+    nós**, com toda propriedade geométrica normalizada em px. Sem dependência nova (tokenizador
+    próprio, ~40 linhas — a entrada é gerada por máquina).
+  - `src/index.css`: `--text-nav` (9px), `--text-micro` (11px), `--text-lead` (15px), com
+    line-height. **Nenhum consumidor ainda** — token não usado não muda pixel nenhum, então esta
+    etapa dispensa a inspeção visual nos 2 modos × 4 acentos.
+  - `src/tests/helpers/tailwindGeometry.ts` — resolvedor classe→px, lendo a escala e os raios do
+    próprio `index.css`. **Classe não classificada levanta**: ignorar por omissão é como as travas
+    antigas ficaram verdes. Ele já pegou um defeito nele mesmo (peso lido como `500rem`).
+  - `src/tests/helpers/designSpec.ts` — acesso ao JSON, ancorando **por texto** (`byText` exige
+    unicidade) e por `path` onde o mock repete rótulo.
+  - `src/tests/conventions/screenGeometry.test.tsx` — 22 assertivas na 3a: **7 verdes** (o
+    `KpiCard` inteiro, altura e gap do cabeçalho, título de seção) e **15 `divergente(...)`**.
+  - `designTokens.test.ts` e `fontSizes.test.ts` atualizados para a escala de 10 degraus.
+
+  **A catraca:** `divergente` é `it.fails` — passa enquanto a assertiva reprova. Commitar 15 falhas
+  soltas deixaria o CI vermelho por cinco sessões, e com ele vermelho ninguém distingue divergência
+  conhecida de regressão nova. Corrigir o componente faz o `it.fails` reprovar, e a única saída é
+  trocar `divergente` por `it`: **corrigir sem declarar é impossível, declarar sem corrigir
+  também**. Verificado na F0 trocando o raio do `Badge` e conferindo que a assertiva passou a
+  falhar. `divergente` que sobra é dívida visível; zero `divergente` é a tela fiel.
+
+  **Cobertura declarada:** só os componentes que renderizam sem provider. `Sidebar`, `Omnibox` e a
+  composição da `TasksPage` (ordem das seções, `gap` do corpo) **não estão cobertos** e entram nas
+  etapas que já os tocam — F3, F4, F5.
+- **F1 · `SectionCard`** — casca sem fundo, cabeçalho com fundo e régua, paddings, contador como
+  pílula, slot de ação nos dois tamanhos. Toca as 7 telas.
+- **F2 · `TaskRow` como grid** — colunas configuráveis (as três formas do censo), separadores,
+  medidas, chip em coluna própria, ação↔duração no mesmo slot. Toca 5 telas: re-conferir 3b/3c/3d
+  contra o spec na mesma sessão.
+- **F3 · `PageHeader` + `TasksPage`** — cabeçalho do design, ordem das seções, `gap-5`, `px-5`,
+  `Ver semana →` ligado ao Planos (o botão existe e nunca foi passado).
+- **F4 · Omnibox + `chipStyles` + `Badge`** — pílula, 12,25px nos chips, alinhamento da faixa,
+  placeholder em `text-lead`.
+- **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.
+- **F6 · Fechamento** — exceções declaradas na §8.4 do CLAUDE.md (§7.5.5 e §7.5.6) e a trava
+  estendida às outras 6 telas.
