@@ -40,11 +40,9 @@ export function TaskCard({
     <TaskRow
       title={task.name ?? "(sem nome)"}
       subtitle={subtitle || undefined}
-      // A coluna do chevron **reservada**, na largura do ícone que a linha do
-      // grupo põe ali. Vazia de verdade ela mede 0, e aí a faixa de horário
-      // desta linha sobe 14px à esquerda da faixa do grupo — que é o que o
-      // wireframe faz, medido, e é desalinhamento e não recuo.
-      leading={<span className="w-3.5" aria-hidden />}
+      // A coluna que a linha do grupo usa para o chevron, aqui vazia: quem lhe
+      // dá largura é o primitivo, para as duas caírem no mesmo x.
+      leading={<span aria-hidden />}
       nested={nested}
       meta={
         <span className="text-micro font-mono tabular-nums text-fg-muted">

@@ -872,11 +872,19 @@ visual 2 modos × 4 acentos ao fim de cada uma.
     embrulhava linha e filhas num `<div>`, e ali o grupo **recolhido** era o último filho — perdia a
     régua no meio da lista. Como fragmento, o último elemento da lista é o último de verdade.
   - **A linha filha diz o pertencimento por trilho e degrau** — a prop `nested` do `TaskRow`, e não
-    uma casca em volta. O trilho é um filete de 2px **fora do fluxo** (`absolute left-3`, como a
-    barra do item ativo da sidebar), no x em que o conteúdo da linha não aninhada começa: ele desce
-    de sob o chevron do grupo, não ocupa célula da grade e filhas em sequência formam um filete só.
-    O degrau são 12px de `pl-6` na própria linha — sai do `1fr` do nome, então **chip e duração
-    continuam onde estão** nas linhas em volta e só a esquerda degraus.
+    uma casca em volta. O trilho é um filete de 2px **fora do fluxo** (como a barra do item ativo da
+    sidebar): não ocupa célula da grade, e filhas em sequência formam um filete só. O degrau é um
+    padding a mais na própria linha (`pl-6` contra `pl-3`) — sai do `1fr` do nome, então **chip e
+    duração continuam onde estão** nas linhas em volta e só a esquerda degraus.
+
+    **O x do trilho é conta, não número:** `padding horizontal da linha + metade da coluna do
+    chevron`, para ele descer pelo **eixo** da seta que abre o grupo. As duas parcelas moram juntas
+    no topo do `TaskRow` e governam três coisas que têm de concordar — o padding, a largura
+    reservada da coluna (que o primitivo aplica, para o call site não repetir a medida) e o x do
+    trilho. O que o Tailwind não deixa derivar (`pl-3`/`pl-6` são literais, utilitário não lê
+    variável) é `TaskRow.test.tsx` que amarra: ele compara o `left` do trilho com o padding que a
+    classe **realmente rende** mais metade da coluna medida no DOM. **Verificado que reprova**, com
+    sonda: `pl-3`→`pl-4` dá `esperado 23, atual 19`, e o ícone em 16 dá `esperado 20, atual 19`.
 
     > **Aqui o mock está errado, e a medida é o que prova.** Ele desenha um `<span></span>` vazio na
     > coluna do chevron da filha, que **reserva a coluna e não a largura**: medido em Chromium, a

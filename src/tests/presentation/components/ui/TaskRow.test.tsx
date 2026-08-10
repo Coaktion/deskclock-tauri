@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TaskRow } from "@presentation/components/ui/TaskRow";
+import { geometryOf } from "../../../helpers/tailwindGeometry";
 
 describe("TaskRow", () => {
   it("mostra nome, subtítulo e duração", () => {
@@ -36,13 +37,35 @@ describe("TaskRow", () => {
     // O trilho não pode ser filho em fluxo: a grade tem uma coluna por célula,
     // e um filho a mais empurraria a última para fora do gabarito.
     const { container, rerender } = render(<TaskRow title="a" duration="1h" nested />);
-    const row = container.firstElementChild!;
-    expect(row.className).toContain("pl-6");
     expect(container.querySelector("span.absolute")).not.toBeNull();
 
     rerender(<TaskRow title="a" duration="1h" />);
-    expect(container.firstElementChild!.className).toContain("pl-3");
     expect(container.querySelector("span.absolute")).toBeNull();
+  });
+
+  /**
+   * O trilho desce pelo **meio** do chevron do grupo, e as três medidas que
+   * fazem isso valer moram em lugares que o CSS não liga sozinho: o padding vem
+   * de uma classe do Tailwind, a largura da coluna de um `style`, e o x do
+   * trilho de uma conta. Esta é a amarração — se alguém trocar `pl-3` por `pl-4`
+   * ou mudar a escala do ícone, o trilho sai do eixo e é aqui que se descobre.
+   */
+  it("o trilho desce pelo eixo do chevron da linha em volta", () => {
+    const semAninhar = render(<TaskRow title="a" leading={<span />} />);
+    const paddingDoPai = geometryOf(semAninhar.container.firstElementChild!.className).paddingLeft;
+    const colunaDoChevron =
+      semAninhar.container.querySelector<HTMLElement>("[data-leading]")!.style.width;
+
+    const aninhada = render(<TaskRow title="a" leading={<span />} nested />);
+    const linha = aninhada.container.firstElementChild as HTMLElement;
+    const trilho = linha.querySelector<HTMLElement>("span.absolute")!;
+
+    expect(paddingDoPai).toBeDefined();
+    expect(Number.parseFloat(trilho.style.left)).toBe(
+      paddingDoPai! + Number.parseFloat(colunaDoChevron) / 2
+    );
+    // E o degrau da filha é um padding a mais, não um número solto.
+    expect(geometryOf(linha.className).paddingLeft).toBe(paddingDoPai! * 2);
   });
 
   it("o chip só alterna quando a linha entrega o clique", () => {
