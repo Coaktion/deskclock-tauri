@@ -8,7 +8,7 @@ import {
   EditPlannedTaskModal,
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
-import { Badge } from "@presentation/components/ui";
+import { BillableChip } from "@presentation/components/ui";
 
 interface PlannedTaskItemProps {
   task: PlannedTask;
@@ -98,11 +98,7 @@ export function PlannedTaskItem({
             >
               {task.name}
             </p>
-            {/* O billable era duas cores sem legenda — barra à esquerda e ponto —, e
-                cor sozinha não diz o que significa. O chip escreve. */}
-            <Badge tone={task.billable ? "billable" : "neutral"}>
-              {task.billable ? "Billable" : "Non-billable"}
-            </Badge>
+            <BillableChip billable={task.billable} />
             {task.scheduleType === "recurring" && (
               <span className="shrink-0 flex items-center gap-0.5 text-xs text-accent-text/70 leading-none">
                 <RefreshCw size={14} />

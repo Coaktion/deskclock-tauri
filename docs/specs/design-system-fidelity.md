@@ -364,20 +364,43 @@ deste handoff: a janela tem 78 px e escreve **número monoespaçado**, não text
 `body/ui` vs. `caption` não tem o que dizer ali. Entrou junto o parágrafo da trava nova, ao lado
 da contagem de `<button>` que a §8.4 já mantinha.
 
-### Fase E · Produto — **precisa de confirmação do usuário antes de começar**
+### Fase E · Produto
 
-**E1 · Chip de billable escrito no `TaskRow`.** O design é explícito: _"A barra verde à esquerda
-**sai** — o chip escrito assume"_, com pílula de 10px/500 dizendo "Billable"/"Non-billable". O
-`TaskRow` fez o inverso: manteve a barra e não tem chip. Isso também derruba a regra de
-acessibilidade do próprio handoff (_"cor nunca é o único sinal"_) — hoje a informação está só na
-cor da faixa e no `title` do ponto.
-**Não é fidelidade, é produto:** o CLAUDE.md §8.4 hoje documenta a faixa como contrato do
-primitivo, e o clique que alterna billable mora no ponto de projeto — que precisaria de um novo
-dono. Muda 5 telas. **Perguntar antes.**
+**E1 · Chip de billable escrito no `TaskRow`** — ✅ **feito**. Adoção completa autorizada pelo
+usuário em 2026-08-10. O design é explícito: _"A barra verde à esquerda **sai** — o chip escrito
+assume"_, com pílula de 10px/500 dizendo "Billable"/"Non-billable". O `TaskRow` fazia o inverso:
+mantinha a barra e não tinha chip, deixando a informação só na cor da faixa e no `title` do ponto —
+contra a regra de acessibilidade do próprio handoff (_"cor nunca é o único sinal"_). E o não
+faturável não tinha sinal nenhum: sem faixa, indistinguível da linha que ninguém classificou.
 
-> O A4 já entregou o **desenho** do chip (`Badge tone="billable"`, em uso no `PlannedTaskItem`), e
-> com isso o que resta em E1 é só a decisão de produto: tirar a faixa do `TaskRow`, pôr o chip nas
-> 5 telas e achar um dono para o clique que alterna billable.
+**`ui/BillableChip.tsx`** é o primitivo novo — o A4 já tinha entregue o desenho (`Badge`
+`tone="billable"`/`neutral`, em uso no `PlannedTaskItem`), e o que faltava era um dono para o par
+de rótulos, que escrito em dois lugares é o começo de duas redações. O `PlannedTaskItem` passou a
+consumi-lo.
+
+Três decisões que a etapa obrigou:
+
+- **O dono do clique é o chip.** Ele morava no **ponto de projeto** (`onDotClick`/`dotTitle`), que
+  assim pintava uma coisa e alternava outra — e, sem faixa, seria a única forma de descobrir o
+  faturamento da linha. As duas props saíram do primitivo, que não desenha mais `<button>` no ponto;
+  entrou `onToggleBillable`. Só o `TaskCard` passava o clique, e é ele que continua passando.
+- **Clicável, o chip não é um `Badge`** — é um `<button>` vestindo um. A fronteira do `Badge` é não
+  responder ao clique, e um `onClick` opcional nele apagaria a régua que decide entre `Badge`,
+  `FilterPill` e `Button`. O botão para a propagação: a linha em volta é clicável em três das cinco
+  telas (selecionar no Histórico e no Manual, expandir no grupo de Tarefas).
+- **`billable` perdeu o default `false`.** Ausente, a linha cala sobre faturamento e não desenha
+  chip; um `false` implícito escreveria "Non-billable" sobre linha nunca classificada. As cinco
+  chamadas passam o valor, então nada mudou na tela.
+
+**Fora, e registrado:** o cabeçalho de grupo continua mostrando o chip da **primeira** tarefa, e
+continua podendo mentir — o agrupamento é Nome + Projeto + Categoria (§6.3) e não inclui `billable`.
+Era assim com a faixa; escrito, o desacerto fica visível. Resolvê-lo é produto, não migração. O
+`ToggleBillable` (chip clicável com ícone, `sm`, um call site em `CategoriesPanel`) também ficou:
+é controle de formulário, não indicador de linha.
+
+**A conferir na tela:** o chip come largura do nome nas linhas com `meta` (Histórico e Manual têm
+faixa de horário à esquerda **e** duração à direita) — é onde o nome truncaria antes. E o chip
+`neutral` sobre linha em hover (`bg-raised`), que é onde a borda dele some primeiro.
 
 ---
 
@@ -476,8 +499,15 @@ com a tabela de escala).
    parar.
 5. Não propor merge em `main` nem rodar o `@code-quality-reviewer` antes do fim da rodada.
 
-**Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B e C foram
+**Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B, C e E foram
 conferidos na tela). Por ordem de risco:
+
+-2. **O chip de billable nas cinco telas** (E1) — é a mudança mais visível da rodada: **toda** linha
+    de tarefa ganhou texto novo ao lado do nome e perdeu a faixa verde. Olhar primeiro Histórico e
+    Lançamento Manual, que são as linhas mais apertadas (faixa de horário à esquerda, duração à
+    direita), e conferir se o nome ainda respira. Depois, em Tarefas, que o chip alterna o
+    faturamento no clique — era o ponto de projeto que fazia isso.
+
 
 -1. **O cabeçalho das sete telas, com o título em 20px** — a conta diz que cabe com ~225 px de
     folga em Configurações, mas é conta, não medida. Olhar Configurações e Dados primeiro (são as

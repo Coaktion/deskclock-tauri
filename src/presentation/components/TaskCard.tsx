@@ -40,10 +40,7 @@ export function TaskCard({
       duration={formatDurationCompact(task.durationSeconds ?? 0)}
       billable={task.billable}
       dotColor={getProjectColor(task.projectId)}
-      onDotClick={() => onToggleBillable(task)}
-      dotTitle={
-        task.billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"
-      }
+      onToggleBillable={() => onToggleBillable(task)}
       badges={
         sent && (
           <span title="Enviado para o Google Sheets" className="shrink-0 text-billable">

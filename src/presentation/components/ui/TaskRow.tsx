@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BillableChip } from "./BillableChip";
 
 interface TaskRowProps {
   title: string;
@@ -8,12 +9,12 @@ interface TaskRowProps {
   meta?: ReactNode;
   /** Ausente na linha que não mede tempo — a tarefa planejada. */
   duration?: string;
-  /** Desenha a faixa de acento à esquerda da linha. */
+  /** Ausente = a linha não fala de faturamento e não desenha o chip. */
   billable?: boolean;
+  /** Ausente = o chip só informa; presente, ele alterna o faturamento. */
+  onToggleBillable?: () => void;
   /** Cor do projeto; vem de `getProjectColor`, então é valor, não classe. */
   dotColor?: string;
-  onDotClick?: () => void;
-  dotTitle?: string;
   /** Caixa de seleção ou seta de expandir. */
   leading?: ReactNode;
   /** Marcas à direita da duração — "enviado", contagem do grupo. */
@@ -29,10 +30,9 @@ export function TaskRow({
   subtitle,
   meta,
   duration,
-  billable = false,
+  billable,
+  onToggleBillable,
   dotColor,
-  onDotClick,
-  dotTitle,
   leading,
   badges,
   actions,
@@ -42,37 +42,29 @@ export function TaskRow({
   return (
     <div
       onClick={onClick}
-      className={`group relative flex items-center gap-2 px-4 py-2.5 rounded-control transition-colors ${
+      className={`group flex items-center gap-2 px-4 py-2.5 rounded-control transition-colors ${
         selected ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-raised"
       } ${onClick ? "cursor-pointer" : ""}`}
     >
-      {billable && (
-        <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-billable rounded-r-full" />
-      )}
-
       {leading}
 
-      {dotColor &&
-        (onDotClick ? (
-          <button
-            type="button"
-            onClick={onDotClick}
-            title={dotTitle}
-            className="shrink-0 w-2 h-2 rounded-full transition-colors"
-            style={{ backgroundColor: dotColor }}
-          />
-        ) : (
-          <span
-            className="shrink-0 w-2 h-2 rounded-full"
-            style={{ backgroundColor: dotColor }}
-            aria-hidden
-          />
-        ))}
+      {dotColor && (
+        <span
+          className="shrink-0 w-2 h-2 rounded-full"
+          style={{ backgroundColor: dotColor }}
+          aria-hidden
+        />
+      )}
 
       {meta && <div className="shrink-0">{meta}</div>}
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-fg truncate">{title}</p>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="text-sm text-fg truncate">{title}</p>
+          {billable !== undefined && (
+            <BillableChip billable={billable} onToggle={onToggleBillable} />
+          )}
+        </div>
         {subtitle && <p className="text-xs text-fg-muted truncate mt-0.5">{subtitle}</p>}
       </div>
 

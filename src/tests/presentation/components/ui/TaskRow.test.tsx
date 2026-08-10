@@ -15,21 +15,48 @@ describe("TaskRow", () => {
     expect(container.querySelector(".tabular-nums")).toBeNull();
   });
 
-  it("o ponto do projeto só é botão quando há o que clicar", () => {
-    const { rerender } = render(<TaskRow title="a" duration="1h" dotColor="#fff" />);
+  it("o ponto do projeto não é clicável — ele é cor de projeto, nada mais", () => {
+    render(<TaskRow title="a" duration="1h" dotColor="#fff" />);
     expect(screen.queryByRole("button")).toBeNull();
-
-    const onDotClick = vi.fn();
-    rerender(<TaskRow title="a" duration="1h" dotColor="#fff" onDotClick={onDotClick} />);
-    screen.getByRole("button").click();
-    expect(onDotClick).toHaveBeenCalled();
   });
 
-  it("desenha a faixa de billable só quando a tarefa é faturável", () => {
-    const { container, rerender } = render(<TaskRow title="a" duration="1h" billable />);
-    expect(container.querySelector(".bg-billable")).toBeTruthy();
+  it("escreve o faturamento, e cala sobre ele quando a linha não o informa", () => {
+    const { rerender } = render(<TaskRow title="a" duration="1h" billable />);
+    expect(screen.getByText("Billable")).toBeTruthy();
+
+    rerender(<TaskRow title="a" duration="1h" billable={false} />);
+    expect(screen.getByText("Non-billable")).toBeTruthy();
 
     rerender(<TaskRow title="a" duration="1h" />);
-    expect(container.querySelector(".bg-billable")).toBeNull();
+    expect(screen.queryByText("Billable")).toBeNull();
+    expect(screen.queryByText("Non-billable")).toBeNull();
+  });
+
+  it("o chip só alterna quando a linha entrega o clique", () => {
+    const { rerender } = render(<TaskRow title="a" duration="1h" billable />);
+    expect(screen.queryByRole("button")).toBeNull();
+
+    const onToggleBillable = vi.fn();
+    rerender(<TaskRow title="a" duration="1h" billable onToggleBillable={onToggleBillable} />);
+    screen.getByRole("button").click();
+    expect(onToggleBillable).toHaveBeenCalled();
+  });
+
+  it("alternar o faturamento não aciona a linha em volta", () => {
+    const onClick = vi.fn();
+    const onToggleBillable = vi.fn();
+    render(
+      <TaskRow
+        title="a"
+        duration="1h"
+        billable
+        onToggleBillable={onToggleBillable}
+        onClick={onClick}
+      />
+    );
+
+    screen.getByRole("button").click();
+    expect(onToggleBillable).toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
   });
 });
