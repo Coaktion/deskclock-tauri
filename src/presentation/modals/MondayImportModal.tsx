@@ -32,7 +32,7 @@ import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProje
 import { resolveTimelineByBoard } from "@domain/usecases/monday/resolveTimelineColumns";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { Button, FilterPill, Modal, Toggle } from "@presentation/components/ui";
+import { Badge, Button, FilterPill, Modal, Toggle } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -564,13 +564,13 @@ function ItemRow({
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="text-sm text-fg truncate">{row.item.name}</span>
             {isDuplicate && (
-              <span
+              <Badge
+                tone="warning"
+                icon={<AlertTriangle size={14} />}
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-xs leading-none rounded-chip bg-yellow-900/50 text-yellow-400 shrink-0"
               >
-                <AlertTriangle size={14} />
                 já existe
-              </span>
+              </Badge>
             )}
           </div>
           <p className="text-xs text-fg-muted mt-0.5">

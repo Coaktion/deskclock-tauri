@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Pencil, Trash2, Check, X, DollarSign } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { UUID } from "@shared/types";
-import { Input } from "@presentation/components/ui";
+import { Badge, Input } from "@presentation/components/ui";
 
 interface CategoryCardProps {
   category: Category;
@@ -99,13 +99,9 @@ export function CategoryCard({
       ) : (
         <>
           <span className="flex-1 text-sm text-fg truncate">{category.name}</span>
-          <span
-            className={`shrink-0 text-xs px-1.5 py-0.5 rounded-chip ${
-              category.defaultBillable ? "bg-billable/10 text-billable" : "bg-raised text-fg-muted"
-            }`}
-          >
+          <Badge tone={category.defaultBillable ? "billable" : "neutral"}>
             {category.defaultBillable ? "Bill." : "Non."}
-          </span>
+          </Badge>
           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
               onClick={(e) => {

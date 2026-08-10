@@ -4,7 +4,7 @@ import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resol
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import type { SyncFeedback } from "@presentation/hooks/useSyncNowButton";
-import { Select } from "@presentation/components/ui";
+import { Badge, Select } from "@presentation/components/ui";
 import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 
 /* ── helpers ── */
@@ -232,16 +232,9 @@ export function IntegrationTile({
         {subBadges && subBadges.length > 0 && (
           <div className="flex gap-1.5">
             {subBadges.map((b) => (
-              <span
-                key={b.label}
-                className={`text-xs px-1.5 py-0.5 rounded-chip border ${
-                  b.active
-                    ? "bg-billable/10 border-billable/20 text-billable"
-                    : "bg-raised border-border text-fg-muted"
-                }`}
-              >
+              <Badge key={b.label} tone={b.active ? "success" : "neutral"}>
                 {b.label}
-              </span>
+              </Badge>
             ))}
           </div>
         )}

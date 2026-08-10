@@ -3,7 +3,7 @@ import type { Category } from "@domain/entities/Category";
 import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { UUID } from "@shared/types";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
-import { SearchInput } from "@presentation/components/ui";
+import { Badge, SearchInput } from "@presentation/components/ui";
 
 interface ProjectCategoriesEditorProps {
   categories: Category[];
@@ -83,12 +83,9 @@ export function ProjectCategoriesEditor({
                 />
                 <span className="flex-1 text-xs text-fg-secondary truncate">{c.name}</span>
                 {source === "monday" && (
-                  <span
-                    title="Veio da varredura do Monday. Desmarcar vale até a próxima varredura — para tirar de vez, remova o Activity Type do quadro."
-                    className="shrink-0 px-1 py-0.5 text-xs leading-none rounded-chip bg-raised border border-border text-fg-muted"
-                  >
+                  <Badge title="Veio da varredura do Monday. Desmarcar vale até a próxima varredura — para tirar de vez, remova o Activity Type do quadro.">
                     Monday
-                  </span>
+                  </Badge>
                 )}
               </label>
             );

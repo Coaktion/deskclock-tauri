@@ -201,8 +201,36 @@ ações à direita, secundária sem casca, **nunca dois botões cheios**. Largur
   > ela saíram a janela `command-palette` inteira, o scrim e o único `backdrop-blur` restante. Não
   > há mais véu fora da casca `Modal`.
 
-**A4 · `Badge`** — pendente. A partir de `components/chipStyles.ts`, que já é o vocabulário certo
-sem ser componente. Cobre o chip de billable da fase E.
+**A4 · `Badge`** — ✅ **feito**. O rótulo curto que **não** responde ao clique: 15 grafias
+distintas viraram um `<span>` de `rounded-chip` com borda, `text-xs`/500, `leading-none`. O raio e
+a borda saem de `chipStyles.ts` e da direção de cor 2a ("definida por borda"); `rounded-full` era
+minoria (6 contra 9) e não sobreviveu.
+
+Seis tons, tirados dos call sites: `neutral`, `billable`, `success`, `accent`, `warning`, `danger`.
+`billable` e `success` compartilham o verde e mesmo assim são tons separados — coincidem na cor,
+não no significado.
+
+- **Nasceram `--color-success` e `--color-warning`** (decisão do usuário em 2026-08-10, contra
+  concentrar o amber cru ou reaproveitar `paused`). O aviso é hue 85, não os 70 da pausa, ou o
+  aviso leria como tarefa pausada; e desce para L 0.62 no modo claro, como o âmbar de pausa desce.
+  Assertivas em `designTokens.test.ts`, nos dois blocos.
+- **13 call sites migrados**: os três do `TaskSendModal`, o chip de billable do `PlannedTaskItem`,
+  os dois do `ImportCalendarModal` e o "já existe" do `MondayImportModal`, `CategoryCard`,
+  `ProjectCategoriesEditor`, as tags de `ClockifyEntriesModal`/`MondayEntriesModal`/`TagMultiSelect`,
+  os `subBadges` das integrações e o contador de dia do `WeekPlanningView`.
+- **Fora, e de propósito:** os quatro `STATUS_COLORS` do `ImportZendeskModal` — é cor de
+  **entidade** (quatro status do Zendesk), como a paleta de workspace, e colapsá-los nos tons
+  semânticos apagaria a distinção entre "pendente" e "em espera". O chip de atalho do `ShortcutRow`
+  (mono, é tecla) e o contador circular do `CompactOverlay` (16 px fixos) também.
+- **Duas mudanças visíveis:** o chip de billable do `PlannedTaskItem` e as três pílulas do
+  `TaskSendModal` perderam o `rounded-full`; e o "Faltando: …" saiu do laranja para `danger`,
+  porque ele **desabilita a seleção do grupo** — é impedimento, não aviso, e o "Parcial" ao lado
+  ficou sendo o único âmbar.
+- O `TaskSendModal` teve o aviso de reenvio e o `TONE_CLASS` passados aos tokens novos: era o único
+  arquivo onde badge e frase de aviso aparecem lado a lado, e deixá-los em amarelos diferentes era
+  criar o descompasso na mesma tela. **O resto do `amber-*`/`yellow-*` cru continua em pé** (toast,
+  `AtalhosTab`, `DeleteWorkspaceModal`, `MondayProjectsImport`, `CustomFieldCard`,
+  `OmniboxRunning`, `ExportModal`) — agora é substituição, não decisão.
 
 ### Fase B · Escala tipográfica
 
@@ -296,6 +324,10 @@ cor da faixa e no `title` do ponto.
 primitivo, e o clique que alterna billable mora no ponto de projeto — que precisaria de um novo
 dono. Muda 5 telas. **Perguntar antes.**
 
+> O A4 já entregou o **desenho** do chip (`Badge tone="billable"`, em uso no `PlannedTaskItem`), e
+> com isso o que resta em E1 é só a decisão de produto: tirar a faixa do `TaskRow`, pôr o chip nas
+> 5 telas e achar um dono para o clique que alterna billable.
+
 ---
 
 ## 3. Decisões pendentes do usuário
@@ -338,14 +370,17 @@ Para conferir progresso em sessão futura, os números de 2026-08-08 **antes** d
 
 Ao fim da fase A (2026-08-10, medido com `grep -rho`):
 
-|                                | Antes | Agora                                            |
-| ------------------------------ | ----- | ------------------------------------------------ |
-| `<input>` crus                 | 81    | **35** (caixa, rádio e faixa, fora por assinatura) |
-| `<select>` crus                | 21    | **5**                                            |
-| scrims                         | 4     | **1**, depois **0** — o que sobrava era o `CommandPalette`, removido |
-| larguras de modal              | 5     | **4** — as da casca                              |
-| `text-xs`                      | 461   | **365** (a varredura da fase B é sobre estes)     |
-| `<button>` nos 19 modais       | —     | **26**, dos quais 3 no `SetupModal`              |
+|                          | Antes | Agora                                                                |
+| ------------------------ | ----- | -------------------------------------------------------------------- |
+| `<input>` crus           | 81    | **35** (caixa, rádio e faixa, fora por assinatura)                   |
+| `<select>` crus          | 21    | **5**                                                                |
+| scrims                   | 4     | **1**, depois **0** — o que sobrava era o `CommandPalette`, removido |
+| larguras de modal        | 5     | **4** — as da casca                                                  |
+| `text-xs`                | 461   | **365** (a varredura da fase B é sobre estes)                        |
+| `<button>` nos 19 modais | —     | **26**, dos quais 3 no `SetupModal`                                  |
+
+Depois do A4 (2026-08-10): `text-xs` em **354**, e `amber-*`/`yellow-*`/`orange-*` crus em **29**
+linhas / 11 arquivos, todas fora de badge (banners, toast, frases de status).
 
 **A fase B tem menos trabalho do que a §B2 estimou**: ela contava ~172 `text-xs` em controle a
 partir de 461, e a fase A absorveu 96 deles nos primitivos. **Recontar arquivo a arquivo antes de
@@ -374,8 +409,16 @@ com a tabela de escala).
    parar.
 5. Não propor merge em `main` nem rodar o `@code-quality-reviewer` antes do fim da rodada.
 
-**Verificação manual pendente** (nenhuma das três sessões do A3 foi conferida na tela). Por ordem
-de risco:
+**Verificação manual pendente** (nem as três sessões do A3 nem o A4 foram conferidos na tela). Por
+ordem de risco:
+
+0. **Os dois tokens novos nos dois modos** — `--color-warning` no modo claro é o único valor desta
+   rodada escolhido sem swatch de referência (L 0.62 / hue 75, por analogia com o âmbar de pausa).
+   Conferir o "Parcial" e o aviso de reenvio do envio manual sobre fundo branco. E o `Badge` em
+   `neutral` sobre `raised`: é a borda que o separa da linha, e é onde ela some primeiro.
+   0b. **O chip de billable do `PlannedTaskItem` e as três pílulas do `TaskSendModal`** perderam o
+   `rounded-full`; e o "Faltando: …" virou vermelho ao lado do "Parcial" âmbar. É a mudança mais
+   visível do A4.
 
 1. **Os dois modais de apontamentos** (Clockify e Monday) — saíram de janela cheia para 900 px, é a
    maior mudança de medida da rodada. Conferir se a grade de 4 colunas das linhas ainda respira.

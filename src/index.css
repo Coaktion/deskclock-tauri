@@ -97,6 +97,12 @@
   --color-billable: oklch(0.72 0.15 162);
   --color-paused: oklch(0.75 0.15 70);
   --color-danger: oklch(0.65 0.19 22);
+  /* Sucesso repete o verde de billable e mesmo assim é token próprio: hora
+     faturável e "enviado" coincidem na cor, não no significado, e enquanto
+     dividiam o mesmo nome trocar um mexia no outro. Aviso é vizinho da pausa e
+     não é ela — mais amarelo, para não ler como tarefa pausada na mesma tela. */
+  --color-success: oklch(0.72 0.15 162);
+  --color-warning: oklch(0.78 0.15 85);
 
   /* Cores de projeto — mesma lightness e chroma, só o hue muda: na mesma lista
      o âmbar hoje pesa mais que o slate justamente por não obedecerem a isso. */
@@ -175,6 +181,9 @@
      valor, fica ilegível. Valor do swatch claro de 2a. */
   --color-paused: oklch(0.68 0.15 70);
   --color-danger: oklch(0.58 0.19 22);
+  --color-success: oklch(0.62 0.15 162);
+  /* Pelo mesmo motivo do âmbar de pausa: em L 0.78 o aviso sobre branco some. */
+  --color-warning: oklch(0.62 0.14 75);
 }
 
 /* ── Cursor de arraste em regiões drag ── */

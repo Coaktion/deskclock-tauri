@@ -33,6 +33,8 @@ const THEME_TOKENS = [
   "--color-billable",
   "--color-paused",
   "--color-danger",
+  "--color-success",
+  "--color-warning",
   "--color-project-1",
   "--color-project-2",
   "--color-project-3",
@@ -65,6 +67,8 @@ const LIGHT_MODE_TOKENS = [
   "--color-billable",
   "--color-paused",
   "--color-danger",
+  "--color-success",
+  "--color-warning",
 ];
 
 /**

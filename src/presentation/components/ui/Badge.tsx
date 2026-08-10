@@ -1,0 +1,44 @@
+import type { ReactNode } from "react";
+
+/**
+ * Rótulo curto que **não** responde ao clique: "Billable", "Enviado",
+ * "já existe", o nome de uma tag. O que reage ao clique é `FilterPill` (recorte
+ * de lista) ou `Button` — e é essa fronteira, e não o desenho, que decide qual
+ * dos três usar.
+ */
+export type BadgeTone = "neutral" | "billable" | "success" | "accent" | "warning" | "danger";
+
+/**
+ * `billable` e `success` compartilham o verde e mesmo assim são tons separados:
+ * "faturável" e "deu certo" coincidem hoje na cor, não no significado, e um
+ * `success` escrito como `billable` some no dia em que os dois divergirem.
+ */
+const TONE: Record<BadgeTone, string> = {
+  neutral: "bg-raised border-border text-fg-muted",
+  billable: "bg-billable/10 border-billable/30 text-billable",
+  success: "bg-success/10 border-success/30 text-success",
+  accent: "bg-accent/10 border-accent/30 text-accent-text",
+  warning: "bg-warning/10 border-warning/30 text-warning",
+  danger: "bg-danger/10 border-danger/30 text-danger",
+};
+
+interface BadgeProps {
+  tone?: BadgeTone;
+  /** Vem antes do texto, e nunca no lugar dele — cor e ícone não são legenda. */
+  icon?: ReactNode;
+  children: ReactNode;
+  title?: string;
+  className?: string;
+}
+
+export function Badge({ tone = "neutral", icon, children, title, className = "" }: BadgeProps) {
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center gap-0.5 shrink-0 whitespace-nowrap px-1.5 py-0.5 border rounded-chip text-xs font-medium leading-none ${TONE[tone]} ${className}`}
+    >
+      {icon}
+      {children}
+    </span>
+  );
+}

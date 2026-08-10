@@ -3,7 +3,7 @@ import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTa
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
-import { FilterPill, PageHeader } from "@presentation/components/ui";
+import { Badge, FilterPill, PageHeader } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
@@ -380,11 +380,11 @@ export function WeekPlanningView() {
                         </button>
                       )}
                       {dayTasks.length > 0 && (
-                        <span className="text-xs font-mono tabular-nums text-fg-muted bg-raised rounded-full px-1.5 py-0.5 leading-none">
+                        <Badge className="font-mono tabular-nums">
                           {dayCompleted > 0
                             ? `${dayCompleted}/${dayTasks.length}`
                             : dayTasks.length}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>

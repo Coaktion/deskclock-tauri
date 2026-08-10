@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
+import { Badge } from "@presentation/components/ui";
+
 export interface TagOption {
   id: string;
   name: string;
@@ -66,11 +68,7 @@ export function TagMultiSelect({
         {selected.length === 0 ? (
           <span className="text-fg-muted">{placeholder}</span>
         ) : (
-          selected.map((t) => (
-            <span key={t.id} className="bg-border text-fg px-1.5 py-0.5 rounded-chip text-xs">
-              {t.name}
-            </span>
-          ))
+          selected.map((t) => <Badge key={t.id}>{t.name}</Badge>)
         )}
         <ChevronDown size={14} className="ml-auto shrink-0 text-fg-muted" />
       </button>

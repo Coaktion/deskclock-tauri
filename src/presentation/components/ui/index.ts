@@ -6,6 +6,7 @@ export { Toggle } from "./Toggle";
 export { KpiCard, type KpiTone } from "./KpiCard";
 export { TaskRow } from "./TaskRow";
 export { FilterPill } from "./FilterPill";
+export { Badge, type BadgeTone } from "./Badge";
 export { SearchInput } from "./SearchInput";
 export { Field } from "./Field";
 export { Input, type InputProps } from "./Input";

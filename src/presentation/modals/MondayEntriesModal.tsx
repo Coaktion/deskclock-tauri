@@ -8,7 +8,7 @@ import {
 } from "@presentation/hooks/useMondayEntries";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { Button, FilterPill, IconButton, Modal, Select } from "@presentation/components/ui";
+import { Badge, Button, FilterPill, IconButton, Modal, Select } from "@presentation/components/ui";
 import {
   addDaysISO,
   formatDurationCompact,
@@ -275,12 +275,7 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
           )
             .filter(([, label]) => label.length > 0)
             .map(([field, label]) => (
-              <span
-                key={field}
-                className="bg-raised text-fg-secondary px-1.5 py-0.5 rounded-chip text-xs"
-              >
-                {label}
-              </span>
+              <Badge key={field}>{label}</Badge>
             ))}
         </div>
       </div>

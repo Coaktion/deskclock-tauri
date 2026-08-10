@@ -24,7 +24,7 @@ import {
 } from "@domain/usecases/tasks/SendTasks";
 import { formatDurationCompact, todayISO } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { Button, FilterPill, Input, Modal } from "@presentation/components/ui";
+import { Badge, Button, FilterPill, Input, Modal } from "@presentation/components/ui";
 import {
   useTaskSendSelection,
   buildResultMessage,
@@ -68,8 +68,8 @@ const DEFAULT_RESEND_WARNING =
   "Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas.";
 
 const TONE_CLASS: Record<SendTone, string> = {
-  success: "text-billable",
-  warning: "text-yellow-300",
+  success: "text-success",
+  warning: "text-warning",
   error: "text-danger",
 };
 
@@ -125,23 +125,22 @@ function GroupRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm text-fg truncate">{first.name ?? "(sem nome)"}</span>
+          {/* Faltar dado desabilita a seleção do grupo — é impedimento, não
+              aviso, e por isso o vermelho e não o âmbar do "Parcial". */}
           {isInvalid && (
-            <span className="flex items-center gap-0.5 text-xs text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-full shrink-0">
-              <AlertTriangle size={14} />
+            <Badge tone="danger" icon={<AlertTriangle size={14} />}>
               Faltando: {validation.missing.join(", ")}
-            </span>
+            </Badge>
           )}
           {!isInvalid && allSent && (
-            <span className="flex items-center gap-0.5 text-xs text-billable bg-billable/10 border border-billable/20 px-1.5 py-0.5 rounded-full shrink-0">
-              <CheckCheck size={14} />
+            <Badge tone="success" icon={<CheckCheck size={14} />}>
               Enviado
-            </span>
+            </Badge>
           )}
           {!isInvalid && someSent && (
-            <span className="flex items-center gap-0.5 text-xs text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-1.5 py-0.5 rounded-full shrink-0">
-              <AlertTriangle size={14} />
+            <Badge tone="warning" icon={<AlertTriangle size={14} />}>
               Parcial
-            </span>
+            </Badge>
           )}
         </div>
         <div className="flex gap-2 text-xs text-fg-muted mt-0.5">
@@ -310,9 +309,9 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
         sel.hasSentSelected || sel.message ? (
           <>
             {sel.hasSentSelected && (
-              <div className="flex items-start gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-control">
-                <AlertTriangle size={14} className="text-yellow-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-yellow-300">
+              <div className="flex items-start gap-2 px-3 py-2 bg-warning/10 border border-warning/20 rounded-control">
+                <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+                <p className="text-xs text-warning">
                   {adapter.resendWarning ?? DEFAULT_RESEND_WARNING}
                 </p>
               </div>

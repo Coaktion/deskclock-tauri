@@ -11,7 +11,7 @@ import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
-import { Button, FilterPill, IconButton, Modal } from "@presentation/components/ui";
+import { Badge, Button, FilterPill, IconButton, Modal } from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
   todayISO,
@@ -397,12 +397,7 @@ function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
               </span>
             )}
             {entry.tags?.map((t) => (
-              <span
-                key={t.id}
-                className="bg-raised text-fg-secondary px-1.5 py-0.5 rounded-chip text-xs"
-              >
-                {t.name}
-              </span>
+              <Badge key={t.id}>{t.name}</Badge>
             ))}
           </div>
         )}

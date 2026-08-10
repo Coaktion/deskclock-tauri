@@ -9,7 +9,7 @@ import {
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { Button, Modal, Toggle } from "@presentation/components/ui";
+import { Badge, Button, Modal, Toggle } from "@presentation/components/ui";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { emit } from "@tauri-apps/api/event";
@@ -282,21 +282,18 @@ function EventRow({
               </span>
             )}
             {isDeduped && (
-              <span
-                title="Mesma tarefa recorrente já incluída — não criará tarefa separada"
-                className="px-1 py-0.5 text-xs leading-none rounded-chip bg-border text-fg-secondary shrink-0"
-              >
+              <Badge title="Mesma tarefa recorrente já incluída — não criará tarefa separada">
                 recorrente
-              </span>
+              </Badge>
             )}
             {isDuplicateOfExisting && (
-              <span
+              <Badge
+                tone="warning"
+                icon={<AlertTriangle size={14} />}
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-xs leading-none rounded-chip bg-yellow-900/50 text-yellow-400 shrink-0"
               >
-                <AlertTriangle size={14} />
                 já existe
-              </span>
+              </Badge>
             )}
           </div>
           <p className="text-xs text-fg-muted mt-0.5">
@@ -760,13 +757,7 @@ export function ImportCalendarModal({
                       <div className="text-xs text-fg-muted mt-0.5">seg a sex</div>
                     </div>
                     <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
-                      <span
-                        className={`text-xs px-1.5 py-0.5 rounded-full ${
-                          isActive ? "bg-accent/10 text-accent-text" : "bg-raised text-fg-muted"
-                        }`}
-                      >
-                        {count} ev.
-                      </span>
+                      <Badge tone={isActive ? "accent" : "neutral"}>{count} ev.</Badge>
                       {selCount > 0 && <span className="text-xs text-billable">{selCount} ✓</span>}
                     </div>
                   </button>
