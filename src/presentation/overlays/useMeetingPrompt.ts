@@ -28,8 +28,14 @@ export function useMeetingPrompt(popupSize: { width: number; height: number }) {
         activeRef.current = true;
         setPrompt(payload);
         await positionPopupNearCompact(appWindow, popupSize);
+        // O aviso aparece por conta própria, no meio do que o usuário está
+        // fazendo: chegar com foco tira o teclado da janela em que ele digita.
+        // Tirar só o `setFocus()` não basta — no Windows o próprio `show()`
+        // ativa a janela —, então quem resolve é nascer não-ativável. Os botões
+        // continuam clicáveis (o prompt é só botão, não depende de teclado) e o
+        // guard de blur de `PopupOverlayApp` segue valendo.
+        await appWindow.setFocusable(false);
         await appWindow.show();
-        await appWindow.setFocus();
       }
     );
     return () => {
@@ -48,6 +54,9 @@ export function useMeetingPrompt(popupSize: { width: number; height: number }) {
       activeRef.current = false;
       setPrompt(null);
       await appWindow.hide();
+      // A não-ativação vale só enquanto o aviso está na tela: no uso normal o
+      // popup depende de foco — fechar no blur, digitar no omnibox.
+      await appWindow.setFocusable(true);
     },
     [prompt]
   );
