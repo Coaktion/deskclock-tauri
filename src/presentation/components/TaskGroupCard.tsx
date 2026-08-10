@@ -176,15 +176,16 @@ export function TaskGroupCard({
       />
 
       {/*
-       * As filhas não são indentadas: elas alinham com a linha do grupo pelas
-       * colunas da grade, e é a célula vazia do chevron que abre o recuo. Sem
-       * casca em volta, a última linha da lista é a última filha — e é ela que
-       * fica sem régua.
+       * As filhas não são recuadas: recuar moveria todas as colunas delas, e
+       * quem diz o pertencimento é o trilho do `nested`. Sem casca em volta
+       * porque, embrulhadas, a última filha vira `:last-child` do embrulho e
+       * perde a régua no meio da lista — e o grupo recolhido também.
        */}
       {expanded &&
         tasks.map((t) => (
           <TaskCard
             key={t.id}
+            nested
             task={t}
             projects={projects}
             categories={categories}

@@ -556,9 +556,9 @@ conferidos na tela). Por ordem de risco:
 -4. **A linha de tarefa nas 5 telas** (F2) — é a mudança de maior alcance depois da escala: **toda**
     lista perdeu o respiro entre linhas e ganhou régua, e a linha deixou de ser pílula para ser
     faixa de borda a borda. Olhar primeiro **Entradas de hoje**, que é onde o conteúdo se moveu: o
-    `3 registros` saiu do subtítulo para a coluna de 88px, as linhas filhas ganharam faixa de
-    horário e **perderam a indentação** — conferir se ainda se lê que elas pertencem ao grupo
-    acima, agora que só o chevron aberto e a coluna vazia dizem isso. Depois, em **Histórico e
+    `3 registros` saiu do subtítulo para a coluna de 88px, e as linhas filhas ganharam faixa de
+    horário, trilho e um degrau de 12px — conferir se o trilho se vê no **modo claro**, onde ele é
+    `border-subtle` sobre canvas quase branco. Depois, em **Histórico e
     Manual**, a duração sumindo no hover para a ação entrar no lugar dela: é a mudança de
     comportamento da etapa, e é onde uma linha estreita mostraria as duas se atropelando.
     -4b. **O cartão do dia do Histórico deixou de pintar fundo** — mesma mudança que a F1 fez no
@@ -871,10 +871,25 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   - **A régua é `last:border-b-0`, e por isso o `TaskGroupCard` deixou de ter casca.** Ele
     embrulhava linha e filhas num `<div>`, e ali o grupo **recolhido** era o último filho — perdia a
     régua no meio da lista. Como fragmento, o último elemento da lista é o último de verdade.
-  - **As linhas filhas não são mais indentadas** (decisão do usuário, 2026-08-10, contra a
-    recomendação de manter). O `pl-4 ml-3 border-l` saiu; elas alinham com a linha do grupo pelas
-    colunas, e o recuo passa a vir da **célula vazia do chevron** que o `TaskCard` reserva — que é
-    literalmente o `<span></span>` que o mock desenha ali.
+  - **A linha filha diz o pertencimento por trilho e degrau** — a prop `nested` do `TaskRow`, e não
+    uma casca em volta. O trilho é um filete de 2px **fora do fluxo** (`absolute left-3`, como a
+    barra do item ativo da sidebar), no x em que o conteúdo da linha não aninhada começa: ele desce
+    de sob o chevron do grupo, não ocupa célula da grade e filhas em sequência formam um filete só.
+    O degrau são 12px de `pl-6` na própria linha — sai do `1fr` do nome, então **chip e duração
+    continuam onde estão** nas linhas em volta e só a esquerda degraus.
+
+    > **Aqui o mock está errado, e a medida é o que prova.** Ele desenha um `<span></span>` vazio na
+    > coluna do chevron da filha, que **reserva a coluna e não a largura**: medido em Chromium, a
+    > faixa de 88px do grupo começa em x=174 e a das filhas em **x=160** — as filhas ficam 14px
+    > **para fora**, que é pior que não ter recuo. O wireframe passa batido porque desenha um grupo
+    > só; o app enfileira N. Por isso o `TaskCard` reserva a coluna em `w-3.5`, na largura do ícone
+    > que a linha do grupo põe ali. **É divergência declarada**, e é por ela que não há caso de linha
+    > aninhada na bancada: ele reprovaria para sempre por uma diferença que é correção.
+
+    A primeira volta desta etapa seguiu o mock ao pé da letra — sem trilho e sem degrau — e o
+    usuário reprovou na leitura (2026-08-10): o pertencimento tinha sumido. Trilho sozinho também
+    não bastou. **A pilha foi fotografada nos dois modos** antes de fechar (grupo recolhido, grupo
+    aberto com duas filhas, tarefa solta em seguida).
   - **O cartão do dia do Histórico parou de pintar fundo**, como a F1 fez com o `SectionCard` (o
     spec da 3b mostra a mesma anatomia: casca só com borda, faixa em `surface`). Não é melhoria fora
     de escopo: a linha em hover passou a ser `bg-surface`, e sobre um cartão `bg-surface` ela some.
@@ -883,7 +898,9 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   *quantos* no grupo (`3 registros`, que era sufixo do subtítulo) e *quando* na tarefa solta e nas
   filhas (`13:30–13:48`, que não existia nas Entradas). A faixa virou `formatTimeRange` em
   `shared/utils/time.ts` — era o terceiro consumidor, e as três grafias divergiam (o Manual escrevia
-  `09:12 – 11:00` com espaços, o Histórico escrevia `09:12–—` quando não havia fim).
+  `09:12 – 11:00` com espaços, o Histórico escrevia `09:12–—` quando não havia fim). **A tarefa
+  solta reserva a coluna do chevron e não leva trilho nem degrau** — ela é irmã do grupo, não filha,
+  e é o mesmo `TaskCard` que desenha as duas.
 
   **A bancada visual mede as três formas em zero divergência de propriedade** — grade, gap, padding,
   régua, alinhamento e os dois degraus de texto batem valor a valor nas três. **O que resta é

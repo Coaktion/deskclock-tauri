@@ -12,6 +12,8 @@ interface TaskCardProps {
   categories: Category[];
   sent?: boolean;
   playDisabled?: boolean;
+  /** Dentro de um grupo aberto — a linha ganha o trilho que a prende à de cima. */
+  nested?: boolean;
   onPlay: (task: Task) => void;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
@@ -24,6 +26,7 @@ export function TaskCard({
   categories,
   sent = false,
   playDisabled = false,
+  nested = false,
   onPlay,
   onEdit,
   onDelete,
@@ -37,10 +40,12 @@ export function TaskCard({
     <TaskRow
       title={task.name ?? "(sem nome)"}
       subtitle={subtitle || undefined}
-      // A célula vazia da coluna do chevron: é ela que alinha esta linha com a
-      // do grupo acima, e é o que o design desenha no lugar da seta que a linha
-      // filha não tem.
-      leading={<span aria-hidden />}
+      // A coluna do chevron **reservada**, na largura do ícone que a linha do
+      // grupo põe ali. Vazia de verdade ela mede 0, e aí a faixa de horário
+      // desta linha sobe 14px à esquerda da faixa do grupo — que é o que o
+      // wireframe faz, medido, e é desalinhamento e não recuo.
+      leading={<span className="w-3.5" aria-hidden />}
+      nested={nested}
       meta={
         <span className="text-micro font-mono tabular-nums text-fg-muted">
           {formatTimeRange(task.startTime, task.endTime)}

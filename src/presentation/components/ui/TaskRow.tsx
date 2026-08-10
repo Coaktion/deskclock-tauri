@@ -21,6 +21,12 @@ interface TaskRowProps {
   badges?: ReactNode;
   /** Dividem a última coluna com a duração: ela recua, elas aparecem. */
   actions?: ReactNode;
+  /**
+   * A linha pende da de cima — a tarefa dentro de um grupo aberto. Ela ganha o
+   * trilho e um degrau de 12px à esquerda; o degrau sai do `1fr` do nome, então
+   * chip e duração continuam onde estão nas linhas em volta.
+   */
+  nested?: boolean;
   selected?: boolean;
   onClick?: () => void;
 }
@@ -52,6 +58,7 @@ export function TaskRow({
   leading,
   badges,
   actions,
+  nested = false,
   selected = false,
   onClick,
 }: TaskRowProps) {
@@ -83,9 +90,11 @@ export function TaskRow({
   return (
     <div
       onClick={onClick}
-      className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor))} gap-2.5 px-3 py-2.5 border-b border-border-subtle last:border-b-0 transition-colors ${
-        selected ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-surface"
-      } ${onClick ? "cursor-pointer" : ""}`}
+      className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor))} gap-2.5 py-2.5 pr-3 border-b border-border-subtle last:border-b-0 transition-colors ${
+        nested ? "relative pl-6" : "pl-3"
+      } ${selected ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-surface"} ${
+        onClick ? "cursor-pointer" : ""
+      }`}
     >
       {hasLeading && leading}
       {hasMeta && meta}
@@ -135,6 +144,19 @@ export function TaskRow({
           </div>
         )}
       </div>
+
+      {/*
+       * O trilho da linha aninhada, no x em que o conteúdo da linha **não**
+       * aninhada começa — ou seja, sob o chevron do grupo, que é de onde ele
+       * desce. Fora do fluxo de propósito: em fluxo ele seria mais uma célula, e
+       * a grade tem uma coluna por célula. Sem raio e de topo a base, para que
+       * filhas em sequência formem um filete só. Vem por último no DOM porque o
+       * ponto de projeto é o primeiro `aria-hidden` da linha, e há quem o
+       * procure assim.
+       */}
+      {nested && (
+        <span className="absolute left-3 top-0 bottom-0 w-0.5 bg-border-subtle" aria-hidden />
+      )}
     </div>
   );
 }

@@ -32,6 +32,19 @@ describe("TaskRow", () => {
     expect(screen.queryByText("Non-billable")).toBeNull();
   });
 
+  it("a linha aninhada ganha trilho e degrau, e o trilho fica fora do fluxo", () => {
+    // O trilho não pode ser filho em fluxo: a grade tem uma coluna por célula,
+    // e um filho a mais empurraria a última para fora do gabarito.
+    const { container, rerender } = render(<TaskRow title="a" duration="1h" nested />);
+    const row = container.firstElementChild!;
+    expect(row.className).toContain("pl-6");
+    expect(container.querySelector("span.absolute")).not.toBeNull();
+
+    rerender(<TaskRow title="a" duration="1h" />);
+    expect(container.firstElementChild!.className).toContain("pl-3");
+    expect(container.querySelector("span.absolute")).toBeNull();
+  });
+
   it("o chip só alterna quando a linha entrega o clique", () => {
     const { rerender } = render(<TaskRow title="a" duration="1h" billable />);
     expect(screen.queryByRole("button")).toBeNull();

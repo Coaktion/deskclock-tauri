@@ -448,6 +448,14 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > `TaskGroupCard` é fragmento e não casca (embrulhado, o grupo recolhido virava o último filho e
   > perdia a régua no meio da lista).
   >
+  > **A linha filha diz o pertencimento pela prop `nested`, nunca por casca em volta** — trilho de
+  > 2px fora do fluxo (`absolute left-3`, descendo de sob o chevron do grupo) mais um degrau de
+  > 12px (`pl-6`) na própria linha. O degrau sai do `1fr` do nome, então chip e duração ficam onde
+  > estão nas linhas em volta e só a esquerda degraus; o trilho, fora do fluxo, não vira célula da
+  > grade. **A coluna do chevron é reservada em `w-3.5` mesmo vazia**: vazia de verdade ela mede 0,
+  > e a faixa de horário da filha sobe 14px à esquerda da faixa do grupo — que é o que o wireframe
+  > faz, medido, e é desalinhamento e não recuo. Divergir dele aqui é deliberado.
+  >
   > **Duração e ações dividem a última coluna**, empilhadas por `col-start-1 row-start-1`: a duração
   > recua no hover e as ações entram no lugar dela. Empilhar em vez de trocar por `hidden` guarda a
   > largura da célula (que senão pularia com o cursor) e o acesso pelo teclado; em repouso as ações
