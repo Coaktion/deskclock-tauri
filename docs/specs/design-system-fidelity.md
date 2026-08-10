@@ -194,9 +194,12 @@ ações à direita, secundária sem casca, **nunca dois botões cheios**. Largur
   **O `SetupModal` fica de fora de vez:** fundo opaco, sem véu, sem X e sem para onde fechar —
   é a janela da primeira execução, não um diálogo.
 
-  > **O `CommandPalette` não é modal e não entrou.** Ele é o último `bg-black/60 backdrop-blur-sm`
-  > do app, mas abre encostado no alto (`items-start pt-20`), não centrado, e não tem cabeçalho,
-  > rodapé nem título — a casca não o expressa. Fica para uma decisão própria.
+  > **O `CommandPalette` não entrou, e depois deixou de existir.** Ele era o último
+  > `bg-black/60 backdrop-blur-sm` do app, mas abria encostado no alto (`items-start pt-20`), não
+  > centrado, e não tinha cabeçalho, rodapé nem título — a casca não o expressava, e a decisão
+  > ficou em aberto. O usuário resolveu **removendo a feature** em 2026-08-10, por não usá-la: com
+  > ela saíram a janela `command-palette` inteira, o scrim e o único `backdrop-blur` restante. Não
+  > há mais véu fora da casca `Modal`.
 
 **A4 · `Badge`** — pendente. A partir de `components/chipStyles.ts`, que já é o vocabulário certo
 sem ser componente. Cobre o chip de billable da fase E.
@@ -339,7 +342,7 @@ Ao fim da fase A (2026-08-10, medido com `grep -rho`):
 | ------------------------------ | ----- | ------------------------------------------------ |
 | `<input>` crus                 | 81    | **35** (caixa, rádio e faixa, fora por assinatura) |
 | `<select>` crus                | 21    | **5**                                            |
-| scrims                         | 4     | **1** — e é o `CommandPalette`, que não é modal   |
+| scrims                         | 4     | **1**, depois **0** — o que sobrava era o `CommandPalette`, removido |
 | larguras de modal              | 5     | **4** — as da casca                              |
 | `text-xs`                      | 461   | **365** (a varredura da fase B é sobre estes)     |
 | `<button>` nos 19 modais       | —     | **26**, dos quais 3 no `SetupModal`              |

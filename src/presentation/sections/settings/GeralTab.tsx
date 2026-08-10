@@ -36,7 +36,6 @@ export function GeralTab() {
   const config = useAppConfig();
 
   const [userName, setUserName] = useState("");
-  const [showWelcome, setShowWelcome] = useState(true);
   const [startOnBoot, setStartOnBoot] = useState(false);
   const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [closeOnFocusLoss, setCloseOnFocusLoss] = useState(false);
@@ -51,7 +50,6 @@ export function GeralTab() {
   useEffect(() => {
     if (!config.isLoaded) return;
     setUserName(config.get("userName"));
-    setShowWelcome(config.get("showWelcomeMessage"));
     setLiveTrayTimer(config.get("liveTrayTimer"));
     setCloseOnFocusLoss(config.get("closeOnFocusLoss"));
     setDiscardTasksUnderOneMinute(config.get("discardTasksUnderOneMinute"));
@@ -68,7 +66,6 @@ export function GeralTab() {
 
   async function handleToggle(
     key:
-      | "showWelcomeMessage"
       | "liveTrayTimer"
       | "closeOnFocusLoss"
       | "discardTasksUnderOneMinute"
@@ -137,14 +134,6 @@ export function GeralTab() {
       </SectionCard>
 
       <SectionCard title="Comportamento" divided>
-        <SectionRow>
-          <Toggle
-            label="Abrir acesso rápido ao iniciar"
-            description="Exibe o painel de ações ao abrir o app. Use Ctrl+K para abrí-lo a qualquer momento."
-            checked={showWelcome}
-            onChange={(v) => handleToggle("showWelcomeMessage", setShowWelcome, v)}
-          />
-        </SectionRow>
         <SectionRow>
           <Toggle
             label="Iniciar na inicialização do computador"

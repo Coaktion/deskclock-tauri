@@ -2,52 +2,26 @@ import { useEffect, type RefObject } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ConfigContextValue } from "@shared/types/appConfig";
-import { OVERLAY_EVENTS, type CommandPaletteNavigatePayload } from "@shared/types/overlayEvents";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { Page } from "@presentation/components/Sidebar";
 
 const appWindow = getCurrentWindow();
 
-interface CommandPaletteRouterDeps {
+interface AppRouterDeps {
   config: ConfigContextValue;
   setPage: (page: Page) => void;
   setFocusTaskEdit: (value: boolean) => void;
   ignoreBlurRef: RefObject<boolean>;
   showMainWindow: (focusToo?: boolean) => Promise<void>;
-  showCommandPalette: () => Promise<void>;
 }
 
-export function useCommandPaletteRouter({
+export function useAppRouter({
   config,
   setPage,
   setFocusTaskEdit,
   ignoreBlurRef,
   showMainWindow,
-  showCommandPalette,
-}: CommandPaletteRouterDeps) {
-  // Atalho de teclado: mostra command palette
-  useEffect(() => {
-    const unlisten = listen("shortcut:show-command-palette", () => {
-      void showCommandPalette();
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Navega para página quando command palette seleciona
-  useEffect(() => {
-    const unlisten = listen<CommandPaletteNavigatePayload>(
-      OVERLAY_EVENTS.COMMAND_PALETTE_NAVIGATE,
-      async ({ payload }) => {
-        await showMainWindow(true);
-        setPage(payload.page as Page);
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
-
+}: AppRouterDeps) {
   // Mostra a janela principal no estado atual, sem trocar de página
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.OVERLAY_OPEN_APP, async () => {

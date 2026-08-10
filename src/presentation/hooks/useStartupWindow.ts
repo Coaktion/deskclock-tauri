@@ -2,7 +2,7 @@ import { useCallback, useEffect, type RefObject } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { positionNearTaskbar, centerOnWorkArea } from "@shared/utils/windowPosition";
+import { positionNearTaskbar } from "@shared/utils/windowPosition";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 
 const appWindow = getCurrentWindow();
@@ -13,10 +13,6 @@ const MAIN_WINDOW_SIZE = { width: 1100, height: 700 };
 
 async function getOverlayCompact() {
   return WebviewWindow.getByLabel("overlay-compact");
-}
-
-async function getCommandPalette() {
-  return WebviewWindow.getByLabel("command-palette");
 }
 
 export function useStartupWindow(
@@ -37,14 +33,6 @@ export function useStartupWindow(
     },
     [config]
   );
-
-  const showCommandPalette = useCallback(async () => {
-    const cp = await getCommandPalette();
-    if (!cp) return;
-    await centerOnWorkArea(cp, { width: 560, height: 500 });
-    await cp.show();
-    await cp.setFocus();
-  }, []);
 
   // Fecha janela ao perder foco, se habilitado e não fixada
   useEffect(() => {
@@ -120,19 +108,8 @@ export function useStartupWindow(
       return;
     }
 
-    if (config.get("showWelcomeMessage")) {
-      void (async () => {
-        const cp = await getCommandPalette();
-        if (cp) {
-          await showCommandPalette();
-        } else {
-          await showMainWindow();
-        }
-      })();
-    } else {
-      void showMainWindow();
-    }
+    void showMainWindow();
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { showMainWindow, showCommandPalette };
+  return { showMainWindow };
 }

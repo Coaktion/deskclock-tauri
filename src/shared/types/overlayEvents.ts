@@ -16,9 +16,7 @@ export const OVERLAY_EVENTS = {
   CATEGORIES_CHANGED: "categories-changed",
   CUSTOM_FIELDS_CHANGED: "custom-fields-changed",
   PROJECT_CATEGORIES_CHANGED: "project-categories-changed",
-  COMMAND_PALETTE_NAVIGATE: "command-palette:navigate",
   OVERLAY_OPEN_APP: "overlay-open-app",
-  COMMAND_PALETTE_START_TASK: "command-palette:start-task",
   DEEPLINK_NAVIGATE: "deeplink:navigate",
   DEEPLINK_START_TASK: "deeplink:start-task",
   DEEPLINK_RETROACTIVE_PREFILL: "deeplink:retroactive-prefill",
@@ -31,18 +29,6 @@ export const OVERLAY_EVENTS = {
   MONDAY_IMPORT_SYNC_RESULT: "monday-import:sync-result",
   WORKSPACE_CHANGED: "workspace-changed",
 } as const;
-
-export interface CommandPaletteNavigatePayload {
-  page: string;
-}
-
-export interface CommandPaletteStartTaskPayload {
-  name?: string | null;
-  projectId?: string | null;
-  categoryId?: string | null;
-  billable: boolean;
-  plannedTaskId?: string | null;
-}
 
 export interface RunningTaskChangedPayload {
   task: Task | null;

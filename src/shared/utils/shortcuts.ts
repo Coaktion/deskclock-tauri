@@ -15,8 +15,3 @@ export function matchesShortcut(e: KeyboardEvent, acc: string): boolean {
   const eKey = e.key.toLowerCase();
   return eKey === keyPart || (eKey === " " && keyPart === "space");
 }
-
-export function formatShortcut(acc: string): string {
-  if (!acc) return "";
-  return acc.replace(/CmdOrCtrl/gi, "Ctrl").replace(/Meta/gi, "Cmd");
-}

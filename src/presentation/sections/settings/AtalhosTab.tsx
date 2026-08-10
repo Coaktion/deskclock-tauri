@@ -12,7 +12,6 @@ export function AtalhosTab() {
   const [shortcutStopTask, setShortcutStopTask] = useState("");
   const [shortcutToggleOverlay, setShortcutToggleOverlay] = useState("");
   const [shortcutToggleWindow, setShortcutToggleWindow] = useState("");
-  const [shortcutCommandPalette, setShortcutCommandPalette] = useState("");
   const [displayServer, setDisplayServer] = useState("");
   const [failedShortcuts, setFailedShortcuts] = useState<string[]>([]);
 
@@ -22,7 +21,6 @@ export function AtalhosTab() {
     setShortcutStopTask(config.get("shortcutStopTask"));
     setShortcutToggleOverlay(config.get("shortcutToggleOverlay"));
     setShortcutToggleWindow(config.get("shortcutToggleWindow"));
-    setShortcutCommandPalette(config.get("shortcutCommandPalette"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -37,21 +35,18 @@ export function AtalhosTab() {
       stopTask: string;
       toggleOverlay: string;
       toggleWindow: string;
-      commandPalette: string;
     }>
   ) {
     const t = overrides?.toggleTask ?? shortcutToggleTask;
     const s = overrides?.stopTask ?? shortcutStopTask;
     const o = overrides?.toggleOverlay ?? shortcutToggleOverlay;
     const w = overrides?.toggleWindow ?? shortcutToggleWindow;
-    const cp = overrides?.commandPalette ?? shortcutCommandPalette;
     const failed = await invoke<string[]>("update_shortcuts", {
       shortcuts: [
         { action: "toggle-task", accelerator: t },
         { action: "stop-task", accelerator: s },
         { action: "toggle-overlay", accelerator: o },
         { action: "toggle-window", accelerator: w },
-        { action: "toggle-command-palette", accelerator: cp },
       ],
     });
     setFailedShortcuts(failed);
@@ -59,7 +54,6 @@ export function AtalhosTab() {
     await config.set("shortcutStopTask", s);
     await config.set("shortcutToggleOverlay", o);
     await config.set("shortcutToggleWindow", w);
-    await config.set("shortcutCommandPalette", cp);
   }
 
   return (
@@ -83,21 +77,6 @@ export function AtalhosTab() {
           </p>
         </div>
       )}
-
-      <SectionCard title="Acesso rápido">
-        <SectionRow>
-          <ShortcutRow
-            label="Acesso rápido (Command Palette)"
-            description="Abre o painel de ações de qualquer lugar, mesmo com a janela fechada"
-            value={shortcutCommandPalette}
-            failed={failedShortcuts.includes(shortcutCommandPalette) && !!shortcutCommandPalette}
-            onSave={(v) => {
-              setShortcutCommandPalette(v);
-              applyShortcuts({ commandPalette: v });
-            }}
-          />
-        </SectionRow>
-      </SectionCard>
 
       <SectionCard title="Tarefa e janelas" divided>
         <SectionRow>

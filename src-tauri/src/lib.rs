@@ -90,12 +90,7 @@ unsafe extern "system" fn timer_topmost_proc(
     let Some(handle) = APP_HANDLE.get() else {
         return;
     };
-    for label in [
-        "overlay-compact",
-        "overlay-popup",
-        "toast",
-        "command-palette",
-    ] {
+    for label in ["overlay-compact", "overlay-popup", "toast"] {
         let Some(w) = handle.get_webview_window(label) else {
             continue;
         };
@@ -136,12 +131,7 @@ unsafe extern "system" fn win_event_proc(
     let Some(handle) = APP_HANDLE.get() else {
         return;
     };
-    for label in [
-        "overlay-compact",
-        "overlay-popup",
-        "toast",
-        "command-palette",
-    ] {
+    for label in ["overlay-compact", "overlay-popup", "toast"] {
         let Some(w) = handle.get_webview_window(label) else {
             continue;
         };
@@ -216,12 +206,7 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
     }
     #[cfg(not(target_os = "windows"))]
     std::thread::spawn(move || loop {
-        for label in [
-            "overlay-compact",
-            "overlay-popup",
-            "toast",
-            "command-palette",
-        ] {
+        for label in ["overlay-compact", "overlay-popup", "toast"] {
             if let Some(w) = handle.get_webview_window(label) {
                 if w.is_visible().unwrap_or(false) {
                     w.set_always_on_top(true).ok();

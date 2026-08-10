@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { Page } from "@presentation/components/Sidebar";
 
@@ -19,11 +18,6 @@ interface DeepLinkNavigatePayload {
   page: string;
 }
 
-async function hideCommandPalette() {
-  const cp = await WebviewWindow.getByLabel("command-palette");
-  await cp?.hide();
-}
-
 export function useDeepLink(setPage: (page: Page) => void) {
   // App já em execução: recebe evento em tempo real.
   useEffect(() => {
@@ -33,7 +27,6 @@ export function useDeepLink(setPage: (page: Page) => void) {
         const page = payload.page as Page;
         if (VALID_PAGES.includes(page)) {
           setPage(page);
-          hideCommandPalette().catch(() => {});
         }
       }
     );
@@ -48,7 +41,6 @@ export function useDeepLink(setPage: (page: Page) => void) {
     invoke<string | null>("get_pending_deep_link_page").then((page) => {
       if (!page || !VALID_PAGES.includes(page as Page)) return;
       setPage(page as Page);
-      hideCommandPalette().catch(() => {});
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 }

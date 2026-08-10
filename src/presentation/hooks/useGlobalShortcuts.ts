@@ -15,7 +15,6 @@ export function useGlobalShortcuts(config: ConfigContextValue) {
         { action: "stop-task", accelerator: config.get("shortcutStopTask") },
         { action: "toggle-overlay", accelerator: config.get("shortcutToggleOverlay") },
         { action: "toggle-window", accelerator: config.get("shortcutToggleWindow") },
-        { action: "toggle-command-palette", accelerator: config.get("shortcutCommandPalette") },
       ],
     }).catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps

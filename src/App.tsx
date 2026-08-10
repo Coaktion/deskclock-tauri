@@ -12,7 +12,7 @@ import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { TourProvider } from "@presentation/contexts/TourContext";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
-import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
+import { useAppRouter } from "@presentation/hooks/useAppRouter";
 import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
 import { useDeepLink } from "@presentation/hooks/useDeepLink";
 import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
@@ -30,7 +30,7 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { TasksPage } from "@presentation/pages/TasksPage";
-import { OVERLAY_EVENTS, type CommandPaletteStartTaskPayload } from "@shared/types/overlayEvents";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -116,19 +116,6 @@ function MainContent({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [setPage]);
-
-  // Command palette: start task from standalone window
-  useEffect(() => {
-    const unlisten = listen<CommandPaletteStartTaskPayload>(
-      OVERLAY_EVENTS.COMMAND_PALETTE_START_TASK,
-      async ({ payload }) => {
-        await startTask(payload);
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [startTask]);
 
   // Deep link: task/start — resolve nomes para IDs e inicia a tarefa
   const handleDeepLinkStart = useCallback(
@@ -279,20 +266,15 @@ function AppInner() {
 
   useAppearanceSync(config);
   useGlobalShortcuts(config);
-  const { showMainWindow, showCommandPalette } = useStartupWindow(
-    config,
-    ignoreBlurRef,
-    isPinnedRef
-  );
+  const { showMainWindow } = useStartupWindow(config, ignoreBlurRef, isPinnedRef);
   useDailySyncScheduler(config, runDaily);
   useUpdateNotifier();
-  useCommandPaletteRouter({
+  useAppRouter({
     config,
     setPage,
     setFocusTaskEdit,
     ignoreBlurRef,
     showMainWindow,
-    showCommandPalette,
   });
   useDeepLink(setPage);
 

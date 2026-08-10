@@ -15,7 +15,6 @@ export type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition };
 const DEFAULTS: AppConfig = {
   setupCompleted: false,
   userName: "",
-  showWelcomeMessage: true,
   startOnBoot: false,
   liveTrayTimer: false,
   closeOnFocusLoss: false,
@@ -33,7 +32,6 @@ const DEFAULTS: AppConfig = {
   shortcutStopTask: "",
   shortcutToggleOverlay: "",
   shortcutToggleWindow: "",
-  shortcutCommandPalette: "",
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
   overlaySize: "big" as const,

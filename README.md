@@ -79,12 +79,6 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
   destino
 - As integrações continuam enxergando todos os workspaces
 
-### Acesso rápido (Command Palette)
-- Painel de ações acessível via `Ctrl+K` ou ao abrir o app (configurável)
-- Atalhos numéricos `Ctrl+1–7` para navegar direto às telas
-- Iniciar nova tarefa em branco sem abrir a janela principal
-- Busca fuzzy nas ações e tarefas planejadas do dia
-
 ### Overlays
 - **Compact Overlay:** sempre visível (always-on-top), arrastável com persistência de posição; mostra ícone + badge de tarefas pendentes quando idle, timer `MM:SS` pulsante quando em execução
 - **Popup Flyout:** aberto ao clicar no Compact; mostra tarefas planejadas (idle) ou controles da tarefa em execução (running/paused); edição inline por campo (nome, projeto, categoria, hora de início) sem abrir modal
@@ -105,7 +99,6 @@ Aplicativo desktop de registro de horas trabalhadas, construído com Tauri + Rea
 - Atalhos globais configuráveis: toggle tarefa, parar, mostrar/ocultar overlay e janela
 - Temas: Azul, Verde, Escuro, Claro
 - Tamanho de fonte: P, M, G, GG
-- Abrir acesso rápido (Command Palette) ao iniciar o app (configurável)
 
 ---
 
@@ -407,8 +400,8 @@ src/
 │   └── integrations/ # Google Sheets, Google Calendar (OAuth, sender, importer)
 ├── presentation/     # React UI
 │   ├── pages/        # Tasks, Planning, Retroactive, History, Data, Settings, Integrations
-│   ├── components/   # Autocomplete, DatePickerInput, Sidebar, CommandPalette…
-│   ├── overlays/     # Execution, Planning, Compact, CommandPaletteApp, Toast
+│   ├── components/   # Autocomplete, DatePickerInput, Sidebar, Omnibox…
+│   ├── overlays/     # Execution, Planning, Compact, Toast
 │   ├── modals/       # EditTaskModal, ExportModal, ImportCalendarModal…
 │   ├── hooks/        # useRunningTask, useHistory, usePlannedTasks…
 │   └── contexts/     # RunningTaskContext, ConfigContext

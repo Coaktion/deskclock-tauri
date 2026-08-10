@@ -42,7 +42,6 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   // Geral
   setupCompleted: boolean;
   userName: string;
-  showWelcomeMessage: boolean;
   startOnBoot: boolean;
   liveTrayTimer: boolean;
   closeOnFocusLoss: boolean;
@@ -84,8 +83,6 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   shortcutStopTask: string;
   shortcutToggleOverlay: string;
   shortcutToggleWindow: string;
-  // Atalho da janela
-  shortcutCommandPalette: string;
   // Overlay
   overlayAlwaysVisible: boolean;
   overlayShowOnStart: boolean;
