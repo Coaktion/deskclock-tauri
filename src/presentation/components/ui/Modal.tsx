@@ -37,6 +37,13 @@ interface ModalProps {
   /** Frase abaixo do título, para a consequência que o título não cabe. */
   description?: ReactNode;
   /**
+   * Canto direito do cabeçalho, à esquerda do X — o ↻ dos modais de apontamentos
+   * e o total de horas ao lado dele. Fica no cabeçalho, e não na `toolbar`,
+   * porque age sobre o diálogo inteiro em vez de recortar a lista: descê-lo
+   * junto dos filtros diria que ele é mais um deles.
+   */
+  headerEnd?: ReactNode;
+  /**
    * Faixa fixa entre o cabeçalho e o corpo — o recorte de período do envio, as
    * abas da exportação. Fica fora do corpo porque não deve rolar junto com a
    * lista que ela filtra.
@@ -71,9 +78,12 @@ interface ModalProps {
    */
   onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
   /**
-   * Substitui o arranjo do corpo — não se soma a ele. Duas classes de `gap` na
-   * mesma string dependeriam da ordem em que o Tailwind as emite, que não é a
-   * ordem em que foram escritas.
+   * Substitui o arranjo **e o espaçamento** do corpo — não se soma a eles. Duas
+   * classes da mesma propriedade na mesma string dependeriam da ordem em que o
+   * Tailwind as emite, que não é a ordem em que foram escritas: `p-0` sai antes
+   * de `p-5` na folha, então quem passava `p-0` para tirar o padding continuava
+   * com ele. Por isso o `p-5` mora **aqui**, no valor padrão, e não na classe
+   * fixa do corpo — assim substituí-lo é substituí-lo de verdade.
    */
   bodyClassName?: string;
 }
@@ -84,19 +94,24 @@ export function Modal({
   children,
   size = "md",
   description,
+  headerEnd,
   toolbar,
   footer,
   footerStart,
   notice,
   tall = false,
   onKeyDown,
-  bodyClassName = "flex flex-col gap-3",
+  bodyClassName = "p-5 flex flex-col gap-3",
 }: ModalProps) {
   const titleId = useId();
   useEscapeToClose(onClose);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/82">
+    // `data-modal-open` é o que impede o ESC de esconder a janela inteira: o
+    // listener de `useGlobalShortcuts` é do `document` e roda **antes** do
+    // `useEscapeToClose`, que é da `window`. Escrito à mão, só três telas o
+    // tinham — e o modal que o perde fecha o app em vez de si mesmo.
+    <div data-modal-open className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/82">
       <div
         role="dialog"
         aria-modal="true"
@@ -113,14 +128,17 @@ export function Modal({
             </h2>
             {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
           </div>
-          <IconButton
-            icon={<X size={16} />}
-            title="Fechar"
-            variant="neutral"
-            size="sm"
-            onClick={onClose}
-            className="-mr-1"
-          />
+          <div className="shrink-0 flex items-center gap-2">
+            {headerEnd}
+            <IconButton
+              icon={<X size={16} />}
+              title="Fechar"
+              variant="neutral"
+              size="sm"
+              onClick={onClose}
+              className="-mr-1"
+            />
+          </div>
         </div>
 
         {toolbar && (
@@ -128,7 +146,7 @@ export function Modal({
         )}
 
         <div
-          className={`min-h-0 overflow-y-auto p-5 ${tall ? "flex-1" : "max-h-[60vh]"} ${bodyClassName}`}
+          className={`min-h-0 overflow-y-auto ${tall ? "flex-1" : "max-h-[60vh]"} ${bodyClassName}`}
         >
           {children}
         </div>

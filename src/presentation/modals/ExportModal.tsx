@@ -413,7 +413,8 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
         size="lg"
         tall
         onClose={onClose}
-        bodyClassName=""
+        // Espaçamento sem arranjo: cada aba desenha o próprio `flex`.
+        bodyClassName="p-5"
         toolbar={
           // As abas eram o cabeçalho inteiro, sem título — o design pede título e
           // as abas são recorte de conteúdo, não nome do diálogo.

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { X, RefreshCw, Loader2, Pencil, Trash2, DollarSign, Plus } from "lucide-react";
+import { RefreshCw, Loader2, Pencil, Trash2, DollarSign, Plus } from "lucide-react";
 import type {
   ClockifyHydratedProject,
   ClockifyHydratedTag,
@@ -11,7 +11,7 @@ import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { Button, FilterPill, IconButton, Modal } from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
   todayISO,
@@ -104,7 +104,6 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   const [customEnd, setCustomEnd] = useState(todayISO());
   const [onlyDefaultTags, setOnlyDefaultTags] = useState(defaultTagIds.length > 0);
 
-  useEscapeToClose(onClose);
 
   // Range derivado do filtro
   const range = useMemo(() => {
@@ -182,66 +181,53 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   // Guard: configuração ausente
   if (!apiKey || !workspaceId || !userId) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="w-full max-w-md bg-surface border border-border rounded-card shadow-2xl p-6">
-          <p className="text-sm text-fg mb-4">
-            Configure o Clockify (API Key + workspace) na tela de Integrações antes de abrir esta
-            janela.
-          </p>
-          <button
-            onClick={onClose}
-            className="text-xs bg-raised hover:bg-border text-fg px-3 py-1.5 rounded-chip transition-colors"
-          >
+      <Modal
+        title="Apontamentos do Clockify"
+        onClose={onClose}
+        footer={
+          <Button variant="secondary" onClick={onClose}>
             Fechar
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      >
+        <p className="text-sm text-fg">
+          Configure o Clockify (API Key + workspace) na tela de Integrações antes de abrir esta
+          janela.
+        </p>
+      </Modal>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] bg-surface border border-border rounded-card shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-fg">Apontamentos do Clockify</h2>
-            <p className="text-xs text-fg-muted mt-0.5 truncate">
-              {workspaceName ? `Workspace: ${workspaceName}` : "Workspace ativo"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={refresh}
-              disabled={loading}
-              title="Recarregar"
-              className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            </button>
-            <button
-              onClick={onClose}
-              title="Fechar"
-              className="text-fg-muted hover:text-fg-secondary transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-
-        {/* Filtros */}
-        <div className="px-5 py-3 border-b border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-2">
+    // `xl` (900) e `tall`: era janela cheia (`100vw-16px`), a quinta largura de
+    // modal do app e o segundo dos dois véus com desfoque. Numa janela de 1100 px
+    // sobram 900 para a tabela — é diálogo, e passa a ler como os outros.
+    <Modal
+      title="Apontamentos do Clockify"
+      description={workspaceName ? `Workspace: ${workspaceName}` : "Workspace ativo"}
+      size="xl"
+      tall
+      onClose={onClose}
+      // Sem padding: cada linha desenha o próprio `px-5` e o cabeçalho do dia é
+      // `sticky` — com padding no scrollport ele grudaria deslocado.
+      bodyClassName=""
+      headerEnd={
+        <IconButton
+          icon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
+          title="Recarregar"
+          variant="neutral"
+          size="sm"
+          disabled={loading}
+          onClick={refresh}
+        />
+      }
+      toolbar={
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {(Object.keys(QUICK_LABELS) as QuickFilter[]).map((q) => (
-              <button
-                key={q}
-                onClick={() => setQuick(q)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  quick === q ? "bg-accent text-white" : "bg-raised text-fg-secondary hover:text-fg"
-                }`}
-              >
+              <FilterPill key={q} size="sm" active={quick === q} onClick={() => setQuick(q)}>
                 {QUICK_LABELS[q]}
-              </button>
+              </FilterPill>
             ))}
           </div>
 
@@ -256,6 +242,8 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
           <div className="ml-auto flex items-center gap-3">
             {defaultTagIds.length > 0 && (
               <label className="flex items-center gap-1.5 text-xs text-fg-secondary cursor-pointer">
+                {/* Caixa não é `Input`: a assinatura a recusa por tipo, e ela não
+                    tem casca, fundo nem raio para vestir (§8.4). */}
                 <input
                   type="checkbox"
                   checked={onlyDefaultTags}
@@ -265,19 +253,20 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
                 Apenas com tags padrão
               </label>
             )}
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Plus size={14} />}
               onClick={() => setCreateOpen((v) => !v)}
               disabled={createOpen}
-              className="flex items-center gap-1 px-3 py-1 text-xs bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-full transition"
             >
-              <Plus size={14} />
               Novo apontamento
-            </button>
+            </Button>
           </div>
         </div>
-
-        {/* Lista */}
-        <div className="flex-1 overflow-y-auto">
+      }
+    >
+      <>
           {createOpen && (
             <EntryForm
               initial={createInitial}
@@ -310,12 +299,9 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
               <p className="text-sm text-fg-muted mb-2">
                 Nenhum apontamento com as tags padrão neste período.
               </p>
-              <button
-                onClick={() => setOnlyDefaultTags(false)}
-                className="text-xs text-accent-text hover:text-fg transition-colors"
-              >
+              <Button variant="ghost" onClick={() => setOnlyDefaultTags(false)}>
                 Mostrar todos
-              </button>
+              </Button>
             </div>
           )}
 
@@ -348,9 +334,8 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 

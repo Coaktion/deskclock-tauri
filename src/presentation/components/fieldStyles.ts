@@ -4,12 +4,14 @@
  * telas que precisam parecer a mesma coisa: com as classes copiadas, um ajuste
  * em uma delas desalinha as outras em silêncio.
  *
+ * **O campo em si já não mora aqui.** `fieldClass` e `bareInputClass` foram
+ * substituídos por `ui/controlStyles.ts`, que é o interior de `Input`, `Select`
+ * e `Textarea` — os valores eram os mesmos, mas classe solta não impede o
+ * próximo campo de nascer à mão. O que sobra é o que veste o campo por fora: a
+ * caixa, os dois rótulos e a casca da coluna de formulário.
+ *
  * Nada aqui é valor literal — só classes do Tailwind (§8.4 do CLAUDE.md).
  */
-
-/** Campo comum: desenha a própria casca e ocupa a linha inteira. */
-export const fieldClass =
-  "w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent";
 
 /**
  * Caixa que veste o visual de um input. Quando o campo divide a linha com um
@@ -20,10 +22,6 @@ export const fieldClass =
  */
 export const boxClass =
   "bg-raised border border-border rounded-control focus-within:border-accent transition-colors";
-
-/** Input sem casca: quem desenha é o `boxClass` em volta. */
-export const bareInputClass =
-  "w-full px-2.5 py-1.5 text-sm bg-transparent border-none text-fg placeholder-fg-muted focus:outline-none";
 
 /**
  * Rótulo encaixado na borda superior da caixa. O fundo do rótulo é o mesmo da

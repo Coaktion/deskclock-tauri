@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DollarSign, Loader2, Pencil, RefreshCw, Trash2, X } from "lucide-react";
+import { DollarSign, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   useMondayEntries,
@@ -7,9 +7,8 @@ import {
   type MondayEntryPatch,
 } from "@presentation/hooks/useMondayEntries";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { Select } from "@presentation/components/ui";
+import { Button, FilterPill, IconButton, Modal, Select } from "@presentation/components/ui";
 import {
   addDaysISO,
   formatDurationCompact,
@@ -72,7 +71,6 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
 
   const [quick, setQuick] = useState<QuickFilter>("7days");
 
-  useEscapeToClose(onClose);
 
   // Só projeto com quadro de destino: sem ele não há atividade a listar, e o id
   // vazio entraria na consulta que pede os itens de vários boards de uma vez.
@@ -118,77 +116,71 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
 
   if (!apiKey || !userId || mappings.length === 0) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="w-full max-w-md bg-surface border border-border rounded-card shadow-2xl p-6">
-          <p className="text-sm text-fg mb-4">
-            Conecte o Monday e importe os projetos na tela de Integrações antes de abrir esta
-            janela.
-          </p>
-          <button
-            onClick={onClose}
-            className="text-xs bg-raised hover:bg-border text-fg px-3 py-1.5 rounded-chip transition-colors"
-          >
+      <Modal
+        title="Atividades no Monday"
+        onClose={onClose}
+        footer={
+          <Button variant="secondary" onClick={onClose}>
             Fechar
-          </button>
-        </div>
-      </div>
+          </Button>
+        }
+      >
+        <p className="text-sm text-fg">
+          Conecte o Monday e importe os projetos na tela de Integrações antes de abrir esta janela.
+        </p>
+      </Modal>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)] bg-surface border border-border rounded-card shadow-2xl flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-fg">Atividades no Monday</h2>
-            <p className="text-xs text-fg-muted mt-0.5 truncate">
-              Somente as suas, nos {mappings.length} board(s) vinculados
-            </p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            {entries.length > 0 && (
-              <span className="text-xs font-mono tabular-nums text-fg-secondary">
-                {formatDurationCompact(Math.round(totalHours * 3600))}
-              </span>
-            )}
-            <button
-              onClick={refresh}
+    // `xl` (900) e `tall`: era janela cheia (`100vw-16px`), a quinta largura de
+    // modal do app e o primeiro dos dois véus com desfoque. Numa janela de 1100 px
+    // sobram 900 para a tabela — é diálogo, e passa a ler como os outros.
+    <Modal
+      title="Atividades no Monday"
+      description={`Somente as suas, nos ${mappings.length} board(s) vinculados`}
+      size="xl"
+      tall
+      onClose={onClose}
+      // Sem padding: cada linha desenha o próprio `px-5` e o cabeçalho do dia é
+      // `sticky` — com padding no scrollport ele grudaria deslocado.
+      bodyClassName=""
+      headerEnd={
+        <>
+          {entries.length > 0 && (
+            <span className="text-xs font-mono tabular-nums text-fg-secondary">
+              {formatDurationCompact(Math.round(totalHours * 3600))}
+            </span>
+          )}
+          <IconButton
+            icon={<RefreshCw size={14} className={loading ? "animate-spin" : ""} />}
+            title="Recarregar"
+            variant="neutral"
+            size="sm"
+            disabled={busy}
+            onClick={refresh}
+          />
+        </>
+      }
+      toolbar={
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Travados enquanto a busca corre: sem isso dá para pular de janela em
+              janela e cada clique reordena a lista sob o cursor. */}
+          {(Object.keys(QUICK_LABELS) as QuickFilter[]).map((q) => (
+            <FilterPill
+              key={q}
+              size="sm"
+              active={quick === q}
               disabled={busy}
-              title="Recarregar"
-              className="text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
+              onClick={() => setQuick(q)}
             >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-            </button>
-            <button
-              onClick={onClose}
-              title="Fechar"
-              className="text-fg-muted hover:text-fg-secondary transition-colors"
-            >
-              <X size={16} />
-            </button>
-          </div>
+              {QUICK_LABELS[q]}
+            </FilterPill>
+          ))}
         </div>
-
-        <div className="px-5 py-3 border-b border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-2">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {/* Travados enquanto a busca corre: sem isso dá para pular de janela
-                em janela e cada clique reordena a lista sob o cursor. */}
-            {(Object.keys(QUICK_LABELS) as QuickFilter[]).map((q) => (
-              <button
-                key={q}
-                onClick={() => setQuick(q)}
-                disabled={busy}
-                className={`px-3 py-1 text-xs rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  quick === q ? "bg-accent text-white" : "bg-raised text-fg-secondary hover:text-fg"
-                }`}
-              >
-                {QUICK_LABELS[q]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto">
+      }
+    >
+      <>
           {loading && entries.length === 0 && (
             <div className="flex items-center justify-center py-12 text-fg-muted">
               <Loader2 size={20} className="animate-spin" />
@@ -231,9 +223,8 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
               )}
             </div>
           ))}
-        </div>
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 

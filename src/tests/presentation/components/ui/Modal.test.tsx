@@ -56,7 +56,24 @@ describe("Modal", () => {
     expect(container.querySelector("[role=dialog]")!.children.length).toBe(5);
   });
 
-  it("o X fecha e tem nome acessível — é o único controle do cabeçalho", () => {
+  it("o canto direito do cabeçalho age sobre o diálogo, e não filtra a lista", () => {
+    render(
+      <Modal
+        title="Apontamentos do Clockify"
+        onClose={vi.fn()}
+        headerEnd={<button>Recarregar</button>}
+        toolbar={<span>Hoje</span>}
+      >
+        lista
+      </Modal>
+    );
+    const header = screen.getByRole("heading", { name: "Apontamentos do Clockify" }).parentElement!
+      .parentElement!;
+    expect(header.contains(screen.getByRole("button", { name: "Recarregar" }))).toBe(true);
+    expect(header.contains(screen.getByText("Hoje"))).toBe(false);
+  });
+
+  it("o X fecha e tem nome acessível — sem texto, é tudo o que o botão anuncia", () => {
     const onClose = vi.fn();
     render(
       <Modal title="Conectar ao Monday" onClose={onClose}>
@@ -76,6 +93,15 @@ describe("Modal", () => {
     );
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("marca-se como aberto, ou o ESC esconderia a janela em vez do modal", () => {
+    const { container } = render(
+      <Modal title="Editar tarefa planejada" onClose={vi.fn()}>
+        corpo
+      </Modal>
+    );
+    expect(container.querySelector("[data-modal-open]")).toBeTruthy();
   });
 
   it("ESC já consumido por um dropdown aberto não fecha o modal junto", () => {

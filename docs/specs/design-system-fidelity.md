@@ -118,7 +118,8 @@ mesmas linhas duas vezes.
 - `fieldControlClass` e `settingsInputClass` apagados. Caixa, rádio e faixa ficam de fora **por
   assinatura** — não têm casca, fundo nem raio.
 
-**A3 · `Modal`** — 🔶 **duas sessões de três feitas**.
+**A3 · `Modal`** — ✅ **feito** (`810f2e0`, `4cfe7d1`, sessão 3). **Dos 19 modais, 18 estão na
+casca**; o único fora é o `SetupModal`, e é a exceção declarada.
 
 Spec do documento _Overlays e modais_, implementada em `ui/Modal.tsx`: véu
 `oklch(0.13 0.028 261.692 / 0.82)` = **`bg-canvas/82`**, **sem blur** (_"em janela de 1100px ele
@@ -156,17 +157,46 @@ ações à direita, secundária sem casca, **nunca dois botões cheios**. Largur
   De quebra: o editor de ticket do Zendesk deixou de reimplementar `Toggle` e `SegmentedControl`
   à mão, e o "Copiado!" da exportação parou de escrever verde sobre verde.
 
-- **Sessão 3 — pendente.** Os `xl`, que carregam lógica própria:
-  - `EditPlannedTaskModal`, `ImportCalendarModal`, `MondayImportModal` — todos `max-w-2xl`
-    (672px) hoje, entre o `lg` (720) e o `xl` (900). **Decidir qual**, e não inventar um terceiro.
-  - `ClockifyEntriesModal` e `MondayEntriesModal` — janela cheia
-    (`max-w-[calc(100vw-16px)] max-h-[calc(100vh-16px)]`). **Podem não caber na casca**; se não
-    couberem, a resposta certa é deixá-los fora com a justificativa escrita, como o `SetupModal`.
-  - `fieldClass` (em `components/fieldStyles.ts`) sobrevive por **um** consumidor só, o
-    `EditPlannedTaskModal` — apagar ao migrá-lo.
+- **Sessão 3** — os cinco que carregavam lógica própria. As larguras foram **decisão do usuário
+  em 2026-08-10**, com a medida escolhida pelo conteúdo, sem inventar um quinto degrau:
+  - `EditPlannedTaskModal` → **`lg`** (672 → 720). É formulário; a grade de duas colunas é o que
+    ele pede. `fieldClass` foi apagado ao migrá-lo, e `bareInputClass` caiu junto — estava sem
+    consumidor desde o A2. Sobrou de `fieldStyles.ts` só o que veste o campo **por fora**: a
+    caixa, os dois rótulos e a casca da coluna de formulário.
+  - `MondayImportModal` → **`lg`** (672 → 720). A lista é uma coluna só.
+  - `ImportCalendarModal` → **`xl`** (672 → 900). É o único modal de **duas colunas**: a lista de
+    semanas come 192 px, e em 720 sobravam 528 para linhas que editam projeto e categoria em
+    linha. O corpo é a linha flex das duas colunas, e com isso o `overflow` da casca fica inerte
+    — ele nunca transborda porque a altura dos filhos é a dele.
+  - `ClockifyEntriesModal` e `MondayEntriesModal` → **`xl` + `tall`**. **Couberam.** Eram a
+    quinta largura de modal (`100vw-16px`) e os dois últimos véus com desfoque; a largura visível
+    cai de ~1084 para 900 numa janela de 1100. A casca ganhou um encaixe para isso, o
+    **`headerEnd`** — o ↻ dos dois e o total de horas do Monday. Os dois guardas de "integração
+    não configurada", que eram `max-w-md` escrito à mão, viraram `Modal` `md`.
+
+  Duas coisas passaram a morar no primitivo nesta sessão, e nenhuma é enfeite:
+  - **`data-modal-open`**, que é o que impede o ESC de esconder a **janela inteira**: o listener
+    de `useGlobalShortcuts` é do `document` e roda **antes** do `useEscapeToClose`, que é da
+    `window`. Escrito à mão, só três telas o tinham — os 10 modais das sessões 1 e 2 estavam sem
+    ele, e ali o ESC fechava o app em vez do diálogo.
+  - **O `p-5` do corpo saiu da classe fixa e virou o valor padrão de `bodyClassName`.** A prop
+    promete substituir, e não somar; mas `p-0` é emitido **antes** de `p-5` na folha, então o
+    `bodyClassName="p-0"` do `ImportZendeskModal` (sessão 2) não tirava padding nenhum. Com o
+    `p-5` no padrão, substituí-lo é substituí-lo de verdade — e quem só passava arranjo
+    (`flex flex-col gap-*`) voltou a pedir o `p-5` junto.
+
+  Três mudanças **visíveis** entraram aqui, além das larguras: os dois pares de pílulas de
+  período viraram `FilterPill`; as duas chaves escritas à mão (importação do Monday e do Calendar)
+  viraram `Toggle`, que é 40×20 e não 32×16; e o `+` sozinho da linha "adicionar ação" virou
+  **"+ Adicionar"** — o `Button` pede rótulo, e um ícone só dentro de uma caixa não é o que o
+  `IconButton` desenha.
 
   **O `SetupModal` fica de fora de vez:** fundo opaco, sem véu, sem X e sem para onde fechar —
   é a janela da primeira execução, não um diálogo.
+
+  > **O `CommandPalette` não é modal e não entrou.** Ele é o último `bg-black/60 backdrop-blur-sm`
+  > do app, mas abre encostado no alto (`items-start pt-20`), não centrado, e não tem cabeçalho,
+  > rodapé nem título — a casca não o expressa. Fica para uma decisão própria.
 
 **A4 · `Badge`** — pendente. A partir de `components/chipStyles.ts`, que já é o vocabulário certo
 sem ser componente. Cobre o chip de billable da fase E.
@@ -240,8 +270,13 @@ meses.
 
 > **Exceções a registrar na baseline** (já conhecidas, todas justificadas no §8.4): a alça de
 > arraste do `ExportModal` (`cursor-grab`), o ▶ do Lançamento Manual, o "Lançar N com horário",
-> as definições de `SubSection`/`MappingBox`/`IntegrationTile`, o toggle de billable do
-> `EditGroupModal` (o estado ligado é a cor do próprio significado) e o `PlannedTaskItem`.
+> as definições de `SubSection`/`MappingBox`/`IntegrationTile`, o toggle de billable — do
+> `EditGroupModal`, do `EditTaskModal` e do `EditPlannedTaskModal`, os três pelo mesmo motivo: o
+> estado ligado **é** a cor do próprio significado, e no `IconButton` a cor é o destino do hover
+> com repouso sempre em `fg-muted` — e o `PlannedTaskItem`.
+>
+> **Sobram 26 `<button>` nos 19 modais**, três deles no `SetupModal`. É o número a fazer encolher,
+> e o piso não é zero: o toggle de billable e as linhas de seleção com caixa própria ficam.
 
 **D2 · Registrar as exceções declaradas** na §8.4 do CLAUDE.md, em vez de deixá-las implícitas:
 overlay compacto abaixo de 12,25px, cores de workspace e de marca fora dos tokens de significado,
@@ -282,7 +317,13 @@ dono. Muda 5 telas. **Perguntar antes.**
    2:1"_. Usar cor explícita + tachado ou ícone.
 4. **Overlay compacto 52px vs. 68px do design.** Pode ter sido escolha do usuário; sinalizado
    porque a escala de texto do popup foi calibrada no documento para 68/78px.
-5. **Larguras dos três modais `max-w-2xl`** — `lg` (720) ou `xl` (900). Ver A3, sessão 3.
+5. ~~**Larguras dos três modais `max-w-2xl`**~~ — **decidido em 2026-08-10**, ver A3 sessão 3.
+6. **Os três overlines escritos à mão.** `text-overline` existe e é o token, mas há três grafias
+   soltas convivendo: `text-xs font-medium … tracking-wide` (`EditPlannedTaskModal`),
+   `text-xs font-semibold … tracking-widest` (os dois modais de apontamentos) e `text-xs …
+tracking-wide` sem peso (`MoveToWorkspaceModal`). A sessão 1 do A3 as manteve, e a sessão 3 as
+   manteve por consistência com ela — **unificá-las nos 10 px do token é decisão própria**, porque
+   encolhe rótulo em cinco lugares. Aparenta a mesma família da decisão 1 (`Field` entalhado).
 
 ---
 
@@ -291,6 +332,21 @@ dono. Muda 5 telas. **Perguntar antes.**
 Para conferir progresso em sessão futura, os números de 2026-08-08 **antes** desta rodada:
 `73` strings de classe distintas em `<button>` · `81` `<input>` crus · `21` `<select>` ·
 `461` `text-xs` · `190` `text-sm` · `4` scrims · `5` larguras de modal · `63` `opacity-4[05]`.
+
+Ao fim da fase A (2026-08-10, medido com `grep -rho`):
+
+|                                | Antes | Agora                                            |
+| ------------------------------ | ----- | ------------------------------------------------ |
+| `<input>` crus                 | 81    | **35** (caixa, rádio e faixa, fora por assinatura) |
+| `<select>` crus                | 21    | **5**                                            |
+| scrims                         | 4     | **1** — e é o `CommandPalette`, que não é modal   |
+| larguras de modal              | 5     | **4** — as da casca                              |
+| `text-xs`                      | 461   | **365** (a varredura da fase B é sobre estes)     |
+| `<button>` nos 19 modais       | —     | **26**, dos quais 3 no `SetupModal`              |
+
+**A fase B tem menos trabalho do que a §B2 estimou**: ela contava ~172 `text-xs` em controle a
+partir de 461, e a fase A absorveu 96 deles nos primitivos. **Recontar arquivo a arquivo antes de
+começar** — as listas de densidade do §B2 são anteriores a A1.
 
 ---
 
@@ -315,6 +371,17 @@ com a tabela de escala).
    parar.
 5. Não propor merge em `main` nem rodar o `@code-quality-reviewer` antes do fim da rodada.
 
-**Verificação manual pendente** (nenhuma das duas sessões do A3 foi conferida na tela): os sete
-modais `md` — sobretudo o `EditTaskModal` no modo claro, que é o mais alto e o único que passou a
-rolar — e os três `lg`, sobretudo o Exportar, onde a mudança de estrutura foi maior.
+**Verificação manual pendente** (nenhuma das três sessões do A3 foi conferida na tela). Por ordem
+de risco:
+
+1. **Os dois modais de apontamentos** (Clockify e Monday) — saíram de janela cheia para 900 px, é a
+   maior mudança de medida da rodada. Conferir se a grade de 4 colunas das linhas ainda respira.
+2. **`ImportCalendarModal`** — foi para 900 px e o corpo virou linha flex; conferir se as duas
+   colunas rolam **cada uma por si** e o cabeçalho `sticky` da semana gruda no lugar certo.
+3. **`ExportModal`** — o `bodyClassName` passou de `""` para `"p-5"`. Antes o `p-5` chegava por
+   herança silenciosa, então a intenção é a mesma; é o call site em que errar isso apareceria.
+4. **`ImportZendeskModal`** — o `p-0` dele **passou a valer**. O corpo perdeu 20 px de padding que
+   estava lá contra a intenção do código.
+5. `EditTaskModal` no modo claro (o mais alto, e o único `md` que rola) e o `EditPlannedTaskModal`,
+   onde os botões de agendamento viraram `Button` e ficaram 2 px mais baixos.
+6. Em todos: **ESC não deve esconder a janela do app** — é o `data-modal-open` novo na casca.

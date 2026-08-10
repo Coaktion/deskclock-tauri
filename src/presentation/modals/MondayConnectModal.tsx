@@ -55,7 +55,7 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
       title="Conectar ao Monday"
       onClose={onClose}
       onKeyDown={handleKeyDown}
-      bodyClassName="flex flex-col gap-4"
+      bodyClassName="p-5 flex flex-col gap-4"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>

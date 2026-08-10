@@ -9,6 +9,7 @@ import {
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { Button, Modal, Toggle } from "@presentation/components/ui";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { emit } from "@tauri-apps/api/event";
@@ -22,13 +23,11 @@ import {
   Loader2,
   Repeat2,
   Square,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -382,7 +381,6 @@ export function ImportCalendarModal({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
-  useEscapeToClose(onClose);
 
   useEffect(() => {
     setLoading(true);
@@ -635,44 +633,84 @@ export function ImportCalendarModal({
     selectedWeekEvents.length > 0 && selectedWeekEvents.every((e) => selected.has(e.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
-      <div className="bg-surface border border-border rounded-card shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex flex-col gap-2 px-4 py-3 border-b border-border-subtle shrink-0">
-          <div className="flex items-center gap-3">
-            <Calendar size={16} className="text-accent-text shrink-0" />
-            <h2 className="text-sm font-semibold text-fg flex-1">Importar do Google Calendar</h2>
-            <button
-              onClick={onClose}
-              className="p-1 text-fg-muted hover:text-fg-secondary rounded-control"
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-fg-secondary">
-            <span className="shrink-0">De</span>
-            <DatePickerInput
-              value={fromDate}
-              onChange={(d) => {
-                setFromDate(d);
-                if (d > toDate) setToDate(d);
-              }}
-              className="flex-1"
-            />
-            <span className="shrink-0">até</span>
-            <DatePickerInput
-              value={toDate}
-              onChange={(d) => {
-                setToDate(d);
-                if (d < fromDate) setFromDate(d);
-              }}
-              className="flex-1"
-            />
-          </div>
+    // `xl` (900) e não `lg`: é o único modal de duas colunas — a lista de semanas
+    // come 192 px, e em 720 sobravam 528 para linhas que editam projeto e
+    // categoria em linha. Eram 672 px em `max-w-2xl`, fora das quatro larguras.
+    <Modal
+      title={
+        <>
+          <Calendar size={16} className="text-accent-text shrink-0" />
+          Importar do Google Calendar
+        </>
+      }
+      size="xl"
+      tall
+      onClose={onClose}
+      // A linha das duas colunas, sem padding: cada coluna rola por si e desenha
+      // o próprio espaçamento, e com isso o `overflow` do corpo fica inerte —
+      // ele nunca transborda porque a altura dos filhos é a dele.
+      bodyClassName="flex"
+      toolbar={
+        <div className="flex items-center gap-2 text-xs text-fg-secondary">
+          <span className="shrink-0">De</span>
+          <DatePickerInput
+            value={fromDate}
+            onChange={(d) => {
+              setFromDate(d);
+              if (d > toDate) setToDate(d);
+            }}
+            className="flex-1"
+          />
+          <span className="shrink-0">até</span>
+          <DatePickerInput
+            value={toDate}
+            onChange={(d) => {
+              setToDate(d);
+              if (d < fromDate) setFromDate(d);
+            }}
+            className="flex-1"
+          />
         </div>
-
-        {/* Corpo */}
-        {loading || error || events.length === 0 ? (
+      }
+      // A chave decide algo sobre a importação inteira, e fica fora do corpo por
+      // isso: dentro, rolaria para fora da vista junto com a lista de eventos.
+      notice={
+        !loading && !error && events.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <Toggle
+              checked={addOpenUrlAction}
+              onChange={setAddOpenUrlAction}
+              ariaLabel="Adicionar automaticamente uma ação de abrir URL do evento"
+            />
+            <span className="text-xs text-fg-secondary">
+              Adicionar automaticamente uma ação de abrir URL do evento
+            </span>
+          </div>
+        ) : null
+      }
+      footer={
+        !loading && !error && events.length > 0 ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleImport}
+              loading={importing}
+              disabled={effectiveTaskCount === 0}
+            >
+              {importing
+                ? "Importando…"
+                : effectiveTaskCount < selected.size
+                  ? `Importar ${selected.size} evento(s) → ${effectiveTaskCount} tarefa(s)`
+                  : `Importar selecionados (${selected.size})`}
+            </Button>
+          </>
+        ) : null
+      }
+    >
+      {loading || error || events.length === 0 ? (
           <div className="flex-1 overflow-y-auto">
             {loading && (
               <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
@@ -764,59 +802,6 @@ export function ImportCalendarModal({
             </div>
           </div>
         )}
-
-        {/* Footer */}
-        {!loading && !error && events.length > 0 && (
-          <div className="flex flex-col gap-2 px-4 py-3 border-t border-border-subtle shrink-0">
-            <label
-              className="flex items-center gap-2 cursor-pointer select-none"
-              onClick={() => setAddOpenUrlAction((v) => !v)}
-            >
-              <div
-                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                  addOpenUrlAction ? "bg-accent" : "bg-border"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                    addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
-              </div>
-              <span className="text-xs text-fg-secondary">
-                Adicionar automaticamente uma ação de abrir URL do evento
-              </span>
-            </label>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={onClose}
-                className="text-xs text-fg-muted hover:text-fg-secondary transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={importing || effectiveTaskCount === 0}
-                className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-control transition"
-              >
-                {importing ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Importando…
-                  </>
-                ) : effectiveTaskCount < selected.size ? (
-                  <>
-                    Importar {selected.size} evento(s) → {effectiveTaskCount} tarefa(s)
-                  </>
-                ) : (
-                  <>Importar selecionados ({selected.size})</>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    </Modal>
   );
 }

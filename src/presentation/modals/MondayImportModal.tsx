@@ -8,7 +8,6 @@ import {
   DownloadCloud,
   Loader2,
   Square,
-  X,
 } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import type { Category } from "@domain/entities/Category";
@@ -33,6 +32,7 @@ import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProje
 import { resolveTimelineByBoard } from "@domain/usecases/monday/resolveTimelineColumns";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { Button, FilterPill, Modal, Toggle } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -41,7 +41,6 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { addDaysISO, todayISO, weekBoundsISO } from "@shared/utils/time";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 type PeriodFilter = "today" | "week" | "next30";
 
@@ -156,7 +155,6 @@ export function MondayImportModal({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
-  useEscapeToClose(onClose);
 
   // Só projeto com quadro de destino: sem ele não há board de onde ler itens.
   const mappings = useMemo(
@@ -360,43 +358,85 @@ export function MondayImportModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80">
-      <div className="bg-surface border border-border rounded-card shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-        <div className="flex flex-col gap-2 px-4 py-3 border-b border-border-subtle shrink-0">
-          <div className="flex items-center gap-3">
-            <DownloadCloud size={16} className="text-accent-text shrink-0" />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-semibold text-fg">Importar itens do Monday</h2>
-              <p className="text-xs text-fg-muted mt-0.5 truncate">
-                Somente os seus, nos {availableBoards.length} board(s) vinculados
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1 text-fg-muted hover:text-fg-secondary rounded-control"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  period === p
-                    ? "bg-accent text-white"
-                    : "bg-raised text-fg-secondary hover:text-fg"
-                }`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
+    // `lg` (720) e não `xl`: a lista é uma coluna só, e eram 672 px em
+    // `max-w-2xl` — fora das quatro larguras da casca.
+    <Modal
+      title={
+        <>
+          <DownloadCloud size={16} className="text-accent-text shrink-0" />
+          Importar itens do Monday
+        </>
+      }
+      description={`Somente os seus, nos ${availableBoards.length} board(s) vinculados`}
+      size="lg"
+      tall
+      onClose={onClose}
+      // Sem padding: cada linha da lista desenha o próprio `px-4`, e o cabeçalho
+      // de grupo é `sticky` — com padding no scrollport ele grudaria deslocado.
+      bodyClassName=""
+      toolbar={
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
+            <FilterPill key={p} size="sm" active={period === p} onClick={() => setPeriod(p)}>
+              {PERIOD_LABELS[p]}
+            </FilterPill>
+          ))}
         </div>
-
-        <div className="flex-1 overflow-y-auto">
+      }
+      // O recorte, os avisos e a chave ficam fora do corpo: rolariam junto com a
+      // lista que descrevem, e a chave decide algo sobre a importação inteira.
+      notice={
+        visibleRows.length > 0 ? (
+          <>
+            {unavailableCount > 0 && (
+              <p className="text-xs text-fg-muted">
+                {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora desta
+                lista.
+              </p>
+            )}
+            {hiddenImported > 0 && (
+              <p className="text-xs text-fg-muted">
+                {hiddenImported} item(ns) já importado(s) estão fora desta lista.
+              </p>
+            )}
+            {!stageField && (
+              <p className="text-xs text-fg-muted">
+                Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna do
+                board, em Integrações → Monday → Importação de dados.
+              </p>
+            )}
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={addOpenUrlAction}
+                onChange={setAddOpenUrlAction}
+                ariaLabel="Adicionar uma ação de abrir o item no Monday"
+              />
+              <span className="text-xs text-fg-secondary">
+                Adicionar uma ação de abrir o item no Monday
+              </span>
+            </div>
+          </>
+        ) : null
+      }
+      footer={
+        visibleRows.length > 0 ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleImport}
+              loading={importing}
+              disabled={selectedVisible.length === 0}
+            >
+              {importing ? "Importando…" : `Importar selecionados (${selectedVisible.length})`}
+            </Button>
+          </>
+        ) : null
+      }
+    >
+      <>
           {availableBoards.length === 0 && (
             <p className="text-sm text-fg-muted text-center py-12 px-4">
               {mappings.length === 0
@@ -474,73 +514,8 @@ export function MondayImportModal({
                 </div>
               );
             })}
-        </div>
-
-        {visibleRows.length > 0 && (
-          <div className="flex flex-col gap-2 px-4 py-3 border-t border-border-subtle shrink-0">
-            {unavailableCount > 0 && (
-              <p className="text-xs text-fg-muted">
-                {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
-                desta lista.
-              </p>
-            )}
-            {hiddenImported > 0 && (
-              <p className="text-xs text-fg-muted">
-                {hiddenImported} item(ns) já importado(s) estão fora desta lista.
-              </p>
-            )}
-            {!stageField && (
-              <p className="text-xs text-fg-muted">
-                Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna
-                do board, em Integrações → Monday → Importação de dados.
-              </p>
-            )}
-            <label
-              className="flex items-center gap-2 cursor-pointer select-none"
-              onClick={() => setAddOpenUrlAction((v) => !v)}
-            >
-              <div
-                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                  addOpenUrlAction ? "bg-accent" : "bg-border"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                    addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
-              </div>
-              <span className="text-xs text-fg-secondary">
-                Adicionar uma ação de abrir o item no Monday
-              </span>
-            </label>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={onClose}
-                className="text-xs text-fg-muted hover:text-fg-secondary transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={importing || selectedVisible.length === 0}
-                className="flex items-center gap-1.5 text-xs bg-accent hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-control transition"
-              >
-                {importing ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    Importando…
-                  </>
-                ) : (
-                  <>Importar selecionados ({selectedVisible.length})</>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      </>
+    </Modal>
   );
 }
 
