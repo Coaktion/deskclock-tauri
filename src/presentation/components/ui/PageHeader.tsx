@@ -38,7 +38,7 @@ export function PageHeader({
         // trunca quando o `context` cresce. O teto existe para o subtítulo, que
         // é frase e não caberia inteiro num cabeçalho de altura fixa.
         <div className="shrink-0 max-w-[45%]">
-          <h1 className="text-base font-semibold text-fg truncate">{title}</h1>
+          <h1 className="text-xl font-semibold text-fg truncate">{title}</h1>
           {subtitle && <p className="text-xs text-fg-muted truncate">{subtitle}</p>}
         </div>
       )}

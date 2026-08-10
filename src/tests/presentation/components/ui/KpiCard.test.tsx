@@ -8,10 +8,15 @@ function barWidth(container: HTMLElement): string | undefined {
 }
 
 describe("KpiCard", () => {
-  it("sem barPct não desenha barra", () => {
-    const { container } = render(<KpiCard label="Registros" value="12" />);
+  it("sem barPct desenha o trilho vazio — é ele que preserva a altura do cartão", () => {
+    const cheio = render(<KpiCard label="Billable" value="4:00" barPct={50} />).container;
+    const vazio = render(<KpiCard label="Registros" value="12" />).container;
+
     expect(screen.getByText("12")).toBeTruthy();
-    expect(barWidth(container)).toBeUndefined();
+    expect(barWidth(vazio)).toBeUndefined();
+    // A única diferença entre os dois é o preenchimento: o trilho, que dá a
+    // altura, está nos dois.
+    expect(vazio.querySelectorAll("div").length).toBe(cheio.querySelectorAll("div").length - 1);
   });
 
   it("prende a barra entre 0 e 100", () => {

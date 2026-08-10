@@ -56,7 +56,7 @@ não medida na hora:
 | -------------------------------------------------------- | ---------------- | ------------------------ |
 | `body/ui` — nome de tarefa, pílula, botão, input, rótulo | **12,25px**      | `text-sm` = 14px         |
 | `caption` — metadado de linha                            | **10,5px**       | `text-xs` = 12px         |
-| `title/page`                                             | 20px             | `text-base` = 16px ⚠ bug |
+| `title/page`                                             | 20px             | `text-base` = 16px ⚠ bug — corrigido na C1 |
 | `title/section`                                          | 16px             | `text-base` = 16px ✓     |
 | `overline`                                               | 10px             | `text-overline` = 10px ✓ |
 | `mono/tempo` (valor de KPI)                              | 17px             | `text-base` = 16px       |
@@ -285,25 +285,42 @@ de 10px, o que enfraquece o argumento contra unificá-las, mas a decisão contin
 O `text-metric` nasceu **sem consumidor**: quem o gasta é a C2 (valor do `KpiCard`). Ele sobrevive
 ao tree-shaking porque o bloco é `@theme static`, e o build confirma que o utilitário é emitido.
 
-### Fase C · Fidelidade pontual
+### Fase C · Fidelidade pontual — ✅ **feita** (C1 + C2 + C3, commit único)
 
-**C1 · `PageHeader` → `text-xl`** (`PageHeader.tsx`, hoje `text-base`). Design: `title/page`
-20px/600, e a própria §8.4 do CLAUDE.md já tabela `text-xl`. Nenhuma das 7 telas usa `text-xl`
-hoje — é a divergência mais visível do conjunto.
-**Risco a verificar antes de commitar:** com 20px, Configurações e Dados precisam caber título +
-6 abas + ações nos 56px de uma janela de 1100. Se não couber, **parar e reportar** em vez de
-inventar um tamanho intermediário. Ajustar
-`src/tests/presentation/components/ui/PageHeader.test.tsx`.
+As três são pontuais e não se tocam; separá-las em três sessões custaria três verificações
+manuais das mesmas telas.
 
-**C2 · `KpiCard`** — dois defeitos:
+**C1 · `PageHeader` → `text-xl`.** Design: `title/page` 20px/600, que a §8.4 do CLAUDE.md já
+tabelava e que **nenhuma** das 7 telas usava — a divergência mais visível do conjunto. Em
+`text-base` o título da página tinha o tamanho exato do cabeçalho de `SectionCard`, dois níveis
+de hierarquia na mesma medida.
 
-- A faixa some quando não há `barPct` (`{pct !== undefined && …}`), e o cartão encolhe. O guia de
-  migração é explícito: _"sem ele a faixa fica vazia para preservar a altura"_. Renderizar sempre
-  o trilho de 3px; sem `barPct`, sem preenchimento.
-- Valor em `text-base` (16) → `text-metric` (17), criado em B1.
+O risco de largura que a etapa mandava conferir **não se materializou**. Pior caso, Configurações
+(título + 6 abas `sm` + botão "Manual"), numa janela de 1100 menos sidebar (68) e rail (52),
+menos o `px-4` do cabeçalho = **948 px úteis**: título ~135 + gap 12 + 6 pílulas ~444 + 6 gaps 48
++ "Manual" ~84 = **~723**. Sobram ~225 px, e mesmo inflando as estimativas de glifo em 25% cabe.
+Dados (4 abas) e Planejamento (o `context` mais largo, ~580 no total) ficam bem abaixo disso.
 
-**C3 · `SearchInput`** — anel de foco de 3px, hoje ausente. _"foco com anel de 3px em vez de só
-trocar a borda"_ — `focus:ring-[3px] ring-accent/15` somado à borda de acento.
+`PageHeader.test.tsx` **não precisou de ajuste**: ele afirma o `data-tour` na casca e o botão de
+tour, nunca o tamanho do título — que é classe, e classe não é contrato (§7.6).
+
+**C2 · `KpiCard`** — os dois defeitos corrigidos:
+
+- O trilho passa a ser renderizado **sempre**; `barPct` governa o **preenchimento**, não o
+  trilho. Condicionado, ele encolhia em 7px os dois cartões do Histórico que não têm percentual
+  ("Total" e "Registros") e desalinhava a fileira de quatro.
+- Valor em `text-base` (16) → **`text-metric`** (17). Com isso o degrau criado em B1 ganha o
+  consumidor que lhe faltava, e o build confirma o utilitário emitido.
+
+O teste teve o contrato invertido: era _"sem barPct não desenha barra"_ e virou _"sem barPct
+desenha o trilho vazio"_, comparando a estrutura dos dois cartões — a única diferença é o
+preenchimento.
+
+**C3 · `SearchInput`** — `focus:ring-[3px] focus:ring-accent/15` somado à borda de acento, no
+`className` que já ia para o `Input`. Fica sendo o **único** campo do app com anel: a busca mora
+acima de uma lista que se reordena a cada tecla, e ali a troca de cor da borda sozinha some no
+meio do movimento. Os dois utilitários são escritos com `focus:` — só a cor, sem a largura, não
+desenha anel nenhum.
 
 ### Fase D · Travas
 
@@ -403,6 +420,16 @@ Depois da fase B (2026-08-10), a escala em `.tsx`:
 | --------- | --------- | ----------- | ------------- | ----------- | --------- | --------------- |
 | 167       | 279       | 9           | 0 (é da C2)   | 8           | 2         | 15              |
 
+Depois da fase C (2026-08-10): `text-metric` em **1** (o valor do `KpiCard`), `text-base` em
+**6** e `text-xl` em **3** — o `PageHeader` mudou de coluna.
+
+Os seis `text-base` que sobram, e o que fazer com eles: os dois `<h2>` do `SetupModal` e o
+`<h1>` de falha de config do `App.tsx` são `title/section` legítimos; o contador do overlay
+compacto é exceção declarada; o campo do `OmniboxIdle` é o único campo do app maior que os
+outros, de propósito. **Sobra um fora de lugar:** o total do dia no `HistoryPage` (linha 55) é
+número em `font-mono`, ou seja `mono/tempo` — deveria ser `text-metric`, como o valor do
+`KpiCard`. Não foi tocado aqui porque a C2 nomeia o `KpiCard`, e não uma varredura de `text-base`.
+
 ---
 
 ## 5. O que já está fiel — não mexer
@@ -426,8 +453,15 @@ com a tabela de escala).
    parar.
 5. Não propor merge em `main` nem rodar o `@code-quality-reviewer` antes do fim da rodada.
 
-**Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem a fase B foram conferidos
-na tela). Por ordem de risco:
+**Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B e C foram
+conferidos na tela). Por ordem de risco:
+
+-1. **O cabeçalho das sete telas, com o título em 20px** — a conta diz que cabe com ~225 px de
+    folga em Configurações, mas é conta, não medida. Olhar Configurações e Dados primeiro (são as
+    de abas), depois Planejamento, onde o `context` é o mais largo. Se o título truncar, o
+    problema é o `max-w-[45%]` dele, não o tamanho.
+    -1b. **A fileira de KPIs do Histórico** — os quatro cartões devem ficar da mesma altura agora,
+    com "Total" e "Registros" mostrando trilho vazio em vez de nada.
 
 0. **A escala inteira, em todas as telas** — é a mudança de maior alcance da rodada: todo texto do
    app mudou de tamanho. O que olhar primeiro são os **line-heights**, que entraram como valores de

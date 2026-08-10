@@ -32,7 +32,10 @@ export function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         // O padding à esquerda abre o lugar da lupa; o da direita vem do `size`.
-        className="pl-8"
+        // O anel de 3px é o foco da busca: ela mora acima de uma lista que se
+        // reordena a cada tecla, e a troca de cor da borda sozinha some no meio
+        // do movimento.
+        className="pl-8 focus:ring-[3px] focus:ring-accent/15"
       />
     </div>
   );

@@ -20,7 +20,7 @@ interface KpiCardProps {
   value: string;
   hint?: string;
   tone?: KpiTone;
-  /** Percentual 0–100. Ausente = cartão sem barra. */
+  /** Percentual 0–100. Ausente = trilho vazio, nunca trilho ausente. */
   barPct?: number;
   /** Tom da barra quando ele não acompanha o do valor. */
   barTone?: KpiTone;
@@ -33,18 +33,21 @@ export function KpiCard({ label, value, hint, tone = "default", barPct, barTone 
     <div className="flex-1 min-w-0 bg-surface border border-border-subtle rounded-card p-3 flex flex-col gap-1">
       <span className="text-overline uppercase text-fg-muted">{label}</span>
       <span
-        className={`font-mono text-base font-medium tracking-tight tabular-nums ${VALUE_TONE[tone]}`}
+        className={`font-mono text-metric font-medium tracking-tight tabular-nums ${VALUE_TONE[tone]}`}
       >
         {value}
       </span>
-      {pct !== undefined && (
-        <div className="h-[3px] bg-raised rounded-full overflow-hidden mt-1">
+      {/* O trilho é desenhado sempre, e é ele que mantém os cartões da mesma
+          altura: os quatro do Histórico ficam lado a lado, e dois deles não têm
+          percentual nenhum a mostrar. Sem `barPct`, fica vazio. */}
+      <div className="h-[3px] bg-raised rounded-full overflow-hidden mt-1">
+        {pct !== undefined && (
           <div
             className={`h-full rounded-full transition-all duration-300 ${BAR_TONE[barTone ?? tone]}`}
             style={{ width: `${pct}%` }}
           />
-        </div>
-      )}
+        )}
+      </div>
       {hint && <span className="text-xs text-fg-muted mt-0.5">{hint}</span>}
     </div>
   );
