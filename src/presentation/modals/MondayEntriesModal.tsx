@@ -291,18 +291,18 @@ function EntryRow({ entry, deleting, onStartEdit, onDelete }: EntryRowProps) {
       >
         {confirming || deleting ? (
           <>
-            <span className="text-xs text-fg-secondary mr-1">Excluir do Monday?</span>
+            <span className="text-sm text-fg-secondary mr-1">Excluir do Monday?</span>
             <button
               onClick={() => setConfirming(false)}
               disabled={deleting}
-              className="px-2 py-1 text-xs text-fg-secondary hover:text-fg disabled:opacity-50 rounded-control transition-colors"
+              className="px-2 py-1 text-sm text-fg-secondary hover:text-fg disabled:opacity-50 rounded-control transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={() => void onDelete()}
               disabled={deleting}
-              className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-danger/10 border border-danger text-danger hover:bg-danger/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-control transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 text-sm bg-danger/10 border border-danger text-danger hover:bg-danger/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-control transition-colors"
             >
               {deleting && <Loader2 size={14} className="animate-spin" />}
               Excluir
@@ -383,13 +383,13 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-xs text-fg-muted">Horas</label>
+        <label className="text-sm text-fg-muted">Horas</label>
         <input
           type="text"
           inputMode="decimal"
           value={hours}
           onChange={(e) => setHours(e.target.value)}
-          className="w-20 px-2 py-1.5 text-xs bg-raised border border-border rounded-control text-fg tabular-nums focus:outline-none focus:border-accent"
+          className="w-20 px-2 py-1.5 text-sm bg-raised border border-border rounded-control text-fg tabular-nums focus:outline-none focus:border-accent"
           autoComplete="off"
         />
 
@@ -434,7 +434,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
             title={
               billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
             }
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-control border transition-colors shrink-0 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-control border transition-colors shrink-0 ${
               billable
                 ? "bg-billable/10 border-billable/40 text-billable"
                 : "bg-raised border-border text-fg-secondary hover:text-fg"
@@ -449,14 +449,14 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
           <button
             onClick={onCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-xs text-fg-secondary hover:text-fg disabled:opacity-50"
+            className="px-3 py-1.5 text-sm text-fg-secondary hover:text-fg disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !canSave}
-            className="px-3 py-1.5 text-xs bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="px-3 py-1.5 text-sm bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             Salvar

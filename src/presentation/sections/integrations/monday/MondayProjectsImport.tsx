@@ -296,7 +296,7 @@ export function MondayProjectsImport({
                   ganha o campo no lugar onde o nome remoto ficava. */}
               {linked.map((m) => (
                 <div key={m.portfolioItemId} className="flex items-center gap-3 py-1">
-                  <span className="text-xs text-fg-secondary flex-1 truncate">
+                  <span className="text-sm text-fg-secondary flex-1 truncate">
                     {namesById.get(m.deskclockProjectId)}
                   </span>
                   {!m.mondayBoardId && (

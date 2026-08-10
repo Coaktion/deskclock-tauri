@@ -54,7 +54,7 @@ function ResolutionRow({
       <span className="text-xs uppercase tracking-wide text-fg-muted">{label}</span>
       {sourceName ? (
         <>
-          <span className="text-xs text-fg-secondary">
+          <span className="text-sm text-fg-secondary">
             Na origem: <span className="text-fg">{sourceName}</span>
           </span>
           <Select

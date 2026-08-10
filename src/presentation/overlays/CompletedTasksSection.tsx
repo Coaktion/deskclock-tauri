@@ -40,7 +40,7 @@ export function CompletedTasksSection({
     <div className="h-full flex flex-col">
       {/* Resumo do total do dia */}
       <div className="flex items-center px-3 py-1 border-b border-border-subtle/70 shrink-0">
-        <span className="text-xs text-fg-muted">Total do dia</span>
+        <span className="text-sm text-fg-muted">Total do dia</span>
         <span className="ml-auto text-xs tabular-nums text-fg-secondary font-mono">
           {formatDurationCompact(totalSeconds)}
         </span>
@@ -67,7 +67,7 @@ export function CompletedTasksSection({
                 style={{ backgroundColor: railColor }}
               />
               <div className="flex-1 min-w-0 pl-1.5">
-                <p className="text-xs font-medium text-fg-secondary truncate leading-tight">
+                <p className="text-sm font-medium text-fg-secondary truncate leading-tight">
                   {first.name || <span className="text-fg-muted italic">(sem nome)</span>}
                   {count > 1 && <span className="font-normal text-fg-muted"> ·{count}x</span>}
                 </p>

@@ -97,7 +97,7 @@ export function ShortcutRow({
           onClick={startRecording}
           onKeyDown={handleKeyDown}
           onBlur={() => setRecording(false)}
-          className={`px-3 py-1.5 text-xs rounded-control border transition-colors focus:outline-none ${
+          className={`px-3 py-1.5 text-sm rounded-control border transition-colors focus:outline-none ${
             recording
               ? "bg-accent/15 border-accent text-accent-text animate-pulse"
               : "bg-raised border-border text-fg-muted hover:text-fg hover:border-fg-muted"
@@ -108,7 +108,7 @@ export function ShortcutRow({
         {value && !recording && (
           <button
             onClick={() => onSave("")}
-            className="text-xs text-fg-muted hover:text-danger transition-colors"
+            className="text-sm text-fg-muted hover:text-danger transition-colors"
             title="Remover atalho"
           >
             ✕

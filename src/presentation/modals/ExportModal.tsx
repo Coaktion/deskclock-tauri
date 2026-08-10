@@ -172,14 +172,14 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
     <div onKeyDown={handleKeyDown} className="flex flex-col gap-4 h-full overflow-y-auto">
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
-          <label className="text-xs text-fg-secondary mb-1 block" htmlFor="export-profile-name">
+          <label className="text-sm text-fg-secondary mb-1 block" htmlFor="export-profile-name">
             Nome do perfil
           </label>
           <Input id="export-profile-name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
 
         <div>
-          <label className="text-xs text-fg-secondary mb-1 block">Formato</label>
+          <label className="text-sm text-fg-secondary mb-1 block">Formato</label>
           <Select
             aria-label="Formato"
             value={format}
@@ -193,7 +193,7 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
 
         {format === "csv" && (
           <div>
-            <label className="text-xs text-fg-secondary mb-1 block">Separador</label>
+            <label className="text-sm text-fg-secondary mb-1 block">Separador</label>
             <Select
               aria-label="Separador"
               value={separator}
@@ -207,7 +207,7 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
         )}
 
         <div>
-          <label className="text-xs text-fg-secondary mb-1 block">Duração</label>
+          <label className="text-sm text-fg-secondary mb-1 block">Duração</label>
           <Select
             aria-label="Duração"
             value={durationFormat}
@@ -221,7 +221,7 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
         </div>
 
         <div>
-          <label className="text-xs text-fg-secondary mb-1 block">Formato de data</label>
+          <label className="text-sm text-fg-secondary mb-1 block">Formato de data</label>
           <Select
             aria-label="Formato de data"
             value={dateFormat}
@@ -248,7 +248,7 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
 
       {/* Colunas */}
       <div>
-        <p className="text-xs text-fg-secondary mb-2">
+        <p className="text-sm text-fg-secondary mb-2">
           Colunas <span className="text-fg-muted">(arraste para reordenar)</span>
         </p>
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -434,7 +434,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
           <div className="flex flex-col gap-4">
             {/* Perfil */}
             <div>
-              <label className="text-xs text-fg-secondary mb-1 block">Perfil de exportação</label>
+              <label className="text-sm text-fg-secondary mb-1 block">Perfil de exportação</label>
               <Select
                 aria-label="Perfil de exportação"
                 value={selectedProfileId}
@@ -452,7 +452,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
 
             {/* Período */}
             <div>
-              <label className="text-xs text-fg-secondary mb-1 block">Período</label>
+              <label className="text-sm text-fg-secondary mb-1 block">Período</label>
               <div className="flex gap-2 mb-2">
                 {(["today", "custom"] as PeriodMode[]).map((m) => (
                   <Button
@@ -481,7 +481,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
             {loaded && (
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs text-fg-secondary">
+                  <p className="text-sm text-fg-secondary">
                     {selected.size} de {tasks.length} selecionadas
                   </p>
                   <div className="flex gap-2">
@@ -522,7 +522,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
                           }
                           className="accent-accent shrink-0"
                         />
-                        <span className="text-xs text-fg-secondary truncate">
+                        <span className="text-sm text-fg-secondary truncate">
                           {t.name ?? "(sem nome)"}
                         </span>
                         {proj && (
@@ -626,7 +626,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
 
       {/* Fora do modal: é aviso de janela, não conteúdo do diálogo. */}
       {savedPath && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2.5 bg-raised border border-border rounded-control shadow-xl text-xs text-fg max-w-sm">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 px-4 py-2.5 bg-raised border border-border rounded-control shadow-xl text-sm text-fg max-w-sm">
           <Check size={14} className="text-billable shrink-0" />
           <span className="truncate">Salvo em: {savedPath}</span>
         </div>

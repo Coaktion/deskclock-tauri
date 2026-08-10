@@ -27,7 +27,7 @@ export function ActionChip({ action }: ActionChipProps) {
       onClick={() =>
         void executeActions([action], { openUrl: openInBrowser, openPath: openInFileManager })
       }
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border border-accent/25 bg-accent/5 text-accent-text hover:border-accent/50 hover:bg-accent/10 transition-colors"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-control border border-accent/25 bg-accent/5 text-accent-text hover:border-accent/50 hover:bg-accent/10 transition-colors"
     >
       {action.type === "open_url" ? <Globe size={14} /> : <FolderOpen size={14} />}
       {actionLabel(action)}

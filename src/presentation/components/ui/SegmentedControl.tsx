@@ -43,7 +43,7 @@ export function SegmentedControl<T extends string>({
             type="button"
             onClick={() => onChange(option.value)}
             aria-pressed={selected}
-            className={`px-2.5 py-1 text-xs font-medium rounded-chip transition-colors ${
+            className={`px-2.5 py-1 text-sm font-medium rounded-chip transition-colors ${
               selected ? "bg-accent text-white" : "text-fg-muted hover:text-fg"
             }`}
           >

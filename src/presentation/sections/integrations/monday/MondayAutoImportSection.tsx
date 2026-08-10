@@ -67,7 +67,7 @@ export function MondayAutoImportSection() {
           }}
         />
       </Row>
-      <p className="text-xs text-fg-muted leading-relaxed py-2.5">
+      <p className="text-body text-fg-muted leading-relaxed py-2.5">
         Ao abrir o app e a cada 4 horas, importa as suas tarefas da semana nos boards vinculados
         como planejadas — para trazer alguma novidade na hora, use &quot;Buscar itens agora&quot;.
         Item já importado não vira tarefa de novo: o que mudar no Monday é atualizado aqui,

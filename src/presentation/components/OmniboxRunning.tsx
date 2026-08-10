@@ -274,7 +274,7 @@ export function OmniboxRunning({
               <button
                 onClick={handleStartTimeClick}
                 title="Editar hora de início"
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded-chip border border-transparent hover:border-border hover:bg-raised hover:text-fg-secondary text-fg-muted text-xs transition-colors group"
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-chip border border-transparent hover:border-border hover:bg-raised hover:text-fg-secondary text-fg-muted text-sm transition-colors group"
               >
                 início {formatTimeOfDay(runningTask.startTime)}
                 <Pen size={14} className="opacity-0 group-hover:opacity-60 transition-opacity" />
@@ -294,17 +294,17 @@ export function OmniboxRunning({
           </span>
           {confirmingStop ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-fg-muted">Concluída?</span>
+              <span className="text-sm text-fg-muted">Concluída?</span>
               <button
                 onClick={() => handleStopConfirm(true)}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
               >
                 <CheckCircle2 size={14} />
                 Sim
               </button>
               <button
                 onClick={() => handleStopConfirm(false)}
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
               >
                 <Clock size={14} />
                 Não
@@ -321,7 +321,7 @@ export function OmniboxRunning({
               <button
                 onClick={handleStopClick}
                 title="Parar tarefa"
-                className="px-3 py-1 text-xs font-medium bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 rounded-control transition-colors"
+                className="px-3 py-1 text-sm font-medium bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 rounded-control transition-colors"
               >
                 Parar
               </button>
@@ -388,13 +388,13 @@ export function OmniboxRunning({
           <div className="flex gap-2 justify-end">
             <button
               onClick={() => setFillingRequired(false)}
-              className="px-3 py-1.5 text-xs text-fg-muted hover:text-fg transition-colors"
+              className="px-3 py-1.5 text-sm text-fg-muted hover:text-fg transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleFillSubmit}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
             >
               <ArrowRight size={14} />
               Continuar

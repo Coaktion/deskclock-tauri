@@ -38,7 +38,7 @@ export function ProjectCategoriesEditor({
 
   if (categories.length === 0) {
     return (
-      <p className="text-xs text-fg-muted py-2">
+      <p className="text-sm text-fg-muted py-2">
         Nenhuma categoria cadastrada neste workspace — não há o que associar.
       </p>
     );
@@ -58,7 +58,7 @@ export function ProjectCategoriesEditor({
         <button
           type="button"
           onClick={onClearAll}
-          className="self-start px-2 py-1 text-xs bg-raised border border-border hover:border-fg-muted text-fg-secondary hover:text-fg rounded-control transition-colors"
+          className="self-start px-2 py-1 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary hover:text-fg rounded-control transition-colors"
         >
           Desmarcar todas ({sourceById.size})
         </button>
@@ -81,7 +81,7 @@ export function ProjectCategoriesEditor({
                   onChange={() => onToggle(c.id)}
                   className="shrink-0 accent-accent cursor-pointer"
                 />
-                <span className="flex-1 text-xs text-fg-secondary truncate">{c.name}</span>
+                <span className="flex-1 text-sm text-fg-secondary truncate">{c.name}</span>
                 {source === "monday" && (
                   <Badge title="Veio da varredura do Monday. Desmarcar vale até a próxima varredura — para tirar de vez, remova o Activity Type do quadro.">
                     Monday

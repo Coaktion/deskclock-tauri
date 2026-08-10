@@ -151,10 +151,10 @@ export function ZendeskIntegrationCard() {
         <SubSection icon={<Key size={14} />} title="Credenciais OAuth" defaultOpen={!connected}>
           {!connected && (
             <div className="rounded-control bg-raised border border-border px-4 py-3 space-y-2 mb-1">
-              <p className="text-xs font-medium text-fg-secondary">
+              <p className="text-sm font-medium text-fg-secondary">
                 Como criar um OAuth client no Zendesk:
               </p>
-              <ol className="text-xs text-fg-muted space-y-1 list-decimal list-inside">
+              <ol className="text-body text-fg-muted space-y-1 list-decimal list-inside">
                 <li>
                   Acesse{" "}
                   <span className="text-fg-secondary font-medium">
@@ -168,7 +168,7 @@ export function ZendeskIntegrationCard() {
                 <li>
                   Em <span className="text-fg-secondary font-medium">URLs de redirecionamento</span>
                   , adicione exatamente:{" "}
-                  <code className="text-accent-text font-mono text-xs">
+                  <code className="text-accent-text font-mono">
                     http://localhost:27422/callback
                   </code>
                 </li>
@@ -190,7 +190,7 @@ export function ZendeskIntegrationCard() {
                 placeholder="minha-empresa"
                 className="w-36"
               />
-              <span className="text-xs text-fg-muted shrink-0">.zendesk.com</span>
+              <span className="text-sm text-fg-muted shrink-0">.zendesk.com</span>
             </div>
           </Row>
           <Row label="Client ID">
@@ -227,7 +227,7 @@ export function ZendeskIntegrationCard() {
               hint="Onde os tickets importados viram tarefas planejadas."
               className="pb-2.5 mb-3 border-b border-border-subtle"
             />
-            <p className="text-xs text-fg-muted mb-3">
+            <p className="text-sm text-fg-muted mb-3">
               Importe tickets abertos atribuídos a você como tarefas planejadas.
             </p>
             <Button

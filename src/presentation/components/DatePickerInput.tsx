@@ -184,11 +184,11 @@ export function DatePickerInput({
                 weeks: "mt-1",
                 weekdays: "flex",
                 weekday:
-                  "w-8 h-7 flex items-center justify-center text-xs text-fg-muted font-normal",
+                  "w-8 h-7 flex items-center justify-center text-sm text-fg-muted font-normal",
                 week: "flex",
                 day: "w-8 h-8 flex items-center justify-center",
                 day_button:
-                  "w-8 h-8 flex items-center justify-center text-xs font-mono tabular-nums text-fg-secondary hover:bg-raised rounded-control transition-colors",
+                  "w-8 h-8 flex items-center justify-center text-sm font-mono tabular-nums text-fg-secondary hover:bg-raised rounded-control transition-colors",
                 selected: "bg-accent rounded-control text-white",
                 today: "text-accent-text font-semibold",
                 outside: "opacity-30",

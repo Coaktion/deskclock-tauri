@@ -440,7 +440,7 @@ export function RetroactivePage() {
                     onClick={() => void handleLaunchAllTimed()}
                     disabled={launchingAll}
                     title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
-                    className="ml-auto flex items-center gap-1.5 text-xs text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
+                    className="ml-auto flex items-center gap-1.5 text-sm text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                   >
                     <ListChecks size={14} />
                     {launchingAll ? "Lançando…" : `Lançar ${timedPlannedTasks.length} com horário`}

@@ -53,7 +53,7 @@ function MappingBox({
         aria-expanded={open}
         className="flex items-center gap-2 w-full px-3 py-2.5 text-left bg-raised hover:bg-border transition-colors rounded-t-control"
       >
-        <span className="text-xs font-medium text-fg-secondary">{title}</span>
+        <span className="text-sm font-medium text-fg-secondary">{title}</span>
         <span className="text-xs text-fg-muted ml-1">
           ({count}/{total})
         </span>
@@ -398,7 +398,7 @@ export function ClockifyMappingsSection({
                 const mapped = categoryMapping.find((m) => m.deskclockCategoryId === c.id);
                 return (
                   <div key={c.id} className="flex items-center gap-3 py-1">
-                    <span className="text-xs text-fg-secondary flex-1 truncate">{c.name}</span>
+                    <span className="text-sm text-fg-secondary flex-1 truncate">{c.name}</span>
                     <TagMultiSelect
                       allTags={clockifyTags}
                       selectedIds={mapped?.clockifyTagIds ?? []}
@@ -414,7 +414,7 @@ export function ClockifyMappingsSection({
         {/* Tags padrão */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-fg-secondary">Tags padrão</span>
+            <span className="text-sm font-medium text-fg-secondary">Tags padrão</span>
           </div>
           <p className="text-xs text-fg-muted mb-2">
             Adicionadas em todos os envios, independente da categoria.

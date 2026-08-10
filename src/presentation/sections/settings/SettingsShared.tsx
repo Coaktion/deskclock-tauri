@@ -109,7 +109,7 @@ export function NumberInputWithCommit({
 
   return (
     <div>
-      {label && <label className="block text-xs text-fg-muted mb-1.5">{label}</label>}
+      {label && <label className="block text-sm text-fg-muted mb-1.5">{label}</label>}
       <Input
         type="number"
         min={min}

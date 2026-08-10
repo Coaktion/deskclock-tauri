@@ -42,7 +42,7 @@ export function RunningCustomFieldsSheet({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 h-[37px] shrink-0 bg-raised border-b border-border">
-        <span className="text-xs font-medium text-fg-secondary truncate">
+        <span className="text-sm font-medium text-fg-secondary truncate">
           Campos personalizados
         </span>
         <button
@@ -69,14 +69,14 @@ export function RunningCustomFieldsSheet({
       <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-border/60">
         <button
           onClick={onClose}
-          className="px-2.5 py-1 text-xs text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
+          className="px-2.5 py-1 text-sm text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
+          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-sm font-medium bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
         >
           <Check size={14} />
           Salvar

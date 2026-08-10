@@ -73,8 +73,8 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
       }
     >
       <div className="rounded-control bg-raised/60 border border-border/50 px-4 py-3 space-y-2">
-        <p className="text-xs font-medium text-fg-secondary">Como gerar seu token:</p>
-        <ol className="text-xs text-fg-secondary space-y-1 list-decimal list-inside">
+        <p className="text-sm font-medium text-fg-secondary">Como gerar seu token:</p>
+        <ol className="text-body text-fg-secondary space-y-1 list-decimal list-inside">
           <li>
             Acesse{" "}
             <a
@@ -97,7 +97,7 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs text-fg-secondary" htmlFor="monday-api-key">
+        <label className="text-sm text-fg-secondary" htmlFor="monday-api-key">
           Token da API
         </label>
         <div className="relative">

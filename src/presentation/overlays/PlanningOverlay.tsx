@@ -43,7 +43,7 @@ export function PlanningOverlay({ onMinimize, onClose, onNavigatePlanning }: Pla
     <div className="fixed bottom-4 right-4 z-40 w-72 bg-surface border border-border rounded-card shadow-2xl overflow-hidden">
       {/* Title bar */}
       <div className="flex items-center justify-between px-3 py-2 bg-raised border-b border-border">
-        <span className="text-xs font-medium text-fg-secondary">Tarefas de Hoje</span>
+        <span className="text-sm font-medium text-fg-secondary">Tarefas de Hoje</span>
         <div className="flex gap-1">
           <button
             onClick={onNavigatePlanning}
@@ -82,7 +82,7 @@ export function PlanningOverlay({ onMinimize, onClose, onNavigatePlanning }: Pla
                 className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle hover:bg-raised/50 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-fg truncate">{task.name}</p>
+                  <p className="text-sm text-fg truncate">{task.name}</p>
                   {project && <p className="text-xs text-fg-muted truncate">{project.name}</p>}
                 </div>
                 <button
@@ -101,7 +101,7 @@ export function PlanningOverlay({ onMinimize, onClose, onNavigatePlanning }: Pla
       <div className="p-2 border-t border-border">
         <button
           onClick={handleNewTask}
-          className="w-full py-1.5 text-xs text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
+          className="w-full py-1.5 text-sm text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
         >
           + Nova tarefa
         </button>

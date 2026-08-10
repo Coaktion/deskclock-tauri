@@ -47,7 +47,7 @@ export function FilterPill({
       disabled={disabled}
       title={title}
       aria-pressed={active}
-      className={`relative inline-flex items-center gap-1.5 ${SIZE[size]} text-xs font-medium border rounded-full whitespace-nowrap transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${state} ${className}`}
+      className={`relative inline-flex items-center gap-1.5 ${SIZE[size]} text-sm font-medium border rounded-full whitespace-nowrap transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${state} ${className}`}
     >
       {icon}
       {children}

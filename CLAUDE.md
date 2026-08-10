@@ -1682,16 +1682,37 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   espaçamento também é rem, então padding, gap e larguras crescem junto — `--spacing` **não** é
   reancorado para compensar.
 
-- **A escala tipográfica é um conjunto fechado de cinco degraus**, e o sexto é exceção declarada:
+- **A escala tipográfica é um conjunto fechado de sete degraus**, e o oitavo é exceção declarada:
 
   | Papel | Utilitário | px | Peso |
   |---|---|---|---|
   | `title/page` | `text-xl` | 20 | 600 — um por página, no `PageHeader` |
+  | `mono/tempo` | `text-metric` | 17 | valor de KPI e cronômetro |
   | `title/section` | `text-base` | 16 | 600 — cabeçalho de `SectionCard` |
-  | `body` / `body/ui` | `text-sm` | 14 | 400, ou 500 se clicável ou numérico |
-  | `caption` | `text-xs` | 12 | 400 — metadado de linha |
+  | `body` | `text-body` | 14 | 400 — prosa que se lê em parágrafo |
+  | `body/ui` | `text-sm` | 12,25 | 400, ou 500 se clicável ou numérico |
+  | `caption` | `text-xs` | 10,5 | 400 — metadado de linha |
   | `overline` | `text-overline` | 10 | 600, `0.1em` |
   | `display/timer` | `text-2xl` | 24 | cronômetro da tarefa em execução |
+
+  > **Quatro dos degraus são reancorados nos px do design, e dois deles sobrescrevem o Tailwind.**
+  > O design especifica a escala sobre uma raiz de **14**; a raiz daqui é 16, escolhida porque é
+  > nela que raio, cabeçalho de 56 px, toggle 40×20 e a escala de ícones caem nos valores que o
+  > mesmo design pede em px. Enquanto os dois lados conviveram, tudo o que era rem cresceu 14% e
+  > tudo o que era px ficou parado — e é esse descompasso, não um acúmulo de descuidos, que produzia
+  > a sensação de "quase certo": a proporção interna de cada componente quebrava, o layout geral
+  > não. Reancorar **só** os tokens de tamanho de fonte separa as duas coisas. Raiz, `--spacing`,
+  > raios e ícones **ficam onde estão** — quem encontrar `--text-sm` fora do valor do Tailwind não
+  > está diante de um engano. `designTokens.test.ts` afirma os quatro valores, porque um
+  > `pnpm update` que devolvesse o padrão não quebraria build, teste nem tela: desfaria a
+  > reancoragem inteira em silêncio.
+  >
+  > **`body` e `body/ui` não são o mesmo papel.** `body/ui` é o texto que o app usa para operar —
+  > nome de tarefa, pílula, botão, campo, rótulo de campo, item de menu, aba, linha de lista. `body`
+  > é o parágrafo que se lê: passo a passo de conexão, callout de ajuda, changelog, o aviso do
+  > modal de exclusão. A régua entre eles é se o texto acompanha um controle ou se ele **é** o
+  > conteúdo. Anotação subordinada a outro elemento — subtítulo, contador, timestamp, dica de uma
+  > linha sob um controle, mensagem de validação — é `caption`, e continua em `text-xs`.
 
   **O overline tem token próprio** (`--text-overline` e seus dois modificadores) porque 10 px não
   existe na escala do Tailwind e é o único degrau que carrega peso e tracking junto — sem token ele
@@ -1769,9 +1790,11 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   > não é a do formulário (a borda em acento do editor inline), e o único que espera classes de cor
   > vindas de fora.
   >
-  > Dois tamanhos, `sm` e `md`, e o `sm` existe para o `text-xs` dos formulários densos (a coluna do
-  > Planejamento, o popup de 264 px) morar **num** lugar: a fase B da rodada de fidelidade o promove
-  > trocando uma linha, em vez de ~49 call sites.
+  > Dois tamanhos, `sm` e `md`, e **a diferença entre eles é densidade, nunca tamanho de texto**:
+  > campo é `body/ui` nos dois casos, e o que muda é o quanto a casca respira em volta. O `sm` é o
+  > dos formulários densos (a coluna do Planejamento, o popup de 264 px). Enquanto ele foi um degrau
+  > menor de fonte, o mesmo formulário lia em dois tamanhos dependendo da largura da coluna em que
+  > caísse.
   >
   > **Caixa, rádio e faixa não são `Input`, e a assinatura os recusa** — `type` os exclui por tipo.
   > Não têm casca, fundo nem raio; vesti-los com o vocabulário de campo os quebraria. Um `Checkbox`

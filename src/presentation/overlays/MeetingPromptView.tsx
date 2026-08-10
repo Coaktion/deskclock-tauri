@@ -19,11 +19,11 @@ export function MeetingPromptView({ prompt, onRespond }: MeetingPromptViewProps)
       <div className="h-full w-full flex flex-col items-center justify-center gap-4 p-5 text-center bg-surface border border-border-subtle rounded-card shadow-xl">
         <Icon size={28} className="text-accent-text" />
         <div className="flex flex-col gap-1">
-          <p className="text-xs text-fg-secondary">
+          <p className="text-sm text-fg-secondary">
             {isStart ? "Reunião começando" : "Reunião terminou"}
           </p>
           <p className="text-sm font-medium text-fg line-clamp-2">{prompt.title}</p>
-          <p className="text-xs text-fg-secondary mt-1">
+          <p className="text-sm text-fg-secondary mt-1">
             {isStart ? "Deseja iniciar esta tarefa?" : "Ainda está em andamento?"}
           </p>
         </div>
@@ -44,7 +44,7 @@ export function MeetingPromptView({ prompt, onRespond }: MeetingPromptViewProps)
               </button>
               <button
                 onClick={() => onRespond("dismiss")}
-                className="w-full px-3 py-1.5 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
+                className="w-full px-3 py-1.5 text-sm text-fg-muted hover:text-fg-secondary transition-colors"
               >
                 Dispensar
               </button>

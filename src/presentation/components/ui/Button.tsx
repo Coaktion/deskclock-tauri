@@ -97,7 +97,7 @@ export function Button({
       aria-busy={loading || undefined}
       aria-expanded={expanded}
       title={title}
-      className={`inline-flex items-center justify-center gap-1.5 text-xs font-medium rounded-control whitespace-nowrap disabled:cursor-not-allowed ${VARIANT[variant]} ${padding} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 text-sm font-medium rounded-control whitespace-nowrap disabled:cursor-not-allowed ${VARIANT[variant]} ${padding} ${className}`}
     >
       {loading ? <Loader2 size={14} className="animate-spin" /> : icon}
       {children}

@@ -80,7 +80,7 @@ export function CategoryCard({
           <button
             onClick={() => setEditBillable((b) => !b)}
             title={editBillable ? "Billable" : "Non-billable"}
-            className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-chip border transition-colors shrink-0 ${
+            className={`flex items-center gap-1 px-2 py-0.5 text-sm rounded-chip border transition-colors shrink-0 ${
               editBillable
                 ? "bg-billable/10 border-billable/40 text-billable"
                 : "bg-raised border-border text-fg-muted"

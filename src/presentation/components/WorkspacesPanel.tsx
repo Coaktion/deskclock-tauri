@@ -113,7 +113,7 @@ export function WorkspacesPanel() {
             type="button"
             onClick={() => void handleAdd()}
             disabled={!newName.trim()}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control disabled:opacity-40 transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control disabled:opacity-40 transition-colors"
           >
             <Plus size={14} />
             Criar
@@ -217,22 +217,22 @@ export function WorkspacesPanel() {
 
       {pending && (
         <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-control border border-paused/40 bg-paused/5">
-          <p className="text-xs text-fg-secondary leading-snug">
+          <p className="text-sm text-fg-secondary leading-snug">
             Há uma tarefa em execução. Parar e trocar para{" "}
             <span className="text-fg font-medium">{pending.name}</span>?
           </p>
-          <span className="text-xs text-fg-muted">Marcar a tarefa como:</span>
+          <span className="text-sm text-fg-muted">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-billable bg-billable/10 border border-billable/30 hover:bg-billable/20 rounded-control transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-billable bg-billable/10 border border-billable/30 hover:bg-billable/20 rounded-control transition-colors"
             >
               <CheckCircle2 size={14} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control transition-colors"
             >
               <Clock size={14} />
               Pendente

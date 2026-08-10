@@ -233,15 +233,15 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
 
           {quick === "custom" && (
             <div className="flex items-center gap-2">
-              <DatePickerInput value={customStart} onChange={setCustomStart} className="text-xs" />
-              <span className="text-xs text-fg-muted">até</span>
-              <DatePickerInput value={customEnd} onChange={setCustomEnd} className="text-xs" />
+              <DatePickerInput value={customStart} onChange={setCustomStart} />
+              <span className="text-sm text-fg-muted">até</span>
+              <DatePickerInput value={customEnd} onChange={setCustomEnd} />
             </div>
           )}
 
           <div className="ml-auto flex items-center gap-3">
             {defaultTagIds.length > 0 && (
-              <label className="flex items-center gap-1.5 text-xs text-fg-secondary cursor-pointer">
+              <label className="flex items-center gap-1.5 text-sm text-fg-secondary cursor-pointer">
                 {/* Caixa não é `Input`: a assinatura a recusa por tipo, e ela não
                     tem casca, fundo nem raio para vestir (§8.4). */}
                 <input
@@ -573,7 +573,7 @@ function EntryForm({
           title={
             billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
           }
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-control border transition-colors shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-control border transition-colors shrink-0 ${
             billable
               ? "bg-billable/10 border-billable/40 text-billable"
               : "bg-raised border-border text-fg-secondary hover:text-fg"
@@ -586,34 +586,34 @@ function EntryForm({
 
       <div className="flex flex-wrap items-center gap-2">
         <DatePickerInput value={dateISO} onChange={setDateISO} />
-        <span className="text-xs text-fg-muted">Início</span>
+        <span className="text-sm text-fg-muted">Início</span>
         <input
           type="time"
           value={startHHMM}
           onChange={(e) => setStartHHMM(e.target.value)}
-          className="w-24 px-2 py-1 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+          className="w-24 px-2 py-1 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
           autoComplete="off"
         />
-        <span className="text-xs text-fg-muted">Fim</span>
+        <span className="text-sm text-fg-muted">Fim</span>
         <input
           type="time"
           value={endHHMM}
           onChange={(e) => setEndHHMM(e.target.value)}
-          className="w-24 px-2 py-1 text-xs bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
+          className="w-24 px-2 py-1 text-sm bg-raised border border-border rounded-control text-fg focus:outline-none focus:border-accent"
           autoComplete="off"
         />
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={onCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-xs text-fg-secondary hover:text-fg disabled:opacity-50"
+            className="px-3 py-1.5 text-sm text-fg-secondary hover:text-fg disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !canSave}
-            className="px-3 py-1.5 text-xs bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            className="px-3 py-1.5 text-sm bg-accent hover:opacity-90 text-white rounded-control disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
             {saveLabel}

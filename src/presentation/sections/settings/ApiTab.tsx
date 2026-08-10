@@ -131,7 +131,7 @@ export function ApiTab() {
                 href={`http://localhost:${localApiStatus.port}/docs`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 text-xs text-accent-text hover:opacity-80 transition-opacity ml-auto"
+                className="flex items-center gap-1 text-sm text-accent-text hover:opacity-80 transition-opacity ml-auto"
               >
                 <ExternalLink size={14} />
                 Swagger

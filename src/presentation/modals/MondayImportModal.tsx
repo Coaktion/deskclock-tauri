@@ -411,7 +411,7 @@ export function MondayImportModal({
                 onChange={setAddOpenUrlAction}
                 ariaLabel="Adicionar uma ação de abrir o item no Monday"
               />
-              <span className="text-xs text-fg-secondary">
+              <span className="text-sm text-fg-secondary">
                 Adicionar uma ação de abrir o item no Monday
               </span>
             </div>
@@ -487,7 +487,7 @@ export function MondayImportModal({
                         <Square size={14} className={someSelected ? "opacity-50" : ""} />
                       )}
                     </button>
-                    <span className="text-xs font-semibold text-fg-secondary flex-1 truncate">
+                    <span className="text-sm font-semibold text-fg-secondary flex-1 truncate">
                       {projectName}
                     </span>
                     <span className="text-xs text-fg-muted">

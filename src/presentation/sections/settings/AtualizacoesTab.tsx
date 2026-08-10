@@ -34,7 +34,7 @@ function ReleaseNotes({ body }: { body: string }) {
 
   if (items.length === 0) {
     return (
-      <p className="text-xs text-fg-muted bg-raised rounded-control px-3 py-2 whitespace-pre-wrap">
+      <p className="text-body text-fg-muted bg-raised rounded-control px-3 py-2 whitespace-pre-wrap">
         {body}
       </p>
     );
@@ -44,11 +44,11 @@ function ReleaseNotes({ body }: { body: string }) {
     <div className="bg-raised rounded-control px-3 py-2 space-y-0.5 max-h-48 overflow-y-auto">
       {items.map((item) =>
         item.type === "header" ? (
-          <p key={item.key} className="text-xs font-medium text-fg-secondary pt-1.5 first:pt-0">
+          <p key={item.key} className="text-sm font-medium text-fg-secondary pt-1.5 first:pt-0">
             {item.text}
           </p>
         ) : (
-          <div key={item.key} className="flex gap-1.5 text-xs text-fg-secondary">
+          <div key={item.key} className="flex gap-1.5 text-body text-fg-secondary">
             <span className="text-fg-muted shrink-0">•</span>
             <span>{item.text}</span>
           </div>

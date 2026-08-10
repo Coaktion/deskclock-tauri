@@ -362,7 +362,7 @@ function ExecSection({
             }}
             options={projects}
             placeholder="Projeto"
-            className="w-full text-xs"
+            className="w-full"
             dropUp
           />
         </div>
@@ -370,7 +370,7 @@ function ExecSection({
         <button
           onClick={() => openProjectEdit()}
           onKeyDown={chipTypeahead(openProjectEdit)}
-          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border transition-colors ${
+          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-control border transition-colors ${
             projectName
               ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
               : "text-fg-muted bg-raised/50 border-dashed border-border/50 hover:border-border"
@@ -407,7 +407,7 @@ function ExecSection({
             }}
             options={categoryOptions}
             placeholder="Categoria"
-            className="w-full text-xs"
+            className="w-full"
             dropUp
           />
         </div>
@@ -415,7 +415,7 @@ function ExecSection({
         <button
           onClick={() => openCategoryEdit()}
           onKeyDown={chipTypeahead(openCategoryEdit)}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-control border transition-colors ${
             categoryName
               ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
               : "text-fg-muted bg-raised/50 border-dashed border-border/50 hover:border-border"
@@ -429,7 +429,7 @@ function ExecSection({
         {/* Billable */}
         <button
           onClick={() => void onUpdateTask({ billable: !task.billable })}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-control border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium rounded-control border transition-colors ${
             task.billable
               ? "bg-billable/10 border-billable/40 text-billable hover:bg-billable/20"
               : "bg-raised border-border text-fg-secondary hover:border-fg-muted"
@@ -465,7 +465,7 @@ function ExecSection({
         ) : (
           <button
             onClick={() => setEditingStartTime(true)}
-            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-xs text-fg-secondary bg-raised border border-border rounded-control hover:border-fg-muted transition-colors"
+            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-sm text-fg-secondary bg-raised border border-border rounded-control hover:border-fg-muted transition-colors"
           >
             <Clock size={14} className="text-fg-muted shrink-0" />
             {fmtTime(task.startTime)}
@@ -479,7 +479,7 @@ function ExecSection({
       {customFields.length > 0 && (
         <button
           onClick={onOpenCustomFields}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-control border transition-colors ${
+          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-control border transition-colors ${
             countFilledCustomValues(customFields, task.customValues) > 0
               ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
               : "text-fg-muted bg-raised/50 border-dashed border-border/50 hover:border-border"
@@ -512,7 +512,7 @@ function ExecSection({
         // alternativa, e continua exigindo o clique que a diferencia.
         <div className="flex flex-col gap-1.5" onKeyDown={handleConfirmStopKeyDown}>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-fg-secondary">Encerrar às</span>
+            <span className="text-sm text-fg-secondary">Encerrar às</span>
             <div className="flex items-center gap-1.5 flex-1">
               <Clock size={14} className="text-fg-muted shrink-0" />
               <Input
@@ -549,7 +549,7 @@ function ExecSection({
                 setConfirmingStop(false);
                 void onStop(true, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-billable/80 hover:bg-billable disabled:bg-border disabled:text-fg-muted disabled:cursor-not-allowed text-white rounded-control transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-sm bg-billable/80 hover:bg-billable disabled:bg-border disabled:text-fg-muted disabled:cursor-not-allowed text-white rounded-control transition-colors"
             >
               <CheckCircle2 size={14} /> Concluída
             </button>
@@ -559,7 +559,7 @@ function ExecSection({
                 setConfirmingStop(false);
                 void onStop(false, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-border hover:opacity-90 disabled:bg-raised disabled:text-fg-muted disabled:cursor-not-allowed text-fg rounded-control transition"
+              className="flex items-center gap-1 px-2 py-1 text-sm bg-border hover:opacity-90 disabled:bg-raised disabled:text-fg-muted disabled:cursor-not-allowed text-fg rounded-control transition"
             >
               <Clock size={14} /> Pendente
             </button>
@@ -569,7 +569,7 @@ function ExecSection({
         <div className="flex items-center gap-1.5">
           <button
             onClick={isRunning ? onPause : onResume}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
           >
             {isRunning ? (
               <>
@@ -583,13 +583,13 @@ function ExecSection({
           </button>
           <button
             onClick={openConfirmStop}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-fg-secondary hover:text-fg bg-raised hover:bg-border rounded-control transition-colors"
           >
             <Square size={14} /> Parar
           </button>
           <button
             onClick={onCancel}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-danger hover:bg-danger/10 rounded-control border border-danger/40 transition-colors"
+            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-danger hover:bg-danger/10 rounded-control border border-danger/40 transition-colors"
           >
             <X size={14} /> Cancelar
           </button>
@@ -699,7 +699,7 @@ export function PopupOverlayContent({
         className="flex items-center justify-between px-3 bg-raised border-b border-border shrink-0 rounded-t-card overflow-hidden"
         style={{ height: HEADER_H }}
       >
-        <span className="text-xs font-medium text-fg-secondary select-none pointer-events-none truncate">
+        <span className="text-sm font-medium text-fg-secondary select-none pointer-events-none truncate">
           {runningTask ? "Em execução" : "Tarefas de Hoje"}
         </span>
         <div className="flex items-center gap-1">
@@ -748,7 +748,7 @@ export function PopupOverlayContent({
           <div className="p-2 border-b border-border/60 shrink-0" style={{ height: NEW_TASK_H }}>
             <button
               onClick={() => onStartTask({ billable: true })}
-              className="w-full h-full flex items-center justify-center gap-1.5 text-xs text-fg-secondary hover:text-fg bg-raised hover:bg-border/80 rounded-control transition-colors"
+              className="w-full h-full flex items-center justify-center gap-1.5 text-sm text-fg-secondary hover:text-fg bg-raised hover:bg-border/80 rounded-control transition-colors"
             >
               <Play size={14} fill="currentColor" />
               Nova tarefa
@@ -759,7 +759,7 @@ export function PopupOverlayContent({
           <div className="flex border-b border-border-subtle shrink-0" style={{ height: TABS_H }}>
             <button
               onClick={() => setActiveTab("planned")}
-              className={`flex-1 text-xs font-medium border-b-2 transition-colors ${
+              className={`flex-1 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "planned"
                   ? "text-fg border-accent"
                   : "text-fg-muted border-transparent hover:text-fg-secondary"
@@ -769,7 +769,7 @@ export function PopupOverlayContent({
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`flex-1 text-xs font-medium border-b-2 transition-colors ${
+              className={`flex-1 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === "completed"
                   ? "text-fg border-accent"
                   : "text-fg-muted border-transparent hover:text-fg-secondary"
@@ -806,7 +806,7 @@ export function PopupOverlayContent({
                         />
                         <div className="flex-1 min-w-0 pl-1.5">
                           <div className="flex items-center gap-1 min-w-0">
-                            <p className="text-xs font-medium text-fg truncate leading-tight">
+                            <p className="text-sm font-medium text-fg truncate leading-tight">
                               {task.name}
                             </p>
                             {trackedTitles.has((task.name ?? "").toLowerCase().trim()) && (
@@ -870,7 +870,7 @@ export function PopupOverlayContent({
       >
         <button
           onClick={handleOpenApp}
-          className="ml-auto flex items-center gap-1 text-xs text-fg-muted hover:text-fg-secondary transition-colors"
+          className="ml-auto flex items-center gap-1 text-sm text-fg-muted hover:text-fg-secondary transition-colors"
         >
           Abrir app
           <ArrowRight size={14} />

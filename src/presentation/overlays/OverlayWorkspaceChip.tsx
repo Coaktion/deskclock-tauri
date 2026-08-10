@@ -60,7 +60,7 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
         className="flex items-center gap-1 max-w-[92px] px-1.5 py-0.5 rounded-control hover:bg-border transition-colors"
       >
         <WorkspaceDot color={activeWorkspace.color} size={7} />
-        <span className="text-xs text-fg-secondary truncate">{activeWorkspace.name}</span>
+        <span className="text-sm text-fg-secondary truncate">{activeWorkspace.name}</span>
       </button>
 
       {open && (
@@ -72,7 +72,7 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
             <button
               key={w.id}
               onClick={() => void handlePick(w.id)}
-              className="w-full flex items-center gap-1.5 px-2 py-1 text-xs text-fg-secondary hover:bg-raised transition-colors"
+              className="w-full flex items-center gap-1.5 px-2 py-1 text-sm text-fg-secondary hover:bg-raised transition-colors"
             >
               <WorkspaceDot color={w.color} size={7} />
               <span className="flex-1 text-left truncate">{w.name}</span>
@@ -87,27 +87,27 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
           style={MENU_POS}
           className="fixed z-50 w-52 bg-surface border border-border rounded-control shadow-2xl p-2"
         >
-          <p className="text-xs text-fg-secondary leading-snug mb-1.5">
+          <p className="text-sm text-fg-secondary leading-snug mb-1.5">
             Parar a tarefa e trocar para <span className="text-fg">{pending.name}</span>?
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-billable hover:opacity-90 text-white rounded-chip transition"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-sm bg-billable hover:opacity-90 text-white rounded-chip transition"
             >
               <CheckCircle2 size={14} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-xs bg-border hover:opacity-90 text-fg rounded-chip transition"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-sm bg-border hover:opacity-90 text-fg rounded-chip transition"
             >
               <Clock size={14} />
               Pendente
             </button>
             <button
               onClick={cancel}
-              className="ml-auto px-1 text-xs text-fg-muted hover:text-fg-secondary"
+              className="ml-auto px-1 text-sm text-fg-muted hover:text-fg-secondary"
             >
               ✕
             </button>

@@ -34,7 +34,7 @@ export function PlannedTasksSection({
         onNavigatePlanning && (
           <button
             onClick={onNavigatePlanning}
-            className="text-xs text-fg-muted hover:text-accent-text transition-colors"
+            className="text-sm text-fg-muted hover:text-accent-text transition-colors"
           >
             Ver semana →
           </button>

@@ -5,9 +5,10 @@ import { describe, expect, it } from "vitest";
 import { listSourceFiles } from "../helpers/sourceFiles";
 
 /**
- * A escala tipográfica é um conjunto fechado: `text-xl` (20), `text-base` (16),
- * `text-sm` (14), `text-xs` (12) e `text-overline` (10, com peso e tracking
- * próprios). Tamanho em px arbitrário fica de fora.
+ * A escala tipográfica é um conjunto fechado: `text-xl` (20), `text-metric`
+ * (17), `text-base` (16), `text-body` (14), `text-sm` (12,25), `text-xs` (10,5)
+ * e `text-overline` (10, com peso e tracking próprios). Tamanho em px
+ * arbitrário fica de fora.
  *
  * Ao contrário dos outros testes de convenção desta pasta, este nasce **sem
  * baseline**: as 176 ocorrências que existiam foram convertidas de uma vez, e

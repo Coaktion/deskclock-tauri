@@ -47,14 +47,14 @@ export function OmniboxCustomFieldsPanel({
       <div className="flex gap-2 justify-end">
         <button
           onClick={onClose}
-          className="px-3 py-1.5 text-xs text-fg-muted hover:text-fg transition-colors"
+          className="px-3 py-1.5 text-sm text-fg-muted hover:text-fg transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 disabled:opacity-50 rounded-control transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 disabled:opacity-50 rounded-control transition-colors"
         >
           <Check size={14} />
           Salvar

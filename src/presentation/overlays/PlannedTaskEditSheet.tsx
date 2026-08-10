@@ -43,7 +43,7 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 };
 
 const chipClass =
-  "flex items-center justify-center gap-1 px-2 py-1 text-xs rounded-control border transition-colors";
+  "flex items-center justify-center gap-1 px-2 py-1 text-sm rounded-control border transition-colors";
 
 /**
  * Edição da tarefa planejada **dentro** do popup, sem crescer a janela: painel
@@ -74,7 +74,7 @@ export function PlannedTaskEditSheet({
     >
       {/* Header */}
       <div className="flex items-center justify-between px-3 h-[37px] shrink-0 bg-raised border-b border-border">
-        <span className="text-xs font-medium text-fg-secondary truncate">Editar planejada</span>
+        <span className="text-sm font-medium text-fg-secondary truncate">Editar planejada</span>
         <button
           onClick={onClose}
           title="Cancelar"
@@ -187,7 +187,7 @@ export function PlannedTaskEditSheet({
             <DatePickerInput
               value={editor.scheduleDate}
               onChange={editor.setScheduleDate}
-              className="flex-1 text-xs"
+              className="flex-1"
             />
           </div>
         )}
@@ -200,7 +200,7 @@ export function PlannedTaskEditSheet({
                 type="button"
                 title={day.title}
                 onClick={() => editor.toggleDay(day.value)}
-                className={`flex-1 py-1 text-xs rounded-control border transition-colors ${
+                className={`flex-1 py-1 text-sm rounded-control border transition-colors ${
                   editor.recurringDays.includes(day.value)
                     ? "bg-accent/10 border-accent text-accent-text"
                     : "bg-raised border-border text-fg-secondary hover:text-fg"
@@ -217,13 +217,13 @@ export function PlannedTaskEditSheet({
             <DatePickerInput
               value={editor.periodStart}
               onChange={editor.setPeriodStart}
-              className="w-full text-xs"
+              className="w-full"
               label="Início"
             />
             <DatePickerInput
               value={editor.periodEnd}
               onChange={editor.setPeriodEnd}
-              className="w-full text-xs"
+              className="w-full"
               label="Fim"
             />
           </div>
@@ -247,7 +247,7 @@ export function PlannedTaskEditSheet({
                     <FolderOpen size={14} />
                   )}
                 </span>
-                <span className="flex-1 text-xs text-fg-secondary truncate" title={action.value}>
+                <span className="flex-1 text-sm text-fg-secondary truncate" title={action.value}>
                   {action.value}
                 </span>
                 <button
@@ -301,14 +301,14 @@ export function PlannedTaskEditSheet({
       <div className="flex items-center gap-1.5 px-3 h-[38px] shrink-0 border-t border-border/60">
         <button
           onClick={onClose}
-          className="px-2.5 py-1 text-xs text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
+          className="px-2.5 py-1 text-sm text-fg-secondary hover:text-fg hover:bg-raised rounded-control transition-colors"
         >
           Cancelar
         </button>
         <button
           onClick={() => void editor.save()}
           disabled={editor.saving}
-          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
+          className="ml-auto flex items-center gap-1 px-2.5 py-1 text-sm font-medium bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition"
         >
           <Check size={14} />
           Salvar

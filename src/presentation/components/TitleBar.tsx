@@ -41,9 +41,9 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
     <div className="h-8 bg-canvas border-b border-border-subtle flex items-center shrink-0 select-none">
       {/* Área de arraste */}
       <div data-tauri-drag-region className="flex-1 flex items-center gap-2 px-3 h-full min-w-0">
-        <span className="text-xs font-semibold text-fg-muted tracking-wide">DeskClock</span>
-        <span className="text-fg-muted text-xs">·</span>
-        <span className="text-xs text-fg-secondary truncate">{PAGE_LABELS[page]}</span>
+        <span className="text-sm font-semibold text-fg-muted tracking-wide">DeskClock</span>
+        <span className="text-fg-muted text-sm">·</span>
+        <span className="text-sm text-fg-secondary truncate">{PAGE_LABELS[page]}</span>
       </div>
 
       {/* Controles da janela */}

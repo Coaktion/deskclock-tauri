@@ -21,7 +21,7 @@ function ChoiceChip({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`px-2.5 py-1 rounded-chip text-xs font-medium border transition-colors ${
+      className={`px-2.5 py-1 rounded-chip text-sm font-medium border transition-colors ${
         active
           ? "bg-accent/10 border-accent/40 text-accent-text"
           : "bg-raised border-border text-fg-muted hover:border-fg-muted hover:text-fg"
@@ -117,7 +117,7 @@ export function GeralTab() {
             {userName ? userName[0].toUpperCase() : "?"}
           </div>
           <div className="flex-1 min-w-0">
-            <label htmlFor="settings-user-name" className="block text-xs text-fg-muted">
+            <label htmlFor="settings-user-name" className="block text-sm text-fg-muted">
               Como quer ser chamado?
             </label>
             <Input
@@ -189,7 +189,7 @@ export function GeralTab() {
           {roundingEnabled && (
             <div className="mt-3 space-y-3">
               <div>
-                <p className="text-xs text-fg-secondary mb-2">Slots ativos</p>
+                <p className="text-sm text-fg-secondary mb-2">Slots ativos</p>
                 <div className="flex flex-wrap gap-1.5">
                   {ALL_ROUNDING_SLOTS.map((slot) => (
                     <ChoiceChip
@@ -203,7 +203,7 @@ export function GeralTab() {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-fg-secondary mb-1">Tolerância</p>
+                <p className="text-sm text-fg-secondary mb-1">Tolerância</p>
                 <p className="text-xs text-fg-muted mb-2">
                   Quando uma tarefa passa de um slot ativo, se for encerrada ainda dentro desta
                   tolerância, é arredondada para o slot recém ultrapassado. Do contrário, irá para o
@@ -260,7 +260,7 @@ export function GeralTab() {
               await config.set("overlayPosition_planning", { x: -1, y: -1 });
               await config.set("overlayPosition_compact", { x: -1, y: -1 });
             }}
-            className="text-xs text-fg-secondary hover:text-fg underline underline-offset-2 transition-colors"
+            className="text-sm text-fg-secondary hover:text-fg underline underline-offset-2 transition-colors"
           >
             Redefinir posições salvas das janelas
           </button>

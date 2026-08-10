@@ -130,7 +130,7 @@ export function DeleteWorkspaceModal({
           resolve — mover os dados não move a integração junto. */}
       {boundIntegrations.length > 0 && <IntegrationsWarning bindings={boundIntegrations} />}
 
-      <p className="text-xs text-fg-secondary leading-relaxed">
+      <p className="text-body text-fg-secondary leading-relaxed">
         Tarefas, planejadas, projetos, categorias e perfis de exportação deste workspace precisam de
         um destino.
       </p>

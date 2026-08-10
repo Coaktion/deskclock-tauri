@@ -62,7 +62,7 @@ export function WorkspaceSwitcher() {
       >
         {active ? <WorkspaceDot color={active.color} size={10} /> : <Layers size={14} />}
         <span
-          className={`text-xs font-medium leading-none truncate max-w-full ${
+          className={`text-sm font-medium leading-none truncate max-w-full ${
             open ? classes.text : "text-fg-muted"
           }`}
         >
@@ -77,7 +77,7 @@ export function WorkspaceSwitcher() {
             <button
               key={w.id}
               onClick={() => void handlePick(w.id)}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-fg-secondary hover:bg-raised transition-colors"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-fg-secondary hover:bg-raised transition-colors"
             >
               <WorkspaceDot color={w.color} />
               <span className="flex-1 text-left truncate">{w.name}</span>
@@ -90,7 +90,7 @@ export function WorkspaceSwitcher() {
       {pending && (
         <div className="absolute left-full top-0 ml-1 z-50 w-60 bg-surface border border-border rounded-card shadow-2xl p-3">
           <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-xs text-fg-secondary leading-snug">
+            <p className="text-sm text-fg-secondary leading-snug">
               Há uma tarefa em execução. Parar e trocar para{" "}
               <span className="text-fg font-medium">{pending.name}</span>?
             </p>
@@ -101,18 +101,18 @@ export function WorkspaceSwitcher() {
               <X size={14} />
             </button>
           </div>
-          <span className="block text-xs text-fg-muted mb-1.5">Marcar a tarefa como:</span>
+          <span className="block text-sm text-fg-muted mb-1.5">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
             >
               <CheckCircle2 size={14} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
             >
               <Clock size={14} />
               Pendente

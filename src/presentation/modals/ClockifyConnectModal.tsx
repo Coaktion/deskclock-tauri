@@ -72,8 +72,8 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
       }
     >
       <div className="rounded-control bg-raised/60 border border-border/50 px-4 py-3 space-y-2">
-        <p className="text-xs font-medium text-fg-secondary">Como gerar sua API Key:</p>
-        <ol className="text-xs text-fg-secondary space-y-1 list-decimal list-inside">
+        <p className="text-sm font-medium text-fg-secondary">Como gerar sua API Key:</p>
+        <ol className="text-body text-fg-secondary space-y-1 list-decimal list-inside">
           <li>
             Acesse{" "}
             <a
@@ -96,7 +96,7 @@ export function ClockifyConnectModal({ onConnected, onClose }: ClockifyConnectMo
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs text-fg-secondary" htmlFor="clockify-api-key">
+        <label className="text-sm text-fg-secondary" htmlFor="clockify-api-key">
           API Key
         </label>
         <div className="relative">

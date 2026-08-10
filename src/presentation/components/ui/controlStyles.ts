@@ -25,9 +25,12 @@ export type ControlVariant = "boxed" | "bare" | "plain";
 
 /**
  * `sm` é o controle dos formulários densos (a coluna do Planejamento, o popup
- * de 264 px, os editores por linha dos modais de lista). Existe para o tamanho
- * morar **num** lugar: hoje ele é `text-xs` escrito em dezenas de call sites, e
- * a fase B da rodada de fidelidade o promove trocando esta linha.
+ * de 264 px, os editores por linha dos modais de lista).
+ *
+ * **A diferença entre os dois é densidade, nunca tamanho de texto**: campo é
+ * `body/ui` nos dois casos, e o que muda é o quanto a casca respira em volta.
+ * Enquanto o `sm` era um degrau menor de fonte, o mesmo formulário lia em dois
+ * tamanhos dependendo da largura da coluna em que caísse.
  */
 export type ControlSize = "sm" | "md";
 
@@ -39,11 +42,6 @@ const SHELL: Record<ControlVariant, string> = {
 
 /** Por extenso, nunca montado em runtime: o scanner do Tailwind não vê classe
  *  interpolada e não geraria CSS nenhum para ela (§8.4). */
-const TEXT: Record<ControlSize, string> = {
-  sm: "text-xs",
-  md: "text-sm",
-};
-
 const PADDING: Record<ControlSize, string> = {
   sm: "px-2 py-1",
   md: "px-2.5 py-1.5",
@@ -66,10 +64,9 @@ export function controlClass(
   const border = invalid && variant === "boxed" ? "border-danger!" : "";
 
   return [
-    "w-full text-fg placeholder-fg-muted focus:outline-none transition-colors",
+    "w-full text-sm text-fg placeholder-fg-muted focus:outline-none transition-colors",
     "disabled:opacity-50 disabled:cursor-not-allowed",
     SHELL[variant],
-    TEXT[size],
     // O `plain` não espaça: a linha em volta já espaçou, e um padding aqui o
     // desalinharia dos irmãos dela. É a única diferença entre ele e o `bare`.
     variant === "plain" ? "" : PADDING[size],

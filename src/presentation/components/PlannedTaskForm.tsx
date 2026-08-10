@@ -280,7 +280,7 @@ export function PlannedTaskForm({
                 key={type}
                 type="button"
                 onClick={() => set("scheduleType", type)}
-                className={`flex-1 py-1 text-xs font-medium rounded-chip transition-colors ${
+                className={`flex-1 py-1 text-sm font-medium rounded-chip transition-colors ${
                   form.scheduleType === type
                     ? "bg-accent text-white"
                     : "bg-transparent text-fg-muted hover:text-fg"
@@ -315,7 +315,7 @@ export function PlannedTaskForm({
                   key={value}
                   type="button"
                   onClick={() => toggleDay(value)}
-                  className={`flex-1 py-1.5 text-xs font-medium rounded-full border transition-colors ${
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-full border transition-colors ${
                     form.recurringDays.includes(value)
                       ? "bg-accent/10 border-accent/40 text-accent-text"
                       : "bg-transparent border-border text-fg-muted hover:border-fg-muted hover:text-fg"
@@ -360,7 +360,7 @@ export function PlannedTaskForm({
               >
                 {action.type === "open_url" ? <ExternalLink size={14} /> : <FolderOpen size={14} />}
               </span>
-              <span className="flex-1 text-xs text-fg-secondary truncate" title={action.value}>
+              <span className="flex-1 text-sm text-fg-secondary truncate" title={action.value}>
                 {action.value}
               </span>
               <button

@@ -63,7 +63,7 @@ export function TagMultiSelect({
       <button
         ref={triggerRef}
         onClick={() => (open ? setOpen(false) : openDropdown())}
-        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-raised border border-border rounded-chip px-2 py-1 text-xs text-left focus:outline-none focus:border-accent"
+        className="flex flex-wrap items-center gap-1 min-w-[180px] max-w-[260px] bg-raised border border-border rounded-chip px-2 py-1 text-sm text-left focus:outline-none focus:border-accent"
       >
         {selected.length === 0 ? (
           <span className="text-fg-muted">{placeholder}</span>
@@ -93,7 +93,7 @@ export function TagMultiSelect({
                     onChange={() => toggle(t.id)}
                     className="accent-accent"
                   />
-                  <span className="text-xs text-fg">{t.name}</span>
+                  <span className="text-sm text-fg">{t.name}</span>
                 </label>
               ))
             )}

@@ -232,43 +232,58 @@ não no significado.
   `AtalhosTab`, `DeleteWorkspaceModal`, `MondayProjectsImport`, `CustomFieldCard`,
   `OmniboxRunning`, `ExportModal`) — agora é substituição, não decisão.
 
-### Fase B · Escala tipográfica
+### Fase B · Escala tipográfica — ✅ **feita** (B1 + B2, commit único)
 
 **B1 + B2 são um commit só.** B1 sozinha deixa 461 lugares em 10,5px de uma vez — a branch fica
-quebrada no meio se separar.
+quebrada no meio se separar. É por isso que a fase saiu em **uma** sessão, contra a estimativa de
+3–4 que a §B2 fazia: o corte por componente não existia aqui.
 
-**B1 · Reancorar os tokens** — `src/index.css`, dentro do `@theme static`:
+**B1 · Tokens reancorados** — `src/index.css`, dentro do `@theme static`: `--text-sm` 0.765625rem
+(12,25), `--text-xs` 0.65625rem (10,5), e os dois degraus novos `--text-body` 0.875rem (14) e
+`--text-metric` 1.0625rem (17), cada um com seu `--text-*--line-height` (1.35 / 1.4 / 1.55 / 1.2 —
+**valores de partida**, a calibrar na verificação visual: os mockups não declaram line-height nas
+linhas de lista). Intocados: `--text-base`, `text-xl`, `--text-overline`, `--spacing` e a raiz de
+16px.
 
-```css
---text-sm: 0.765625rem; /* 12,25px — body/ui */
---text-xs: 0.65625rem; /* 10,5px  — caption */
---text-body: 0.875rem; /* 14px    — prosa longa, degrau novo */
---text-metric: 1.0625rem; /* 17px    — valor de KPI e cronômetro */
-```
+`designTokens.test.ts` ganhou três coisas: os oito tokens na lista de tipografia, **assertiva de
+valor** para os quatro reancorados — é o único lugar da suíte onde o valor é a afirmação, porque um
+`pnpm update` que devolvesse `--text-sm` ao padrão do Tailwind não quebraria nada e desfaria a
+rodada 14% de cada vez — e a guarda de que raiz e `--spacing` seguem onde estavam.
 
-Com os respectivos `--text-*--line-height`. Começar em `1.35` (sm) e `1.4` (xs) e ajustar na
-verificação visual — os mockups não declaram line-height nas linhas de lista. **Não tocar** em
-`--text-base` (16, `title/section`), `text-xl` (20, `title/page`), `--text-overline` (10),
-`--spacing`, nem na raiz de 16px. Assertivas novas em
-`src/tests/conventions/designTokens.test.ts`.
+**B2 · Varredura** — 355 `text-xs` → **167**. Os ~188 promovidos batem com a estimativa de ~172 da
+§B2 mais o que a fase A não absorveu.
 
-**B2 · Varredura dos ~172 `text-xs` que são controle** — o grosso do trabalho.
+A régua aplicada, que é a que ficou registrada na §8.4 do CLAUDE.md:
 
-- Promover a `text-sm` onde o design manda `body/ui`: pílula, botão, input, chip clicável,
-  rótulo de campo. **Manter** `text-xs` em metadado de linha e dica (`KpiCard.hint`,
-  `TaskRow.subtitle`, `SectionCard.description`).
-- Aplicar `text-body` na prosa: descrições de configuração, parágrafos de ajuda.
-- **A fase A barateou isto**: `Button`, `IconButton`, `Input`, `Select`, `Textarea` e `Modal` já
-  concentram o tamanho num lugar só. O `ControlSize` do `controlStyles.ts` é literalmente uma
-  linha (`sm: "text-xs"`) que promove ~49 call sites de uma vez — ver o comentário lá.
-- Arquivo a arquivo, pelos mais densos (contagem anterior à fase A): `PopupOverlayContent` (24),
-  `ImportCalendarModal` (23), `ClockifyEntriesModal` (21), `GoogleIntegrationSection` (20),
-  `TaskSendModal` (20), `MondayEntriesModal` (19), `HistoryPage` (17), `ExportModal` (17),
-  `PlannedTaskEditSheet` (14), `MondayProjectsImport` (13), `ZendeskIntegrationSection` (13),
-  `MondayImportModal` (13). **Recontar antes de começar** — a fase A mexeu em quase todos.
-- **Exceção declarada:** o overlay compacto pode descer abaixo de 12,25px (janela de 78px), e só
-  em número monoespaçado — está no documento _Overlays e modais_.
-- **3–4 sessões**, pela regra "um componente por conversa" do CLAUDE.md.
+- **`text-sm` (`body/ui`)** — o que o usuário aciona ou o que nomeia uma coisa: botão, pílula, aba,
+  chip, campo, rótulo de campo, rótulo ao lado de um controle, item de menu, texto principal de
+  linha de lista, título de painel.
+- **`text-body`** — o parágrafo que se lê: os dois passo a passo de conexão (Monday, Clockify), as
+  instruções OAuth do Zendesk, o callout de dicas da Agenda, a explicação do rastreio automático, o
+  changelog e o aviso do modal de exclusão de workspace. **9 call sites** — deliberadamente poucos.
+- **`text-xs` (`caption`)** — anotação subordinada: subtítulo de linha, contador, timestamp, mono de
+  metadado, dica de uma linha sob um controle, mensagem de validação, estado vazio.
+
+Quatro decisões que não são óbvias na régua:
+
+- **O `ControlSize` do `controlStyles.ts` deixou de ter degrau de texto.** `sm` e `md` agora diferem
+  só no padding, e o `text-sm` subiu para a string base — um `Record` de duas entradas idênticas é
+  convite a divergirem. Isso promoveu os ~49 call sites de campo denso de uma vez.
+- **`Badge` fica em `text-xs`**, sozinho entre os primitivos. O design pede a pílula escrita em
+  10px/500 (é a mesma medida do chip de billable da E1), e ela não responde ao clique — `FilterPill`
+  e `SegmentedControl`, que respondem, subiram.
+- **`className="text-xs"` em `Autocomplete` e `DatePickerInput` era morto** e foi apagado, não
+  promovido: nos dois a `className` veste o wrapper, e o campo lá dentro traz o próprio tamanho.
+- **O overlay compacto não foi tocado** — exceção declarada (janela de 78px, só em número
+  monoespaçado), e o timer do popup segue em `text-xl`.
+
+**Efeito colateral a conferir na tela:** as quatro grafias de overline escritas à mão (decisão
+pendente nº 6, mais o cabeçalho de dia do `WeekPlanningView`) encolheram de 12px para 10,5px sem
+ninguém decidir isso — o `text-xs` delas foi reancorado junto. Elas ficaram **mais perto** do token
+de 10px, o que enfraquece o argumento contra unificá-las, mas a decisão continua sendo do usuário.
+
+O `text-metric` nasceu **sem consumidor**: quem o gasta é a C2 (valor do `KpiCard`). Ele sobrevive
+ao tree-shaking porque o bloco é `@theme static`, e o build confirma que o utilitário é emitido.
 
 ### Fase C · Fidelidade pontual
 
@@ -382,9 +397,11 @@ Ao fim da fase A (2026-08-10, medido com `grep -rho`):
 Depois do A4 (2026-08-10): `text-xs` em **354**, e `amber-*`/`yellow-*`/`orange-*` crus em **29**
 linhas / 11 arquivos, todas fora de badge (banners, toast, frases de status).
 
-**A fase B tem menos trabalho do que a §B2 estimou**: ela contava ~172 `text-xs` em controle a
-partir de 461, e a fase A absorveu 96 deles nos primitivos. **Recontar arquivo a arquivo antes de
-começar** — as listas de densidade do §B2 são anteriores a A1.
+Depois da fase B (2026-08-10), a escala em `.tsx`:
+
+| `text-xs` | `text-sm` | `text-body` | `text-metric` | `text-base` | `text-xl` | `text-overline` |
+| --------- | --------- | ----------- | ------------- | ----------- | --------- | --------------- |
+| 167       | 279       | 9           | 0 (é da C2)   | 8           | 2         | 15              |
 
 ---
 
@@ -409,10 +426,24 @@ com a tabela de escala).
    parar.
 5. Não propor merge em `main` nem rodar o `@code-quality-reviewer` antes do fim da rodada.
 
-**Verificação manual pendente** (nem as três sessões do A3 nem o A4 foram conferidos na tela). Por
-ordem de risco:
+**Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem a fase B foram conferidos
+na tela). Por ordem de risco:
 
-0. **Os dois tokens novos nos dois modos** — `--color-warning` no modo claro é o único valor desta
+0. **A escala inteira, em todas as telas** — é a mudança de maior alcance da rodada: todo texto do
+   app mudou de tamanho. O que olhar primeiro são os **line-heights**, que entraram como valores de
+   partida e não como medida do design: 1.35 no `body/ui` e 1.4 no `caption`. Onde eles erram é em
+   linha de lista de duas alturas (`TaskRow`, a lista de planejadas do popup, as linhas dos dois
+   modais de apontamentos), que tem altura fixa em px e não acomoda folga. Depois, os **10,5px** do
+   `caption` no modo claro, que é onde o contraste some primeiro.
+   00b. **Os quatro overlines escritos à mão encolheram sem decisão** (decisão pendente nº 6, mais o
+   cabeçalho de dia do `WeekPlanningView`): 12px → 10,5px, contra os 10px do token. Se ficarem bem,
+   a decisão nº 6 vira quase formalidade.
+   00c. **Os 9 `text-body`** — é o degrau novo, e ele é **maior** que os rótulos em volta. Onde ele mais
+   aparece é nos dois modais de conexão (Monday, Clockify) e no bloco OAuth do Zendesk. Ficando
+   grande demais ao lado do formulário, o degrau certo é `text-sm` e o `text-body` recua para os
+   callouts.
+
+1. **Os dois tokens novos nos dois modos** — `--color-warning` no modo claro é o único valor desta
    rodada escolhido sem swatch de referência (L 0.62 / hue 75, por analogia com o âmbar de pausa).
    Conferir o "Parcial" e o aviso de reenvio do envio manual sobre fundo branco. E o `Badge` em
    `neutral` sobre `raised`: é a borda que o separa da linha, e é onde ela some primeiro.
@@ -420,14 +451,14 @@ ordem de risco:
    `rounded-full`; e o "Faltando: …" virou vermelho ao lado do "Parcial" âmbar. É a mudança mais
    visível do A4.
 
-1. **Os dois modais de apontamentos** (Clockify e Monday) — saíram de janela cheia para 900 px, é a
+2. **Os dois modais de apontamentos** (Clockify e Monday) — saíram de janela cheia para 900 px, é a
    maior mudança de medida da rodada. Conferir se a grade de 4 colunas das linhas ainda respira.
-2. **`ImportCalendarModal`** — foi para 900 px e o corpo virou linha flex; conferir se as duas
+3. **`ImportCalendarModal`** — foi para 900 px e o corpo virou linha flex; conferir se as duas
    colunas rolam **cada uma por si** e o cabeçalho `sticky` da semana gruda no lugar certo.
-3. **`ExportModal`** — o `bodyClassName` passou de `""` para `"p-5"`. Antes o `p-5` chegava por
+4. **`ExportModal`** — o `bodyClassName` passou de `""` para `"p-5"`. Antes o `p-5` chegava por
    herança silenciosa, então a intenção é a mesma; é o call site em que errar isso apareceria.
-4. **`ImportZendeskModal`** — o `p-0` dele **passou a valer**. O corpo perdeu 20 px de padding que
+5. **`ImportZendeskModal`** — o `p-0` dele **passou a valer**. O corpo perdeu 20 px de padding que
    estava lá contra a intenção do código.
-5. `EditTaskModal` no modo claro (o mais alto, e o único `md` que rola) e o `EditPlannedTaskModal`,
+6. `EditTaskModal` no modo claro (o mais alto, e o único `md` que rola) e o `EditPlannedTaskModal`,
    onde os botões de agendamento viraram `Button` e ficaram 2 px mais baixos.
-6. Em todos: **ESC não deve esconder a janela do app** — é o `data-modal-open` novo na casca.
+7. Em todos: **ESC não deve esconder a janela do app** — é o `data-modal-open` novo na casca.

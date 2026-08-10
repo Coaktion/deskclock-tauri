@@ -27,7 +27,7 @@ export function ProjectMappingRow({
 
   return (
     <div className="flex items-center gap-2 py-1">
-      <span className="text-xs text-fg-secondary flex-1 truncate min-w-0">{project.name}</span>
+      <span className="text-sm text-fg-secondary flex-1 truncate min-w-0">{project.name}</span>
       <div className="flex items-center gap-1 w-[210px] shrink-0">
         <div className="flex-1">
           <Autocomplete

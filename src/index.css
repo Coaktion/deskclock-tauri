@@ -140,6 +140,30 @@
   --text-overline: 0.625rem;
   --text-overline--font-weight: 600;
   --text-overline--letter-spacing: 0.1em;
+
+  /* O design especifica a escala em px sobre uma raiz de 14, e a raiz daqui é
+     16 — decisão tomada por causa dos raios, do cabeçalho e dos ícones, que só
+     caem nos valores certos em 16. Reancorar os dois degraus de texto nos px do
+     design é o que separa as duas coisas: o layout continua na raiz 16 e a
+     proporção interna dos componentes volta a ser a desenhada. Por isso estes
+     valores não batem com os do Tailwind, e é de propósito.
+
+     `--text-base` (16, título de seção), `text-xl` (20, título de tela) e
+     `--text-overline` ficam onde estão: são os degraus que o design já
+     especifica em px, e coincidem. */
+  --text-sm: 0.765625rem; /* 12,25px — body/ui: nome, pílula, botão, campo */
+  --text-sm--line-height: 1.35;
+  --text-xs: 0.65625rem; /* 10,5px — caption: metadado de linha, dica */
+  --text-xs--line-height: 1.4;
+
+  /* Dois degraus novos, ambos fora do que o Tailwind nomeia. `body` é a prosa
+     que se lê em parágrafo — descrição de configuração, texto de ajuda —, que
+     em 12,25px cansa; `metric` é o número grande, valor de KPI e cronômetro,
+     onde o design pede um degrau só acima do título de seção. */
+  --text-body: 0.875rem; /* 14px */
+  --text-body--line-height: 1.55;
+  --text-metric: 1.0625rem; /* 17px */
+  --text-metric--line-height: 1.2;
 }
 
 /* Fora do @theme de propósito: `hue` não é namespace do Tailwind — não geraria

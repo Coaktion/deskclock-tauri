@@ -310,7 +310,7 @@ export function WeekPlanningView() {
                           allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
                         setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
                       }}
-                      className="text-xs text-fg-muted hover:text-fg transition-colors"
+                      className="text-sm text-fg-muted hover:text-fg transition-colors"
                     >
                       {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
                         ? "Desmarcar todas"
@@ -319,13 +319,13 @@ export function WeekPlanningView() {
                     <button
                       onClick={() => void handleBulkDelete()}
                       disabled={selectedIds.size === 0}
-                      className="text-xs text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
+                      className="text-sm text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
                     </button>
                     <button
                       onClick={exitSelectMode}
-                      className="text-xs text-fg-muted hover:text-fg transition-colors"
+                      className="text-sm text-fg-muted hover:text-fg transition-colors"
                     >
                       Cancelar
                     </button>
@@ -333,7 +333,7 @@ export function WeekPlanningView() {
                 ) : (
                   <button
                     onClick={() => setSelectMode(true)}
-                    className="text-xs px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
+                    className="text-sm px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
                   >
                     Selecionar tarefas
                   </button>
@@ -372,7 +372,7 @@ export function WeekPlanningView() {
                       {selectMode && dayTasks.length > 0 && (
                         <button
                           onClick={() => toggleSelectAllForDay(day)}
-                          className="text-xs text-fg-muted hover:text-fg transition-colors"
+                          className="text-sm text-fg-muted hover:text-fg transition-colors"
                         >
                           {dayTasks.every((t) => selectedIds.has(t.id))
                             ? "Desmarcar"

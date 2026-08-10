@@ -509,7 +509,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
         className="py-2.5 border-b border-border-subtle"
       />
       <div className="py-2.5 flex items-center justify-between">
-        <p className="text-xs text-fg-muted">
+        <p className="text-sm text-fg-muted">
           Importe eventos do Google Agenda como tarefas planejadas.
         </p>
         <Button
@@ -531,7 +531,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
             }}
           />
         </Row>
-        <p className="text-xs text-fg-muted leading-relaxed pb-2.5">
+        <p className="text-body text-fg-muted leading-relaxed pb-2.5">
           Ao abrir o app e a cada 2 minutos, busca os eventos do dia e pergunta, no horário de
           início, se deseja iniciar cada reunião. Ao fim do evento, pergunta se ainda está em
           andamento.
@@ -551,7 +551,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
       </div>
       <div className="flex items-start gap-2 mb-2 p-2.5 bg-accent/5 border border-accent/20 rounded-control">
         <Info size={14} className="text-accent-text shrink-0 mt-0.5" />
-        <p className="text-xs text-accent-text leading-relaxed">
+        <p className="text-body text-accent-text leading-relaxed">
           Adicione na descrição do evento para pré-preencher projeto e categoria ao importar:
           <br />
           <span className="font-mono text-accent-text">Projeto: Nome do Projeto</span>

@@ -82,6 +82,11 @@ const LIGHT_MODE_TOKENS = [
  * O `--text-overline` e seus dois modificadores são o quinto degrau da escala:
  * sem eles, `text-overline` deixa de dimensionar e o rótulo de seção volta ao
  * tamanho herdado, sem nada quebrar.
+ *
+ * `--text-sm` e `--text-xs` **sobrescrevem** degraus que o Tailwind já define,
+ * e é por isso que a ausência deles é invisível: sem a redeclaração o app volta
+ * a 14/12px e continua renderizando — só deixa de bater com o design. Os dois
+ * degraus novos (`body`, `metric`) falham do jeito oposto, sumindo de tamanho.
  */
 const TYPOGRAPHY_TOKENS = [
   "--font-sans",
@@ -92,6 +97,30 @@ const TYPOGRAPHY_TOKENS = [
   "--text-overline",
   "--text-overline--font-weight",
   "--text-overline--letter-spacing",
+  "--text-sm",
+  "--text-sm--line-height",
+  "--text-xs",
+  "--text-xs--line-height",
+  "--text-body",
+  "--text-body--line-height",
+  "--text-metric",
+  "--text-metric--line-height",
+];
+
+/**
+ * A exceção da rodada de fidelidade: aqui o valor **é** a afirmação.
+ *
+ * Estes quatro são os únicos tokens cujo valor o resto da suíte não pode
+ * inferir de nada — reancorá-los nos px do design é o que corrige a proporção
+ * interna dos componentes, e um `pnpm update` do Tailwind que devolva `--text-sm`
+ * ao padrão de 14px não quebra build, teste nem tela: só desfaz a rodada
+ * inteira, 14% de cada vez.
+ */
+const REANCHORED_SIZES: [token: string, rem: string, px: string][] = [
+  ["--text-sm", "0.765625rem", "12,25px"],
+  ["--text-xs", "0.65625rem", "10,5px"],
+  ["--text-body", "0.875rem", "14px"],
+  ["--text-metric", "1.0625rem", "17px"],
 ];
 
 /** Cada família tem duas faces: latin e latin-ext. */
@@ -145,9 +174,25 @@ describe("convenção: tokens semânticos do design system", () => {
     expect(declaredIn(body, THEME_TOKENS)).toEqual(THEME_TOKENS);
   });
 
-  it("declara as duas famílias, os três pesos e o overline", () => {
+  it("declara as duas famílias, os três pesos e a escala inteira", () => {
     const body = blockBody(css, "@theme static {");
     expect(declaredIn(body, TYPOGRAPHY_TOKENS)).toEqual(TYPOGRAPHY_TOKENS);
+  });
+
+  it.each(REANCHORED_SIZES)(
+    "%s vale %s (%s do design), e não o padrão do Tailwind",
+    (token, rem) => {
+      const body = blockBody(css, "@theme static {");
+      expect(body).toMatch(new RegExp(`^\\s*${token}:\\s*${rem.replace(".", "\\.")};`, "m"));
+    }
+  );
+
+  it("não reancora a raiz nem o ritmo de espaçamento", () => {
+    // A reancoragem é só dos tamanhos de fonte. Raiz e `--spacing` sustentam
+    // raio, cabeçalho de 56px, toggle 40×20 e a escala de ícones, que o design
+    // especifica em px e que já batem — mexer neles reabriria tudo isso.
+    expect(css).toMatch(/^\s*font-size:\s*16px;/m);
+    expect(blockBody(css, "@theme static {")).not.toMatch(/^\s*--spacing:/m);
   });
 
   // `@font-face` não aninha bloco, então aqui `[^}]*` não corta nada pela metade.

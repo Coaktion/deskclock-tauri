@@ -280,7 +280,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
                 onChange={(e) => sel.setCustomStart(e.target.value)}
                 className="w-auto"
               />
-              <span className="text-xs text-fg-muted">até</span>
+              <span className="text-sm text-fg-muted">até</span>
               <Input
                 type="date"
                 size="sm"
@@ -393,7 +393,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
                     {someSelected && <div className="w-2 h-0.5 bg-accent rounded-sm" />}
                   </div>
 
-                  <span className="flex-1 text-xs font-medium text-fg-secondary capitalize">
+                  <span className="flex-1 text-sm font-medium text-fg-secondary capitalize">
                     {formatDayLabel(date)}
                   </span>
 

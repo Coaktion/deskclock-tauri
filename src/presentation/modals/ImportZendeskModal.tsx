@@ -104,7 +104,7 @@ function TicketEditor({ state, projects, categoryOptionsFor, onChange }: TicketE
 
       {/* Toggle abrir URL */}
       <div className="flex items-center justify-between py-0.5">
-        <span className="text-xs text-fg-secondary flex items-center gap-1">
+        <span className="text-sm text-fg-secondary flex items-center gap-1">
           <ExternalLink size={14} />
           Adicionar automaticamente uma ação de abrir o ticket
         </span>
@@ -117,7 +117,7 @@ function TicketEditor({ state, projects, categoryOptionsFor, onChange }: TicketE
 
       {/* Tipo de agendamento */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-fg-muted shrink-0">Agendamento:</span>
+        <span className="text-sm text-fg-muted shrink-0">Agendamento:</span>
         <SegmentedControl
           ariaLabel="Tipo de agendamento"
           value={state.scheduleType}

@@ -135,7 +135,7 @@ export function ToastApp() {
       {toast.actionLabel && toast.actionEvent && (
         <button
           onClick={() => handleAction(toast.actionEvent!)}
-          className="text-xs font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded-control border border-violet-700 hover:border-violet-500"
+          className="text-sm font-medium text-violet-300 hover:text-violet-100 shrink-0 transition-colors px-2 py-1 rounded-control border border-violet-700 hover:border-violet-500"
         >
           {toast.actionLabel}
         </button>

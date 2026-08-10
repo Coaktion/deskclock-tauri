@@ -61,7 +61,7 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
             <button
               key={a.modal}
               onClick={() => onOpen(a.modal)}
-              className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-xs text-fg-secondary rounded-chip hover:bg-raised hover:text-fg transition-colors"
+              className="flex items-center gap-2 w-full text-left px-2 py-1.5 text-sm text-fg-secondary rounded-chip hover:bg-raised hover:text-fg transition-colors"
             >
               {a.icon}
               {a.label}

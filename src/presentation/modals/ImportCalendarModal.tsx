@@ -170,11 +170,11 @@ function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: E
       />
 
       <div className="flex items-center gap-2">
-        <span className="text-xs text-fg-muted shrink-0">Agendamento:</span>
+        <span className="text-sm text-fg-muted shrink-0">Agendamento:</span>
         <div className="flex items-center gap-1 bg-raised rounded-control p-0.5">
           <button
             onClick={() => onChange({ ...state, scheduleType: "specific_date" })}
-            className={`px-2 py-0.5 text-xs rounded-control transition-colors ${
+            className={`px-2 py-0.5 text-sm rounded-control transition-colors ${
               state.scheduleType === "specific_date"
                 ? "bg-accent text-white"
                 : "text-fg-secondary hover:text-fg"
@@ -189,7 +189,7 @@ function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: E
                 : onlyWeekdays(event.suggestedRecurringDays ?? []);
               onChange({ ...state, scheduleType: "recurring", recurringDays: days });
             }}
-            className={`px-2 py-0.5 text-xs rounded-control transition-colors ${
+            className={`px-2 py-0.5 text-sm rounded-control transition-colors ${
               state.scheduleType === "recurring"
                 ? "bg-accent text-white"
                 : "text-fg-secondary hover:text-fg"
@@ -202,13 +202,13 @@ function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: E
 
       {state.scheduleType === "recurring" && (
         <div className="flex items-center gap-1">
-          <span className="text-xs text-fg-muted shrink-0 mr-1">Dias:</span>
+          <span className="text-sm text-fg-muted shrink-0 mr-1">Dias:</span>
           {WEEKDAY_VALUES.map((day) => (
             <button
               key={day}
               onClick={() => toggleDay(day)}
               title={DAY_LABELS[day]}
-              className={`w-7 h-7 text-xs rounded-control transition-colors ${
+              className={`w-7 h-7 text-sm rounded-control transition-colors ${
                 state.recurringDays.includes(day)
                   ? "bg-accent text-white"
                   : "bg-raised text-fg-muted hover:text-fg"
@@ -587,7 +587,7 @@ export function ImportCalendarModal({
           ) : (
             <div className="w-[13px] shrink-0" />
           )}
-          <span className="text-xs font-semibold text-fg-secondary capitalize flex-1">
+          <span className="text-sm font-semibold text-fg-secondary capitalize flex-1">
             {dayOfWeek}
             <span className="ml-1.5 font-normal text-fg-muted">{dayShort}</span>
           </span>
@@ -648,7 +648,7 @@ export function ImportCalendarModal({
       // ele nunca transborda porque a altura dos filhos é a dele.
       bodyClassName="flex"
       toolbar={
-        <div className="flex items-center gap-2 text-xs text-fg-secondary">
+        <div className="flex items-center gap-2 text-sm text-fg-secondary">
           <span className="shrink-0">De</span>
           <DatePickerInput
             value={fromDate}
@@ -679,7 +679,7 @@ export function ImportCalendarModal({
               onChange={setAddOpenUrlAction}
               ariaLabel="Adicionar automaticamente uma ação de abrir URL do evento"
             />
-            <span className="text-xs text-fg-secondary">
+            <span className="text-sm text-fg-secondary">
               Adicionar automaticamente uma ação de abrir URL do evento
             </span>
           </div>
@@ -750,7 +750,7 @@ export function ImportCalendarModal({
                   >
                     <div className="flex-1 min-w-0">
                       <div
-                        className={`text-xs font-medium truncate ${isActive ? "text-fg" : "text-fg-secondary"}`}
+                        className={`text-sm font-medium truncate ${isActive ? "text-fg" : "text-fg-secondary"}`}
                       >
                         {weekRangeLabel(weekKey)}
                       </div>
@@ -770,12 +770,12 @@ export function ImportCalendarModal({
               {selectedWeek ? (
                 <>
                   <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-raised/90 backdrop-blur-sm border-b border-border-subtle shrink-0">
-                    <span className="text-xs font-semibold text-fg flex-1 capitalize">
+                    <span className="text-sm font-semibold text-fg flex-1 capitalize">
                       {weekRangeLabelLong(selectedWeek)}
                     </span>
                     <button
                       onClick={toggleWeekEvents}
-                      className="text-xs text-accent-text hover:text-fg transition-colors shrink-0"
+                      className="text-sm text-accent-text hover:text-fg transition-colors shrink-0"
                     >
                       {allWeekSelected ? "Desmarcar todos" : "Selecionar todos"}
                     </button>

@@ -23,7 +23,7 @@ export function ImportCard({
     <div className="border border-border-subtle rounded-control p-3 space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-xs font-medium text-fg-secondary">{title}</span>
+          <span className="text-sm font-medium text-fg-secondary">{title}</span>
           <p className="text-xs text-fg-muted mt-0.5">{hint}</p>
         </div>
         {action}
