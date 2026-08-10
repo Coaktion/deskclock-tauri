@@ -100,7 +100,7 @@ export function TodayEntriesSection({
     <SectionCard
       title="Entradas de hoje"
       action={
-        <span className="text-xs font-mono tabular-nums text-fg-muted">
+        <span className="font-mono tabular-nums text-fg-secondary">
           {formatHHMMSS(totalSeconds)}
         </span>
       }

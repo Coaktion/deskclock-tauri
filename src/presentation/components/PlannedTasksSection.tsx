@@ -29,12 +29,13 @@ export function PlannedTasksSection({
 
   return (
     <SectionCard
-      title={`Planejadas para hoje · ${pending.length}`}
+      title="Planejadas para hoje"
+      count={pending.length}
       action={
         onNavigatePlanning && (
           <button
             onClick={onNavigatePlanning}
-            className="text-sm text-fg-muted hover:text-accent-text transition-colors"
+            className="text-accent-text hover:opacity-80 transition-opacity"
           >
             Ver semana →
           </button>

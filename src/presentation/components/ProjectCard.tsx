@@ -156,7 +156,7 @@ export function ProjectCard({
       {showCategories && !editing && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="mx-3 mb-2 px-3 py-2 rounded-control bg-canvas border border-border-subtle"
+          className="mx-3 mb-2 px-3 py-2 rounded-control bg-surface border border-border-subtle"
         >
           {/* O estado vazio precisa se explicar, ou parece que a associação se
               perdeu — é o estado de todo projeto até alguém marcar algo. */}

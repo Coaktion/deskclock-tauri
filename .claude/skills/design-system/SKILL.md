@@ -404,6 +404,23 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > linha entre as `SectionRow`; sem ele o cartão é caixa só, para conteúdo que já tem estrutura
   > própria. O cabeçalho aparece com **título ou descrição** — a descrição sozinha basta, que é o
   > caso de Workspaces e Campos personalizados.
+  >
+  > **A casca do `SectionCard` não pinta fundo, e o cabeçalho é uma faixa.** Casca: borda,
+  > `rounded-card` e `overflow-hidden`, nada mais — o conteúdo fica sobre o canvas, e é isso que
+  > faz a faixa aparecer como faixa. Cabeçalho: `bg-surface`, `border-b`, `px-3 py-2.5`, `gap-2`,
+  > `items-center` — **uma medida só, 10/12**, medida na tela 3a; o 8/12 que o spec mostra nas
+  > outras quatro telas é ruído do mock, não um segundo degrau (o mesmo mock discorda de si em gap
+  > e em contador). Com `description` o alinhamento volta a `items-start`, que é o único caso que o
+  > design não desenha. O contador é a prop `count`, na pílula de `rounded-full` +
+  > `bg-border-subtle` + 2/6, em mono e 10px com `tracking-normal` — o `text-overline` é o único
+  > degrau de 10px e o `0.1em` dele abre um vão à direita de um número só. O slot de `action`
+  > carrega o degrau de 11px (`text-micro`), então o call site passa só cor e família: `accent-text`
+  > no link, mono `fg-secondary` no total do dia.
+  >
+  > **Padding e arranjo do corpo vão em `bodyClassName`, nunca em `className`** — pelo mesmo motivo
+  > que no `Modal`. Na casca, o padding inseta a faixa do cabeçalho e deixa a régua flutuando dentro
+  > do cartão. E o `overflow-hidden` da casca é o que impede usá-la para o cartão do dia do
+  > Histórico, que tem cabeçalho `sticky` dentro (§ acima): ali o cartão é escrito à mão.
 
   > **Toda linha de tarefa é o `TaskRow`, e sobrou uma.** Tarefas, Planejamento, Lançamento Manual e
   > Integrações passaram aos tokens de uma vez, e com elas caíram as cópias de linha que ainda

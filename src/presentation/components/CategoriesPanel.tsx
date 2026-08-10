@@ -59,7 +59,7 @@ export function CategoriesPanel({ data }: CategoriesPanelProps) {
   const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
 
   return (
-    <SectionCard title="Categorias" className="p-3 flex flex-col gap-3">
+    <SectionCard title="Categorias" bodyClassName="p-3 flex flex-col gap-3">
       <div className="flex gap-2">
         <SearchInput
           value={search}

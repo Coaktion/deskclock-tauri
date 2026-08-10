@@ -75,6 +75,8 @@ const SPEC = {
   sectionCard: s3a.byPath("1/1/1/2"),
   sectionHeader: s3a.byPath("1/1/1/2/0"),
   sectionTitle: s3a.byText("Planejadas para hoje"),
+  sectionCount: s3a.byPath("1/1/1/2/0/1"),
+  sectionAction: s3a.byText("Ver semana →"),
   plannedRow: s3a.byPath("1/1/1/2/1"),
   plannedDot: s3a.byPath("1/1/1/2/1/0"),
   plannedTitle: s3a.byPath("1/1/1/2/1/1/0"),
@@ -205,29 +207,30 @@ describe("geometria: tela 3a contra o spec do design", () => {
 
   describe("SectionCard", () => {
     const card = shellOf(
-      <SectionCard title="Planejadas para hoje" action={<span>Ver semana →</span>}>
+      <SectionCard title="Planejadas para hoje" count={3} action={<span>Ver semana →</span>}>
         <div />
       </SectionCard>
     );
     const header = card.children[0];
+    const [, count, action] = Array.from(header.children);
 
-    divergente("a casca não pinta fundo, as linhas ficam sobre o canvas — divergente, F1", () => {
+    it("a casca não pinta fundo, as linhas ficam sobre o canvas", () => {
       expectBackground(card, SPEC.sectionCard);
     });
 
-    divergente("a casca recorta o conteúdo no raio — divergente, F1", () => {
+    it("a casca recorta o conteúdo no raio", () => {
       // `overflow:hidden` no spec: é ele que faz a régua da última linha e o
       // fundo do cabeçalho respeitarem o canto arredondado.
       expect(SPEC.sectionCard.style.overflow).toBe("hidden");
       expect(card.className).toMatch(/(?:^|\s)overflow-hidden(?:\s|$)/);
     });
 
-    divergente("o cabeçalho pinta fundo próprio e fecha com régua — divergente, F1", () => {
+    it("o cabeçalho pinta fundo próprio e fecha com régua", () => {
       expectBackground(header, SPEC.sectionHeader);
       expectBottomRule(header, SPEC.sectionHeader);
     });
 
-    divergente("o cabeçalho tem o padding, o gap e o alinhamento do spec — divergente, F1", () => {
+    it("o cabeçalho tem o padding, o gap e o alinhamento do spec", () => {
       expectPadding(header, SPEC.sectionHeader);
       const actual = geometryOf(header.className);
       expect(actual.gap).toBe(numberOf(SPEC.sectionHeader, "gap"));
@@ -238,6 +241,21 @@ describe("geometria: tela 3a contra o spec do design", () => {
       const title = header.querySelector("p");
       expect(title).not.toBeNull();
       expect(geometryOf(title!.className).fontSize).toBe(numberOf(SPEC.sectionTitle, "font-size"));
+    });
+
+    it("o contador é pílula própria, não texto concatenado no título", () => {
+      const actual = geometryOf(count.className);
+      expect(count.textContent).toBe("3");
+      expect(actual.fontSize).toBe(numberOf(SPEC.sectionCount, "font-size"));
+      expect(actual.fontWeight).toBe(Number(SPEC.sectionCount.style["font-weight"]));
+      expect(actual.borderRadius).toBe(radiusOf(SPEC.sectionCount));
+      expectPadding(count, SPEC.sectionCount);
+    });
+
+    it("o slot de ação é o degrau de 11px, encostado à direita", () => {
+      const actual = geometryOf(action.className);
+      expect(actual.fontSize).toBe(numberOf(SPEC.sectionAction, "font-size"));
+      expect(actual.marginLeft).toBe(SPEC.sectionAction.style["margin-left"]);
     });
   });
 

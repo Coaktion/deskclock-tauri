@@ -38,7 +38,7 @@ export const CASES: VisualCase[] = [
     anchor: "1/1/1/2",
     width: 938,
     element: (
-      <SectionCard title="Planejadas para hoje" action={<span>Ver semana →</span>}>
+      <SectionCard title="Planejadas para hoje" count={3} action={<span>Ver semana →</span>}>
         <TaskRow
           title="Daily do time de produto"
           subtitle="Coaktion · Reunião"

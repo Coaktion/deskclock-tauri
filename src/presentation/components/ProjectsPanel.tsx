@@ -91,7 +91,7 @@ export function ProjectsPanel({ data, categories }: ProjectsPanelProps) {
   const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
 
   return (
-    <SectionCard title="Projetos" className="p-3 flex flex-col gap-3">
+    <SectionCard title="Projetos" bodyClassName="p-3 flex flex-col gap-3">
       <div className="flex gap-2">
         <SearchInput
           value={search}

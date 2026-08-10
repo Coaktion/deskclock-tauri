@@ -53,7 +53,7 @@ export function CustomFieldsPanel({ data }: CustomFieldsPanelProps) {
     <SectionCard
       title="Campos personalizados"
       description="Valem para todos os workspaces e entram no agrupamento de tarefas: duas tarefas iguais com valores diferentes contam como registros separados."
-      className="p-3 pt-0 flex flex-col gap-3"
+      bodyClassName="p-3 flex flex-col gap-3"
     >
       <div
         onKeyDown={handleAddKeyDown}

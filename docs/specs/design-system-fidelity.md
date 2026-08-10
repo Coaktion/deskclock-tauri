@@ -528,7 +528,8 @@ translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-b
 > o documento _Telas redesenhadas_". Era falso — a auditoria conferiu que o título está em overline
 > e parou aí. A casca, o fundo do cabeçalho, a régua inferior e os paddings divergem todos (§7.4).
 > Serve de aviso ao resto desta seção: "confere com o documento" sem número medido não é
-> verificação.
+> verificação. As quatro divergências que ela nomeia foram fechadas na **F1**, e agora com número:
+> cabeçalho de 38px contra 38px do mock.
 
 ---
 
@@ -546,6 +547,14 @@ translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-b
 
 **Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B, C e E foram
 conferidos na tela). Por ordem de risco:
+
+-3. **O `SectionCard` nas 7 telas** (F1) — a casca deixou de pintar fundo, então **toda** lista e
+    todo grupo de configuração passou a ficar sobre o canvas, com a faixa do cabeçalho sendo o único
+    `surface` do cartão. Olhar primeiro **Configurações e Dados**, que são 12 dos 13 cartões e onde a
+    mudança é a de maior alcance: conferir se a linha de configuração ainda se separa do fundo e se a
+    faixa do cabeçalho lê como faixa, não como cabeçalho solto. Depois, no **modo claro**, a pílula
+    do contador (`bg-border-subtle` sobre `surface` branco) e as duas subidas para `bg-surface` — o
+    painel de categorias do `ProjectCard` e a linha de workspace inativa.
 
 -2. **O chip de billable nas cinco telas** (E1) — é a mudança mais visível da rodada: **toda** linha
     de tarefa ganhou texto novo ao lado do nome e perdeu a faixa verde. Olhar primeiro Histórico e
@@ -711,6 +720,12 @@ raios, `p-5` do corpo.
    declarada; a trava não cobra a pílula.
 6. **`WorkspaceSwitcher` permanece na sidebar** e o **teto de 176px das Planejadas permanece** — as
    duas divergem do mock e entram como exceções declaradas.
+7. **O cabeçalho de seção tem uma medida só: 10/12.** O spec mostra **dois** paddings — 10/12 nas
+   3a/3b e 8/12 nas 3c/3d/3e/3f — e a decisão foi que 10/12 é o padrão, **sem variação**: não há
+   prop de tamanho no `SectionCard`, e o 8/12 das outras quatro telas é ruído do mock, não um
+   segundo degrau a implementar. O mock discorda de si mesmo nesses cabeçalhos por mais de um eixo
+   (gap 8 na 3a e 10 na 3c, contador como pílula na 3a e concatenado no título na 3c), e um prop de
+   densidade congelaria essa discordância antes de a trava poder julgá-la.
 
 ### 7.6 Etapas
 
@@ -771,9 +786,40 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   a linha de tarefa, **53,22 contra 55**. O `gridTemplateColumns` do mock resolve para
   `14px 88px 666px 48px 56px` na linha de entrada — a coluna de 88px medida, não declarada.
 
-- **F1 · `SectionCard`** — casca sem fundo, cabeçalho com fundo e régua, paddings, contador como
-  pílula, slot de ação nos dois tamanhos. Toca as 7 telas. **Alvo medido:** altura da casca
-  `205,66 → 204`.
+- **F1 · `SectionCard`** — ✅ **feita (2026-08-10)**. Casca sem fundo, cabeçalho com fundo e régua,
+  contador como pílula, slot de ação no degrau do spec. Toca as 7 telas.
+
+  **O cabeçalho ficou exato: 38px no app contra 38px no mock**, e é a pílula do contador que governa
+  a altura nos dois lados (10px × lh 1.3 = 13, mais 2+2 de padding = 17; mais 20 de padding do
+  cabeçalho e 1 da régua). **A casca foi de 205,66 para 199,66**, contra os 204 do mock: o alvo
+  `→ 204` da estimativa não era desta etapa, porque os 4,34px que faltam são as **três linhas**
+  (53,22 no app contra 55/55/54 no mock — a última sem régua) e a linha é a F2.
+
+  O que entrou:
+  - Casca: `border` + `rounded-card` + `overflow-hidden`, **sem `bg-surface`** — as linhas passam a
+    ficar sobre o canvas, e é isso que faz a faixa do cabeçalho aparecer como faixa.
+  - Cabeçalho: `bg-surface`, `border-b`, `px-3 py-2.5`, `gap-2`, `items-center` — a medida da §7.5.7.
+    Com `description` ele volta a `items-start`, que é o único caso que o design não desenha.
+  - Contador: prop `count`, na pílula do spec (`rounded-full`, `bg-border-subtle`, 2/6, mono,
+    `tabular-nums`). O `tracking-normal` é deliberado — `text-overline` é o único degrau de 10px da
+    escala e carrega `0.1em` junto, que num número só abre um vão à direita. **O fundo é
+    `bg-border-subtle`, e não o `bg-raised` que a §7.4 escreveu:** o valor medido é
+    `oklch(0.26 0.033 257)`, que é `border-subtle` exato, e no modo claro o `raised` (0.967) seria
+    quase invisível sobre o `surface` branco do cabeçalho. Onde prosa e JSON discordam, vale o JSON.
+  - Slot de ação: `ml-auto` e **`text-micro` no primitivo** — as duas formas do design (o link em
+    `accent-text`, o total em mono `fg-secondary`) deixam de carregar tamanho no call site.
+  - **`bodyClassName`**, pelo mesmo motivo que o `Modal` tem: os quatro painéis de Dados punham
+    `p-3 flex flex-col gap-3` na **casca**, o que agora insetaria a faixa do cabeçalho e deixaria a
+    régua flutuando dentro do cartão. O padding mudou de lugar, não de valor (o `pt-0` de dois deles
+    caiu — a faixa passou a dar o topo).
+  - Duas quedas de contraste que a casca transparente causou, e que são correção da própria etapa,
+    não melhoria fora de escopo: o painel de categorias do `ProjectCard` e a linha de workspace
+    inativa eram `bg-canvas` **recuando** contra o `surface` do cartão; sobre o canvas viravam
+    invisíveis, com só a borda de pé. Os dois subiram para `bg-surface`.
+  - `screenGeometry`: os **quatro `divergente` do `SectionCard` viraram `it`**, e entraram **duas
+    assertivas novas** — a pílula do contador (tamanho, peso, raio, padding) e o degrau de 11px do
+    slot de ação, que a §7.4 media como delta e nenhuma assertiva cobria. O caso da bancada visual
+    passou a levar `count={3}`, como o mock.
 - **F2 · `TaskRow` como grid** — colunas configuráveis (as três formas do censo), separadores,
   medidas, chip em coluna própria, ação↔duração no mesmo slot. Toca 5 telas: re-conferir 3b/3c/3d
   contra o spec na mesma sessão.

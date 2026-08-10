@@ -93,7 +93,7 @@ export function WorkspacesPanel() {
     <SectionCard
       title="Workspaces"
       description="Cada workspace tem seus próprios projetos, categorias, tarefas, planejadas e perfis de exportação. Cada integração escolhe em qual deles trabalha."
-      className="p-3 pt-0 flex flex-col gap-3"
+      bodyClassName="p-3 flex flex-col gap-3"
     >
       {/* Criação */}
       <div
@@ -133,7 +133,7 @@ export function WorkspacesPanel() {
             <div
               key={w.id}
               className={`flex flex-col gap-2 px-3 py-2 rounded-control border transition-colors ${
-                isActive ? workspaceClasses(w.color).soft : "bg-canvas border-border-subtle"
+                isActive ? workspaceClasses(w.color).soft : "bg-surface border-border-subtle"
               }`}
             >
               <div className="flex items-center gap-2">
