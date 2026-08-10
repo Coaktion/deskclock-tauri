@@ -1,11 +1,11 @@
-import { Check, DollarSign, ExternalLink, FolderOpen, Plus, Trash2, X } from "lucide-react";
+import { Check, ExternalLink, FolderOpen, Plus, Trash2, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { Input, Select } from "@presentation/components/ui";
+import { BillableChip, Input, Select } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -119,20 +119,10 @@ export function PlannedTaskEditSheet({
             variant="bare"
             size="sm"
           />
-          <button
-            type="button"
-            onClick={() => editor.setBillable(!editor.billable)}
-            title={
-              editor.billable
-                ? "Billable — clique para alternar"
-                : "Non-billable — clique para alternar"
-            }
-            className={`flex items-center shrink-0 transition-colors ${
-              editor.billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
-            }`}
-          >
-            <DollarSign size={14} />
-          </button>
+          <BillableChip
+            billable={editor.billable}
+            onToggle={() => editor.setBillable(!editor.billable)}
+          />
         </div>
 
         {/* Campos personalizados logo depois de categoria e billable, antes do

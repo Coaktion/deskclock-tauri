@@ -402,6 +402,44 @@ Era assim com a faixa; escrito, o desacerto fica visível. Resolvê-lo é produt
 faixa de horário à esquerda **e** duração à direita) — é onde o nome truncaria antes. E o chip
 `neutral` sobre linha em hover (`bg-raised`), que é onde a borda dele some primeiro.
 
+**E2 · O chip também nos formulários** — ✅ **feito**. Pedido do usuário em 2026-08-10, com a
+premissa de que a janela em 1100 px (PR 6.5) tirou o aperto de largura que justificava o `$` sem
+rótulo. Eram **11 call sites em 5 grafias**, e a divergência já tinha passado de tamanho:
+
+| Grafia | Onde |
+|---|---|
+| `$` sozinho, dentro da caixa de categoria | Planejamento, Manual, `EditTaskModal`, `EditPlannedTaskModal`, gaveta do popup |
+| `$` + texto, `rounded-control` | `EditGroupModal`, tarefa em execução do popup, apontamentos Clockify e Monday |
+| `$` + texto, `rounded-chip` | `ToggleBillable` (Dados → Categorias), `CategoryCard` |
+
+Duas coisas que a contagem não mostra e a migração corrige: os dois modais de apontamentos
+escreviam **em português** ("Faturável"/"Não-faturável") e o `CategoryCard` **abreviava**
+("Bill."/"Non."). A redação passou a ser do primitivo — é isso, e não a disciplina de quem edita,
+que impede a sexta grafia.
+
+Três decisões:
+
+- **Um tamanho só**, e ele é o do `TaskRow`. A pergunta sobre um segundo degrau para o "chip sozinho
+  na linha" foi respondida pela decisão seguinte, que elimina esse caso.
+- **Num formulário o chip nunca fica sozinho na linha** (decisão do usuário) — é o sufixo da caixa
+  da categoria, que é onde os cinco `$` já moravam. Quem se moveu foi o `EditGroupModal`: a
+  categoria virou campo dentro de caixa e o botão de altura cheia que ocupava a linha seguinte saiu.
+  Onde não existe caixa de campo (editores de linha dos dois modais de apontamentos, linha
+  "adicionar" das categorias, tarefa em execução do popup), o chip fica na fileira de controles que
+  já existe.
+- **`ToggleBillable` apagado** — era o chip escrito de novo, com ícone e em outra medida, com um
+  consumidor só.
+
+O baseline do `componentPrimitives.test.ts` desceu em 6 arquivos (o `EditGroupModal` e o
+`ToggleBillable` saíram da lista; `PopupOverlayContent` 16→15, `MondayEntriesModal` 6→5,
+`ClockifyEntriesModal` 4→3, `CategoryCard` 3→2). Os cinco `$` não estavam no baseline: eram ícone
+sem padding, e o que a trava conta é caixa própria.
+
+**A conferir na tela:** o popup de 264 px (gaveta de edição e tarefa em execução), que é onde o
+chip mais aperta; o `EditGroupModal`, que mudou de arranjo; e a grade de 3 colunas do editor do
+Clockify, cujo `items-start` virou `items-center` porque o chip é mais baixo que os dois campos ao
+lado.
+
 ---
 
 ## 3. Decisões pendentes do usuário
@@ -507,6 +545,9 @@ conferidos na tela). Por ordem de risco:
     Lançamento Manual, que são as linhas mais apertadas (faixa de horário à esquerda, duração à
     direita), e conferir se o nome ainda respira. Depois, em Tarefas, que o chip alterna o
     faturamento no clique — era o ponto de projeto que fazia isso.
+    -2b. **O mesmo chip nos 11 formulários** (E2) — o `$` sem rótulo sumiu do app. O aperto está no
+    popup de 264 px (gaveta de edição e tarefa em execução); depois dele, o `EditGroupModal`, cujo
+    billable saiu de uma linha própria para dentro da caixa da categoria.
 
 
 -1. **O cabeçalho das sete telas, com o título em 20px** — a conta diz que cabe com ~225 px de

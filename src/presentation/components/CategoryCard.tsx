@@ -1,8 +1,8 @@
 import { useState, useRef } from "react";
-import { Pencil, Trash2, Check, X, DollarSign } from "lucide-react";
+import { Pencil, Trash2, Check, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { UUID } from "@shared/types";
-import { Badge, Input } from "@presentation/components/ui";
+import { BillableChip, Input } from "@presentation/components/ui";
 
 interface CategoryCardProps {
   category: Category;
@@ -77,18 +77,7 @@ export function CategoryCard({
             onKeyDown={handleKeyDown}
             className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
-          <button
-            onClick={() => setEditBillable((b) => !b)}
-            title={editBillable ? "Billable" : "Non-billable"}
-            className={`flex items-center gap-1 px-2 py-0.5 text-sm rounded-chip border transition-colors shrink-0 ${
-              editBillable
-                ? "bg-billable/10 border-billable/40 text-billable"
-                : "bg-raised border-border text-fg-muted"
-            }`}
-          >
-            <DollarSign size={14} />
-            {editBillable ? "Bill." : "Non."}
-          </button>
+          <BillableChip billable={editBillable} onToggle={() => setEditBillable((b) => !b)} />
           <button onClick={confirmEdit} className="p-1 text-billable hover:opacity-80 shrink-0">
             <Check size={14} />
           </button>
@@ -99,9 +88,7 @@ export function CategoryCard({
       ) : (
         <>
           <span className="flex-1 text-sm text-fg truncate">{category.name}</span>
-          <Badge tone={category.defaultBillable ? "billable" : "neutral"}>
-            {category.defaultBillable ? "Bill." : "Non."}
-          </Badge>
+          <BillableChip billable={category.defaultBillable} />
           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
               onClick={(e) => {

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { RefreshCw, Loader2, Pencil, Trash2, DollarSign, Plus } from "lucide-react";
+import { RefreshCw, Loader2, Pencil, Trash2, Plus } from "lucide-react";
 import type {
   ClockifyHydratedProject,
   ClockifyHydratedTag,
@@ -11,7 +11,14 @@ import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
-import { Badge, Button, FilterPill, IconButton, Modal } from "@presentation/components/ui";
+import {
+  Badge,
+  BillableChip,
+  Button,
+  FilterPill,
+  IconButton,
+  Modal,
+} from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
   todayISO,
@@ -103,7 +110,6 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   const [customStart, setCustomStart] = useState(todayISO());
   const [customEnd, setCustomEnd] = useState(todayISO());
   const [onlyDefaultTags, setOnlyDefaultTags] = useState(defaultTagIds.length > 0);
-
 
   // Range derivado do filtro
   const range = useMemo(() => {
@@ -267,73 +273,73 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
       }
     >
       <>
-          {createOpen && (
-            <EntryForm
-              initial={createInitial}
-              clockifyProjects={clockifyProjects}
-              clockifyTags={clockifyTags}
-              saveLabel="Criar"
-              onCancel={() => setCreateOpen(false)}
-              onSave={handleCreate}
-            />
-          )}
+        {createOpen && (
+          <EntryForm
+            initial={createInitial}
+            clockifyProjects={clockifyProjects}
+            clockifyTags={clockifyTags}
+            saveLabel="Criar"
+            onCancel={() => setCreateOpen(false)}
+            onSave={handleCreate}
+          />
+        )}
 
-          {!rangeValid && (
-            <p className="text-center text-fg-muted text-sm py-12">Selecione um período válido.</p>
-          )}
+        {!rangeValid && (
+          <p className="text-center text-fg-muted text-sm py-12">Selecione um período válido.</p>
+        )}
 
-          {rangeValid && showLoading && (
-            <div className="flex items-center justify-center py-12 text-fg-muted">
-              <Loader2 size={20} className="animate-spin" />
-            </div>
-          )}
+        {rangeValid && showLoading && (
+          <div className="flex items-center justify-center py-12 text-fg-muted">
+            <Loader2 size={20} className="animate-spin" />
+          </div>
+        )}
 
-          {rangeValid && showEmpty && (
-            <p className="text-center text-fg-muted text-sm py-12">
-              Nenhum apontamento encontrado neste período.
+        {rangeValid && showEmpty && (
+          <p className="text-center text-fg-muted text-sm py-12">
+            Nenhum apontamento encontrado neste período.
+          </p>
+        )}
+
+        {rangeValid && filteredOutByTags && (
+          <div className="text-center py-12">
+            <p className="text-sm text-fg-muted mb-2">
+              Nenhum apontamento com as tags padrão neste período.
             </p>
-          )}
+            <Button variant="ghost" onClick={() => setOnlyDefaultTags(false)}>
+              Mostrar todos
+            </Button>
+          </div>
+        )}
 
-          {rangeValid && filteredOutByTags && (
-            <div className="text-center py-12">
-              <p className="text-sm text-fg-muted mb-2">
-                Nenhum apontamento com as tags padrão neste período.
-              </p>
-              <Button variant="ghost" onClick={() => setOnlyDefaultTags(false)}>
-                Mostrar todos
-              </Button>
-            </div>
-          )}
-
-          {rangeValid && dayGroups.length > 0 && (
-            <div>
-              {dayGroups.map((group) => (
-                <div key={group.dateISO}>
-                  <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
-                    <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
-                      {formatHistoryDayHeader(group.dateISO)}
-                    </span>
-                    <span className="text-xs font-mono tabular-nums text-fg-muted">
-                      {formatHHMM(group.totalSeconds)}
-                    </span>
-                  </div>
-                  {group.entries.map((entry) => (
-                    <EntryRow
-                      key={entry.id}
-                      entry={entry}
-                      isEditing={editingId === entry.id}
-                      clockifyProjects={clockifyProjects}
-                      clockifyTags={clockifyTags}
-                      onStartEdit={() => setEditingId(entry.id)}
-                      onCancelEdit={() => setEditingId(null)}
-                      onSave={(payload) => handleSaveEdit(entry.id, payload)}
-                      onDelete={() => handleDelete(entry.id)}
-                    />
-                  ))}
+        {rangeValid && dayGroups.length > 0 && (
+          <div>
+            {dayGroups.map((group) => (
+              <div key={group.dateISO}>
+                <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
+                    {formatHistoryDayHeader(group.dateISO)}
+                  </span>
+                  <span className="text-xs font-mono tabular-nums text-fg-muted">
+                    {formatHHMM(group.totalSeconds)}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
+                {group.entries.map((entry) => (
+                  <EntryRow
+                    key={entry.id}
+                    entry={entry}
+                    isEditing={editingId === entry.id}
+                    clockifyProjects={clockifyProjects}
+                    clockifyTags={clockifyTags}
+                    onStartEdit={() => setEditingId(entry.id)}
+                    onCancelEdit={() => setEditingId(null)}
+                    onSave={(payload) => handleSaveEdit(entry.id, payload)}
+                    onDelete={() => handleDelete(entry.id)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </>
     </Modal>
   );
@@ -555,7 +561,7 @@ function EntryForm({
         className="w-full px-2.5 py-1.5 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
       />
 
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-start">
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
         <Autocomplete
           value={projectInput}
           onChange={setProjectInput}
@@ -567,21 +573,7 @@ function EntryForm({
           placeholder="Projeto *"
         />
         <TagMultiSelect allTags={clockifyTags} selectedIds={tagIds} onChange={setTagIds} />
-        <button
-          type="button"
-          onClick={() => setBillable((b) => !b)}
-          title={
-            billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
-          }
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-control border transition-colors shrink-0 ${
-            billable
-              ? "bg-billable/10 border-billable/40 text-billable"
-              : "bg-raised border-border text-fg-secondary hover:text-fg"
-          }`}
-        >
-          <DollarSign size={14} />
-          {billable ? "Faturável" : "Não-faturável"}
-        </button>
+        <BillableChip billable={billable} onToggle={() => setBillable((b) => !b)} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

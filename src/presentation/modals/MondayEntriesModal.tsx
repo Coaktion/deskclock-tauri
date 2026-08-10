@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { DollarSign, Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { Loader2, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import {
   useMondayEntries,
@@ -8,7 +8,15 @@ import {
 } from "@presentation/hooks/useMondayEntries";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { Badge, Button, FilterPill, IconButton, Modal, Select } from "@presentation/components/ui";
+import {
+  Badge,
+  BillableChip,
+  Button,
+  FilterPill,
+  IconButton,
+  Modal,
+  Select,
+} from "@presentation/components/ui";
 import {
   addDaysISO,
   formatDurationCompact,
@@ -70,7 +78,6 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
   const userId = config.get("mondayUserId");
 
   const [quick, setQuick] = useState<QuickFilter>("7days");
-
 
   // Só projeto com quadro de destino: sem ele não há atividade a listar, e o id
   // vazio entraria na consulta que pede os itens de vários boards de uma vez.
@@ -181,48 +188,48 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
       }
     >
       <>
-          {loading && entries.length === 0 && (
-            <div className="flex items-center justify-center py-12 text-fg-muted">
-              <Loader2 size={20} className="animate-spin" />
-            </div>
-          )}
+        {loading && entries.length === 0 && (
+          <div className="flex items-center justify-center py-12 text-fg-muted">
+            <Loader2 size={20} className="animate-spin" />
+          </div>
+        )}
 
-          {!loading && mappings.length > 0 && dayGroups.length === 0 && (
-            <p className="text-center text-fg-muted text-sm py-12">
-              Nenhuma atividade sua neste período.
-            </p>
-          )}
+        {!loading && mappings.length > 0 && dayGroups.length === 0 && (
+          <p className="text-center text-fg-muted text-sm py-12">
+            Nenhuma atividade sua neste período.
+          </p>
+        )}
 
-          {dayGroups.map((group) => (
-            <div key={group.dayISO}>
-              <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
-                <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
-                  {group.dayISO ? formatHistoryDayHeader(group.dayISO) : "Sem data"}
-                </span>
-                <span className="text-xs font-mono tabular-nums text-fg-muted">
-                  {formatDurationCompact(Math.round(group.totalHours * 3600))}
-                </span>
-              </div>
-              {group.entries.map((entry) =>
-                editingId === entry.itemId ? (
-                  <EntryForm
-                    key={entry.itemId}
-                    entry={entry}
-                    onCancel={() => setEditingId(null)}
-                    onSave={(patch) => handleSaveEdit(entry, patch)}
-                  />
-                ) : (
-                  <EntryRow
-                    key={entry.itemId}
-                    entry={entry}
-                    deleting={deletingId === entry.itemId}
-                    onStartEdit={() => setEditingId(entry.itemId)}
-                    onDelete={() => handleDelete(entry)}
-                  />
-                )
-              )}
+        {dayGroups.map((group) => (
+          <div key={group.dayISO}>
+            <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
+              <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
+                {group.dayISO ? formatHistoryDayHeader(group.dayISO) : "Sem data"}
+              </span>
+              <span className="text-xs font-mono tabular-nums text-fg-muted">
+                {formatDurationCompact(Math.round(group.totalHours * 3600))}
+              </span>
             </div>
-          ))}
+            {group.entries.map((entry) =>
+              editingId === entry.itemId ? (
+                <EntryForm
+                  key={entry.itemId}
+                  entry={entry}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(patch) => handleSaveEdit(entry, patch)}
+                />
+              ) : (
+                <EntryRow
+                  key={entry.itemId}
+                  entry={entry}
+                  deleting={deletingId === entry.itemId}
+                  onStartEdit={() => setEditingId(entry.itemId)}
+                  onDelete={() => handleDelete(entry)}
+                />
+              )
+            )}
+          </div>
+        ))}
       </>
     </Modal>
   );
@@ -428,21 +435,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
             alterna um valor que nunca sai daqui é armadilha — o mesmo motivo de
             o Project Stage acima ser condicional. */}
         {entry.mapping.columnIds.billingType && (
-          <button
-            type="button"
-            onClick={() => setBillable((b) => !b)}
-            title={
-              billable ? "Faturável — clique para alternar" : "Não-faturável — clique para alternar"
-            }
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-control border transition-colors shrink-0 ${
-              billable
-                ? "bg-billable/10 border-billable/40 text-billable"
-                : "bg-raised border-border text-fg-secondary hover:text-fg"
-            }`}
-          >
-            <DollarSign size={14} />
-            {billable ? "Faturável" : "Não-faturável"}
-          </button>
+          <BillableChip billable={billable} onToggle={() => setBillable((b) => !b)} />
         )}
 
         <div className="ml-auto flex items-center gap-2">

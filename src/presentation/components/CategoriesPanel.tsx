@@ -3,8 +3,7 @@ import { Plus, Upload } from "lucide-react";
 import type { UseCategoriesResult } from "@presentation/hooks/useCategories";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { Input, SectionCard, SearchInput } from "@presentation/components/ui";
-import { ToggleBillable } from "./ToggleBillable";
+import { BillableChip, Input, SectionCard, SearchInput } from "@presentation/components/ui";
 import { CategoryCard } from "./CategoryCard";
 import { SelectionBar } from "./SelectionBar";
 import { BulkImportModal } from "@presentation/modals/BulkImportModal";
@@ -92,7 +91,7 @@ export function CategoriesPanel({ data }: CategoriesPanelProps) {
           placeholder="Adicionar nova categoria (Enter para salvar)"
           className="flex-1"
         />
-        <ToggleBillable value={newBillable} onChange={setNewBillable} />
+        <BillableChip billable={newBillable} onToggle={() => setNewBillable((b) => !b)} />
       </div>
 
       {!loading && filtered.length > 0 && (

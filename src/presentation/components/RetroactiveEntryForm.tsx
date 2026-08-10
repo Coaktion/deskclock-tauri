@@ -4,11 +4,10 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
-import { Field, Input } from "@presentation/components/ui";
+import { BillableChip, Field, Input } from "@presentation/components/ui";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { DollarSign } from "lucide-react";
 
 interface RetroactiveEntryFormProps {
   form: ReturnType<typeof useRetroactiveForm>;
@@ -74,20 +73,7 @@ export function RetroactiveEntryForm({
           className="flex-1"
           variant="bare"
         />
-        <button
-          type="button"
-          onClick={() => form.setBillable((b) => !b)}
-          title={
-            form.billable
-              ? "Billable — clique para alternar"
-              : "Non-billable — clique para alternar"
-          }
-          className={`flex items-center gap-1 shrink-0 transition-colors ${
-            form.billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
-          }`}
-        >
-          <DollarSign size={14} />
-        </button>
+        <BillableChip billable={form.billable} onToggle={() => form.setBillable((b) => !b)} />
       </div>
 
       <CustomFieldInputs

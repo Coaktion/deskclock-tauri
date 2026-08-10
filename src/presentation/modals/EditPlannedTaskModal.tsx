@@ -1,11 +1,18 @@
-import { Plus, ExternalLink, FolderOpen, Trash2, DollarSign } from "lucide-react";
+import { Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { boxClass } from "@presentation/components/fieldStyles";
-import { Button, IconButton, Input, Modal, Select } from "@presentation/components/ui";
+import {
+  BillableChip,
+  Button,
+  IconButton,
+  Input,
+  Modal,
+  Select,
+} from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import {
   usePlannedTaskEditor,
@@ -136,21 +143,7 @@ export function EditPlannedTaskModal({
               className="flex-1 min-w-0"
               variant="bare"
             />
-            {/* Não é `IconButton`: nele a cor é o destino do hover e o repouso é
-                sempre `fg-muted`, e aqui o estado ligado *é* a cor do próprio
-                significado — a mesma exceção do `EditGroupModal`. */}
-            <button
-              type="button"
-              onClick={() => setBillable((b) => !b)}
-              title={
-                billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
-              }
-              className={`flex items-center gap-1 shrink-0 transition-colors ${
-                billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
-              }`}
-            >
-              <DollarSign size={14} />
-            </button>
+            <BillableChip billable={billable} onToggle={() => setBillable((b) => !b)} />
           </div>
         </div>
 
@@ -225,7 +218,9 @@ export function EditPlannedTaskModal({
       <div className="border-t border-border-subtle" />
 
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">Ações ao iniciar</p>
+        <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">
+          Ações ao iniciar
+        </p>
 
         {actions.length > 0 && (
           <ul className="flex flex-col gap-1.5">

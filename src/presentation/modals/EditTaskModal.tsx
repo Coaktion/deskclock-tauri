@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { DollarSign } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -8,7 +7,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { boxClass, notchedBoxClass, notchedLabelClass } from "@presentation/components/fieldStyles";
-import { Button, Input, Modal } from "@presentation/components/ui";
+import { BillableChip, Button, Input, Modal } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
@@ -192,18 +191,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             className="flex-1 min-w-0"
             variant="bare"
           />
-          <button
-            type="button"
-            onClick={() => setBillable((b) => !b)}
-            title={
-              billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"
-            }
-            className={`flex items-center gap-1 shrink-0 transition-colors ${
-              billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
-            }`}
-          >
-            <DollarSign size={14} />
-          </button>
+          <BillableChip billable={billable} onToggle={() => setBillable((b) => !b)} />
         </div>
       </div>
 

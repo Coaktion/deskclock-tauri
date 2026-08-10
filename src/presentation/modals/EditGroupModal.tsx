@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { DollarSign } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
@@ -9,7 +8,8 @@ import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { Button, Input, Modal } from "@presentation/components/ui";
+import { boxClass } from "@presentation/components/fieldStyles";
+import { BillableChip, Button, Input, Modal } from "@presentation/components/ui";
 
 interface GroupUpdates {
   name: string | null;
@@ -110,38 +110,29 @@ export function EditGroupModal({
           options={projects}
           placeholder="Projeto"
         />
-        <Autocomplete
-          value={categoryName}
-          onChange={(v) => {
-            setCategoryName(v);
-            const cat = categories.find((c) => c.name === v);
-            if (cat) setBillable(cat.defaultBillable);
-          }}
-          onSelect={(o) => {
-            setSelectedCategoryId(o.id);
-            const cat = categories.find((c) => c.id === o.id);
-            if (cat) setBillable(cat.defaultBillable);
-          }}
-          options={categoryOptions}
-          placeholder="Categoria"
-        />
+        {/* Categoria e billable leem como um campo só, como nas telas de entrada:
+            a caixa desenha a borda e o chip mora dentro dela. */}
+        <div className={`${boxClass} flex items-center pr-2`}>
+          <Autocomplete
+            value={categoryName}
+            onChange={(v) => {
+              setCategoryName(v);
+              const cat = categories.find((c) => c.name === v);
+              if (cat) setBillable(cat.defaultBillable);
+            }}
+            onSelect={(o) => {
+              setSelectedCategoryId(o.id);
+              const cat = categories.find((c) => c.id === o.id);
+              if (cat) setBillable(cat.defaultBillable);
+            }}
+            options={categoryOptions}
+            placeholder="Categoria"
+            className="flex-1 min-w-0"
+            variant="bare"
+          />
+          <BillableChip billable={billable} onToggle={() => setBillable((b) => !b)} />
+        </div>
       </div>
-
-      {/* Alternância, não ação: fica fora do `Button` porque o estado ligado é a
-          cor do próprio significado (`billable`), que nenhuma variante expressa. */}
-      <button
-        type="button"
-        onClick={() => setBillable((b) => !b)}
-        title={billable ? "Billable — clique para alternar" : "Non-billable — clique para alternar"}
-        className={`flex items-center gap-1.5 self-start px-3 py-2 text-sm font-medium rounded-control border transition-colors ${
-          billable
-            ? "bg-billable/10 border-billable/40 text-billable"
-            : "bg-raised border-border text-fg-secondary hover:text-fg"
-        }`}
-      >
-        <DollarSign size={14} />
-        {billable ? "Billable" : "Non-billable"}
-      </button>
 
       <CustomFieldInputs fields={activeFields} values={customValues} onChange={setCustomValues} />
     </Modal>

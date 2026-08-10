@@ -5,13 +5,13 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { FilterPill, Input, Select } from "@presentation/components/ui";
+import { BillableChip, FilterPill, Input, Select } from "@presentation/components/ui";
 import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO } from "@shared/utils/time";
-import { DollarSign, ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
+import { ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 interface FormState {
@@ -245,20 +245,7 @@ export function PlannedTaskForm({
           className="flex-1"
           variant="bare"
         />
-        <button
-          type="button"
-          onClick={() => set("billable", !form.billable)}
-          title={
-            form.billable
-              ? "Billable — clique para alternar"
-              : "Non-billable — clique para alternar"
-          }
-          className={`flex items-center gap-1 shrink-0 transition-colors ${
-            form.billable ? "text-billable" : "text-fg-muted hover:text-fg-secondary"
-          }`}
-        >
-          <DollarSign size={14} />
-        </button>
+        <BillableChip billable={form.billable} onToggle={() => set("billable", !form.billable)} />
       </div>
 
       <CustomFieldInputs

@@ -7,7 +7,7 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { Input } from "@presentation/components/ui";
+import { BillableChip, Input } from "@presentation/components/ui";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -32,7 +32,6 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  DollarSign,
   ListChecks,
   Pause,
   Pen,
@@ -426,18 +425,10 @@ function ExecSection({
       )}
 
       <div className="flex gap-1.5 items-center">
-        {/* Billable */}
-        <button
-          onClick={() => void onUpdateTask({ billable: !task.billable })}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-sm font-medium rounded-control border transition-colors ${
-            task.billable
-              ? "bg-billable/10 border-billable/40 text-billable hover:bg-billable/20"
-              : "bg-raised border-border text-fg-secondary hover:border-fg-muted"
-          }`}
-        >
-          <DollarSign size={14} />
-          {task.billable ? "Billable" : "Non-billable"}
-        </button>
+        <BillableChip
+          billable={task.billable}
+          onToggle={() => void onUpdateTask({ billable: !task.billable })}
+        />
 
         {/* Start time */}
         {editingStartTime ? (
