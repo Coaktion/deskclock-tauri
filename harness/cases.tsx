@@ -141,7 +141,20 @@ export const CASES: VisualCase[] = [
     screen: "3a",
     anchor: "1/1/0",
     width: 978,
-    element: <PageHeader title="Tarefas" onStartTour={() => {}} />,
+    element: (
+      <PageHeader
+        title="Tarefas"
+        // A saudação do mock, com o total do dia inline: sem ela a comparação
+        // mediria um cabeçalho de título só, que é a divergência que a F3 fecha.
+        context={
+          <span className="min-w-0 truncate text-sm text-fg-muted">
+            Boa tarde, Rafael ·{" "}
+            <span className="font-mono tabular-nums text-fg-secondary">05:48:40</span> hoje
+          </span>
+        }
+        onStartTour={() => {}}
+      />
+    ),
   },
   {
     id: "badge-billable",

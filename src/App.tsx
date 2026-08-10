@@ -38,17 +38,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 function PageContent({
   page,
+  setPage,
   focusTaskEdit,
   onFocusTaskEditHandled,
 }: {
   page: Page;
+  setPage: (p: Page) => void;
   focusTaskEdit: boolean;
   onFocusTaskEditHandled: () => void;
 }) {
   switch (page) {
     case "tasks":
       return (
-        <TasksPage focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
+        <TasksPage
+          focusTaskEdit={focusTaskEdit}
+          onFocusTaskEditHandled={onFocusTaskEditHandled}
+          onNavigatePlanning={() => setPage("planning")}
+        />
       );
     case "planning":
       return <PlanningPage />;
@@ -235,6 +241,7 @@ function MainContent({
         <main className="flex-1 overflow-hidden">
           <PageContent
             page={page}
+            setPage={setPage}
             focusTaskEdit={focusTaskEdit}
             onFocusTaskEditHandled={onFocusTaskEditHandled}
           />

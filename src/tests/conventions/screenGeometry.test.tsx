@@ -1,4 +1,6 @@
 import { render } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
 
@@ -55,17 +57,22 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  * `divergente` é a tela fiel.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
- * renderizam sem provider. `Sidebar`, `Omnibox` e a composição da `TasksPage`
- * (ordem das seções, `gap` do corpo) dependem de contexto e entram nas etapas
- * que já os tocam — F3, F4 e F5. Enquanto não entrarem, **eles não estão
- * cobertos**, e dizer isso aqui é o que impede a lista de parecer completa.
+ * renderizam sem provider, mais a composição do corpo da `TasksPage`, que é
+ * lida do código-fonte (ver o bloco dela). `Sidebar` e `Omnibox` dependem de
+ * contexto e entram nas etapas que já os tocam — F4 e F5. Enquanto não
+ * entrarem, **eles não estão cobertos**, e dizer isso aqui é o que impede a
+ * lista de parecer completa.
  */
 
 const s3a = screen("3a");
 
+/** O corpo rolável da tela — é dele que saem os degraus entre as seções. */
+const BODY_PATH = "1/1/1";
+
 /** Ancoragem por caminho onde o texto se repete entre linhas e telas. */
 const SPEC = {
   pageHeader: s3a.byPath("1/1/0"),
+  body: s3a.byPath(BODY_PATH),
   tourButton: s3a.byPath("1/1/0/2/0"),
   kpiCard: s3a.byPath("1/1/1/1/0"),
   kpiLabel: s3a.byText("Billable hoje"),
@@ -108,8 +115,8 @@ const divergente = it.fails;
  * Nas outras a ausência continua sendo ausência — um `gap` não declarado não é
  * "gap zero", é um layout que não usa gap.
  */
-function expectPadding(el: Element, node: SpecNode) {
-  const actual = geometryOf(el.className);
+function expectPadding(target: Element | string, node: SpecNode) {
+  const actual = geometryOf(typeof target === "string" ? target : target.className);
   expect({
     top: actual.paddingTop ?? 0,
     right: actual.paddingRight ?? 0,
@@ -145,7 +152,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(actual.gap).toBe(numberOf(SPEC.pageHeader, "gap"));
     });
 
-    divergente("tem o padding horizontal do cabeçalho — divergente, F3", () => {
+    it("tem o padding horizontal do cabeçalho", () => {
       expectPadding(header, SPEC.pageHeader);
     });
 
@@ -338,6 +345,62 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(geometryOf(entry.className).gridTemplateColumns).toBe(
         stringOf(SPEC.entriesRow, "grid-template-columns").replace(/\s+/g, " ")
       );
+    });
+  });
+
+  /**
+   * A composição do corpo — o degrau entre as seções e a ordem delas — é lida
+   * do **código-fonte** da página, e não de um render.
+   *
+   * A `TasksPage` monta contexto, banco e IPC do Tauri; renderizá-la aqui
+   * pediria uma dúzia de mocks, e cada hook novo na página quebraria a trava
+   * com um erro que não fala de geometria nenhuma. O que esta fatia afirma
+   * (gap, padding e ordem) está inteiro na classe do corpo e na ordem das tags,
+   * que é o que o arquivo já mostra. O número continua vindo do JSON.
+   */
+  describe("TasksPage — a composição do corpo", () => {
+    const source = readFileSync(
+      resolve(__dirname, "../../..", "src/presentation/pages/TasksPage.tsx"),
+      "utf8"
+    );
+
+    /** O corpo é o elemento que rola; é o que o identifica sem repetir a classe. */
+    const body = /className="([^"]*overflow-y-auto[^"]*)"/.exec(source)?.[1];
+
+    /** Em que filho do corpo o nó do spec cai — 0 é o primeiro. */
+    function bodyIndex(node: SpecNode): number {
+      if (!node.path.startsWith(`${BODY_PATH}/`)) {
+        throw new Error(`spec ${node.path} não está dentro do corpo (${BODY_PATH})`);
+      }
+      return Number(node.path.slice(BODY_PATH.length + 1).split("/")[0]);
+    }
+
+    /** Cada seção da página pelo texto que ela escreve no mock. */
+    const sections = {
+      Omnibox: s3a.byText("Em que você está trabalhando?"),
+      TotalsSection: s3a.byText("Billable hoje"),
+      PlannedTasksSection: s3a.byText("Planejadas para hoje"),
+      TodayEntriesSection: s3a.byText("Entradas de hoje"),
+    };
+
+    it("o corpo tem o padding e o degrau entre seções do spec", () => {
+      expect(body, "corpo rolável não encontrado na TasksPage").toBeDefined();
+      expectPadding(body!, SPEC.body);
+      expect(geometryOf(body!).gap).toBe(numberOf(SPEC.body, "gap"));
+    });
+
+    it("as seções entram na ordem do design", () => {
+      const design = Object.entries(sections)
+        .sort(([, a], [, b]) => bodyIndex(a) - bodyIndex(b))
+        .map(([name]) => name);
+
+      const page = Object.keys(sections).map((name) => {
+        const at = source.indexOf(`<${name}`);
+        expect(at, `<${name}> não está na TasksPage`).toBeGreaterThan(-1);
+        return [name, at] as const;
+      });
+
+      expect(page.sort((a, b) => a[1] - b[1]).map(([name]) => name)).toEqual(design);
     });
   });
 

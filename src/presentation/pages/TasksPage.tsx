@@ -13,14 +13,20 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTasks } from "@presentation/hooks/useTasks";
 import { useEffect } from "react";
-import { todayISO } from "@shared/utils/time";
+import { formatHHMMSS, todayISO } from "@shared/utils/time";
 
 interface TasksPageProps {
   focusTaskEdit?: boolean;
   onFocusTaskEditHandled?: () => void;
+  /** Destino do "Ver semana →" das planejadas. */
+  onNavigatePlanning?: () => void;
 }
 
-export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPageProps = {}) {
+export function TasksPage({
+  focusTaskEdit,
+  onFocusTaskEditHandled,
+  onNavigatePlanning,
+}: TasksPageProps = {}) {
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -77,13 +83,22 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
   return (
     <div className="h-full flex flex-col">
       <PageHeader
-        title={`${greet}${userName ? `, ${userName}` : ""}!`}
-        subtitle="No que iremos trabalhar hoje?"
+        title="Tarefas"
+        context={
+          <span className="min-w-0 truncate text-sm text-fg-muted">
+            {greet}
+            {userName ? `, ${userName}` : ""} ·{" "}
+            <span className="font-mono tabular-nums text-fg-secondary">
+              {formatHHMMSS(totalToday)}
+            </span>{" "}
+            hoje
+          </span>
+        }
         onStartTour={startTour}
         tourId="tasks-greeting"
       />
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 p-5">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-5 p-5">
         {/* Omnibox — idle or running */}
         <div data-tour="tasks-omnibox">
           <Omnibox
@@ -97,22 +112,25 @@ export function TasksPage({ focusTaskEdit, onFocusTaskEditHandled }: TasksPagePr
           />
         </div>
 
-        <div data-tour="tasks-planned-section">
-          <PlannedTasksSection
-            tasks={plannedTasks}
-            projects={projects}
-            dateISO={today}
-            playDisabled={!!runningTask}
-            onPlay={handlePlayPlanned}
-          />
-        </div>
-
         <div data-tour="tasks-totals">
           <TotalsSection
             billableSeconds={totals.billableSeconds}
             nonBillableSeconds={totals.nonBillableSeconds}
             weekSeconds={totals.weekSeconds}
             weekDays={totals.weekDays}
+          />
+        </div>
+
+        {/* `empty:hidden`: sem planejadas a seção não renderiza, e o invólucro
+            vazio ainda cobraria um degrau de `gap-5` no meio do corpo. */}
+        <div data-tour="tasks-planned-section" className="empty:hidden">
+          <PlannedTasksSection
+            tasks={plannedTasks}
+            projects={projects}
+            dateISO={today}
+            playDisabled={!!runningTask}
+            onPlay={handlePlayPlanned}
+            onNavigatePlanning={onNavigatePlanning}
           />
         </div>
 

@@ -922,8 +922,37 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   Dois artefatos da bancada corrigidos junto, que mediam o fixture e não o componente: o caso era
   sempre `:last-child` (então media a linha *sem* régua, que é o oposto do nó do mock) e a ação era
   um `▶` de texto no lugar do glifo de 14px, que muda a largura da coluna que a comparação afirma.
-- **F3 · `PageHeader` + `TasksPage`** — cabeçalho do design, ordem das seções, `gap-5`, `px-5`,
-  `Ver semana →` ligado ao Planos (o botão existe e nunca foi passado).
+- **F3 · `PageHeader` + `TasksPage`** — ✅ **feita (2026-08-10)**. O cabeçalho volta ao design e o
+  corpo passa a ter a ordem e o degrau do spec.
+
+  **O caso `page-header` é o primeiro fiel da bancada: 978×56 contra 978×56, zero divergência de
+  propriedade, 0,47% de pixel** — e o que sobra é antialiasing de glifo mais o `?` de 22px, que é a
+  F5. Foi preciso dar ao caso a saudação do mock: sem ela a bancada media um cabeçalho de título só.
+
+  O que entrou:
+  - **`px-4` → `px-5` no `PageHeader`** (20 do spec). Toca as 7 telas, e é o que põe o cabeçalho no
+    mesmo eixo vertical do `p-5` do corpo — antes ele recuava 4px para dentro.
+  - **`Tarefas` é o título, e a saudação virou `context`** (§7.5.2): `text-sm` em `fg-muted` com o
+    total do dia em mono `fg-secondary` no meio da frase (`Boa tarde, Rafael · 05:48:40 hoje`). A
+    saudação era o título — 20/600 — e o subtítulo (`No que iremos trabalhar hoje?`) saiu: no design
+    o cabeçalho da tela tem uma linha só. O `tourId` continua `tasks-greeting`, e o passo continua
+    verdadeiro: o cabeçalho ainda saúda.
+  - **Corpo: `gap-4` → `gap-5`** e a ordem do spec — Omnibox → **KPI** → Planejadas → Entradas. Os
+    passos do tour trocaram de lugar junto, ou ele desceria até as planejadas para voltar ao KPI.
+  - **`Ver semana →` ligado ao Planejamento.** A prop `onNavigatePlanning` existia no
+    `PlannedTasksSection` e **nunca chegava**, então o slot de ação que a F1 desenhou não
+    renderizava. Quem faltava era o `setPage`: o `PageContent` recebia só a página, não o setter.
+  - **`empty:hidden` no invólucro das planejadas.** Sem planejadas a seção devolve `null`, e o
+    `<div data-tour>` vazio continuava sendo item do flex: cobrava um degrau de 20px no meio do
+    corpo, entre o KPI e as Entradas. Com `gap-4` o buraco já existia, menor.
+
+  **A trava:** o `divergente` do padding do cabeçalho virou `it`, e entrou o bloco `TasksPage`, que
+  fecha a lacuna que a F0 declarou (corpo e ordem das seções). Ele lê o **código-fonte** da página em
+  vez de renderizá-la: a `TasksPage` monta contexto, banco e IPC do Tauri, e uma dúzia de mocks faria
+  cada hook novo quebrar a trava com um erro que não fala de geometria. O que a fatia afirma está
+  inteiro na classe do corpo e na ordem das tags — e o número continua vindo do JSON, inclusive a
+  ordem, que sai do índice do nó dentro do corpo (`1/1/1/N`). **Verificado que reprova**, com sonda:
+  `gap-4` dá `esperado 20, atual 16`, e trocar duas seções de lugar reprova a ordem.
 - **F4 · Omnibox + `chipStyles` + `Badge`** — pílula, 12,25px nos chips, alinhamento da faixa,
   placeholder em `text-lead`.
 - **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.

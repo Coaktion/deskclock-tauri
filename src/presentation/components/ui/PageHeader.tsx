@@ -31,7 +31,7 @@ export function PageHeader({
   return (
     <header
       data-tour={tourId}
-      className="shrink-0 h-14 px-4 flex items-center gap-3 border-b border-border-subtle"
+      className="shrink-0 h-14 px-5 flex items-center gap-3 border-b border-border-subtle"
     >
       {title && (
         // `shrink-0`: o título é a identidade da tela e não pode ser o que

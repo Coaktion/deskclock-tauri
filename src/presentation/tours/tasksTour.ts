@@ -22,22 +22,22 @@ export const tasksTourSteps: DriveStep[] = [
     },
   },
   {
+    element: '[data-tour="tasks-totals"]',
+    popover: {
+      title: "Resumo do dia",
+      description:
+        "Acompanhe horas billable, non-billable, total de hoje e progresso da semana em relação às suas metas configuradas.",
+      side: "bottom",
+      align: "start",
+    },
+  },
+  {
     element: '[data-tour="tasks-planned-section"]',
     popover: {
       title: "Tarefas planejadas para hoje",
       description:
         "Tarefas que você programou para este dia aparecem aqui. Clique no botão de play em qualquer uma para iniciá-la instantaneamente.",
       side: "bottom",
-      align: "start",
-    },
-  },
-  {
-    element: '[data-tour="tasks-totals"]',
-    popover: {
-      title: "Resumo do dia",
-      description:
-        "Acompanhe horas billable, non-billable, total de hoje e progresso da semana em relação às suas metas configuradas.",
-      side: "top",
       align: "start",
     },
   },
