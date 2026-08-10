@@ -1,17 +1,16 @@
-# DeskClock — Instruções para agentes de IA
+# DeskClock — instruções para agentes de IA
 
-**Fonte da verdade:** [`CLAUDE.md`](./CLAUDE.md). Leia o arquivo completo antes de qualquer mudança. Em particular, **§9 (Guardrails arquiteturais)** lista regras invioláveis para evitar que novas contribuições reintroduzam os antipatterns mapeados na análise SOLID/DRY de 2026-05-05.
+**Comece por [`CLAUDE.md`](./CLAUDE.md).** Ele é curto de propósito: índice de invariantes mais
+um mapa de qual documento ler para cada tipo de tarefa (§5 de lá).
 
-Resumo do que `CLAUDE.md` cobre:
+**Não leia tudo antes de começar.** Este repo tinha 180KB de especificação carregada em todo
+request, e a instrução anterior aqui era literalmente "leia o arquivo completo antes de qualquer
+mudança". O conteúdo continua todo disponível, agora sob demanda: `docs/telas/`,
+`docs/integracoes/`, `docs/modelo-de-dados.md`, `docs/regras-de-negocio.md`, `docs/testes.md`,
+`docs/guardrails.md`, e a skill `design-system` para qualquer coisa visual.
 
-- Visão e princípios de produto (§1, §5)
-- Stack e arquitetura Clean (§2, §3)
-- Modelo de dados e regras de negócio (§4, §6)
-- Workflow de desenvolvimento, testes, branches, commits (§7)
-- Convenções de código e design system (§8)
-- **Guardrails arquiteturais — regras invioláveis por camada, limites de tamanho, checagem anti-DRY, roteiro para nova integração (§9)**
-
-Antes de implementar qualquer feature ou refactor, valide o plano contra §9.
+Antes de implementar feature ou refactor, valide o plano contra a §3 (regras de dependência) e
+`docs/guardrails.md`.
 
 ---
 

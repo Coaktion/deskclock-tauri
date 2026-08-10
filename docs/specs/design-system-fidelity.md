@@ -3,8 +3,9 @@
 > **Estado: em execução**, na branch `refactor/design-tokens`. Este documento é a **fonte
 > única** da rodada: ele substitui o plano e a memória que viviam fora do repositório
 > (`~/.claude/plans/design-system-fidelity.md` e a memória `project-design-system-migration`),
-> justamente para a rodada poder ser retomada em outra máquina. Leia o CLAUDE.md antes —
-> este documento pressupõe o §8.4 inteiro.
+> justamente para a rodada poder ser retomada em outra máquina. **Invoque a skill
+> `design-system` antes** — este documento a pressupõe inteira (ela era a §8.4 do CLAUDE.md
+> até 2026-08-10, quando o CLAUDE.md de 180KB foi fatiado; o de-para está na §5.1 dele).
 >
 > Continuação da migração do design system (8 PRs, **todos concluídos**). Fonte do design:
 > projeto claude.ai `DeskClock design system review` (`30120d16-f60a-4ca7-bc70-6e56adb8ebc7`),
@@ -534,7 +535,8 @@ translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-b
 ## 6. Retomando numa máquina nova
 
 1. `git checkout refactor/design-tokens && pnpm install`.
-2. Ler o CLAUDE.md (§8.4 inteiro) e este documento.
+2. Invocar a skill `design-system` (era a §8.4 do CLAUDE.md, fatiada em 2026-08-10) e ler este
+   documento. O CLAUDE.md agora é índice de 12KB e traz o de-para das seções antigas na §5.1.
 3. `git log --oneline main..HEAD` — **o git é a fonte confiável do estado**, este documento é a
    intenção.
 4. Identificar a próxima etapa pendente aqui, implementar **só ela**, rodar
@@ -658,7 +660,8 @@ no sistema inteiro**. `TaskRow` ser flex é divergência sistêmica, não da tel
    subpixel, rasterização) — isso segue na inspeção visual 1100×700 nos 2 modos × 4 acentos.
 
 **Pergunta aberta:** diff de pixel automatizado (screenshot da app sobreposto ao do mock) exige
-**Playwright** — fora da lista homologada e vetado por nome no CLAUDE.md §6. Perguntado ao usuário
+**Playwright** — fora da lista homologada e vetado por nome no CLAUDE.md global da Aktie (§6,
+testes). Perguntado ao usuário
 em 2026-08-10, **sem resposta ainda**. O plano funciona sem ele.
 
 ### 7.4 Deltas medidos da tela 3a
@@ -753,5 +756,6 @@ visual 2 modos × 4 acentos ao fim de cada uma.
 - **F4 · Omnibox + `chipStyles` + `Badge`** — pílula, 12,25px nos chips, alinhamento da faixa,
   placeholder em `text-lead`.
 - **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.
-- **F6 · Fechamento** — exceções declaradas na §8.4 do CLAUDE.md (§7.5.5 e §7.5.6) e a trava
-  estendida às outras 6 telas.
+- **F6 · Fechamento** — exceções declaradas (§7.5.5 e §7.5.6) na skill `design-system`
+  (`.claude/skills/design-system/SKILL.md`, que é onde a §8.4 do CLAUDE.md passou a morar desde
+  2026-08-10) e a trava estendida às outras 6 telas.
