@@ -1037,6 +1037,16 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   contra o `px-3 py-3` do repouso, então o botão anda 4px quando a tarefa começa. **O mock não
   desenha o omnibox em execução em nenhuma das 7 telas**, então não há número para decidir — e sem
   número esta rodada não mexe.
+
+  > **Resolvida em 2026-08-10, por decisão do usuário, fora desta rodada.** Sem número do mock, o
+  > número passou a ser o **próprio repouso**: o `OmniboxRunning` foi reconstruído sobre o esqueleto
+  > do `OmniboxIdle` — duas linhas, `px-3 py-3` e `px-3 pb-3`, botão de 40px, nome no degrau `lead`,
+  > chips no eixo do botão. O timer ocupa a ponta que no repouso fica vazia, e o início mais os
+  > controles de parada ficam debaixo dele, na faixa de chips. Medido na bancada: caixa 102,53,
+  > linha 1 64, faixa 36,53, play em (13,13) e primeiro chip em (13,65) — **iguais nos dois
+  > estados**. O início ganhou slot fixo de 128×24 porque o `input[type=time]` do Chromium mede
+  > 26,86 com o `py-0.75` que fecha o chip em 24,53: o `-webkit-datetime-edit` traz caixa própria e
+  > ignora entrelinha, então a altura vem de `h-6`, não de padding.
 - **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.
 - **F6 · Fechamento** — exceções declaradas (§7.5.5, §7.5.6 e §7.5.8) na skill `design-system`
   (`.claude/skills/design-system/SKILL.md`, que é onde a §8.4 do CLAUDE.md passou a morar desde
