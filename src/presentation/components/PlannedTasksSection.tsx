@@ -3,6 +3,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { SectionCard, TaskRow } from "@presentation/components/ui";
+import { pendingPlannedTasks } from "@domain/utils/plannedPending";
 import { getProjectColor } from "@shared/utils/projectColor";
 
 interface PlannedTasksSectionProps {
@@ -24,7 +25,7 @@ export function PlannedTasksSection({
   onPlay,
   onNavigatePlanning,
 }: PlannedTasksSectionProps) {
-  const pending = tasks.filter((t) => !t.completedDates.includes(dateISO));
+  const pending = pendingPlannedTasks(tasks, dateISO);
   if (pending.length === 0) return null;
 
   return (
@@ -42,7 +43,9 @@ export function PlannedTasksSection({
         )
       }
     >
-      <div className="max-h-44 overflow-y-auto">
+      {/* 166px: é o que faz o cartão cheio terminar no mesmo nível do bloco de
+          KPI ao lado (dois cartões mais o degrau, menos este cabeçalho). */}
+      <div className="max-h-[166px] overflow-y-auto">
         {pending.map((task) => {
           const project = projects.find((p) => p.id === task.projectId);
           const category = categories.find((c) => c.id === task.categoryId);

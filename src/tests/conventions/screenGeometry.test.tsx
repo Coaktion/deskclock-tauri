@@ -389,18 +389,47 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(geometryOf(body!).gap).toBe(numberOf(SPEC.body, "gap"));
     });
 
-    it("as seções entram na ordem do design", () => {
+    /** Onde cada seção aparece no arquivo — a ordem em que a página as monta. */
+    function ordemNaPagina(): string[] {
+      return Object.keys(sections)
+        .map((name) => {
+          const at = source.indexOf(`<${name}`);
+          expect(at, `<${name}> não está na TasksPage`).toBeGreaterThan(-1);
+          return [name, at] as const;
+        })
+        .sort((a, b) => a[1] - b[1])
+        .map(([name]) => name);
+    }
+
+    it("o Omnibox abre a tela e as Entradas fecham, como no design", () => {
       const design = Object.entries(sections)
         .sort(([, a], [, b]) => bodyIndex(a) - bodyIndex(b))
         .map(([name]) => name);
+      const pagina = ordemNaPagina();
 
-      const page = Object.keys(sections).map((name) => {
-        const at = source.indexOf(`<${name}`);
-        expect(at, `<${name}> não está na TasksPage`).toBeGreaterThan(-1);
-        return [name, at] as const;
-      });
+      expect(pagina[0]).toBe(design[0]);
+      expect(pagina.at(-1)).toBe(design.at(-1));
+    });
 
-      expect(page.sort((a, b) => a[1] - b[1]).map(([name]) => name)).toEqual(design);
+    /**
+     * **Exceção declarada (decisão do usuário, 2026-08-10).** O design empilha
+     * KPI e Planejadas, um sob o outro, e é isso que o JSON diz. Medido na
+     * bancada, a pilha deixava **96px** para as Entradas numa janela de 700 —
+     * cabeçalho da seção e uma linha e pouco. Pareadas numa linha, as Entradas
+     * passam a 213px e três linhas e meia, e o que se move são os **números**,
+     * não os nomes: o cartão de KPI cai de 225,5 para 223,5 de largura, e a
+     * linha de tarefa não encolhe em nenhuma das duas listas.
+     *
+     * A afirmação aqui é a decisão, não o mock — mas as duas pontas acima
+     * continuam vindo do JSON, e é o que impede a exceção de virar licença.
+     */
+    it("KPI e Planejadas dividem a linha do meio", () => {
+      expect(ordemNaPagina().slice(1, 3).sort()).toEqual(
+        ["PlannedTasksSection", "TotalsSection"].sort()
+      );
+      // Uma linha só, e as duas metades pelo mesmo `flex-1`.
+      expect(source).toMatch(/<div className="shrink-0 flex gap-5 items-start">/);
+      expect(source.match(/className="flex-1 min-w-0"/g)).toHaveLength(2);
     });
   });
 

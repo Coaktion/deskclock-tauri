@@ -13,7 +13,7 @@ export default tseslint.config(
     // `getComputedStyle` entram porque a bancada visual declara funções que o
     // Playwright **serializa e executa dentro da página** — elas moram num
     // arquivo Node e rodam no browser.
-    files: ["scripts/**/*.mjs"],
+    files: ["scripts/**/*.mjs", "harness/**/*.mjs"],
     languageOptions: {
       globals: {
         console: "readonly",

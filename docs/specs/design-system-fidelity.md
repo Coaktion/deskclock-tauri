@@ -744,6 +744,21 @@ raios, `p-5` do corpo.
    segundo degrau a implementar. O mock discorda de si mesmo nesses cabeçalhos por mais de um eixo
    (gap 8 na 3a e 10 na 3c, contador como pílula na 3a e concatenado no título na 3c), e um prop de
    densidade congelaria essa discordância antes de a trava poder julgá-la.
+8. **KPI e Planejadas dividem a linha do meio, e as Entradas ficam com a altura que sobra** —
+   decidido **depois da F3**, contra a pilha do design, e medido na bancada antes de valer. Na pilha
+   do mock as Entradas começavam a **476px** de um orçamento de 572: cabeçalho de seção e **1,1
+   linha**. Pareadas, elas passam a **223px e 3,5 linhas** (sem planejadas, 332 e 5,5). O usuário
+   fechou o arranjo em três pontos: (a) **sem planejadas, a faixa de KPI volta aos quatro em linha**,
+   na largura toda — senão seriam quatro cartões em metade da tela, com 459px de vazio ao lado; (b)
+   com 1 ou 2 planejadas, **quem governa a altura da fileira é o KPI**, e o vazio sob a lista fica;
+   (c) o **teto das planejadas cai de 176 para 166px**, que é o que faz o cartão cheio terminar no
+   mesmo nível do bloco de KPI — **206,16 nos dois lados**, medido.
+
+   **O que se move são os números, não os nomes**, e é por isso que o par é KPI+Planejadas e não as
+   duas listas lado a lado: a linha de Entradas carrega ~250px de coluna fixa em volta do nome
+   (chevron, faixa de 88, chip, duração, quatro degraus), então em meia largura o nome cairia de 664
+   para **185px** — ~30 caracteres, com o subtítulo truncando. O que encolhe de fato é o cartão de
+   KPI, de 225,5 para **223,5**.
 
 ### 7.6 Etapas
 
@@ -946,16 +961,37 @@ visual 2 modos × 4 acentos ao fim de cada uma.
     `<div data-tour>` vazio continuava sendo item do flex: cobrava um degrau de 20px no meio do
     corpo, entre o KPI e as Entradas. Com `gap-4` o buraco já existia, menor.
 
+  **Depois da etapa, a composição do corpo mudou por decisão do usuário (§7.5.8):** KPI e Planejadas
+  passaram a dividir a linha do meio e as Entradas a ficar com a altura que sobra, rolando por
+  dentro. A ordem do design vale para as duas pontas — Omnibox abre, Entradas fecham — e o meio é
+  exceção declarada. O que entrou junto:
+  - `domain/utils/plannedPending.ts` — o filtro de pendentes do dia, que a tela agora usa para
+    decidir **arranjo** e não só presença de lista. Escrito duas vezes, a lista some e o arranjo
+    não. (Ele existe em mais quatro lugares — os dois overlays, o Lançamento Manual e a semana —,
+    e unificá-los não é desta mudança.)
+  - `TotalsSection` ganhou `layout`: `row` (os quatro em linha) e `grid` (2×2). É o único lugar onde
+    o cartão de KPI muda de largura.
+  - `TodayEntriesSection` virou a seção que cresce (`flex-1 min-h-0` na casca, rolagem no corpo). O
+    invólucro dela leva um piso de 160px: sem ele, a janela apertada a encolheria até zero em vez de
+    voltar a rolar o corpo.
+  - Com o arranjo condicional, o `empty:hidden` da F3 saiu — a seção não é mais renderizada quando
+    não há pendentes, então não há invólucro vazio cobrando degrau.
+  - `harness/composicoes.tsx` + `harness/shot.mjs` — a bancada passou a montar **tela inteira**, no
+    orçamento real (938×572), e a fotografar nos dois modos. É o que permitiu decidir por medida:
+    a app não posa para a bancada porque as páginas montam contexto, banco e IPC.
+
   **A trava:** o `divergente` do padding do cabeçalho virou `it`, e entrou o bloco `TasksPage`, que
   fecha a lacuna que a F0 declarou (corpo e ordem das seções). Ele lê o **código-fonte** da página em
   vez de renderizá-la: a `TasksPage` monta contexto, banco e IPC do Tauri, e uma dúzia de mocks faria
   cada hook novo quebrar a trava com um erro que não fala de geometria. O que a fatia afirma está
   inteiro na classe do corpo e na ordem das tags — e o número continua vindo do JSON, inclusive a
   ordem, que sai do índice do nó dentro do corpo (`1/1/1/N`). **Verificado que reprova**, com sonda:
-  `gap-4` dá `esperado 20, atual 16`, e trocar duas seções de lugar reprova a ordem.
+  `gap-4` dá `esperado 20, atual 16`, e trocar duas seções de lugar reprova a ordem. Com a §7.5.8, a
+  assertiva de ordem passou a afirmar **as duas pontas pelo JSON** e o par do meio pela decisão — a
+  exceção está escrita na própria assertiva, e é o que a impede de virar licença para reordenar.
 - **F4 · Omnibox + `chipStyles` + `Badge`** — pílula, 12,25px nos chips, alinhamento da faixa,
   placeholder em `text-lead`.
 - **F5 · Sidebar + `TourButton` + acertos finos do `KpiCard`** — inclui `formatWeekTotal`.
-- **F6 · Fechamento** — exceções declaradas (§7.5.5 e §7.5.6) na skill `design-system`
+- **F6 · Fechamento** — exceções declaradas (§7.5.5, §7.5.6 e §7.5.8) na skill `design-system`
   (`.claude/skills/design-system/SKILL.md`, que é onde a §8.4 do CLAUDE.md passou a morar desde
   2026-08-10) e a trava estendida às outras 6 telas.

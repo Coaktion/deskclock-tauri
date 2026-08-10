@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import "../src/index.css";
 import { CASES } from "./cases";
+import { COMPOSICOES } from "./composicoes";
 
 /**
  * Bancada visual — renderiza **um** caso, escolhido por `?case=<id>`, dentro de
@@ -14,16 +15,20 @@ import { CASES } from "./cases";
  */
 const params = new URLSearchParams(location.search);
 const id = params.get("case") ?? CASES[0].id;
-const found = CASES.find((c) => c.id === id);
+/** As composições entram na galeria, não na comparação — ver `composicoes.tsx`. */
+const catalogo = [...CASES, ...COMPOSICOES];
+const found = catalogo.find((c) => c.id === id);
 /** `?w=` vence o valor do arquivo: quem mede a largura do mock é o script. */
 const largura = Number(params.get("w")) || found?.width;
+/** Só composição declara altura: ela é o orçamento da tela, não do elemento. */
+const altura = found && "height" in found ? found.height : undefined;
 
 const root = createRoot(document.getElementById("bancada")!);
 
 if (!found) {
   root.render(
     <pre style={{ color: "red", font: "12px monospace" }}>
-      caso &quot;{id}&quot; não existe. Disponíveis: {CASES.map((c) => c.id).join(", ")}
+      caso &quot;{id}&quot; não existe. Disponíveis: {catalogo.map((c) => c.id).join(", ")}
     </pre>
   );
 } else {
@@ -38,7 +43,7 @@ if (!found) {
         style={{ padding: 0, margin: 0, width: "fit-content" }}
         data-bancada-raiz
       >
-        <div style={{ width: largura }} data-bancada-caso>
+        <div style={{ width: largura, height: altura }} data-bancada-caso>
           {found.element}
           {/* Irmão invisível: sem ele todo caso é `:last-child`, e a linha de
               tarefa mediria sempre o caso "última da lista" — que é justamente

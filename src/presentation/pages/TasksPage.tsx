@@ -1,5 +1,6 @@
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Task } from "@domain/entities/Task";
+import { pendingPlannedTasks } from "@domain/utils/plannedPending";
 import { Omnibox } from "@presentation/components/Omnibox";
 import { PlannedTasksSection } from "@presentation/components/PlannedTasksSection";
 import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
@@ -79,6 +80,8 @@ export function TasksPage({
   }, [hasSeenTour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const totalToday = totals.billableSeconds + totals.nonBillableSeconds;
+  /** Governa o arranjo da linha do meio, não só a presença da lista. */
+  const hasPlanned = pendingPlannedTasks(plannedTasks, today).length > 0;
 
   return (
     <div className="h-full flex flex-col">
@@ -100,7 +103,7 @@ export function TasksPage({
 
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-5 p-5">
         {/* Omnibox — idle or running */}
-        <div data-tour="tasks-omnibox">
+        <div data-tour="tasks-omnibox" className="shrink-0">
           <Omnibox
             plannedTasks={plannedTasks}
             recentTasks={recentTasks}
@@ -112,29 +115,36 @@ export function TasksPage({
           />
         </div>
 
-        <div data-tour="tasks-totals">
-          <TotalsSection
-            billableSeconds={totals.billableSeconds}
-            nonBillableSeconds={totals.nonBillableSeconds}
-            weekSeconds={totals.weekSeconds}
-            weekDays={totals.weekDays}
-          />
+        {/* Planejadas e KPI dividem uma linha só. Sem planejadas a faixa fica
+            sozinha e o `flex-1` já lhe dá a largura toda — daí ela trocar de
+            arranjo junto, ou seriam quatro cartões em metade da tela. */}
+        <div className="shrink-0 flex gap-5 items-start">
+          {hasPlanned && (
+            <div data-tour="tasks-planned-section" className="flex-1 min-w-0">
+              <PlannedTasksSection
+                tasks={plannedTasks}
+                projects={projects}
+                dateISO={today}
+                playDisabled={!!runningTask}
+                onPlay={handlePlayPlanned}
+                onNavigatePlanning={onNavigatePlanning}
+              />
+            </div>
+          )}
+          <div data-tour="tasks-totals" className="flex-1 min-w-0">
+            <TotalsSection
+              billableSeconds={totals.billableSeconds}
+              nonBillableSeconds={totals.nonBillableSeconds}
+              weekSeconds={totals.weekSeconds}
+              weekDays={totals.weekDays}
+              layout={hasPlanned ? "grid" : "row"}
+            />
+          </div>
         </div>
 
-        {/* `empty:hidden`: sem planejadas a seção não renderiza, e o invólucro
-            vazio ainda cobraria um degrau de `gap-5` no meio do corpo. */}
-        <div data-tour="tasks-planned-section" className="empty:hidden">
-          <PlannedTasksSection
-            tasks={plannedTasks}
-            projects={projects}
-            dateISO={today}
-            playDisabled={!!runningTask}
-            onPlay={handlePlayPlanned}
-            onNavigatePlanning={onNavigatePlanning}
-          />
-        </div>
-
-        <div data-tour="tasks-entries">
+        {/* O piso é o que impede a seção de sumir na janela apertada: abaixo
+            dele o corpo volta a rolar, em vez de encolhê-la até zero. */}
+        <div data-tour="tasks-entries" className="flex-1 min-h-40 flex flex-col">
           <TodayEntriesSection
             groups={groups}
             projects={projects}
