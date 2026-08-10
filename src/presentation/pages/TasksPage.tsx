@@ -142,9 +142,9 @@ export function TasksPage({
           </div>
         </div>
 
-        {/* O piso é o que impede a seção de sumir na janela apertada: abaixo
-            dele o corpo volta a rolar, em vez de encolhê-la até zero. */}
-        <div data-tour="tasks-entries" className="flex-1 min-h-40 flex flex-col">
+        {/* A seção cresce só até caber o que lista. O `shrink-0` é o que a
+            impede de ser espremida quando o corpo passa a rolar. */}
+        <div data-tour="tasks-entries" className="shrink-0">
           <TodayEntriesSection
             groups={groups}
             projects={projects}

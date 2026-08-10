@@ -98,10 +98,8 @@ export function TodayEntriesSection({
 
   return (
     <SectionCard
-      // A seção fica com a altura que sobra do corpo e rola por dentro: é o que
-      // mantém o cabeçalho — e o total do dia — à vista com a lista longa.
-      className="flex-1 min-h-0 flex flex-col"
-      bodyClassName="min-h-0 overflow-y-auto"
+      // A seção tem a altura do que ela lista: sem lista longa não sobra caixa
+      // vazia, e com lista longa quem rola é o corpo da página, não ela.
       title="Entradas de hoje"
       action={
         <span className="font-mono tabular-nums text-fg-secondary">

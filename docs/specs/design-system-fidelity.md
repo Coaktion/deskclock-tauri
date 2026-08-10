@@ -975,7 +975,9 @@ visual 2 modos × 4 acentos ao fim de cada uma.
     o cartão de KPI muda de largura.
   - `TodayEntriesSection` virou a seção que cresce (`flex-1 min-h-0` na casca, rolagem no corpo). O
     invólucro dela leva um piso de 160px: sem ele, a janela apertada a encolheria até zero em vez de
-    voltar a rolar o corpo.
+    voltar a rolar o corpo. **Revertido em 2026-08-10, por decisão do usuário:** a seção passou a ter
+    a altura do que lista — sem `flex-1`, sem rolagem por dentro e sem piso —, e quem rola com a
+    lista longa é o corpo da página. Com poucas entradas não sobra mais caixa vazia embaixo.
   - Com o arranjo condicional, o `empty:hidden` da F3 saiu — a seção não é mais renderizada quando
     não há pendentes, então não há invólucro vazio cobrando degrau.
   - `harness/composicoes.tsx` + `harness/shot.mjs` — a bancada passou a montar **tela inteira**, no
