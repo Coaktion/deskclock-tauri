@@ -20,7 +20,12 @@ import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
-import { formatHHMMSS, formatHHMM, formatHistoryDayHeader } from "@shared/utils/time";
+import {
+  formatHHMMSS,
+  formatHHMM,
+  formatHistoryDayHeader,
+  formatTimeRange,
+} from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
@@ -34,6 +39,14 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
 };
 
 const cardClass = "bg-surface border border-border-subtle rounded-card";
+
+/**
+ * O cartão do dia é o `SectionCard` escrito à mão — sem `overflow-hidden`, por
+ * causa do cabeçalho `sticky` de dentro. Como ele, **não pinta fundo**: quem
+ * pinta é a faixa do cabeçalho, e as linhas ficam sobre o canvas. Com fundo, a
+ * linha em hover (que é `surface`) ficaria invisível sobre o próprio cartão.
+ */
+const dayCardClass = "border border-border-subtle rounded-card";
 const eyebrowClass = "text-overline uppercase text-fg-muted";
 
 function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
@@ -420,7 +433,7 @@ export function HistoryPage() {
             </div>
 
             {groups.map((group) => (
-              <div key={group.dateISO} className={cardClass}>
+              <div key={group.dateISO} className={dayCardClass}>
                 {/* Sem `overflow-hidden` no cartão: ele viraria o scrollport do
                     `sticky` abaixo, que então nunca sairia do lugar. */}
                 <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-surface border-b border-border-subtle rounded-t-card">
@@ -453,20 +466,10 @@ export function HistoryPage() {
                   </div>
                 </div>
 
-                <div className="p-1.5 flex flex-col gap-0.5">
+                <div>
                   {group.tasks.map((task) => {
                     const project = projects.find((p) => p.id === task.projectId);
                     const category = categories.find((c) => c.id === task.categoryId);
-                    const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    });
-                    const endStr = task.endTime
-                      ? new Date(task.endTime).toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "—";
                     const isSelected = selectedIds.has(task.id);
                     const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
 
@@ -476,8 +479,8 @@ export function HistoryPage() {
                         title={task.name ?? "(sem nome)"}
                         subtitle={subtitle || undefined}
                         meta={
-                          <span className="text-xs font-mono tabular-nums text-fg-muted">
-                            {startStr}–{endStr}
+                          <span className="text-micro font-mono tabular-nums text-fg-muted">
+                            {formatTimeRange(task.startTime, task.endTime)}
                           </span>
                         }
                         duration={formatHHMMSS(task.durationSeconds ?? 0)}
@@ -503,12 +506,14 @@ export function HistoryPage() {
                               <IconButton
                                 icon={<Pencil size={14} />}
                                 title="Editar"
+                                size="sm"
                                 onClick={() => setEditingTask(task)}
                               />
                               <IconButton
                                 icon={<Trash2 size={14} />}
                                 title="Excluir"
                                 variant="danger"
+                                size="sm"
                                 onClick={() => void remove(task.id)}
                               />
                             </>

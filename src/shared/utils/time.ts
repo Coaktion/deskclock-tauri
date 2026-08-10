@@ -31,6 +31,17 @@ export function formatTimeOfDay(isoString: string): string {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
+/**
+ * A faixa de horário da coluna de 88px da linha de tarefa — `09:12–11:00`, com
+ * meia-quadratim e sem espaço, como o design a escreve. Sem fim registrado ela
+ * é só o começo: a tarefa em aberto não tem faixa, e escrever `09:12–—` põe um
+ * travessão onde o leitor espera uma hora.
+ */
+export function formatTimeRange(startISO: string, endISO: string | null): string {
+  const start = formatTimeOfDay(startISO);
+  return endISO ? `${start}–${formatTimeOfDay(endISO)}` : start;
+}
+
 export function todayISO(): string {
   const d = new Date();
   const y = d.getFullYear();

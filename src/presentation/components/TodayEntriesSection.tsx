@@ -108,7 +108,7 @@ export function TodayEntriesSection({
       {groups.length === 0 ? (
         <p className="text-sm text-fg-muted text-center py-6">Nenhuma entrada hoje.</p>
       ) : (
-        <div className="p-1.5 pt-0 flex flex-col gap-0.5">
+        <div>
           {groups.map((g) => (
             <TaskGroupCard
               key={g.key}

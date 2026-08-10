@@ -271,7 +271,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
       />
     );
 
-    divergente("é grid com as colunas do spec, não flex — divergente, F2", () => {
+    it("é grid com as colunas do spec, não flex", () => {
       const actual = geometryOf(row.className);
       expect(actual.display).toBe(stringOf(SPEC.plannedRow, "display"));
       expect(actual.gridTemplateColumns).toBe(
@@ -279,17 +279,17 @@ describe("geometria: tela 3a contra o spec do design", () => {
       );
     });
 
-    divergente("tem o gap e o padding da linha — divergente, F2", () => {
+    it("tem o gap e o padding da linha", () => {
       expect(geometryOf(row.className).gap).toBe(numberOf(SPEC.plannedRow, "gap"));
       expectPadding(row, SPEC.plannedRow);
     });
 
-    divergente("fecha com régua em vez de flutuar como pílula arredondada — divergente, F2", () => {
+    it("fecha com régua em vez de flutuar como pílula arredondada", () => {
       expectBottomRule(row, SPEC.plannedRow);
       expect(geometryOf(row.className).borderRadius).toBeUndefined();
     });
 
-    divergente("o ponto de projeto tem 6px — divergente, F2", () => {
+    it("o ponto de projeto tem 6px", () => {
       const dot = row.querySelector("span[aria-hidden]");
       expect(dot).not.toBeNull();
       const actual = geometryOf(dot!.className);
@@ -297,7 +297,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(actual.height).toBe(numberOf(SPEC.plannedDot, "height"));
     });
 
-    divergente("o nome e o metadado ficam nos dois degraus do spec — divergente, F2", () => {
+    it("o nome e o metadado ficam nos dois degraus do spec", () => {
       const [title, subtitle] = Array.from(row.querySelectorAll("p"));
       expect(geometryOf(title.className).fontSize).toBe(numberOf(SPEC.plannedTitle, "font-size"));
       const meta = geometryOf(subtitle.className);
@@ -305,7 +305,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(meta.marginTop).toBe(numberOf(SPEC.plannedSubtitle, "margin-top"));
     });
 
-    divergente("a duração fica no degrau de 12,25px, não no caption — divergente, F2", () => {
+    it("a duração fica no degrau de 12,25px, não no caption", () => {
       const duration = Array.from(row.querySelectorAll("span")).find(
         (el) => el.textContent === "02:48:00"
       );
@@ -315,10 +315,29 @@ describe("geometria: tela 3a contra o spec do design", () => {
       );
     });
 
-    divergente("as ações ficam no gap de 2px do spec — divergente, F2", () => {
+    it("as ações ficam no gap de 2px do spec", () => {
       const group = row.querySelector("button")?.parentElement;
       expect(group).not.toBeNull();
       expect(geometryOf(group!.className).gap).toBe(numberOf(SPEC.entriesActions, "gap"));
+    });
+
+    it("com chevron e faixa de horário, é a forma de cinco colunas", () => {
+      // A segunda das três formas do censo (§7.2): o que muda entre elas é o
+      // que **precede** o nome, e é isso que a linha lê das próprias props.
+      const entry = shellOf(
+        <TaskRow
+          leading={<span aria-hidden />}
+          meta={<span>13:30–13:48</span>}
+          title="Daily do time de produto"
+          subtitle="Coaktion · Reunião"
+          duration="02:48:00"
+          billable
+          dotColor="oklch(0.65 0.16 300)"
+        />
+      );
+      expect(geometryOf(entry.className).gridTemplateColumns).toBe(
+        stringOf(SPEC.entriesRow, "grid-template-columns").replace(/\s+/g, " ")
+      );
     });
   });
 

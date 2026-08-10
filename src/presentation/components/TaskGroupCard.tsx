@@ -4,7 +4,7 @@ import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
-import { formatDurationCompact } from "@shared/utils/time";
+import { formatDurationCompact, formatTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { TaskRow } from "@presentation/components/ui";
 import { TaskCard } from "./TaskCard";
@@ -82,15 +82,21 @@ export function TaskGroupCard({
     );
   }
 
-  const subParts = [project?.name, category?.name];
-  if (isGroup) subParts.push(`${tasks.length} registros`);
-  const subtitle = subParts.filter(Boolean).join(" · ");
+  const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
 
   return (
-    <div>
+    <>
       <TaskRow
         title={displayName}
         subtitle={subtitle || undefined}
+        // A coluna de 88px responde "quantos" no grupo e "quando" na tarefa
+        // solta — o design a reserva para o dado que situa a linha, não para
+        // um sufixo do subtítulo.
+        meta={
+          <span className="text-micro font-mono tabular-nums text-fg-muted">
+            {isGroup ? `${tasks.length} registros` : formatTimeRange(first.startTime, first.endTime)}
+          </span>
+        }
         duration={formatDurationCompact(group.totalSeconds)}
         billable={first.billable}
         dotColor={projectColor}
@@ -136,7 +142,7 @@ export function TaskGroupCard({
                   onMoveToWorkspace(tasks);
                 }}
                 title="Mover para workspace"
-                className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
               >
                 <FolderInput size={14} />
               </button>
@@ -149,7 +155,7 @@ export function TaskGroupCard({
                     onEditGroup?.(group);
                   }}
                   title="Editar grupo"
-                  className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                  className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
                 >
                   <Edit2 size={14} />
                 </button>
@@ -159,7 +165,7 @@ export function TaskGroupCard({
                     onMerge(group);
                   }}
                   title="Unificar"
-                  className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                  className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
                 >
                   <Merge size={14} />
                 </button>
@@ -169,24 +175,27 @@ export function TaskGroupCard({
         }
       />
 
-      {expanded && (
-        <div className="pl-4 ml-3 border-l border-border-subtle">
-          {tasks.map((t) => (
-            <TaskCard
-              key={t.id}
-              task={t}
-              projects={projects}
-              categories={categories}
-              sent={sentIds?.has(t.id)}
-              playDisabled={playDisabled}
-              onPlay={onPlay}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onToggleBillable={onToggleBillable}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+      {/*
+       * As filhas não são indentadas: elas alinham com a linha do grupo pelas
+       * colunas da grade, e é a célula vazia do chevron que abre o recuo. Sem
+       * casca em volta, a última linha da lista é a última filha — e é ela que
+       * fica sem régua.
+       */}
+      {expanded &&
+        tasks.map((t) => (
+          <TaskCard
+            key={t.id}
+            task={t}
+            projects={projects}
+            categories={categories}
+            sent={sentIds?.has(t.id)}
+            playDisabled={playDisabled}
+            onPlay={onPlay}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggleBillable={onToggleBillable}
+          />
+        ))}
+    </>
   );
 }

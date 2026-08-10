@@ -508,6 +508,11 @@ Depois da fase D (2026-08-10), agora congelado em `componentPrimitives.test.ts`:
 caixa própria em **121** / 44 arquivos (era 131 com `className` literal na abertura, por outro
 critério) e campo cru fora de `ui/` em **6** / 3 arquivos.
 
+Depois da F2 (2026-08-10), medido na bancada visual: as **três formas** da linha em zero divergência
+de propriedade, e altura de **53,22 contra 55** nas três — 1,78px que são o line-height, não a linha.
+O `SectionCard` de três linhas fecha em **198,66 contra 204**, que é exatamente 3 × 1,78: a conta que
+a F1 deixou em aberto não sobra nada.
+
 Os seis `text-base` que sobram, e o que fazer com eles: os dois `<h2>` do `SetupModal` e o
 `<h1>` de falha de config do `App.tsx` são `title/section` legítimos; o contador do overlay
 compacto é exceção declarada; o campo do `OmniboxIdle` é o único campo do app maior que os
@@ -547,6 +552,19 @@ translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-b
 
 **Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B, C e E foram
 conferidos na tela). Por ordem de risco:
+
+-4. **A linha de tarefa nas 5 telas** (F2) — é a mudança de maior alcance depois da escala: **toda**
+    lista perdeu o respiro entre linhas e ganhou régua, e a linha deixou de ser pílula para ser
+    faixa de borda a borda. Olhar primeiro **Entradas de hoje**, que é onde o conteúdo se moveu: o
+    `3 registros` saiu do subtítulo para a coluna de 88px, as linhas filhas ganharam faixa de
+    horário e **perderam a indentação** — conferir se ainda se lê que elas pertencem ao grupo
+    acima, agora que só o chevron aberto e a coluna vazia dizem isso. Depois, em **Histórico e
+    Manual**, a duração sumindo no hover para a ação entrar no lugar dela: é a mudança de
+    comportamento da etapa, e é onde uma linha estreita mostraria as duas se atropelando.
+    -4b. **O cartão do dia do Histórico deixou de pintar fundo** — mesma mudança que a F1 fez no
+    `SectionCard`, e pelo mesmo motivo. Conferir no **modo claro** que a linha em hover ainda se
+    separa, e que a linha **selecionada** (que é `bg-accent/10` de borda a borda) não escapa pelo
+    canto arredondado do cartão: ele não tem `overflow-hidden`, por causa do cabeçalho `sticky`.
 
 -3. **O `SectionCard` nas 7 telas** (F1) — a casca deixou de pintar fundo, então **toda** lista e
     todo grupo de configuração passou a ficar sobre o canvas, com a faixa do cabeçalho sendo o único
@@ -820,9 +838,65 @@ visual 2 modos × 4 acentos ao fim de cada uma.
     assertivas novas** — a pílula do contador (tamanho, peso, raio, padding) e o degrau de 11px do
     slot de ação, que a §7.4 media como delta e nenhuma assertiva cobria. O caso da bancada visual
     passou a levar `count={3}`, como o mock.
-- **F2 · `TaskRow` como grid** — colunas configuráveis (as três formas do censo), separadores,
-  medidas, chip em coluna própria, ação↔duração no mesmo slot. Toca 5 telas: re-conferir 3b/3c/3d
-  contra o spec na mesma sessão.
+- **F2 · `TaskRow` como grid** — ✅ **feita (2026-08-10)**. As três formas do censo saem das próprias
+  props, e a régua é uma só: **o que muda entre elas é o que precede o nome.**
+
+  | Precede o nome | Colunas | Onde |
+  | --- | --- | --- |
+  | nada (só o ponto) | `auto 1fr auto auto` | Planejadas de hoje |
+  | a faixa de 88px | `88px 1fr auto auto` | Histórico, Lançamento Manual |
+  | chevron **e** faixa | `auto 88px 1fr auto auto` | Entradas de hoje |
+
+  São **quatro literais** em `gridColumns()` (a quarta é a linha sem ponto e sem faixa) e não uma
+  string montada: `grid-cols-[${...}]` o Tailwind não vê no código-fonte, e a linha cairia num
+  `display:grid` sem colunas — que é flex mal desenhado. O build confirma os quatro utilitários
+  emitidos.
+
+  **O ponto de projeto muda de lugar, não de tamanho.** Ele abre coluna própria só quando nada o
+  precede; com o chevron ou a faixa à frente, entra no bloco do nome (`flex gap-2`), que é o que o
+  design desenha nas formas B e C. Sem isso, o nome começaria em lugares diferentes na mesma lista.
+
+  Medidas, todas do spec: `gap-2.5` (10) · `px-3 py-2.5` (10/12) · `border-b border-border-subtle
+  last:border-b-0` no lugar do `rounded-control` · ponto `w-1.5` (6) · subtítulo `mt-px` · duração
+  em `text-sm` · ações em `gap-0.5` e padding 4px (`p-1` nos botões crus, `size="sm"` nos
+  `IconButton`) · faixa de horário em `text-micro`, que é o degrau de 11px que a F0 criou.
+
+  Quatro decisões que a etapa obrigou:
+
+  - **Duração e ações dividem a última coluna, empilhadas** (`col-start-1 row-start-1`), e não
+    trocadas por `hidden`. Empilhar guarda duas coisas: a largura da célula não pula quando o cursor
+    entra, e o botão continua alcançável pelo teclado — `display:none` o tiraria da ordem de foco.
+    O par de ações leva `pointer-events-none` em repouso, ou os botões invisíveis engoliriam o
+    clique da linha em volta. **Sem duração, a ação fica sempre visível** (§7.5.3): é a Planejada.
+  - **A régua é `last:border-b-0`, e por isso o `TaskGroupCard` deixou de ter casca.** Ele
+    embrulhava linha e filhas num `<div>`, e ali o grupo **recolhido** era o último filho — perdia a
+    régua no meio da lista. Como fragmento, o último elemento da lista é o último de verdade.
+  - **As linhas filhas não são mais indentadas** (decisão do usuário, 2026-08-10, contra a
+    recomendação de manter). O `pl-4 ml-3 border-l` saiu; elas alinham com a linha do grupo pelas
+    colunas, e o recuo passa a vir da **célula vazia do chevron** que o `TaskCard` reserva — que é
+    literalmente o `<span></span>` que o mock desenha ali.
+  - **O cartão do dia do Histórico parou de pintar fundo**, como a F1 fez com o `SectionCard` (o
+    spec da 3b mostra a mesma anatomia: casca só com borda, faixa em `surface`). Não é melhoria fora
+    de escopo: a linha em hover passou a ser `bg-surface`, e sobre um cartão `bg-surface` ela some.
+
+  **Conteúdo que se moveu, e é o que fecha a fidelidade da 3a:** a coluna de 88px passou a responder
+  *quantos* no grupo (`3 registros`, que era sufixo do subtítulo) e *quando* na tarefa solta e nas
+  filhas (`13:30–13:48`, que não existia nas Entradas). A faixa virou `formatTimeRange` em
+  `shared/utils/time.ts` — era o terceiro consumidor, e as três grafias divergiam (o Manual escrevia
+  `09:12 – 11:00` com espaços, o Histórico escrevia `09:12–—` quando não havia fim).
+
+  **A bancada visual mede as três formas em zero divergência de propriedade** — grade, gap, padding,
+  régua, alinhamento e os dois degraus de texto batem valor a valor nas três. **O que resta é
+  altura: 53,22 contra 55**, idêntico nas três, e o `SectionCard` fecha em 198,66 contra 204 —
+  exatamente 3 × 1,78. É o line-height, não a linha: o mock não declara nenhum e herda o `normal` da
+  Source Sans 3 (~1,42), enquanto `--text-sm`/`--text-xs` entraram na B1 com 1.35/1.4 declarados
+  como "valores de partida". **Calibrá-los ficou fora da F2 por decisão do usuário** — são dois
+  tokens globais que mudam todo texto de 10,5 e 12,25px do app, e isso é etapa própria, não efeito
+  colateral da linha. Com isso a conta que a F1 deixou em aberto fecha inteira.
+
+  Dois artefatos da bancada corrigidos junto, que mediam o fixture e não o componente: o caso era
+  sempre `:last-child` (então media a linha *sem* régua, que é o oposto do nó do mock) e a ação era
+  um `▶` de texto no lugar do glifo de 14px, que muda a largura da coluna que a comparação afirma.
 - **F3 · `PageHeader` + `TasksPage`** — cabeçalho do design, ordem das seções, `gap-5`, `px-5`,
   `Ver semana →` ligado ao Planos (o botão existe e nunca foi passado).
 - **F4 · Omnibox + `chipStyles` + `Badge`** — pílula, 12,25px nos chips, alinhamento da faixa,

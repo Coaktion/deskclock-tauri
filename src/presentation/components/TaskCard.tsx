@@ -2,7 +2,7 @@ import { Play, Pencil, Trash2, CheckCheck } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { formatDurationCompact } from "@shared/utils/time";
+import { formatDurationCompact, formatTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { TaskRow } from "@presentation/components/ui";
 
@@ -37,6 +37,15 @@ export function TaskCard({
     <TaskRow
       title={task.name ?? "(sem nome)"}
       subtitle={subtitle || undefined}
+      // A célula vazia da coluna do chevron: é ela que alinha esta linha com a
+      // do grupo acima, e é o que o design desenha no lugar da seta que a linha
+      // filha não tem.
+      leading={<span aria-hidden />}
+      meta={
+        <span className="text-micro font-mono tabular-nums text-fg-muted">
+          {formatTimeRange(task.startTime, task.endTime)}
+        </span>
+      }
       duration={formatDurationCompact(task.durationSeconds ?? 0)}
       billable={task.billable}
       dotColor={getProjectColor(task.projectId)}
@@ -54,7 +63,7 @@ export function TaskCard({
             <button
               onClick={() => onPlay(task)}
               title="Iniciar com estes dados"
-              className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+              className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
             >
               <Play size={14} />
             </button>
@@ -62,14 +71,14 @@ export function TaskCard({
           <button
             onClick={() => onEdit(task)}
             title="Editar"
-            className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+            className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => onDelete(task)}
             title="Excluir"
-            className="p-1.5 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
+            className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
           >
             <Trash2 size={14} />
           </button>

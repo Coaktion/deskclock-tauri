@@ -92,7 +92,9 @@ const IGNORED = [
   /^(bg|text|border|ring|divide|from|to|via|outline|placeholder|fill|stroke|shadow)-/,
   /^(divide|space)-[xy]$/,
   /^(z|order|opacity|aria|data)-/,
-  /^(focus|hover|active|disabled|group-hover|group-focus-within|focus-within|focus-visible|peer)[:-]/,
+  /** Posição na grade: diz em que célula o filho cai, não que medida ele tem. */
+  /^(col|row)-(start|end|span|auto)/,
+  /^(focus|hover|active|disabled|group-hover|group-focus-within|focus-within|focus-visible|peer|first|last)[:-]/,
   /^(sr-only|not-sr-only|appearance-none|resize-none|antialiased)$/,
   /^(min|max)-[wh]-/,
   /^(top|right|bottom|left|inset)-/,

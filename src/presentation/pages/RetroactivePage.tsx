@@ -25,7 +25,7 @@ import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal"
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
-import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
+import { addDaysISO, formatHHMMSS, formatTimeRange, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { ChevronLeft, ChevronRight, ListChecks, Pencil, Play, Trash2 } from "lucide-react";
@@ -38,17 +38,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
  * espaço, e quem não a quer tem o dia sem planejadas, em que ela não aparece.
  */
 const PLANNED_LIST_HEIGHT = { min: 72, max: 480, default: 144 } as const;
-
-function isoToHHMM(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function formatTimeRange(startISO: string, endISO: string | null): string {
-  const s = isoToHHMM(startISO);
-  if (!endISO) return s;
-  return `${s} – ${isoToHHMM(endISO)}`;
-}
 
 interface DayTaskRowProps {
   task: Task;
@@ -80,7 +69,7 @@ function DayTaskRow({
       title={task.name ?? "(sem nome)"}
       subtitle={subtitle || undefined}
       meta={
-        <span className="text-xs font-mono tabular-nums text-fg-muted">
+        <span className="text-micro font-mono tabular-nums text-fg-muted">
           {formatTimeRange(task.startTime, task.endTime)}
         </span>
       }
@@ -104,11 +93,17 @@ function DayTaskRow({
       actions={
         selectMode ? undefined : (
           <>
-            <IconButton icon={<Pencil size={14} />} title="Editar" onClick={() => onEdit(task)} />
+            <IconButton
+              icon={<Pencil size={14} />}
+              title="Editar"
+              size="sm"
+              onClick={() => onEdit(task)}
+            />
             <IconButton
               icon={<Trash2 size={14} />}
               title="Excluir"
               variant="danger"
+              size="sm"
               onClick={() => onDelete(task.id)}
             />
           </>
@@ -567,7 +562,7 @@ export function RetroactivePage() {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-1.5 flex flex-col gap-0.5">
+            <div className="flex-1 overflow-y-auto">
               {tasks.length === 0 ? (
                 <p className="text-center text-fg-muted text-sm py-10">
                   Nenhuma entrada para este dia

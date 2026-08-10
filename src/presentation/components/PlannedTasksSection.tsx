@@ -42,7 +42,7 @@ export function PlannedTasksSection({
         )
       }
     >
-      <div className="p-1.5 pt-0 flex flex-col gap-0.5 max-h-44 overflow-y-auto">
+      <div className="max-h-44 overflow-y-auto">
         {pending.map((task) => {
           const project = projects.find((p) => p.id === task.projectId);
           const category = categories.find((c) => c.id === task.categoryId);
@@ -59,7 +59,7 @@ export function PlannedTasksSection({
                 playDisabled ? undefined : (
                   <button
                     onClick={() => onPlay(task)}
-                    className="p-1.5 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
+                    className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
                     title="Iniciar"
                   >
                     <Play size={14} />

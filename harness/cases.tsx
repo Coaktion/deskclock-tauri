@@ -1,3 +1,4 @@
+import { ChevronRight, Play } from "lucide-react";
 import type { ReactElement } from "react";
 
 import { Badge } from "@presentation/components/ui/Badge";
@@ -71,20 +72,50 @@ export const CASES: VisualCase[] = [
         subtitle="Coaktion · Reunião"
         billable
         dotColor="oklch(0.65 0.16 300)"
-        actions={<span style={{ display: "flex", padding: 4 }}>▶</span>}
+        // O mesmo glifo de 14px do mock: um "▶" de texto mede outra coisa, e a
+        // largura da coluna de ação é o que a comparação afirma.
+        actions={
+          <span className="flex p-1 text-fg-muted">
+            <Play size={14} />
+          </span>
+        }
       />
     ),
   },
   {
+    // A segunda forma do censo: chevron, faixa de 88px, nome com o ponto dentro.
     id: "task-row-entry",
     screen: "3a",
     anchor: "1/1/1/3/1",
     width: 936,
     element: (
       <TaskRow
+        leading={
+          <span className="flex text-fg-muted">
+            <ChevronRight size={14} />
+          </span>
+        }
+        meta={<span className="text-micro font-mono tabular-nums text-fg-muted">3 registros</span>}
         title="Ajustes no relatório mensal"
         subtitle="Cliente A · Desenvolvimento"
         duration="02:48:00"
+        billable
+        dotColor="oklch(0.65 0.16 258)"
+      />
+    ),
+  },
+  {
+    // A terceira: sem chevron, a faixa de horário abrindo a linha do Histórico.
+    id: "task-row-history",
+    screen: "3b",
+    anchor: "1/1/1/3/1",
+    width: 936,
+    element: (
+      <TaskRow
+        meta={<span className="text-micro font-mono tabular-nums text-fg-muted">09:12–11:00</span>}
+        title="Ajustes no relatório mensal"
+        subtitle="Cliente A · Desenvolvimento"
+        duration="01:48:00"
         billable
         dotColor="oklch(0.65 0.16 258)"
       />

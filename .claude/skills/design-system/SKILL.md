@@ -149,7 +149,7 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > glifo que ocupa a janela inteira; aplicá-la ali encolheria o cronômetro para 10,5 px numa peça
   > que existe justamente para ser lida de relance.
 
-- **Ritmo:** padding de página **`p-5`**, linha de lista **`py-2.5 px-4`** (o `TaskRow`), e valores
+- **Ritmo:** padding de página **`p-5`**, linha de lista **`py-2.5 px-3`** (o `TaskRow`), e valores
   de espaçamento fechados em 1 / 2 / 3 / 4 / 6 / 8. Fora disso, pare e pergunte (§"Zero hardcode
   visual").
 
@@ -383,10 +383,14 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
 
   > **No Histórico o full-bleed deu lugar a um cartão por dia**, com o corpo da tela em `p-5` e as
   > entradas como `TaskRow`. Era a tela com **dois** `grid-template-columns` de linha — um para o
-  > `selectMode`, outro fora dele —, e é a flex do `TaskRow` que os dispensa: a caixa de seleção
-  > entra em `leading` e a faixa de horário em `meta`, sem segundo layout a manter em sincronia. O
-  > ponto passa a carregar a **cor do projeto**, a mesma da linha do tempo e da distribuição logo
-  > acima, e quem diz o faturamento é o chip escrito (§ abaixo).
+  > `selectMode`, outro fora dele —, e é o `TaskRow` que os dispensa: a caixa de seleção entra em
+  > `leading` e a faixa de horário em `meta`, e a grade sai das próprias props, sem segundo layout a
+  > manter em sincronia. O ponto passa a carregar a **cor do projeto**, a mesma da linha do tempo e
+  > da distribuição logo acima, e quem diz o faturamento é o chip escrito (§ abaixo).
+  >
+  > **O cartão do dia não pinta fundo**, como a casca do `SectionCard`: quem pinta é a faixa do
+  > cabeçalho, e as linhas ficam sobre o canvas. Com fundo próprio, a linha em hover — que é
+  > `surface` — ficaria invisível sobre o cartão.
   >
   > **O cartão do dia não leva `overflow-hidden`.** Ele viraria o scrollport do cabeçalho `sticky`
   > de dentro, que então nunca sairia do lugar — o cabeçalho do dia ficaria preso ao topo do próprio
@@ -429,6 +433,26 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > A `duration` virou **opcional** para a linha que não mede tempo — a planejada de hoje na tela de
   > Tarefas —, e o `SectionCard` ganhou `action`, o canto direito do cabeçalho onde moram o total do
   > dia e o atalho "Ver semana".
+  >
+  > **A linha é uma grade de colunas fixas, e a régua é uma só: o que muda entre as formas é o que
+  > precede o nome.** Nada além do ponto → `auto 1fr auto auto`; a faixa de 88px → `88px 1fr auto
+  > auto`; chevron **e** faixa → `auto 88px 1fr auto auto`. O `TaskRow` as deriva de `leading` e
+  > `meta`, e os literais estão em `gridColumns()` porque `grid-cols-[${...}]` montada em template
+  > string o Tailwind não vê no código-fonte — a linha cairia num `display:grid` sem colunas. **O
+  > ponto muda de lugar, não de tamanho:** ele só abre coluna própria quando nada o precede; com
+  > chevron ou faixa à frente ele entra no bloco do nome, ou o nome começaria em lugares diferentes
+  > na mesma lista.
+  >
+  > **A linha é faixa, não pílula:** de borda a borda, sem raio, fechada por `border-b` com
+  > `last:border-b-0` — por isso o contêiner da lista não põe `padding` nem `gap`, e por isso o
+  > `TaskGroupCard` é fragmento e não casca (embrulhado, o grupo recolhido virava o último filho e
+  > perdia a régua no meio da lista).
+  >
+  > **Duração e ações dividem a última coluna**, empilhadas por `col-start-1 row-start-1`: a duração
+  > recua no hover e as ações entram no lugar dela. Empilhar em vez de trocar por `hidden` guarda a
+  > largura da célula (que senão pularia com o cursor) e o acesso pelo teclado; em repouso as ações
+  > levam `pointer-events-none`, ou os botões invisíveis engoliriam o clique da linha. **Sem
+  > duração, a ação fica sempre visível** — é a linha planejada, e é decisão do usuário.
   >
   > **O `PlannedTaskItem` é a exceção, e é deliberada.** Ele fica com o layout próprio porque os
   > botões dele abrem por largura (`w-0` + `overflow-hidden`, §5.3) e o do primitivo abre por

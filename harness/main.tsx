@@ -40,6 +40,10 @@ if (!found) {
       >
         <div style={{ width: largura }} data-bancada-caso>
           {found.element}
+          {/* Irmão invisível: sem ele todo caso é `:last-child`, e a linha de
+              tarefa mediria sempre o caso "última da lista" — que é justamente
+              a que não tem régua. O mock ancora numa linha do meio. */}
+          <span style={{ display: "none" }} />
         </div>
       </div>
     </StrictMode>
