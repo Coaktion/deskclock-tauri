@@ -64,6 +64,11 @@ compila → `pnpm lint` → commit semântico → PR.
 - Antes de criar branch, conferir mergeadas pendentes: `git branch --merged main`.
 - **Verificação visual não é opcional** em mudança de aparência: `pnpm tauri dev` nos **2 modos ×
   4 acentos**.
+- **`pnpm visual`** compara o componente renderizado em Chromium com o wireframe do design, medida
+  a medida e pixel a pixel (`.visual/`). Fora do `pnpm test` de propósito — diff de pixel depende
+  de fonte e de browser, e num gate obrigatório viraria a falha que todo mundo aprende a ignorar.
+  Rode quando estiver mexendo em aparência; ele mede o que o `screenGeometry` não alcança (altura
+  real da linha, largura que a coluna do grid recebe, quebra de texto).
 
 ## 5. Onde está o resto — e quando ler
 

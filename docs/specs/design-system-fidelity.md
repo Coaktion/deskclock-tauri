@@ -659,10 +659,9 @@ no sistema inteiro**. `TaskRow` ser flex é divergência sistêmica, não da tel
    divergências de §7.4 vivem aí. Ela **não** vê layout de verdade (quebra de linha, overflow,
    subpixel, rasterização) — isso segue na inspeção visual 1100×700 nos 2 modos × 4 acentos.
 
-**Pergunta aberta:** diff de pixel automatizado (screenshot da app sobreposto ao do mock) exige
-**Playwright** — fora da lista homologada e vetado por nome no CLAUDE.md global da Aktie (§6,
-testes). Perguntado ao usuário
-em 2026-08-10, **sem resposta ainda**. O plano funciona sem ele.
+**Playwright: autorizado pelo usuário em 2026-08-10**, explicitamente contra o veto por nome do
+CLAUDE.md global da Aktie (§6, testes). Virou a bancada visual — ver F0.5, que fechou a lacuna
+declarada aqui.
 
 ### 7.4 Deltas medidos da tela 3a
 
@@ -746,8 +745,35 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   **Cobertura declarada:** só os componentes que renderizam sem provider. `Sidebar`, `Omnibox` e a
   composição da `TasksPage` (ordem das seções, `gap` do corpo) **não estão cobertos** e entram nas
   etapas que já os tocam — F3, F4, F5.
+- **F0.5 · Bancada visual (Playwright)** — ✅ **feita (2026-08-10)**. Fecha a lacuna que a F0
+  declarou: o `screenGeometry` cobre o que vem de classe ou token, e **nada** do que só existe
+  depois do layout.
+  - `harness/` — página Vite que renderiza **um** primitivo por carregamento (`?case=`), com o
+    `index.css` real e a largura que o mock dá a ele. Serve também como galeria manual.
+  - `scripts/visual-check.mjs` → `pnpm visual`: abre o wireframe e a bancada no mesmo Chromium,
+    resolve o nó do mock **pelo mesmo caminho** que o teste usa, e compara caixa renderizada,
+    estilo computado e pixel (`pixelmatch`). Escreve `.visual/<caso>.{mock,app,diff}.png` e
+    `relatorio.json` (git-ignored).
+  - **Determinismo:** rede bloqueada e as duas pontas usando o **mesmo woff2 embutido**. Sem isso
+    o mock busca a fonte no Google e a mesma execução dá números diferentes com a conexão ruim —
+    ou cai na fonte de sistema e mede outra coisa.
+  - **Só afirma o que o spec declara.** O browser computa tudo, então comparar a lista inteira
+    compara herança: `font-size` herdado (o wireframe vive numa caixa de 14px, o app numa raiz de
+    16 — é a decisão do PR 6.5, não regressão), `font-family` que difere só no fallback, e
+    `display`/`gap`/`align-items` de filho de grid, que o CSS blocifica nos dois lados.
+  - **Fora do `pnpm test` de propósito:** diff de pixel depende de fonte, browser e GPU; num gate
+    obrigatório viraria a falha que todo mundo aprende a ignorar, e trava ignorada é pior que
+    trava nenhuma.
+
+  **O que ela achou de imediato, e que nenhuma outra trava veria:** o `KpiCard` tem **97,08px de
+  altura contra 98** do mock **com todas as classes batendo** — vem dos line-heights, que a fase
+  B1 registrou como "valores de partida, não medida do design"; o `Badge` tem **16,5 contra 20**; e
+  a linha de tarefa, **53,22 contra 55**. O `gridTemplateColumns` do mock resolve para
+  `14px 88px 666px 48px 56px` na linha de entrada — a coluna de 88px medida, não declarada.
+
 - **F1 · `SectionCard`** — casca sem fundo, cabeçalho com fundo e régua, paddings, contador como
-  pílula, slot de ação nos dois tamanhos. Toca as 7 telas.
+  pílula, slot de ação nos dois tamanhos. Toca as 7 telas. **Alvo medido:** altura da casca
+  `205,66 → 204`.
 - **F2 · `TaskRow` como grid** — colunas configuráveis (as três formas do censo), separadores,
   medidas, chip em coluna própria, ação↔duração no mesmo slot. Toca 5 telas: re-conferir 3b/3c/3d
   contra o spec na mesma sessão.

@@ -9,9 +9,19 @@ export default tseslint.config(
   js.configs.recommended,
   {
     // Os scripts de build rodam no Node, fora do bundle: sem isto o `console`
-    // do extrator de spec lê como global indefinido.
+    // do extrator de spec lê como global indefinido. `document` e
+    // `getComputedStyle` entram porque a bancada visual declara funções que o
+    // Playwright **serializa e executa dentro da página** — elas moram num
+    // arquivo Node e rodam no browser.
     files: ["scripts/**/*.mjs"],
-    languageOptions: { globals: { console: "readonly", process: "readonly" } },
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        document: "readonly",
+        getComputedStyle: "readonly",
+      },
+    },
   },
   ...tseslint.configs.recommended,
   {
