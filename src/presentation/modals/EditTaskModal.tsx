@@ -13,6 +13,7 @@ import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { addDaysISO, resolveRegisteredEndHHMM } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -109,7 +110,8 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
     );
 
     setSaving(true);
-    await updateTask(
+    const nowISO = new Date().toISOString();
+    const updated = await updateTask(
       taskRepo,
       task.id,
       {
@@ -122,8 +124,14 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
         durationSeconds,
         customValues,
       },
-      new Date().toISOString()
+      nowISO
     );
+    // O modal edita uma tarefa, mas faturamento é do grupo: o chip daqui deixava
+    // a irmã com o valor antigo, e a trava do chip da lista não alcança este
+    // caminho. Vale o que o modal salvou — inclusive quando a edição mudou o
+    // nome e a tarefa passou a pertencer a outro grupo, cujo valor ela leva
+    // consigo. Grupo já uniforme não gera escrita nenhuma.
+    await setGroupBillable(taskRepo, updated, billable, nowISO);
     void notifyTasksChanged();
     setSaving(false);
     onSave();

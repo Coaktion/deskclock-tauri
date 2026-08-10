@@ -15,6 +15,15 @@
 - O usuário pode sobrescrever manualmente a qualquer momento.
 - Na lista de entradas, um clique no indicador billable alterna o valor.
 
+> **O faturamento é do grupo, não da tarefa solta.** `billable` não compõe a chave de agrupamento
+> (§6.3), então irmãs podem divergir nele — e o cabeçalho do grupo, que mostra o valor da primeira,
+> passa a mentir sobre as outras sem nada na tela avisando. Por isso alternar numa linha alterna em
+> todas as irmãs (`setGroupBillable`), o chip do **cabeçalho** também alterna o grupo inteiro, e o
+> `EditTaskModal` propaga para o grupo o valor que salvou — inclusive quando a edição mudou o nome e
+> a tarefa passou a pertencer a outro grupo, cujo valor ela leva consigo. O recorte das irmãs é o dia
+> e o workspace da tarefa, entre as **concluídas**: é onde o grupo existe, e uma execução em curso com
+> o mesmo nome não está nele. Grupo já uniforme não gera escrita — a regra só age onde havia divergência.
+
 ### 6.3 Agrupamento de tarefas
 - Critério: Nome + Projeto + Categoria idênticos.
 - Agrupamento é apenas visual — os registros permanecem independentes no banco.

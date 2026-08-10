@@ -99,6 +99,10 @@ export function TaskGroupCard({
         }
         duration={formatDurationCompact(group.totalSeconds)}
         billable={first.billable}
+        // O chip do cabeçalho fala pelo grupo, então ele alterna o grupo — pelo
+        // mesmo caminho da filha, que já vale para as irmãs. Informar sem deixar
+        // clicar era a única linha da tela em que o chip não respondia.
+        onToggleBillable={() => onToggleBillable(first)}
         dotColor={projectColor}
         selected={selectable && selected}
         onClick={handleRowClick}

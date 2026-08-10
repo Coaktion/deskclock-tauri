@@ -14,6 +14,7 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
@@ -69,7 +70,9 @@ export function TodayEntriesSection({
   }
 
   async function handleToggleBillable(task: Task) {
-    await updateTask(taskRepo, task.id, { billable: !task.billable }, new Date().toISOString());
+    // O clique chega de uma linha, mas o faturamento é do grupo: alternar só a
+    // filha deixava as irmãs para trás e o cabeçalho mentindo sobre elas.
+    await setGroupBillable(taskRepo, task, !task.billable, new Date().toISOString());
     void notifyTasksChanged();
     reload();
   }
