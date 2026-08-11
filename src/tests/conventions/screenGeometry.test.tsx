@@ -4,13 +4,21 @@ import { resolve } from "node:path";
 import { createRef, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
 import { OmniboxIdle } from "@presentation/components/OmniboxIdle";
 import { Sidebar } from "@presentation/components/Sidebar";
 import { Badge } from "@presentation/components/ui/Badge";
+import { Button } from "@presentation/components/ui/Button";
+import { Field } from "@presentation/components/ui/Field";
+import { FilterPill } from "@presentation/components/ui/FilterPill";
+import { Input } from "@presentation/components/ui/Input";
 import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { PageHeader } from "@presentation/components/ui/PageHeader";
-import { SectionCard } from "@presentation/components/ui/SectionCard";
+import { SearchInput } from "@presentation/components/ui/SearchInput";
+import { SectionCard, SectionRow } from "@presentation/components/ui/SectionCard";
 import { TaskRow } from "@presentation/components/ui/TaskRow";
+import { Toggle } from "@presentation/components/ui/Toggle";
+import { IntegrationTile } from "@presentation/sections/integrations/shared";
 
 import {
   hasBackground,
@@ -43,26 +51,29 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  *    congela o que já está — foi assim que as cinco travas anteriores nasceram
  *    verdes sobre um layout aproximado.
  *
- * ## `divergente` — a catraca, e por que ela não aparece aqui
+ * ## `divergente` — a catraca
  *
- * A regra 2 pede um teste que reprova hoje, mas commitar 15 falhas soltas
- * deixaria o CI vermelho por cinco sessões e, com ele vermelho, ninguém
+ * A regra 2 pede um teste que reprova hoje, mas commitar as falhas soltas
+ * deixaria o CI vermelho por sessões seguidas e, com ele vermelho, ninguém
  * distingue a divergência conhecida da regressão nova. Cada divergência medida
- * entrava então como `divergente(...)`, que é `it.fails`: passa **enquanto** a
- * assertiva reprova. Corrigir o componente faz o `it.fails` reprovar, e a única
- * saída é trocar `divergente` por `it` — corrigir sem declarar é impossível, e
- * declarar sem corrigir também.
+ * entra como `divergente(...)`, que é `it.fails`: passa **enquanto** a assertiva
+ * reprova. Corrigir o componente faz o `it.fails` reprovar, e a única saída é
+ * trocar `divergente` por `it` — corrigir sem declarar é impossível, e declarar
+ * sem corrigir também. `divergente` que sobra é dívida visível; zero
+ * `divergente` numa tela é a tela fiel.
  *
- * **A tela 3a está em zero**, e é por isso que o utilitário não existe mais no
- * arquivo: as 15 divergências que a F0 mediu foram fechadas entre a F1 e a F5.
- * Ele volta com a F6, que estende a trava às outras 6 telas — e volta com a
- * mesma regra, não como licença para deixar assertiva vermelha em paz.
+ * **A tela 3a está em zero**: as 15 divergências que a F0 mediu foram fechadas
+ * entre a F1 e a F5. As 12 que sobram são das outras seis telas, medidas na F6,
+ * e metade delas é a mesma peça — o campo de formulário, que diverge no padding
+ * nos dois tamanhos e no rótulo.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
  * renderizam sem provider — mais o `OmniboxIdle` e a `Sidebar`, que pedem um
- * mock cada (ver os blocos deles) — e a composição do corpo da `TasksPage`, que
- * é lida do código-fonte. As outras 6 telas **não estão cobertas**, e dizer isso
- * aqui é o que impede a lista de parecer completa.
+ * mock cada (ver os blocos deles) — e o que só existe na composição da página,
+ * lido do **código-fonte**. Fora ficam os painéis que montam contexto, banco e
+ * IPC: o corpo do Planejamento e do Lançamento Manual, os painéis de Dados e as
+ * abas de Configurações são medidos pelos primitivos que os compõem, não
+ * inteiros.
  */
 
 /**
@@ -84,6 +95,13 @@ vi.mock("@presentation/hooks/useProjectCategoryMap", () => ({
 vi.mock("@presentation/components/WorkspaceSwitcher", () => ({
   WorkspaceSwitcher: () => null,
 }));
+
+/**
+ * A divergência medida e declarada. `it.fails` passa enquanto a assertiva
+ * reprova, então a etapa que corrigir o componente **tem** de trocar isto por
+ * `it` — é o que impede corrigir sem declarar e declarar sem corrigir.
+ */
+const divergente = it.fails;
 
 const s3a = screen("3a");
 
@@ -129,6 +147,25 @@ const SPEC = {
   entriesDuration: s3a.byText("02:48:00"),
   entriesActions: s3a.byPath("1/1/1/3/2/4"),
 };
+
+/**
+ * O código-fonte de um arquivo do app. É por aqui que entram as afirmações que
+ * só existem na composição da página — a coluna de leitura, a ordem das seções,
+ * o cabeçalho escrito à mão —, cujas páginas montam contexto, banco e IPC do
+ * Tauri: renderizá-las pediria uma dúzia de mocks, e cada hook novo quebraria a
+ * trava com um erro que não fala de geometria nenhuma.
+ */
+function sourceOf(path: string): string {
+  return readFileSync(resolve(__dirname, "../../..", path), "utf8");
+}
+
+/** A classe de um elemento identificado por um trecho dela — o `p-5` do corpo,
+ *  o `sticky` do cabeçalho do dia. */
+function classNameContaining(source: string, marker: string): string {
+  const found = new RegExp(`className="([^"]*${marker}[^"]*)"`).exec(source)?.[1];
+  if (!found) throw new Error(`nenhuma className com "${marker}"`);
+  return found;
+}
 
 /** Primeiro elemento renderizado — a casca do componente. */
 function shellOf(element: ReactElement): HTMLElement {
@@ -529,10 +566,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
    * que é o que o arquivo já mostra. O número continua vindo do JSON.
    */
   describe("TasksPage — a composição do corpo", () => {
-    const source = readFileSync(
-      resolve(__dirname, "../../..", "src/presentation/pages/TasksPage.tsx"),
-      "utf8"
-    );
+    const source = sourceOf("src/presentation/pages/TasksPage.tsx");
 
     /** O corpo é o elemento que rola; é o que o identifica sem repetir a classe. */
     const body = /className="([^"]*overflow-y-auto[^"]*)"/.exec(source)?.[1];
@@ -615,6 +649,373 @@ describe("geometria: tela 3a contra o spec do design", () => {
       expect(actual.fontSize).toBe(numberOf(SPEC.rowChip, "font-size"));
       expect(actual.fontWeight).toBe(Number(SPEC.rowChip.style["font-weight"]));
       expectPadding(chip, SPEC.rowChip);
+    });
+  });
+});
+
+/**
+ * As outras seis telas. Elas repetem a moldura da 3a — sidebar, `PageHeader`,
+ * `SectionCard`, `TaskRow`, `KpiCard` —, então o que entra aqui é o que **só**
+ * elas mostram: a coluna de leitura de 720px, a linha de configuração, a chave,
+ * o campo de formulário, a pílula pequena e o ladrilho de integração.
+ *
+ * O número continua vindo do JSON **da tela em que o elemento aparece**, e não
+ * do da 3a: ancorar tudo numa tela só faria a cobertura parecer maior do que é.
+ */
+describe("geometria: as outras seis telas contra o spec do design", () => {
+  const s3b = screen("3b");
+  const s3c = screen("3c");
+  const s3d = screen("3d");
+  const s3e = screen("3e");
+  const s3f = screen("3f");
+  const s3g = screen("3g");
+
+  describe("3b · Histórico", () => {
+    const SPEC_3B = {
+      acao: s3b.byText("Filtros"),
+      periodo: s3b.byText("Hoje"),
+      busca: s3b.byPath("1/1/1/0/5/1"),
+      diaHeader: s3b.byPath("1/1/1/3/0"),
+    };
+
+    it("o botão de ação do cabeçalho tem o padding, o raio e o gap do spec", () => {
+      const botao = shellOf(<Button icon={<span />}>Filtros</Button>);
+      const actual = geometryOf(botao.className);
+      expectPadding(botao, SPEC_3B.acao);
+      expect(actual.borderRadius).toBe(radiusOf(SPEC_3B.acao));
+      expect(actual.gap).toBe(numberOf(SPEC_3B.acao, "gap"));
+      expect(actual.fontSize).toBe(numberOf(SPEC_3B.acao, "font-size"));
+    });
+
+    it("a pílula de período é a pílula de 6/12 no degrau de 12,25px", () => {
+      const pill = shellOf(<FilterPill onClick={() => {}}>Hoje</FilterPill>);
+      const actual = geometryOf(pill.className);
+      expectPadding(pill, SPEC_3B.periodo);
+      expect(actual.borderRadius).toBe(radiusOf(SPEC_3B.periodo));
+      expect(actual.fontSize).toBe(numberOf(SPEC_3B.periodo, "font-size"));
+    });
+
+    it("a busca abre 32px à esquerda para a lupa", () => {
+      const busca = shellOf(<SearchInput value="" onChange={() => {}} />);
+      const campo = busca.querySelector("input")!;
+      expect(geometryOf(campo.className).paddingLeft).toBe(paddingOf(SPEC_3B.busca).left);
+    });
+
+    /**
+     * O padding do campo é o mesmo em todas as telas que têm formulário, e
+     * diverge em todas: `md` rende 10/6 contra os 12/7 do spec. Está aqui, e
+     * não só na 3d, porque é o campo da busca que a 3b desenha.
+     */
+    divergente("a busca tem o padding do campo do spec — divergente, campos", () => {
+      const busca = shellOf(<SearchInput value="" onChange={() => {}} />);
+      const campo = busca.querySelector("input")!;
+      const actual = geometryOf(campo.className);
+      expect(actual.paddingTop).toBe(paddingOf(SPEC_3B.busca).top);
+      expect(actual.paddingRight).toBe(paddingOf(SPEC_3B.busca).right);
+    });
+
+    /**
+     * O cartão do dia é escrito à mão na página — a casca do `SectionCard` tem
+     * `overflow-hidden`, que viraria o scrollport do cabeçalho `sticky` de
+     * dentro e o prenderia ao topo do próprio cartão.
+     */
+    divergente("o cabeçalho do dia tem o padding da faixa — divergente, 8/12 hoje", () => {
+      const header = classNameContaining(
+        sourceOf("src/presentation/pages/HistoryPage.tsx"),
+        "sticky top-0"
+      );
+      expectPadding(header, SPEC_3B.diaHeader);
+    });
+  });
+
+  describe("3c · Dados", () => {
+    const SPEC_3C = {
+      corpo: s3c.byPath("1/1/1"),
+      coluna: s3c.byPath("1/1/1/0"),
+      abas: s3c.byPath("1/1/0/1"),
+    };
+
+    it("o corpo tem o padding de página e a coluna de leitura do spec", () => {
+      const source = sourceOf("src/presentation/pages/DataPage.tsx");
+      expectPadding(classNameContaining(source, "overflow-y-auto"), SPEC_3C.corpo);
+      expect(source).toContain(`max-w-[${numberOf(SPEC_3C.coluna, "max-width")}px]`);
+    });
+
+    /**
+     * No design as abas ficam **coladas ao título** (`margin-left: 8`, gap 6) e
+     * só as ações vão para a direita. Hoje elas dividem o grupo `ml-auto` com
+     * as ações, e herdam dele o gap de 8 — o que também as afasta do título.
+     */
+    divergente("as abas ficam coladas ao título, no gap do spec — divergente", () => {
+      const header = shellOf(<PageHeader title="Dados" tabs={<span data-abas="" />} />);
+      const abas = header.querySelector("[data-abas]")!.parentElement!;
+      const actual = geometryOf(abas.className);
+      expect(actual.gap).toBe(numberOf(SPEC_3C.abas, "gap"));
+      expect(actual.marginLeft).toBe(numberOf(SPEC_3C.abas, "margin-left"));
+    });
+  });
+
+  describe("3d · Configurações", () => {
+    const SPEC_3D = {
+      corpo: s3d.byPath("1/1/1"),
+      coluna: s3d.byPath("1/1/1/0"),
+      linha: s3d.byPath("1/1/1/0/1/1"),
+      chave: s3d.byPath("1/1/1/0/1/1/1"),
+      knob: s3d.byPath("1/1/1/0/1/1/1/0"),
+      rotulo: s3d.byText("Iniciar com o sistema"),
+      dica: s3d.byText("Abre o DeskClock ao ligar o computador"),
+      campo: s3d.byText("Rafael"),
+    };
+
+    it("o corpo tem o padding de página e a coluna de leitura do spec", () => {
+      const source = sourceOf("src/presentation/pages/SettingsPage.tsx");
+      expectPadding(classNameContaining(source, "overflow-y-auto"), SPEC_3D.corpo);
+      expect(source).toContain(`max-w-[${numberOf(SPEC_3D.coluna, "max-width")}px]`);
+    });
+
+    it("a chave é 40×20 com knob de 16, e a linha dela tem o gap do spec", () => {
+      const linha = shellOf(
+        <Toggle
+          checked={false}
+          onChange={() => {}}
+          label="Iniciar com o sistema"
+          description="Abre o DeskClock ao ligar o computador"
+        />
+      );
+      const trilho = linha.querySelector("button")!;
+      const knob = trilho.firstElementChild!;
+
+      expect(geometryOf(linha.className).gap).toBe(numberOf(SPEC_3D.linha, "gap"));
+      const chave = geometryOf(trilho.className);
+      expect(chave.width).toBe(numberOf(SPEC_3D.chave, "width"));
+      expect(chave.height).toBe(numberOf(SPEC_3D.chave, "height"));
+      expect(chave.borderRadius).toBe(radiusOf(SPEC_3D.chave));
+      expect(geometryOf(knob.className).width).toBe(numberOf(SPEC_3D.knob, "width"));
+    });
+
+    it("o rótulo e a dica da linha ficam nos dois degraus do spec", () => {
+      const linha = shellOf(
+        <Toggle
+          checked={false}
+          onChange={() => {}}
+          label="Iniciar com o sistema"
+          description="Abre o DeskClock ao ligar o computador"
+        />
+      );
+      const [rotulo, dica] = Array.from(linha.querySelectorAll("p"));
+      expect(geometryOf(rotulo.className).fontSize).toBe(numberOf(SPEC_3D.rotulo, "font-size"));
+      expect(geometryOf(dica.className).fontSize).toBe(numberOf(SPEC_3D.dica, "font-size"));
+    });
+
+    /** O mesmo 1px que o `TaskRow` já usa no subtítulo (`mt-px`), e que aqui
+     *  ficou em `mt-0.5`. */
+    divergente("a dica encosta no rótulo com 1px, não 2 — divergente", () => {
+      const linha = shellOf(
+        <Toggle
+          checked={false}
+          onChange={() => {}}
+          label="Iniciar com o sistema"
+          description="Abre o DeskClock ao ligar o computador"
+        />
+      );
+      const dica = linha.querySelectorAll("p")[1];
+      expect(geometryOf(dica.className).marginTop).toBe(numberOf(SPEC_3D.dica, "margin-top"));
+    });
+
+    divergente("a linha de configuração tem o padding do spec — divergente, 12/16 hoje", () => {
+      const linha = shellOf(<SectionRow>linha</SectionRow>);
+      expectPadding(linha, SPEC_3D.linha);
+    });
+
+    /**
+     * O campo `md` — o de Configurações e o dos modais. O raio e o degrau de
+     * texto batem; o padding não, nos dois eixos.
+     */
+    it("o campo tem o raio e o degrau de texto do spec", () => {
+      const campo = shellOf(<Input value="Rafael" onChange={() => {}} />);
+      const actual = geometryOf(campo.className);
+      expect(actual.borderRadius).toBe(radiusOf(SPEC_3D.campo));
+      expect(actual.fontSize).toBe(numberOf(SPEC_3D.campo, "font-size"));
+    });
+
+    divergente("o campo tem o padding 7/12 do spec — divergente, campos", () => {
+      const campo = shellOf(<Input value="Rafael" onChange={() => {}} />);
+      expectPadding(campo, SPEC_3D.campo);
+    });
+  });
+
+  describe("3e · Planejamento", () => {
+    const SPEC_3E = {
+      semana: s3e.byText("Semana atual"),
+      dia: s3e.byText("Seg"),
+      coluna: s3e.byPath("1/1/1/0"),
+      corpoColuna: s3e.byPath("1/1/1/0/1"),
+      rotulo: s3e.byText("Nome"),
+      campo: s3e.byPath("1/1/1/0/1/0/1"),
+    };
+
+    it("a pílula de dia é a mesma pílula de 6/12 do Histórico", () => {
+      const pill = shellOf(<FilterPill onClick={() => {}}>Seg</FilterPill>);
+      expectPadding(pill, SPEC_3E.dia);
+      expect(geometryOf(pill.className).fontSize).toBe(numberOf(SPEC_3E.dia, "font-size"));
+    });
+
+    it("a pílula pequena tem o padding 4/10 do spec", () => {
+      const pill = shellOf(
+        <FilterPill size="sm" onClick={() => {}}>
+          Semana atual
+        </FilterPill>
+      );
+      expectPadding(pill, SPEC_3E.semana);
+    });
+
+    /** Ela é a única pílula do app que o design escreve num degrau menor que o
+     *  `body/ui` — 11px, que é o `text-micro` que a F0 criou. */
+    divergente("a pílula pequena lê no degrau de 11px — divergente", () => {
+      const pill = shellOf(
+        <FilterPill size="sm" onClick={() => {}}>
+          Semana atual
+        </FilterPill>
+      );
+      expect(geometryOf(pill.className).fontSize).toBe(numberOf(SPEC_3E.semana, "font-size"));
+    });
+
+    divergente("a coluna de formulário nasce nos 280px do spec — divergente, 256 hoje", () => {
+      // A largura é arrastável (`useResizablePanel`), então o que se compara é
+      // o padrão: é ele que a tela mostra a quem nunca arrastou.
+      expect(FORM_COLUMN_WIDTH.default).toBe(numberOf(SPEC_3E.coluna, "width"));
+    });
+
+    /**
+     * **Decisão pendente nº1 do handoff, medida.** O design escreve o rótulo do
+     * campo como **overline acima da caixa** (10px/600); o app o encaixa na
+     * borda, em `caption`. São quatro grafias no app — `Field`, o entalhe em
+     * classes do `EditTaskModal`, o rótulo flutuante dos campos personalizados
+     * e o rótulo solto —, e unificá-las nos 10px do token é trabalho próprio.
+     */
+    divergente("o rótulo do campo é o overline de 10px — divergente, campos", () => {
+      const campo = shellOf(
+        <Field label="Nome">
+          <Input variant="bare" />
+        </Field>
+      );
+      const rotulo = geometryOf(campo.querySelector("label")!.className);
+      expect(rotulo.fontSize).toBe(numberOf(SPEC_3E.rotulo, "font-size"));
+      expect(rotulo.fontWeight).toBe(Number(SPEC_3E.rotulo.style["font-weight"]));
+    });
+
+    divergente("o campo denso tem o padding 7/10 do spec — divergente, campos", () => {
+      const campo = shellOf(<Input size="sm" />);
+      expectPadding(campo, SPEC_3E.campo);
+    });
+  });
+
+  describe("3f · Lançamento manual", () => {
+    const SPEC_3F = {
+      hoje: s3f.byText("Hoje"),
+      linha: s3f.byPath("1/1/1/1/0/1"),
+      faixa: s3f.byPath("1/1/1/1/0/1/0"),
+    };
+
+    it("a linha de apontamento é a grade de 88px do spec", () => {
+      // Sem `leading`: o Lançamento Manual não agrupa, então a coluna do
+      // chevron não existe — é a forma de quatro colunas, não a de cinco.
+      const row = shellOf(
+        <TaskRow
+          meta={<span>09:12–11:00</span>}
+          title="Ajustes no relatório mensal"
+          subtitle="Cliente A · Desenvolvimento"
+          duration="01:48"
+          billable
+          dotColor="oklch(0.65 0.16 258)"
+        />
+      );
+      const actual = geometryOf(row.className);
+      expect(actual.gridTemplateColumns).toBe(
+        stringOf(SPEC_3F.linha, "grid-template-columns").replace(/\s+/g, " ")
+      );
+      expect(actual.gap).toBe(numberOf(SPEC_3F.linha, "gap"));
+      expectPadding(row, SPEC_3F.linha);
+    });
+
+    it("a faixa de horário lê no degrau de 11px", () => {
+      const faixa = shellOf(
+        <span className="text-micro font-mono tabular-nums text-fg-muted">09:12–11:00</span>
+      );
+      expect(geometryOf(faixa.className).fontSize).toBe(numberOf(SPEC_3F.faixa, "font-size"));
+    });
+
+    divergente("a pílula do dia navegado lê no degrau de 11px — divergente", () => {
+      const pill = shellOf(
+        <FilterPill size="sm" onClick={() => {}}>
+          Hoje
+        </FilterPill>
+      );
+      expect(geometryOf(pill.className).fontSize).toBe(numberOf(SPEC_3F.hoje, "font-size"));
+    });
+  });
+
+  describe("3g · Integrações", () => {
+    const SPEC_3G = {
+      corpo: s3g.byPath("1/1/1"),
+      coluna: s3g.byPath("1/1/1/0"),
+      ladrilho: s3g.byPath("1/1/1/0/0"),
+      logo: s3g.byPath("1/1/1/0/0/0"),
+      nome: s3g.byText("Google"),
+    };
+
+    it("o corpo tem o padding de página e a coluna de leitura do spec", () => {
+      const source = sourceOf("src/presentation/pages/IntegrationsPage.tsx");
+      expectPadding(classNameContaining(source, "overflow-y-auto"), SPEC_3G.corpo);
+      expect(source).toContain(`max-w-[${numberOf(SPEC_3G.coluna, "max-width")}px]`);
+    });
+
+    it("o ladrilho tem o padding, o raio e a caixa do logo do spec", () => {
+      const tile = shellOf(
+        <IntegrationTile
+          logo={<span />}
+          name="Google"
+          description="Sheets e Calendar com uma única conta"
+          connected
+          onClick={() => {}}
+        />
+      );
+      const actual = geometryOf(tile.className);
+      expectPadding(tile, SPEC_3G.ladrilho);
+      expect(actual.borderRadius).toBe(radiusOf(SPEC_3G.ladrilho));
+
+      const logo = geometryOf(tile.firstElementChild!.className);
+      expect(logo.width).toBe(numberOf(SPEC_3G.logo, "width"));
+      expect(logo.height).toBe(numberOf(SPEC_3G.logo, "height"));
+      expect(logo.borderRadius).toBe(radiusOf(SPEC_3G.logo));
+    });
+
+    it("o nome do serviço é o degrau de 12,25px em peso 600", () => {
+      const tile = shellOf(
+        <IntegrationTile
+          logo={<span />}
+          name="Google"
+          description="Sheets e Calendar com uma única conta"
+          connected
+          onClick={() => {}}
+        />
+      );
+      const nome = geometryOf(tile.children[1].firstElementChild!.className);
+      expect(nome.fontSize).toBe(numberOf(SPEC_3G.nome, "font-size"));
+      expect(nome.fontWeight).toBe(Number(SPEC_3G.nome.style["font-weight"]));
+    });
+
+    divergente("o ladrilho tem o gap de 14 do spec — divergente, 16 hoje", () => {
+      const tile = shellOf(
+        <IntegrationTile
+          logo={<span />}
+          name="Google"
+          description="Sheets e Calendar com uma única conta"
+          connected
+          onClick={() => {}}
+        />
+      );
+      expect(geometryOf(tile.className).gap).toBe(numberOf(SPEC_3G.ladrilho, "gap"));
     });
   });
 });

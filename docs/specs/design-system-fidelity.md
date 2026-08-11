@@ -447,17 +447,20 @@ lado.
 
 ## 3. Decisões pendentes do usuário
 
-1. **`Field` entalhado vs. overline.** O design (tela 3f) diz que os rótulos entalhados _"viram o
-   rótulo overline usado no resto do app"_. O `Field.tsx` manteve o entalhe, e a §5.8 do CLAUDE.md
-   documenta o rótulo flutuante como escolha deliberada para a coluna estreita. Pode ter sido
-   decisão consciente — **confirmar antes de mexer**.
+1. ~~**`Field` entalhado vs. overline.**~~ — **decidida em 2026-08-10**: o campo segue o design,
+   nos formulários **e** nos modais (_"os fields estão divergentes do design e não deveriam, tanto
+   os dos forms quanto dos modais"_). Medido e declarado na F6 como `divergente`; **corrigir é a
+   F7**.
 
-   > Levantado com o usuário em 2026-08-08, sem decisão ainda. Estado real da cobertura: `Field`
-   > (o entalhe como componente) é usado em **2 arquivos**; o mesmo entalhe em classes
-   > (`notchedBoxClass`/`notchedLabelClass`) continua no `EditTaskModal`; o rótulo flutuante
-   > (`floatingLabelClass`) continua no `CustomFieldInputs`; e o rótulo solto acima do campo
-   > (`<label className="text-xs …">`) não tem componente nenhum. **Unificar os quatro é trabalho
-   > desta decisão, não da fase B.**
+   > O que a decisão abrange, medido: o **rótulo** — o design escreve overline de 10px/600 **acima**
+   > da caixa, e o app o encaixa na borda em `caption` (10,5). São quatro grafias: `Field` (o
+   > entalhe como componente, 2 arquivos), o mesmo entalhe em classes
+   > (`notchedBoxClass`/`notchedLabelClass`, no `EditTaskModal`), o rótulo flutuante
+   > (`floatingLabelClass`, no `CustomFieldInputs`) e o rótulo solto acima do campo
+   > (`<label className="text-xs …">`, sem componente nenhum). E o **padding** da casca, que
+   > diverge nos dois tamanhos e não depende do rótulo: `md` rende 10/6 contra os 12/7 do spec,
+   > `sm` rende 8/4 contra 10/7. O padding mora em `ui/controlStyles.ts` e vale para `Input`,
+   > `Select` e `Textarea` de uma vez.
 
 2. **Integrações (tela 3g).** _"status vira chip curto em vez de frase; a não conectada fica com
    contorno tracejado e um botão explícito"_. O `StatusBadge` ainda é a frase "Conectado como
@@ -517,6 +520,10 @@ pelo mesmo `--text-sm--line-height`/`--text-xs--line-height` (1.35/1.4 declarado
 valores de partida, contra o `normal` que o mock herda): linha 53,22 contra 55 · KPI 97,08 contra
 98 · chip do omnibox 24,53 contra 26. **Calibrá-los é etapa própria**, por decisão do usuário — são
 dois tokens globais que mudam todo texto de 10,5 e 12,25px do app.
+
+Depois da F6 (2026-08-10): a trava vai de **22 para 68 assertivas**, cobrindo as 7 telas — **56
+verdes e 12 `divergente`**, todas fora da 3a. Sete das 12 são o campo de formulário (padding nos
+dois tamanhos, rótulo), que é a F7.
 
 Depois da F2 (2026-08-10), medido na bancada visual: as **três formas** da linha em zero divergência
 de propriedade, e altura de **53,22 contra 55** nas três — 1,78px que são o line-height, não a linha.
@@ -1110,13 +1117,73 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   providers de verdade, e o `vi.mock` que a trava usa não existe ali. A composição
   `tasks-corpo*` acompanhou os dois acertos do KPI, mas segue com a casca antiga das Entradas
   (`flex-1` + rolagem por dentro), que a §7.5.8 reverteu na app; corrigi-la é da F6.
-- **F6 · Fechamento** — exceções declaradas (§7.5.5, §7.5.6 e §7.5.8) na skill `design-system`
-  (`.claude/skills/design-system/SKILL.md`, que é onde a §8.4 do CLAUDE.md passou a morar desde
-  2026-08-10) e a trava estendida às outras 6 telas.
+- **F6 · Fechamento** — ✅ **feita (2026-08-10)**. A rodada fecha com a trava falando das **sete**
+  telas e com a skill carregando o que sobrevive ao handoff.
 
-  **Três dívidas de documento a fechar junto, achadas na F5:** a tabela da escala na skill ainda
-  descreve **sete** degraus e não os **dez** da §7.5.1 — `text-nav`, `text-micro` e `text-lead`
-  nasceram na F0 e hoje têm consumidor (sidebar, faixa de horário e slot de ação, campo do omnibox),
-  mas quem lê a skill não os encontra. O `divergente` do `screenGeometry.test.tsx` volta com esta
-  etapa, e volta com a mesma regra. E a composição `tasks-corpo*` da bancada segue com a casca
-  antiga das Entradas, que a §7.5.8 já reverteu na app.
+  **A skill ganhou três coisas.** A tabela da escala foi de **sete** degraus para os **dez** da
+  §7.5.1, com o parágrafo que diz de onde vieram os três últimos — o censo, não gosto: 96
+  ocorrências em 9px e 11px que a escala fechada não tinha, e a régua entre `micro` e `caption`
+  ("aquilo é uma frase?"), que é o que impede o degrau novo de virar sinônimo do velho. Entrou o
+  mecanismo de garantia — spec extraído, `screenGeometry`, `divergente` e o que a trava **não** vê
+  —, porque a rodada acaba e o handoff sai de circulação. E entraram as **quatro exceções
+  declaradas**: o par KPI+Planejadas com as Entradas na altura do que listam (§7.5.8), o
+  `WorkspaceSwitcher` na sidebar e o teto de 166px (§7.5.6), e a pílula de `Ctrl K` que não existe
+  (§7.5.5). Elas estão escritas como o que são — decisão tomada, não dívida —, e com o aviso de
+  que fora delas divergir do JSON é defeito.
+
+  **A trava passou de 22 para 68 assertivas**, e as 46 novas são o que **só** as outras seis telas
+  mostram: a coluna de leitura de 720px, a linha de configuração, a chave, o campo de formulário
+  em dois tamanhos, as duas pílulas, o ladrilho de integração e a grade de 88px do Lançamento
+  Manual. Duas regras de método valeram aqui:
+
+  - **O número vem do JSON da tela em que o elemento aparece**, não do da 3a. Ancorar tudo numa
+    tela só faria a cobertura parecer maior do que é.
+  - **Cobertura declarada:** primitivo que renderiza sem provider, mais três leituras de
+    código-fonte no molde que a F3 usou na `TasksPage` (a coluna de 720 em Dados, Configurações e
+    Integrações; o cabeçalho do cartão de dia do Histórico). Os painéis que montam contexto, banco
+    e IPC são medidos pelos primitivos que os compõem, não inteiros — e isso está escrito no
+    arquivo.
+
+  **12 `divergente`, e sete delas são a mesma peça — o campo.** Ele diverge no padding nos dois
+  tamanhos (`md` rende 10/6 contra 12/7; `sm` rende 8/4 contra 10/7), e o rótulo é o entalhe em
+  `caption` onde o design escreve **overline acima da caixa**. Isso atravessa formulário e modal,
+  e foi o que o usuário apontou em 2026-08-10 ao responder a decisão pendente nº1: _"os fields
+  estão divergentes do design e não deveriam, tanto os dos forms quanto dos modais"_. **Corrigir é
+  a F7** — são quatro grafias de rótulo e um padding que toca todo campo do app, e a verificação
+  visual é da etapa que corrige.
+
+  As outras cinco: as **abas** do `PageHeader` dividem o grupo `ml-auto` com as ações, e no design
+  ficam coladas ao título (`margin-left: 8`, gap 6) · o cabeçalho do **cartão de dia** do Histórico
+  em 8/12 contra 10/12 · a **`SectionRow`** em 12/16 contra `padding: 12` · a **pílula `sm`** em
+  12,25 contra os 11 do `text-micro` (é a única pílula que o design escreve abaixo do `body/ui`) ·
+  a **dica do `Toggle`** em `mt-0.5` contra 1px · o **gap do ladrilho** de integração em 16 contra
+  14 · e a **coluna de formulário**, cujo padrão nasce em 256 contra os 280 do spec (ela é
+  arrastável, então o que se compara é o padrão — é ele que a tela mostra a quem nunca arrastou).
+
+  **Cada `divergente` foi conferido reprovando pela medida**, e não por acidente: com a catraca
+  trocada por `it`, as 12 falham com número contra número. Duas reprovavam pelo motivo errado e
+  foram corrigidas no resolvedor — `-top-2` (posição negativa, que o padrão de `top-` não pegava) e
+  `rounded-sm`, que é a micromarca fora da escala de três raios e levantava em vez de ser medida.
+
+  **A bancada** teve a composição `tasks-corpo*` alinhada com a app: as Entradas perderam o
+  `flex-1` e a rolagem por dentro, e quem rola passou a ser o corpo. De quebra, o `OmniboxStub`
+  seguia com a faixa de chips em `px-4` — os 4px que a **F4** tirou —, então ele media o primeiro
+  chip fora do eixo do botão. É o mesmo tipo de defeito que a F2 corrigiu nos dois artefatos dela:
+  a bancada medindo o fixture, não o componente.
+
+- **F7 · O campo de formulário** — pendente. É a maior das 12 divergências que a F6 deixou
+  medidas, e a única que o usuário apontou por conta própria. Duas frentes, e a segunda depende da
+  primeira só na ordem de conferir na tela:
+  - **Padding**, em `ui/controlStyles.ts`: `md` de `px-2.5 py-1.5` para 12/7 e `sm` de `px-2 py-1`
+    para 10/7. Os 7px saem da escala como `py-1.75` — é o mesmo passo fracionário que o
+    `py-0.75` do `chipStyles` já usa, e o build emite o utilitário. Toca **todo** campo do app de
+    uma vez, incluindo a busca; as duas assertivas de padding do `screenGeometry` viram `it`.
+  - **Rótulo**: as quatro grafias colapsam no overline de 10px acima da caixa. Isto **encolhe
+    rótulo em toda tela de formulário e em todo modal**, e é o que faz a etapa pedir a inspeção nos
+    2 modos × 4 acentos. A decisão pendente nº6 (os overlines escritos à mão) é da mesma família e
+    cabe aqui.
+
+  Fora, e a conferir com o usuário antes: o `floatingLabelClass` dos campos personalizados existe
+  por um motivo próprio — o rótulo precisa continuar visível depois de preenchido, porque "Project
+  Stage" não se explica pela posição no formulário. Um overline fixo acima da caixa **resolve**
+  isso; o que se perde é a economia de altura numa lista de campos dinâmicos.

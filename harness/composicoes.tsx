@@ -36,8 +36,8 @@ const ALTURA = 572;
 
 /**
  * Substituto do Omnibox: ele monta contexto, banco e IPC, e o que interessa
- * aqui é a altura que ele ocupa. A anatomia é a do mock — linha de 40px com
- * `px-3 py-3`, faixa de chips com `px-4 pb-3`.
+ * aqui é a altura que ele ocupa. A anatomia é a do `OmniboxIdle` — linha de
+ * 40px com `px-3 py-3`, faixa de chips com `px-3 pb-3`, no eixo do botão.
  */
 function OmniboxStub() {
   return (
@@ -50,11 +50,11 @@ function OmniboxStub() {
           Em que você está trabalhando?
         </span>
       </div>
-      <div className="flex gap-2 px-4 pb-3">
-        <span className="rounded-chip border border-dashed border-border px-2 py-[3px] text-sm text-fg-muted">
+      <div className="flex gap-2 px-3 pb-3">
+        <span className="rounded-chip border border-dashed border-border px-2 py-0.75 text-sm text-fg-muted">
           Projeto
         </span>
-        <span className="rounded-chip border border-dashed border-border px-2 py-[3px] text-sm text-fg-muted">
+        <span className="rounded-chip border border-dashed border-border px-2 py-0.75 text-sm text-fg-muted">
           Categoria
         </span>
       </div>
@@ -172,9 +172,15 @@ function LinhasEntradas() {
 const VER_SEMANA = <span className="text-accent-text">Ver semana →</span>;
 const TOTAL_DIA = <span className="font-mono tabular-nums text-fg-secondary">05:48:40</span>;
 
-/** O corpo da tela, com o mesmo `gap-5` e a mesma caixa das duas montagens. */
+/**
+ * O corpo da tela, com o mesmo `gap-5` e a mesma caixa das duas montagens.
+ *
+ * **Quem rola é ele**, como na `TasksPage`: as Entradas têm a altura do que
+ * listam, então a lista longa empurra o corpo em vez de rolar por dentro da
+ * seção.
+ */
 function Corpo({ children }: { children: ReactNode }) {
-  return <div className="h-full flex flex-col gap-5 bg-canvas">{children}</div>;
+  return <div className="h-full overflow-y-auto flex flex-col gap-5 bg-canvas">{children}</div>;
 }
 
 /** A faixa de KPI nos dois arranjos — é a única coisa que muda entre as duas telas. */
@@ -200,7 +206,7 @@ function Kpis({ layout }: { layout: "row" | "grid" }) {
 export const COMPOSICOES: Composicao[] = [
   {
     id: "tasks-corpo",
-    nota: "Com planejadas: KPI em 2×2 ao lado da lista, e as Entradas ficam com a altura que sobra.",
+    nota: "Com planejadas: KPI em 2×2 ao lado da lista, e as Entradas com a altura do que listam.",
     width: LARGURA,
     height: ALTURA,
     element: (
@@ -218,12 +224,7 @@ export const COMPOSICOES: Composicao[] = [
           </SectionCard>
           <Kpis layout="grid" />
         </div>
-        <SectionCard
-          className="flex-1 min-h-0 flex flex-col"
-          title="Entradas de hoje"
-          action={TOTAL_DIA}
-          bodyClassName="min-h-0 overflow-y-auto"
-        >
+        <SectionCard className="shrink-0" title="Entradas de hoje" action={TOTAL_DIA}>
           <LinhasEntradas />
         </SectionCard>
       </Corpo>
@@ -240,12 +241,7 @@ export const COMPOSICOES: Composicao[] = [
         <div className="shrink-0 flex gap-5 items-start">
           <Kpis layout="row" />
         </div>
-        <SectionCard
-          className="flex-1 min-h-0 flex flex-col"
-          title="Entradas de hoje"
-          action={TOTAL_DIA}
-          bodyClassName="min-h-0 overflow-y-auto"
-        >
+        <SectionCard className="shrink-0" title="Entradas de hoje" action={TOTAL_DIA}>
           <LinhasEntradas />
         </SectionCard>
       </Corpo>

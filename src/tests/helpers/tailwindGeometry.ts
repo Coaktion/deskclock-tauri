@@ -54,6 +54,14 @@ const RADII: Record<string, number> = {
   control: cssNumber("--radius-control") ?? 8,
   card: cssNumber("--radius-card") ?? 12,
   none: 0,
+  /**
+   * Fora da escala de três raios, e de propósito: é a micromarca de 2 a 8 px
+   * — o tique da caixa, a barra da linha do tempo, o retalho do rótulo
+   * entalhado. Não vem de token do app; o valor é o padrão do Tailwind. Está
+   * aqui em vez de levantar porque um elemento que a carrega ainda precisa ter
+   * as outras medidas lidas.
+   */
+  sm: 4,
   /** No spec o raio total aparece como `99px`; aqui o Tailwind emite `9999px`. */
   full: 9999,
 };
@@ -97,11 +105,14 @@ const IGNORED = [
   /^(focus|hover|active|disabled|group-hover|group-focus-within|focus-within|focus-visible|peer|first|last)[:-]/,
   /^(sr-only|not-sr-only|appearance-none|resize-none|antialiased)$/,
   /^(min|max)-[wh]-/,
-  /^(top|right|bottom|left|inset)-/,
+  /** Posição, não medida — inclusive negativa: o `-top-2` do rótulo entalhado. */
+  /^-?(top|right|bottom|left|inset)-/,
   /^(border|ring|shadow)$/,
   /^border-[trbl]$/,
   /** Raio de um canto só — as cinco micromarcas do app; não é o raio da caixa. */
   /^rounded-(t|r|b|l|tl|tr|br|bl|s|e)(-|$)/,
+  /** Transformação, não caixa: `translate-x-5` move o knob do `Toggle`, não o mede. */
+  /^-?translate-[xy]-/,
 ];
 
 /** Medidas que não são px e o spec não compara nesse eixo. */

@@ -99,18 +99,37 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   espaçamento também é rem, então padding, gap e larguras crescem junto — `--spacing` **não** é
   reancorado para compensar.
 
-- **A escala tipográfica é um conjunto fechado de sete degraus**, e o oitavo é exceção declarada:
+- **A escala tipográfica é um conjunto fechado de dez degraus**, e o décimo primeiro é exceção
+  declarada:
 
   | Papel | Utilitário | px | Peso |
   |---|---|---|---|
   | `title/page` | `text-xl` | 20 | 600 — um por página, no `PageHeader` |
   | `mono/tempo` | `text-metric` | 17 | valor de KPI e cronômetro |
   | `title/section` | `text-base` | 16 | 600 — cabeçalho de `SectionCard` |
+  | `lead` | `text-lead` | 15 | 500 — o campo do omnibox, e só ele |
   | `body` | `text-body` | 14 | 400 — prosa que se lê em parágrafo |
   | `body/ui` | `text-sm` | 12,25 | 400, ou 500 se clicável ou numérico |
+  | `micro` | `text-micro` | 11 | mono curto, link e glifo — ver abaixo |
   | `caption` | `text-xs` | 10,5 | 400 — metadado de linha |
   | `overline` | `text-overline` | 10 | 600, `0.1em` |
+  | `nav` | `text-nav` | 9 | 500, entrelinha 1 — o rótulo da sidebar |
   | `display/timer` | `text-2xl` | 24 | cronômetro da tarefa em execução |
+
+  > **Os três últimos degraus a nascer — `nav`, `micro` e `lead` — vieram de medida, não de
+  > gosto.** O censo de `font-size` das 7 telas do design achou **96 ocorrências** em dois
+  > tamanhos que a escala fechada não tinha: 9px em 56 lugares (o rótulo da sidebar, que em 12,25
+  > cortava "Integra…" nos 68px da coluna) e 11px em 40 (todo o micro-mono — faixa de horário,
+  > contagem, total do dia, o slot de ação do `SectionCard`, o glifo do `?`), mais 15px em 2 (o
+  > placeholder do omnibox). O `fontSizes.test.ts` proibia escrevê-los inline e não havia token
+  > para pôr no lugar: **era a escala do micro-texto renderizando um degrau errado em todas as
+  > telas**, e é a explicação mecânica do "quase certo" que duas rodadas de fidelidade não
+  > fecharam.
+  >
+  > `micro` e `caption` diferem em meio pixel e mesmo assim são papéis distintos: `caption` é
+  > frase subordinada que se lê (subtítulo, dica, validação), `micro` é dado curto ou controle que
+  > não se lê como frase — número em mono, um link de duas palavras, um glifo. Na dúvida entre os
+  > dois, pergunte se aquilo é uma frase.
 
   > **Quatro dos degraus são reancorados nos px do design, e dois deles sobrescrevem o Tailwind.**
   > O design especifica a escala sobre uma raiz de **14**; a raiz daqui é 16, escolhida porque é
@@ -561,6 +580,45 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > (`RunningTaskSection`, `RunningTaskEditForm`, `BulkImportTextarea`): cada varredura desta migração
   > os reescrevia. A moldura — `Sidebar`, `TitleBar`, `WorkspaceSwitcher` e a casca do `App` — entrou
   > junto por aparecer em **todas** as telas, embora não estivesse em nenhum PR do plano.
+- **A geometria é travada contra o design medido, não contra prosa.**
+  `scripts/extract-design-spec.mjs` lê o wireframe versionado
+  (`docs/design-spec/raw/telas-redesenhadas.html`) e emite `docs/design-spec/*.json`: um nó por
+  elemento, com toda propriedade geométrica em px. `src/tests/conventions/screenGeometry.test.tsx`
+  renderiza o componente real, resolve cada utilitário do Tailwind para px e compara com o JSON.
+  **Toda decisão visual cita `spec[...]`; onde prosa e JSON discordam, vale o JSON** — foi assim
+  que o raio do `Badge` e o fundo da pílula do contador se decidiram, contra o que esta skill
+  afirmava.
+
+  > **`divergente(...)` é `it.fails`**, e é a catraca: passa **enquanto** a assertiva reprova.
+  > Corrigir o componente faz o `it.fails` reprovar, e a única saída é trocar `divergente` por
+  > `it` — corrigir sem declarar é impossível, e declarar sem corrigir também. `divergente` que
+  > sobra é dívida medida e visível, nunca licença para deixar assertiva vermelha em paz.
+  >
+  > O que a trava **não** vê é layout de verdade — quebra de linha, overflow, subpixel. Isso é a
+  > bancada visual (`pnpm visual`), que compara componente e wireframe em Chromium, e a inspeção
+  > em 1100×700 nos 2 modos × 4 acentos.
+
+- **Quatro lugares em que a tela diverge do mock de propósito.** São **exceções declaradas**, e
+  não dívida por pagar: `screenGeometry.test.tsx` não as cobra, e quem for "corrigi-las" está
+  desfazendo decisão tomada. Fora destas quatro, divergir do spec extraído
+  (`docs/design-spec/*.json`) é defeito.
+
+  - **A tela de Tarefas pareia KPI e Planejadas na linha do meio**, e as Entradas ficam com a
+    altura do que listam. O design os empilha; medido na bancada, a pilha deixava **96px** para
+    as Entradas num orçamento de 572 — cabeçalho de seção e uma linha e pouco. Pareadas, elas
+    passam a 213px. **O par é KPI+Planejadas, e não as duas listas lado a lado**, porque a linha
+    de Entradas carrega ~250px de coluna fixa em volta do nome (chevron, faixa de 88, chip,
+    duração): em meia largura o nome cairia para ~185px. Sem planejadas, a faixa de KPI volta aos
+    quatro em linha. **A ordem do design vale para as duas pontas** — Omnibox abre, Entradas
+    fecham —, e é isso que a trava continua afirmando pelo JSON.
+  - **O `WorkspaceSwitcher` fica na sidebar.** O mock não desenha o seletor, e é por isso que a
+    trava o mocka para `null` ao medir a nav: o que ela compara é o nó do spec, não uma versão
+    amputada dele.
+  - **O teto das planejadas de hoje é 166px** — é o que faz o cartão cheio terminar no mesmo
+    nível do bloco de KPI ao lado (206,16 dos dois lados, medido).
+  - **Não há pílula de `Ctrl K` no omnibox.** O mock é anterior à remoção do command palette
+    (`bcf09ff`); a feature não existe mais.
+
 - **Cor de significado só por token.** `billable`, `paused` e `danger` — nunca `emerald`, `green`,
   `rose` ou `red`. O que ainda resta está congelado em
   `src/tests/conventions/meaningColors.test.ts`, e o teste falha nos dois sentidos: subir é
