@@ -1,8 +1,36 @@
 import type { ReactNode } from "react";
 
+/**
+ * O cartão de hoje no Planejamento (`1/1/1/1/1/1` da tela 3e) é a mesma
+ * anatomia com casca, faixa, régua, título e pílula em acento. Mora aqui, e não
+ * no call site, porque a faixa escrita duas vezes é como as grafias divergentes
+ * desta migração nasceram.
+ */
+export type SectionCardTone = "default" | "accent";
+
+const TONE: Record<
+  SectionCardTone,
+  { shell: string; header: string; title: string; count: string }
+> = {
+  default: {
+    shell: "border-border-subtle",
+    header: "bg-surface border-border-subtle",
+    title: "text-fg-muted",
+    count: "bg-border-subtle text-fg-secondary",
+  },
+  accent: {
+    shell: "border-accent/30",
+    header: "bg-accent/8 border-accent/25",
+    title: "text-accent-text",
+    count: "bg-accent/15 text-accent-text",
+  },
+};
+
 interface SectionCardProps {
   /** Nome do grupo, em overline. Ausente: cartão sem cabeçalho. */
   title?: string;
+  /** `accent` marca o cartão do dia corrente. */
+  tone?: SectionCardTone;
   /** Quantos itens a lista tem, na pílula ao lado do título. */
   count?: number;
   /** Frase abaixo do título, para o que a lista de dentro não explica sozinha. */
@@ -30,11 +58,12 @@ interface SectionCardProps {
  * escala e carrega `0.1em` junto, que num número só abre um vão à direita.
  */
 const COUNT_PILL =
-  "shrink-0 rounded-full bg-border-subtle px-1.5 py-0.5 " +
-  "text-overline tracking-normal leading-[1.3] font-mono tabular-nums text-fg-secondary";
+  "shrink-0 rounded-full px-1.5 py-0.5 " +
+  "text-overline tracking-normal leading-[1.3] font-mono tabular-nums";
 
 export function SectionCard({
   title,
+  tone = "default",
   count,
   description,
   action,
@@ -44,22 +73,23 @@ export function SectionCard({
   children,
 }: SectionCardProps) {
   const hasHeader = Boolean(title || description || action) || count !== undefined;
+  const colors = TONE[tone];
 
   return (
-    <div className={`border border-border-subtle rounded-card overflow-hidden ${className}`}>
+    <div className={`border ${colors.shell} rounded-card overflow-hidden ${className}`}>
       {hasHeader && (
         <div
-          className={`bg-surface border-b border-border-subtle px-3 py-2.5 flex gap-2 ${
+          className={`${colors.header} border-b px-3 py-2.5 flex gap-2 ${
             description ? "items-start" : "items-center"
           }`}
         >
           <div className="min-w-0">
-            {title && <p className="text-overline uppercase text-fg-muted">{title}</p>}
+            {title && <p className={`text-overline uppercase ${colors.title}`}>{title}</p>}
             {description && (
               <p className="text-xs text-fg-muted mt-1 leading-relaxed">{description}</p>
             )}
           </div>
-          {count !== undefined && <span className={COUNT_PILL}>{count}</span>}
+          {count !== undefined && <span className={`${COUNT_PILL} ${colors.count}`}>{count}</span>}
           {action && <div className="ml-auto shrink-0 text-micro">{action}</div>}
         </div>
       )}

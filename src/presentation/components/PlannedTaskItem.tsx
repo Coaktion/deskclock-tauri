@@ -72,7 +72,7 @@ export function PlannedTaskItem({
   return (
     <>
       <div
-        className={`flex items-center gap-3 pl-4 pr-3 py-3 border-b border-border-subtle transition-colors group ${
+        className={`flex items-center gap-2.5 px-3 py-2.5 border-b border-border-subtle last:border-b-0 transition-colors group ${
           isCompleted && !selectMode ? "opacity-50" : ""
         } ${
           selectMode

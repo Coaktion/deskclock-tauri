@@ -3,7 +3,7 @@ import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTa
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
-import { Badge, FilterPill, PageHeader } from "@presentation/components/ui";
+import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
@@ -269,7 +269,7 @@ export function WeekPlanningView() {
               seleção sairiam da tela junto. */}
           <div
             data-tour="planning-day-filter"
-            className="border-b border-border-subtle shrink-0 flex items-center gap-3 px-4 py-2.5"
+            className="border-b border-border-subtle shrink-0 flex items-center gap-3 px-5 py-2.5"
           >
             {/* O padding de 2px acomoda o ponto de "hoje", que sai 2px para fora
                 da pílula: sendo hoje o último dia visível, esses 2px viravam
@@ -342,8 +342,14 @@ export function WeekPlanningView() {
             )}
           </div>
 
-          {/* ── Task list grouped by day ────────────────────────────────────── */}
-          <div data-tour="planning-task-list" className="flex-1 min-h-0 overflow-y-auto">
+          {/* ── Um cartão por dia ────────────────────────────────────────────
+              O corpo é o `p-5` de página com o degrau de 16 entre os cartões
+              (spec `1/1/1/1/1` da 3e), e o dia corrente é o mesmo cartão no tom
+              de acento. */}
+          <div
+            data-tour="planning-task-list"
+            className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-4"
+          >
             {filteredDays.map((day) => {
               const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
               if (dayTasks.length === 0 && dayFilter !== "all") return null;
@@ -354,42 +360,38 @@ export function WeekPlanningView() {
               const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
 
               return (
-                <div key={day}>
-                  <div
-                    className={`flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle ${isToday ? "bg-accent/5" : "bg-surface"}`}
-                  >
-                    <span
-                      className={`text-overline uppercase ${isToday ? "text-accent-text" : "text-fg-secondary"}`}
-                    >
-                      {dayLabel}
-                      {isToday && (
-                        <span className="ml-1.5 normal-case font-medium text-accent-text/70">
-                          hoje
-                        </span>
-                      )}
-                    </span>
-                    <div className="ml-auto flex items-center gap-2">
-                      {selectMode && dayTasks.length > 0 && (
-                        <button
-                          onClick={() => toggleSelectAllForDay(day)}
-                          className="text-sm text-fg-muted hover:text-fg transition-colors"
+                <SectionCard
+                  key={day}
+                  className="shrink-0"
+                  title={isToday ? `${dayLabel} · hoje` : dayLabel}
+                  tone={isToday ? "accent" : "default"}
+                  action={
+                    dayTasks.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        {selectMode && (
+                          <button
+                            onClick={() => toggleSelectAllForDay(day)}
+                            className="text-sm text-fg-muted hover:text-fg transition-colors"
+                          >
+                            {dayTasks.every((t) => selectedIds.has(t.id))
+                              ? "Desmarcar"
+                              : "Selecionar"}
+                          </button>
+                        )}
+                        <Badge
+                          tone={isToday ? "accent" : "neutral"}
+                          className="font-mono tabular-nums"
                         >
-                          {dayTasks.every((t) => selectedIds.has(t.id))
-                            ? "Desmarcar"
-                            : "Selecionar"}
-                        </button>
-                      )}
-                      {dayTasks.length > 0 && (
-                        <Badge className="font-mono tabular-nums">
                           {dayCompleted > 0
                             ? `${dayCompleted}/${dayTasks.length}`
                             : dayTasks.length}
                         </Badge>
-                      )}
-                    </div>
-                  </div>
+                      </div>
+                    )
+                  }
+                >
                   {dayTasks.length === 0 ? (
-                    <p className="px-4 py-3 text-xs text-fg-muted">Nenhuma tarefa planejada</p>
+                    <p className="px-3 py-2.5 text-xs text-fg-muted">Nenhuma tarefa planejada</p>
                   ) : (
                     dayTasks.map((task) => (
                       <PlannedTaskItem
@@ -414,7 +416,7 @@ export function WeekPlanningView() {
                       />
                     ))
                   )}
-                </div>
+                </SectionCard>
               );
             })}
           </div>

@@ -851,6 +851,11 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       corpoColuna: s3e.byPath("1/1/1/0/1"),
       rotulo: s3e.byText("Nome"),
       campo: s3e.byPath("1/1/1/0/1/0/1"),
+      filtroDias: s3e.byPath("1/1/1/1/0"),
+      semana7: s3e.byPath("1/1/1/1/1"),
+      cartaoDia: s3e.byPath("1/1/1/1/1/0"),
+      cartaoHoje: s3e.byPath("1/1/1/1/1/1"),
+      faixaHoje: s3e.byPath("1/1/1/1/1/1/0"),
     };
 
     it("a pílula de dia é a mesma pílula de 6/12 do Histórico", () => {
@@ -925,6 +930,54 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     it("o campo denso tem o padding 7/10 do spec", () => {
       const campo = shellOf(<Input size="sm" />);
       expectPadding(campo, SPEC_3E.campo);
+    });
+
+    /**
+     * A semana é lida do código-fonte, no molde que a F3 usou na `TasksPage`: o
+     * `WeekPlanningView` monta repositórios, banco e IPC, e uma dúzia de mocks
+     * faria cada hook novo quebrar a trava com um erro que não fala de
+     * geometria. O que se afirma aqui está inteiro na classe dos dois blocos.
+     */
+    it("a linha de dias e o corpo da semana têm o padding e o degrau do spec", () => {
+      const source = sourceOf("src/presentation/components/WeekPlanningView.tsx");
+      expectPadding(
+        classNameContaining(source, "border-b border-border-subtle shrink-0"),
+        SPEC_3E.filtroDias
+      );
+
+      const corpo = classNameContaining(source, "overflow-y-auto");
+      expectPadding(corpo, SPEC_3E.semana7);
+      expect(geometryOf(corpo).gap).toBe(numberOf(SPEC_3E.semana7, "gap"));
+    });
+
+    /**
+     * O dia é um `SectionCard`, e o dia corrente é o **mesmo** cartão no tom de
+     * acento — casca, faixa, régua, título e pílula trocam juntos. Escrito no
+     * call site, o cartão de hoje seria a faixa desenhada em dois lugares.
+     */
+    it("o cartão do dia é o cartão de seção, e o de hoje é o mesmo em acento", () => {
+      const hoje = shellOf(
+        <SectionCard title="Sex, 07/08 · hoje" tone="accent">
+          <div />
+        </SectionCard>
+      );
+      const faixa = hoje.children[0];
+
+      expect(geometryOf(hoje.className).borderRadius).toBe(radiusOf(SPEC_3E.cartaoHoje));
+      expect(SPEC_3E.cartaoHoje.style.overflow).toBe("hidden");
+      expectBackground(faixa, SPEC_3E.faixaHoje);
+      expectBottomRule(faixa, SPEC_3E.faixaHoje);
+
+      // O tom não pode ser inerte: o spec pinta a faixa de hoje com outra cor
+      // (`accent/8` contra o `surface` do dia comum), e é a única coisa que
+      // separa os dois cartões.
+      const comum = shellOf(
+        <SectionCard title="Seg, 03/08">
+          <div />
+        </SectionCard>
+      );
+      expect(geometryOf(comum.className).borderRadius).toBe(radiusOf(SPEC_3E.cartaoDia));
+      expect(faixa.className).not.toBe(comum.children[0].className);
     });
   });
 
