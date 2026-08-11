@@ -4,7 +4,7 @@ import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
-import { formatDurationCompact, formatTimeRange } from "@shared/utils/time";
+import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { TaskRow } from "@presentation/components/ui";
 import { TaskCard } from "./TaskCard";
@@ -94,7 +94,9 @@ export function TaskGroupCard({
         // um sufixo do subtítulo.
         meta={
           <span className="text-micro font-mono tabular-nums text-fg-muted">
-            {isGroup ? `${tasks.length} registros` : formatTimeRange(first.startTime, first.endTime)}
+            {isGroup
+              ? `${tasks.length} registros`
+              : formatRegisteredTimeRange(first.startTime, first.durationSeconds, first.endTime)}
           </span>
         }
         duration={formatDurationCompact(group.totalSeconds)}

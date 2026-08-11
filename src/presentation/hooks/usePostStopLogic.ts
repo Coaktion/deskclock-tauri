@@ -1,7 +1,7 @@
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { shouldDiscardTask, computeRoundedDuration } from "@domain/utils/taskStopRules";
+import { shouldDiscardTask, computeRoundedStop } from "@domain/utils/taskStopRules";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import type { ConfigContextValue } from "@shared/types/appConfig";
@@ -68,19 +68,15 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
       }
 
       let finalTask = task;
-      const rounded = computeRoundedDuration(
+      const rounded = computeRoundedStop(
+        task.startTime,
         duration,
         config.get("roundingEnabled"),
         config.get("roundingSlots"),
         config.get("roundingTolerance")
       );
       if (rounded !== null) {
-        finalTask = await updateTaskUC(
-          taskRepo,
-          task.id,
-          { durationSeconds: rounded },
-          task.updatedAt
-        );
+        finalTask = await updateTaskUC(taskRepo, task.id, rounded, task.updatedAt);
         triggerReload();
       }
 

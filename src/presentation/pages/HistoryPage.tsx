@@ -24,7 +24,7 @@ import {
   formatHHMMSS,
   formatHHMM,
   formatHistoryDayHeader,
-  formatTimeRange,
+  formatRegisteredTimeRange,
 } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import type { Task } from "@domain/entities/Task";
@@ -478,7 +478,11 @@ export function HistoryPage() {
                         subtitle={subtitle || undefined}
                         meta={
                           <span className="text-micro font-mono tabular-nums text-fg-muted">
-                            {formatTimeRange(task.startTime, task.endTime)}
+                            {formatRegisteredTimeRange(
+                              task.startTime,
+                              task.durationSeconds,
+                              task.endTime
+                            )}
                           </span>
                         }
                         duration={formatHHMMSS(task.durationSeconds ?? 0)}

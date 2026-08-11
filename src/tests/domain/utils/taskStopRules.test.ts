@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { shouldDiscardTask, computeRoundedDuration } from "@domain/utils/taskStopRules";
+import {
+  shouldDiscardTask,
+  computeRoundedDuration,
+  computeRoundedStop,
+} from "@domain/utils/taskStopRules";
 
 describe("shouldDiscardTask", () => {
   it("descarta tarefa com menos de 60s quando regra ativa", () => {
@@ -55,5 +59,37 @@ describe("computeRoundedDuration", () => {
 
   it("retorna null quando slots vazios", () => {
     expect(computeRoundedDuration(500, true, [], 0)).toBeNull();
+  });
+});
+
+describe("computeRoundedStop", () => {
+  const START = "2026-08-11T13:00:00.000Z";
+
+  it("grava o fim que fecha a conta com a duração arredondada", () => {
+    // parada real 13:41 (2460s), slots de 15 em 15 → sobe para 45min
+    expect(computeRoundedStop(START, 2460, true, [15, 30, 45, 60], 0)).toEqual({
+      durationSeconds: 2700,
+      endTime: "2026-08-11T13:45:00.000Z",
+    });
+  });
+
+  it("o fim recua quando o arredondamento desce para o slot inferior", () => {
+    // 16min com tolerância de 2min → fica em 15min, e o fim vem junto
+    expect(computeRoundedStop(START, 960, true, [15, 30], 2)).toEqual({
+      durationSeconds: 900,
+      endTime: "2026-08-11T13:15:00.000Z",
+    });
+  });
+
+  it("retorna null quando o arredondamento está desativado", () => {
+    expect(computeRoundedStop(START, 2460, false, [15], 0)).toBeNull();
+  });
+
+  it("retorna null quando a duração já cai no slot — nada a reescrever", () => {
+    expect(computeRoundedStop(START, 900, true, [15], 0)).toBeNull();
+  });
+
+  it("retorna null quando a duração é zero", () => {
+    expect(computeRoundedStop(START, 0, true, [15], 0)).toBeNull();
   });
 });

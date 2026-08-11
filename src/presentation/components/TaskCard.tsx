@@ -2,7 +2,7 @@ import { Play, Pencil, Trash2, CheckCheck } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { formatDurationCompact, formatTimeRange } from "@shared/utils/time";
+import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { TaskRow } from "@presentation/components/ui";
 
@@ -46,7 +46,7 @@ export function TaskCard({
       nested={nested}
       meta={
         <span className="text-micro font-mono tabular-nums text-fg-muted">
-          {formatTimeRange(task.startTime, task.endTime)}
+          {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
         </span>
       }
       duration={formatDurationCompact(task.durationSeconds ?? 0)}

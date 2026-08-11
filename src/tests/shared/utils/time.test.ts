@@ -8,6 +8,8 @@ import {
   computeEndHHMM,
   localDateISO,
   resolveRegisteredEndHHMM,
+  formatRegisteredTimeRange,
+  addSecondsISO,
 } from "@shared/utils/time";
 
 describe("localDateISO", () => {
@@ -110,4 +112,39 @@ describe("resolveRegisteredEndHHMM", () => {
     expect(resolveRegisteredEndHHMM("09:00", 0, "10:23")).toBe("10:23"));
   it("sem duração e sem fim, cai no início", () =>
     expect(resolveRegisteredEndHHMM("09:00", null, null)).toBe("09:00"));
+});
+
+describe("formatRegisteredTimeRange", () => {
+  // Constrói um ISO no fuso local, para a formatação não depender do TZ do runner.
+  const at = (h: number, m: number) => new Date(2026, 7, 11, h, m, 0).toISOString();
+
+  it("arredondada: a faixa fecha a conta com a duração, não com a parada", () =>
+    // parou 13:41, gravado 45min pelo arredondamento
+    expect(formatRegisteredTimeRange(at(13, 0), 2700, at(13, 41))).toBe("13:00–13:45"));
+
+  it("sem arredondamento, a faixa é o intervalo real", () =>
+    expect(formatRegisteredTimeRange(at(13, 0), 2280, at(13, 38))).toBe("13:00–13:38"));
+
+  it("pausada: o fim vem do tempo somado, não do intervalo", () =>
+    expect(formatRegisteredTimeRange(at(9, 0), 5400, at(11, 30))).toBe("09:00–10:30"));
+
+  it("sem duração gravada, cai no fim registrado", () =>
+    expect(formatRegisteredTimeRange(at(9, 0), null, at(10, 23))).toBe("09:00–10:23"));
+
+  it("tarefa em aberto não tem faixa, só o começo", () =>
+    expect(formatRegisteredTimeRange(at(9, 0), null, null)).toBe("09:00"));
+
+  it("duração zerada e sem fim também não inventa faixa", () =>
+    expect(formatRegisteredTimeRange(at(9, 0), 0, null)).toBe("09:00"));
+});
+
+describe("addSecondsISO", () => {
+  it("desloca o instante para frente", () =>
+    expect(addSecondsISO("2026-08-11T13:00:00.000Z", 2700)).toBe("2026-08-11T13:45:00.000Z"));
+
+  it("aceita deslocamento negativo", () =>
+    expect(addSecondsISO("2026-08-11T13:45:00.000Z", -900)).toBe("2026-08-11T13:30:00.000Z"));
+
+  it("atravessa a virada do dia", () =>
+    expect(addSecondsISO("2026-08-11T23:30:00.000Z", 3600)).toBe("2026-08-12T00:30:00.000Z"));
 });

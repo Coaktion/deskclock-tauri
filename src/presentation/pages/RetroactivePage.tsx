@@ -25,7 +25,7 @@ import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal"
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
-import { addDaysISO, formatHHMMSS, formatTimeRange, todayISO } from "@shared/utils/time";
+import { addDaysISO, formatHHMMSS, formatRegisteredTimeRange, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { ChevronLeft, ChevronRight, ListChecks, Pencil, Play, Trash2 } from "lucide-react";
@@ -70,7 +70,7 @@ function DayTaskRow({
       subtitle={subtitle || undefined}
       meta={
         <span className="text-micro font-mono tabular-nums text-fg-muted">
-          {formatTimeRange(task.startTime, task.endTime)}
+          {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
         </span>
       }
       duration={formatHHMMSS(task.durationSeconds ?? 0)}

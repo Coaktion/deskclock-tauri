@@ -45,10 +45,27 @@ export function formatTimeOfDay(isoString: string): string {
  * meia-quadratim e sem espaço, como o design a escreve. Sem fim registrado ela
  * é só o começo: a tarefa em aberto não tem faixa, e escrever `09:12–—` põe um
  * travessão onde o leitor espera uma hora.
+ *
+ * O fim é sempre `início + duração gravada` (`resolveRegisteredEndHHMM`), o mesmo
+ * que o modal de edição exibe. Mostrar aqui o instante da parada punha na tela um
+ * fim que não fechava a conta com a duração ao lado, e que virava outro número
+ * assim que a tarefa era aberta para editar. O `endTime` só entra como reserva,
+ * para o registro sem duração gravada.
  */
-export function formatTimeRange(startISO: string, endISO: string | null): string {
+export function formatRegisteredTimeRange(
+  startISO: string,
+  durationSeconds: number | null | undefined,
+  endISO: string | null
+): string {
   const start = formatTimeOfDay(startISO);
-  return endISO ? `${start}–${formatTimeOfDay(endISO)}` : start;
+  const hasDuration = durationSeconds != null && durationSeconds > 0;
+  if (!hasDuration && !endISO) return start;
+  return `${start}–${resolveRegisteredEndHHMM(start, durationSeconds, endISO ? formatTimeOfDay(endISO) : null)}`;
+}
+
+/** Desloca um instante ISO em N segundos, preservando o fuso do original. */
+export function addSecondsISO(isoString: string, seconds: number): string {
+  return new Date(new Date(isoString).getTime() + seconds * 1000).toISOString();
 }
 
 export function todayISO(): string {
