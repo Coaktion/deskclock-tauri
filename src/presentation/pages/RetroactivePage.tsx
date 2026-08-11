@@ -4,13 +4,13 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
+import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
-import { Button, IconButton, PageHeader, TaskRow } from "@presentation/components/ui";
+import { Button, IconButton, PageHeader, SectionCard, TaskRow } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -420,149 +420,151 @@ export function RetroactivePage() {
           />
         </CollapsibleFormColumn>
 
-        <div className="flex-1 min-w-0 flex flex-col">
-          {/* Tarefas planejadas para o dia — sugestões para lançamento. Sem
-              `border-b`: quem desenha a linha é o `ResizeHandle` abaixo, ou
-              haveria linha dupla. */}
+        <div className="flex-1 min-w-0 flex flex-col p-5 gap-5">
           {plannedTasks.length > 0 && (
-            <div className="shrink-0">
-              <div className="flex items-center gap-3 px-5 pt-2.5 pb-1">
-                <p className="text-overline uppercase text-fg-muted">Planejadas para este dia</p>
-                {/* Com uma só, o ▶ da própria linha já é este botão — o lote
-                    existe para o dia cheio de reuniões importadas. */}
-                {timedPlannedTasks.length > 1 && (
-                  <button
-                    onClick={() => void handleLaunchAllTimed()}
-                    disabled={launchingAll}
-                    title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
-                    className="ml-auto flex items-center gap-1.5 text-sm text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ListChecks size={14} />
-                    {launchingAll ? "Lançando…" : `Lançar ${timedPlannedTasks.length} com horário`}
-                  </button>
-                )}
-              </div>
-              {launchError && <p className="px-5 pb-1 text-xs text-danger">{launchError}</p>}
-              {/* `maxHeight`, não `height`: com duas planejadas a seção encolhe
-                  até o conteúdo, como fazia com o `max-h-36` que isto substitui
-                  — altura fixa deixaria espaço vazio todo dia. */}
-              <div
-                ref={plannedListRef}
-                className="overflow-y-auto"
-                style={{ maxHeight: plannedPanel.size }}
-              >
-                {plannedTasks.map((task) => {
-                  const projectName = projects.find((p) => p.id === task.projectId)?.name;
-                  const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-                  const hasTime = !!(task.startTime && task.endTime);
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-2 px-5 py-2 hover:bg-raised transition-colors"
+            <div>
+              <SectionCard
+                title="Planejadas para este dia"
+                count={plannedTasks.length}
+                className="border-b-0 rounded-b-none"
+                action={
+                  timedPlannedTasks.length > 1 && (
+                    <button
+                      onClick={() => void handleLaunchAllTimed()}
+                      disabled={launchingAll}
+                      title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
+                      className="ml-auto flex items-center gap-1.5 text-sm text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
-                      <button
-                        onClick={() => {
-                          if (hasTime) {
-                            void handleDirectLaunch(task);
-                            return;
-                          }
-                          // Pré-preencher é um convite a revisar os campos: com a
-                          // coluna recolhida, o clique não mostraria nada.
-                          formColumn.set(false);
-                          form.prefill(task);
-                        }}
-                        // Com o lote em curso, o clique aqui lançaria de novo o
-                        // que a fila já está lançando — a lista só se atualiza
-                        // no fim.
-                        disabled={launchingAll}
-                        title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                        className={`shrink-0 p-1.5 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                          hasTime
-                            ? "text-accent-text hover:bg-accent/10"
-                            : "text-fg-muted hover:text-fg hover:bg-raised"
-                        }`}
+                      <ListChecks size={14} />
+                      {launchingAll
+                        ? "Lançando…"
+                        : `Lançar ${timedPlannedTasks.length} com horário`}
+                    </button>
+                  )
+                }
+              >
+                <div
+                  ref={plannedListRef}
+                  className="overflow-y-auto"
+                  style={{ maxHeight: plannedPanel.size }}
+                >
+                  {plannedTasks.map((task) => {
+                    const projectName = projects.find((p) => p.id === task.projectId)?.name;
+                    const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+                    const hasTime = !!(task.startTime && task.endTime);
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-2.5 py-2.5 px-3 hover:bg-raised transition-colors border-b border-border-subtle last:border-b-0"
                       >
-                        <Play size={14} />
-                      </button>
-                      <span className="flex-1 text-sm text-fg-secondary truncate">{task.name}</span>
-                      {hasTime && (
-                        <span className="text-xs text-fg-muted font-mono tabular-nums shrink-0">
-                          {task.startTime}–{task.endTime}
-                        </span>
-                      )}
-                      {projectName && (
-                        <span className="text-xs text-fg-muted truncate max-w-20 shrink-0">
-                          {projectName}
-                        </span>
-                      )}
-                      {categoryName && (
-                        <span className="text-xs text-fg-muted truncate max-w-20 shrink-0">
-                          {categoryName}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        <div className="min-w-0 w-full flex items-center gap-2">
+                          <span
+                            className="shrink-0 w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: getProjectColor(task.projectId) }}
+                            aria-hidden
+                          />
+                          <div className="min-w-0 w-full">
+                            <p className="text-sm text-fg truncate">{task.name}</p>
+                            {(projectName || categoryName) && (
+                              <p className="text-xs text-fg-muted truncate mt-px">
+                                {projectName} {projectName && categoryName ? "·" : ""}{" "}
+                                {categoryName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {hasTime && (
+                          <span className="text-xs text-fg-muted font-mono tabular-nums shrink-0">
+                            {task.startTime}–{task.endTime}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (hasTime) {
+                              void handleDirectLaunch(task);
+                              return;
+                            }
+                            formColumn.set(false);
+                            form.prefill(task);
+                          }}
+                          disabled={launchingAll}
+                          title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
+                          className={`shrink-0 p-1.5 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            hasTime
+                              ? "text-accent-text hover:bg-accent/10"
+                              : "text-fg-muted hover:text-fg hover:bg-raised"
+                          }`}
+                        >
+                          <Play size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+              <ResizeHandle
+                {...plannedPanel.handleProps}
+                active={plannedPanel.isDragging}
+                className="-mt-0.5"
+                aria-label="Altura da lista de planejadas"
+                title="Arraste para redimensionar. Duplo clique volta ao padrão."
+              />
             </div>
-          )}
-
-          {plannedTasks.length > 0 && (
-            <ResizeHandle
-              {...plannedPanel.handleProps}
-              active={plannedPanel.isDragging}
-              aria-label="Altura da lista de planejadas"
-              title="Arraste para redimensionar. Duplo clique volta ao padrão."
-            />
           )}
 
           {/* Lista de tarefas */}
           <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
-            {/* Barra de seleção: mora aqui, e não no header, porque age sobre
-                esta lista — e o header já estava disputando espaço com a
-                navegação de data. Sem tarefas não há o que selecionar. */}
-            {tasks.length > 0 && (
-              <div className="shrink-0 flex items-center justify-end gap-3 px-5 py-2 border-b border-border-subtle">
-                {selectMode ? (
-                  <>
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        const allSelected = selectedIds.size >= tasks.length;
-                        setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
-                      }}
-                    >
-                      {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
-                    </Button>
-                    {workspaces.length > 1 && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))}
-                        disabled={selectedIds.size === 0}
-                      >
-                        Mover para workspace
+            <SectionCard
+              title="Apontamentos do dia"
+              action={
+                tasks.length > 0 && (
+                  <div className="shrink-0 flex items-center justify-end gap-3">
+                    {selectMode ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            const allSelected = selectedIds.size >= tasks.length;
+                            setSelectedIds(
+                              allSelected ? new Set() : new Set(tasks.map((t) => t.id))
+                            );
+                          }}
+                        >
+                          {selectedIds.size >= tasks.length
+                            ? "Desmarcar todas"
+                            : "Selecionar todas"}
+                        </Button>
+                        {workspaces.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))
+                            }
+                            disabled={selectedIds.size === 0}
+                          >
+                            Mover para workspace
+                          </Button>
+                        )}
+                        <Button
+                          variant="danger"
+                          onClick={() => void handleBulkDelete()}
+                          disabled={selectedIds.size === 0}
+                        >
+                          Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                        </Button>
+                        <Button variant="ghost" onClick={exitSelectMode}>
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => setSelectMode(true)}>
+                        Selecionar tarefas
                       </Button>
                     )}
-                    <Button
-                      variant="danger"
-                      onClick={() => void handleBulkDelete()}
-                      disabled={selectedIds.size === 0}
-                    >
-                      Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-                    </Button>
-                    <Button variant="ghost" onClick={exitSelectMode}>
-                      Cancelar
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="secondary" size="sm" onClick={() => setSelectMode(true)}>
-                    Selecionar tarefas
-                  </Button>
-                )}
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto">
+                  </div>
+                )
+              }
+            >
               {tasks.length === 0 ? (
                 <p className="text-center text-fg-muted text-sm py-10">
                   Nenhuma entrada para este dia
@@ -582,7 +584,7 @@ export function RetroactivePage() {
                   />
                 ))
               )}
-            </div>
+            </SectionCard>
           </div>
         </div>
       </div>
