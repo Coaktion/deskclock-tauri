@@ -235,6 +235,22 @@ export function geometryOf(className: string): Geometry {
       continue;
     }
 
+    /**
+     * `space-y-N` cai no mesmo `gap`, e não é atalho: numa **coluna** ele produz
+     * exatamente o ritmo que `row-gap` produz — margem entre irmãos, nenhuma nas
+     * pontas —, e é assim que o design o declara (`gap: 12` no corpo da coluna
+     * de formulário). Sem isto o resolvedor levanta, e nenhuma assertiva pode
+     * cobrir o espaçamento de quem usa `space-y` em vez de `gap`.
+     *
+     * Só o eixo y: `space-x` no meio de uma coluna seria outra medida, e traduzi-lo
+     * aqui esconderia a diferença em vez de levantar.
+     */
+    const spaceY = /^space-y-(.+)$/.exec(raw);
+    if (spaceY) {
+      out.gap = spacing(spaceY[1]);
+      continue;
+    }
+
     const box = /^(w|h|size)-(.+)$/.exec(raw);
     if (box) {
       if (NON_PX.has(box[2])) continue;

@@ -513,11 +513,12 @@ Depois da F6 (2026-08-10): a trava vai de **22 para 68 assertivas**, cobrindo as
 verdes e 12 `divergente`**, todas fora da 3a. Sete das 12 são o campo de formulário (padding nos
 dois tamanhos, rótulo), que é a F7.
 
-Depois da F7 (2026-08-10): **60 verdes e 8 `divergente`** nas mesmas 68 assertivas, e **4 dos 11
-casos da bancada em zero divergência de pixel** (`page-header`, `tour-button`, `badge-billable`,
-`field-sm`). Grafias de rótulo de campo: **4 → 1**. Overlines escritos à mão: **11 → 0**. As 8 que
-sobram são peças distintas — abas do `PageHeader`, cabeçalho do cartão de dia, `SectionRow`, pílula
-`sm` (duas telas), dica do `Toggle`, gap do ladrilho e a largura padrão da coluna de formulário.
+Depois da F7 (2026-08-10): **63 verdes e 7 `divergente`** em 70 assertivas, e **4 dos 11 casos da
+bancada em zero divergência de pixel** (`page-header`, `tour-button`, `badge-billable`, `field-sm`).
+Grafias de rótulo de campo: **4 → 1**. Overlines escritos à mão: **11 → 0**. Declarações do padrão
+da coluna: **2 → 1**. As 7 que sobram cobrem seis peças distintas — abas do `PageHeader`, cabeçalho
+do cartão de dia, `SectionRow`, dica do `Toggle`, gap do ladrilho e a pílula `sm`, que conta duas
+vezes por aparecer em duas telas.
 
 Depois da F2 (2026-08-10), medido na bancada visual: as **três formas** da linha em zero divergência
 de propriedade, e altura de **53,22 contra 55** nas três — 1,78px que são o line-height, não a linha.
@@ -1236,12 +1237,34 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   bloco aparece — a trava mede rótulo e padding separados) e a composição `coluna-formulario`, a
   pilha da 3f no ritmo do spec, fotografada nos dois modos antes de fechar.
 
+  **A coluna de formulário fechou junto** (pedido do usuário, ainda na F7, depois de medir 232px na
+  tela contra os 279 do design). São os 280px e o padding 12 do spec, e a trava vai a **7
+  `divergente`**:
+  - `FORM_COLUMN_WIDTH.default` de 256 para **280**, e `formColumnClass` de `p-2` para **`p-3`** —
+    o padding passa a acompanhar o `space-y-3` que já era 12.
+  - **O padrão estava escrito duas vezes, e o segundo é que valia.** `ConfigContext` declarava
+    `planningFormWidth: 256` à mão, e `useResizablePanel` só cai no `defaultSize` quando o gravado é
+    **0** — a config nunca devolve 0, devolve o `DEFAULTS` dela. Enquanto os dois discordassem, a
+    trava podia afirmar 280 e a tela abrir com outro número. Agora a config lê
+    `FORM_COLUMN_WIDTH.default`, e há uma assertiva de que ela não volte a teclar o número.
+  - **O cabeçalho da coluna foi junto**, de `px-2.5 py-1.5` para **`px-3 py-2`** (8/12 do spec): o
+    eixo x dele tem de ser o do corpo, ou o rótulo da coluna fica 2px para dentro dos campos. Fica
+    de fora o `bg-surface` que o spec dá a essa faixa — é a mesma anatomia do `SectionCard`, e é
+    decisão visual própria.
+  - **`useResizablePanel.test.tsx` dependia da coincidência.** Ele monta o `ConfigProvider` de
+    verdade, e o `256` do `OPTIONS` batia com o `256` do `DEFAULTS` por acaso; o `makeRepo()` passou
+    a devolver as três chaves de tamanho **zeradas**, que é o caminho documentado para o hook cair
+    no `defaultSize` que o próprio teste passa.
+  - **`space-y-*` entrou no resolvedor de geometria**, mapeado para `gap`: numa coluna ele produz
+    exatamente o ritmo do `row-gap`, e é assim que o design o declara. Sem isso ele levantava, e
+    nenhuma assertiva podia cobrir o espaçamento de quem usa `space-y`.
+
   **Fora, e registrado — não é dívida oculta, é medida que a etapa não tinha mandato para mexer:**
   - **As duas colunas de formulário renderizam o campo em `md`, e o spec as mede em `sm`** (7/10).
     O `ControlSize` já diz que `sm` "é o dos formulários densos (a coluna do Planejamento, o popup
     de 264px)" — o call site é que nunca passou a prop. A F7 corrigiu o valor dos dois degraus, não
     quem escolhe o degrau; `screenGeometry` e a bancada afirmam o primitivo, então nada disso está
     coberto pela trava.
-  - **A coluna tem `p-2` (8px) e o spec mede 12**, com o mesmo gap 12 nos dois.
+  - **A faixa do cabeçalho da coluna não pinta fundo**, e o spec a mede em `bg-surface`.
   - O `<label>` "Horas" do `MondayEntriesModal` fica em `text-sm`: é rótulo **ao lado** de um
     controle numa fileira, não acima de uma caixa, e o design não desenha esse nó.

@@ -72,7 +72,9 @@ export function CollapsibleFormColumn({
   return (
     <>
       <div data-tour={tourId} className={formColumnShellClass} style={{ width: panel.size }}>
-        <div className="shrink-0 flex items-center gap-2 px-2.5 py-1.5 border-b border-border-subtle">
+        {/* 8/12 do spec, e o eixo x tem de ser o mesmo do corpo (`p-3`): com o
+            cabeçalho em 10 o rótulo ficaria 2px para dentro dos campos. */}
+        <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border-subtle">
           {/* `leading-none`: com a entrelinha padrão, a caixa do texto fica mais
               alta que as letras e o rótulo desce em relação ao ícone ao lado. */}
           <span className="flex-1 text-overline leading-none uppercase text-fg-muted truncate">

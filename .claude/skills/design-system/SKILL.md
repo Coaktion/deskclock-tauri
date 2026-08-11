@@ -262,6 +262,14 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > exportado em `fieldStyles.ts` por **um** call site — o "Período" da exportação, cujo rótulo veste
   > um par de botões seguido de duas datas, e não um controle que caiba numa caixa.
   >
+  > **A coluna de formulário tem 280px e padding 12** (`FORM_COLUMN_WIDTH.default`,
+  > `formColumnClass`), medida do spec, e o cabeçalho dela usa o **mesmo eixo x** do corpo — em 10
+  > contra 12 o rótulo da coluna ficaria para dentro dos campos. O padrão é declarado **num lugar
+  > só**: `ConfigContext` lê `FORM_COLUMN_WIDTH.default` em vez de teclar o número, porque
+  > `useResizablePanel` só cai no `defaultSize` quando o gravado é 0 — e a config nunca devolve 0,
+  > devolve o `DEFAULTS` dela. Enquanto os dois estiveram escritos à mão, o de baixo é que abria a
+  > tela e o de cima é que a trava afirmava.
+  >
   > **Nas duas colunas de formulário todo campo tem rótulo**, como os specs da 3e e da 3f desenham.
   > Elas eram só placeholder, com o argumento de que o rótulo faria a coluna alternar texto e caixa
   > a cada linha — mas metade já tinha rótulo, no entalhe, então o que existia era a alternância

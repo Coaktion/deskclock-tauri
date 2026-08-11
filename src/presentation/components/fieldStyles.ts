@@ -53,13 +53,26 @@ export const fieldLabelClass = "text-overline uppercase text-fg-muted";
  */
 export const formColumnShellClass = "shrink-0 min-w-0 flex flex-col";
 
-/** Limites do arraste das colunas de formulário. O padrão é a largura que elas
- *  tinham fixa (`w-64`), então quem nunca arrastar não vê diferença. */
-export const FORM_COLUMN_WIDTH = { min: 224, max: 560, default: 256 } as const;
+/**
+ * Limites do arraste das colunas de formulário. O padrão são os **280px do
+ * spec** (telas 3e e 3f), e não os 256 com que a coluna nasceu — o `w-64` que
+ * ela tinha fixa antes de virar arrastável.
+ *
+ * **Este é o único lugar que declara o padrão.** Ele estava escrito também em
+ * `ConfigContext`, e era de lá que o número saía de verdade: `useResizablePanel`
+ * só cai no `defaultSize` quando o valor gravado é 0, e a config nunca devolve 0
+ * — devolve o `DEFAULTS` dela. Enquanto os dois discordassem, a trava podia
+ * afirmar um número que a tela não usava.
+ */
+export const FORM_COLUMN_WIDTH = { min: 224, max: 560, default: 280 } as const;
 
 /**
  * Corpo do formulário dentro da casca: é ele que rola e que espaça os campos.
  * Separado da casca porque o cabeçalho com o botão de recolher precisa ficar
  * parado enquanto os campos rolam por baixo.
+ *
+ * `p-3` e `space-y-3` são os **12/12 do spec** — o padding acompanha o gap, que
+ * já era 12. Em `p-2` a coluna apertava os campos contra a borda e contra o
+ * cabeçalho, que espaça por fora deles.
  */
-export const formColumnClass = "flex-1 min-h-0 overflow-y-auto p-2 space-y-3";
+export const formColumnClass = "flex-1 min-h-0 overflow-y-auto p-3 space-y-3";

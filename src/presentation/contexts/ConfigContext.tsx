@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
+import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
 import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
 import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
 import type {
@@ -22,8 +23,12 @@ const DEFAULTS: AppConfig = {
   showIntegrationsRail: true,
   planningFormCollapsed: false,
   retroactiveFormCollapsed: false,
-  planningFormWidth: 256,
-  retroactiveFormWidth: 256,
+  // O número mora em `FORM_COLUMN_WIDTH`, e não aqui: é **este** default que a
+  // tela usa (`useResizablePanel` só cai no `defaultSize` dele se o gravado for
+  // 0, e a config nunca devolve 0), então escrevê-lo à mão nos dois lugares
+  // deixava o padrão da coluna divergir do que a trava afirma.
+  planningFormWidth: FORM_COLUMN_WIDTH.default,
+  retroactiveFormWidth: FORM_COLUMN_WIDTH.default,
   retroactivePlannedHeight: 144,
   mode: "" as const,
   accent: "" as const,

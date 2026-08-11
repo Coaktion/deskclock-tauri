@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { createRef, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
+import { FORM_COLUMN_WIDTH, formColumnClass } from "@presentation/components/fieldStyles";
 import { OmniboxIdle } from "@presentation/components/OmniboxIdle";
 import { Sidebar } from "@presentation/components/Sidebar";
 import { Badge } from "@presentation/components/ui/Badge";
@@ -64,8 +64,8 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  *
  * **A tela 3a está em zero**: as 15 divergências que a F0 mediu foram fechadas
  * entre a F1 e a F5. As 12 que a F6 mediu nas outras seis telas viraram **7** na
- * F7, que fechou o campo de formulário — o padding nos dois tamanhos e o
- * rótulo, que era a mesma peça repetida em quatro assertivas.
+ * F7, que fechou o campo de formulário — o padding nos dois tamanhos e o rótulo,
+ * que era a mesma peça repetida em quatro assertivas — e a coluna que o abriga.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
  * renderizam sem provider — mais o `OmniboxIdle` e a `Sidebar`, que pedem um
@@ -879,10 +879,30 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       expect(geometryOf(pill.className).fontSize).toBe(numberOf(SPEC_3E.semana, "font-size"));
     });
 
-    divergente("a coluna de formulário nasce nos 280px do spec — divergente, 256 hoje", () => {
+    it("a coluna de formulário nasce nos 280px do spec", () => {
       // A largura é arrastável (`useResizablePanel`), então o que se compara é
       // o padrão: é ele que a tela mostra a quem nunca arrastou.
       expect(FORM_COLUMN_WIDTH.default).toBe(numberOf(SPEC_3E.coluna, "width"));
+    });
+
+    /**
+     * O padrão precisa ser **um** número. `useResizablePanel` só cai no
+     * `defaultSize` quando o gravado é 0, e a config nunca devolve 0 — devolve o
+     * `DEFAULTS` dela. Enquanto os dois estiveram escritos à mão, o de cima
+     * afirmava 280 e a tela abria com o de baixo.
+     */
+    it("o padrão da config é o mesmo do primitivo, e não um segundo número", () => {
+      const source = sourceOf("src/presentation/contexts/ConfigContext.tsx");
+      expect(source).toContain("planningFormWidth: FORM_COLUMN_WIDTH.default");
+      expect(source).toContain("retroactiveFormWidth: FORM_COLUMN_WIDTH.default");
+    });
+
+    it("o corpo da coluna tem o padding e o ritmo do spec", () => {
+      // A classe é constante exportada, não `className` de JSX: o corpo da
+      // coluna é escrito por dois formulários e a medida mora no módulo.
+      const actual = geometryOf(formColumnClass);
+      expectPadding(formColumnClass, SPEC_3E.corpoColuna);
+      expect(actual.gap).toBe(numberOf(SPEC_3E.corpoColuna, "gap"));
     });
 
     /**

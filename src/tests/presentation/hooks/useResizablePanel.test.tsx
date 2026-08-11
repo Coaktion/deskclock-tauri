@@ -5,10 +5,26 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+/**
+ * As três chaves de tamanho voltam **zeradas**, e é isso que faz o teste medir o
+ * `defaultSize` que ele mesmo passa. Zero é o valor de uma chave nunca escrita, e
+ * o hook o traduz para o padrão — o caminho documentado.
+ *
+ * Sem isso o `ConfigProvider` (que é o de verdade aqui) devolve o `DEFAULTS`
+ * dele, e cada expectativa deste arquivo passaria a depender da largura que a
+ * coluna do Planejamento tem na app. Elas concordavam por coincidência de dois
+ * literais, e a coincidência acabou quando a coluna foi para os 280px do design.
+ */
 function makeRepo(overrides: Partial<IConfigRepository> = {}): IConfigRepository {
   return {
     get: vi.fn((_key, defaultValue) => Promise.resolve(defaultValue)),
-    loadAll: vi.fn(() => Promise.resolve({})),
+    loadAll: vi.fn(() =>
+      Promise.resolve({
+        planningFormWidth: 0,
+        retroactiveFormWidth: 0,
+        retroactivePlannedHeight: 0,
+      })
+    ),
     set: vi.fn(() => Promise.resolve()),
     delete: vi.fn(() => Promise.resolve()),
     ...overrides,

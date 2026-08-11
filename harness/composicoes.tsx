@@ -1,6 +1,7 @@
 import { ChevronRight, Play } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 
+import { FORM_COLUMN_WIDTH, formColumnClass } from "@presentation/components/fieldStyles";
 import { BillableChip } from "@presentation/components/ui/BillableChip";
 import { Field } from "@presentation/components/ui/Field";
 import { Input } from "@presentation/components/ui/Input";
@@ -224,69 +225,81 @@ function Kpis({ layout }: { layout: "row" | "grid" }) {
  */
 function ColunaFormulario() {
   return (
-    <div className="w-[280px] shrink-0 flex flex-col gap-3 p-3 bg-canvas border-r border-border-subtle">
-      <Field label="Nome" htmlFor="galeria-nome">
-        <Input id="galeria-nome" variant="bare" size="sm" placeholder="Nome da tarefa" readOnly />
-      </Field>
-      <Field label="Projeto" htmlFor="galeria-projeto">
-        <Input
-          id="galeria-projeto"
-          variant="bare"
-          size="sm"
-          defaultValue="Cliente A"
-          readOnly
-          onChange={() => {}}
-        />
-      </Field>
-      <Field label="Categoria" htmlFor="galeria-categoria" boxClassName="flex items-center pr-2">
-        <Input
-          id="galeria-categoria"
-          variant="bare"
-          size="sm"
-          defaultValue="Desenvolvimento"
-          readOnly
-          onChange={() => {}}
-        />
-        <BillableChip billable onToggle={() => {}} />
-      </Field>
-      <Field label="Nº do chamado" htmlFor="galeria-cf">
-        <Input id="galeria-cf" variant="bare" size="sm" placeholder=" " readOnly />
-      </Field>
-      <Field label="Duração" htmlFor="galeria-duracao" boxClassName="flex items-center">
-        <Input
-          id="galeria-duracao"
-          variant="bare"
-          size="sm"
-          defaultValue="00:42"
-          readOnly
-          onChange={() => {}}
-          className="w-20! font-mono tabular-nums"
-        />
-        <span className="w-full pr-2.5 text-xs text-fg-muted truncate">Use: 1h30, 1h, 30...</span>
-      </Field>
-      <div className="flex gap-2">
-        <Field label="Início" htmlFor="galeria-inicio" className="flex-1">
+    <div
+      className="shrink-0 flex flex-col bg-canvas border-r border-border-subtle"
+      style={{ width: FORM_COLUMN_WIDTH.default }}
+    >
+      {/* O cabeçalho da coluna, no 8/12 do spec — é o eixo x dele que precisa
+          bater com o do corpo, ou o rótulo fica para dentro dos campos. */}
+      <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border-subtle">
+        <span className="flex-1 text-overline leading-none uppercase text-fg-muted truncate">
+          Novo apontamento
+        </span>
+      </div>
+      <div className={formColumnClass}>
+        <Field label="Nome" htmlFor="galeria-nome">
+          <Input id="galeria-nome" variant="bare" size="sm" placeholder="Nome da tarefa" readOnly />
+        </Field>
+        <Field label="Projeto" htmlFor="galeria-projeto">
           <Input
-            id="galeria-inicio"
+            id="galeria-projeto"
             variant="bare"
             size="sm"
-            defaultValue="13:48"
+            defaultValue="Cliente A"
             readOnly
             onChange={() => {}}
-            className="font-mono tabular-nums"
           />
         </Field>
-        <Field label="Fim" htmlFor="galeria-fim" className="flex-1">
+        <Field label="Categoria" htmlFor="galeria-categoria" boxClassName="flex items-center pr-2">
           <Input
-            id="galeria-fim"
+            id="galeria-categoria"
             variant="bare"
             size="sm"
-            defaultValue="14:30"
+            defaultValue="Desenvolvimento"
             readOnly
             onChange={() => {}}
-            className="font-mono tabular-nums"
           />
+          <BillableChip billable onToggle={() => {}} />
         </Field>
+        <Field label="Nº do chamado" htmlFor="galeria-cf">
+          <Input id="galeria-cf" variant="bare" size="sm" placeholder=" " readOnly />
+        </Field>
+        <Field label="Duração" htmlFor="galeria-duracao" boxClassName="flex items-center">
+          <Input
+            id="galeria-duracao"
+            variant="bare"
+            size="sm"
+            defaultValue="00:42"
+            readOnly
+            onChange={() => {}}
+            className="w-20! font-mono tabular-nums"
+          />
+          <span className="w-full pr-2.5 text-xs text-fg-muted truncate">Use: 1h30, 1h, 30...</span>
+        </Field>
+        <div className="flex gap-2">
+          <Field label="Início" htmlFor="galeria-inicio" className="flex-1">
+            <Input
+              id="galeria-inicio"
+              variant="bare"
+              size="sm"
+              defaultValue="13:48"
+              readOnly
+              onChange={() => {}}
+              className="font-mono tabular-nums"
+            />
+          </Field>
+          <Field label="Fim" htmlFor="galeria-fim" className="flex-1">
+            <Input
+              id="galeria-fim"
+              variant="bare"
+              size="sm"
+              defaultValue="14:30"
+              readOnly
+              onChange={() => {}}
+              className="font-mono tabular-nums"
+            />
+          </Field>
+        </div>
       </div>
     </div>
   );
@@ -296,8 +309,8 @@ export const COMPOSICOES: Composicao[] = [
   {
     id: "coluna-formulario",
     nota: "Todo campo com rótulo em overline acima da caixa: a pilha do Lançamento Manual, no ritmo do spec da 3f.",
-    width: 280,
-    height: 420,
+    width: FORM_COLUMN_WIDTH.default,
+    height: 480,
     element: <ColunaFormulario />,
   },
   {
