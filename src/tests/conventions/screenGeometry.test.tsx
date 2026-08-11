@@ -63,9 +63,9 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  * `divergente` numa tela é a tela fiel.
  *
  * **A tela 3a está em zero**: as 15 divergências que a F0 mediu foram fechadas
- * entre a F1 e a F5. As 12 que sobram são das outras seis telas, medidas na F6,
- * e metade delas é a mesma peça — o campo de formulário, que diverge no padding
- * nos dois tamanhos e no rótulo.
+ * entre a F1 e a F5. As 12 que a F6 mediu nas outras seis telas viraram **7** na
+ * F7, que fechou o campo de formulário — o padding nos dois tamanhos e o
+ * rótulo, que era a mesma peça repetida em quatro assertivas.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
  * renderizam sem provider — mais o `OmniboxIdle` e a `Sidebar`, que pedem um
@@ -702,11 +702,10 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * O padding do campo é o mesmo em todas as telas que têm formulário, e
-     * diverge em todas: `md` rende 10/6 contra os 12/7 do spec. Está aqui, e
-     * não só na 3d, porque é o campo da busca que a 3b desenha.
+     * O padding do campo é o mesmo em todas as telas que têm formulário. Está
+     * aqui, e não só na 3d, porque é o campo da busca que a 3b desenha.
      */
-    divergente("a busca tem o padding do campo do spec — divergente, campos", () => {
+    it("a busca tem o padding do campo do spec", () => {
       const busca = shellOf(<SearchInput value="" onChange={() => {}} />);
       const campo = busca.querySelector("input")!;
       const actual = geometryOf(campo.className);
@@ -838,7 +837,7 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       expect(actual.fontSize).toBe(numberOf(SPEC_3D.campo, "font-size"));
     });
 
-    divergente("o campo tem o padding 7/12 do spec — divergente, campos", () => {
+    it("o campo tem o padding 7/12 do spec", () => {
       const campo = shellOf(<Input value="Rafael" onChange={() => {}} />);
       expectPadding(campo, SPEC_3D.campo);
     });
@@ -887,13 +886,12 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * **Decisão pendente nº1 do handoff, medida.** O design escreve o rótulo do
-     * campo como **overline acima da caixa** (10px/600); o app o encaixa na
-     * borda, em `caption`. São quatro grafias no app — `Field`, o entalhe em
-     * classes do `EditTaskModal`, o rótulo flutuante dos campos personalizados
-     * e o rótulo solto —, e unificá-las nos 10px do token é trabalho próprio.
+     * O rótulo é **overline acima da caixa** (10px/600), e é o `Field` que o
+     * escreve. Eram quatro grafias — o entalhe do próprio `Field`, o mesmo
+     * entalhe em classes no `EditTaskModal`, o rótulo flutuante dos campos
+     * personalizados e o `<label>` solto —, colapsadas na F7.
      */
-    divergente("o rótulo do campo é o overline de 10px — divergente, campos", () => {
+    it("o rótulo do campo é o overline de 10px", () => {
       const campo = shellOf(
         <Field label="Nome">
           <Input variant="bare" />
@@ -904,7 +902,7 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       expect(rotulo.fontWeight).toBe(Number(SPEC_3E.rotulo.style["font-weight"]));
     });
 
-    divergente("o campo denso tem o padding 7/10 do spec — divergente, campos", () => {
+    it("o campo denso tem o padding 7/10 do spec", () => {
       const campo = shellOf(<Input size="sm" />);
       expectPadding(campo, SPEC_3E.campo);
     });

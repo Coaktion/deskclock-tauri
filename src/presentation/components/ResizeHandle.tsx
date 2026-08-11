@@ -27,9 +27,8 @@ interface ResizeHandleProps extends React.ComponentPropsWithoutRef<"div"> {
  * quer é um traço fino que responde ao cursor.
  *
  * **A caixa do grip usa o fundo da superfície** (`bg-canvas`, o mesmo da
- * janela) para apagar o trecho de linha que passa por trás dela — a mesma
- * técnica do `notchedLabelClass`. Sem o recorte apareceriam três linhas em vez
- * de duas barras.
+ * janela) para apagar o trecho de linha que passa por trás dela. Sem o recorte
+ * apareceriam três linhas em vez de duas barras.
  *
  * O gutter de 6px é largura (ou altura) de layout de verdade, não sobreposição:
  * o grip cabe nele sem invadir os painéis vizinhos. O `after` estende a área de

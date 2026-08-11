@@ -3,6 +3,8 @@ import type { ReactElement } from "react";
 
 import { chipBillableClass, chipEmptyClass } from "@presentation/components/chipStyles";
 import { Badge } from "@presentation/components/ui/Badge";
+import { Field } from "@presentation/components/ui/Field";
+import { Input } from "@presentation/components/ui/Input";
 import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { PageHeader } from "@presentation/components/ui/PageHeader";
 import { SectionCard } from "@presentation/components/ui/SectionCard";
@@ -197,6 +199,24 @@ export const CASES: VisualCase[] = [
       <button type="button" className={chipBillableClass}>
         Billable
       </button>
+    ),
+  },
+  {
+    // O campo com rótulo, que é o par overline + caixa. É aqui que a altura do
+    // bloco aparece: a trava mede as classes do rótulo e o padding da caixa
+    // separados, e o que o entalhe custava era justamente a soma dos dois.
+    //
+    // A largura é a da coluna do mock menos o padding dela (280 − 12 × 2), e o
+    // `size="sm"` é o degrau que o spec mede nesta coluna — o mesmo que a
+    // assertiva `o campo denso tem o padding 7/10` afirma.
+    id: "field-sm",
+    screen: "3e",
+    anchor: "1/1/1/0/1/0",
+    width: 256,
+    element: (
+      <Field label="Nome" htmlFor="bancada-nome">
+        <Input id="bancada-nome" variant="bare" size="sm" placeholder="Nome da tarefa" readOnly />
+      </Field>
     ),
   },
 ];

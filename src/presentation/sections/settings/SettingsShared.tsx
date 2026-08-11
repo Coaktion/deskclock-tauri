@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Input, Select } from "@presentation/components/ui";
+import { Field, Input, Select } from "@presentation/components/ui";
 
 export function SliderRow({
   label,
@@ -85,7 +85,9 @@ export function NumberInputWithCommit({
   onCommit,
   inputClassName,
 }: {
-  label: string;
+  /** Ausente, o campo fica sem rótulo próprio: quem o nomeia é a linha em
+   *  volta, com o texto à esquerda e o controle à direita (a porta da API). */
+  label?: string;
   min: number;
   max: number;
   committed: number;
@@ -107,18 +109,18 @@ export function NumberInputWithCommit({
     onCommit(parsed);
   }
 
-  return (
-    <div>
-      {label && <label className="block text-sm text-fg-muted mb-1.5">{label}</label>}
-      <Input
-        type="number"
-        min={min}
-        max={max}
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onBlur={handleBlur}
-        className={inputClassName ?? "w-full font-mono tabular-nums"}
-      />
-    </div>
+  const field = (
+    <Input
+      type="number"
+      variant={label ? "bare" : "boxed"}
+      min={min}
+      max={max}
+      value={input}
+      onChange={(e) => setInput(e.target.value)}
+      onBlur={handleBlur}
+      className={inputClassName ?? "w-full font-mono tabular-nums"}
+    />
   );
+
+  return label ? <Field label={label}>{field}</Field> : field;
 }

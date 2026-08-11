@@ -447,20 +447,10 @@ lado.
 
 ## 3. Decisões pendentes do usuário
 
-1. ~~**`Field` entalhado vs. overline.**~~ — **decidida em 2026-08-10**: o campo segue o design,
-   nos formulários **e** nos modais (_"os fields estão divergentes do design e não deveriam, tanto
-   os dos forms quanto dos modais"_). Medido e declarado na F6 como `divergente`; **corrigir é a
-   F7**.
-
-   > O que a decisão abrange, medido: o **rótulo** — o design escreve overline de 10px/600 **acima**
-   > da caixa, e o app o encaixa na borda em `caption` (10,5). São quatro grafias: `Field` (o
-   > entalhe como componente, 2 arquivos), o mesmo entalhe em classes
-   > (`notchedBoxClass`/`notchedLabelClass`, no `EditTaskModal`), o rótulo flutuante
-   > (`floatingLabelClass`, no `CustomFieldInputs`) e o rótulo solto acima do campo
-   > (`<label className="text-xs …">`, sem componente nenhum). E o **padding** da casca, que
-   > diverge nos dois tamanhos e não depende do rótulo: `md` rende 10/6 contra os 12/7 do spec,
-   > `sm` rende 8/4 contra 10/7. O padding mora em `ui/controlStyles.ts` e vale para `Input`,
-   > `Select` e `Textarea` de uma vez.
+1. ~~**`Field` entalhado vs. overline.**~~ — **decidida em 2026-08-10 e corrigida na F7.** O campo
+   segue o design, nos formulários **e** nos modais (_"os fields estão divergentes do design e não
+   deveriam, tanto os dos forms quanto dos modais"_). As quatro grafias de rótulo colapsaram no
+   overline de `ui/Field`, e o padding foi para 12/7 (`md`) e 10/7 (`sm`).
 
 2. **Integrações (tela 3g).** _"status vira chip curto em vez de frase; a não conectada fica com
    contorno tracejado e um botão explícito"_. O `StatusBadge` ainda é a frase "Conectado como
@@ -471,12 +461,10 @@ lado.
 4. **Overlay compacto 52px vs. 68px do design.** Pode ter sido escolha do usuário; sinalizado
    porque a escala de texto do popup foi calibrada no documento para 68/78px.
 5. ~~**Larguras dos três modais `max-w-2xl`**~~ — **decidido em 2026-08-10**, ver A3 sessão 3.
-6. **Os três overlines escritos à mão.** `text-overline` existe e é o token, mas há três grafias
-   soltas convivendo: `text-xs font-medium … tracking-wide` (`EditPlannedTaskModal`),
-   `text-xs font-semibold … tracking-widest` (os dois modais de apontamentos) e `text-xs …
-tracking-wide` sem peso (`MoveToWorkspaceModal`). A sessão 1 do A3 as manteve, e a sessão 3 as
-   manteve por consistência com ela — **unificá-las nos 10 px do token é decisão própria**, porque
-   encolhe rótulo em cinco lugares. Aparenta a mesma família da decisão 1 (`Field` entalhado).
+6. ~~**Os três overlines escritos à mão.**~~ — **decidida em 2026-08-10 e corrigida na F7**, junto
+   com a decisão 1, que é da mesma família. As três grafias viraram `text-overline` em 11 lugares /
+   7 arquivos — as duas que a decisão não nomeava (`WeekPlanningView` e `CollapsibleFormColumn`)
+   escreviam a mesma string das nomeadas, e ficar de fora manteria a grafia viva.
 
 ---
 
@@ -525,6 +513,12 @@ Depois da F6 (2026-08-10): a trava vai de **22 para 68 assertivas**, cobrindo as
 verdes e 12 `divergente`**, todas fora da 3a. Sete das 12 são o campo de formulário (padding nos
 dois tamanhos, rótulo), que é a F7.
 
+Depois da F7 (2026-08-10): **60 verdes e 8 `divergente`** nas mesmas 68 assertivas, e **4 dos 11
+casos da bancada em zero divergência de pixel** (`page-header`, `tour-button`, `badge-billable`,
+`field-sm`). Grafias de rótulo de campo: **4 → 1**. Overlines escritos à mão: **11 → 0**. As 8 que
+sobram são peças distintas — abas do `PageHeader`, cabeçalho do cartão de dia, `SectionRow`, pílula
+`sm` (duas telas), dica do `Toggle`, gap do ladrilho e a largura padrão da coluna de formulário.
+
 Depois da F2 (2026-08-10), medido na bancada visual: as **três formas** da linha em zero divergência
 de propriedade, e altura de **53,22 contra 55** nas três — 1,78px que são o line-height, não a linha.
 O `SectionCard` de três linhas fecha em **198,66 contra 204**, que é exatamente 3 × 1,78: a conta que
@@ -569,6 +563,22 @@ translate 20 **exato**, `FilterPill`, a escala de ícones 14/16/18, zero `font-b
 
 **Verificação manual pendente** (nem as três sessões do A3, nem o A4, nem as fases B, C e E foram
 conferidos na tela). Por ordem de risco:
+
+-6. **O campo de formulário em toda tela e todo modal** (F7) — é a mudança de maior alcance depois
+    da escala: **todo** campo do app mudou de padding, e **todo** rótulo saiu do entalhe na borda
+    para o overline acima da caixa. A coluna de formulário foi fotografada nos dois modos na
+    bancada (`coluna-formulario`) e lê bem; o que a foto não cobre são os call sites que **não**
+    são coluna. Por ordem: o **popup de 264px** (gaveta de edição), que é onde o rótulo novo mais
+    aperta a altura; o **`EditTaskModal`**, o mais alto e o único `md` que rola — ele ganhou três
+    blocos de rótulo e perdeu o `pt-3` de três campos; os **campos personalizados**, que eram o
+    rótulo flutuante e agora ocupam altura fixa numa lista de N (Planejamento, Manual,
+    `EditTaskModal`, `EditPlannedTaskModal`, popup); e o **`ExportModal`**, cujo grid de 2 colunas
+    passou a ter seis blocos de rótulo + caixa.
+    -6b. **Os 11 overlines que encolheram de 10,5 para 10px** (decisão nº6): os cabeçalhos de dia
+    do Histórico e dos dois modais de apontamentos, os três blocos do `EditPlannedTaskModal`, os
+    dois do `MoveToWorkspaceModal`, o cabeçalho de dia do `WeekPlanningView` e — o mais arriscado —
+    o rótulo **vertical** da coluna recolhida (`CollapsibleFormColumn`), que é o único texto girado
+    do app e agora tem 10px numa faixa de 36.
 
 -5. **A sidebar nas 7 telas** (F5) — o rótulo caiu de 12,25px para **9px**, e é a peça que aparece
     em toda tela. Conferir se ele ainda **se lê** — 9px é o menor texto do app, e no **modo claro**
@@ -1171,19 +1181,67 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   chip fora do eixo do botão. É o mesmo tipo de defeito que a F2 corrigiu nos dois artefatos dela:
   a bancada medindo o fixture, não o componente.
 
-- **F7 · O campo de formulário** — pendente. É a maior das 12 divergências que a F6 deixou
-  medidas, e a única que o usuário apontou por conta própria. Duas frentes, e a segunda depende da
-  primeira só na ordem de conferir na tela:
-  - **Padding**, em `ui/controlStyles.ts`: `md` de `px-2.5 py-1.5` para 12/7 e `sm` de `px-2 py-1`
-    para 10/7. Os 7px saem da escala como `py-1.75` — é o mesmo passo fracionário que o
-    `py-0.75` do `chipStyles` já usa, e o build emite o utilitário. Toca **todo** campo do app de
-    uma vez, incluindo a busca; as duas assertivas de padding do `screenGeometry` viram `it`.
-  - **Rótulo**: as quatro grafias colapsam no overline de 10px acima da caixa. Isto **encolhe
-    rótulo em toda tela de formulário e em todo modal**, e é o que faz a etapa pedir a inspeção nos
-    2 modos × 4 acentos. A decisão pendente nº6 (os overlines escritos à mão) é da mesma família e
-    cabe aqui.
+- **F7 · O campo de formulário** — ✅ **feita (2026-08-10)**. Era a maior das 12 divergências que a
+  F6 deixou medidas, e a única que o usuário apontou por conta própria. A trava vai de **12 para 8
+  `divergente`**, e o campo é a única peça que sai inteira.
 
-  Fora, e a conferir com o usuário antes: o `floatingLabelClass` dos campos personalizados existe
-  por um motivo próprio — o rótulo precisa continuar visível depois de preenchido, porque "Project
-  Stage" não se explica pela posição no formulário. Um overline fixo acima da caixa **resolve**
-  isso; o que se perde é a economia de altura numa lista de campos dinâmicos.
+  **`field-sm` é o quarto caso fiel da bancada: 255×51,53 contra 255×52, zero divergência de
+  propriedade, 0,00% de pixel.** Os 0,47px que sobram são o mesmo `--text-sm--line-height` que
+  segura a linha em 53,22 desde a F2.
+
+  **Padding**, em `ui/controlStyles.ts`: `md` foi de `px-2.5 py-1.5` para **`px-3 py-1.75`** (12/7)
+  e `sm` de `px-2 py-1` para **`px-2.5 py-1.75`** (10/7). Os 7px saem da escala como `py-1.75`, o
+  mesmo passo fracionário do `py-0.75` do `chipStyles`, e o build confirma o utilitário emitido
+  (`padding-block:calc(var(--spacing) * 1.75)`). **A densidade ficou sendo só lateral** — o eixo
+  vertical é o mesmo nos dois tamanhos, que é como o design os mede, e faz sentido: o que a coluna
+  estreita economiza é largura.
+
+  **Rótulo**: as quatro grafias colapsaram no overline de 10px acima da caixa, e quem o escreve é o
+  `ui/Field`, reconstruído — bloco `flex flex-col gap-1`, `<label>` no degrau `overline`, caixa por
+  baixo. **Com o entalhe foram embora as compensações que ele espalhava por call site:** o `mt-1.5`
+  no fluxo (mais um `mt-4.5` e dois `<div>` que só existiam para receber o `space-y-*` do pai) e o
+  **`pt-3` em todo controle de dentro**, que era o que impedia o texto de subir sobre o rótulo.
+  - `notchedBoxClass`/`notchedLabelClass` e `floatingFieldClass`/`floatingLabelClass` foram
+    **apagados**; de `fieldStyles.ts` sobrou a caixa sem rótulo, a casca da coluna e o
+    `fieldLabelClass` novo.
+  - **`fieldLabelClass` existe por um call site só** — o "Período" da exportação, cujo rótulo veste
+    um par de botões seguido de duas datas, e não um controle que caiba numa caixa. Escrever a
+    string ali à mão teria criado a quinta grafia no mesmo commit que fecha as quatro.
+  - O `Field` ganhou **`boxClassName`**, pelo mesmo motivo que o `Modal` tem `bodyClassName`: com o
+    rótulo fora da caixa, `flex-1` é do bloco e `items-center` é da caixa, e a prop única mandava
+    os dois para o mesmo lugar. `Field.test.tsx` amarra a separação.
+
+  **As três frentes que o usuário ampliou, decididas em 2026-08-10:**
+  - **Os campos personalizados entram** (decisão pendente nº1, o resto dela). O rótulo flutuante
+    prometia manter "Project Stage" visível depois de preenchido; o overline fixo **resolve isso
+    melhor**, e sem as 9 variantes de `group-has-[…]:` que a implementação sem JavaScript pedia. Com
+    ele saiu o `placeholder=" "`, que existia só para o `:placeholder-shown` casar.
+  - **A decisão pendente nº6 entra**: as três grafias de overline escrito à mão viraram
+    `text-overline` em **11 lugares / 7 arquivos** — `EditPlannedTaskModal` (3), `MoveToWorkspaceModal`
+    (2), `HistoryPage` (2), os dois modais de apontamentos, `WeekPlanningView` e
+    `CollapsibleFormColumn`. As duas últimas não estavam nomeadas na decisão e escreviam a **mesma
+    string** das nomeadas: deixá-las de fora manteria a grafia viva.
+  - **As duas colunas de formulário ganham rótulo.** `PlannedTaskForm` e `RetroactiveEntryForm` não
+    tinham nenhum — só placeholder —, e os specs da 3e e da 3f desenham overline acima de **todas**
+    as caixas. O argumento contra ("o rótulo faria a coluna alternar texto e caixa a cada linha")
+    não se sustentava: metade da coluna já tinha rótulo, no entalhe, então o que existia era a
+    alternância entre **dois desenhos de campo**. O placeholder continua, dizendo o formato
+    (`Buscar projeto…`, `HH:MM`); o rótulo diz o que é.
+
+  As quatro assertivas do campo viraram `it`, e **cada uma foi verificada reprovando pela medida**,
+  com sonda: `md` de volta a `py-1.5` reprova a busca e o campo de Configurações; `sm` de volta a
+  `px-2 py-1` reprova o campo denso; e o rótulo em `text-xs` dá `esperado 10, atual 10,5`.
+
+  **A bancada ganhou duas peças:** o caso `field-sm` (o par overline + caixa, que é onde a altura do
+  bloco aparece — a trava mede rótulo e padding separados) e a composição `coluna-formulario`, a
+  pilha da 3f no ritmo do spec, fotografada nos dois modos antes de fechar.
+
+  **Fora, e registrado — não é dívida oculta, é medida que a etapa não tinha mandato para mexer:**
+  - **As duas colunas de formulário renderizam o campo em `md`, e o spec as mede em `sm`** (7/10).
+    O `ControlSize` já diz que `sm` "é o dos formulários densos (a coluna do Planejamento, o popup
+    de 264px)" — o call site é que nunca passou a prop. A F7 corrigiu o valor dos dois degraus, não
+    quem escolhe o degrau; `screenGeometry` e a bancada afirmam o primitivo, então nada disso está
+    coberto pela trava.
+  - **A coluna tem `p-2` (8px) e o spec mede 12**, com o mesmo gap 12 nos dois.
+  - O `<label>` "Horas" do `MondayEntriesModal` fica em `text-sm`: é rótulo **ao lado** de um
+    controle numa fileira, não acima de uma caixa, e o design não desenha esse nó.

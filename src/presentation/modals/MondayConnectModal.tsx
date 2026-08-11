@@ -3,7 +3,7 @@ import { ExternalLink, KeyRound } from "lucide-react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { MondayAuthError } from "@infra/integrations/monday/errors";
-import { Button, Input, Modal } from "@presentation/components/ui";
+import { Button, Field, Input, Modal } from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface MondayConnectModalProps {
@@ -96,24 +96,20 @@ export function MondayConnectModal({ onConnected, onClose }: MondayConnectModalP
         </ol>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-sm text-fg-secondary" htmlFor="monday-api-key">
-          Token da API
-        </label>
-        <div className="relative">
-          <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-          <Input
-            id="monday-api-key"
-            type="password"
-            size="sm"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Cole seu token aqui"
-            className="pl-8"
-            autoFocus
-          />
-        </div>
-      </div>
+      <Field label="Token da API" htmlFor="monday-api-key" boxClassName="relative">
+        <KeyRound size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-muted" />
+        <Input
+          id="monday-api-key"
+          type="password"
+          size="sm"
+          variant="bare"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="Cole seu token aqui"
+          className="pl-8"
+          autoFocus
+        />
+      </Field>
 
       {error && <p className="text-xs text-danger">{error}</p>}
     </Modal>

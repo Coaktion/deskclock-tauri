@@ -392,9 +392,7 @@ export function HistoryPage() {
         {searched && groups.length > 0 && (
           <>
             <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
-                Entradas
-              </span>
+              <span className="text-overline uppercase text-fg-secondary">Entradas</span>
               {selectMode ? (
                 <div className="flex items-center gap-3">
                   <Button
@@ -437,7 +435,7 @@ export function HistoryPage() {
                 {/* Sem `overflow-hidden` no cartão: ele viraria o scrollport do
                     `sticky` abaixo, que então nunca sairia do lugar. */}
                 <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-surface border-b border-border-subtle rounded-t-card">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
+                  <span className="text-overline uppercase text-fg-secondary">
                     {formatHistoryDayHeader(group.dateISO)}
                   </span>
                   <div className="flex items-center gap-2">

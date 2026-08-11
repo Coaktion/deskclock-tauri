@@ -115,7 +115,7 @@ export function EditPlannedTaskModal({
           (`fieldStyles.ts`): campo comum desenha a própria casca, e quem divide
           a linha com um botão vive dentro de uma caixa. */}
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">Tarefa</p>
+        <p className="text-overline uppercase text-fg-muted">Tarefa</p>
         <Input
           autoFocus
           value={name}
@@ -157,7 +157,7 @@ export function EditPlannedTaskModal({
       <div className="border-t border-border-subtle" />
 
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">Agendamento</p>
+        <p className="text-overline uppercase text-fg-muted">Agendamento</p>
         {/* Alternância em `accent`/`secondary`, a mesma língua do botão
             "Filtros" e do `FilterPill` aceso. Não é `SegmentedControl`: ele é
             uma faixa compacta de pílulas, e estes três ocupam a linha inteira. */}
@@ -218,9 +218,7 @@ export function EditPlannedTaskModal({
       <div className="border-t border-border-subtle" />
 
       <div className="flex flex-col gap-3">
-        <p className="text-xs font-medium text-fg-muted uppercase tracking-wide">
-          Ações ao iniciar
-        </p>
+        <p className="text-overline uppercase text-fg-muted">Ações ao iniciar</p>
 
         {actions.length > 0 && (
           <ul className="flex flex-col gap-1.5">

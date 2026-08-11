@@ -3,7 +3,7 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
+import { formColumnClass } from "@presentation/components/fieldStyles";
 import { BillableChip, Field, Input } from "@presentation/components/ui";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
@@ -22,8 +22,12 @@ interface RetroactiveEntryFormProps {
  * personalizados o formulário cresce sem limite, e empilhado sobre a lista ele
  * empurrava os registros do dia para fora da tela.
  *
- * Os rótulos são placeholders — inclusive os dos campos personalizados — para
- * a coluna não virar uma alternância de texto e caixa a cada linha.
+ * **Todo campo tem rótulo em overline acima da caixa** (`Field`), como o spec da
+ * 3f desenha. Eram placeholders, com o argumento de que o rótulo faria a coluna
+ * alternar texto e caixa a cada linha — mas metade dela já tinha rótulo (o
+ * entalhe da duração e das horas), então o que existia era a alternância entre
+ * dois desenhos de campo, não a economia dela. O placeholder continua, dizendo
+ * o formato ("Buscar projeto…", "HH:MM"); o rótulo diz o que é.
  */
 export function RetroactiveEntryForm({
   form,
@@ -37,26 +41,35 @@ export function RetroactiveEntryForm({
 
   return (
     <div className={formColumnClass} onKeyDown={handleKeyDown}>
-      <Input
-        ref={form.nameRef}
-        value={form.name}
-        onChange={(e) => form.setName(e.target.value)}
-        placeholder="Nome da tarefa"
-      />
+      <Field label="Nome" htmlFor="retro-name">
+        <Input
+          id="retro-name"
+          ref={form.nameRef}
+          variant="bare"
+          value={form.name}
+          onChange={(e) => form.setName(e.target.value)}
+          placeholder="Nome da tarefa"
+        />
+      </Field>
 
-      <Autocomplete
-        value={form.projectName}
-        onChange={form.setProjectName}
-        onSelect={(o) => {
-          form.setSelectedProjectId(o.id);
-          form.clearCategory();
-        }}
-        options={projects}
-        placeholder="Projeto"
-      />
-
-      <div className={`${boxClass} flex items-center pr-2`}>
+      <Field label="Projeto" htmlFor="retro-project">
         <Autocomplete
+          id="retro-project"
+          value={form.projectName}
+          onChange={form.setProjectName}
+          onSelect={(o) => {
+            form.setSelectedProjectId(o.id);
+            form.clearCategory();
+          }}
+          options={projects}
+          placeholder="Buscar projeto…"
+          variant="bare"
+        />
+      </Field>
+
+      <Field label="Categoria" htmlFor="retro-category" boxClassName="flex items-center pr-2">
+        <Autocomplete
+          id="retro-category"
           value={form.categoryName}
           onChange={(v) => {
             form.setCategoryName(v);
@@ -69,12 +82,12 @@ export function RetroactiveEntryForm({
             if (cat) form.setBillable(cat.defaultBillable);
           }}
           options={categoryOptions}
-          placeholder="Categoria"
+          placeholder="Buscar categoria…"
           className="flex-1"
           variant="bare"
         />
         <BillableChip billable={form.billable} onToggle={() => form.setBillable((b) => !b)} />
-      </div>
+      </Field>
 
       <CustomFieldInputs
         fields={customFields}
@@ -84,37 +97,29 @@ export function RetroactiveEntryForm({
         className="space-y-3"
       />
 
-      {/* O wrapper existe só para receber o `space-y-3` do pai. Sem ele, o
-          `mt-1.5` da caixa cairia no mesmo elemento e *substituiria* a margem do
-          space-y em vez de somar — foi por isso que, no rascunho, a duração
-          precisou de 16px enquanto início e fim se resolveram com 6px. */}
-      <div>
-        <Field label="Duração" htmlFor="retro-duration" className="mt-4.5 flex items-center">
-          <Input
-            id="retro-duration"
-            data-tour="retroactive-duration"
-            variant="bare"
-            value={form.durationInput}
-            onChange={(e) => form.setDurationInput(e.target.value)}
-            onBlur={form.commitDuration}
-            onKeyDown={(e) => {
-              // Consome porque tem trabalho próprio antes do submit: o Enter não
-              // dispara o `onBlur`, então a duração digitada precisa virar hora
-              // de fim aqui — senão a tarefa nasceria com o fim antigo.
-              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-              e.preventDefault();
-              const newEnd = form.commitDuration();
-              void form.handleAdd(newEnd || undefined);
-            }}
-            placeholder="HH:MM"
-            title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className="w-20! pt-3"
-          />
-          <span className="w-full pt-3 pb-1.5 pr-2.5 text-xs text-fg-muted truncate">
-            Use: 1h30, 1h, 30...
-          </span>
-        </Field>
-      </div>
+      <Field label="Duração" htmlFor="retro-duration" boxClassName="flex items-center">
+        <Input
+          id="retro-duration"
+          data-tour="retroactive-duration"
+          variant="bare"
+          value={form.durationInput}
+          onChange={(e) => form.setDurationInput(e.target.value)}
+          onBlur={form.commitDuration}
+          onKeyDown={(e) => {
+            // Consome porque tem trabalho próprio antes do submit: o Enter não
+            // dispara o `onBlur`, então a duração digitada precisa virar hora
+            // de fim aqui — senão a tarefa nasceria com o fim antigo.
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            const newEnd = form.commitDuration();
+            void form.handleAdd(newEnd || undefined);
+          }}
+          placeholder="HH:MM"
+          title="Aceita: 1:30, 90, 1h, 1h 30m"
+          className="w-20!"
+        />
+        <span className="w-full pr-2.5 text-xs text-fg-muted truncate">Use: 1h30, 1h, 30...</span>
+      </Field>
 
       <div data-tour="retroactive-timeinputs" className="flex gap-2">
         <Field label="Início" htmlFor="retro-start" className="flex-1">
@@ -132,7 +137,6 @@ export function RetroactiveEntryForm({
               e.preventDefault();
               form.handleStartCommit("");
             }}
-            className="pt-3"
           />
         </Field>
         <Field label="Fim" htmlFor="retro-end" className="flex-1">
@@ -148,7 +152,6 @@ export function RetroactiveEntryForm({
               e.preventDefault();
               form.handleEndCommit("");
             }}
-            className="pt-3"
           />
         </Field>
       </div>

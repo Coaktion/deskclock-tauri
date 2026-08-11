@@ -19,8 +19,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { fieldLabelClass } from "@presentation/components/fieldStyles";
 import {
   Button,
+  Field,
   IconButton,
   Input,
   Modal,
@@ -171,17 +173,19 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
   return (
     <div onKeyDown={handleKeyDown} className="flex flex-col gap-4 h-full overflow-y-auto">
       <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2">
-          <label className="text-sm text-fg-secondary mb-1 block" htmlFor="export-profile-name">
-            Nome do perfil
-          </label>
-          <Input id="export-profile-name" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
+        <Field label="Nome do perfil" htmlFor="export-profile-name" className="col-span-2">
+          <Input
+            id="export-profile-name"
+            variant="bare"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </Field>
 
-        <div>
-          <label className="text-sm text-fg-secondary mb-1 block">Formato</label>
+        <Field label="Formato">
           <Select
             aria-label="Formato"
+            variant="bare"
             value={format}
             onChange={(e) => setFormat(e.target.value as ExportFormat)}
             className="w-full"
@@ -189,13 +193,13 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
             <option value="csv">CSV</option>
             <option value="json">JSON</option>
           </Select>
-        </div>
+        </Field>
 
         {format === "csv" && (
-          <div>
-            <label className="text-sm text-fg-secondary mb-1 block">Separador</label>
+          <Field label="Separador">
             <Select
               aria-label="Separador"
+              variant="bare"
               value={separator}
               onChange={(e) => setSeparator(e.target.value as CsvSeparator)}
               className="w-full"
@@ -203,13 +207,13 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
               <option value="comma">Vírgula</option>
               <option value="semicolon">Ponto-e-vírgula</option>
             </Select>
-          </div>
+          </Field>
         )}
 
-        <div>
-          <label className="text-sm text-fg-secondary mb-1 block">Duração</label>
+        <Field label="Duração">
           <Select
             aria-label="Duração"
+            variant="bare"
             value={durationFormat}
             onChange={(e) => setDurationFormat(e.target.value as DurationFormat)}
             className="w-full"
@@ -218,12 +222,12 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
             <option value="decimal">Decimal (horas)</option>
             <option value="minutes">Minutos</option>
           </Select>
-        </div>
+        </Field>
 
-        <div>
-          <label className="text-sm text-fg-secondary mb-1 block">Formato de data</label>
+        <Field label="Formato de data">
           <Select
             aria-label="Formato de data"
+            variant="bare"
             value={dateFormat}
             onChange={(e) => setDateFormat(e.target.value as DateFormat)}
             className="w-full"
@@ -231,7 +235,7 @@ function ProfileForm({ initial, customFields, onSave, onCancel }: ProfileFormPro
             <option value="iso">ISO (AAAA-MM-DD)</option>
             <option value="dd/mm/yyyy">DD/MM/AAAA</option>
           </Select>
-        </div>
+        </Field>
 
         <div className="col-span-2">
           <label className="flex items-center gap-2 text-sm text-fg-secondary cursor-pointer">
@@ -433,10 +437,10 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
         {tab === "export" && (
           <div className="flex flex-col gap-4">
             {/* Perfil */}
-            <div>
-              <label className="text-sm text-fg-secondary mb-1 block">Perfil de exportação</label>
+            <Field label="Perfil de exportação">
               <Select
                 aria-label="Perfil de exportação"
+                variant="bare"
                 value={selectedProfileId}
                 onChange={(e) => setSelectedProfileId(e.target.value)}
                 className="w-full"
@@ -448,11 +452,13 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
                   </option>
                 ))}
               </Select>
-            </div>
+            </Field>
 
-            {/* Período */}
+            {/* Período — o rótulo não veste um campo, e sim um par de botões
+                seguido de duas datas: fica como overline solto, na mesma medida
+                que o `Field` escreve. */}
             <div>
-              <label className="text-sm text-fg-secondary mb-1 block">Período</label>
+              <p className={`${fieldLabelClass} mb-1`}>Período</p>
               <div className="flex gap-2 mb-2">
                 {(["today", "custom"] as PeriodMode[]).map((m) => (
                   <Button

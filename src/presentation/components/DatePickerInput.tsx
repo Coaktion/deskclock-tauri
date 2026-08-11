@@ -129,7 +129,7 @@ export function DatePickerInput({
   }
 
   const field = label ? (
-    <Field label={label} className={`${invalid ? "border-danger!" : ""} ${className}`}>
+    <Field label={label} className={className} boxClassName={invalid ? "border-danger!" : ""}>
       <Input
         ref={inputRef}
         variant="bare"
@@ -138,7 +138,7 @@ export function DatePickerInput({
         placeholder={placeholder}
         onClick={handleOpen}
         onKeyDown={handleKeyDown}
-        className="pt-3 cursor-pointer"
+        className="cursor-pointer"
       />
     </Field>
   ) : (

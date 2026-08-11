@@ -316,7 +316,7 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
             {dayGroups.map((group) => (
               <div key={group.dateISO}>
                 <div className="flex items-center justify-between px-5 py-2.5 bg-surface/60 border-b border-border-subtle sticky top-0 z-10">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-fg-secondary">
+                  <span className="text-overline uppercase text-fg-secondary">
                     {formatHistoryDayHeader(group.dateISO)}
                   </span>
                   <span className="text-xs font-mono tabular-nums text-fg-muted">

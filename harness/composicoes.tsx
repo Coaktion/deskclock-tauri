@@ -1,6 +1,9 @@
 import { ChevronRight, Play } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 
+import { BillableChip } from "@presentation/components/ui/BillableChip";
+import { Field } from "@presentation/components/ui/Field";
+import { Input } from "@presentation/components/ui/Input";
 import { KpiCard } from "@presentation/components/ui/KpiCard";
 import { SectionCard } from "@presentation/components/ui/SectionCard";
 import { TaskRow } from "@presentation/components/ui/TaskRow";
@@ -189,7 +192,13 @@ function Kpis({ layout }: { layout: "row" | "grid" }) {
     <section
       className={`flex-1 min-w-0 ${layout === "grid" ? "grid grid-cols-2 gap-3" : "flex gap-3"}`}
     >
-      <KpiCard label="Billable hoje" value="04:12:38" tone="billable" barPct={72} hint="72% do total" />
+      <KpiCard
+        label="Billable hoje"
+        value="04:12:38"
+        tone="billable"
+        barPct={72}
+        hint="72% do total"
+      />
       <KpiCard
         label="Non-billable"
         value="01:36:02"
@@ -203,7 +212,94 @@ function Kpis({ layout }: { layout: "row" | "grid" }) {
   );
 }
 
+/**
+ * A coluna de formulário do Lançamento Manual, na largura e no ritmo do spec da
+ * 3f (280px, padding 12, gap 12). É o que a F7 mais mexe: **todo** rótulo saiu
+ * do entalhe na borda para o overline acima da caixa, e o campo mudou de padding
+ * nos dois tamanhos.
+ *
+ * A foto responde o que a medida não responde: se a pilha de rótulo + caixa
+ * ainda lê como uma coluna, e se o overline de 10px em `fg-muted` se sustenta no
+ * **modo claro**, que é onde ele some primeiro.
+ */
+function ColunaFormulario() {
+  return (
+    <div className="w-[280px] shrink-0 flex flex-col gap-3 p-3 bg-canvas border-r border-border-subtle">
+      <Field label="Nome" htmlFor="galeria-nome">
+        <Input id="galeria-nome" variant="bare" size="sm" placeholder="Nome da tarefa" readOnly />
+      </Field>
+      <Field label="Projeto" htmlFor="galeria-projeto">
+        <Input
+          id="galeria-projeto"
+          variant="bare"
+          size="sm"
+          defaultValue="Cliente A"
+          readOnly
+          onChange={() => {}}
+        />
+      </Field>
+      <Field label="Categoria" htmlFor="galeria-categoria" boxClassName="flex items-center pr-2">
+        <Input
+          id="galeria-categoria"
+          variant="bare"
+          size="sm"
+          defaultValue="Desenvolvimento"
+          readOnly
+          onChange={() => {}}
+        />
+        <BillableChip billable onToggle={() => {}} />
+      </Field>
+      <Field label="Nº do chamado" htmlFor="galeria-cf">
+        <Input id="galeria-cf" variant="bare" size="sm" placeholder=" " readOnly />
+      </Field>
+      <Field label="Duração" htmlFor="galeria-duracao" boxClassName="flex items-center">
+        <Input
+          id="galeria-duracao"
+          variant="bare"
+          size="sm"
+          defaultValue="00:42"
+          readOnly
+          onChange={() => {}}
+          className="w-20! font-mono tabular-nums"
+        />
+        <span className="w-full pr-2.5 text-xs text-fg-muted truncate">Use: 1h30, 1h, 30...</span>
+      </Field>
+      <div className="flex gap-2">
+        <Field label="Início" htmlFor="galeria-inicio" className="flex-1">
+          <Input
+            id="galeria-inicio"
+            variant="bare"
+            size="sm"
+            defaultValue="13:48"
+            readOnly
+            onChange={() => {}}
+            className="font-mono tabular-nums"
+          />
+        </Field>
+        <Field label="Fim" htmlFor="galeria-fim" className="flex-1">
+          <Input
+            id="galeria-fim"
+            variant="bare"
+            size="sm"
+            defaultValue="14:30"
+            readOnly
+            onChange={() => {}}
+            className="font-mono tabular-nums"
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
 export const COMPOSICOES: Composicao[] = [
+  {
+    id: "coluna-formulario",
+    nota: "Todo campo com rótulo em overline acima da caixa: a pilha do Lançamento Manual, no ritmo do spec da 3f.",
+    width: 280,
+    height: 420,
+    element: <ColunaFormulario />,
+  },
   {
     id: "tasks-corpo",
     nota: "Com planejadas: KPI em 2×2 ao lado da lista, e as Entradas com a altura do que listam.",

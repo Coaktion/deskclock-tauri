@@ -1,37 +1,48 @@
+import { fieldLabelClass } from "@presentation/components/fieldStyles";
 import type { ReactNode } from "react";
 
 /**
- * Campo com rótulo encaixado na borda. O controle vai como filho, sem casca
- * própria — quem desenha fundo, borda e raio é a caixa, e é por isso que o
- * campo lê como uma coisa só quando divide a linha com um botão. O controle é
- * um `<Input variant="bare">` (ou `Select`/`Textarea` no mesmo variante).
+ * Campo de formulário: **rótulo em overline acima da caixa**, na medida do spec
+ * extraído (tela 3e — 10px/600, `0.1em`, gap 4 até a caixa). O controle vai como
+ * filho, sem casca própria — quem desenha fundo, borda e raio é a caixa, e é por
+ * isso que o campo lê como uma coisa só quando divide a linha com um botão ou
+ * com um texto auxiliar. O controle é um `<Input variant="bare">` (ou
+ * `Select`/`Textarea` no mesmo variante).
  *
- * **Sob `space-y-*`:** o `mt-1.5` que compensa a subida do rótulo é escrito no
- * próprio elemento, então *substitui* a margem do `space-y` em vez de somar.
- * Sendo filho direto de um container com `space-y-*`, envolva num `<div>`.
+ * **O rótulo era encaixado na borda**, e o app tinha mais três grafias para a
+ * mesma coisa: o mesmo entalhe escrito em classes, o rótulo flutuante dos campos
+ * personalizados e o `<label>` solto em `body/ui`. As quatro colapsaram aqui.
+ * Com o entalhe foram junto as compensações que ele espalhava por call site — o
+ * `mt-1.5` no fluxo (para o rótulo caber acima da borda) e o `pt-3` em **todo**
+ * controle de dentro (para o texto não subir sobre o rótulo).
  */
 interface FieldProps {
   label: string;
   /** Sem ele, o clique no rótulo não foca o campo. */
   htmlFor?: string;
   children: ReactNode;
+  /** Classes do bloco inteiro — largura e lugar na linha (`flex-1`, `w-32`). */
   className?: string;
+  /**
+   * Classes da **caixa**: o arranjo de quem divide a linha com o controle
+   * (`flex items-center pr-2`) e a borda de erro. Separado do `className` pelo
+   * mesmo motivo que o `bodyClassName` do `Modal` — na caixa, o `flex-1` não
+   * chegaria à linha; no bloco, o `items-center` não chegaria à caixa.
+   */
+  boxClassName?: string;
 }
 
-export function Field({ label, htmlFor, children, className = "" }: FieldProps) {
+export function Field({ label, htmlFor, children, className = "", boxClassName = "" }: FieldProps) {
   return (
-    <div
-      className={`relative mt-1.5 bg-raised border border-border rounded-control focus-within:border-accent transition-colors ${className}`}
-    >
-      {/* O fundo do rótulo precisa ser o da caixa: é ele que apaga o trecho de
-          borda por baixo. Divergindo, sobra um risco atravessando o texto. */}
-      <label
-        htmlFor={htmlFor}
-        className="absolute -top-2 left-1.5 px-1 bg-raised text-xs text-fg-muted rounded-sm"
-      >
+    <div className={`flex flex-col gap-1 ${className}`}>
+      <label htmlFor={htmlFor} className={fieldLabelClass}>
         {label}
       </label>
-      {children}
+      <div
+        className={`bg-raised border border-border rounded-control focus-within:border-accent transition-colors ${boxClassName}`}
+      >
+        {children}
+      </div>
     </div>
   );
 }

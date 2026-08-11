@@ -31,6 +31,10 @@ export type ControlVariant = "boxed" | "bare" | "plain";
  * `body/ui` nos dois casos, e o que muda é o quanto a casca respira em volta.
  * Enquanto o `sm` era um degrau menor de fonte, o mesmo formulário lia em dois
  * tamanhos dependendo da largura da coluna em que caísse.
+ *
+ * Contra o spec, a densidade ficou sendo **só lateral** — 10px contra 12, com o
+ * mesmo eixo vertical. É o design que os mede assim, e faz sentido: o que a
+ * coluna estreita precisa economizar é largura.
  */
 export type ControlSize = "sm" | "md";
 
@@ -40,11 +44,20 @@ const SHELL: Record<ControlVariant, string> = {
   plain: "bg-transparent border-none",
 };
 
-/** Por extenso, nunca montado em runtime: o scanner do Tailwind não vê classe
- *  interpolada e não geraria CSS nenhum para ela (§8.4). */
+/**
+ * As medidas do spec extraído: `md` é 7/12 (tela 3d, o campo de Configurações e
+ * o dos modais) e `sm` é 7/10 (tela 3e, a coluna do Planejamento). O eixo
+ * vertical é o mesmo nos dois — o que o `sm` encolhe é a lateral —, e os 7px
+ * saem da escala como `py-1.75`, o mesmo passo fracionário que o `py-0.75` do
+ * `chipStyles` já usa: no Tailwind v4 ele multiplica `--spacing`, e o build
+ * emite o utilitário.
+ *
+ * Por extenso, nunca montado em runtime: o scanner do Tailwind não vê classe
+ * interpolada e não geraria CSS nenhum para ela (§8.4).
+ */
 const PADDING: Record<ControlSize, string> = {
-  sm: "px-2 py-1",
-  md: "px-2.5 py-1.5",
+  sm: "px-2.5 py-1.75",
+  md: "px-3 py-1.75",
 };
 
 /**

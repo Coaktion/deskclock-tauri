@@ -3,6 +3,7 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
+import { fieldLabelClass } from "@presentation/components/fieldStyles";
 import { Input, SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
 import { NumberInputWithCommit } from "./SettingsShared";
 
@@ -66,10 +67,7 @@ export function GeralTab() {
 
   async function handleToggle(
     key:
-      | "liveTrayTimer"
-      | "closeOnFocusLoss"
-      | "discardTasksUnderOneMinute"
-      | "showIntegrationsRail",
+      "liveTrayTimer" | "closeOnFocusLoss" | "discardTasksUnderOneMinute" | "showIntegrationsRail",
     setter: (v: boolean) => void,
     value: boolean
   ) {
@@ -116,8 +114,11 @@ export function GeralTab() {
           <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-accent-text text-lg font-semibold shrink-0 select-none">
             {userName ? userName[0].toUpperCase() : "?"}
           </div>
+          {/* O campo é `plain` — a linha do cartão já espaça, e uma caixa aqui
+              o desalinharia do avatar ao lado —, então o rótulo é o overline
+              solto: não há caixa para o `Field` desenhar. */}
           <div className="flex-1 min-w-0">
-            <label htmlFor="settings-user-name" className="block text-sm text-fg-muted">
+            <label htmlFor="settings-user-name" className={`block ${fieldLabelClass}`}>
               Como quer ser chamado?
             </label>
             <Input

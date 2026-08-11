@@ -61,10 +61,11 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > montada em runtime (`bg-${slot}-500`) o Tailwind não vê. A lista curada vive em
   > `domain/utils/workspaceColor.ts`.
 
-  > **`rounded-sm` sobrevive fora da escala de três raios**, em cinco lugares. Todos são marcas de
-  > 2 a 8 px — o tique do checkbox, a barra da linha do tempo, o retalho que o rótulo encaixado usa
-  > para apagar a borda. Com o raio de chip (6 px) elas viram bolhas: os três raios governam caixa,
-  > não micromarca.
+  > **`rounded-sm` sobrevive fora da escala de três raios**, em três lugares. Todos são marcas de
+  > 2 a 8 px — o tique do checkbox, o traço do estado parcial, a barra da linha do tempo. Com o raio
+  > de chip (6 px) elas viram bolhas: os três raios governam caixa, não micromarca. (Eram cinco: os
+  > outros dois eram o retalho com que o rótulo **encaixado** apagava o trecho de borda por baixo de
+  > si, e o rótulo saiu do entalhe.)
 - **Famílias:** **Source Sans 3** (`--font-sans`) e **Source Code Pro** (`--font-mono`), a mesma
   superfamília — título e cronômetro têm o mesmo esqueleto. Vêm empacotadas: os woff2 saem dos
   pacotes `@fontsource-variable/*` e o `@font-face` é escrito à mão no topo de `src/index.css`,
@@ -192,11 +193,12 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   antigas seguem em pé enquanto as telas não migram, e são apagadas ao migrar o último consumidor
   de cada uma — foi assim que `components/SearchInput.tsx`, o `ToggleRow`/`SettingsCard`/`CardRow`
   do `SettingsShared`, o `Toggle` de `integrations/shared`, o `integrationButtonClass`, o
-  `settingsInputClass`, o `fieldControlClass`, o `fieldClass` e o `bareInputClass` saíram. Ao
-  lado deles fica um vocabulário de classe, não componente: `components/chipStyles.ts` (os chips de
-  atributo do omnibox) e `components/fieldStyles.ts`, que depois da migração dos campos guarda só o
-  que veste o campo **por fora** — a caixa (`boxClass`), os dois rótulos (encaixado e flutuante) e a
-  casca da coluna de formulário.
+  `settingsInputClass`, o `fieldControlClass`, o `fieldClass`, o `bareInputClass`, o entalhe
+  (`notchedBoxClass`/`notchedLabelClass`) e o rótulo flutuante
+  (`floatingFieldClass`/`floatingLabelClass`) saíram. Ao lado deles fica um vocabulário de classe,
+  não componente: `components/chipStyles.ts` (os chips de atributo do omnibox) e
+  `components/fieldStyles.ts`, que depois da migração dos campos guarda só a caixa **sem rótulo**
+  (`boxClass`), o `fieldLabelClass` e a casca da coluna de formulário.
 
   > **O que o `Button` trava é a caixa, não a cor.** As cinco variantes saíram de uma contagem dos
   > call sites, não de um catálogo: `primary` (acento cheio), `accent` (acento suave), `secondary`
@@ -239,6 +241,32 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > dos formulários densos (a coluna do Planejamento, o popup de 264 px). Enquanto ele foi um degrau
   > menor de fonte, o mesmo formulário lia em dois tamanhos dependendo da largura da coluna em que
   > caísse.
+  >
+  > **O padding é 12/7 no `md` e 10/7 no `sm`**, medida a medida do spec (telas 3d e 3e), e a
+  > densidade é **só lateral**: o eixo vertical é o mesmo nos dois, que é como o design os mede — o
+  > que a coluna estreita economiza é largura. Os 7px saem da escala como `py-1.75`, o mesmo passo
+  > fracionário do `py-0.75` do `chipStyles`: no Tailwind v4 ele multiplica `--spacing`, e o build
+  > emite o utilitário.
+  >
+  > **O rótulo é overline de 10px acima da caixa, e quem o escreve é o `Field`.** Havia quatro
+  > grafias para a mesma coisa — o entalhe na borda (como componente e copiado em classes), o rótulo
+  > flutuante dos campos personalizados e o `<label>` solto em `body/ui` —, e o entalhe cobrava caro:
+  > `mt-1.5` no fluxo para o rótulo caber acima da borda, `<div>` de embrulho para esse `mt` não
+  > substituir a margem do `space-y-*` do pai, e **`pt-3` em todo controle de dentro** para o texto
+  > não subir sobre o rótulo. Nada disso existe mais. O `Field` é bloco `flex flex-col gap-1`,
+  > rótulo no degrau `overline`, caixa por baixo — e o controle dentro dela é `bare`.
+  >
+  > **`className` veste o bloco, `boxClassName` veste a caixa**, pelo mesmo motivo que o `Modal` tem
+  > `bodyClassName`: `flex-1` é lugar na linha e `items-center` é arranjo de quem divide a caixa com
+  > o controle, e uma prop só mandaria os dois para o mesmo elemento. `fieldLabelClass` está
+  > exportado em `fieldStyles.ts` por **um** call site — o "Período" da exportação, cujo rótulo veste
+  > um par de botões seguido de duas datas, e não um controle que caiba numa caixa.
+  >
+  > **Nas duas colunas de formulário todo campo tem rótulo**, como os specs da 3e e da 3f desenham.
+  > Elas eram só placeholder, com o argumento de que o rótulo faria a coluna alternar texto e caixa
+  > a cada linha — mas metade já tinha rótulo, no entalhe, então o que existia era a alternância
+  > entre dois desenhos de campo. O placeholder ficou, dizendo o **formato** (`Buscar projeto…`,
+  > `HH:MM`); o rótulo diz **o que é**.
   >
   > **Caixa, rádio e faixa não são `Input`, e a assinatura os recusa** — `type` os exclui por tipo.
   > Não têm casca, fundo nem raio; vesti-los com o vocabulário de campo os quebraria. Um `Checkbox`

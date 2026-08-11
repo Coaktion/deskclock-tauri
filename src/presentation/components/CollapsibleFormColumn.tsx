@@ -62,7 +62,7 @@ export function CollapsibleFormColumn({
         <PanelLeftOpen size={16} className="shrink-0" />
         {/* De pé, lido de cima para baixo: virar o texto é o que permite manter
             o rótulo numa faixa dessa largura em vez de só um ícone sem nome. */}
-        <span className="[writing-mode:vertical-rl] text-xs uppercase tracking-wide whitespace-nowrap">
+        <span className="[writing-mode:vertical-rl] text-overline uppercase whitespace-nowrap">
           {label}
         </span>
       </button>

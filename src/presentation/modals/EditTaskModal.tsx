@@ -6,8 +6,8 @@ import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { boxClass, notchedBoxClass, notchedLabelClass } from "@presentation/components/fieldStyles";
-import { BillableChip, Button, Input, Modal } from "@presentation/components/ui";
+import { boxClass } from "@presentation/components/fieldStyles";
+import { BillableChip, Button, Field, Input, Modal } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
@@ -216,10 +216,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
           onChange={setStartDate}
           className="flex-1"
         />
-        <div className={`${boxClass} ${notchedBoxClass} w-32 shrink-0`}>
-          <label htmlFor="edit-task-duration" className={notchedLabelClass}>
-            Duração
-          </label>
+        <Field label="Duração" htmlFor="edit-task-duration" className="w-32 shrink-0">
           <Input
             id="edit-task-duration"
             variant="bare"
@@ -237,16 +234,12 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             }}
             placeholder="1h30, 90, 1h…"
             title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className="pt-3"
           />
-        </div>
+        </Field>
       </div>
 
       <div className="flex gap-2">
-        <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
-          <label htmlFor="edit-task-start" className={notchedLabelClass}>
-            Início
-          </label>
+        <Field label="Início" htmlFor="edit-task-start" className="flex-1">
           <Input
             id="edit-task-start"
             type="time"
@@ -254,13 +247,9 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             value={startTime}
             onChange={(e) => handleStartChange(e.target.value)}
             onBlur={(e) => handleStartCommit(e.target.value)}
-            className="pt-3"
           />
-        </div>
-        <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
-          <label htmlFor="edit-task-end" className={notchedLabelClass}>
-            Fim
-          </label>
+        </Field>
+        <Field label="Fim" htmlFor="edit-task-end" className="flex-1">
           <Input
             id="edit-task-end"
             type="time"
@@ -268,9 +257,8 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
             value={endTime}
             onChange={(e) => handleEndChange(e.target.value)}
             onBlur={(e) => handleEndCommit(e.target.value)}
-            className="pt-3"
           />
-        </div>
+        </Field>
       </div>
     </Modal>
   );

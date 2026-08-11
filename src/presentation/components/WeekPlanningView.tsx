@@ -359,7 +359,7 @@ export function WeekPlanningView() {
                     className={`flex items-center gap-2 px-4 py-2.5 border-b border-border-subtle ${isToday ? "bg-accent/5" : "bg-surface"}`}
                   >
                     <span
-                      className={`text-xs font-semibold uppercase tracking-widest ${isToday ? "text-accent-text" : "text-fg-secondary"}`}
+                      className={`text-overline uppercase ${isToday ? "text-accent-text" : "text-fg-secondary"}`}
                     >
                       {dayLabel}
                       {isToday && (

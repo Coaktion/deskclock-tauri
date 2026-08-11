@@ -5,7 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { BillableChip, FilterPill, Input, Select } from "@presentation/components/ui";
+import { BillableChip, Field, FilterPill, Input, Select } from "@presentation/components/ui";
 import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
@@ -199,33 +199,42 @@ export function PlannedTaskForm({
     // navegador cobriria só parte dos campos, e é ele que o hook cancela para o
     // Enter ter uma regra só em todo o app (`useSubmitOnEnter`).
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className={formColumnClass}>
-      <Input
-        ref={nameRef}
-        value={form.name}
-        onChange={(e) => set("name", e.target.value)}
-        placeholder="Nome da tarefa"
-      />
+      <Field label="Nome" htmlFor="planned-name">
+        <Input
+          id="planned-name"
+          ref={nameRef}
+          variant="bare"
+          value={form.name}
+          onChange={(e) => set("name", e.target.value)}
+          placeholder="Nome da tarefa"
+        />
+      </Field>
 
-      <Autocomplete
-        value={form.projectName}
-        onChange={(v) => {
-          set("projectName", v);
-          if (!v) {
-            set("projectId", null);
-            clearCategory();
-          }
-        }}
-        onSelect={(o) => {
-          set("projectId", o.id);
-          set("projectName", o.name);
-          clearCategory();
-        }}
-        options={projects}
-        placeholder="Projeto"
-      />
-
-      <div className={`${boxClass} flex items-center pr-2`}>
+      <Field label="Projeto" htmlFor="planned-project">
         <Autocomplete
+          id="planned-project"
+          value={form.projectName}
+          onChange={(v) => {
+            set("projectName", v);
+            if (!v) {
+              set("projectId", null);
+              clearCategory();
+            }
+          }}
+          onSelect={(o) => {
+            set("projectId", o.id);
+            set("projectName", o.name);
+            clearCategory();
+          }}
+          options={projects}
+          placeholder="Buscar projeto…"
+          variant="bare"
+        />
+      </Field>
+
+      <Field label="Categoria" htmlFor="planned-category" boxClassName="flex items-center pr-2">
+        <Autocomplete
+          id="planned-category"
           value={form.categoryName}
           onChange={(v) => {
             set("categoryName", v);
@@ -241,12 +250,12 @@ export function PlannedTaskForm({
             }));
           }}
           options={categoryOptions}
-          placeholder="Categoria"
+          placeholder="Buscar categoria…"
           className="flex-1"
           variant="bare"
         />
         <BillableChip billable={form.billable} onToggle={() => set("billable", !form.billable)} />
-      </div>
+      </Field>
 
       <CustomFieldInputs
         fields={activeFields}

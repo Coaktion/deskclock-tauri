@@ -92,7 +92,6 @@ export function ApiTab() {
               </p>
             </div>
             <NumberInputWithCommit
-              label=""
               min={1024}
               max={65535}
               committed={localApiPort}
