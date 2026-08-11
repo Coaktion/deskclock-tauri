@@ -392,8 +392,8 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > regressão se esconde. Ele nasce em **121** botões (44 arquivos) e **6** campos crus (3), medido
   > ao fim da fase C: é dívida a pagar, não permissão, e o piso não é zero — o toggle de billable
   > dos três modais de edição fica (o estado ligado **é** a cor do significado, e no `IconButton` a
-  > cor é o destino do hover), assim como o `PlannedTaskItem`, cujos botões abrem por largura e não
-  > por opacidade (§5.3), e os três primitivos locais acima.
+  > cor é o destino do hover) e os três primitivos locais acima. **O `PlannedTaskItem` saiu da
+  > lista** — os cinco botões dele viraram `IconButton` quando a linha migrou para `TaskRow`.
   >
   > Duas coisas que o número não conta, e é melhor saber antes de comemorá-lo: `className` montada
   > numa constante fora da tag escapa do regex, então **121 é piso**; e os seis campos crus são
@@ -528,13 +528,20 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > recua no hover e as ações entram no lugar dela. Empilhar em vez de trocar por `hidden` guarda a
   > largura da célula (que senão pularia com o cursor) e o acesso pelo teclado; em repouso as ações
   > levam `pointer-events-none`, ou os botões invisíveis engoliriam o clique da linha. **Sem
-  > duração, a ação fica sempre visível** — é a linha planejada, e é decisão do usuário.
+  > duração, a ação fica sempre visível** — é a linha planejada de hoje, que tem **uma** ação.
   >
-  > **O `PlannedTaskItem` é a exceção, e é deliberada.** Ele fica com o layout próprio porque os
-  > botões dele abrem por largura (`w-0` + `overflow-hidden`, §5.3) e o do primitivo abre por
-  > opacidade: unificá-los mudaria, sem pedido, o comportamento das linhas do Histórico já
-  > entregues. A linha também carrega ícone de recorrência e sino, que o primitivo não expressa — o
-  > chip de billable ela agora compartilha, pelo `BillableChip`.
+  > **Com cinco ações, quem some é a largura, e é a prop `collapseActions`.** A linha do
+  > Planejamento tem play, editar, concluir, duplicar e excluir: deixada sempre visível, a coluna
+  > delas sai do `1fr` do nome, que trunca numa linha vazia à direita (§5.3). O `w-0` +
+  > `overflow-hidden` que vivia no `PlannedTaskItem` passou a morar aqui, e é por isso que ele
+  > **deixou de ser exceção** — a linha do Planejamento é o `TaskRow`, na forma de quatro colunas
+  > com o ponto de projeto, como o spec da 3e desenha.
+  >
+  > Duas props nasceram com essa migração, e as duas existem porque o `<p>` do nome **trunca**:
+  > `titleMarks` põe recorrência e sino **ao lado** do nome (dentro dele, o glifo seria o primeiro
+  > a sumir num nome longo), e `completed` risca e apaga o nome — o `opacity-50` de linha inteira
+  > que a tela usava **não** subiu junto, porque é a decisão pendente nº3 do handoff (contraste
+  > perto de 2:1) e o par tachado + `fg-muted` é justamente o que ela prescreve.
   >
   > **O faturamento é escrito, não pintado** (`BillableChip`). A faixa verde à esquerda do `TaskRow`
   > **saiu**: ela dizia "faturável" só em cor, e nada dizia sobre o não faturável — que ficava sem

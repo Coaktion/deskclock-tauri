@@ -24,9 +24,12 @@ import { listSourceFiles } from "../helpers/sourceFiles";
  * piso não é zero, e as exceções conhecidas estão registradas na §8.4 do
  * CLAUDE.md: o toggle de billable dos três modais de edição (o estado ligado
  * **é** a cor do significado, e no `IconButton` a cor é o destino do hover), a
- * alça de arraste, o ▶ do Lançamento Manual, o `PlannedTaskItem` (cujos botões
- * abrem por largura, não por opacidade) e as definições de
+ * alça de arraste, o ▶ do Lançamento Manual e as definições de
  * `SubSection`/`MappingBox`/`IntegrationTile`, que são primitivos locais.
+ *
+ * O `PlannedTaskItem` **saiu** da lista: os cinco botões dele viraram
+ * `IconButton` quando a linha migrou para `TaskRow`, e o que os fazia abrir por
+ * largura passou a ser a prop `collapseActions` do primitivo.
  */
 
 /** Onde os primitivos são definidos — desenhar a caixa ali é o trabalho deles. */
@@ -58,7 +61,6 @@ const BUTTON_BASELINE: Record<string, number> = {
   "src/presentation/components/OmniboxCustomFieldsPanel.tsx": 1,
   "src/presentation/components/OmniboxRunning.tsx": 7,
   "src/presentation/components/PlannedTaskForm.tsx": 3,
-  "src/presentation/components/PlannedTaskItem.tsx": 5,
   "src/presentation/components/PlannedTasksSection.tsx": 1,
   "src/presentation/components/ProjectCard.tsx": 3,
   "src/presentation/components/ProjectCategoriesEditor.tsx": 1,

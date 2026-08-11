@@ -856,6 +856,9 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       cartaoDia: s3e.byPath("1/1/1/1/1/0"),
       cartaoHoje: s3e.byPath("1/1/1/1/1/1"),
       faixaHoje: s3e.byPath("1/1/1/1/1/1/0"),
+      linhaDia: s3e.byPath("1/1/1/1/1/0/1"),
+      pontoDia: s3e.byPath("1/1/1/1/1/0/1/0"),
+      acoesDia: s3e.byPath("1/1/1/1/1/1/1/3"),
     };
 
     it("a pílula de dia é a mesma pílula de 6/12 do Histórico", () => {
@@ -978,6 +981,53 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       );
       expect(geometryOf(comum.className).borderRadius).toBe(radiusOf(SPEC_3E.cartaoDia));
       expect(faixa.className).not.toBe(comum.children[0].className);
+    });
+
+    /**
+     * A linha planejada é a **forma A** do `TaskRow` — nada precede o nome, então
+     * o ponto de projeto abre coluna própria. Ela era flex e sem ponto: o
+     * faturamento e a cor do projeto eram as duas coisas que faltavam para a
+     * lista falar a mesma língua da 3a e da 3f.
+     */
+    it("a linha planejada é a grade de quatro colunas com o ponto do projeto", () => {
+      const row = shellOf(
+        <TaskRow
+          title="Revisão de PRs"
+          subtitle="Cliente A · Desenvolvimento"
+          dotColor="oklch(0.65 0.16 258)"
+          billable
+          collapseActions
+          actions={<span />}
+        />
+      );
+      const actual = geometryOf(row.className);
+
+      expect(actual.gridTemplateColumns).toBe(
+        stringOf(SPEC_3E.linhaDia, "grid-template-columns").replace(/\s+/g, " ")
+      );
+      expect(actual.gap).toBe(numberOf(SPEC_3E.linhaDia, "gap"));
+      expectPadding(row, SPEC_3E.linhaDia);
+
+      const ponto = row.firstElementChild!;
+      const dot = geometryOf(ponto.className);
+      expect(dot.width).toBe(numberOf(SPEC_3E.pontoDia, "width"));
+      expect(dot.height).toBe(numberOf(SPEC_3E.pontoDia, "height"));
+      expect(dot.borderRadius).toBe(radiusOf(SPEC_3E.pontoDia));
+    });
+
+    /**
+     * Com cinco botões, a coluna reservada sai do `1fr` do nome. `collapseActions`
+     * fecha a célula em **largura** até o hover — é a §5.3, agora no primitivo.
+     */
+    it("as ações da linha planejada fecham em largura até o hover, no gap do spec", () => {
+      const row = shellOf(
+        <TaskRow title="Revisão de PRs" collapseActions actions={<span data-acoes="" />} />
+      );
+      const acoes = row.querySelector("[data-acoes]")!.parentElement!;
+
+      expect(geometryOf(acoes.className).gap).toBe(numberOf(SPEC_3E.acoesDia, "gap"));
+      expect(acoes.className).toMatch(/(?:^|\s)w-0(?:\s|$)/);
+      expect(acoes.className).toMatch(/(?:^|\s)group-hover:w-auto(?:\s|$)/);
     });
   });
 

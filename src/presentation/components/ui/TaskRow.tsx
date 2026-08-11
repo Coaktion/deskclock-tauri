@@ -3,6 +3,14 @@ import { BillableChip } from "./BillableChip";
 
 interface TaskRowProps {
   title: string;
+  /**
+   * Marcas que ficam **ao lado** do nome e não podem ser cortadas com ele —
+   * recorrência, sino do rastreio. Fora do `<p>` de propósito: o nome trunca, e
+   * dentro dele o glifo seria o primeiro a sumir num nome longo.
+   */
+  titleMarks?: ReactNode;
+  /** Riscado e apagado — a planejada já concluída no dia. */
+  completed?: boolean;
   /** Projeto · Categoria, ou o que a tela use como segunda linha. */
   subtitle?: ReactNode;
   /** A coluna de 88px — faixa de horário, contagem de registros do grupo. */
@@ -21,6 +29,14 @@ interface TaskRowProps {
   badges?: ReactNode;
   /** Dividem a última coluna com a duração: ela recua, elas aparecem. */
   actions?: ReactNode;
+  /**
+   * Sem duração para recuar, a célula das ações fecha em **largura** até o
+   * hover, em vez de ficar sempre aberta. É o que a linha planejada do
+   * Planejamento pede: com cinco botões, a coluna reservada sai do `1fr` do
+   * nome, que trunca numa linha vazia à direita (§5.3). Onde a ação é uma só —
+   * o ▶ das planejadas de hoje —, ela continua sempre visível (§7.5.3).
+   */
+  collapseActions?: boolean;
   /**
    * A linha pende da de cima — a tarefa dentro de um grupo aberto. Ela ganha o
    * trilho e um degrau de 12px à esquerda; o degrau sai do `1fr` do nome, então
@@ -68,6 +84,8 @@ const PADDING_LEFT = { row: "pl-3", nested: "pl-6" } as const;
 
 export function TaskRow({
   title,
+  titleMarks,
+  completed = false,
   subtitle,
   meta,
   duration,
@@ -77,6 +95,7 @@ export function TaskRow({
   leading,
   badges,
   actions,
+  collapseActions = false,
   nested = false,
   selected = false,
   onClick,
@@ -99,9 +118,22 @@ export function TaskRow({
     />
   );
 
+  const name = (
+    <p className={`text-sm truncate ${completed ? "line-through text-fg-muted" : "text-fg"}`}>
+      {title}
+    </p>
+  );
+
   const nameBlock = (
     <div className="min-w-0">
-      <p className="text-sm text-fg truncate">{title}</p>
+      {titleMarks ? (
+        <div className="min-w-0 flex items-center gap-1.5">
+          {name}
+          {titleMarks}
+        </div>
+      ) : (
+        name
+      )}
       {subtitle && <p className="text-xs text-fg-muted truncate mt-px">{subtitle}</p>}
     </div>
   );
@@ -153,7 +185,9 @@ export function TaskRow({
        * `hidden` guarda duas coisas — a largura da célula não pula quando o
        * cursor entra, e o botão continua alcançável pelo teclado, que é o que
        * `display:none` tiraria. Sem duração (a planejada), a ação fica sempre
-       * visível: é a decisão §7.5.3 do handoff.
+       * visível: é a decisão §7.5.3 do handoff — a menos que `collapseActions`
+       * peça o contrário, e aí quem some é a **largura**, que é o que a coluna
+       * de cinco botões cobraria do nome.
        */}
       <div className="grid items-center justify-items-end">
         {duration && (
@@ -172,7 +206,9 @@ export function TaskRow({
             className={`col-start-1 row-start-1 flex gap-0.5 ${
               duration
                 ? "opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
-                : ""
+                : collapseActions
+                  ? "w-0 overflow-hidden opacity-0 transition-opacity group-hover:w-auto group-hover:opacity-100 group-focus-within:w-auto group-focus-within:opacity-100"
+                  : ""
             }`}
           >
             {actions}
