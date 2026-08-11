@@ -443,6 +443,13 @@ export function RetroactivePage() {
                   )
                 }
               >
+                {/* Fora da rolagem: o lote pode falhar com a lista rolada, e
+                    dentro dela o aviso nasceria fora de vista. */}
+                {launchError && (
+                  <p className="px-3 py-2 text-xs text-danger border-b border-border-subtle">
+                    {launchError}
+                  </p>
+                )}
                 <div
                   ref={plannedListRef}
                   className="overflow-y-auto"
