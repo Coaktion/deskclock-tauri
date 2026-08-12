@@ -597,8 +597,11 @@ conferidos na tela). Por ordem de risco:
     comportamento da etapa, e é onde uma linha estreita mostraria as duas se atropelando.
     -4b. **O cartão do dia do Histórico deixou de pintar fundo** — mesma mudança que a F1 fez no
     `SectionCard`, e pelo mesmo motivo. Conferir no **modo claro** que a linha em hover ainda se
-    separa, e que a linha **selecionada** (que é `bg-accent/10` de borda a borda) não escapa pelo
-    canto arredondado do cartão: ele não tem `overflow-hidden`, por causa do cabeçalho `sticky`.
+    separa. O sangramento da linha **selecionada** (`bg-accent/10` de borda a borda) pelo canto
+    arredondado **deixou de ser risco**: o cartão adotou o `SectionCard` em 2026-08-12 e com ele o
+    `overflow-hidden` da casca, que a recorta. O que conferir no lugar é a **caixa de seleção do
+    dia**, nova no slot `leading`: se ela alinha com as caixas das linhas de dentro, e se o estado
+    parcial (traço) aparece com o dia meio marcado.
 
 -3. **O `SectionCard` nas 7 telas** (F1) — a casca deixou de pintar fundo, então **toda** lista e
     todo grupo de configuração passou a ficar sobre o canvas, com a faixa do cabeçalho sendo o único

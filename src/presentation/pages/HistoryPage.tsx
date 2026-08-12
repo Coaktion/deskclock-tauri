@@ -1,9 +1,5 @@
-import { useState, useEffect } from "react";
-import { Search, Pencil, Trash2, FileDown, Filter } from "lucide-react";
-import { useHistory, type QuickFilter, type DayGroup } from "@presentation/hooks/useHistory";
-import { useProjects } from "@presentation/hooks/useProjects";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import type { Project } from "@domain/entities/Project";
+import type { Task } from "@domain/entities/Task";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import {
@@ -13,22 +9,27 @@ import {
   KpiCard,
   PageHeader,
   SearchInput,
+  SectionCard,
   Select,
   TaskRow,
 } from "@presentation/components/ui";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
+import { useCategories } from "@presentation/hooks/useCategories";
+import { useHistory, type DayGroup, type QuickFilter } from "@presentation/hooks/useHistory";
+import { useProjects } from "@presentation/hooks/useProjects";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
-import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
+import { getProjectColor } from "@shared/utils/projectColor";
 import {
-  formatHHMMSS,
   formatHHMM,
+  formatHHMMSS,
   formatHistoryDayHeader,
   formatRegisteredTimeRange,
 } from "@shared/utils/time";
-import { getProjectColor } from "@shared/utils/projectColor";
-import type { Task } from "@domain/entities/Task";
-import type { Project } from "@domain/entities/Project";
+import { FileDown, Filter, Pencil, Search, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const QUICK_LABELS: Record<QuickFilter, string> = {
   today: "Hoje",
@@ -39,15 +40,11 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
 };
 
 const cardClass = "bg-surface border border-border-subtle rounded-card";
-
-/**
- * O cartão do dia é o `SectionCard` escrito à mão — sem `overflow-hidden`, por
- * causa do cabeçalho `sticky` de dentro. Como ele, **não pinta fundo**: quem
- * pinta é a faixa do cabeçalho, e as linhas ficam sobre o canvas. Com fundo, a
- * linha em hover (que é `surface`) ficaria invisível sobre o próprio cartão.
- */
-const dayCardClass = "border border-border-subtle rounded-card";
 const eyebrowClass = "text-overline uppercase text-fg-muted";
+
+/** A caixa do dia e a da linha são a mesma peça — é o alinhamento entre elas que
+ *  diz que uma comanda as outras, e duas grafias o desfariam em silêncio. */
+const selectionBoxClass = "w-3.5 h-3.5 accent-accent cursor-pointer";
 
 /**
  * A cor de projeto sai da entidade, e aqui três blocos só têm o id em mão — a
@@ -275,13 +272,26 @@ export function HistoryPage() {
       />
 
       {/* Recorte do período: fica fora do cabeçalho porque as cinco pílulas e os
-          dois botões, juntos, não cabem nos 56 px sem quebrar em duas linhas. */}
-      <div className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 border-b border-border-subtle flex-wrap">
+          dois botões, juntos, não cabem nos 56 px sem quebrar em duas linhas. A
+          busca divide a linha com as pílulas, como o spec desenha (`1/1/1/0`):
+          ela é o sexto filho, em `flex-1`, e o `ml-1` é o degrau a mais que o
+          design abre entre a última pílula e o campo. */}
+      <div
+        onKeyDown={handleKeyDown}
+        className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 border-b border-border-subtle flex-wrap"
+      >
         {(["today", "7days", "30days", "month", "custom"] as QuickFilter[]).map((q) => (
           <FilterPill key={q} active={filters.quick === q} onClick={() => handleQuick(q)}>
             {QUICK_LABELS[q]}
           </FilterPill>
         ))}
+        <SearchInput
+          value={filters.name}
+          onChange={(v) => updateFilter("name", v)}
+          placeholder="Buscar por nome…"
+          ariaLabel="Buscar por nome"
+          className="flex-1 ml-1"
+        />
       </div>
 
       {advancedOpen && (
@@ -355,15 +365,6 @@ export function HistoryPage() {
           </Button>
         </div>
       )}
-
-      <div onKeyDown={handleKeyDown} className="shrink-0 px-4 py-2.5 border-b border-border-subtle">
-        <SearchInput
-          value={filters.name}
-          onChange={(v) => updateFilter("name", v)}
-          placeholder="Buscar por nome…"
-          ariaLabel="Buscar por nome"
-        />
-      </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-3">
         {searched && allTasks.length > 0 && (
@@ -440,41 +441,54 @@ export function HistoryPage() {
               )}
             </div>
 
-            {groups.map((group) => (
-              <div key={group.dateISO} className={dayCardClass}>
-                {/* Sem `overflow-hidden` no cartão: ele viraria o scrollport do
-                    `sticky` abaixo, que então nunca sairia do lugar. */}
-                <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-2 bg-surface border-b border-border-subtle rounded-t-card">
-                  <span className="text-overline uppercase text-fg-secondary">
-                    {formatHistoryDayHeader(group.dateISO)}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {selectMode && group.tasks.length > 0 && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          const groupIds = group.tasks.map((t) => t.id);
-                          const groupSelected = groupIds.every((id) => selectedIds.has(id));
+            {groups.map((group) => {
+              const groupIds = group.tasks.map((t) => t.id);
+              const allInGroup = groupIds.length > 0 && groupIds.every((id) => selectedIds.has(id));
+              const someInGroup = groupIds.some((id) => selectedIds.has(id));
+              const dayLabel = formatHistoryDayHeader(group.dateISO);
+
+              return (
+                <SectionCard
+                  key={group.dateISO}
+                  // O corpo da tela é coluna de flex *e* scrollport. O
+                  // `overflow-hidden` da casca zera o mínimo automático do item
+                  // de flex (`min-height: auto` só vale com overflow visível),
+                  // então sem isto os cartões se espremem na altura disponível
+                  // em vez de somarem e fazerem a coluna rolar.
+                  className="shrink-0"
+                  title={dayLabel}
+                  leading={
+                    selectMode && groupIds.length > 0 ? (
+                      <input
+                        type="checkbox"
+                        checked={allInGroup}
+                        // Seleção parcial: traço em vez de vazio, senão o dia com
+                        // metade das linhas marcadas lê como dia sem nada marcado.
+                        ref={(el) => {
+                          if (el) el.indeterminate = someInGroup && !allInGroup;
+                        }}
+                        onChange={() =>
                           setSelectedIds((prev) => {
+                            // A decisão sai de `prev`, não do closure do render:
+                            // o updater tem de valer sozinho na fila do React.
+                            const todas = groupIds.every((id) => prev.has(id));
                             const next = new Set(prev);
-                            if (groupSelected) groupIds.forEach((id) => next.delete(id));
+                            if (todas) groupIds.forEach((id) => next.delete(id));
                             else groupIds.forEach((id) => next.add(id));
                             return next;
-                          });
-                        }}
-                      >
-                        {group.tasks.every((t) => selectedIds.has(t.id))
-                          ? "Desmarcar"
-                          : "Selecionar"}
-                      </Button>
-                    )}
-                    <span className="text-xs font-mono tabular-nums text-fg-muted">
+                          })
+                        }
+                        aria-label={`Selecionar ${dayLabel}`}
+                        className={selectionBoxClass}
+                      />
+                    ) : undefined
+                  }
+                  action={
+                    <span className="font-mono tabular-nums text-fg-secondary">
                       {formatHHMM(group.totalSeconds)}
                     </span>
-                  </div>
-                </div>
-
-                <div>
+                  }
+                >
                   {group.tasks.map((task) => {
                     const project = projects.find((p) => p.id === task.projectId);
                     const category = categories.find((c) => c.id === task.categoryId);
@@ -508,7 +522,7 @@ export function HistoryPage() {
                               onChange={() => toggleSelectTask(task.id)}
                               onClick={(e) => e.stopPropagation()}
                               aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
-                              className="w-3.5 h-3.5 accent-accent cursor-pointer"
+                              className={selectionBoxClass}
                             />
                           ) : undefined
                         }
@@ -534,9 +548,9 @@ export function HistoryPage() {
                       />
                     );
                   })}
-                </div>
-              </div>
-            ))}
+                </SectionCard>
+              );
+            })}
           </>
         )}
       </div>

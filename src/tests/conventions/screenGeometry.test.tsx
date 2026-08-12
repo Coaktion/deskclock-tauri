@@ -66,6 +66,8 @@ import { geometryOf } from "../helpers/tailwindGeometry";
  * entre a F1 e a F5. As 12 que a F6 mediu nas outras seis telas viraram **7** na
  * F7, que fechou o campo de formulário — o padding nos dois tamanhos e o rótulo,
  * que era a mesma peça repetida em quatro assertivas — e a coluna que o abriga.
+ * E viraram **6** em 2026-08-12, quando o cartão do dia do Histórico adotou o
+ * `SectionCard` e a faixa dele saiu de 8/12 para os 10/12 do spec.
  *
  * **Cobertura declarada, e o que falta:** aqui estão os componentes que
  * renderizam sem provider — mais o `OmniboxIdle` e a `Sidebar`, que pedem um
@@ -160,7 +162,7 @@ function sourceOf(path: string): string {
 }
 
 /** A classe de um elemento identificado por um trecho dela — o `p-5` do corpo,
- *  o `sticky` do cabeçalho do dia. */
+ *  a régua do cabeçalho da semana no `WeekPlanningView`. */
 function classNameContaining(source: string, marker: string): string {
   const found = new RegExp(`className="([^"]*${marker}[^"]*)"`).exec(source)?.[1];
   if (!found) throw new Error(`nenhuma className com "${marker}"`);
@@ -706,16 +708,23 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * O cartão do dia é escrito à mão na página — a casca do `SectionCard` tem
-     * `overflow-hidden`, que viraria o scrollport do cabeçalho `sticky` de
-     * dentro e o prenderia ao topo do próprio cartão.
+     * O cartão do dia é o `SectionCard`, e por isso a faixa mede 10/12 aqui como
+     * mede na 3a e na 3e. Enquanto ele foi escrito à mão — para fugir do
+     * `overflow-hidden` da casca, que prenderia o cabeçalho `sticky` de dentro ao
+     * topo do próprio cartão — a faixa media 8/12 e esta trava era `divergente`.
+     * O `sticky` saiu, o cartão adotou o primitivo, e a medida fechou.
      */
-    divergente("o cabeçalho do dia tem o padding da faixa — divergente, 8/12 hoje", () => {
-      const header = classNameContaining(
-        sourceOf("src/presentation/pages/HistoryPage.tsx"),
-        "sticky top-0"
+    it("o cabeçalho do dia tem o padding da faixa", () => {
+      const dia = shellOf(
+        <SectionCard title="Hoje · 07/08">
+          <div />
+        </SectionCard>
       );
-      expectPadding(header, SPEC_3B.diaHeader);
+      expectPadding(dia.children[0], SPEC_3B.diaHeader);
+
+      // Medir o primitivo só vale enquanto for ele que a tela usa: escrito à mão
+      // de novo, o cartão voltaria aos 8/12 com esta trava verde.
+      expect(sourceOf("src/presentation/pages/HistoryPage.tsx")).toContain("<SectionCard");
     });
   });
 

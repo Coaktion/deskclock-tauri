@@ -490,10 +490,22 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > cabeçalho, e as linhas ficam sobre o canvas. Com fundo próprio, a linha em hover — que é
   > `surface` — ficaria invisível sobre o cartão.
   >
-  > **O cartão do dia não leva `overflow-hidden`.** Ele viraria o scrollport do cabeçalho `sticky`
-  > de dentro, que então nunca sairia do lugar — o cabeçalho do dia ficaria preso ao topo do próprio
-  > cartão, que é o oposto do que `sticky` existe para fazer. O canto de cima é arredondado no
-  > cabeçalho (`rounded-t-card`), não recortado pelo cartão.
+  > **O cartão do dia é o `SectionCard`, e não mais uma cópia dele.** Ele nasceu escrito à mão por
+  > um motivo só: o cabeçalho do dia era `sticky`, e o `overflow-hidden` da casca o teria prendido
+  > ao topo do próprio cartão — o oposto do que `sticky` existe para fazer. **O `sticky` saiu**
+  > (decisão do usuário, 2026-08-12) e com ele o motivo; a cópia foi apagada. O que a adoção
+  > fechou, além da duplicata: a faixa era 8/12 e passou aos **10/12** do spec, o título saiu de
+  > `fg-secondary` para o `fg-muted` que o spec pede, e o total do dia saiu de `text-xs` para o
+  > degrau de 11px que o slot de `action` já carrega. A trava `divergente` de 3b virou `it`.
+  >
+  > **A caixa que seleciona o dia inteiro mora no slot `leading`**, à esquerda do título, e
+  > substituiu o botão de texto "Selecionar"/"Desmarcar" do canto direito. Ela cai na mesma coluna
+  > vertical das caixas das linhas que controla — a faixa e o `TaskRow` compartilham o `px-3` —, e
+  > é isso que a torna o controle daquelas linhas em vez de um botão solto no cabeçalho. Estado
+  > parcial por `ref`/`indeterminate`, como no `SelectionBar`: sem ele, o dia com metade das linhas
+  > marcadas lê como dia sem nada marcado. **É divergência declarada do wireframe** — o nó
+  > `1/1/1/3/0` da 3b desenha um span de texto "Selecionar", não uma caixa —, escolhida pelo
+  > usuário em 2026-08-12 pela consistência com a seleção por linha, que já era caixa.
 
   > **Em Dados e Configurações as abas moram no cabeçalho** (`PageHeader.tabs`) e o conteúdo é uma
   > **coluna de 720 px centrada**, dentro de um corpo em `p-5`. Configurações era `max-w-xl` (576),
@@ -521,8 +533,14 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   >
   > **Padding e arranjo do corpo vão em `bodyClassName`, nunca em `className`** — pelo mesmo motivo
   > que no `Modal`. Na casca, o padding inseta a faixa do cabeçalho e deixa a régua flutuando dentro
-  > do cartão. E o `overflow-hidden` da casca é o que impede usá-la para o cartão do dia do
-  > Histórico, que tem cabeçalho `sticky` dentro (§ acima): ali o cartão é escrito à mão.
+  > do cartão.
+  >
+  > **O cabeçalho tem dois encaixes, e o lado importa.** `action` é o canto direito — o total do
+  > dia, o atalho "Ver semana" —, e `leading` é a esquerda do título, para o controle que age sobre
+  > as linhas de dentro (a caixa de seleção do dia, no Histórico). `leading` sozinho já levanta o
+  > cabeçalho, como `description`: sendo controle, sem cabeçalho ele sumiria calado. **Não sobrou
+  > nenhum call site fora da casca** — o cartão do dia do Histórico era o último, e a razão dele
+  > (cabeçalho `sticky`) deixou de existir.
 
   > **Toda linha de tarefa é o `TaskRow`, e sobrou uma.** Tarefas, Planejamento, Lançamento Manual e
   > Integrações passaram aos tokens de uma vez, e com elas caíram as cópias de linha que ainda

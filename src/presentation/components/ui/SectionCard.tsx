@@ -29,6 +29,14 @@ const TONE: Record<
 interface SectionCardProps {
   /** Nome do grupo, em overline. Ausente: cartão sem cabeçalho. */
   title?: string;
+  /**
+   * Encostado à esquerda do título — o controle que age sobre o conteúdo do
+   * cartão, e não sobre o cartão. Fica na mesma coluna do que a lista de dentro
+   * abre à esquerda, porque a faixa e a linha compartilham o `px-3`: é o
+   * alinhamento que o torna o comando *daquelas* linhas em vez de um botão
+   * solto no cabeçalho. Hoje é a caixa que seleciona o dia, no Histórico.
+   */
+  leading?: ReactNode;
   /** `accent` marca o cartão do dia corrente. */
   tone?: SectionCardTone;
   /** Quantos itens a lista tem, na pílula ao lado do título. */
@@ -63,6 +71,7 @@ const COUNT_PILL =
 
 export function SectionCard({
   title,
+  leading,
   tone = "default",
   count,
   description,
@@ -72,7 +81,8 @@ export function SectionCard({
   bodyClassName = "",
   children,
 }: SectionCardProps) {
-  const hasHeader = Boolean(title || description || action) || count !== undefined;
+  // `leading` conta: sozinho ele é um controle, e sem cabeçalho sumiria calado.
+  const hasHeader = Boolean(title || description || action || leading) || count !== undefined;
   const colors = TONE[tone];
 
   return (
@@ -87,6 +97,10 @@ export function SectionCard({
             description ? "items-start" : "items-center"
           }`}
         >
+          {/* `flex` tira o controle do fluxo inline do invólucro: como inline ele
+              herdaria entrelinha e espaço de descida, e o eixo dele ficaria
+              alguns décimos abaixo do eixo do título. */}
+          {leading && <div className="shrink-0 flex items-center justify-center">{leading}</div>}
           <div className="min-w-0">
             {title && <p className={`text-overline uppercase ${colors.title}`}>{title}</p>}
             {description && (
