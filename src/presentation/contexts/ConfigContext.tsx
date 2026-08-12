@@ -1,15 +1,15 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { ConfigRepository } from "@infra/database/ConfigRepository";
 import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
+import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
-import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
-import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
 import type {
   AppConfig,
   ConfigContextValue,
   ConfigKey,
   OverlayPosition,
 } from "@shared/types/appConfig";
+import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
+import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 export type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition };
 
@@ -39,7 +39,6 @@ const DEFAULTS: AppConfig = {
   shortcutToggleWindow: "",
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
-  overlaySize: "big" as const,
   overlayOpacity: 100,
   overlaySnapToGrid: false,
   overlayPosition_execution: { x: -1, y: -1 },

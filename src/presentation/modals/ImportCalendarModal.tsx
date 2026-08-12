@@ -708,91 +708,91 @@ export function ImportCalendarModal({
       }
     >
       {loading || error || events.length === 0 ? (
-          <div className="flex-1 overflow-y-auto">
-            {loading && (
-              <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
-                <Loader2 size={16} className="animate-spin" />
-                <span className="text-sm">Buscando eventos…</span>
-              </div>
-            )}
-            {!loading && error && (
-              <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
-                <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
-                <p className="text-xs text-danger">{error}</p>
-              </div>
-            )}
-            {!loading && !error && (
-              <p className="text-sm text-fg-muted text-center py-12">
-                Nenhum evento encontrado neste período.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-1 overflow-hidden">
-            {/* Sidebar — lista de semanas */}
-            <div className="w-48 shrink-0 border-r border-border-subtle overflow-y-auto bg-surface/50 flex flex-col">
-              <div className="px-3 py-2 text-overline uppercase text-fg-muted border-b border-border-subtle">
-                Semanas
-              </div>
-              {allWeekKeys.map((weekKey) => {
-                const count = events.filter((e) => getMondayISO(e.date) === weekKey).length;
-                const selCount = events.filter(
-                  (e) => getMondayISO(e.date) === weekKey && selected.has(e.id)
-                ).length;
-                const isActive = selectedWeek === weekKey;
-                return (
-                  <button
-                    key={weekKey}
-                    onClick={() => setSelectedWeek(weekKey)}
-                    className={`w-full text-left flex items-start gap-2 px-3 py-2.5 transition-colors border-l-2 ${
-                      isActive ? "bg-raised border-accent" : "border-transparent hover:bg-raised/50"
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={`text-sm font-medium truncate ${isActive ? "text-fg" : "text-fg-secondary"}`}
-                      >
-                        {weekRangeLabel(weekKey)}
-                      </div>
-                      <div className="text-xs text-fg-muted mt-0.5">seg a sex</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
-                      <Badge tone={isActive ? "accent" : "neutral"}>{count} ev.</Badge>
-                      {selCount > 0 && <span className="text-xs text-billable">{selCount} ✓</span>}
-                    </div>
-                  </button>
-                );
-              })}
+        <div className="flex-1 overflow-y-auto">
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Buscando eventos…</span>
             </div>
-
-            {/* Painel — dias e eventos da semana selecionada */}
-            <div className="flex-1 overflow-y-auto flex flex-col">
-              {selectedWeek ? (
-                <>
-                  <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-raised/90 backdrop-blur-sm border-b border-border-subtle shrink-0">
-                    <span className="text-sm font-semibold text-fg flex-1 capitalize">
-                      {weekRangeLabelLong(selectedWeek)}
-                    </span>
-                    <button
-                      onClick={toggleWeekEvents}
-                      className="text-sm text-accent-text hover:text-fg transition-colors shrink-0"
+          )}
+          {!loading && error && (
+            <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
+              <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+              <p className="text-xs text-danger">{error}</p>
+            </div>
+          )}
+          {!loading && !error && (
+            <p className="text-sm text-fg-muted text-center py-12">
+              Nenhum evento encontrado neste período.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar — lista de semanas */}
+          <div className="w-48 shrink-0 border-r border-border-subtle overflow-y-auto bg-surface/50 flex flex-col">
+            <div className="px-3 py-2 text-overline uppercase text-fg-muted border-b border-border-subtle">
+              Semanas
+            </div>
+            {allWeekKeys.map((weekKey) => {
+              const count = events.filter((e) => getMondayISO(e.date) === weekKey).length;
+              const selCount = events.filter(
+                (e) => getMondayISO(e.date) === weekKey && selected.has(e.id)
+              ).length;
+              const isActive = selectedWeek === weekKey;
+              return (
+                <button
+                  key={weekKey}
+                  onClick={() => setSelectedWeek(weekKey)}
+                  className={`w-full text-left flex items-start gap-2 px-3 py-2.5 transition-colors border-l-2 ${
+                    isActive ? "bg-raised border-accent" : "border-transparent hover:bg-raised/50"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={`text-sm font-medium truncate ${isActive ? "text-fg" : "text-fg-secondary"}`}
                     >
-                      {allWeekSelected ? "Desmarcar todos" : "Selecionar todos"}
-                    </button>
+                      {weekRangeLabel(weekKey)}
+                    </div>
+                    <div className="text-xs text-fg-muted mt-0.5">seg a sex</div>
                   </div>
-                  {selectedWeekDays.map((date) => renderDayGroup(date))}
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-fg-muted">
-                    <Calendar size={28} className="mx-auto mb-2 opacity-30" />
-                    <p className="text-xs">Selecione uma semana</p>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
+                    <Badge tone={isActive ? "accent" : "neutral"}>{count} ev.</Badge>
+                    {selCount > 0 && <span className="text-xs text-billable">{selCount} ✓</span>}
                   </div>
-                </div>
-              )}
-            </div>
+                </button>
+              );
+            })}
           </div>
-        )}
+
+          {/* Painel — dias e eventos da semana selecionada */}
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            {selectedWeek ? (
+              <>
+                <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-raised/90 backdrop-blur-sm border-b border-border-subtle shrink-0">
+                  <span className="text-sm font-semibold text-fg flex-1 capitalize">
+                    {weekRangeLabelLong(selectedWeek)}
+                  </span>
+                  <button
+                    onClick={toggleWeekEvents}
+                    className="text-sm text-accent-text hover:text-fg transition-colors shrink-0"
+                  >
+                    {allWeekSelected ? "Desmarcar todos" : "Selecionar todos"}
+                  </button>
+                </div>
+                {selectedWeekDays.map((date) => renderDayGroup(date))}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-fg-muted">
+                  <Calendar size={28} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">Selecione uma semana</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

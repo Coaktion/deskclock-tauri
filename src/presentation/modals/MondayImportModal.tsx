@@ -390,8 +390,8 @@ export function MondayImportModal({
           <>
             {unavailableCount > 0 && (
               <p className="text-xs text-fg-muted">
-                {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora desta
-                lista.
+                {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
+                desta lista.
               </p>
             )}
             {hiddenImported > 0 && (
@@ -401,8 +401,8 @@ export function MondayImportModal({
             )}
             {!stageField && (
               <p className="text-xs text-fg-muted">
-                Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna do
-                board, em Integrações → Monday → Importação de dados.
+                Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna
+                do board, em Integrações → Monday → Importação de dados.
               </p>
             )}
             <div className="flex items-center gap-2">
@@ -437,83 +437,83 @@ export function MondayImportModal({
       }
     >
       <>
-          {availableBoards.length === 0 && (
-            <p className="text-sm text-fg-muted text-center py-12 px-4">
-              {mappings.length === 0
-                ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
-                : "Os boards vinculados apontam para projetos de outro workspace. Confira o workspace escolhido na integração ou importe os projetos nele."}
-            </p>
-          )}
+        {availableBoards.length === 0 && (
+          <p className="text-sm text-fg-muted text-center py-12 px-4">
+            {mappings.length === 0
+              ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
+              : "Os boards vinculados apontam para projetos de outro workspace. Confira o workspace escolhido na integração ou importe os projetos nele."}
+          </p>
+        )}
 
-          {loading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Buscando itens…</span>
-            </div>
-          )}
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">Buscando itens…</span>
+          </div>
+        )}
 
-          {!loading && error && (
-            <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
-              <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
-              <p className="text-xs text-danger">{error}</p>
-            </div>
-          )}
+        {!loading && error && (
+          <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
+            <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+            <p className="text-xs text-danger">{error}</p>
+          </div>
+        )}
 
-          {!loading && !error && availableBoards.length > 0 && visibleRows.length === 0 && (
-            <p className="text-sm text-fg-muted text-center py-12 px-4">
-              {rows.length === 0
-                ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
-                : hiddenImported > 0
-                  ? `Todas as suas ${hiddenImported} tarefas deste período já estão no planejamento.`
-                  : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
-            </p>
-          )}
+        {!loading && !error && availableBoards.length > 0 && visibleRows.length === 0 && (
+          <p className="text-sm text-fg-muted text-center py-12 px-4">
+            {rows.length === 0
+              ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
+              : hiddenImported > 0
+                ? `Todas as suas ${hiddenImported} tarefas deste período já estão no planejamento.`
+                : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
+          </p>
+        )}
 
-          {!loading &&
-            groups.map(([projectName, groupRows]) => {
-              const allSelected = groupRows.every((r) => selected.has(r.item.id));
-              const someSelected = !allSelected && groupRows.some((r) => selected.has(r.item.id));
-              return (
-                <div key={projectName} className="border-b border-border-subtle last:border-0">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-raised/40 sticky top-0 z-10">
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(groupRows)}
-                      className="shrink-0 text-fg-secondary hover:text-fg"
-                    >
-                      {allSelected ? (
-                        <CheckSquare size={14} />
-                      ) : (
-                        <Square size={14} className={someSelected ? "opacity-50" : ""} />
-                      )}
-                    </button>
-                    <span className="text-sm font-semibold text-fg-secondary flex-1 truncate">
-                      {projectName}
-                    </span>
-                    <span className="text-xs text-fg-muted">
-                      {groupRows.filter((r) => selected.has(r.item.id)).length}/{groupRows.length}
-                    </span>
-                  </div>
-
-                  {groupRows.map((row) => (
-                    <ItemRow
-                      key={row.item.id}
-                      row={row}
-                      selected={selected.has(row.item.id)}
-                      editState={
-                        editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField)
-                      }
-                      categories={categories}
-                      categoryOptionsFor={categoryOptionsFor}
-                      stageField={stageField}
-                      isDuplicate={existingNames.has(row.item.name.toLowerCase().trim())}
-                      onToggleSelect={() => toggleItem(row.item.id)}
-                      onEditChange={(s) => updateEdit(row.item.id, s)}
-                    />
-                  ))}
+        {!loading &&
+          groups.map(([projectName, groupRows]) => {
+            const allSelected = groupRows.every((r) => selected.has(r.item.id));
+            const someSelected = !allSelected && groupRows.some((r) => selected.has(r.item.id));
+            return (
+              <div key={projectName} className="border-b border-border-subtle last:border-0">
+                <div className="flex items-center gap-2 px-4 py-2 bg-raised/40 sticky top-0 z-10">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(groupRows)}
+                    className="shrink-0 text-fg-secondary hover:text-fg"
+                  >
+                    {allSelected ? (
+                      <CheckSquare size={14} />
+                    ) : (
+                      <Square size={14} className={someSelected ? "opacity-50" : ""} />
+                    )}
+                  </button>
+                  <span className="text-sm font-semibold text-fg-secondary flex-1 truncate">
+                    {projectName}
+                  </span>
+                  <span className="text-xs text-fg-muted">
+                    {groupRows.filter((r) => selected.has(r.item.id)).length}/{groupRows.length}
+                  </span>
                 </div>
-              );
-            })}
+
+                {groupRows.map((row) => (
+                  <ItemRow
+                    key={row.item.id}
+                    row={row}
+                    selected={selected.has(row.item.id)}
+                    editState={
+                      editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField)
+                    }
+                    categories={categories}
+                    categoryOptionsFor={categoryOptionsFor}
+                    stageField={stageField}
+                    isDuplicate={existingNames.has(row.item.name.toLowerCase().trim())}
+                    onToggleSelect={() => toggleItem(row.item.id)}
+                    onEditChange={(s) => updateEdit(row.item.id, s)}
+                  />
+                ))}
+              </div>
+            );
+          })}
       </>
     </Modal>
   );

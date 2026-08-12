@@ -81,10 +81,7 @@ describe("setGroupBillable", () => {
   it("não escreve na irmã que já está no valor pedido", async () => {
     // É o que deixa a regra barata de chamar depois de qualquer edição: grupo
     // uniforme não vira escrita, e o `updatedAt` das irmãs fica onde estava.
-    const day = [
-      makeTask({ id: "t1", billable: true }),
-      makeTask({ id: "t2", billable: false }),
-    ];
+    const day = [makeTask({ id: "t1", billable: true }), makeTask({ id: "t2", billable: false })];
     const repo = makeRepo(day);
 
     const changed = await setGroupBillable(repo, day[0], false, NOW);

@@ -111,7 +111,10 @@ export function Modal({
     // listener de `useGlobalShortcuts` é do `document` e roda **antes** do
     // `useEscapeToClose`, que é da `window`. Escrito à mão, só três telas o
     // tinham — e o modal que o perde fecha o app em vez de si mesmo.
-    <div data-modal-open className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/82">
+    <div
+      data-modal-open
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-canvas/82"
+    >
       <div
         role="dialog"
         aria-modal="true"

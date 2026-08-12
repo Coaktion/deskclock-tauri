@@ -1,11 +1,11 @@
-import type { SheetColumnMapping } from "@shared/types/sheetsConfig";
-import type { RoundingSlot } from "@shared/utils/roundDuration";
 import type {
-  ClockifyWorkspaceRef,
-  ClockifyProjectMapping,
   ClockifyCategoryMapping,
+  ClockifyProjectMapping,
+  ClockifyWorkspaceRef,
 } from "@shared/types/clockifyConfig";
 import type { MondayFieldCatalogs, MondayProjectMapping } from "@shared/types/mondayConfig";
+import type { SheetColumnMapping } from "@shared/types/sheetsConfig";
+import type { RoundingSlot } from "@shared/utils/roundDuration";
 
 export interface OverlayPosition {
   x: number;
@@ -86,7 +86,6 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   // Overlay
   overlayAlwaysVisible: boolean;
   overlayShowOnStart: boolean;
-  overlaySize: "big" | "small";
   overlayOpacity: number;
   overlaySnapToGrid: boolean;
   overlayPosition_execution: OverlayPosition;

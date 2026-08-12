@@ -6,8 +6,8 @@ import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
-import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
+import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTour } from "@presentation/hooks/useTour";
@@ -157,7 +157,10 @@ export function WeekPlanningView() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredDays = dayFilter === "all" ? visibleDays : [dayFilter];
+  const filteredDays = useMemo(
+    () => (dayFilter === "all" ? visibleDays : [dayFilter]),
+    [dayFilter, visibleDays]
+  );
 
   const allVisibleTaskIds = useMemo(() => {
     const ids = new Set<string>();
