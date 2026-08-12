@@ -11,7 +11,9 @@ import {
   type MondayTaskSenderOptions,
 } from "@infra/integrations/MondayTaskSender";
 import { MondayClient } from "@infra/integrations/monday/MondayClient";
+import { DriveBackupRunner } from "@infra/integrations/googledrive/DriveBackupRunner";
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
+import type { IDriveBackupRunner } from "@domain/integrations/IDriveBackupRunner";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import type { ITicketImporter } from "@domain/integrations/ITicketImporter";
 import type { IClockifyApi } from "@domain/integrations/IClockifyApi";
@@ -34,6 +36,7 @@ export interface IntegrationFactories {
   createMondayTaskSender(options?: MondayTaskSenderOptions): ITaskSender;
   /** apiKey opcional → permite ConnectModal validar key não persistida. Default usa config. */
   createMondayApi(apiKey?: string): IMondayApi;
+  createDriveBackupRunner(): IDriveBackupRunner;
 }
 
 const IntegrationsContext = createContext<IntegrationFactories | null>(null);
@@ -65,6 +68,7 @@ export function IntegrationsProvider({
           options
         ),
       createMondayApi: (apiKey) => new MondayClient(apiKey ?? config.get("mondayApiKey")),
+      createDriveBackupRunner: () => new DriveBackupRunner(config),
     }),
     [config, mondayActivityItemRepo, customFieldRepo, categoryRepo]
   );

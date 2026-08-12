@@ -242,7 +242,7 @@ depois que a migração entrar**, ou carrega ela junto.
 |---|---|
 | 0 · Rust: snapshot + upload | ✅ **feita** (2026-08-12) — `cargo check` limpo. Validação funcional só é possível na Fase 2, quando houver quem chame o comando. |
 | 1 · Domain: portas e vencimento | ✅ **feita** (2026-08-12) — as 6 chaves, `SECRET_CONFIG_KEYS`, `IDriveBackupPort` e `shouldRunBackup`, com os testes da Fase 5 que lhes cabem. Uma regra a mais do que o plano previa: `lastRunAt` no futuro conta como vencido, senão relógio acertado para trás para o backup calado. |
-| 2 · Infra: cliente do Drive | pendente |
+| 2 · Infra: cliente do Drive | ✅ **feita** (2026-08-12) — `GoogleDriveClient`, `DriveBackupRunner`, `IDriveBackupRunner` (interface nova em `domain/`, para a fábrica devolver porta e não classe de `infra/`) e a fábrica no `IntegrationsContext`, com os testes da Fase 5 que lhes cabem. **A validação manual da §4 não coube aqui**: nada no app ainda chama o runner — a fábrica existe, mas o primeiro chamador nasce na Fase 3. Fazer ao fim da Fase 4, com o botão "Fazer backup agora". |
 | 3 · Agendador | pendente |
 | 4 · UI | pendente |
 | 5 · Testes e docs | acompanha cada fase |
