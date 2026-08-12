@@ -12,6 +12,9 @@ export interface OverlayPosition {
   y: number;
 }
 
+/** Periodicidade do backup do banco no Drive. Contada por intervalo desde o último sucesso. */
+export type BackupFrequency = "daily" | "weekly" | "monthly";
+
 /**
  * Workspace do DeskClock em que cada integração trabalha.
  *
@@ -111,6 +114,25 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
    * silêncio — sem este rastro, reunião que não vira planejada é indiagnosticável.
    */
   calendarLastSyncError: string;
+  // Backup do banco no Google Drive
+  driveBackupEnabled: boolean;
+  driveBackupFrequency: BackupFrequency;
+  /**
+   * Pasta "DeskClock Backups" no Drive do usuário. Vazio = ainda não criada; o
+   * cliente cria na primeira execução e persiste o id aqui. Ela é **visível**
+   * de propósito: baixar o backup sem passar pelo app é o motivo de ele existir.
+   */
+  driveBackupFolderId: string;
+  /**
+   * Instante do último backup bem-sucedido. `0` = nunca. É daqui que sai o
+   * vencimento — não há âncora de calendário, então não há borda de dia 31 e o
+   * backup vencido roda assim que o app abre.
+   */
+  driveBackupLastRunAt: number;
+  /** Falha do último ciclo, exibida na subseção. "" quando correu bem. */
+  driveBackupLastError: string;
+  /** Quantos arquivos ficam na pasta; o excedente é podado após cada envio. */
+  driveBackupKeepCount: number;
   // Tokens Google OAuth
   googleAccessToken: string;
   googleRefreshToken: string;

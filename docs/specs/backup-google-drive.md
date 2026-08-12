@@ -241,7 +241,7 @@ depois que a migração entrar**, ou carrega ela junto.
 | Fase | Estado |
 |---|---|
 | 0 · Rust: snapshot + upload | ✅ **feita** (2026-08-12) — `cargo check` limpo. Validação funcional só é possível na Fase 2, quando houver quem chame o comando. |
-| 1 · Domain: portas e vencimento | pendente |
+| 1 · Domain: portas e vencimento | ✅ **feita** (2026-08-12) — as 6 chaves, `SECRET_CONFIG_KEYS`, `IDriveBackupPort` e `shouldRunBackup`, com os testes da Fase 5 que lhes cabem. Uma regra a mais do que o plano previa: `lastRunAt` no futuro conta como vencido, senão relógio acertado para trás para o backup calado. |
 | 2 · Infra: cliente do Drive | pendente |
 | 3 · Agendador | pendente |
 | 4 · UI | pendente |
