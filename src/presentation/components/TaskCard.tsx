@@ -51,7 +51,7 @@ export function TaskCard({
       }
       duration={formatDurationCompact(task.durationSeconds ?? 0)}
       billable={task.billable}
-      dotColor={getProjectColor(task.projectId)}
+      dotColor={getProjectColor(project)}
       onToggleBillable={() => onToggleBillable(task)}
       badges={
         sent && (

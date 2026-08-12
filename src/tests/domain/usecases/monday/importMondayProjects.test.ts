@@ -79,7 +79,11 @@ function makeApi(items: MondayItem[], schemas: Record<string, MondayBoardSchema>
 }
 
 function makeProjectRepo(existing: { id: string; name: string }[] = []): IProjectRepository {
-  const store: Project[] = existing.map((p) => ({ ...p, workspaceId: DESKCLOCK_WS }));
+  const store: Project[] = existing.map((p, i) => ({
+    ...p,
+    workspaceId: DESKCLOCK_WS,
+    colorIndex: i,
+  }));
   return {
     findAll: vi.fn(async (workspaceId?: string) =>
       workspaceId ? store.filter((p) => p.workspaceId === workspaceId) : store

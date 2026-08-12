@@ -61,12 +61,13 @@ describe("ProjectRepository", () => {
   describe("save", () => {
     it("executa INSERT com os dados corretos", async () => {
       const repo = new ProjectRepository();
-      const project: Project = { id: "uuid-1", workspaceId: "ws-1", name: "Novo" };
+      const project: Project = { id: "uuid-1", workspaceId: "ws-1", name: "Novo", colorIndex: 3 };
       await repo.save(project);
       expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining("INSERT"), [
         "uuid-1",
         "ws-1",
         "Novo",
+        3,
       ]);
     });
   });

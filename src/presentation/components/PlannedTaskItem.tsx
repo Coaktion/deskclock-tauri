@@ -108,7 +108,7 @@ export function PlannedTaskItem({
           )
         }
         subtitle={subtitle || undefined}
-        dotColor={getProjectColor(task.projectId)}
+        dotColor={getProjectColor(project)}
         billable={task.billable}
         leading={
           selectMode ? (

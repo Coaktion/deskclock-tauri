@@ -10,7 +10,7 @@ import {
 import type { MondayItem } from "@shared/types/monday";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 
-const PROJECT: Project = { id: "p1", workspaceId: "ws-1", name: "Cliente A" };
+const PROJECT: Project = { id: "p1", workspaceId: "ws-1", name: "Cliente A", colorIndex: 0 };
 
 function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMapping {
   return {

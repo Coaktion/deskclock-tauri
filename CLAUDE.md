@@ -115,7 +115,7 @@ numa destas.**
 
 | Trava | O que reprova |
 |---|---|
-| `designTokens.test.ts` | token semântico derrubado; raiz de 16px ou `--spacing` reancorados; valor dos degraus reancorados |
+| `designTokens.test.ts` | token semântico derrubado; raiz de 16px ou `--spacing` reancorados; valor dos degraus reancorados; cor de projeto fora do sRGB, abaixo de 3:1 em qualquer um dos dois modos, ou a menos de 0,09 de outra |
 | `fontSizes.test.ts` | `text-[13px]` — tamanho fora da escala de 10 degraus |
 | `fontWeights.test.ts` | peso fora de 400/500/600 |
 | `meaningColors.test.ts` | cor crua do Tailwind em cromo (`bg-gray-800`, `text-emerald-500`) |

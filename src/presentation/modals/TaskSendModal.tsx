@@ -97,7 +97,7 @@ function GroupRow({
   const category = categories.find((c) => c.id === first.categoryId);
   const allSent = group.tasks.every((t) => sentIds.has(t.id));
   const someSent = !allSent && group.tasks.some((t) => sentIds.has(t.id));
-  const projectColor = getProjectColor(first.projectId);
+  const projectColor = getProjectColor(project);
   const validation = validateTask(first);
   const isInvalid = !validation.ok;
 

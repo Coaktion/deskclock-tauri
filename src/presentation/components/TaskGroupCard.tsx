@@ -63,7 +63,7 @@ export function TaskGroupCard({
     }
   }
 
-  const projectColor = getProjectColor(first.projectId);
+  const projectColor = getProjectColor(project);
 
   // Tarefa individual sem agrupamento: renderiza direto sem cabeçalho de grupo
   if (!isGroup && !selectable) {

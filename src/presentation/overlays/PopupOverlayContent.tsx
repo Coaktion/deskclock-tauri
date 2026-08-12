@@ -787,7 +787,7 @@ export function PopupOverlayContent({
                     const project = projects.find((p) => p.id === task.projectId);
                     const category = categories.find((c) => c.id === task.categoryId);
                     const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-                    const railColor = getProjectColor(task.projectId);
+                    const railColor = getProjectColor(project);
 
                     return (
                       <div

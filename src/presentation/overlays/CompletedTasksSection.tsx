@@ -57,7 +57,7 @@ export function CompletedTasksSection({
           const project = projects.find((p) => p.id === first.projectId);
           const category = categories.find((c) => c.id === first.categoryId);
           const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-          const railColor = getProjectColor(first.projectId);
+          const railColor = getProjectColor(project);
           const count = group.tasks.length;
 
           return (

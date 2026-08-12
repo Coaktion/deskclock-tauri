@@ -98,5 +98,11 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/016_project_categories.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 17,
+            description: "project_color_index",
+            sql: include_str!("../migrations/017_project_color_index.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

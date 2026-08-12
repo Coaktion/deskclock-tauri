@@ -35,12 +35,7 @@ const THEME_TOKENS = [
   "--color-danger",
   "--color-success",
   "--color-warning",
-  "--color-project-1",
-  "--color-project-2",
-  "--color-project-3",
-  "--color-project-4",
-  "--color-project-5",
-  "--color-project-6",
+  ...Array.from({ length: 24 }, (_, i) => `--color-project-${i + 1}`),
   "--color-project-none",
   "--radius-chip",
   "--radius-control",
@@ -290,4 +285,102 @@ describe("convenção: tokens semânticos do design system", () => {
       expect(depth).toBe(0);
     }
   );
+});
+
+/**
+ * As cores de projeto são as únicas da paleta cujo **valor** precisa de trava, e
+ * o motivo é histórico: os 6 tokens anteriores pediam `C 0.16` em hues que não
+ * alcançam isso no sRGB — o ciano de `hue 200` pedia 44% acima do máximo — e o
+ * navegador os dessaturava calado. O verde, o âmbar e o ciano renderizavam
+ * lavados, três das seis cores diziam menos do que o CSS afirmava, e nada na
+ * suíte reprovava. Prosa não pega isso; conta pega.
+ *
+ * Aqui o valor é a afirmação, como nos quatro degraus reancorados acima.
+ */
+describe("convenção: as cores de projeto são utilizáveis nos dois modos", () => {
+  const css = readFileSync(CSS_PATH, "utf8");
+
+  /** OKLab → sRGB linear, coeficientes da especificação do Oklab. */
+  function oklchToLinearRgb(L: number, C: number, hDeg: number): [number, number, number] {
+    const h = (hDeg * Math.PI) / 180;
+    const a = C * Math.cos(h);
+    const b = C * Math.sin(h);
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+    const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+    const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+    return [
+      4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+      -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+      -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+    ];
+  }
+
+  const luminance = (rgb: [number, number, number]) => {
+    const [r, g, b] = rgb.map((v) => Math.max(0, Math.min(1, v)));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  const contrast = (y1: number, y2: number) =>
+    (Math.max(y1, y2) + 0.05) / (Math.min(y1, y2) + 0.05);
+
+  /** Os dois canvas, como o `@theme` e o `[data-mode="claro"]` os declaram. */
+  const CANVAS_DARK = luminance(oklchToLinearRgb(0.13, 0.028, 262));
+  const CANVAS_LIGHT = luminance(oklchToLinearRgb(0.985, 0.002, 248));
+
+  const slots = Array.from({ length: 24 }, (_, i) => i + 1).map((n) => {
+    const match = css.match(
+      new RegExp(`--color-project-${n}:\\s*oklch\\(([\\d.]+)\\s+([\\d.]+)\\s+([\\d.]+)\\)`)
+    );
+    if (!match) throw new Error(`--color-project-${n} não está declarado como oklch(L C H)`);
+    return { n, L: Number(match[1]), C: Number(match[2]), h: Number(match[3]) };
+  });
+
+  it.each(slots)("project-$n está dentro do sRGB", ({ L, C, h }) => {
+    // Fora do gamut, o navegador reduz o chroma por conta e a cor declarada não
+    // é a cor exibida — que foi como três das seis anteriores viraram lavadas.
+    for (const canal of oklchToLinearRgb(L, C, h)) {
+      expect(canal).toBeGreaterThanOrEqual(-0.0005);
+      expect(canal).toBeLessThanOrEqual(1.0005);
+    }
+  });
+
+  it.each(slots)("project-$n contrasta ≥3:1 com os dois canvas", ({ L, C, h }) => {
+    // É esta propriedade que dispensa uma segunda tabela de cores de projeto no
+    // `[data-mode="claro"]`. Derrubá-la não quebra nada visível no escuro, que é
+    // onde o app é desenvolvido: o ponto só desaparece no modo claro.
+    const y = luminance(oklchToLinearRgb(L, C, h));
+    expect(contrast(y, CANVAS_DARK)).toBeGreaterThanOrEqual(3);
+    expect(contrast(y, CANVAS_LIGHT)).toBeGreaterThanOrEqual(3);
+  });
+
+  it("nenhum par de cores fica perto o bastante para se confundir", () => {
+    // O piso é a menor distância OKLab que o gerador entrega (0,0945) menos uma
+    // folga de arredondamento. Não é estético: é a distância que decide se duas
+    // linhas da lista parecem o mesmo projeto. Baixá-lo é decisão de design e
+    // exige mexer aqui — que é o ponto de ele estar escrito.
+    const PISO = 0.09;
+    const pontos = slots.map(({ n, L, C, h }) => {
+      const rad = (h * Math.PI) / 180;
+      return { n, L, a: C * Math.cos(rad), b: C * Math.sin(rad) };
+    });
+
+    const proximos: string[] = [];
+    for (let i = 0; i < pontos.length; i++) {
+      for (let j = i + 1; j < pontos.length; j++) {
+        const p = pontos[i];
+        const q = pontos[j];
+        const d = Math.hypot(p.L - q.L, p.a - q.a, p.b - q.b);
+        if (d < PISO) proximos.push(`project-${p.n}/project-${q.n} (${d.toFixed(4)})`);
+      }
+    }
+    expect(proximos).toEqual([]);
+  });
+
+  it("o modo claro não redefine cor de projeto nenhuma", () => {
+    // Uma tabela só, e é o piso de contraste acima que a sustenta. Redefinir
+    // uma no modo claro sem redefinir as 24 reabriria a divergência entre
+    // modos que este bloco existe para fechar.
+    const body = blockBody(css, '[data-mode="claro"] {');
+    expect(body).not.toContain("--color-project-");
+  });
 });

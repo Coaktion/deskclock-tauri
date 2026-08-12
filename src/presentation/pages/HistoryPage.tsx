@@ -49,6 +49,16 @@ const cardClass = "bg-surface border border-border-subtle rounded-card";
 const dayCardClass = "border border-border-subtle rounded-card";
 const eyebrowClass = "text-overline uppercase text-fg-muted";
 
+/**
+ * A cor de projeto sai da entidade, e aqui três blocos só têm o id em mão — a
+ * linha do dia, a linha do tempo e a distribuição. Id que não está no catálogo
+ * (projeto excluído) devolve `undefined` e cai no cinza de "sem projeto", que é
+ * o mesmo destino do "—" que a distribuição já mostra.
+ */
+function projectColorOf(projects: Project[], projectId: string | null | undefined) {
+  return getProjectColor(projects.find((p) => p.id === projectId));
+}
+
 function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
   const parseMinutes = (iso: string) => {
     const d = new Date(iso);
@@ -76,7 +86,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
               <span key={p.id} className="flex items-center gap-1 text-xs text-fg-secondary">
                 <span
                   className="inline-block w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: getProjectColor(p.id) }}
+                  style={{ backgroundColor: getProjectColor(p) }}
                 />
                 {p.name}
               </span>
@@ -92,7 +102,7 @@ function Timeline({ tasks, projects }: { tasks: Task[]; projects: Project[] }) {
           const end = parseMinutes(task.endTime);
           const left = Math.max(0, ((start - dayStart) / dayRange) * 100);
           const width = Math.max(0.5, ((end - start) / dayRange) * 100);
-          const color = getProjectColor(task.projectId);
+          const color = projectColorOf(projects, task.projectId);
           const startStr = new Date(task.startTime).toLocaleTimeString("pt-BR", {
             hour: "2-digit",
             minute: "2-digit",
@@ -145,7 +155,7 @@ function ProjectDistribution({ groups, projects }: { groups: DayGroup[]; project
         {list.map((x) => {
           const h = Math.floor(x.seconds / 3600);
           const m = Math.floor((x.seconds % 3600) / 60);
-          const color = getProjectColor(x.id);
+          const color = projectColorOf(projects, x.id);
           return (
             // A `key` é a mesma chave do agrupamento, não o nome: projeto que
             // não está no catálogo vira "—", e dois ids órfãos diferentes
@@ -487,7 +497,7 @@ export function HistoryPage() {
                         }
                         duration={formatHHMMSS(task.durationSeconds ?? 0)}
                         billable={task.billable}
-                        dotColor={getProjectColor(task.projectId)}
+                        dotColor={projectColorOf(projects, task.projectId)}
                         selected={isSelected}
                         onClick={selectMode ? () => toggleSelectTask(task.id) : undefined}
                         leading={

@@ -42,8 +42,8 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ISheetsConfigPort & IGo
 }
 
 const projects: Project[] = [
-  { id: "proj-1", workspaceId: "ws-1", name: "Projeto Alpha" },
-  { id: "proj-2", workspaceId: "ws-1", name: "Projeto Beta" },
+  { id: "proj-1", workspaceId: "ws-1", name: "Projeto Alpha", colorIndex: 0 },
+  { id: "proj-2", workspaceId: "ws-1", name: "Projeto Beta", colorIndex: 1 },
 ];
 
 const categories: Category[] = [

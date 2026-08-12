@@ -37,7 +37,7 @@ export function ProjectCard({
   const [editName, setEditName] = useState(project.name);
   const [showCategories, setShowCategories] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const color = getProjectColor(project.id);
+  const color = getProjectColor(project);
   const associatedCount = sourceById.size;
 
   function startEdit() {

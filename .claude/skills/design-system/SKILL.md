@@ -19,7 +19,7 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
 - **Tokens semânticos:** o bloco `@theme static` de `src/index.css` declara a camada semântica —
   superfícies (`canvas`, `surface`, `raised`, `border-subtle`, `border`), texto (`fg`,
   `fg-secondary`, `fg-muted`), acento (`accent`, `accent-text`), status (`billable`, `paused`,
-  `danger`), as seis cores de projeto e três raios (`chip` 6 · `control` 8 · `card` 12). Deles saem
+  `danger`), as 24 cores de projeto e três raios (`chip` 6 · `control` 8 · `card` 12). Deles saem
   utilitários normais do Tailwind: `bg-surface`, `text-fg-muted`, `border-border-subtle`,
   `rounded-card`. **É esta a paleta a usar em código novo.**
 
@@ -184,6 +184,40 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   `shared/utils/projectColor.ts` devolve **`var(--color-project-N)`**, não um hex: o retorno vai em
   `style={{ backgroundColor }}`, onde a variável resolve como qualquer outra — e é isso que faz a
   cor do projeto acompanhar o modo claro sem uma segunda tabela.
+
+  > **São 24 cores de projeto, atribuídas e não sorteadas, e os valores saem de um gerador.**
+  > `scripts/generate-project-palette.mjs` os emite; **não os edite à mão**. Eram 6, com a cor
+  > vindo de `hash(id) % 6`, e o modelo tinha dois defeitos independentes. O primeiro é
+  > aritmética: com 60 projetos cada cor carregava ~10 deles, e duas linhas na mesma tela
+  > coincidiam em 98% dos casos — sorteio não conserta isso em paleta de nenhum tamanho, porque
+  > é o problema do aniversário. Quem conserta é o `color_index` persistido no projeto (§4.3 do
+  > modelo de dados), que dá a cada projeto novo o menor slot livre do workspace. O segundo é que
+  > **metade da paleta estava fora do gamut sRGB**: os 6 tokens pediam `C 0.16` em hues que não
+  > alcançam isso — o ciano de `hue 200` pedia 44% acima do máximo — e o navegador os
+  > dessaturava calado, então verde, âmbar e ciano renderizavam lavados sem que nada
+  > denunciasse.
+  >
+  > **A regra "mesma lightness e chroma, só o hue muda" foi revertida, e é reversão declarada.**
+  > Em 24 cores, mantê-la custaria 26% da separação perceptual (0,076 contra 0,095 de menor
+  > distância OKLab), o que deixaria a paleta **pior** que a de 6. Então chroma varia de 0,07 a
+  > 0,17 e L de 0,472 a 0,672: ponto vivo e ponto lavado convivem na mesma lista, e o vivo puxa
+  > mais o olho. É o preço de 24 cores distinguíveis num ponto de 6px, escolhido pelo usuário em
+  > 2026-08-11 com o número na mão.
+  >
+  > **Duas propriedades sustentam a tabela única**, e `designTokens.test.ts` afirma as duas por
+  > cálculo, além de reprovar par com menos de 0,09 de distância: toda cor está dentro do sRGB, e
+  > toda cor contrasta **≥3:1 com os dois canvas**. É a segunda que dispensa o bloco de modo
+  > claro, e é por ela que o L varia por hue — no mesmo L, verde e âmbar carregam muito mais
+  > luminância que azul e sumiriam sobre branco.
+  >
+  > **A ordem dos slots não é decorativa.** Ela é *farthest-point-first*, e os slots são
+  > consumidos por ordem de criação: um workspace com 4 projetos usa os 4 primeiros, que estão
+  > separados por 0,231 em vez dos 0,095 do conjunto completo.
+  >
+  > **O que 24 cores não resolvem, e nenhuma paleta resolve:** com 60 projetos o ponto não
+  > identifica projeto. Discriminar dois pontos lado a lado é uma coisa; olhar um ponto e saber
+  > qual projeto é, outra — essa é categórica, e as pessoas nomeiam ~11 cores. Em todos os
+  > lugares onde a cor aparece o **nome está junto**, e é ele que identifica; a cor agrupa.
 - **Primitivos canônicos:** `src/presentation/components/ui/` — `Button`, `IconButton`,
   `Input`, `Select`, `Textarea`, `SegmentedControl`, `TourButton`, `Toggle`, `KpiCard`, `TaskRow`,
   `FilterPill`, `Badge`, `BillableChip`, `SearchInput`, `Field`, `Modal`, `PageHeader` e

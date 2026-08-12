@@ -123,6 +123,27 @@
 | id | UUID | PK |
 | workspace_id | UUID | FK → Workspace, obrigatório |
 | name | string | Único **por workspace** (`UNIQUE(workspace_id, name)`) |
+| color_index | integer | Slot da paleta de cores. Atribuído na criação, **nunca derivado do id nem do nome** |
+
+> **O `color_index` é o menor índice livre no workspace**, calculado por
+> `nextProjectColorIndex` e gravado na criação — vale para os três caminhos que
+> criam projeto (manual, import em lote, import do Monday). Até a migration 017 a
+> cor saía de `hash(id) % 6`, e sorteio não resolve: com 6 slots e um catálogo de
+> 60 projetos, cada cor carregava ~10 deles e duas linhas na mesma tela tinham 98%
+> de chance de coincidir. Hoje são 24 slots atribuídos, então 2 ou 3 projetos por
+> cor no mesmo catálogo, e 36% de coincidência na tela.
+>
+> **É índice cru, sem teto** — quem passa do fim da paleta dá a volta na
+> apresentação (`índice % 24`, em `getProjectColor`). Guardar o índice e não o
+> slot final é o que permite a paleta crescer ou encolher sem reescrever linha
+> nenhuma. "Menor livre" e não "próximo" porque excluir projeto abre buraco, e
+> reaproveitá-lo mantém o catálogo dentro da faixa da paleta.
+>
+> **Sem UNIQUE em `(workspace_id, color_index)`, de propósito.** Ler o catálogo e
+> gravar não é atômico, e duas criações concorrentes entre janelas podem cair no
+> mesmo índice. Com a constraint, a corrida custaria o projeto (o INSERT falharia
+> e o item do Portfólio sumiria da importação); sem ela, custa uma cor
+> compartilhada, que é o estado normal de todo catálogo maior que a paleta.
 
 ### 4.4 Category
 

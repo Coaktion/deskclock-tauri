@@ -60,9 +60,9 @@ function DayTaskRow({
   selected = false,
   onToggleSelect,
 }: DayTaskRowProps) {
-  const projectName = projects.find((p) => p.id === task.projectId)?.name;
+  const project = projects.find((p) => p.id === task.projectId);
   const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-  const subtitle = [projectName, categoryName].filter(Boolean).join(" · ");
+  const subtitle = [project?.name, categoryName].filter(Boolean).join(" · ");
 
   return (
     <TaskRow
@@ -75,7 +75,7 @@ function DayTaskRow({
       }
       duration={formatHHMMSS(task.durationSeconds ?? 0)}
       billable={task.billable}
-      dotColor={getProjectColor(task.projectId)}
+      dotColor={getProjectColor(project)}
       selected={selected}
       onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
       leading={
@@ -456,7 +456,8 @@ export function RetroactivePage() {
                   style={{ maxHeight: plannedPanel.size }}
                 >
                   {plannedTasks.map((task) => {
-                    const projectName = projects.find((p) => p.id === task.projectId)?.name;
+                    const project = projects.find((p) => p.id === task.projectId);
+                    const projectName = project?.name;
                     const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
                     const hasTime = !!(task.startTime && task.endTime);
                     return (
@@ -467,7 +468,7 @@ export function RetroactivePage() {
                         <div className="min-w-0 w-full flex items-center gap-2">
                           <span
                             className="shrink-0 w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: getProjectColor(task.projectId) }}
+                            style={{ backgroundColor: getProjectColor(project) }}
                             aria-hidden
                           />
                           <div className="min-w-0 w-full">

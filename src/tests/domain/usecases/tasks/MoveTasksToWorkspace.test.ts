@@ -194,6 +194,7 @@ describe("moveTasksToWorkspace", () => {
           id: "p-ja-existia",
           workspaceId: "ws-destino",
           name: "Projeto Novo",
+          colorIndex: 0,
         })),
         save: vi.fn(async () => {
           throw new Error("UNIQUE constraint failed");

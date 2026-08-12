@@ -57,7 +57,7 @@ export function PlannedTasksSection({
               title={task.name || "(sem nome)"}
               subtitle={subtitle || undefined}
               billable={task.billable}
-              dotColor={getProjectColor(task.projectId)}
+              dotColor={getProjectColor(project)}
               actions={
                 playDisabled ? undefined : (
                   <button

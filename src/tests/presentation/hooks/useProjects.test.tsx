@@ -41,7 +41,7 @@ const WORKSPACE = {
 };
 
 function project(name: string): Project {
-  return { id: `p-${name}`, workspaceId: DEFAULT_WORKSPACE_ID, name };
+  return { id: `p-${name}`, workspaceId: DEFAULT_WORKSPACE_ID, name, colorIndex: 0 };
 }
 
 function makeWrapper(projectRepo: IProjectRepository) {
