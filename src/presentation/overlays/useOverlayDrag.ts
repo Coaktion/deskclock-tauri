@@ -77,8 +77,7 @@ export function useOverlayDrag(
   configKey: PositionKey,
   snapToGrid: boolean,
   config: ConfigContextValue,
-  onPositionChange?: () => void,
-  overlaySize?: { width: number; height: number }
+  onPositionChange?: () => void
 ) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef({ x: 0, y: 0 });
@@ -112,7 +111,7 @@ export function useOverlayDrag(
 
         // Clamp to monitor bounds — snap can push window past screen edge
         const winSize = await appWindow.outerSize();
-        const contentSize = overlaySize ?? winSize;
+        const contentSize = winSize;
         // When content is smaller than the window (e.g. 78×52 inside a 200×200 GTK window),
         // compute the centering offset so clamping anchors on the visible area, not the window frame.
         const offsetX = Math.round((winSize.width - contentSize.width) / 2);
@@ -152,7 +151,7 @@ export function useOverlayDrag(
       unlisten.then((fn) => fn());
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [config, configKey, snapToGrid, onPositionChange, overlaySize]);
+  }, [config, configKey, snapToGrid, onPositionChange]);
 
   return restore;
 }

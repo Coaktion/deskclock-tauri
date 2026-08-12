@@ -1,15 +1,14 @@
 import type { Task } from "@domain/entities/Task";
+import { WorkspaceEdge } from "@presentation/components/WorkspaceDot";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { formatHHMMSS, todayISO } from "@shared/utils/time";
 import { ListTodo } from "lucide-react";
-import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
-import { WorkspaceEdge } from "@presentation/components/WorkspaceDot";
 
 interface CompactOverlayContentProps {
   runningTask: Task | null;
   isPopupOpen: boolean;
-  overlaySize: "big" | "small";
   onMouseDown: () => void;
   onTogglePopup: () => void;
 }
@@ -17,7 +16,6 @@ interface CompactOverlayContentProps {
 export function CompactOverlayContent({
   runningTask,
   isPopupOpen,
-  overlaySize,
   onMouseDown,
   onTogglePopup,
 }: CompactOverlayContentProps) {
@@ -44,24 +42,15 @@ export function CompactOverlayContent({
 
   const timerColor = isPaused ? "text-paused" : "text-accent-text";
 
-  const isSmall = overlaySize === "small";
-  const maxW = isSmall ? "max-w-[68px]" : "max-w-[78px]";
-  const maxH = isSmall ? "max-h-[44px]" : "max-h-[52px]";
-  const rounded = isSmall ? "rounded-chip" : "rounded-card";
-  const roundedTop = isSmall ? "rounded-t-chip" : "rounded-t-card";
-  const roundedBottom = isSmall ? "rounded-b-chip" : "rounded-b-card";
-  const timerSize = isSmall ? "text-xs" : "text-sm";
+  const maxW = "max-w-[68px]";
+  const maxH = "max-h-[44px]";
+  const rounded = "rounded-chip";
+  const roundedTop = "rounded-t-chip";
+  const roundedBottom = "rounded-b-chip";
+  const timerSize = "text-sm";
   // O contador é um dígito só na maioria das vezes: pode ser maior que o timer
   // sem estourar a caixa, e é o que o torna legível de relance.
   const countSize = "text-base";
-
-  // Disco atrás do ícone/timer: é ele que abre o vazio entre as duas crescentes,
-  // dispensando uma camada de recorte. Só existe quando há cor para separar —
-  // sem crescentes, o disco seria invisível em repouso e ainda assim criaria um
-  // segundo blend no hover do botão.
-  const centerBackdrop = showWorkspace
-    ? "box-content p-1 rounded-full bg-surface group-hover:bg-raised/60 transition-colors"
-    : "";
 
   return (
     // inset-0 + m-auto centraliza dentro da janela (que no GTK pode ser 136px+).
@@ -77,13 +66,13 @@ export function CompactOverlayContent({
       <button
         onMouseDown={onMouseDown}
         onClick={onTogglePopup}
-        className={`group relative flex items-center justify-center hover:bg-raised/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop}`}
+        className={`group relative flex items-center justify-center hover:bg-raised/60 transition-colors w-full flex-1 cursor-pointer ${roundedTop} overflow-hidden`}
       >
         {/* Só sobre o botão, nunca sobre a barra do grip. */}
-        {showWorkspace && <WorkspaceEdge color={activeWorkspace!.color} className={roundedTop} />}
+        {showWorkspace && <WorkspaceEdge color={activeWorkspace!.color} />}
         {hasTask ? (
           <span
-            className={`relative ${centerBackdrop} font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
+            className={`relative font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
           >
             {formatHHMMSS(seconds)}
           </span>
@@ -92,15 +81,12 @@ export function CompactOverlayContent({
           // overlay já é. Fica no centro, no lugar do ícone, e não como badge de
           // canto: a 68px o badge era pequeno demais para se ler de relance.
           <span
-            className={`relative ${centerBackdrop} ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-accent-text`}
+            className={`relative ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-accent-text`}
           >
             {pendingCount > 99 ? "99+" : pendingCount}
           </span>
         ) : (
-          <ListTodo
-            size={18}
-            className={`relative ${centerBackdrop} text-accent-text pointer-events-none`}
-          />
+          <ListTodo size={18} className={`relative text-accent-text pointer-events-none`} />
         )}
       </button>
 
