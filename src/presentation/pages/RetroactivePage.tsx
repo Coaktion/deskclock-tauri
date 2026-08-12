@@ -523,6 +523,17 @@ export function RetroactivePage() {
           <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
             <SectionCard
               title="Apontamentos do dia"
+              // O cartão acompanha o conteúdo **até** o fim do espaço, e daí em
+              // diante rola. É o `flex: 0 1 auto` padrão com `min-h-0`: sem ele
+              // o item de flex não encolhe abaixo do próprio conteúdo, e a
+              // casca — que tem `overflow-hidden` — recortava a lista em
+              // silêncio, sem barra, escondendo justamente o apontamento
+              // recém-lançado. `flex-1` resolveria a rolagem e cobraria o
+              // contrário: o cartão esticado até o rodapé num dia de duas
+              // linhas. Quem rola é o corpo, com o cabeçalho e a barra de
+              // seleção sempre à vista.
+              className="min-h-0 flex flex-col"
+              bodyClassName="min-h-0 overflow-y-auto"
               action={
                 tasks.length > 0 && (
                   <div className="shrink-0 flex items-center justify-end gap-3">

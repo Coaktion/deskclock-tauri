@@ -78,8 +78,12 @@ export function SectionCard({
   return (
     <div className={`border ${colors.shell} rounded-card overflow-hidden ${className}`}>
       {hasHeader && (
+        // `shrink-0` só tem efeito quando a casca é coluna de flex — o arranjo
+        // do cartão cujo corpo rola. Nele o cabeçalho é item de flex como o
+        // corpo e cederia altura junto, comprimindo a faixa que existe para
+        // ficar à vista enquanto a lista rola. Fora desse arranjo, é inerte.
         <div
-          className={`${colors.header} border-b px-3 py-2.5 flex gap-2 ${
+          className={`${colors.header} shrink-0 border-b px-3 py-2.5 flex gap-2 ${
             description ? "items-start" : "items-center"
           }`}
         >
