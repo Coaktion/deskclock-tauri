@@ -1,9 +1,10 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { TaskGroup } from "@domain/utils/groupTasks";
+import { IconButton } from "@presentation/components/ui";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { formatDurationCompact } from "@shared/utils/time";
-import { Play } from "lucide-react";
+import { Pen, Play } from "lucide-react";
 
 const COMPLETED_ROW_H = 40;
 
@@ -14,6 +15,8 @@ interface CompletedTasksSectionProps {
   categories: Category[];
   /** Inicia uma nova execução com os dados da tarefa concluída (repetir). */
   onRepeat: (group: TaskGroup) => void;
+  /** Abre a edição do grupo no painel que cobre o popup. */
+  onEdit: (group: TaskGroup) => void;
 }
 
 /**
@@ -27,6 +30,7 @@ export function CompletedTasksSection({
   projects,
   categories,
   onRepeat,
+  onEdit,
 }: CompletedTasksSectionProps) {
   if (groups.length === 0) {
     return (
@@ -78,6 +82,14 @@ export function CompletedTasksSection({
               <span className="text-xs tabular-nums text-fg-secondary font-mono shrink-0">
                 {formatDurationCompact(group.totalSeconds)}
               </span>
+              {/* Editar antes de repetir, a mesma ordem da linha planejada:
+                  primeiro o que ajusta o registro, depois o que age. */}
+              <IconButton
+                icon={<Pen size={14} />}
+                title="Editar"
+                size="sm"
+                onClick={() => onEdit(group)}
+              />
               <button
                 onClick={() => onRepeat(group)}
                 title="Repetir tarefa"

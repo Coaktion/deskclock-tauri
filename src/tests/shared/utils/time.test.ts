@@ -10,6 +10,7 @@ import {
   resolveRegisteredEndHHMM,
   formatRegisteredTimeRange,
   addSecondsISO,
+  buildTaskInterval,
 } from "@shared/utils/time";
 
 describe("localDateISO", () => {
@@ -112,6 +113,38 @@ describe("resolveRegisteredEndHHMM", () => {
     expect(resolveRegisteredEndHHMM("09:00", 0, "10:23")).toBe("10:23"));
   it("sem duração e sem fim, cai no início", () =>
     expect(resolveRegisteredEndHHMM("09:00", null, null)).toBe("09:00"));
+});
+
+describe("buildTaskInterval", () => {
+  // Os esperados são montados em horário local, para a asserção não depender do
+  // fuso do runner — o dia da tarefa é local (§6.6).
+  const at = (day: number, h: number, m = 0) => new Date(2026, 7, day, h, m, 0).toISOString();
+
+  it("monta os dois instantes e a duração que os fecha", () => {
+    expect(buildTaskInterval("2026-08-11", "09:00", "10:30")).toEqual({
+      startTime: at(11, 9),
+      endTime: at(11, 10, 30),
+      durationSeconds: 5400,
+    });
+  });
+
+  it("fim menor que início é virada de meia-noite, e o fim cai no dia seguinte", () => {
+    expect(buildTaskInterval("2026-08-11", "23:00", "01:00")).toEqual({
+      startTime: at(11, 23),
+      endTime: at(12, 1),
+      durationSeconds: 7200,
+    });
+  });
+
+  it("início igual ao fim dá duração zero, não um dia inteiro", () => {
+    const { durationSeconds } = buildTaskInterval("2026-08-11", "09:00", "09:00");
+    expect(durationSeconds).toBe(0);
+  });
+
+  it("conta os minutos, não só as horas", () => {
+    const { durationSeconds } = buildTaskInterval("2026-08-11", "09:15", "09:40");
+    expect(durationSeconds).toBe(1500);
+  });
 });
 
 describe("formatRegisteredTimeRange", () => {

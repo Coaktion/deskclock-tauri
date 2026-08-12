@@ -14,7 +14,7 @@ import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { updateTask } from "@domain/usecases/tasks/UpdateTask";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
-import { addDaysISO, resolveRegisteredEndHHMM } from "@shared/utils/time";
+import { buildTaskInterval, resolveRegisteredEndHHMM } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
@@ -34,13 +34,6 @@ function localDateISO(iso: string): string {
 function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(`${dateISO}T00:00:00`);
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 
 export function EditTaskModal({ task, projects, categories, onSave, onClose }: EditTaskModalProps) {
@@ -97,17 +90,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
     const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
     const cId = categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null;
 
-    const startISO = buildISO(startDate, startTime);
-    const et = endOverrideHHMM ?? endTime;
-    let endISO = buildISO(startDate, et);
-    // Se hora fim for anterior à hora início, consideramos que passou da meia-noite
-    if (new Date(endISO) < new Date(startISO)) {
-      endISO = buildISO(addDaysISO(startDate, 1), et);
-    }
-    const durationSeconds = Math.max(
-      0,
-      Math.round((new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000)
-    );
+    const interval = buildTaskInterval(startDate, startTime, endOverrideHHMM ?? endTime);
 
     setSaving(true);
     const nowISO = new Date().toISOString();
@@ -119,9 +102,7 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
         projectId: pId,
         categoryId: cId,
         billable,
-        startTime: startISO,
-        endTime: endISO,
-        durationSeconds,
+        ...interval,
         customValues,
       },
       nowISO

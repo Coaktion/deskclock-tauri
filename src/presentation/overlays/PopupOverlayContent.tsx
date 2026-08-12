@@ -15,6 +15,7 @@ import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { CompletedTaskEditSheet } from "@presentation/overlays/CompletedTaskEditSheet";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
 import { RunningCustomFieldsSheet } from "@presentation/overlays/RunningCustomFieldsSheet";
@@ -610,8 +611,11 @@ export function PopupOverlayContent({
   const today = todayISO();
   const { tasks, reload, complete, update } = usePlannedTasksForDate(today);
   const { titles: trackedTitles } = useTrackedMeetingTitles();
-  const { groups: completedGroups, totalSeconds: completedTotalSeconds } =
-    useCompletedTasksForDate(today);
+  const {
+    groups: completedGroups,
+    totalSeconds: completedTotalSeconds,
+    updateGroup: updateCompletedGroup,
+  } = useCompletedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { activeFields } = useCustomFields();
@@ -624,6 +628,7 @@ export function PopupOverlayContent({
   const hasCustomFields = activeFields.length > 0;
   const [confirmingStop, setConfirmingStop] = useState(false);
   const [editingTask, setEditingTask] = useState<PlannedTask | null>(null);
+  const [editingCompleted, setEditingCompleted] = useState<TaskGroup | null>(null);
   const [editingCustomFields, setEditingCustomFields] = useState(false);
 
   // Reset confirm state whenever the running task changes (started/stopped).
@@ -636,12 +641,11 @@ export function PopupOverlayContent({
     }
   }, [runningTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Os dois painéis seguram o fechamento automático pelo mesmo motivo: o popup
-  // some no blur, e o dos campos personalizados guarda texto digitado que
-  // ninguém salvou ainda.
+  // Os três painéis seguram o fechamento automático pelo mesmo motivo: o popup
+  // some no blur, e todos eles guardam texto digitado que ninguém salvou ainda.
   useEffect(() => {
-    onModalOpenChange(!!editingTask || editingCustomFields);
-  }, [editingTask, editingCustomFields, onModalOpenChange]);
+    onModalOpenChange(!!editingTask || !!editingCompleted || editingCustomFields);
+  }, [editingTask, editingCompleted, editingCustomFields, onModalOpenChange]);
 
   // Resize based on state. A edição de planejada **não** entra aqui: o painel
   // cabe no popup como ele já é, e crescer a janela para editar tiraria o
@@ -848,6 +852,7 @@ export function PopupOverlayContent({
                 projects={projects}
                 categories={categories}
                 onRepeat={handleRepeat}
+                onEdit={setEditingCompleted}
               />
             )}
           </div>
@@ -878,6 +883,19 @@ export function PopupOverlayContent({
           categories={categories}
           onSave={update}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {/* Edição da executada, no mesmo desenho de painel. Ela edita o **grupo**
+          que a linha representa (§6.3) — os campos da chave valem para todas as
+          irmãs, e só o grupo de uma tarefa mostra horário. */}
+      {editingCompleted && (
+        <CompletedTaskEditSheet
+          group={editingCompleted}
+          projects={projects}
+          categories={categories}
+          onSave={updateCompletedGroup}
+          onClose={() => setEditingCompleted(null)}
         />
       )}
 

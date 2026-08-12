@@ -12,7 +12,7 @@ import { SectionCard } from "@presentation/components/ui";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { updateTask } from "@domain/usecases/tasks/UpdateTask";
+import { updateTaskGroup } from "@domain/usecases/tasks/UpdateTaskGroup";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
@@ -93,8 +93,7 @@ export function TodayEntriesSection({
       customValues: CustomValues;
     }
   ) {
-    const nowISO = new Date().toISOString();
-    await Promise.all(group.tasks.map((t) => updateTask(taskRepo, t.id, updates, nowISO)));
+    await updateTaskGroup(taskRepo, group.tasks, updates, new Date().toISOString());
     void notifyTasksChanged();
     reload();
   }

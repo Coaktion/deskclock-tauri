@@ -158,6 +158,41 @@ export function buildLocalISO(dateISO: string, hhmm: string): string {
   return d.toISOString();
 }
 
+/**
+ * Intervalo gravável de uma tarefa a partir do dia e das duas horas locais que a
+ * tela edita: os dois instantes e a duração que os fecha.
+ *
+ * **Fim menor que início é virada de meia-noite, não erro** — a tarefa que
+ * começou às 23:00 e terminou à 01:00 pertence ao dia em que começou, e é assim
+ * que ela é lançada e editada. Sem essa leitura, a conta daria duração negativa,
+ * e o `Math.max` a gravaria como zero.
+ *
+ * A conta estava escrita à mão no `EditTaskModal` e no `ClockifyEntriesModal`,
+ * cada um com sua cópia do `buildLocalISO` daqui de cima. Este é o call site que
+ * pediria a terceira — o painel de edição do popup.
+ */
+export function buildTaskInterval(
+  dateISO: string,
+  startHHMM: string,
+  endHHMM: string
+): { startTime: string; endTime: string; durationSeconds: number } {
+  const startTime = buildLocalISO(dateISO, startHHMM);
+  const sameDayEnd = buildLocalISO(dateISO, endHHMM);
+  const endTime =
+    new Date(sameDayEnd) < new Date(startTime)
+      ? buildLocalISO(addDaysISO(dateISO, 1), endHHMM)
+      : sameDayEnd;
+
+  return {
+    startTime,
+    endTime,
+    durationSeconds: Math.max(
+      0,
+      Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000)
+    ),
+  };
+}
+
 export function addDaysISO(dateISO: string, days: number): string {
   const d = new Date(dateISO + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + days);
