@@ -1,0 +1,19 @@
+# Fim de linha: LF no repositório e LF no working tree, em qualquer sistema.
+#
+# O `eol=lf` não é preferência de estilo: ele ganha do `core.autocrlf=true` que o
+# Git for Windows instala por padrão. Sem ele, o checkout no Windows reescreve os
+# arquivos com CRLF — e o `sqlx::migrate!` embute o checksum do conteúdo dos .sql
+# em tempo de compilação. Um build feito nesse checkout carrega checksums que não
+# batem com os gravados em `_sqlx_migrations`, e o app não abre:
+# "migration 1 was previously applied but has been modified".
+# Aconteceu em 2026-08-12, num clone Windows deste repositório.
+* text=auto eol=lf
+
+# Binários: nunca normalizar, nunca tentar diff de texto.
+*.png binary
+*.ico binary
+*.icns binary
+*.db binary
+
+# Scripts de shell quebram com CRLF mesmo fora do Windows.
+*.sh text eol=lf
