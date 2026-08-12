@@ -11,7 +11,6 @@ import {
 } from "./chipStyles";
 import type { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
-import type { SuggestionItem } from "@presentation/hooks/useOmniboxSuggestions";
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
 
@@ -57,16 +56,10 @@ export function OmniboxIdle({
   setDraft,
   focused,
   setFocused,
-  showSuggestions,
-  setShowSuggestions,
-  activeSuggIdx,
-  setActiveSuggIdx,
   editingChip,
   setEditingChip,
   inputRef,
-  suggestions,
   handleStart,
-  handleSuggestionSelect,
   handleInputKeyDown,
 }: OmniboxIdleProps) {
   const { categoriesFor } = useProjectCategoryMap();
@@ -94,15 +87,8 @@ export function OmniboxIdle({
           ref={inputRef}
           variant="plain"
           value={draft.name}
-          onChange={(e) => {
-            setDraft((d) => ({ ...d, name: e.target.value }));
-            setShowSuggestions(true);
-            setActiveSuggIdx(0);
-          }}
-          onFocus={() => {
-            setFocused(true);
-            setShowSuggestions(true);
-          }}
+          onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+          onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
@@ -179,41 +165,6 @@ export function OmniboxIdle({
           onClick={() => setDraft((d) => ({ ...d, billable: !d.billable }))}
         />
       </div>
-
-      {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="border-t border-border-subtle bg-raised rounded-b-card overflow-hidden">
-          <ul>
-            {suggestions.map((s: SuggestionItem, idx: number) => (
-              <li
-                key={s.key}
-                onMouseDown={() => handleSuggestionSelect(s)}
-                onMouseEnter={() => setActiveSuggIdx(idx)}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                  idx === activeSuggIdx ? "bg-accent/15 text-fg" : "text-fg-secondary"
-                }`}
-              >
-                <span
-                  className={`shrink-0 w-2 h-2 rounded-full ${
-                    s.billable ? "bg-billable" : "bg-fg-muted"
-                  }`}
-                />
-                <span className="flex-1 text-sm truncate">{s.name}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  {s.isPlanned && (
-                    <span className="text-overline uppercase text-accent-text">planejada</span>
-                  )}
-                  {s.projectName && (
-                    <span className="text-xs text-fg-muted truncate max-w-[80px]">
-                      {s.projectName}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

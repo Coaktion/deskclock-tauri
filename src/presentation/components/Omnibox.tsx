@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
-import type { Task } from "@domain/entities/Task";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
@@ -12,7 +11,6 @@ import { OmniboxRunning } from "./OmniboxRunning";
 
 interface OmniboxProps {
   plannedTasks: PlannedTask[];
-  recentTasks: Task[];
   projects: Project[];
   categories: Category[];
   onStarted?: () => void;
@@ -22,7 +20,6 @@ interface OmniboxProps {
 
 export function Omnibox({
   plannedTasks,
-  recentTasks,
   projects,
   categories,
   onStarted,
@@ -42,14 +39,7 @@ export function Omnibox({
   const seconds = useTaskTimer(runningTask);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const draft = useOmniboxDraft({
-    plannedTasks,
-    recentTasks,
-    projects,
-    categories,
-    startTask,
-    onStarted,
-  });
+  const draft = useOmniboxDraft({ startTask, onStarted });
 
   const edit = useOmniboxRunningEdit({
     runningTask,

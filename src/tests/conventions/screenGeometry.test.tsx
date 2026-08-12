@@ -295,8 +295,6 @@ describe("geometria: tela 3a contra o spec do design", () => {
       categoryName: "",
       categoryId: null,
       billable: true,
-      plannedTaskId: null,
-      customValues: {},
     };
     const box = shellOf(
       <OmniboxIdle
@@ -307,16 +305,10 @@ describe("geometria: tela 3a contra o spec do design", () => {
         setDraft={() => {}}
         focused={false}
         setFocused={() => {}}
-        showSuggestions={false}
-        setShowSuggestions={() => {}}
-        activeSuggIdx={0}
-        setActiveSuggIdx={() => {}}
         editingChip={null}
         setEditingChip={() => {}}
         inputRef={createRef<HTMLInputElement>()}
-        suggestions={[]}
         handleStart={() => Promise.resolve()}
-        handleSuggestionSelect={() => {}}
         handleInputKeyDown={() => {}}
         reset={() => {}}
       />

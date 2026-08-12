@@ -1,5 +1,4 @@
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import type { Task } from "@domain/entities/Task";
 import { pendingPlannedTasks } from "@domain/utils/plannedPending";
 import { Omnibox } from "@presentation/components/Omnibox";
 import { PlannedTasksSection } from "@presentation/components/PlannedTasksSection";
@@ -39,23 +38,6 @@ export function TasksPage({
   const hour = new Date().getHours();
   const greet = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const userName = config.get("userName");
-
-  // Recent tasks: unique by name+projectId, up to 8, from today's entries (most recent first)
-  const recentTasks: Task[] = (() => {
-    const all = groups.flatMap((g) => g.tasks);
-    const seen = new Set<string>();
-    const result: Task[] = [];
-    for (let i = all.length - 1; i >= 0; i--) {
-      const t = all[i];
-      const key = `${t.name ?? ""}|${t.projectId ?? ""}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push(t);
-        if (result.length >= 8) break;
-      }
-    }
-    return result;
-  })();
 
   async function handlePlayPlanned(task: PlannedTask) {
     if (runningTask) return;
@@ -106,7 +88,6 @@ export function TasksPage({
         <div data-tour="tasks-omnibox" className="shrink-0">
           <Omnibox
             plannedTasks={plannedTasks}
-            recentTasks={recentTasks}
             projects={projects}
             categories={categories}
             onStarted={reloadPlanned}
