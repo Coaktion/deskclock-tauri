@@ -350,6 +350,10 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Registrado aqui, e não no setup(): as janelas do tauri.conf.json são
+        // criadas antes do hook, e no Windows uma delas já chama get_db_bootstrap
+        // nesse intervalo. Ver o comentário de topo de database.rs.
+        .manage(database::DbBootstrapState::default())
         .setup(|app| {
             // Log habilitado também em release. Targets explícitos (Stdout + LogDir)
             // para não depender do default do plugin — garante que sempre há arquivo.
@@ -404,7 +408,7 @@ pub fn run() {
                 Err(e) => log::error!("Migração do banco falhou: {e}"),
             }
             let db_ready = bootstrap.is_ok();
-            app.manage(database::DbBootstrapState(bootstrap));
+            app.state::<database::DbBootstrapState>().fulfill(bootstrap);
 
             tray::setup_tray(app)?;
             keep_overlays_topmost(app.handle().clone());

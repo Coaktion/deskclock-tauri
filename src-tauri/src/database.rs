@@ -10,16 +10,27 @@
 //! único WARN no log. A correção upstream ainda não existe (a branch `v2` do
 //! plugins-workspace mantém o `.remove()`), por isso não há atalho por upgrade.
 //!
-//! Como o `setup()` roda síncrono na thread principal dentro de `build()`, ele
-//! termina antes de o event loop despachar qualquer `invoke` — logo, antes de
-//! qualquer janela conseguir carregar o banco. Não é o fato de as janelas ainda não
-//! existirem: elas já foram criadas neste ponto (tauri 2.10.3, `app.rs::setup`).
+//! O `setup()` roda dentro do `build()`, **depois** de as 4 janelas do
+//! `tauri.conf.json` serem criadas (tauri 2.10.3, `app.rs::setup`: as janelas na
+//! linha 2374, o hook do app na 2380). Isso não bastaria para haver corrida se
+//! nada despachasse `invoke` antes de o event loop começar — e no Linux não
+//! despacha. No Windows, sim: o wry bombeia a fila de mensagens enquanto espera
+//! cada WebView2 nascer (`webview2_com::wait_with_pump`, wry 0.54.4
+//! `webview2/mod.rs:363,414`), então o frontend da primeira janela chega a chamar
+//! `get_db_bootstrap` enquanto a quarta ainda está sendo criada — antes de o
+//! `setup()` ter migrado o que quer que seja.
+//!
+//! Por isso o state é registrado **no `Builder`**, antes de qualquer janela, já
+//! existindo quando o invoke adiantado chega; e o comando é `async`, para esperar
+//! o resultado da migração sem travar a thread principal, que é justamente quem
+//! está migrando (comando async roda na async runtime — `tauri::ipc::mod.rs:329`).
 
 use std::path::PathBuf;
 
 use sqlx::migrate::Migrator;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use tauri::{AppHandle, Manager, Runtime, State};
+use tokio::sync::watch;
 
 /// Migrations embutidas em tempo de compilação a partir de `src-tauri/migrations/`.
 /// Os arquivos `.sql` são a única fonte da verdade: não há lista paralela a manter.
@@ -61,7 +72,40 @@ pub struct DbBootstrap {
 }
 
 /// Resultado da migração do boot, guardado para o frontend consultar.
-pub struct DbBootstrapState(pub Result<DbBootstrap, String>);
+///
+/// Nasce vazio no `Builder` e é preenchido uma vez, no `setup()`. Quem consulta
+/// antes disso espera — ver o comentário de topo do módulo.
+pub struct DbBootstrapState {
+    tx: watch::Sender<Option<Result<DbBootstrap, String>>>,
+}
+
+impl Default for DbBootstrapState {
+    fn default() -> Self {
+        Self {
+            tx: watch::channel(None).0,
+        }
+    }
+}
+
+impl DbBootstrapState {
+    /// Publica o resultado da migração e libera quem estiver esperando.
+    pub fn fulfill(&self, result: Result<DbBootstrap, String>) {
+        self.tx.send_replace(Some(result));
+    }
+
+    /// Devolve o resultado da migração, esperando se o `setup()` ainda não chegou
+    /// lá. `wait_for` testa o valor corrente antes de dormir: no caso comum — boot
+    /// terminado — não há espera nenhuma.
+    async fn get(&self) -> Result<DbBootstrap, String> {
+        let mut rx = self.tx.subscribe();
+        let value = rx.wait_for(|v| v.is_some()).await.map_err(|_| {
+            "O boot do banco de dados terminou sem publicar um resultado.".to_string()
+        })?;
+        (*value)
+            .clone()
+            .expect("wait_for só devolve com Some publicado")
+    }
+}
 
 /// Aplica as migrations pendentes. Chamado uma vez, no `setup()`.
 pub fn migrate<R: Runtime>(app: &AppHandle<R>) -> Result<DbBootstrap, String> {
@@ -104,6 +148,6 @@ fn expected_version() -> i64 {
 /// URL do banco e versão esperada do schema. Devolve erro quando a migração do boot
 /// falhou, para que nenhuma tela rode contra schema velho.
 #[tauri::command]
-pub fn get_db_bootstrap(state: State<'_, DbBootstrapState>) -> Result<DbBootstrap, String> {
-    state.0.clone()
+pub async fn get_db_bootstrap(state: State<'_, DbBootstrapState>) -> Result<DbBootstrap, String> {
+    state.get().await
 }
