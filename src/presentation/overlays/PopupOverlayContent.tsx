@@ -26,17 +26,17 @@ import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time"
 import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import { emit } from "@tauri-apps/api/event";
 import {
-    ArrowRight,
-    Bell,
-    CalendarDays,
-    Check,
-    CheckCircle2,
-    Clock,
-    Pause,
-    Pen,
-    Play,
-    Square,
-    X,
+  ArrowRight,
+  Bell,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  Clock,
+  Pause,
+  Pen,
+  Play,
+  Square,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
