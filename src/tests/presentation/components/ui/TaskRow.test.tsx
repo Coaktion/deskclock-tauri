@@ -105,6 +105,60 @@ describe("TaskRow", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  /**
+   * Quem abre em largura paga com o `1fr` do nome, e arrasta para a esquerda
+   * tudo o que estiver à direita dele. Com o chip **antes** das ações ele andava
+   * ~118px no instante em que o cursor entrava na linha, e quem herdava o lugar
+   * dele era o último botão da fileira — o "Excluir" do Planejamento, que não
+   * pergunta. O jsdom não faz layout, então o que dá para amarrar é a ordem: nada
+   * que abra em largura pode ficar entre o nome e o chip.
+   */
+  it("o chip fica ancorado depois da célula que abre em largura", () => {
+    const { container } = render(
+      <TaskRow
+        title="a"
+        billable
+        onToggleBillable={() => {}}
+        collapseActions
+        actions={<span data-acoes="" />}
+      />
+    );
+    const celulas = [...container.firstElementChild!.children];
+    const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
+    const chip = celulas.findIndex((c) => c.querySelector("button"));
+
+    expect(acoes).toBeGreaterThanOrEqual(0);
+    expect(chip).toBeGreaterThan(acoes);
+    // E a célula fechada não pode cobrar o `gap` da grade que ela não ocupa, ou
+    // o chip nasce 10px à direita de onde as outras linhas o põem.
+    expect(celulas[acoes].className).toMatch(/(?:^|\s)-mr-2\.5(?:\s|$)/);
+    expect(celulas[acoes].className).toMatch(/(?:^|\s)group-hover:mr-0(?:\s|$)/);
+  });
+
+  /**
+   * O outro lado da mesma regra: com duração a célula já está reservada, nada se
+   * move no hover, e ali o chip continua antes — que é o que o design desenha nas
+   * Entradas. Inverter as duas ordens seria mudar a linha que não tem o defeito.
+   */
+  it("com duração, a célula já está reservada e o chip volta a vir antes", () => {
+    const { container } = render(
+      <TaskRow
+        title="a"
+        duration="1h"
+        billable
+        onToggleBillable={() => {}}
+        actions={<span data-acoes="" />}
+      />
+    );
+    const celulas = [...container.firstElementChild!.children];
+    const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
+    const chip = celulas.findIndex((c) => c.querySelector("button"));
+
+    expect(chip).toBeGreaterThanOrEqual(0);
+    expect(acoes).toBeGreaterThan(chip);
+    expect(celulas[acoes].className).not.toMatch(/-mr-2\.5/);
+  });
+
   it("alternar o faturamento não aciona a linha em volta", () => {
     const onClick = vi.fn();
     const onToggleBillable = vi.fn();

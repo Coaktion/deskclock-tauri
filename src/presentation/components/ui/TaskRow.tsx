@@ -42,6 +42,9 @@ interface TaskRowBaseProps {
    * Planejamento pede: com cinco botões, a coluna reservada sai do `1fr` do
    * nome, que trunca numa linha vazia à direita (§5.3). Onde a ação é uma só —
    * o ▶ das planejadas de hoje —, ela continua sempre visível (§7.5.3).
+   *
+   * A célula que cresce passa **à frente** do chip quando isto está ligado; o
+   * porquê está na ordem das colunas, mais abaixo.
    */
   collapseActions?: boolean;
   /**
@@ -123,6 +126,15 @@ export function TaskRow(props: TaskRowProps) {
   const hasMeta = Boolean(meta);
 
   /**
+   * Fechar em **largura** é o que a linha sem duração faz; com duração, quem
+   * some é a opacidade dentro de uma célula que já está reservada. A leitura
+   * mora aqui e não em duas condições soltas porque a ordem das colunas depende
+   * dela: separadas, a linha que pedisse `collapseActions` **com** duração
+   * ficaria com a ordem de uma e o comportamento da outra.
+   */
+  const collapsesWidth = collapseActions && !duration;
+
+  /**
    * O ponto abre coluna própria só quando **nada o precede**. Com o chevron ou a
    * faixa de horário à frente, ele entra no bloco do nome — é o que o design
    * desenha nas três formas, e é o que mantém o nome começando no mesmo lugar
@@ -154,6 +166,60 @@ export function TaskRow(props: TaskRowProps) {
         name
       )}
       {subtitle && <p className="text-xs text-fg-muted truncate mt-px">{subtitle}</p>}
+    </div>
+  );
+
+  const billableCell = (
+    <div className="flex items-center gap-2">
+      {badges}
+      {billableChip}
+    </div>
+  );
+
+  /*
+   * Duração e ações ocupam a **mesma** célula, empilhadas: a duração recua no
+   * hover e as ações tomam o lugar dela. Empilhar em vez de trocar por `hidden`
+   * guarda duas coisas — a largura da célula não pula quando o cursor entra, e o
+   * botão continua alcançável pelo teclado, que é o que `display:none` tiraria.
+   * Sem duração (a planejada), a ação fica sempre visível: é a decisão §7.5.3 do
+   * handoff — a menos que `collapseActions` peça o contrário, e aí quem some é a
+   * **largura**, que é o que a coluna de cinco botões cobraria do nome.
+   *
+   * Fechada em largura, a célula **ainda consome um `gap` da grade**: sem o
+   * `-mr-2.5` o chip nasceria 10px à direita de onde está hoje. A margem negativa
+   * cancela exatamente esse gap em repouso e o devolve no hover, quando ele passa
+   * a ser o respiro entre o último botão e o chip.
+   */
+  const trailingCell = (
+    <div
+      className={`grid items-center justify-items-end ${
+        collapsesWidth ? "-mr-2.5 group-hover:mr-0 group-focus-within:mr-0" : ""
+      }`}
+    >
+      {duration && (
+        <span
+          className={`col-start-1 row-start-1 text-sm font-mono tabular-nums text-fg-secondary ${
+            actions
+              ? "pointer-events-none transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
+              : ""
+          }`}
+        >
+          {duration}
+        </span>
+      )}
+      {actions && (
+        <div
+          className={`col-start-1 row-start-1 flex gap-0.5 ${
+            duration
+              ? "opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
+              : collapsesWidth
+                ? "w-0 overflow-hidden opacity-0 transition-opacity group-hover:w-auto group-hover:opacity-100 group-focus-within:w-auto group-focus-within:opacity-100"
+                : ""
+          }`}
+        >
+          {actions}
+        </div>
+      )}
     </div>
   );
 
@@ -193,47 +259,30 @@ export function TaskRow(props: TaskRowProps) {
         nameBlock
       )}
 
-      <div className="flex items-center gap-2">
-        {badges}
-        {billableChip}
-      </div>
-
       {/*
-       * Duração e ações ocupam a **mesma** célula, empilhadas: a duração recua no
-       * hover e as ações tomam o lugar dela. Empilhar em vez de trocar por
-       * `hidden` guarda duas coisas — a largura da célula não pula quando o
-       * cursor entra, e o botão continua alcançável pelo teclado, que é o que
-       * `display:none` tiraria. Sem duração (a planejada), a ação fica sempre
-       * visível: é a decisão §7.5.3 do handoff — a menos que `collapseActions`
-       * peça o contrário, e aí quem some é a **largura**, que é o que a coluna
-       * de cinco botões cobraria do nome.
+       * **O que cresce nunca fica entre o `1fr` e o chip.** Quem paga a largura
+       * que a célula das ações abre é sempre o nome, e tudo o que estiver à
+       * direita dele é puxado junto: com o chip antes das ações, ele andava
+       * ~118px para a esquerda no instante em que o cursor entrava na linha, e
+       * quem ocupava o lugar dele era o último botão da fileira — o "Excluir",
+       * que aqui não pergunta. Ancorado por último, o chip fica imóvel, e o único
+       * que encolhe é o nome, que não é alvo de clique.
+       *
+       * Vale só onde a célula fecha em largura: com duração ela já está
+       * reservada, nada se move, e ali o chip continua antes — que é o que o
+       * design desenha nas Entradas.
        */}
-      <div className="grid items-center justify-items-end">
-        {duration && (
-          <span
-            className={`col-start-1 row-start-1 text-sm font-mono tabular-nums text-fg-secondary ${
-              actions
-                ? "pointer-events-none transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
-                : ""
-            }`}
-          >
-            {duration}
-          </span>
-        )}
-        {actions && (
-          <div
-            className={`col-start-1 row-start-1 flex gap-0.5 ${
-              duration
-                ? "opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
-                : collapseActions
-                  ? "w-0 overflow-hidden opacity-0 transition-opacity group-hover:w-auto group-hover:opacity-100 group-focus-within:w-auto group-focus-within:opacity-100"
-                  : ""
-            }`}
-          >
-            {actions}
-          </div>
-        )}
-      </div>
+      {collapsesWidth ? (
+        <>
+          {trailingCell}
+          {billableCell}
+        </>
+      ) : (
+        <>
+          {billableCell}
+          {trailingCell}
+        </>
+      )}
 
       {/*
        * O trilho, no eixo do chevron de que ele desce (ver `RAIL_LEFT`). Fora do
