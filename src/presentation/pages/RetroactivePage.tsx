@@ -10,6 +10,7 @@ import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormC
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { Button, IconButton, PageHeader, SectionCard, TaskRow } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
@@ -86,7 +87,7 @@ function DayTaskRow({
             onChange={() => onToggleSelect?.(task.id)}
             onClick={(e) => e.stopPropagation()}
             aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
-            className="shrink-0 accent-accent w-3.5 h-3.5 cursor-pointer"
+            className={selectionBoxClass}
           />
         ) : undefined
       }

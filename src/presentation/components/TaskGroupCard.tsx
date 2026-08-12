@@ -6,6 +6,7 @@ import type { Category } from "@domain/entities/Category";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { TaskRow } from "@presentation/components/ui";
 import { TaskCard } from "./TaskCard";
 
@@ -119,7 +120,7 @@ export function TaskGroupCard({
               }}
               onClick={(e) => e.stopPropagation()}
               aria-label={`Selecionar ${displayName}`}
-              className="shrink-0 w-3.5 h-3.5 accent-accent cursor-pointer"
+              className={selectionBoxClass}
             />
           ) : (
             isGroup && (

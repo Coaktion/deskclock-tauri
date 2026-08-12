@@ -8,6 +8,7 @@ import {
   EditPlannedTaskModal,
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { IconButton, TaskRow } from "@presentation/components/ui";
 import { getProjectColor } from "@shared/utils/projectColor";
 
@@ -117,7 +118,7 @@ export function PlannedTaskItem({
               checked={selected}
               onChange={() => onToggleSelect?.(task.id)}
               onClick={(e) => e.stopPropagation()}
-              className="accent-accent w-3.5 h-3.5 cursor-pointer"
+              className={selectionBoxClass}
             />
           ) : undefined
         }

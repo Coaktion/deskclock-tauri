@@ -506,6 +506,21 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > marcadas lê como dia sem nada marcado. **É divergência declarada do wireframe** — o nó
   > `1/1/1/3/0` da 3b desenha um span de texto "Selecionar", não uma caixa —, escolhida pelo
   > usuário em 2026-08-12 pela consistência com a seleção por linha, que já era caixa.
+  >
+  > **O Planejamento tem a mesma caixa, no mesmo slot**, e pela mesma razão: o cartão do dia lá já
+  > era `SectionCard`, e o "Selecionar"/"Desmarcar" dele dividia o canto direito com a pílula de
+  > concluídas — dois papéis num encaixe só, e o comando das linhas longe da coluna que ele
+  > comanda. **O `action` ficou com a pílula sozinha**, sem o invólucro que existia só para pôr os
+  > dois lado a lado.
+  >
+  > **A caixa tem uma grafia só no app inteiro** — `selectionBoxClass`, em
+  > `components/selectionStyles.ts`, ao lado de `chipStyles.ts` e `fieldStyles.ts` como vocabulário
+  > de classe. Eram quatro cópias das mesmas classes em quatro ordens (Histórico, Planejamento,
+  > o cabeçalho de grupo de Tarefas e o Lançamento Manual), e **duas sem o `shrink-0`** que a
+  > coluna de largura fixa do `TaskRow` pede — a caixa que encolhe deixa de cair na coluna do
+  > cartão que a comanda, que é a única coisa que a torna o controle daquelas linhas. Não é um
+  > `Checkbox` canônico: caixa, rádio e faixa não têm casca, fundo nem raio, e o primitivo, se
+  > valer, é trabalho próprio.
 
   > **Em Dados e Configurações as abas moram no cabeçalho** (`PageHeader.tabs`) e o conteúdo é uma
   > **coluna de 720 px centrada**, dentro de um corpo em `p-5`. Configurações era `max-w-xl` (576),
@@ -537,8 +552,9 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   >
   > **O cabeçalho tem dois encaixes, e o lado importa.** `action` é o canto direito — o total do
   > dia, o atalho "Ver semana" —, e `leading` é a esquerda do título, para o controle que age sobre
-  > as linhas de dentro (a caixa de seleção do dia, no Histórico). `leading` sozinho já levanta o
-  > cabeçalho, como `description`: sendo controle, sem cabeçalho ele sumiria calado. **Não sobrou
+  > as linhas de dentro (a caixa de seleção do dia, no Histórico e no Planejamento). `leading`
+  > sozinho já levanta o cabeçalho, como `description`: sendo controle, sem cabeçalho ele sumiria
+  > calado. **Não sobrou
   > nenhum call site fora da casca** — o cartão do dia do Histórico era o último, e a razão dele
   > (cabeçalho `sticky`) deixou de existir.
 

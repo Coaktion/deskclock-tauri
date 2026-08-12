@@ -2,6 +2,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import {
   Button,
   FilterPill,
@@ -41,10 +42,6 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
 
 const cardClass = "bg-surface border border-border-subtle rounded-card";
 const eyebrowClass = "text-overline uppercase text-fg-muted";
-
-/** A caixa do dia e a da linha são a mesma peça — é o alinhamento entre elas que
- *  diz que uma comanda as outras, e duas grafias o desfariam em silêncio. */
-const selectionBoxClass = "w-3.5 h-3.5 accent-accent cursor-pointer";
 
 /**
  * A cor de projeto sai da entidade, e aqui três blocos só têm o id em mão — a

@@ -3,6 +3,7 @@ import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTa
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -172,12 +173,13 @@ export function WeekPlanningView() {
     return ids;
   }, [tasks, filteredDays]);
 
-  function toggleSelectAllForDay(day: string) {
-    const dayTaskIds = tasks.filter((t) => isTaskOnDate(t, day)).map((t) => t.id);
-    const allSelected = dayTaskIds.length > 0 && dayTaskIds.every((id) => selectedIds.has(id));
+  function toggleSelectAllForDay(dayTaskIds: string[]) {
     setSelectedIds((prev) => {
+      // A decisão sai de `prev`, não do closure do render: o updater tem de
+      // valer sozinho na fila do React.
+      const todas = dayTaskIds.every((id) => prev.has(id));
       const next = new Set(prev);
-      if (allSelected) dayTaskIds.forEach((id) => next.delete(id));
+      if (todas) dayTaskIds.forEach((id) => next.delete(id));
       else dayTaskIds.forEach((id) => next.add(id));
       return next;
     });
@@ -361,6 +363,10 @@ export function WeekPlanningView() {
               const isToday = day === today;
               const dayLabel = `${DAY_SHORT[dayDate.getUTCDay()]}, ${String(dayDate.getUTCDate()).padStart(2, "0")}/${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}`;
               const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
+              const dayTaskIds = dayTasks.map((t) => t.id);
+              const allInDay =
+                dayTaskIds.length > 0 && dayTaskIds.every((id) => selectedIds.has(id));
+              const someInDay = dayTaskIds.some((id) => selectedIds.has(id));
 
               return (
                 <SectionCard
@@ -368,28 +374,30 @@ export function WeekPlanningView() {
                   className="shrink-0"
                   title={isToday ? `${dayLabel} · hoje` : dayLabel}
                   tone={isToday ? "accent" : "default"}
+                  leading={
+                    selectMode && dayTaskIds.length > 0 ? (
+                      <input
+                        type="checkbox"
+                        checked={allInDay}
+                        // Seleção parcial: traço em vez de vazio, senão o dia com
+                        // metade das linhas marcadas lê como dia sem nada marcado.
+                        ref={(el) => {
+                          if (el) el.indeterminate = someInDay && !allInDay;
+                        }}
+                        onChange={() => toggleSelectAllForDay(dayTaskIds)}
+                        aria-label={`Selecionar ${dayLabel}`}
+                        className={selectionBoxClass}
+                      />
+                    ) : undefined
+                  }
                   action={
                     dayTasks.length > 0 && (
-                      <div className="flex items-center gap-2">
-                        {selectMode && (
-                          <button
-                            onClick={() => toggleSelectAllForDay(day)}
-                            className="text-sm text-fg-muted hover:text-fg transition-colors"
-                          >
-                            {dayTasks.every((t) => selectedIds.has(t.id))
-                              ? "Desmarcar"
-                              : "Selecionar"}
-                          </button>
-                        )}
-                        <Badge
-                          tone={isToday ? "accent" : "neutral"}
-                          className="font-mono tabular-nums"
-                        >
-                          {dayCompleted > 0
-                            ? `${dayCompleted}/${dayTasks.length}`
-                            : dayTasks.length}
-                        </Badge>
-                      </div>
+                      <Badge
+                        tone={isToday ? "accent" : "neutral"}
+                        className="font-mono tabular-nums"
+                      >
+                        {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
+                      </Badge>
                     )
                   }
                 >
