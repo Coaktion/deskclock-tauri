@@ -4,14 +4,25 @@ import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 
 /**
- * Tamanho lógico do popup, em px.
+ * Tamanho lógico do popup, em px. **É a altura que ele tem em todo estado**, e
+ * não uma estimativa inicial: idle e running medem isto, e o conteúdo se arranja
+ * dentro — o card da execução e as abas têm altura própria, e o conteúdo da aba
+ * é o `flex-1` que cede o resto (`PopupOverlayContent`).
  *
  * As duas janelas que o posicionam precisam concordar: quem abre o popup é o
  * overlay compacto, e quem o reposiciona depois é ele mesmo. Divergindo, o
  * popup nasce ancorado por uma altura e se desenha com outra — aparecendo
- * deslocado do canto em que o usuário deixou o compacto.
+ * deslocado do canto em que o usuário deixou o compacto. Enquanto a altura variou
+ * por estado, esta constante era também o **teto** do `setMaxSize` e cortava
+ * calada o que passasse dela.
+ *
+ * **O `overlay-popup` do `tauri.conf.json` repete estes dois números**, e é a
+ * terceira cópia — a que ninguém lembra de atualizar, porque o frontend
+ * redimensiona no mount e o erro só existe nos primeiros quadros, com a janela
+ * ainda escondida. Já divergiu: o conf ficou em 411 px depois que a altura caiu
+ * para 380 (2026-08-12). Mexeu aqui, mexa lá.
  */
-export const POPUP_SIZE: { width: number; height: number } = { width: 288, height: 434 };
+export const POPUP_SIZE: { width: number; height: number } = { width: 288, height: 380 };
 
 /** Positions the overlay popup adjacent to the compact overlay, screen-quadrant-aware. */
 export async function positionPopupNearCompact(

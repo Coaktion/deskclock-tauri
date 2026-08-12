@@ -45,13 +45,13 @@
         "title": "",
         "url": "/",
         "width": 288,
-        "height": 411,
+        "height": 380,
         "minWidth": 1,
         "minHeight": 1,
         "visible": false,
         "decorations": false,
         "alwaysOnTop": true,
-        "resizable": true,
+        "resizable": false,
         "transparent": true,
         "skipTaskbar": true,
         "shadow": false
@@ -89,16 +89,12 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "icons/tray/*.png"
-    ]
+    "resources": ["icons/tray/*.png"]
   },
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "deskclock"
-        ]
+        "schemes": ["deskclock"]
       }
     },
     "updater": {

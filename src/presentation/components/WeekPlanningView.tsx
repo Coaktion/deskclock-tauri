@@ -12,7 +12,7 @@ import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTour } from "@presentation/hooks/useTour";
-import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
+import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
@@ -86,7 +86,7 @@ export function WeekPlanningView() {
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
   const { startTask, runningTask } = useRunningTask();
-  const { titles: trackedTitles, today: trackedToday } = useTrackedMeetingTitles();
+  const { plannedIds: trackedIds, today: trackedToday } = useTrackedMeetingPlannedIds();
 
   const formColumn = usePersistedFlag("planningFormCollapsed");
 
@@ -412,9 +412,7 @@ export function WeekPlanningView() {
                         projects={projects}
                         categories={categories}
                         playDisabled={!!runningTask}
-                        tracked={
-                          day === trackedToday && trackedTitles.has(task.name.toLowerCase().trim())
-                        }
+                        tracked={day === trackedToday && trackedIds.has(task.id)}
                         onPlay={handlePlay}
                         onUpdate={update}
                         onComplete={complete}

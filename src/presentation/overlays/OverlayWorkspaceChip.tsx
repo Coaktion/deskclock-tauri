@@ -19,8 +19,8 @@ const MENU_POS = { top: "2rem", right: "4rem" } as const;
  * Os menus usam `position: fixed`, não `absolute`: o cabeçalho do popup tem
  * `overflow-hidden` (para o arredondamento do topo), então um menu ancorado no
  * chip seria recortado pelo pai. `fixed` tira o menu do fluxo e do clipping —
- * o que também preserva as alturas fixas por estado do popup (`EXEC_H`,
- * `CONTENT_H`…), que redimensionam a janela do Tauri a cada mudança.
+ * e, de quebra, não empurra nada do corpo, cujo conteúdo divide a altura fixa da
+ * janela com o card da execução.
  *
  * Some quando só existe um workspace, igual ao switcher da sidebar.
  */

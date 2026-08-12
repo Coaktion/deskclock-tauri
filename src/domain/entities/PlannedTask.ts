@@ -26,8 +26,17 @@ export interface PlannedTask {
   createdAt: string;
   /** Copiados para a Task ao dar Play — ver `StartPlannedTask`. */
   customValues: CustomValues;
-  /** Horário de início "HH:MM" — preenchido quando importado do Google Agenda */
+  /**
+   * Hora marcada de início, "HH:MM". Ausente = a tarefa não tem hora — é o que
+   * separa o compromisso da tarefa que se faz quando der, e é por esse par que
+   * `groupPlannedBySchedule` agrupa a lista do overlay.
+   *
+   * Hoje quem o preenche é só o import da Agenda (`importCalendarEvents`), o que
+   * na prática faz "tem hora" coincidir com "veio do calendário" — coincidência,
+   * não contrato: a procedência mora nas tabelas de vínculo, e nada aqui deve
+   * passar a depender dela.
+   */
   startTime?: string;
-  /** Horário de fim "HH:MM" — preenchido quando importado do Google Agenda */
+  /** Hora marcada de fim, "HH:MM" — ver {@link PlannedTask.startTime}. */
   endTime?: string;
 }

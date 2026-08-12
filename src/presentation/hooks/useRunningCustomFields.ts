@@ -10,8 +10,9 @@ interface UseRunningCustomFieldsParams {
 
 /**
  * Estado da edição dos campos personalizados da **tarefa em execução**, dividido
- * pelo painel do overlay (`RunningCustomFieldsSheet`) e pelo do omnibox
- * (`OmniboxCustomFieldsPanel`) — dois lugares, uma regra (§9.4).
+ * do painel do omnibox (`OmniboxCustomFieldsPanel`). No overlay ele foi
+ * absorvido pelo `useRunningTaskEditor`, que edita a tarefa inteira num painel
+ * só — as regras de semeadura e de gravação abaixo valem para os dois (§9.4).
  *
  * Os valores são semeados **no mount** e não há efeito que os ressincronize:
  * quem monta este hook é o painel, que só existe enquanto está aberto. Um
