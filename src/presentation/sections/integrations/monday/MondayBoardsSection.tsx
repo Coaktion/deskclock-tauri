@@ -50,17 +50,21 @@ function BoardIdInput({
     void onSave(next);
   }
 
+  // A largura vai no elemento em volta, nunca no campo: o `Input` é sempre
+  // `w-full` e a classe de largura passada a ele morre na ordem do CSS — o
+  // campo ficaria com 100% da linha e, como não encolhe, esmagaria o rótulo.
   return (
-    <Input
-      size="sm"
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      placeholder={placeholder}
-      inputMode="numeric"
-      className="shrink-0 w-36"
-    />
+    <div className="w-36 shrink-0">
+      <Input
+        size="sm"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        placeholder={placeholder}
+        inputMode="numeric"
+      />
+    </div>
   );
 }
 
