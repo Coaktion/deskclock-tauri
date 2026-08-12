@@ -188,5 +188,24 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | key | string (PK) |
 | value | JSON |
 
+### 4.8 Migrations
+
+**Criar uma migration é criar um arquivo** em `src-tauri/migrations/`, no padrão
+`NNN_descricao.sql`. Não há lista paralela a manter: o `sqlx::migrate!` embute o
+diretório em tempo de compilação (`src-tauri/src/database.rs`). O registro à mão que
+existia em `src-tauri/src/migrations.rs` foi apagado em 2026-08-12.
+
+**Quem migra é o Rust, no `setup()`, e não o `tauri-plugin-sql`.** O plugin 2.4.0 tira
+a lista de migrations do mapa compartilhado *antes* de migrar, então uma tentativa que
+falha consome a lista e todas as seguintes **conectam sem migrar e retornam sucesso** —
+com 4 janelas no boot, o app inteiro rodava em schema velho deixando um WARN no log.
+Por isso o `.add_migrations` saiu: um dono só. Falha de migração agora aparece na tela
+de erro do `App.tsx`, a API local não sobe, e nenhuma tela abre o banco.
+
+O `getDb()` confere `MAX(version)` de `_sqlx_migrations` contra a versão que o Rust
+reporta — é o que pega migrar um arquivo e ler outro. E **rollback não deixa linha**:
+"sem linha" é ambíguo entre "nunca tentou" e "tentou e reverteu"; o log é a única
+testemunha.
+
 ---
 

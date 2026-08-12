@@ -1,6 +1,6 @@
 mod api;
 mod commands;
-mod migrations;
+mod database;
 mod tray;
 
 use std::collections::HashMap;
@@ -396,6 +396,16 @@ pub fn run() {
             // versão do tauri.conf.json (package_info), não a do Cargo.toml (0.1.0).
             log::info!("DeskClock {} iniciando", app.package_info().version);
 
+            // Migrar aqui, e não pelo plugin sql, é o que impede a corrida entre as 4
+            // janelas do boot de deixar o app em schema velho. Ver database.rs.
+            let bootstrap = database::migrate(app.handle());
+            match &bootstrap {
+                Ok(b) => log::info!("Banco migrado até a versão {}", b.expected_version),
+                Err(e) => log::error!("Migração do banco falhou: {e}"),
+            }
+            let db_ready = bootstrap.is_ok();
+            app.manage(database::DbBootstrapState(bootstrap));
+
             tray::setup_tray(app)?;
             keep_overlays_topmost(app.handle().clone());
 
@@ -403,7 +413,11 @@ pub fn run() {
             app.manage(PendingDeepLinkPage(Mutex::new(None)));
             app.manage(PendingStartTask(Mutex::new(None)));
             app.manage(PendingRetroactivePrefill(Mutex::new(None)));
-            api::server::start_on_boot(app.handle().clone());
+            // A API local lê o mesmo banco: sem migração aplicada, ela serviria dados
+            // de um schema que o resto do app já rejeitou.
+            if db_ready {
+                api::server::start_on_boot(app.handle().clone());
+            }
 
             if let Err(e) = app.deep_link().register("deskclock") {
                 log::warn!("Falha ao registrar esquema deep link: {e}");
@@ -433,19 +447,11 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations(
-                    if cfg!(debug_assertions) {
-                        "sqlite:deskclock-dev.db"
-                    } else {
-                        "sqlite:deskclock.db"
-                    },
-                    migrations::get_migrations(),
-                )
-                .build(),
-        )
+        // Sem `.add_migrations`: o plugin só conecta. Quem migra é o setup() acima,
+        // e há um dono só — ver database.rs.
+        .plugin(tauri_plugin_sql::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
+            database::get_db_bootstrap,
             save_file,
             update_tray_tooltip,
             update_tray_icon,

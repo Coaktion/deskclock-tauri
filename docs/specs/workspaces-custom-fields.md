@@ -228,7 +228,7 @@ workspace, `ON DELETE SET NULL` preservado e as tabelas `_pre_011` intactas e n�
 > **Custo assumido:** a 011 replica o schema de `tasks`/`planned_tasks`/`export_profiles` tal como
 > está após a 010. Alterar retroativamente qualquer migration anterior exige acompanhar este arquivo.
 
-#### 1.1 Migration `011_workspaces.sql` (version 11 em `src-tauri/src/migrations.rs`)
+#### 1.1 Migration `011_workspaces.sql`
 
 Ordem exata validada pelo spike (o SQL candidato já passou nos dois bancos):
 

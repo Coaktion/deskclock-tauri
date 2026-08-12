@@ -194,7 +194,7 @@ saída de emergência chegue antes do que precisa dela.
 
 Sem UI, sem mudança de comportamento.
 
-#### 0.1 Migration `016_project_categories.sql` (version 16 em `src-tauri/src/migrations.rs`)
+#### 0.1 Migration `016_project_categories.sql`
 
 ```sql
 CREATE TABLE project_categories (

@@ -45,7 +45,7 @@ idempotência próprio indexado por assinatura de grupo.
    tipos `shared/types/monday.ts` e `mondayConfig.ts`; `validateTaskForMonday`; use cases puros
    `mondayGroupSignature`, `buildActivityColumnValues`, `resolveBoardActivitiesColumns`,
    `filterProjectBoards`, `importMondayProjects`.
-2. **Persistência** — migration `010_monday_activity_items.sql` (version 10 em `migrations.rs`) +
+2. **Persistência** — migration `010_monday_activity_items.sql` +
    `MondayActivityItemRepository` (upsert por `signature`).
 3. **Infra** — `MondayClient` (GraphQL, `Authorization` sem `Bearer`, paginação, `errors.ts`);
    `MondayTaskSender` com o upsert idempotente (create / update / skip);
