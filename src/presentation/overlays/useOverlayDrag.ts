@@ -3,10 +3,10 @@ import { snapPositionToGrid } from "@shared/utils/snapToGrid";
 import { clampIntoMonitor, positionNearTaskbar } from "@shared/utils/windowPosition";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import {
-  currentMonitor,
-  getCurrentWindow,
-  monitorFromPoint,
-  primaryMonitor,
+    currentMonitor,
+    getCurrentWindow,
+    monitorFromPoint,
+    primaryMonitor,
 } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -77,7 +77,8 @@ export function useOverlayDrag(
   configKey: PositionKey,
   snapToGrid: boolean,
   config: ConfigContextValue,
-  onPositionChange?: () => void
+  onPositionChange?: () => void,
+  overlaySize?: { width: number; height: number }
 ) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef({ x: 0, y: 0 });
@@ -111,7 +112,7 @@ export function useOverlayDrag(
 
         // Clamp to monitor bounds — snap can push window past screen edge
         const winSize = await appWindow.outerSize();
-        const contentSize = winSize;
+        const contentSize = overlaySize ?? winSize;
         // When content is smaller than the window (e.g. 78×52 inside a 200×200 GTK window),
         // compute the centering offset so clamping anchors on the visible area, not the window frame.
         const offsetX = Math.round((winSize.width - contentSize.width) / 2);

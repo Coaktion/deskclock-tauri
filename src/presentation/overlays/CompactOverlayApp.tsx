@@ -5,9 +5,9 @@ import { RepositoriesProvider, useRepositories } from "@presentation/contexts/Re
 import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import {
-  OVERLAY_EVENTS,
-  type OverlayConfigChangedPayload,
-  type RunningTaskChangedPayload,
+    OVERLAY_EVENTS,
+    type OverlayConfigChangedPayload,
+    type RunningTaskChangedPayload,
 } from "@shared/types/overlayEvents";
 import { POPUP_SIZE, positionPopupNearCompact } from "@shared/utils/windowPosition";
 import { listen } from "@tauri-apps/api/event";
@@ -55,7 +55,8 @@ function CompactOverlayAppInner() {
     "overlayPosition_compact",
     snapToGrid,
     config,
-    handlePositionChange
+    handlePositionChange,
+    OVERLAY_COMPACT_SIZE
   );
 
   useEffect(() => {
