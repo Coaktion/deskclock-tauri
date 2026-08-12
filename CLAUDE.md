@@ -82,6 +82,7 @@ compila → `pnpm lint` → commit semântico → PR.
 | vai **escrever teste** | `docs/testes.md` |
 | vai criar **abstração ou integração nova** | `docs/guardrails.md` |
 | a rodada de **fidelidade do design** está em curso | `docs/specs/design-system-fidelity.md` — conferir se a mudança visual não é uma etapa de lá |
+| vai mexer no **backup do banco no Drive** | `docs/specs/backup-google-drive.md` — execução em fases, uma por sessão |
 | quer saber **por que** algo é assim | `docs/historico-de-decisoes.md` e `git log` |
 
 ### 5.1 De-para das seções antigas
