@@ -14,10 +14,15 @@ import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CompactOverlayContent } from "./CompactOverlayContent";
+import { useOverlayDrag } from "./useOverlayDrag";
 
 async function getPopup() {
   return WebviewWindow.getByLabel("overlay-popup");
 }
+
+/** Precisa acompanhar `overlay-compact` em `tauri.conf.json`: é o fallback usado para
+ *  validar a posição salva quando a janela ainda não reportou o próprio tamanho. */
+const OVERLAY_COMPACT_SIZE = { width: 68, height: 44 } as const;
 
 function CompactOverlayAppInner() {
   const config = useAppConfig();
@@ -25,6 +30,7 @@ function CompactOverlayAppInner() {
   const { taskRepo } = useRepositories();
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
+  const [snapToGrid, setSnapToGrid] = useState(false);
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
 
@@ -37,9 +43,26 @@ function CompactOverlayAppInner() {
     setIsPopupOpen(value);
   };
 
+  // Close popup if compact moves (user dragging)
+  const handlePositionChange = useCallback(() => {
+    if (isPopupOpenRef.current) {
+      syncPopupOpen(false);
+      void getPopup().then((p) => p?.hide());
+    }
+  }, []);
+
+  const restoreCompactPosition = useOverlayDrag(
+    "overlayPosition_compact",
+    snapToGrid,
+    config,
+    handlePositionChange
+  );
+
   useEffect(() => {
     if (!config.isLoaded) return;
     setOverlayOpacity(config.get("overlayOpacity") as number);
+    setSnapToGrid(!!config.get("overlaySnapToGrid"));
+    void restoreCompactPosition(OVERLAY_COMPACT_SIZE);
     // Load initial running task — RUNNING_TASK_CHANGED is only emitted on mutations,
     // not on startup, so we query the DB directly.
     void getActiveTasks(taskRepo).then((tasks) => {
@@ -53,6 +76,7 @@ function CompactOverlayAppInner() {
       OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED,
       ({ payload }) => {
         if (payload.key === "overlayOpacity") setOverlayOpacity(payload.value as number);
+        else if (payload.key === "overlaySnapToGrid") setSnapToGrid(!!payload.value);
       }
     );
     return () => {
@@ -92,12 +116,6 @@ function CompactOverlayAppInner() {
     syncPopupOpen(true);
   }, []);
 
-  const closePopup = useCallback(async () => {
-    syncPopupOpen(false);
-    const popup = await getPopup();
-    await popup?.hide();
-  }, []);
-
   // Capture popup state on mousedown, before blur fires
   const handleMouseDown = useCallback(() => {
     wasPopupOpenOnMouseDownRef.current = isPopupOpenRef.current;
@@ -111,11 +129,6 @@ function CompactOverlayAppInner() {
     }
     void openPopup();
   }, [openPopup]);
-
-  // Also expose an explicit close path for the position-change case
-  useEffect(() => {
-    // The handlePositionChange callback captures closePopup via closure — keep it stable
-  }, [closePopup]);
 
   const opacity = isHovered ? 1 : overlayOpacity / 100;
 
