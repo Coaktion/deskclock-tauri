@@ -1,7 +1,18 @@
 import type { ReactNode } from "react";
 import { BillableChip } from "./BillableChip";
 
-interface TaskRowProps {
+/**
+ * Faturamento é **par**, nunca prop solta: a linha que o informa é a linha que o
+ * altera. Como união e não como dois opcionais porque só a união recusa em
+ * compilação a linha que desenha o chip mudo — que foi o que quatro telas
+ * fizeram enquanto `onToggleBillable` era opcional.
+ */
+type BillableProps =
+  /** A linha não fala de faturamento e não desenha o chip. */
+  | { billable?: undefined; onToggleBillable?: undefined }
+  | { billable: boolean; onToggleBillable: () => void };
+
+interface TaskRowBaseProps {
   title: string;
   /**
    * Marcas que ficam **ao lado** do nome e não podem ser cortadas com ele —
@@ -17,10 +28,6 @@ interface TaskRowProps {
   meta?: ReactNode;
   /** Ausente na linha que não mede tempo — a tarefa planejada. */
   duration?: string;
-  /** Ausente = a linha não fala de faturamento e não desenha o chip. */
-  billable?: boolean;
-  /** Ausente = o chip só informa; presente, ele alterna o faturamento. */
-  onToggleBillable?: () => void;
   /** Cor do projeto; vem de `getProjectColor`, então é valor, não classe. */
   dotColor?: string;
   /** Caixa de seleção ou seta de expandir. Vazio reserva a coluna. */
@@ -46,6 +53,8 @@ interface TaskRowProps {
   selected?: boolean;
   onClick?: () => void;
 }
+
+type TaskRowProps = TaskRowBaseProps & BillableProps;
 
 /**
  * As formas de grade do censo do design (§7.2 do handoff): a coluna de 88px
@@ -82,24 +91,34 @@ const RAIL_LEFT = PADDING_X + LEADING_WIDTH / 2;
 /** `pl-6` é o dobro de `pl-3`: o degrau da filha é um padding a mais. */
 const PADDING_LEFT = { row: "pl-3", nested: "pl-6" } as const;
 
-export function TaskRow({
-  title,
-  titleMarks,
-  completed = false,
-  subtitle,
-  meta,
-  duration,
-  billable,
-  onToggleBillable,
-  dotColor,
-  leading,
-  badges,
-  actions,
-  collapseActions = false,
-  nested = false,
-  selected = false,
-  onClick,
-}: TaskRowProps) {
+export function TaskRow(props: TaskRowProps) {
+  const {
+    title,
+    titleMarks,
+    completed = false,
+    subtitle,
+    meta,
+    duration,
+    dotColor,
+    leading,
+    badges,
+    actions,
+    collapseActions = false,
+    nested = false,
+    selected = false,
+    onClick,
+  } = props;
+
+  /**
+   * O par de faturamento sai de `props`, e não do destructuring acima, porque é
+   * só no objeto que a união se estreita: desmembrado, o `billable` deixa de
+   * carregar consigo a garantia de que o `onToggleBillable` veio junto.
+   */
+  const billableChip =
+    props.billable === undefined ? null : (
+      <BillableChip billable={props.billable} onToggle={props.onToggleBillable} />
+    );
+
   const hasLeading = Boolean(leading);
   const hasMeta = Boolean(meta);
 
@@ -176,7 +195,7 @@ export function TaskRow({
 
       <div className="flex items-center gap-2">
         {badges}
-        {billable !== undefined && <BillableChip billable={billable} onToggle={onToggleBillable} />}
+        {billableChip}
       </div>
 
       {/*

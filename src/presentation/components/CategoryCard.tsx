@@ -88,7 +88,13 @@ export function CategoryCard({
       ) : (
         <>
           <span className="flex-1 text-sm text-fg truncate">{category.name}</span>
-          <BillableChip billable={category.defaultBillable} />
+          {/* Grava na hora, sem passar pelo modo de edição: o chip é o controle
+              do faturamento em toda parte, e aqui o que ele governa é o padrão
+              das tarefas futuras (§6.2), não as já lançadas. */}
+          <BillableChip
+            billable={category.defaultBillable}
+            onToggle={() => void onUpdate(category.id, category.name, !category.defaultBillable)}
+          />
           <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
             <button
               onClick={(e) => {

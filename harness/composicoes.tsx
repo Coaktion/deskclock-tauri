@@ -38,6 +38,9 @@ export interface Composicao {
 const LARGURA = 938;
 const ALTURA = 572;
 
+/** A bancada mede caixa, não comportamento: o chip precisa de ação, e nada faz. */
+const noop = () => {};
+
 /**
  * Substituto do Omnibox: ele monta contexto, banco e IPC, e o que interessa
  * aqui é a altura que ele ocupa. A anatomia é a do `OmniboxIdle` — linha de
@@ -138,6 +141,7 @@ function LinhasPlanejadas() {
           title={t.nome}
           subtitle={t.meta}
           billable
+          onToggleBillable={noop}
           dotColor={t.cor}
           actions={
             <span className="flex p-1 text-fg-muted">
@@ -166,6 +170,7 @@ function LinhasEntradas() {
           subtitle={t.meta}
           duration={t.dur}
           billable={t.billable}
+          onToggleBillable={noop}
           dotColor={t.cor}
         />
       ))}

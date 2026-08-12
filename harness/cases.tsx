@@ -22,6 +22,9 @@ import { TourButton } from "@presentation/components/ui/TourButton";
  * Importa de `components/ui/<arquivo>` e não do `index.ts` de propósito: o
  * barril arrasta primitivo que puxa contexto, e a bancada roda sem provider.
  */
+/** A bancada mede caixa, não comportamento: o chip precisa de ação, e nada faz. */
+const noop = () => {};
+
 export interface VisualCase {
   /** Id do caso; nomeia o PNG e a linha do relatório. */
   id: string;
@@ -48,18 +51,21 @@ export const CASES: VisualCase[] = [
           title="Daily do time de produto"
           subtitle="Coaktion · Reunião"
           billable
+          onToggleBillable={noop}
           dotColor="oklch(0.65 0.16 300)"
         />
         <TaskRow
           title="Revisão do fluxo de exportação"
           subtitle="Cliente A · Desenvolvimento"
           billable
+          onToggleBillable={noop}
           dotColor="oklch(0.65 0.16 258)"
         />
         <TaskRow
           title="Organizar backlog da sprint"
           subtitle="Interno · Gestão"
           billable={false}
+          onToggleBillable={noop}
           dotColor="oklch(0.55 0.02 264)"
         />
       </SectionCard>
@@ -75,6 +81,7 @@ export const CASES: VisualCase[] = [
         title="Daily do time de produto"
         subtitle="Coaktion · Reunião"
         billable
+        onToggleBillable={noop}
         dotColor="oklch(0.65 0.16 300)"
         // O mesmo glifo de 14px do mock: um "▶" de texto mede outra coisa, e a
         // largura da coluna de ação é o que a comparação afirma.
@@ -104,6 +111,7 @@ export const CASES: VisualCase[] = [
         subtitle="Cliente A · Desenvolvimento"
         duration="02:48:00"
         billable
+        onToggleBillable={noop}
         dotColor="oklch(0.65 0.16 258)"
       />
     ),
@@ -121,6 +129,7 @@ export const CASES: VisualCase[] = [
         subtitle="Cliente A · Desenvolvimento"
         duration="01:48:00"
         billable
+        onToggleBillable={noop}
         dotColor="oklch(0.65 0.16 258)"
       />
     ),

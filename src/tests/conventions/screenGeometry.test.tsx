@@ -474,8 +474,9 @@ describe("geometria: tela 3a contra o spec do design", () => {
         subtitle="Coaktion · Reunião"
         duration="02:48:00"
         billable
+        onToggleBillable={() => {}}
         dotColor="oklch(0.65 0.16 300)"
-        actions={<button />}
+        actions={<button data-acoes="" />}
       />
     );
 
@@ -524,7 +525,9 @@ describe("geometria: tela 3a contra o spec do design", () => {
     });
 
     it("as ações ficam no gap de 2px do spec", () => {
-      const group = row.querySelector("button")?.parentElement;
+      // Pelo marcador, e não pelo primeiro `<button>` da linha: o chip de
+      // faturamento também é botão, e vem antes das ações no DOM.
+      const group = row.querySelector("[data-acoes]")?.parentElement;
       expect(group).not.toBeNull();
       expect(geometryOf(group!.className).gap).toBe(numberOf(SPEC.entriesActions, "gap"));
     });
@@ -540,6 +543,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
           subtitle="Coaktion · Reunião"
           duration="02:48:00"
           billable
+          onToggleBillable={() => {}}
           dotColor="oklch(0.65 0.16 300)"
         />
       );
@@ -997,6 +1001,7 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
           subtitle="Cliente A · Desenvolvimento"
           dotColor="oklch(0.65 0.16 258)"
           billable
+          onToggleBillable={() => {}}
           collapseActions
           actions={<span />}
         />
@@ -1049,6 +1054,7 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
           subtitle="Cliente A · Desenvolvimento"
           duration="01:48"
           billable
+          onToggleBillable={() => {}}
           dotColor="oklch(0.65 0.16 258)"
         />
       );

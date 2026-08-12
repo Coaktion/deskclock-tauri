@@ -22,10 +22,13 @@ describe("TaskRow", () => {
   });
 
   it("escreve o faturamento, e cala sobre ele quando a linha não o informa", () => {
-    const { rerender } = render(<TaskRow title="a" duration="1h" billable />);
+    const alterna = vi.fn();
+    const { rerender } = render(
+      <TaskRow title="a" duration="1h" billable onToggleBillable={alterna} />
+    );
     expect(screen.getByText("Billable")).toBeTruthy();
 
-    rerender(<TaskRow title="a" duration="1h" billable={false} />);
+    rerender(<TaskRow title="a" duration="1h" billable={false} onToggleBillable={alterna} />);
     expect(screen.getByText("Non-billable")).toBeTruthy();
 
     rerender(<TaskRow title="a" duration="1h" />);
@@ -84,14 +87,22 @@ describe("TaskRow", () => {
     expect(duracao.className).toContain("pointer-events-none");
   });
 
-  it("o chip só alterna quando a linha entrega o clique", () => {
-    const { rerender } = render(<TaskRow title="a" duration="1h" billable />);
-    expect(screen.queryByRole("button")).toBeNull();
-
+  /**
+   * O par `billable`/`onToggleBillable` é união nas props, então a linha que
+   * desenha o chip mudo não compila — o que este teste guarda é o outro lado:
+   * onde o chip aparece, ele é o controle, e a linha sem faturamento não
+   * inventa botão nenhum.
+   */
+  it("o chip é sempre o controle do faturamento, nunca um rótulo", () => {
     const onToggleBillable = vi.fn();
-    rerender(<TaskRow title="a" duration="1h" billable onToggleBillable={onToggleBillable} />);
+    const { rerender } = render(
+      <TaskRow title="a" duration="1h" billable onToggleBillable={onToggleBillable} />
+    );
     screen.getByRole("button").click();
     expect(onToggleBillable).toHaveBeenCalled();
+
+    rerender(<TaskRow title="a" duration="1h" />);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
   it("alternar o faturamento não aciona a linha em volta", () => {

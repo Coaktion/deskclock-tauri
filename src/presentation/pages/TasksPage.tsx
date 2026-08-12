@@ -32,7 +32,11 @@ export function TasksPage({
   const { categories } = useCategories();
   const { groups, totals, reload } = useTasks();
   const { startTask, runningTask } = useRunningTask();
-  const { tasks: plannedTasks, reload: reloadPlanned } = usePlannedTasksForDate(today);
+  const {
+    tasks: plannedTasks,
+    reload: reloadPlanned,
+    update: updatePlanned,
+  } = usePlannedTasksForDate(today);
   const config = useAppConfig();
 
   const hour = new Date().getHours();
@@ -50,6 +54,11 @@ export function TasksPage({
       customValues: task.customValues,
     });
     await reloadPlanned();
+  }
+
+  /** O `update` do hook já recarrega a lista e emite PLANNED_TASKS_CHANGED. */
+  async function handleTogglePlannedBillable(task: PlannedTask) {
+    await updatePlanned(task.id, { billable: !task.billable });
   }
 
   const { startTour, hasSeenTour } = useTour("tasks");
@@ -108,6 +117,7 @@ export function TasksPage({
                 dateISO={today}
                 playDisabled={!!runningTask}
                 onPlay={handlePlayPlanned}
+                onToggleBillable={handleTogglePlannedBillable}
                 onNavigatePlanning={onNavigatePlanning}
               />
             </div>

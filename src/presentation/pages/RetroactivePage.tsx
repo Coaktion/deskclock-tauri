@@ -5,6 +5,7 @@ import type { Task } from "@domain/entities/Task";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
@@ -46,6 +47,7 @@ interface DayTaskRowProps {
   categories: Category[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onToggleBillable: (task: Task) => void;
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
@@ -57,6 +59,7 @@ function DayTaskRow({
   categories,
   onEdit,
   onDelete,
+  onToggleBillable,
   selectMode = false,
   selected = false,
   onToggleSelect,
@@ -76,6 +79,7 @@ function DayTaskRow({
       }
       duration={formatHHMMSS(task.durationSeconds ?? 0)}
       billable={task.billable}
+      onToggleBillable={() => onToggleBillable(task)}
       dotColor={getProjectColor(project)}
       selected={selected}
       onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
@@ -254,6 +258,17 @@ export function RetroactivePage() {
 
   async function handleDelete(id: string) {
     await deleteTask(taskRepo, id);
+    void notifyTasksChanged();
+    await loadTasks();
+  }
+
+  /**
+   * Arrasta as irmãs do grupo junto, como a tela de Tarefas: `billable` não
+   * compõe a chave de agrupamento (§6.3), então alternar só a clicada deixaria o
+   * cabeçalho do grupo mentindo sobre as outras.
+   */
+  async function handleToggleBillable(task: Task) {
+    await setGroupBillable(taskRepo, task, !task.billable, new Date().toISOString());
     void notifyTasksChanged();
     await loadTasks();
   }
@@ -598,6 +613,7 @@ export function RetroactivePage() {
                     categories={categories}
                     onEdit={setEditingTask}
                     onDelete={handleDelete}
+                    onToggleBillable={handleToggleBillable}
                     selectMode={selectMode}
                     selected={selectedIds.has(t.id)}
                     onToggleSelect={toggleSelectTask}

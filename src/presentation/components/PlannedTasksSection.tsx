@@ -13,6 +13,8 @@ interface PlannedTasksSectionProps {
   dateISO: string;
   playDisabled?: boolean;
   onPlay: (task: PlannedTask) => void;
+  /** O chip de faturamento é controle em toda parte, então a lista precisa saber gravá-lo. */
+  onToggleBillable: (task: PlannedTask) => void;
   onNavigatePlanning?: () => void;
 }
 
@@ -23,6 +25,7 @@ export function PlannedTasksSection({
   dateISO,
   playDisabled = false,
   onPlay,
+  onToggleBillable,
   onNavigatePlanning,
 }: PlannedTasksSectionProps) {
   const pending = pendingPlannedTasks(tasks, dateISO);
@@ -57,6 +60,7 @@ export function PlannedTasksSection({
               title={task.name || "(sem nome)"}
               subtitle={subtitle || undefined}
               billable={task.billable}
+              onToggleBillable={() => onToggleBillable(task)}
               dotColor={getProjectColor(project)}
               actions={
                 playDisabled ? undefined : (

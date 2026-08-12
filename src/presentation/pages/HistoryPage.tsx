@@ -182,8 +182,18 @@ function ProjectDistribution({ groups, projects }: { groups: DayGroup[]; project
 }
 
 export function HistoryPage() {
-  const { filters, groups, totals, searched, search, updateFilter, setQuick, remove, reload } =
-    useHistory();
+  const {
+    filters,
+    groups,
+    totals,
+    searched,
+    search,
+    updateFilter,
+    setQuick,
+    remove,
+    toggleBillable,
+    reload,
+  } = useHistory();
   const { projects } = useProjects();
   const { categories } = useCategories();
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -508,6 +518,7 @@ export function HistoryPage() {
                         }
                         duration={formatHHMMSS(task.durationSeconds ?? 0)}
                         billable={task.billable}
+                        onToggleBillable={() => void toggleBillable(task)}
                         dotColor={projectColorOf(projects, task.projectId)}
                         selected={isSelected}
                         onClick={selectMode ? () => toggleSelectTask(task.id) : undefined}

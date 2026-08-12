@@ -3,11 +3,12 @@ import { Badge } from "./Badge";
 interface BillableChipProps {
   billable: boolean;
   /**
-   * Ausente, o chip só informa. Presente, ele **é** o indicador clicável que a
-   * §5.2 promete — o dono do clique que morava no ponto de projeto, de volta a
-   * ser cor de projeto e nada mais.
+   * Obrigatório, e é a trava: o chip **é** o controle do faturamento, nunca um
+   * rótulo. Enquanto ele foi opcional, quatro listas o desenhavam mudo — e não
+   * havia nada na tela separando o chip que alterna do que só informa, então
+   * descobrir qual era qual dependia de clicar. Chip que só rotula é `Badge`.
    */
-  onToggle?: () => void;
+  onToggle: () => void;
 }
 
 /**
@@ -17,12 +18,6 @@ interface BillableChipProps {
  * cima do `title`.
  */
 export function BillableChip({ billable, onToggle }: BillableChipProps) {
-  const chip = (
-    <Badge tone={billable ? "billable" : "neutral"}>{billable ? "Billable" : "Non-billable"}</Badge>
-  );
-
-  if (!onToggle) return chip;
-
   return (
     <button
       type="button"
@@ -33,9 +28,11 @@ export function BillableChip({ billable, onToggle }: BillableChipProps) {
         onToggle();
       }}
       title={billable ? "Billable — clique para alterar" : "Non-billable — clique para alterar"}
-      className="shrink-0 flex rounded-full hover:opacity-80 transition-opacity"
+      className="shrink-0 flex rounded-full cursor-pointer hover:opacity-80 transition-opacity"
     >
-      {chip}
+      <Badge tone={billable ? "billable" : "neutral"}>
+        {billable ? "Billable" : "Non-billable"}
+      </Badge>
     </button>
   );
 }

@@ -111,6 +111,9 @@ export function PlannedTaskItem({
         subtitle={subtitle || undefined}
         dotColor={getProjectColor(project)}
         billable={task.billable}
+        /* `onUpdate` é o `update` do usePlannedTasks: recarrega e emite
+           PLANNED_TASKS_CHANGED, então o popup acompanha sem nada a mais. */
+        onToggleBillable={() => void onUpdate(task.id, { billable: !task.billable })}
         leading={
           selectMode ? (
             <input
