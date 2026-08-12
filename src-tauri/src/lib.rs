@@ -55,10 +55,10 @@ fn get_pending_retroactive_prefill(
     state.0.lock().unwrap().take()
 }
 use commands::{
-    check_for_update, download_and_install_update, get_bearer_json, get_display_server,
-    get_local_api_status, get_platform, log_frontend, open_in_browser, open_in_file_manager,
-    post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
-    update_shortcuts, update_tray_icon, update_tray_tooltip,
+    backup_db_to_drive, check_for_update, download_and_install_update, get_bearer_json,
+    get_display_server, get_local_api_status, get_platform, log_frontend, open_in_browser,
+    open_in_file_manager, post_form_json, relaunch_app, save_file, start_local_api,
+    start_oauth_server, stop_local_api, update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -477,6 +477,7 @@ pub fn run() {
             get_pending_start_task,
             get_pending_retroactive_prefill,
             log_frontend,
+            backup_db_to_drive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

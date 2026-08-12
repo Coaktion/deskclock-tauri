@@ -240,7 +240,7 @@ depois que a migração entrar**, ou carrega ela junto.
 
 | Fase | Estado |
 |---|---|
-| 0 · Rust: snapshot + upload | pendente |
+| 0 · Rust: snapshot + upload | ✅ **feita** (2026-08-12) — `cargo check` limpo. Validação funcional só é possível na Fase 2, quando houver quem chame o comando. |
 | 1 · Domain: portas e vencimento | pendente |
 | 2 · Infra: cliente do Drive | pendente |
 | 3 · Agendador | pendente |
