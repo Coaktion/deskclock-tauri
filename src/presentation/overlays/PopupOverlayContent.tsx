@@ -36,6 +36,7 @@ import {
   Pen,
   Play,
   X,
+  Zap,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -210,11 +211,33 @@ function RunningCard({
           Fora durante a confirmação de parada: ali o card já cresceu, e quem
           está escolhendo Concluída/Pendente não vai abrir o link. */}
       {actions.length > 0 && !confirmingStop && (
-        <div className="hidden group-hover:flex group-focus-within:flex absolute bottom-full left-0 right-0 z-10 flex-wrap gap-1.5 px-3 py-2 bg-surface border-t border-border shadow-lg">
-          {actions.map((action, i) => (
-            <ActionChip key={i} action={action} />
-          ))}
-        </div>
+        <>
+          {/* O raio cavalga a borda de cima — metade dentro do card, metade
+              fora — e é ele que diz que há o que abrir ali. Custa **zero** de
+              altura, porque está fora do fluxo: é o afford permanente que a
+              faixa flutuante não podia pagar em linha própria.
+
+              Ele **some no hover**, e não convive com a faixa: os dois ocupam
+              o mesmo espaço acima da borda, e é a faixa que o substitui — o
+              raio abre nela. Trocar não pisca, e a razão é geométrica: a
+              metade de fora do raio fica dentro dos ~42px que a faixa passa a
+              cobrir, então o cursor que o alcançou continua sobre um
+              descendente do card, e o `group-hover` não cai. Fosse o raio mais
+              alto que a faixa, ele sumiria, o hover cairia, ele voltaria — e
+              piscaria enquanto o cursor estivesse ali. */}
+          <span
+            aria-hidden
+            className="group-hover:hidden group-focus-within:hidden absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center p-1 rounded-full bg-surface text-accent-text"
+          >
+            <Zap size={14} />
+          </span>
+
+          <div className="hidden group-hover:flex group-focus-within:flex absolute bottom-full left-0 right-0 z-10 flex-wrap gap-1.5 px-3 py-2 bg-surface border-t border-border shadow-lg">
+            {actions.map((action, i) => (
+              <ActionChip key={i} action={action} />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Identidade */}
