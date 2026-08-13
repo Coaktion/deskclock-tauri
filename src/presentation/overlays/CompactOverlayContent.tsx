@@ -40,7 +40,10 @@ export function CompactOverlayContent({
         ? "border-accent"
         : "border-border";
 
-  const timerColor = isPaused ? "text-paused" : "text-accent-text";
+  // O número ocupa a janela inteira, e em acento ele se lia mal: `fg` é branco no
+  // modo escuro e preto no claro. A pausa continua em `paused` — ali a cor é o
+  // estado, não decoração.
+  const timerColor = isPaused ? "text-paused" : "text-fg";
 
   const maxW = "max-w-[68px]";
   const maxH = "max-h-[44px]";
@@ -81,7 +84,7 @@ export function CompactOverlayContent({
           // overlay já é. Fica no centro, no lugar do ícone, e não como badge de
           // canto: a 68px o badge era pequeno demais para se ler de relance.
           <span
-            className={`relative ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-accent-text`}
+            className={`relative ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-fg`}
           >
             {pendingCount > 99 ? "99+" : pendingCount}
           </span>
