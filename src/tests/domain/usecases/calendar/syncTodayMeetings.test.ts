@@ -261,7 +261,9 @@ describe("syncTodayMeetings", () => {
       expect(deps.plannedRepo.update).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "pt-daily",
-          actions: [{ type: "open_url", value: "https://meet.google.com/abc" }],
+          // A ação nasce nomeada pelo destino: o nome do evento a planejada já
+          // leva, e repeti-lo no chip ecoaria o nome logo acima dele.
+          actions: [{ type: "open_url", value: "https://meet.google.com/abc", label: "Meet" }],
           completedDates: ["2026-06-30"],
           sortOrder: 7,
         })
@@ -325,14 +327,22 @@ describe("syncTodayMeetings", () => {
       const deps = makeDeps(
         [makeEvent({ conferenceLink: "https://meet.google.com/abc" })],
         [],
-        [makePlanned("daily", { scheduleType: "recurring", scheduleDate: null, recurringDays: [3] })]
+        [
+          makePlanned("daily", {
+            scheduleType: "recurring",
+            scheduleDate: null,
+            recurringDays: [3],
+          }),
+        ]
       );
       await syncTodayMeetings(deps, RANGE);
 
       // A ação entra; a hora, não — senão o Lançamento Manual ofereceria 10:00
       // num dia em que a reunião não acontece.
       const updated = deps.plannedRepo.update.mock.calls[0][0];
-      expect(updated.actions).toEqual([{ type: "open_url", value: "https://meet.google.com/abc" }]);
+      expect(updated.actions).toEqual([
+        { type: "open_url", value: "https://meet.google.com/abc", label: "Meet" },
+      ]);
       expect(updated.startTime).toBeUndefined();
       expect(updated.endTime).toBeUndefined();
     });
@@ -440,11 +450,9 @@ describe("syncTodayMeetings", () => {
           endISO: composeMeetingEndISO("2026-07-01", "10:00", "10:30"),
         }),
       ];
-      const deps = makeDeps(
-        [makeEvent({ startTime: "15:00", endTime: "15:30" })],
-        existing,
-        [makePlanned("daily", { startTime: "10:00", endTime: "10:30" })]
-      );
+      const deps = makeDeps([makeEvent({ startTime: "15:00", endTime: "15:30" })], existing, [
+        makePlanned("daily", { startTime: "10:00", endTime: "10:30" }),
+      ]);
       const result = await syncTodayMeetings(deps, RANGE);
 
       expect(result.plannedRetimed).toBe(1);
@@ -455,11 +463,9 @@ describe("syncTodayMeetings", () => {
 
     it("horário que já bate não vira UPDATE (o ciclo roda a cada 2 min)", async () => {
       const existing = [makeMeeting({ plannedTaskId: "pt-daily" })];
-      const deps = makeDeps(
-        [makeEvent()],
-        existing,
-        [makePlanned("daily", { startTime: "10:00", endTime: "10:30" })]
-      );
+      const deps = makeDeps([makeEvent()], existing, [
+        makePlanned("daily", { startTime: "10:00", endTime: "10:30" }),
+      ]);
       const result = await syncTodayMeetings(deps, RANGE);
 
       expect(result.plannedRetimed).toBe(0);

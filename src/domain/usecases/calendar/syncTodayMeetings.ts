@@ -7,10 +7,8 @@ import type { Project } from "@domain/entities/Project";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
-import {
-  createPlannedTaskFromEvent,
-  openUrlAction,
-} from "@domain/usecases/plannedTasks/ImportCalendarEvents";
+import { createPlannedTaskFromEvent } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
+import { openUrlAction } from "@domain/utils/actions";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { composeLocalISO, composeMeetingEndISO } from "./meetingTime";
 import { nameKey } from "./nameKey";
@@ -302,7 +300,10 @@ function plannedTimeUpdates(
  * de conferência de uma recorrente é o mesmo em toda ocorrência, e é o único que
  * serve para entrar na reunião.
  */
-function missingOpenUrlAction(planned: PlannedTask, event: CalendarEvent): PlannedTaskAction | null {
+function missingOpenUrlAction(
+  planned: PlannedTask,
+  event: CalendarEvent
+): PlannedTaskAction | null {
   const action = openUrlAction(event.conferenceLink);
   if (!action) return null;
   const has = planned.actions.some((a) => a.type === action.type && a.value === action.value);

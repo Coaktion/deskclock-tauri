@@ -4,6 +4,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { MondayItem } from "@shared/types/monday";
 import type { UUID } from "@shared/types";
 import { localDateISO } from "@shared/utils/time";
+import { openUrlAction } from "@domain/utils/actions";
 import { createPlannedTask } from "../plannedTasks/CreatePlannedTask";
 import { periodToSchedule, type MondayItemPeriod } from "./mondayItemPeriod";
 
@@ -40,6 +41,11 @@ export async function importMondayItems(
   const created: PlannedTask[] = [];
 
   for (const { item, projectId, categoryId, billable, period, customValues } of inputs) {
+    // Mesmo construtor da Agenda: é ele que nomeia a ação pelo destino, e é o
+    // que faz o chip dizer "Monday" em vez de repetir o nome do item, que a
+    // planejada já leva.
+    const action = addOpenUrlAction ? openUrlAction(item.url) : null;
+
     const task = await createPlannedTask(
       repo,
       {
@@ -49,7 +55,7 @@ export async function importMondayItems(
         categoryId,
         billable,
         ...periodToSchedule(period, localDateISO(nowISO)),
-        actions: addOpenUrlAction && item.url ? [{ type: "open_url", value: item.url }] : [],
+        actions: action ? [action] : [],
         customValues: customValues ?? {},
       },
       nowISO
