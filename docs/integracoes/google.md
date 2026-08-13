@@ -1,4 +1,4 @@
-# Google Sheets e Google Agenda
+# Google Sheets, Google Agenda e backup do banco
 
 > Extraído da §5.7 do CLAUDE.md em 2026-08-10, verbatim.
 > Contrato comum a todas as integrações: `docs/integracoes/README.md`.
@@ -173,3 +173,71 @@
 > **Vale só para o `useMeetingTracker`**, e é consequência da exceção da Agenda abaixo: os
 > rastreadores do Monday leem o workspace da **config** e não dependem mais dessa resolução — o gate
 > deles saiu junto com o `useRef` que carregava o id ativo.
+
+---
+
+## Backup do banco no Drive
+
+Terceira subseção do card do Google, ao lado de Sheets e Agenda — **mesma conexão OAuth, um card,
+N chaves**. O plano de execução inteiro está em `docs/specs/backup-google-drive.md`; aqui fica o
+que a tela promete.
+
+| Campo | Tipo |
+|---|---|
+| Backup automático | toggle (`driveBackupEnabled`, padrão desativado) |
+| Frequência | segmentado Diário/Semanal/Mensal (`driveBackupFrequency`, padrão Semanal). Só aparece com o toggle ligado — sem backup automático ele não governa nada |
+| Fazer backup agora | botão; roda o mesmo caminho do agendador, e **não** passa pela espera de retentativa |
+| Último backup | `driveBackupLastRunAt`, ou "Nunca" |
+
+> **O escopo `drive.file` entrou em `ALL_GOOGLE_SCOPES`, e quem já conectou o Google precisa
+> reconectar.** O `refresh_token` guardado carrega os escopos concedidos **no consentimento**;
+> acrescentar um à lista não revalida nada, e a primeira chamada ao Drive volta 403. Este é o único
+> ponto da feature que mexe com quem já usa o app.
+>
+> O 403 é o único erro com tratamento próprio (`backupErrorMessage`), e não é zelo de redação: como
+> texto cru da API — "Request had insufficient authentication scopes" — ele aparece como falha
+> genérica, e tentar de novo dá no mesmo para sempre. Na tela ele vira um aviso em `warning`, no
+> lugar da linha de falha, dizendo para desconectar e conectar de novo. As outras falhas continuam
+> na `SyncFeedbackLine` comum.
+
+> **A pasta `DeskClock Backups` é visível de propósito.** Baixar o banco sem passar pelo app é o
+> motivo de o backup existir; numa pasta oculta (`appDataFolder`) ele dependeria justamente do app
+> que talvez tenha quebrado. Com `drive.file` a listagem só enxerga o que este app criou, então o
+> nome não colide com uma pasta homônima do usuário. Ela é conferida a cada execução — apagada ou
+> na lixeira, é recriada, senão o upload seguinte iria para um `parents` que não existe mais e o
+> backup pararia calado.
+
+> **Os segredos são expurgados do snapshot antes de subir.** O banco guarda `googleRefreshToken`,
+> `clockifyApiKey`, `mondayApiKey` e os tokens do Zendesk (`SECRET_CONFIG_KEYS`), e um arquivo no
+> Drive é bem mais exposto que o `app_config_dir`. Preço aceito: **restaurar exige reconectar as
+> integrações** — o procedimento está em `docs/telas/dados.md`. A lista mora ao lado do `AppConfig`,
+> e não cravada no Rust, porque é lá que uma integração nova acrescenta o token dela;
+> `secretConfigKeys.test.ts` reprova a chave que casa `/token|apikey|secret|password/i` e não está
+> na lista nem entre as isentas.
+
+> **O agendamento é por vencimento, não por horário marcado, e por isso o
+> `useDriveBackupScheduler` não copia o `useDailySyncScheduler`.** Aquele descarta disparo perdido
+> de propósito: se o app estava fechado no minuto configurado, não roda depois. Para envio de horas
+> é acerto; para backup é o defeito — um mensal às 03:00 do dia 1 pode nunca acontecer. Aqui o
+> backup **vence** (24h / 7d / 30d desde o último sucesso) e roda na primeira oportunidade em que o
+> app estiver aberto. Quem for uniformizar os dois está desfazendo decisão tomada.
+>
+> **Falha impõe 30 min de espera**, por cima do vencimento. O carimbo só avança no sucesso, então
+> backup vencido que falha voltaria a ser tentado a cada poll de 5 min — 288 por dia, várias
+> arrastando um `VACUUM INTO` do banco inteiro. E o caso não é raro: até reconectar o Google, toda
+> tentativa volta 403. A espera é em memória, some ao reiniciar o app, e o botão "Fazer backup
+> agora" não passa por ela.
+
+> **A poda roda depois de gravar o carimbo, e o erro dela não sobe.** `driveBackupKeepCount` (10)
+> diz quantos arquivos ficam; o excedente é apagado. Higiene de pasta não pode custar o backup que
+> já subiu — solto, o erro viraria o `driveBackupLastError` de um arquivo que está lá, e o usuário
+> reconectaria o Google por nada. Mesmo raciocínio do `removeOrphans` do Monday
+> (`docs/integracoes/README.md`). Zero ou negativo é "não podar", nunca "apagar tudo".
+
+> **Não há seletor de workspace, e não é esquecimento.** O §9.5 item 7 do `docs/guardrails.md`
+> manda escopar toda integração por workspace; aqui não se aplica — o backup é do banco inteiro,
+> que atravessa todos eles. Escopar seria errado, não incompleto.
+
+> **O comando Rust não tem teste**, declaradamente: o projeto não tem infraestrutura de teste em
+> Rust. Foi por isso que toda a lógica testável — pasta, poda, vencimento, tradução do erro — ficou
+> em TypeScript.

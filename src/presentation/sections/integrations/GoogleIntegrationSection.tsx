@@ -17,6 +17,10 @@ import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
+import {
+  BACKUP_FOLDER_NAME,
+  DRIVE_RECONNECT_MESSAGE,
+} from "@infra/integrations/googledrive/GoogleDriveClient";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
@@ -29,6 +33,7 @@ import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useTour } from "@presentation/hooks/useTour";
 import { useSyncNowButton, type SyncFeedback } from "@presentation/hooks/useSyncNowButton";
+import type { BackupFrequency } from "@shared/types/appConfig";
 import {
   DEFAULT_COLUMN_MAPPING,
   type SheetColumn,
@@ -37,10 +42,12 @@ import {
 import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
+  AlertTriangle,
   Calendar,
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  DatabaseBackup,
   GripVertical,
   Info,
   LogIn,
@@ -74,11 +81,21 @@ const SYNC_TRIGGERS = [
   { value: "on-open", label: "Ao abrir o app" },
   { value: "fixed-time", label: "Horário fixo" },
 ] as const;
+const BACKUP_FREQUENCIES = [
+  { value: "daily", label: "Diário" },
+  { value: "weekly", label: "Semanal" },
+  { value: "monthly", label: "Mensal" },
+] as const;
 
 // Escopos unificados — uma única conexão Google para todos os serviços
 export const ALL_GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
   "https://www.googleapis.com/auth/calendar.readonly",
+  // Só o que o próprio app criou — escopo não sensível, que dispensa a
+  // verificação de segurança que o `drive` amplo exigiria. Quem já conectou o
+  // Google **precisa reconectar**: o refresh_token guardado carrega os escopos
+  // do consentimento, e acrescentar aqui não revalida nada (ver `BackupSection`).
+  "https://www.googleapis.com/auth/drive.file",
   "openid",
   "email",
 ];
@@ -563,6 +580,116 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
   );
 }
 
+/* ── Sub-seção Backup do banco ── */
+
+/**
+ * O backup do banco no Drive. Mora no card do Google, e não numa integração
+ * própria, porque é a **mesma conexão OAuth** de Sheets e Agenda — um card, N
+ * chaves — e é aqui que o aviso de reconexão precisa estar.
+ *
+ * Não há seletor de workspace, e não é esquecimento: o backup é do banco
+ * inteiro, que atravessa todos eles (§2.1 de `docs/specs/backup-google-drive.md`).
+ */
+function BackupSection({ disabled }: { disabled: boolean }) {
+  const config = useAppConfig();
+  const { createDriveBackupRunner } = useIntegrations();
+  const [enabled, setEnabled] = useState(false);
+  const [frequency, setFrequency] = useState<BackupFrequency>("weekly");
+  const [lastRunAt, setLastRunAt] = useState(0);
+  const [lastError, setLastError] = useState("");
+  const [running, setRunning] = useState(false);
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    setEnabled(config.get("driveBackupEnabled"));
+    setFrequency(config.get("driveBackupFrequency"));
+    setLastRunAt(config.get("driveBackupLastRunAt"));
+    // A falha do agendador fica na config: sem semear, abrir a tela esconderia
+    // um erro que continua valendo até o próximo ciclo responder.
+    setLastError(config.get("driveBackupLastError"));
+  }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleBackupNow() {
+    setRunning(true);
+    try {
+      await createDriveBackupRunner().run();
+      setLastRunAt(config.get("driveBackupLastRunAt"));
+      setLastError("");
+      await showToast("success", "Backup enviado para o Google Drive.");
+    } catch {
+      // O runner já gravou a mensagem, e é dela que a linha abaixo vive — ela
+      // sobrevive a sair e voltar da tela, o toast não.
+      setLastError(config.get("driveBackupLastError"));
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  // O 403 do escopo faltante é o único erro com saída conhecida, e a saída não é
+  // "tentar de novo": vira o aviso de reconexão, no lugar da linha de falha.
+  const needsReconnect = lastError === DRIVE_RECONNECT_MESSAGE;
+
+  return (
+    <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
+      <p className="text-body text-fg-muted leading-relaxed py-2.5">
+        Envia uma cópia do banco para a pasta {BACKUP_FOLDER_NAME}, no seu Drive. As chaves das
+        integrações ficam de fora da cópia — ao restaurar, reconecte-as.
+      </p>
+      <Row label="Backup automático">
+        <Toggle
+          ariaLabel="Ativar backup automático"
+          checked={enabled}
+          onChange={async (v) => {
+            setEnabled(v);
+            await config.set("driveBackupEnabled", v);
+          }}
+        />
+      </Row>
+      {enabled && (
+        <Row label="Frequência">
+          <SegmentedControl
+            value={frequency}
+            options={BACKUP_FREQUENCIES}
+            ariaLabel="Frequência do backup"
+            onChange={async (f) => {
+              setFrequency(f);
+              await config.set("driveBackupFrequency", f);
+            }}
+          />
+        </Row>
+      )}
+      <div className="py-2.5 flex items-center justify-between gap-3">
+        <span className="text-xs text-fg-muted shrink-0">
+          Último backup:{" "}
+          <span className="text-fg-secondary">
+            {formatLastSync(lastRunAt ? new Date(lastRunAt).toISOString() : "")}
+          </span>
+        </span>
+        <Button
+          variant="secondary"
+          onClick={handleBackupNow}
+          loading={running}
+          icon={<DatabaseBackup size={14} />}
+          className="shrink-0"
+        >
+          {running ? "Enviando…" : "Fazer backup agora"}
+        </Button>
+      </div>
+      {needsReconnect ? (
+        <div className="flex items-start gap-2 mb-2 p-2.5 bg-warning/5 border border-warning/20 rounded-control">
+          <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+          <p className="text-body text-fg-secondary leading-relaxed">
+            O backup precisa de acesso ao Drive, e a conexão atual não o concedeu. Desconecte e
+            conecte o Google outra vez — Sheets e Agenda seguem funcionando como estão.
+          </p>
+        </div>
+      ) : (
+        lastError && <SyncFeedbackLine feedback={{ ok: false, text: lastError }} />
+      )}
+    </div>
+  );
+}
+
 /* ── Card Google (unificado) ── */
 
 export function GoogleIntegrationCard() {
@@ -661,6 +788,9 @@ export function GoogleIntegrationCard() {
           <CalendarSection disabled={!connected} />
         </SubSection>
       </div>
+      <SubSection icon={<DatabaseBackup size={14} />} title="Backup do banco">
+        <BackupSection disabled={!connected} />
+      </SubSection>
     </div>
   );
 }

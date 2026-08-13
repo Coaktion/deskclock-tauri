@@ -258,8 +258,38 @@ depois que a migração entrar**, ou carrega ela junto.
 | 1 · Domain: portas e vencimento | ✅ **feita** (2026-08-12) — as 6 chaves, `SECRET_CONFIG_KEYS`, `IDriveBackupPort` e `shouldRunBackup`, com os testes da Fase 5 que lhes cabem. Uma regra a mais do que o plano previa: `lastRunAt` no futuro conta como vencido, senão relógio acertado para trás para o backup calado. |
 | 2 · Infra: cliente do Drive | ✅ **feita** (2026-08-12) — `GoogleDriveClient`, `DriveBackupRunner`, `IDriveBackupRunner` (interface nova em `domain/`, para a fábrica devolver porta e não classe de `infra/`) e a fábrica no `IntegrationsContext`, com os testes da Fase 5 que lhes cabem. **A validação manual da §4 não coube aqui**: nada no app ainda chama o runner — a fábrica existe, mas o primeiro chamador nasce na Fase 3. Fazer ao fim da Fase 4, com o botão "Fazer backup agora". |
 | 3 · Agendador | ✅ **feita** (2026-08-13) — `useDriveBackupScheduler` montado no `AppInner`, com o teste que lhe cabe. Duas coisas fora do previsto, ambas abaixo. |
-| 4 · UI | pendente |
-| 5 · Testes e docs | acompanha cada fase |
+| 4 · UI | ✅ **código feito** (2026-08-13) — a `SubSection`, o `drive.file` em `ALL_GOOGLE_SCOPES` e o aviso de reconexão, com os docs da Fase 5 que lhes cabem. **Duas verificações manuais ficaram pendentes com o usuário**, abaixo. |
+| 5 · Testes e docs | acompanha cada fase — `google.md` e `dados.md` escritos junto com a Fase 4 |
+
+### Pendente com o usuário — as duas verificações manuais
+
+Nenhuma das duas é executável por agente, e a feature não está conferida sem elas.
+
+1. **A validação funcional da §4**, adiada desde a Fase 2 porque não havia chamador. Agora há o
+   botão "Fazer backup agora": reconectar o Google (para conceder o `drive.file`), rodar o backup,
+   baixar o `.db` do Drive e conferir no `sqlite3` que `SELECT * FROM config WHERE key LIKE
+   '%oken%'` volta vazio e que `SELECT COUNT(*) FROM tasks` bate com o app.
+2. **`pnpm tauri dev` nos 2 modos × 4 acentos**, olhando a subseção nova — o aviso de reconexão é
+   o único ponto que usa `warning`, e o modo claro dele desce de L 0.78 para 0.62.
+
+### O que a execução acrescentou ao previsto, em 2026-08-13
+
+- **O aviso de reconexão substitui a linha de falha, em vez de somar a ela.** O plano pedia os dois
+  — a `caption` com o erro e o aviso enquanto o erro indicar escopo faltante —, mas a mensagem que
+  o `backupErrorMessage` grava no 403 já **é** "Reconecte o Google…": exibi-la nos dois lugares
+  escreveria a mesma frase duas vezes, uma em `danger` e outra em `warning`. Então o 403 vira o
+  callout (que tem espaço para dizer *por que* reconectar) e todo o resto continua na
+  `SyncFeedbackLine` comum.
+- **A frequência só aparece com o backup automático ligado**, no molde do bloco de sincronização do
+  Sheets logo acima: desligado, ela não governa nada — o botão manual não a consulta.
+- **O nome da pasta na tela vem de `BACKUP_FOLDER_NAME`**, importado do cliente, e não digitado no
+  JSX. É a mesma constante que cria a pasta, então o texto não tem como divergir dela.
+
+### Observação fora de escopo, registrada e não executada
+
+O subtítulo do card ("Acesse o Sheets e o Calendar com uma única conta") e os `subBadges` do
+`GoogleTile` seguem sem mencionar o backup. Não estava no plano da fase; é mudança de uma linha
+cada, se o usuário quiser.
 
 ### Rollback
 
