@@ -17,7 +17,7 @@ Antes de implementar feature ou refactor, valide o plano contra a §3 (regras de
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **deskclock-tauri** (6295 symbols, 15089 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **deskclock-tauri** (7772 symbols, 18272 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

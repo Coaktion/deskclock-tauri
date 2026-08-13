@@ -59,8 +59,6 @@ export function usePlannedTaskEditor({
   const [periodStart, setPeriodStart] = useState(task.periodStart ?? "");
   const [periodEnd, setPeriodEnd] = useState(task.periodEnd ?? "");
   const [actions, setActions] = useState<PlannedTaskAction[]>(task.actions);
-  const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
-  const [newActionValue, setNewActionValue] = useState("");
   const [customValues, setCustomValues] = useState<CustomValues>(task.customValues);
   const [saving, setSaving] = useState(false);
 
@@ -92,16 +90,6 @@ export function usePlannedTaskEditor({
     setRecurringDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
     );
-  }
-
-  function addAction() {
-    if (!newActionValue.trim()) return;
-    setActions((prev) => [...prev, { type: newActionType, value: newActionValue.trim() }]);
-    setNewActionValue("");
-  }
-
-  function removeAction(index: number) {
-    setActions((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function save() {
@@ -149,12 +137,7 @@ export function usePlannedTaskEditor({
     periodEnd,
     setPeriodEnd,
     actions,
-    addAction,
-    removeAction,
-    newActionType,
-    setNewActionType,
-    newActionValue,
-    setNewActionValue,
+    setActions,
     customValues,
     setCustomValues,
     saving,

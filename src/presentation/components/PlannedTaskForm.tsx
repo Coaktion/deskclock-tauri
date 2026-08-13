@@ -5,13 +5,13 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { BillableChip, Field, FilterPill, Input, Select } from "@presentation/components/ui";
-import { boxClass, formColumnClass } from "@presentation/components/fieldStyles";
+import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
+import { BillableChip, Field, FilterPill, Input } from "@presentation/components/ui";
+import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO } from "@shared/utils/time";
-import { ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 interface FormState {
@@ -110,8 +110,6 @@ export function PlannedTaskForm({
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, form.projectId);
   const [submitting, setSubmitting] = useState(false);
-  const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
-  const [newActionValue, setNewActionValue] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
   const handleKeyDown = useSubmitOnEnter(() => void handleSubmit());
 
@@ -136,13 +134,6 @@ export function PlannedTaskForm({
         : [...prev.recurringDays, day].sort();
       return { ...prev, recurringDays: days };
     });
-  }
-
-  function handleAddAction() {
-    const value = newActionValue.trim();
-    if (!value) return;
-    set("actions", [...form.actions, { type: newActionType, value }]);
-    setNewActionValue("");
   }
 
   // Só é "invertido" com as duas datas preenchidas: enquanto falta uma, o
@@ -347,72 +338,11 @@ export function PlannedTaskForm({
       {/* ── Ações ao iniciar ────────────────────────────────────────────────── */}
       <p className={sectionLabelClass}>Ações ao iniciar</p>
 
-      {form.actions.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {form.actions.map((action, i) => (
-            <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-raised rounded-control">
-              <span
-                className={`shrink-0 ${action.type === "open_url" ? "text-accent-text" : "text-fg-secondary"}`}
-              >
-                {action.type === "open_url" ? <ExternalLink size={14} /> : <FolderOpen size={14} />}
-              </span>
-              <span className="flex-1 text-sm text-fg-secondary truncate" title={action.value}>
-                {action.value}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  set(
-                    "actions",
-                    form.actions.filter((_, j) => j !== i)
-                  )
-                }
-                className="shrink-0 text-fg-muted hover:text-danger transition-colors"
-                title="Remover"
-              >
-                <Trash2 size={14} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <Select
-        aria-label="Tipo da ação"
-        size="sm"
-        value={newActionType}
-        onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-        className="w-full"
-      >
-        <option value="open_url">URL</option>
-        <option value="open_file">Arquivo</option>
-      </Select>
-
-      <div className={`${boxClass} flex items-center pr-1`}>
-        <Input
-          variant="bare"
-          size="sm"
-          value={newActionValue}
-          onChange={(e) => setNewActionValue(e.target.value)}
-          onKeyDown={(e) => {
-            // Sub-formulário: aqui o Enter adiciona a ação, não cria a tarefa.
-            // O `preventDefault` é o que avisa isso ao `useSubmitOnEnter`.
-            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            handleAddAction();
-          }}
-          placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
-        />
-        <button
-          type="button"
-          onClick={handleAddAction}
-          disabled={!newActionValue.trim()}
-          title="Adicionar ação"
-          className="shrink-0 p-1 text-fg-muted hover:text-fg disabled:opacity-40 disabled:hover:text-fg-muted transition-colors"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
+      <PlannedActionsField
+        actions={form.actions}
+        onChange={(actions) => set("actions", actions)}
+        compact
+      />
 
       <button
         type="submit"

@@ -80,7 +80,7 @@ const BUTTON_BASELINE: Record<string, number> = {
   "src/presentation/modals/SetupModal.tsx": 1,
   "src/presentation/overlays/MeetingPromptView.tsx": 4,
   "src/presentation/overlays/OverlayWorkspaceChip.tsx": 3,
-  "src/presentation/overlays/PlannedTaskEditSheet.tsx": 5,
+  "src/presentation/overlays/PlannedTaskEditSheet.tsx": 4,
   "src/presentation/overlays/PlanningOverlay.tsx": 5,
   "src/presentation/overlays/PopupOverlayContent.tsx": 1,
   "src/presentation/overlays/ToastApp.tsx": 1,

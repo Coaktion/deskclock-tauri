@@ -1,18 +1,11 @@
-import { Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
-import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { PlannedTask, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
 import { boxClass } from "@presentation/components/fieldStyles";
-import {
-  BillableChip,
-  Button,
-  IconButton,
-  Input,
-  Modal,
-  Select,
-} from "@presentation/components/ui";
+import { BillableChip, Button, Input, Modal } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import {
   usePlannedTaskEditor,
@@ -77,12 +70,7 @@ export function EditPlannedTaskModal({
     periodEnd,
     setPeriodEnd,
     actions,
-    addAction,
-    removeAction,
-    newActionType,
-    setNewActionType,
-    newActionValue,
-    setNewActionValue,
+    setActions,
     customValues,
     setCustomValues,
     saving,
@@ -220,63 +208,7 @@ export function EditPlannedTaskModal({
       <div className="flex flex-col gap-3">
         <p className="text-overline uppercase text-fg-muted">Ações ao iniciar</p>
 
-        {actions.length > 0 && (
-          <ul className="flex flex-col gap-1.5">
-            {actions.map((action, i) => (
-              <li key={i} className="flex items-center gap-3 px-3 py-2 bg-raised rounded-control">
-                <span
-                  className={`shrink-0 ${action.type === "open_url" ? "text-accent-text" : "text-purple-400"}`}
-                >
-                  {action.type === "open_url" ? (
-                    <ExternalLink size={14} />
-                  ) : (
-                    <FolderOpen size={14} />
-                  )}
-                </span>
-                <span className="flex-1 text-sm text-fg-secondary truncate" title={action.value}>
-                  {action.value}
-                </span>
-                <IconButton
-                  icon={<Trash2 size={14} />}
-                  title="Remover"
-                  variant="danger"
-                  size="sm"
-                  onClick={() => removeAction(i)}
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex gap-2">
-          <Select
-            aria-label="Tipo da ação"
-            value={newActionType}
-            onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-          >
-            <option value="open_url">URL</option>
-            <option value="open_file">Arquivo</option>
-          </Select>
-          <Input
-            value={newActionValue}
-            onChange={(e) => setNewActionValue(e.target.value)}
-            onKeyDown={(e) => {
-              // Sub-formulário: aqui o Enter adiciona a ação, não salva a
-              // tarefa. O `preventDefault` avisa isso ao `useSubmitOnEnter`.
-              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-              e.preventDefault();
-              addAction();
-            }}
-            placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
-            className="flex-1"
-          />
-          {/* Com texto, e não o `+` sozinho de antes: é o mesmo botão do "Novo
-              perfil" da exportação, e o `Button` pede rótulo — um ícone só,
-              dentro de uma caixa, não é o que o `IconButton` desenha. */}
-          <Button icon={<Plus size={14} />} onClick={addAction} disabled={!newActionValue.trim()}>
-            Adicionar
-          </Button>
-        </div>
+        <PlannedActionsField actions={actions} onChange={setActions} />
       </div>
     </Modal>
   );

@@ -1,11 +1,12 @@
-import { Check, ExternalLink, FolderOpen, Plus, Trash2, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
-import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { PlannedTask, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { BillableChip, Input, Select } from "@presentation/components/ui";
+import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
+import { BillableChip, Input } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -224,67 +225,7 @@ export function PlannedTaskEditSheet({
         {/* Ações */}
         <p className="text-overline uppercase text-fg-muted">Ações</p>
 
-        {editor.actions.length > 0 && (
-          <ul className="flex flex-col gap-1">
-            {editor.actions.map((action, i) => (
-              <li key={i} className="flex items-center gap-1.5 px-2 py-1 bg-raised rounded-control">
-                <span
-                  className={`shrink-0 ${action.type === "open_url" ? "text-accent-text" : "text-purple-400"}`}
-                >
-                  {action.type === "open_url" ? (
-                    <ExternalLink size={14} />
-                  ) : (
-                    <FolderOpen size={14} />
-                  )}
-                </span>
-                <span className="flex-1 text-sm text-fg-secondary truncate" title={action.value}>
-                  {action.value}
-                </span>
-                <button
-                  onClick={() => editor.removeAction(i)}
-                  title="Remover"
-                  className="shrink-0 text-fg-muted hover:text-danger transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex gap-1">
-          <Select
-            aria-label="Tipo da ação"
-            size="sm"
-            value={editor.newActionType}
-            onChange={(e) => editor.setNewActionType(e.target.value as PlannedTaskAction["type"])}
-            className="shrink-0"
-          >
-            <option value="open_url">URL</option>
-            <option value="open_file">Arquivo</option>
-          </Select>
-          <Input
-            size="sm"
-            value={editor.newActionValue}
-            onChange={(e) => editor.setNewActionValue(e.target.value)}
-            onKeyDown={(e) => {
-              // Sub-formulário: o Enter adiciona a ação, não salva a planejada.
-              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-              e.preventDefault();
-              editor.addAction();
-            }}
-            placeholder={editor.newActionType === "open_url" ? "https://..." : "/caminho"}
-            className="flex-1 min-w-0"
-          />
-          <button
-            onClick={editor.addAction}
-            disabled={!editor.newActionValue.trim()}
-            title="Adicionar ação"
-            className="shrink-0 px-1.5 py-1 bg-border hover:opacity-90 disabled:opacity-40 text-fg rounded-control transition"
-          >
-            <Plus size={14} />
-          </button>
-        </div>
+        <PlannedActionsField actions={editor.actions} onChange={editor.setActions} compact />
       </div>
 
       {/* Footer */}
