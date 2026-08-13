@@ -81,7 +81,10 @@ function makeDeps(
     findForDate: vi.fn(async () => planned),
     save: vi.fn(async () => {}),
     update: vi.fn(async () => {}),
-    findById: vi.fn(),
+    // Resolve do mesmo array de `findForDate`: o alinhamento de horário busca a
+    // planejada **pelo vínculo**, e um stub que devolve sempre `undefined`
+    // deixaria o passo inteiro passando por "planejada apagada".
+    findById: vi.fn(async (id: string) => planned.find((p) => p.id === id) ?? null),
     findForWeek: vi.fn(),
     complete: vi.fn(),
     uncomplete: vi.fn(),
@@ -109,7 +112,13 @@ describe("syncTodayMeetings", () => {
     const deps = makeDeps([makeEvent()]);
     const result = await syncTodayMeetings(deps, RANGE);
 
-    expect(result).toEqual({ tracked: 1, plannedCreated: 1, plannedLinked: 0, errors: [] });
+    expect(result).toEqual({
+      tracked: 1,
+      plannedCreated: 1,
+      plannedLinked: 0,
+      plannedRetimed: 0,
+      errors: [],
+    });
     expect(deps.trackedRepo.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ calendarEventId: "evt1", title: "Daily", startedTaskId: null })
     );
@@ -134,7 +143,13 @@ describe("syncTodayMeetings", () => {
       makeEvent({ id: "b", startTime: undefined }),
     ]);
     const result = await syncTodayMeetings(deps, RANGE);
-    expect(result).toEqual({ tracked: 0, plannedCreated: 0, plannedLinked: 0, errors: [] });
+    expect(result).toEqual({
+      tracked: 0,
+      plannedCreated: 0,
+      plannedLinked: 0,
+      plannedRetimed: 0,
+      errors: [],
+    });
     expect(deps.trackedRepo.upsert).not.toHaveBeenCalled();
   });
 
@@ -152,7 +167,13 @@ describe("syncTodayMeetings", () => {
     ];
     const deps = makeDeps([makeEvent()], existing);
     const result = await syncTodayMeetings(deps, RANGE);
-    expect(result).toEqual({ tracked: 0, plannedCreated: 0, plannedLinked: 0, errors: [] });
+    expect(result).toEqual({
+      tracked: 0,
+      plannedCreated: 0,
+      plannedLinked: 0,
+      plannedRetimed: 0,
+      errors: [],
+    });
     expect(deps.trackedRepo.upsert).not.toHaveBeenCalled();
     expect(deps.trackedRepo.setPlannedTaskId).not.toHaveBeenCalled();
     expect(deps.trackedRepo.remove).not.toHaveBeenCalled();
@@ -165,7 +186,13 @@ describe("syncTodayMeetings", () => {
     const deps = makeDeps([makeEvent()], existing);
     const result = await syncTodayMeetings(deps, RANGE);
 
-    expect(result).toEqual({ tracked: 0, plannedCreated: 1, plannedLinked: 0, errors: [] });
+    expect(result).toEqual({
+      tracked: 0,
+      plannedCreated: 1,
+      plannedLinked: 0,
+      plannedRetimed: 0,
+      errors: [],
+    });
     expect(deps.plannedRepo.save).toHaveBeenCalledTimes(1);
   });
 
@@ -211,7 +238,13 @@ describe("syncTodayMeetings", () => {
       const deps = makeDeps([makeEvent()], [], [makePlanned("daily")]);
       const result = await syncTodayMeetings(deps, RANGE);
 
-      expect(result).toEqual({ tracked: 1, plannedCreated: 0, plannedLinked: 1, errors: [] });
+      expect(result).toEqual({
+        tracked: 1,
+        plannedCreated: 0,
+        plannedLinked: 1,
+        plannedRetimed: 0,
+        errors: [],
+      });
       expect(deps.plannedRepo.save).not.toHaveBeenCalled();
       expect(deps.trackedRepo.setPlannedTaskId).toHaveBeenCalledWith("evt1", "pt-daily");
     });
@@ -268,6 +301,71 @@ describe("syncTodayMeetings", () => {
       );
       await syncTodayMeetings(deps, RANGE);
 
+      // A gravação acontece — é o horário que falta nesta planejada —, e é
+      // justamente por isso que a lista de ações precisa ser conferida aqui:
+      // "não escreveu" deixou de ser prova de "não duplicou".
+      const updated = deps.plannedRepo.update.mock.calls[0][0];
+      expect(updated.actions).toEqual([action]);
+      expect(updated.startTime).toBe("10:00");
+    });
+
+    it("a planejada adotada de dia único recebe o horário do evento", async () => {
+      // O evento não traz link de conferência — e é justamente aí que a hora se
+      // perdia: a adoção desistia no `return` do link antes de olhar o horário.
+      const deps = makeDeps([makeEvent()], [], [makePlanned("daily")]);
+      const result = await syncTodayMeetings(deps, RANGE);
+
+      expect(result.plannedLinked).toBe(1);
+      expect(deps.plannedRepo.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "pt-daily", startTime: "10:00", endTime: "10:30" })
+      );
+    });
+
+    it("não escreve horário em planejada recorrente (valeria para todo dia da recorrência)", async () => {
+      const deps = makeDeps(
+        [makeEvent({ conferenceLink: "https://meet.google.com/abc" })],
+        [],
+        [makePlanned("daily", { scheduleType: "recurring", scheduleDate: null, recurringDays: [3] })]
+      );
+      await syncTodayMeetings(deps, RANGE);
+
+      // A ação entra; a hora, não — senão o Lançamento Manual ofereceria 10:00
+      // num dia em que a reunião não acontece.
+      const updated = deps.plannedRepo.update.mock.calls[0][0];
+      expect(updated.actions).toEqual([{ type: "open_url", value: "https://meet.google.com/abc" }]);
+      expect(updated.startTime).toBeUndefined();
+      expect(updated.endTime).toBeUndefined();
+    });
+
+    it("não escreve horário em planejada de período", async () => {
+      const deps = makeDeps(
+        [makeEvent({ conferenceLink: "https://meet.google.com/abc" })],
+        [],
+        [
+          makePlanned("daily", {
+            scheduleType: "period",
+            scheduleDate: null,
+            periodStart: "2026-06-01",
+            periodEnd: "2026-09-30",
+          }),
+        ]
+      );
+      await syncTodayMeetings(deps, RANGE);
+
+      const updated = deps.plannedRepo.update.mock.calls[0][0];
+      expect(updated.startTime).toBeUndefined();
+      expect(updated.endTime).toBeUndefined();
+    });
+
+    it("não reescreve a planejada cujo horário e ação já batem", async () => {
+      const action: PlannedTaskAction = { type: "open_url", value: "https://meet.google.com/abc" };
+      const deps = makeDeps(
+        [makeEvent({ conferenceLink: action.value })],
+        [],
+        [makePlanned("daily", { actions: [action], startTime: "10:00", endTime: "10:30" })]
+      );
+      await syncTodayMeetings(deps, RANGE);
+
       expect(deps.plannedRepo.update).not.toHaveBeenCalled();
     });
 
@@ -278,7 +376,13 @@ describe("syncTodayMeetings", () => {
       ]);
       const result = await syncTodayMeetings(deps, RANGE);
 
-      expect(result).toEqual({ tracked: 2, plannedCreated: 1, plannedLinked: 1, errors: [] });
+      expect(result).toEqual({
+        tracked: 2,
+        plannedCreated: 1,
+        plannedLinked: 1,
+        plannedRetimed: 0,
+        errors: [],
+      });
     });
   });
 
@@ -288,8 +392,16 @@ describe("syncTodayMeetings", () => {
     const deps = makeDeps([makeEvent()], existing);
     const result = await syncTodayMeetings(deps, RANGE);
 
-    expect(result).toEqual({ tracked: 0, plannedCreated: 0, plannedLinked: 0, errors: [] });
+    expect(result).toEqual({
+      tracked: 0,
+      plannedCreated: 0,
+      plannedLinked: 0,
+      plannedRetimed: 0,
+      errors: [],
+    });
     expect(deps.plannedRepo.save).not.toHaveBeenCalled();
+    // Nem ressuscita pelo alinhamento de horário, que também parte do vínculo.
+    expect(deps.plannedRepo.update).not.toHaveBeenCalled();
   });
 
   it("pré-preenche projeto e categoria a partir da descrição do evento", async () => {
@@ -304,6 +416,79 @@ describe("syncTodayMeetings", () => {
     expect(deps.plannedRepo.save).toHaveBeenCalledWith(
       expect.objectContaining({ projectId: "p1", categoryId: "c1" })
     );
+  });
+
+  describe("horário da planejada já vinculada", () => {
+    it("cura a planejada vinculada que ficou sem hora, sem esperar o dia seguinte", async () => {
+      // Reunião com vínculo não é reavaliada pela adoção — sem este passo, a
+      // planejada que nasceu sem hora só ganharia horário na próxima ocorrência.
+      const existing = [makeMeeting({ plannedTaskId: "pt-daily" })];
+      const deps = makeDeps([makeEvent()], existing, [makePlanned("daily")]);
+      const result = await syncTodayMeetings(deps, RANGE);
+
+      expect(result.plannedRetimed).toBe(1);
+      expect(deps.plannedRepo.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "pt-daily", startTime: "10:00", endTime: "10:30" })
+      );
+    });
+
+    it("remarcação no mesmo dia alinha a hora da planejada vinculada", async () => {
+      const existing = [
+        makeMeeting({
+          plannedTaskId: "pt-daily",
+          startISO: composeLocalISO("2026-07-01", "10:00"),
+          endISO: composeMeetingEndISO("2026-07-01", "10:00", "10:30"),
+        }),
+      ];
+      const deps = makeDeps(
+        [makeEvent({ startTime: "15:00", endTime: "15:30" })],
+        existing,
+        [makePlanned("daily", { startTime: "10:00", endTime: "10:30" })]
+      );
+      const result = await syncTodayMeetings(deps, RANGE);
+
+      expect(result.plannedRetimed).toBe(1);
+      expect(deps.plannedRepo.update).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "pt-daily", startTime: "15:00", endTime: "15:30" })
+      );
+    });
+
+    it("horário que já bate não vira UPDATE (o ciclo roda a cada 2 min)", async () => {
+      const existing = [makeMeeting({ plannedTaskId: "pt-daily" })];
+      const deps = makeDeps(
+        [makeEvent()],
+        existing,
+        [makePlanned("daily", { startTime: "10:00", endTime: "10:30" })]
+      );
+      const result = await syncTodayMeetings(deps, RANGE);
+
+      expect(result.plannedRetimed).toBe(0);
+      expect(deps.plannedRepo.update).not.toHaveBeenCalled();
+    });
+
+    it("reunião que sumiu da agenda não tem horário a alinhar", async () => {
+      // Sumida e já iniciada sobrevive ao reconcile, mas sem evento não há de
+      // onde tirar hora — nem motivo para ler a planejada.
+      const existing = [
+        makeMeeting({ calendarEventId: "gone", startedTaskId: "task1", plannedTaskId: "pt-daily" }),
+      ];
+      const deps = makeDeps([], existing, [makePlanned("daily")]);
+      await syncTodayMeetings(deps, RANGE);
+
+      expect(deps.plannedRepo.findById).not.toHaveBeenCalled();
+    });
+
+    it("falha ao alinhar uma planejada não derruba o ciclo", async () => {
+      const existing = [makeMeeting({ plannedTaskId: "pt-daily" })];
+      const deps = makeDeps([makeEvent()], existing, [makePlanned("daily")]);
+      deps.plannedRepo.update.mockRejectedValueOnce(new Error("banco fora"));
+
+      const result = await syncTodayMeetings(deps, RANGE);
+
+      expect(result.errors).toEqual(["banco fora"]);
+      expect(result.plannedRetimed).toBe(0);
+      expect(deps.trackedRepo.pruneBefore).toHaveBeenCalledWith("2026-07-01");
+    });
   });
 
   describe("reconciliação de reuniões remarcadas/canceladas", () => {

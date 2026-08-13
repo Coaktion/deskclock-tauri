@@ -123,6 +123,24 @@
 > conferência de uma recorrente é o mesmo em toda ocorrência — e é o único que serve para entrar na
 > reunião.
 >
+> **A planejada adotada recebe o horário do evento — se valer um dia só.** A adoção antes só somava
+> a ação, e quem não tem link de conferência não chegava nem a gravar: a planejada ficava sem
+> `startTime`, caía no grupo "Sem hora" do popup e sumia do Lançamento Manual, que lista exatamente
+> as planejadas com horário. Vale para `specific_date` apenas. Numa **recorrente ou de período** o
+> horário é da planejada, não da ocorrência: escrevê-lo faria o Lançamento Manual oferecer 10:00 num
+> dia em que a reunião não acontece, e lançar dali gravaria hora que ninguém trabalhou. A saída certa
+> para elas é horário por ocorrência — modelo que não existe hoje, e que é spec própria, não efeito
+> colateral desta adoção.
+>
+> **Reunião com vínculo tem o horário mantido em dia por um passo separado** (`syncPlannedTimes`).
+> Reunião já tratada não volta à adoção nunca mais — é o que garante que planejada apagada à mão não
+> ressuscite —, e sem esse passo faltavam dois casos: a planejada que já estava vinculada e sem hora
+> (só ganharia horário na ocorrência seguinte, um dia depois) e a **remarcação**, que o reconcile
+> aplica no rastreamento e reabre o prompt no horário novo sem que a planejada soubesse — popup e
+> Lançamento Manual seguiam no horário velho. O passo parte do vínculo, não do nome; `findById` sem
+> resultado é planejada apagada, e aí não faz nada. Só grava havendo diferença: o ciclo roda a cada
+> 2 minutos, e alinhar sempre seria um UPDATE por ciclo para não dizer nada de novo.
+>
 > **O casamento é por nome exato, e de propósito.** Matching aproximado penduraria a reunião no
 > trabalho errado em silêncio, num job de fundo, herdando projeto e etapa errados — duplicata visível
 > é melhor que vínculo errado invisível. Nomes diferentes continuam gerando duas planejadas; a saída

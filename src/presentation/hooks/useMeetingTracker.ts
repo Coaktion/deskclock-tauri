@@ -123,9 +123,11 @@ export function useMeetingTracker() {
         error: failure,
       } satisfies MeetingTrackerSyncResultPayload);
 
-      // Planejada criada ou adotada (que ganha a ação do Meet) → refresh da lista.
+      // Planejada criada, adotada (que ganha a ação do Meet) ou com o horário
+      // alinhado ao evento → refresh da lista. O alinhamento entra na conta porque
+      // muda a linha de seção no popup: ganhando hora ela sai de "Sem hora".
       // Vale também no ciclo parcial: o que foi criado antes da falha está gravado.
-      if (result && result.plannedCreated + result.plannedLinked > 0) {
+      if (result && result.plannedCreated + result.plannedLinked + result.plannedRetimed > 0) {
         await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       }
       return result;
