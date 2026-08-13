@@ -6,6 +6,17 @@ export type ScheduleType = "specific_date" | "recurring" | "period";
 export interface PlannedTaskAction {
   type: "open_url" | "open_file";
   value: string;
+  /**
+   * Como a ação se chama na tela. **Opcional**, e sem ele o chip volta a
+   * derivar o rótulo do próprio valor — hostname na URL, nome do arquivo no
+   * caminho —, que é o que toda ação já gravada mostra. A coluna `actions` é
+   * JSON, então linha antiga lê com o campo ausente e nada precisa migrar.
+   *
+   * O que as integrações escrevem aqui é o **destino**, não a entidade: a
+   * planejada já nasce com o nome do evento ou do item, e repeti-lo no chip
+   * ecoaria, uma linha acima, o nome que o card mostra logo abaixo.
+   */
+  label?: string;
 }
 
 export interface PlannedTask {

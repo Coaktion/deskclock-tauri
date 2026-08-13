@@ -41,12 +41,17 @@ export function PlannedActionsField({
 }: PlannedActionsFieldProps) {
   const [newType, setNewType] = useState<PlannedTaskAction["type"]>("open_url");
   const [newValue, setNewValue] = useState("");
+  const [newLabel, setNewLabel] = useState("");
 
   function add() {
     const value = newValue.trim();
     if (!value) return;
-    onChange([...actions, { type: newType, value }]);
+    const label = newLabel.trim();
+    // Nome vazio não vira `label: ""`: a ação sem nome é a que **não tem** o
+    // campo, e é ela que o chip resolve derivando o rótulo do valor.
+    onChange([...actions, label ? { type: newType, value, label } : { type: newType, value }]);
     setNewValue("");
+    setNewLabel("");
   }
 
   function remove(index: number) {
@@ -85,11 +90,14 @@ export function PlannedActionsField({
               >
                 {action.type === "open_url" ? <ExternalLink size={14} /> : <FolderOpen size={14} />}
               </span>
+              {/* Nomeada, a linha mostra o nome e guarda o valor no `title` —
+                  nos 264px do painel não cabem os dois, e é o nome que a
+                  pessoa escreveu para reconhecer a ação. */}
               <span
                 className="flex-1 min-w-0 text-sm text-fg-secondary truncate"
                 title={action.value}
               >
-                {action.value}
+                {action.label ?? action.value}
               </span>
               <IconButton
                 icon={<Trash2 size={14} />}
@@ -103,6 +111,10 @@ export function PlannedActionsField({
         </ul>
       )}
 
+      {/* A ordem é a da leitura: que tipo é, como se chama, para onde aponta —
+          e o acrescentar fica encostado no último campo, que é onde o Enter
+          cai depois de digitar o valor. O nome vem antes do valor e mesmo
+          assim é o opcional: pô-lo depois deixaria o `+` no meio da pilha. */}
       {compact ? (
         <>
           <Select
@@ -115,6 +127,15 @@ export function PlannedActionsField({
             <option value="open_url">URL</option>
             <option value="open_file">Arquivo</option>
           </Select>
+
+          <Input
+            size="sm"
+            aria-label="Nome da ação"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Nome (opcional)"
+          />
 
           <div className={`${boxClass} flex items-center pr-1`}>
             <Input
@@ -146,6 +167,14 @@ export function PlannedActionsField({
             <option value="open_url">URL</option>
             <option value="open_file">Arquivo</option>
           </Select>
+          <Input
+            aria-label="Nome da ação"
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Nome (opcional)"
+            className="flex-1"
+          />
           <Input
             aria-label="Valor da ação"
             value={newValue}
