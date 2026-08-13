@@ -1,4 +1,5 @@
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
+import { buildPlannedAction } from "@domain/utils/actions";
 import { boxClass } from "@presentation/components/fieldStyles";
 import { Button, IconButton, Input, Select } from "@presentation/components/ui";
 import { ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
@@ -46,10 +47,10 @@ export function PlannedActionsField({
   function add() {
     const value = newValue.trim();
     if (!value) return;
-    const label = newLabel.trim();
-    // Nome vazio não vira `label: ""`: a ação sem nome é a que **não tem** o
-    // campo, e é ela que o chip resolve derivando o rótulo do valor.
-    onChange([...actions, label ? { type: newType, value, label } : { type: newType, value }]);
+    // O `buildPlannedAction` é quem decide que nome vazio **não** vira
+    // `label: ""` — é regra do dado, e vale igual para as três integrações que
+    // criam ação e para as três telas que as editam.
+    onChange([...actions, buildPlannedAction(newType, value, newLabel)]);
     setNewValue("");
     setNewLabel("");
   }
@@ -97,7 +98,7 @@ export function PlannedActionsField({
                 className="flex-1 min-w-0 text-sm text-fg-secondary truncate"
                 title={action.value}
               >
-                {action.label ?? action.value}
+                {action.label?.trim() || action.value}
               </span>
               <IconButton
                 icon={<Trash2 size={14} />}

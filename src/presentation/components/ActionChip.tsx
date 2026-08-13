@@ -43,10 +43,11 @@ export function ActionChip({ action }: ActionChipProps) {
       ) : (
         <FolderOpen size={14} className="shrink-0" />
       )}
-      {/* Nome escrito à mão é mais largo que o hostname que ele substitui, e o
-          card do popup tem 264px: sem teto, duas ações nomeadas quebram a faixa
-          em duas linhas. O valor inteiro fica no `title`. */}
-      <span className="truncate max-w-[9rem]">{actionLabel(action)}</span>
+      {/* O teto existe para o **nome comprido**, não para o número de ações:
+          nome escrito à mão não tem limite, e sem ele um só chip passa dos 264px
+          úteis do card. Duas ações continuam quebrando a faixa em duas linhas, e
+          é o que se espera. O valor inteiro fica no `title`. */}
+      <span className="truncate max-w-36">{actionLabel(action)}</span>
       <ArrowUpRight size={14} className="shrink-0" />
     </button>
   );

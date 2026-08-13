@@ -112,9 +112,17 @@
 | period_start | date \| null | Para `period` |
 | period_end | date \| null | Para `period` |
 | completed_dates | date[] | Datas em que foi marcada como concluída |
-| actions | JSON | Array de `{ type: "open_url" \| "open_file", value: string }` |
+| actions | JSON | Array de `{ type: "open_url" \| "open_file", value: string, label?: string }` |
 | sort_order | integer | Para ordenação manual |
 | created_at | datetime | Auto |
+
+> **O `label` da ação entrou sem migration** (2026-08-13), e é a coluna ser JSON que
+> permitiu: linha antiga desserializa com o campo ausente, e é justamente a ausência que
+> o `actionLabel` trata — sem nome, o chip deriva o rótulo do valor. **Nome vazio não é
+> gravado como `label: ""`**: quem constrói a ação é o `buildPlannedAction`, e é ele que
+> faz a string de espaços e a ausência do campo significarem a mesma coisa nas três
+> integrações que criam ação e nas três telas que as editam. A regra de quem escreve o
+> nome está em `docs/regras-de-negocio.md` §6.5.
 
 ### 4.3 Project
 
