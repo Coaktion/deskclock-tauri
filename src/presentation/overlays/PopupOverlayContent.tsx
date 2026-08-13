@@ -32,10 +32,8 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  Pause,
   Pen,
   Play,
-  Square,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -184,6 +182,13 @@ function RunningCard({
   return (
     <div className="shrink-0 flex flex-col gap-2 px-3 py-2.5 bg-surface border-t border-border rounded-b-card">
       {/* Identidade */}
+      {/* **O `✎` cola no fim do nome, e é por isso que o nome não é `flex-1`.**
+          Clicar no nome já abre a edição — o botão é indicação visual de que
+          aquilo se edita, e indicação que flutua a 100px do texto não indica
+          nada. Sem o `flex-1`, o botão do nome encolhe ao conteúdo e o `✎` vem
+          logo atrás; o `min-w-0` é o que permite ao `truncate` agir quando o
+          nome é longo (medido: ele para em 190px e a linha fecha exata). Quem
+          ocupa a folga passa a ser o `ml-auto` do cancelar. */}
       <div className="flex items-center gap-1.5">
         <span
           title={isRunning ? "Rodando" : "Pausada"}
@@ -192,11 +197,28 @@ function RunningCard({
         <button
           onClick={onEdit}
           title="Editar tarefa"
-          className="min-w-0 flex-1 text-left text-sm font-medium text-fg truncate"
+          className="min-w-0 text-left text-sm font-medium text-fg truncate"
         >
           {task.name ?? <span className="text-fg-muted italic">(sem nome)</span>}
         </button>
         <IconButton icon={<Pen size={14} />} title="Editar tarefa" onClick={onEdit} />
+        {/* Cancelar mora na ponta oposta ao que opera o relógio, e nesta linha
+            porque descartar a tarefa é ação sobre a **tarefa**, não sobre o
+            tempo. Encostado no Parar — que era onde ele morava — o descarte
+            ficava a um pixel da ação que salva, e o usuário passava a mirar.
+            `px-1!` estreita a caixa ao glifo: sem o `!`, o `px-2.5` do próprio
+            `size` vence, porque as duas classes têm a mesma especificidade e
+            quem decide passa a ser a ordem em que o Tailwind as emite, não a
+            ordem em que estão escritas aqui. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="px-1! shrink-0 ml-auto"
+          title="Cancelar"
+          onClick={() => void onCancel()}
+        >
+          <X size={14} className="text-danger" />
+        </Button>
       </div>
 
       {confirmingStop ? (
@@ -260,53 +282,46 @@ function RunningCard({
           </div>
         </div>
       ) : (
+        // A linha do relógio fica só com o que opera o tempo, e os dois botões
+        // dizem o que fazem **por escrito** — sem glifo. Não é preferência: o
+        // card tem 264px úteis (popup de 288 menos o `px-3`) e o cronômetro em
+        // `display/timer` come 112 deles, então rótulo **e** ícone nos dois
+        // mede 270px rodando e 279px pausado. "Retomar" é 9px mais largo que
+        // "Pausar", e por isso é sempre o estado pausado que decide se um
+        // arranjo cabe. Escrito e sem ícone, o pior caso fecha em 239px — e em
+        // 253px com cronômetro de três dígitos de hora, que é o timer esquecido
+        // rodando o fim de semana.
         <div className="flex items-center gap-1.5">
           <p
-            className={`flex-1 min-w-0 font-mono text-2xl font-medium tabular-nums leading-none ${isRunning ? "text-accent-text" : "text-paused"}`}
+            className={`shrink-0 font-mono text-2xl font-medium tabular-nums leading-none ${isRunning ? "text-accent-text" : "text-paused"}`}
           >
             {formatHHMMSS(seconds)}
           </p>
-          {/* As três ações são caixas do mesmo tamanho — `size="sm"` para a
-              altura, e `px-1!` para a largura. O `!` não é preguiça: sem ele o
-              `px-2.5` do próprio `size` vence, porque as duas classes têm a
-              mesma especificidade e quem decide passa a ser a ordem em que o
-              Tailwind as emite, não a ordem em que estão escritas aqui. Medido:
-              sem o `!`, o padding-inline sai em 10px. O que distingue as três é
-              o preenchimento e o glifo, não a área: parar é a primária cheia;
-              pausar e cancelar são secundárias, com o glifo na cor do destino da
-              ação — âmbar para o estado a que ela leva a tarefa, vermelho para o
-              descarte. Cancelar deixou de ser texto puro para não ser a única
-              sem caixa numa fileira de três. */}
+          {/* O rótulo herda a cor do **destino** da ação — âmbar para o estado a
+              que ele leva a tarefa, acento para a volta —, que é o que o glifo
+              carregava antes de sair. Vai num `<span>` e não na `className` do
+              botão porque o `text-fg-secondary` da variante `secondary` tem a
+              mesma especificidade: no elemento, quem venceria seria a ordem de
+              emissão do Tailwind; num filho, não há disputa. */}
           <Button
             variant="secondary"
             size="sm"
-            className="px-1! shrink-0"
+            className="shrink-0 ml-auto"
             title={isRunning ? "Pausar" : "Retomar"}
             onClick={() => void (isRunning ? onPause() : onResume())}
           >
-            {isRunning ? (
-              <Pause size={14} className="text-paused" />
-            ) : (
-              <Play size={14} className="text-accent-text" />
-            )}
+            <span className={isRunning ? "text-paused" : "text-accent-text"}>
+              {isRunning ? "Pausar" : "Retomar"}
+            </span>
           </Button>
           <Button
             variant="primary"
             size="sm"
-            className="px-1! shrink-0"
+            className="shrink-0"
             title="Parar"
             onClick={openConfirmStop}
           >
-            <Square size={14} />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="px-1! shrink-0"
-            title="Cancelar"
-            onClick={() => void onCancel()}
-          >
-            <X size={14} className="text-danger" />
+            Parar
           </Button>
         </div>
       )}
