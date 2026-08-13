@@ -77,8 +77,10 @@
 > dezenas de consultas para montar uma tela só. Ali o recorte desce como `categoryOptionsFor`.
 
 ### 6.5 Ações de tarefa planejada
-- Ao iniciar uma tarefa planejada via Play, as ações configuradas **não são executadas automaticamente**. Elas aparecem como chips clicáveis na seção "Ações" do Popup Flyout enquanto a tarefa estiver em execução, permitindo que o usuário dispare cada uma sob demanda (e mais de uma vez, se quiser).
-- Cada chip mostra um ícone (globo para URL, pasta para arquivo) e um rótulo curto (hostname para URLs, nome do arquivo para caminhos).
+- Ao iniciar uma tarefa planejada via Play, as ações configuradas **não são executadas automaticamente**. Elas ficam como chips clicáveis enquanto a tarefa estiver em execução, e o usuário dispara cada uma sob demanda (e mais de uma vez, se quiser). Onde os chips aparecem está em `docs/telas/overlays.md` — a faixa que abre no hover do card.
+- **A ação tem nome, e o nome é opcional** (`PlannedTaskAction.label`, 2026-08-13). Sem ele o chip deriva o rótulo do próprio valor, que é o que toda ação criada antes do campo mostra: hostname na URL, nome do arquivo no caminho. Nome só de espaços não conta como nome. A coluna `actions` é JSON, então não houve migration e linha antiga lê com o campo ausente.
+- **Integração nomeia pelo destino, nunca pela entidade de origem** (`actionDestinationLabel`): Meet, Zoom, Teams, Google Agenda, Monday, cobrindo subdomínio (`us02web.zoom.us`, `aktienow.monday.com`). A razão é de tela e não de gosto — a planejada importada **já nasce com o nome do evento ou do item** (`name: event.title`, `name: item.name`), então nomear a ação com o mesmo texto faria o chip ecoar, uma linha acima, o nome que o card do popup mostra logo abaixo. "Meet" diz o que o nome da reunião não diz, e é o que separa na tela o par que o `conferenceLink ?? htmlLink` já separa no código. **Host desconhecido não ganha nome**: sem ele o chip deriva do valor, e inventar um aqui daria duas fontes para a mesma string.
+- Cada chip mostra um ícone (globo para URL, pasta para arquivo) e o rótulo, com teto de largura — nome escrito à mão é mais largo que o hostname que substitui, e o card do popup tem 264 px úteis. O valor inteiro fica no `title`.
 - `open_url`: Abre URL no navegador padrão. Auto-prepend `https://` se não contiver `http://` ou `https://`.
 - `open_file`: Abre arquivo/pasta no explorador de arquivos do SO.
 

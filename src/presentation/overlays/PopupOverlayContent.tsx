@@ -5,6 +5,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
+import { ActionChip } from "@presentation/components/ActionChip";
 import { Button, IconButton, Input, TaskRow } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -112,6 +113,8 @@ interface PopupOverlayContentProps {
 
 interface RunningCardProps {
   task: Task;
+  /** Ações da planejada de origem — disparadas daqui, nunca editadas. */
+  actions: PlannedTaskAction[];
   confirmingStop: boolean;
   setConfirmingStop: (v: boolean) => void;
   /** Abre o painel com nome, projeto, categoria, billable, hora, campos e ações. */
@@ -135,9 +138,16 @@ interface RunningCardProps {
  * ele abre o painel que edita o nome ao lado do qual está, e a linha de baixo
  * fica só com o que opera o relógio. **O billable saiu do card** — alterná-lo
  * agora é dentro do painel, junto da categoria de que ele é atributo.
+ *
+ * **As ações voltaram ao card, e como faixa que flutua.** Elas tinham seção
+ * própria antes de a execução virar rodapé, e ficaram só dentro do
+ * `RunningTaskEditSheet` — três interações para o clique que a reunião pede no
+ * segundo em que começa. Aqui a faixa não ocupa altura nenhuma em repouso e não
+ * empurra a lista ao abrir: ela cobre a última linha, e nada no fluxo se mexe.
  */
 function RunningCard({
   task,
+  actions,
   confirmingStop,
   setConfirmingStop,
   onEdit,
@@ -180,7 +190,33 @@ function RunningCard({
   );
 
   return (
-    <div className="shrink-0 flex flex-col gap-2 px-3 py-2.5 bg-surface border-t border-border rounded-b-card">
+    <div className="group relative shrink-0 flex flex-col gap-2 px-3 py-2.5 bg-surface border-t border-border rounded-b-card">
+      {/* A faixa das ações **cresce para cima e não empurra ninguém**. As duas
+          propriedades são o que a tornam viável num card que se hover para
+          clicar: fora do fluxo, a lista não reflui a cada vez que o cursor
+          cruza o rodapé; acima do nome, o que se move é a aresta de cima — o
+          cronômetro e os botões ficam parados no mesmo y. Abrindo abaixo do
+          nome, a faixa empurraria o Parar para debaixo do cursor no exato
+          gesto de ir clicar nele.
+
+          Ela é filha do card, e é isso que sustenta o `group-hover`: `:hover`
+          sobe pela **árvore**, não pela geometria, então o cursor sobre a
+          faixa — que está fora da caixa do card — mantém o card em hover. Como
+          irmã, ela morreria ao subir o cursor.
+
+          `group-focus-within` é o mesmo bloco para quem navega pelo teclado, o
+          par que a linha do Planejamento já usa (§5.3).
+
+          Fora durante a confirmação de parada: ali o card já cresceu, e quem
+          está escolhendo Concluída/Pendente não vai abrir o link. */}
+      {actions.length > 0 && !confirmingStop && (
+        <div className="hidden group-hover:flex group-focus-within:flex absolute bottom-full left-0 right-0 z-10 flex-wrap gap-1.5 px-3 py-2 bg-surface border-t border-border shadow-lg">
+          {actions.map((action, i) => (
+            <ActionChip key={i} action={action} />
+          ))}
+        </div>
+      )}
+
       {/* Identidade */}
       {/* **O `✎` cola no fim do nome, e é por isso que o nome não é `flex-1`.**
           Clicar no nome já abre a edição — o botão é indicação visual de que
@@ -602,6 +638,7 @@ export function PopupOverlayContent({
       {runningTask ? (
         <RunningCard
           task={runningTask}
+          actions={activePlannedTaskActions}
           confirmingStop={confirmingStop}
           setConfirmingStop={setConfirmingStop}
           onEdit={() => setEditingRunning(true)}
