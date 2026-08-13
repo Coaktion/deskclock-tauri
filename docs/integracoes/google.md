@@ -203,9 +203,18 @@ que a tela promete.
 > **A pasta `DeskClock Backups` é visível de propósito.** Baixar o banco sem passar pelo app é o
 > motivo de o backup existir; numa pasta oculta (`appDataFolder`) ele dependeria justamente do app
 > que talvez tenha quebrado. Com `drive.file` a listagem só enxerga o que este app criou, então o
-> nome não colide com uma pasta homônima do usuário. Ela é conferida a cada execução — apagada ou
-> na lixeira, é recriada, senão o upload seguinte iria para um `parents` que não existe mais e o
-> backup pararia calado.
+> nome não colide com uma pasta homônima do usuário. Ela é conferida a cada execução — apagada,
+> na lixeira **ou com outro nome**, é recriada, senão o upload seguinte iria para um `parents` que
+> não existe mais e o backup pararia calado.
+
+> **O banco de dev tem pasta própria, `DeskClock Backups (dev)`.** Não é arrumação: com uma pasta
+> só, cada snapshot que um `pnpm tauri dev` gera entra na fila da poda e empurra para fora um
+> backup de produção — o arquivo que interessa some sem aviso. O `drive.file` não separa os dois
+> sozinho, porque o escopo enxerga o que **o app** criou e o client OAuth é o mesmo. Quem decide é
+> `is_dev_database()` no Rust, que chega ao frontend em `DbBootstrap.isDev` e é lido por
+> `isDevDatabase()`; `import.meta.env.DEV` não serve, porque `tauri build --debug` faz os dois
+> divergirem. A conferência do nome é o que migra quem já rodou backup em dev antes disso: o id
+> salvo apontava para a pasta de produção e continuaria válido para sempre.
 
 > **Os segredos são expurgados do snapshot antes de subir.** O banco guarda `googleRefreshToken`,
 > `clockifyApiKey`, `mondayApiKey` e os tokens do Zendesk (`SECRET_CONFIG_KEYS`), e um arquivo no

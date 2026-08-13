@@ -23,6 +23,7 @@ Todas do usuário, em 2026-08-12.
 | Decisão | Escolha | Por quê |
 |---|---|---|
 | Escopo OAuth | `drive.file`, pasta visível `DeskClock Backups` | Acesso só ao que o app criou. Escopo **não sensível**: dispensa a verificação de segurança (CASA) que o `drive` amplo exige. A pasta é visível para o usuário poder baixar o backup sem passar pelo app — que é o motivo de o backup existir. |
+| Dev e produção | Uma pasta para cada — `DeskClock Backups (dev)` | Com uma pasta só, os snapshots de um `pnpm tauri dev` entram na fila da poda e empurram para fora os de produção. O `drive.file` não separa os dois: ele enxerga o que **o app** criou, e o client OAuth é o mesmo. A variante vem de `is_dev_database()` no Rust via `DbBootstrap.isDev` — `import.meta.env.DEV` divergiria em `tauri build --debug`. |
 | Credenciais no snapshot | **Expurgadas** antes de subir | O banco guarda `googleRefreshToken`, `clockifyApiKey`, `mondayApiKey` e os tokens do Zendesk. Um arquivo no Drive é bem mais exposto que `app_config_dir`. Preço aceito: restaurar exige reconectar as integrações. |
 | Contagem da recorrência | Intervalo desde o último sucesso | 24h / 7d / 30d desde `driveBackupLastRunAt`. Sem âncora de calendário: não há borda de dia 31, e o backup vencido roda assim que o app abre. |
 | Lugar na UI | `SubSection` dentro do card do Google, em Integrações | Mesma conexão OAuth de Sheets e Agenda — um card, N chaves. É onde o aviso de reconexão precisa estar. |
@@ -208,7 +209,8 @@ conferido em 2026-08-12.
 - `src/tests/infra/integrations/googledrive/GoogleDriveClient.test.ts` e `DriveBackupRunner.test.ts`
   — `fetch` e `invoke` mockados: pasta criada uma vez só, pasta apagada pelo usuário sendo
   recriada, poda respeitando `keepCount`, 403 virando a mensagem de reconexão, falha da poda não
-  desfazendo o sucesso, timestamp não avançando em falha.
+  desfazendo o sucesso, timestamp não avançando em falha, banco de dev indo para a pasta de dev e
+  pasta salva com nome divergente sendo descartada.
 - `src/tests/shared/secretConfigKeys.test.ts` — trava no molde das outras: toda chave de `AppConfig`
   que casa `/token|apikey|secret|password/i` está em `SECRET_CONFIG_KEYS` ou numa lista explícita de
   isentas. É o que impede a integração nº 6 de mandar o token dela para o Drive sem ninguém notar.
@@ -260,6 +262,7 @@ depois que a migração entrar**, ou carrega ela junto.
 | 3 · Agendador | ✅ **feita** (2026-08-13) — `useDriveBackupScheduler` montado no `AppInner`, com o teste que lhe cabe. Duas coisas fora do previsto, ambas abaixo. |
 | 4 · UI | ✅ **código feito** (2026-08-13) — a `SubSection`, o `drive.file` em `ALL_GOOGLE_SCOPES` e o aviso de reconexão, com os docs da Fase 5 que lhes cabem. **Duas verificações manuais ficaram pendentes com o usuário**, abaixo. |
 | 5 · Testes e docs | acompanha cada fase — `google.md` e `dados.md` escritos junto com a Fase 4 |
+| 6 · Dev e produção em pastas separadas | ✅ **feita** (2026-08-13) — fora do plano original, pedida depois. `is_dev_database()` no Rust, `DbBootstrap.isDev`, `isDevDatabase()` no `db.ts`, `backupFolderName()` e o nome entrando na conferência da pasta salva. |
 
 ### Pendente com o usuário — as duas verificações manuais
 
@@ -268,7 +271,9 @@ Nenhuma das duas é executável por agente, e a feature não está conferida sem
 1. **A validação funcional da §4**, adiada desde a Fase 2 porque não havia chamador. Agora há o
    botão "Fazer backup agora": reconectar o Google (para conceder o `drive.file`), rodar o backup,
    baixar o `.db` do Drive e conferir no `sqlite3` que `SELECT * FROM config WHERE key LIKE
-   '%oken%'` volta vazio e que `SELECT COUNT(*) FROM tasks` bate com o app.
+   '%oken%'` volta vazio e que `SELECT COUNT(*) FROM tasks` bate com o app. Feita em
+   `pnpm tauri dev`, ela cria e usa a pasta `DeskClock Backups (dev)` — é lá que o arquivo estará,
+   e a contagem de `tasks` que bate é a do banco de dev.
 2. **`pnpm tauri dev` nos 2 modos × 4 acentos**, olhando a subseção nova — o aviso de reconexão é
    o único ponto que usa `warning`, e o modo claro dele desce de L 0.78 para 0.62.
 
@@ -282,8 +287,10 @@ Nenhuma das duas é executável por agente, e a feature não está conferida sem
   `SyncFeedbackLine` comum.
 - **A frequência só aparece com o backup automático ligado**, no molde do bloco de sincronização do
   Sheets logo acima: desligado, ela não governa nada — o botão manual não a consulta.
-- **O nome da pasta na tela vem de `BACKUP_FOLDER_NAME`**, importado do cliente, e não digitado no
-  JSX. É a mesma constante que cria a pasta, então o texto não tem como divergir dela.
+- **O nome da pasta na tela vem de `backupFolderName()`**, importado do cliente, e não digitado no
+  JSX. É a mesma função que nomeia a pasta, então o texto não tem como divergir dela — inclusive em
+  dev, onde a frase mostra `DeskClock Backups (dev)`. O valor inicial do state é o de produção, que
+  é o que vale em toda instalação do usuário; o efeito corrige antes de qualquer clique.
 
 ### Observação fora de escopo, registrada e não executada
 

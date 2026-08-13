@@ -38,11 +38,16 @@ use tokio::sync::watch;
 /// calculava —, então os bancos já migrados continuam válidos.
 static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
 
-/// Nome do arquivo do banco. É a única decisão dev/produção do projeto: o frontend
-/// e a API local consomem daqui em vez de repetir o `cfg!(debug_assertions)` /
-/// `import.meta.env.DEV` — que podem divergir (`tauri build --debug`, por exemplo).
+/// A única decisão dev/produção do projeto. O frontend e a API local consomem
+/// daqui em vez de repetir o `cfg!(debug_assertions)` / `import.meta.env.DEV` —
+/// que podem divergir (`tauri build --debug`, por exemplo).
+pub fn is_dev_database() -> bool {
+    cfg!(debug_assertions)
+}
+
+/// Nome do arquivo do banco, derivado de [`is_dev_database`].
 pub fn db_file_name() -> &'static str {
-    if cfg!(debug_assertions) {
+    if is_dev_database() {
         "deskclock-dev.db"
     } else {
         "deskclock.db"
@@ -69,6 +74,11 @@ pub fn resolve_db_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, String
 pub struct DbBootstrap {
     pub url: String,
     pub expected_version: i64,
+    /// Dev ou produção, decidido em [`is_dev_database`]. Atravessa a fronteira
+    /// aqui, e uma vez só: quem no frontend precisa separar os dois — hoje o
+    /// backup, que não pode misturar as pastas do Drive — lê daqui em vez de
+    /// derivar de novo.
+    pub is_dev: bool,
 }
 
 /// Resultado da migração do boot, guardado para o frontend consultar.
@@ -136,6 +146,7 @@ pub fn migrate<R: Runtime>(app: &AppHandle<R>) -> Result<DbBootstrap, String> {
         Ok(DbBootstrap {
             url: format!("sqlite:{}", db_file_name()),
             expected_version: expected_version(),
+            is_dev: is_dev_database(),
         })
     })
 }

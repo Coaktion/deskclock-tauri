@@ -16,12 +16,17 @@ vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
   })),
 }));
 
-const { DriveBackupRunner, backupFileName } = await import(
-  "@infra/integrations/googledrive/DriveBackupRunner"
-);
-const { DRIVE_RECONNECT_MESSAGE } = await import(
-  "@infra/integrations/googledrive/GoogleDriveClient"
-);
+// Quem decide dev/produção é o Rust, e o `db` inteiro viria junto num import real.
+// O padrão é produção: é o que vale em toda instalação do usuário.
+const mockIsDevDatabase = vi.fn().mockResolvedValue(false);
+vi.mock("@infra/database/db", () => ({
+  isDevDatabase: () => mockIsDevDatabase(),
+}));
+
+const { DriveBackupRunner, backupFileName } =
+  await import("@infra/integrations/googledrive/DriveBackupRunner");
+const { DRIVE_RECONNECT_MESSAGE, BACKUP_FOLDER_NAME, backupFolderName } =
+  await import("@infra/integrations/googledrive/GoogleDriveClient");
 
 const mockInvoke = vi.mocked(invoke);
 const NOW = new Date("2026-08-12T14:30:00");
@@ -65,7 +70,9 @@ function backup(name: string) {
 /** Cada `run` pergunta pela pasta, depois lista para podar; o resto é DELETE. */
 function stubDrive(backups: ReturnType<typeof backup>[]) {
   mockFetch
-    .mockResolvedValueOnce(makeResponse({ id: "folder-1", trashed: false }))
+    .mockResolvedValueOnce(
+      makeResponse({ id: "folder-1", name: BACKUP_FOLDER_NAME, trashed: false })
+    )
     .mockResolvedValueOnce(makeResponse({ files: backups }));
   mockFetch.mockResolvedValue(makeResponse({}, 204));
 }
@@ -82,6 +89,8 @@ beforeEach(() => {
   mockFetch.mockReset();
   mockInvoke.mockReset();
   mockInvoke.mockResolvedValue("file-novo");
+  mockIsDevDatabase.mockReset();
+  mockIsDevDatabase.mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -121,7 +130,9 @@ describe("DriveBackupRunner", () => {
 
   it("não avança o carimbo quando o envio falha", async () => {
     const { config, store } = makeConfig({ driveBackupLastRunAt: 123 });
-    mockFetch.mockResolvedValueOnce(makeResponse({ id: "folder-1", trashed: false }));
+    mockFetch.mockResolvedValueOnce(
+      makeResponse({ id: "folder-1", name: BACKUP_FOLDER_NAME, trashed: false })
+    );
     mockInvoke.mockRejectedValue("Falha ao enviar o backup: rede indisponível");
 
     await expect(new DriveBackupRunner(config).run()).rejects.toThrow("rede indisponível");
@@ -132,7 +143,9 @@ describe("DriveBackupRunner", () => {
 
   it("traduz o 403 do comando em pedido de reconexão", async () => {
     const { config, store } = makeConfig();
-    mockFetch.mockResolvedValueOnce(makeResponse({ id: "folder-1", trashed: false }));
+    mockFetch.mockResolvedValueOnce(
+      makeResponse({ id: "folder-1", name: BACKUP_FOLDER_NAME, trashed: false })
+    );
     mockInvoke.mockRejectedValue("Drive respondeu 403: insufficient authentication scopes");
 
     await expect(new DriveBackupRunner(config).run()).rejects.toThrow(DRIVE_RECONNECT_MESSAGE);
@@ -162,7 +175,9 @@ describe("DriveBackupRunner", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { config, store } = makeConfig();
     mockFetch
-      .mockResolvedValueOnce(makeResponse({ id: "folder-1", trashed: false }))
+      .mockResolvedValueOnce(
+        makeResponse({ id: "folder-1", name: BACKUP_FOLDER_NAME, trashed: false })
+      )
       .mockResolvedValueOnce(makeResponse({ error: { message: "Backend error" } }, 500));
 
     await expect(new DriveBackupRunner(config).run()).resolves.toBe("file-novo");
@@ -171,6 +186,28 @@ describe("DriveBackupRunner", () => {
     expect(store.driveBackupLastError).toBe("");
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  // Sem isto, os snapshots de um `pnpm tauri dev` entram na fila da poda de
+  // produção e empurram para fora o backup que interessa.
+  it("manda o banco de dev para a pasta de dev", async () => {
+    mockIsDevDatabase.mockResolvedValue(true);
+    const { config, store } = makeConfig({ driveBackupFolderId: "" });
+    mockFetch
+      .mockResolvedValueOnce(makeResponse({ files: [] }))
+      .mockResolvedValueOnce(makeResponse({ id: "folder-dev" }))
+      .mockResolvedValueOnce(makeResponse({ files: [] }));
+
+    await new DriveBackupRunner(config).run();
+
+    expect(mockFetch.mock.calls[0][0]).toContain(
+      encodeURIComponent(`name = '${backupFolderName(true)}'`)
+    );
+    expect(store.driveBackupFolderId).toBe("folder-dev");
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "backup_db_to_drive",
+      expect.objectContaining({ folderId: "folder-dev" })
+    );
   });
 
   it("recria a pasta apagada antes de enviar, e envia para a nova", async () => {

@@ -3,8 +3,9 @@ import type { IDriveBackupPort } from "@domain/integrations/IDriveBackupPort";
 import type { IDriveBackupRunner } from "@domain/integrations/IDriveBackupRunner";
 import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 import { SECRET_CONFIG_KEYS } from "@shared/constants/secretConfigKeys";
+import { isDevDatabase } from "@infra/database/db";
 import { GoogleTokenManager } from "../google/GoogleTokenManager";
-import { GoogleDriveClient, backupErrorMessage } from "./GoogleDriveClient";
+import { GoogleDriveClient, backupErrorMessage, backupFolderName } from "./GoogleDriveClient";
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
@@ -17,6 +18,9 @@ export function backupFileName(when: Date): string {
 /**
  * A execução inteira do backup, do token à poda. É o que a UI e o agendador
  * chamam — nenhum dos dois conhece o Drive nem o comando Rust.
+ *
+ * É também a única camada que conhece as duas pontas de dev/produção: o cliente
+ * do Drive recebe o nome da pasta já resolvido, e não sabe de onde ele veio.
  */
 export class DriveBackupRunner implements IDriveBackupRunner {
   private readonly tokenManager: GoogleTokenManager;
@@ -28,7 +32,11 @@ export class DriveBackupRunner implements IDriveBackupRunner {
   async run(): Promise<string> {
     try {
       const token = await this.tokenManager.getValidAccessToken();
-      const client = new GoogleDriveClient(token, this.config);
+      const client = new GoogleDriveClient(
+        token,
+        this.config,
+        backupFolderName(await isDevDatabase())
+      );
       const folderId = await client.ensureBackupFolder();
 
       const fileId = await invoke<string>("backup_db_to_drive", {

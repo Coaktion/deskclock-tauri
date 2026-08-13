@@ -46,7 +46,8 @@ O backup do banco é gerado pela subseção "Backup do banco" do card do Google,
 1. **Feche o DeskClock por inteiro** — as quatro janelas. Substituir o arquivo com o app aberto
    troca o banco por baixo de conexões vivas em modo WAL.
 2. Baixe o `.db` desejado da pasta `DeskClock Backups` no Drive. O nome carrega a data e a hora
-   locais da geração: `deskclock-2026-08-12-1430.db`.
+   locais da geração: `deskclock-2026-08-12-1430.db`. A pasta `DeskClock Backups (dev)`, se
+   existir, é do banco de desenvolvimento — não restaure de lá.
 3. Substitua o arquivo do banco em `app_config_dir`, mantendo o nome que ele já tem
    (`deskclock.db` em produção, `deskclock-dev.db` em desenvolvimento):
    - Windows: `%APPDATA%\com.deskclock.app\`

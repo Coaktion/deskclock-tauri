@@ -20,7 +20,9 @@ import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManage
 import {
   BACKUP_FOLDER_NAME,
   DRIVE_RECONNECT_MESSAGE,
+  backupFolderName,
 } from "@infra/integrations/googledrive/GoogleDriveClient";
+import { isDevDatabase } from "@infra/database/db";
 import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
 import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
@@ -598,6 +600,19 @@ function BackupSection({ disabled }: { disabled: boolean }) {
   const [lastRunAt, setLastRunAt] = useState(0);
   const [lastError, setLastError] = useState("");
   const [running, setRunning] = useState(false);
+  // O nome real da pasta depende de o banco ser o de dev, e quem sabe disso é o
+  // Rust. O de produção é o valor inicial porque é o que vale em toda instalação
+  // do usuário; em dev, o efeito corrige antes de qualquer clique.
+  const [folderName, setFolderName] = useState(BACKUP_FOLDER_NAME);
+
+  useEffect(() => {
+    isDevDatabase()
+      .then((isDev) => setFolderName(backupFolderName(isDev)))
+      .catch(() => {
+        // Só o texto da frase depende disto; o backup resolve a pasta por conta
+        // própria. Falhar aqui não pode derrubar a tela de configurações.
+      });
+  }, []);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -632,8 +647,8 @@ function BackupSection({ disabled }: { disabled: boolean }) {
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>
       <p className="text-body text-fg-muted leading-relaxed py-2.5">
-        Envia uma cópia do banco para a pasta {BACKUP_FOLDER_NAME}, no seu Drive. As chaves das
-        integrações ficam de fora da cópia — ao restaurar, reconecte-as.
+        Envia uma cópia do banco para a pasta {folderName}, no seu Drive. As chaves das integrações
+        ficam de fora da cópia — ao restaurar, reconecte-as.
       </p>
       <Row label="Backup automático">
         <Toggle

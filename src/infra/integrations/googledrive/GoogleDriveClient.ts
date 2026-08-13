@@ -10,6 +10,18 @@ const FOLDER_MIME = "application/vnd.google-apps.folder";
  */
 export const BACKUP_FOLDER_NAME = "DeskClock Backups";
 
+/**
+ * O banco de dev vai para uma pasta própria.
+ *
+ * Não é organização: com uma pasta só, os snapshots que um `pnpm tauri dev`
+ * produz entram na mesma fila da poda e empurram para fora os backups de
+ * produção — o arquivo que interessa some sem aviso. E `drive.file` não separa os
+ * dois, porque o escopo enxerga o que **o app** criou, e o client OAuth é o mesmo.
+ */
+export function backupFolderName(isDev: boolean): string {
+  return isDev ? `${BACKUP_FOLDER_NAME} (dev)` : BACKUP_FOLDER_NAME;
+}
+
 /** Mensagem do 403 — ver `backupErrorMessage`. */
 export const DRIVE_RECONNECT_MESSAGE =
   "Reconecte o Google para conceder acesso ao Drive e refazer o backup.";
@@ -57,11 +69,17 @@ export function backupErrorMessage(err: unknown): string {
  * porque a mesma execução do backup usa **um** token do começo ao fim: o que
  * localizou a pasta é o que o Rust leva no upload. Renovar no meio faria o
  * comando subir com um token que ninguém validou.
+ *
+ * `folderName` também chega pronto, e sem valor padrão: quem sabe se este é o
+ * banco de dev é o Rust, e a resposta chega assíncrona. Com um padrão, uma
+ * ligação esquecida cairia calada na pasta de produção — que é exatamente o
+ * defeito que ter duas pastas existe para evitar.
  */
 export class GoogleDriveClient {
   constructor(
     private readonly token: string,
-    private readonly config: IDriveBackupPort
+    private readonly config: IDriveBackupPort,
+    private readonly folderName: string
   ) {}
 
   /**
@@ -101,12 +119,23 @@ export class GoogleDriveClient {
     }
   }
 
+  /**
+   * O nome entra na conferência junto com a lixeira, e é o que migra o banco de
+   * dev que já tem um `driveBackupFolderId` salvo — apontando para a pasta de
+   * produção, de quando havia uma só. Sem isso, o id continuaria válido para
+   * sempre e o dev nunca mudaria de pasta.
+   *
+   * O efeito colateral é assumido: renomear a pasta no Drive faz o app criar
+   * outra, deixando os backups antigos na renomeada. O nome já era a identidade
+   * da pasta quando o id se perde (`findFolderByName`) — aqui ele passa a valer
+   * também com o id em mãos.
+   */
   private async folderIsUsable(id: string): Promise<boolean> {
     try {
-      const file = await this.request<{ trashed?: boolean }>(
-        `${DRIVE_API}/${encodeURIComponent(id)}?fields=${encodeURIComponent("id,trashed")}`
+      const file = await this.request<{ name?: string; trashed?: boolean }>(
+        `${DRIVE_API}/${encodeURIComponent(id)}?fields=${encodeURIComponent("id,name,trashed")}`
       );
-      return !file.trashed;
+      return !file.trashed && file.name === this.folderName;
     } catch (err) {
       // Só o "não existe" vira "crie outra". 403 e falha de rede sobem: com o
       // escopo faltante, engolir o erro aqui criaria uma pasta duplicada a cada
@@ -123,8 +152,7 @@ export class GoogleDriveClient {
    * pasta homônima do usuário.
    */
   private async findFolderByName(): Promise<string | null> {
-    const query =
-      `name = '${BACKUP_FOLDER_NAME}' and mimeType = '${FOLDER_MIME}' and trashed = false`;
+    const query = `name = '${this.folderName}' and mimeType = '${FOLDER_MIME}' and trashed = false`;
     const url =
       `${DRIVE_API}?q=${encodeURIComponent(query)}` +
       `&pageSize=1&fields=${encodeURIComponent("files(id)")}`;
@@ -138,7 +166,7 @@ export class GoogleDriveClient {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: BACKUP_FOLDER_NAME, mimeType: FOLDER_MIME }),
+        body: JSON.stringify({ name: this.folderName, mimeType: FOLDER_MIME }),
       }
     );
     if (!body.id) throw new Error("O Drive criou a pasta de backups mas não devolveu o id dela.");

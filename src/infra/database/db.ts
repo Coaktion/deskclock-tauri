@@ -4,14 +4,17 @@ import { isRetriableDbLoadError } from "./dbLoadErrors";
 
 let _db: Database | null = null;
 let _initPromise: Promise<Database> | null = null;
+let _bootstrapPromise: Promise<DbBootstrap> | null = null;
 
-// Onde conectar e qual schema esperar vêm do Rust — que é quem migra, e a única
-// decisão dev/produção do projeto. Derivar o nome do arquivo aqui de novo (por
-// `import.meta.env.DEV`) abriria a chance de o frontend ler um banco e a migração
-// do boot escrever em outro; `tauri build --debug` já os faz divergir.
+// Onde conectar, qual schema esperar e se este é o banco de dev vêm do Rust — que
+// é quem migra, e a única decisão dev/produção do projeto. Derivar qualquer um dos
+// três aqui de novo (por `import.meta.env.DEV`) abriria a chance de o frontend ler
+// um banco e a migração do boot escrever em outro; `tauri build --debug` já os faz
+// divergir.
 interface DbBootstrap {
   url: string;
   expectedVersion: number;
+  isDev: boolean;
 }
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -80,6 +83,22 @@ async function assertSchemaUpToDate(db: Database, expectedVersion: number): Prom
   }
 }
 
+// Uma pergunta ao Rust, uma resposta para todos: quem quer só a variante do banco
+// não paga por abrir conexão. A promise fica em cache mesmo quando rejeita, e é o
+// certo — a migração do boot ter falhado não é transitório.
+function getBootstrap(): Promise<DbBootstrap> {
+  _bootstrapPromise ??= invoke<DbBootstrap>("get_db_bootstrap");
+  return _bootstrapPromise;
+}
+
+/**
+ * Se este é o banco de desenvolvimento. Quem separa dev de produção fora do banco
+ * — o backup no Drive, que mantém uma pasta para cada — pergunta aqui.
+ */
+export async function isDevDatabase(): Promise<boolean> {
+  return (await getBootstrap()).isDev;
+}
+
 export async function getDb(): Promise<Database> {
   if (_db) return _db;
   if (!_initPromise) {
@@ -87,7 +106,7 @@ export async function getDb(): Promise<Database> {
       // Erro aqui significa que a migração do boot falhou: o Rust guardou o motivo
       // e o devolve no lugar da URL. Propagar é o comportamento certo — nenhuma
       // tela deve abrir um banco que o boot não conseguiu atualizar.
-      const bootstrap = await invoke<DbBootstrap>("get_db_bootstrap");
+      const bootstrap = await getBootstrap();
       const db = await loadWithRetry(bootstrap.url);
       await assertSchemaUpToDate(db, bootstrap.expectedVersion);
       _db = db;
