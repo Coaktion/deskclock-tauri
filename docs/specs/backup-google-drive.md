@@ -292,11 +292,13 @@ Nenhuma das duas é executável por agente, e a feature não está conferida sem
   dev, onde a frase mostra `DeskClock Backups (dev)`. O valor inicial do state é o de produção, que
   é o que vale em toda instalação do usuário; o efeito corrige antes de qualquer clique.
 
-### Observação fora de escopo, registrada e não executada
+### Observação fora de escopo, registrada e executada depois
 
-O subtítulo do card ("Acesse o Sheets e o Calendar com uma única conta") e os `subBadges` do
-`GoogleTile` seguem sem mencionar o backup. Não estava no plano da fase; é mudança de uma linha
-cada, se o usuário quiser.
+O subtítulo do card e os `subBadges` do `GoogleTile` ficaram sem mencionar o backup ao fim da fase.
+Foram atualizados na sequência, a pedido do usuário: os dois subtítulos passam a dizer "Sheets,
+Calendar e backup no Drive com uma única conta", e o ladrilho ganha um terceiro chip, `Drive`, que
+acende com `driveBackupEnabled` — desligado, o backup só responde ao botão manual, e isso não é
+estado que o ladrilho deva anunciar como ativo.
 
 ### Rollback
 

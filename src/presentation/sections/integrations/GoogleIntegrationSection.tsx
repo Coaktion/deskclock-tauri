@@ -769,7 +769,7 @@ export function GoogleIntegrationCard() {
             <StatusBadge connected={connected} email={email} />
           </div>
           <p className="text-xs text-fg-muted mt-0.5">
-            Acesse o Sheets e o Calendar com uma única conta.
+            Acesse o Sheets, o Calendar e o backup no Drive com uma única conta.
           </p>
         </div>
         <div className="shrink-0 flex items-center gap-2">
@@ -815,13 +815,16 @@ export function GoogleTile({ onClick }: { onClick: () => void }) {
   const connected = config.isLoaded && !!config.get("googleRefreshToken");
   const email = config.isLoaded ? config.get("googleUserEmail") : "";
   const sheetsConfigured = config.isLoaded && !!config.get("integrationGoogleSheetsSpreadsheetId");
+  // O Drive acende com o backup automático ligado, não com a conexão: desligado,
+  // ele só responde ao botão manual — nada que o ladrilho deva anunciar como ativo.
+  const backupEnabled = config.isLoaded && config.get("driveBackupEnabled");
 
   return (
     <IntegrationTile
       onClick={onClick}
       logo={<GoogleLogo size={20} />}
       name="Google"
-      description="Sheets e Calendar com uma única conta"
+      description="Sheets, Calendar e backup no Drive com uma única conta"
       connected={connected}
       email={email}
       subBadges={
@@ -829,6 +832,7 @@ export function GoogleTile({ onClick }: { onClick: () => void }) {
           ? [
               { label: "Sheets", active: sheetsConfigured },
               { label: "Calendar", active: true },
+              { label: "Drive", active: backupEnabled },
             ]
           : undefined
       }
