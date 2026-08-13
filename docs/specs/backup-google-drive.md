@@ -166,6 +166,20 @@ só** — nas outras três, quatro backups concorrentes.
 
 O comentário no topo do hook explica por que ele não copia o `useDailySyncScheduler` (§2.2).
 
+Duas coisas que a execução acrescentou ao previsto, em 2026-08-13:
+
+- **Espera de 30 min depois de uma falha** (`RETRY_COOLDOWN_MS`), por cima do vencimento. O plano
+  não previa, e sem ela o caso mais comum desta feature é o pior: o carimbo só avança no sucesso,
+  então backup vencido que falha volta a ser tentado a cada poll — 288 vezes por dia, várias
+  arrastando um `VACUUM INTO` do banco inteiro. E não é caso raro: **todo mundo que já conectou o
+  Google precisa reconectar** para conceder o `drive.file` (§4 da Fase 4), e até reconectar toda
+  tentativa volta 403. A espera é em memória, some ao reiniciar o app, e o botão "Fazer backup
+  agora" não passa por ela — quem acabou de reconectar não fica esperando meia hora.
+- **Não há guarda por label de janela**, e não é esquecimento: `App` só é renderizado quando o
+  label não é `overlay-compact`, `overlay-popup` nem `toast` (`src/main.tsx`), então o `AppInner`
+  já é exclusivo da janela principal. É a mesma garantia de que o `useDailySyncScheduler` depende
+  hoje. Quem mudar o roteamento do `main.tsx` está mexendo nas duas.
+
 ### Fase 4 · UI
 
 **`src/presentation/sections/integrations/GoogleIntegrationSection.tsx`** — terceiro
@@ -243,7 +257,7 @@ depois que a migração entrar**, ou carrega ela junto.
 | 0 · Rust: snapshot + upload | ✅ **feita** (2026-08-12) — `cargo check` limpo. Validação funcional só é possível na Fase 2, quando houver quem chame o comando. |
 | 1 · Domain: portas e vencimento | ✅ **feita** (2026-08-12) — as 6 chaves, `SECRET_CONFIG_KEYS`, `IDriveBackupPort` e `shouldRunBackup`, com os testes da Fase 5 que lhes cabem. Uma regra a mais do que o plano previa: `lastRunAt` no futuro conta como vencido, senão relógio acertado para trás para o backup calado. |
 | 2 · Infra: cliente do Drive | ✅ **feita** (2026-08-12) — `GoogleDriveClient`, `DriveBackupRunner`, `IDriveBackupRunner` (interface nova em `domain/`, para a fábrica devolver porta e não classe de `infra/`) e a fábrica no `IntegrationsContext`, com os testes da Fase 5 que lhes cabem. **A validação manual da §4 não coube aqui**: nada no app ainda chama o runner — a fábrica existe, mas o primeiro chamador nasce na Fase 3. Fazer ao fim da Fase 4, com o botão "Fazer backup agora". |
-| 3 · Agendador | pendente |
+| 3 · Agendador | ✅ **feita** (2026-08-13) — `useDriveBackupScheduler` montado no `AppInner`, com o teste que lhe cabe. Duas coisas fora do previsto, ambas abaixo. |
 | 4 · UI | pendente |
 | 5 · Testes e docs | acompanha cada fase |
 

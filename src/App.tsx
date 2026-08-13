@@ -3,7 +3,7 @@ import { Sidebar, type Page } from "@presentation/components/Sidebar";
 import { TitleBar } from "@presentation/components/TitleBar";
 import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
-import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
+import { IntegrationsProvider, useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { IntegrationsUiProvider } from "@presentation/contexts/IntegrationsUiContext";
 import { IntegrationsRail } from "@presentation/components/IntegrationsRail";
 import { IntegrationsModalsHost } from "@presentation/components/IntegrationsModalsHost";
@@ -15,6 +15,7 @@ import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import { useAppRouter } from "@presentation/hooks/useAppRouter";
 import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
 import { useDeepLink } from "@presentation/hooks/useDeepLink";
+import { useDriveBackupScheduler } from "@presentation/hooks/useDriveBackupScheduler";
 import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
 import { useMeetingTracker } from "@presentation/hooks/useMeetingTracker";
 import { useMondayItemTracker } from "@presentation/hooks/useMondayItemTracker";
@@ -256,6 +257,7 @@ function MainContent({
 function AppInner() {
   const config = useAppConfig();
   const { runDaily } = useAutoSync();
+  const { createDriveBackupRunner } = useIntegrations();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
   const [focusTaskEdit, setFocusTaskEdit] = useState(false);
@@ -275,6 +277,7 @@ function AppInner() {
   useGlobalShortcuts(config);
   const { showMainWindow } = useStartupWindow(config, ignoreBlurRef, isPinnedRef);
   useDailySyncScheduler(config, runDaily);
+  useDriveBackupScheduler(config, createDriveBackupRunner);
   useUpdateNotifier();
   useAppRouter({
     config,
