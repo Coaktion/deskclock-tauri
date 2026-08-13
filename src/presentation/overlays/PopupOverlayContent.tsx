@@ -217,9 +217,14 @@ function RunningCard({
               altura, porque está fora do fluxo: é o afford permanente que a
               faixa flutuante não podia pagar em linha própria.
 
-              Ele **some no hover**, e não convive com a faixa: os dois ocupam
+              A borda fecha o contorno do caroço: sem ela, o `bg-surface`
+              mascara a borda do card por baixo de si e o traço fica
+              interrompido, com a metade de fora boiando sobre o `canvas` da
+              lista sem nada que a delimite.
+
+              Ele **apaga no hover**, e não convive com a faixa: os dois ocupam
               o mesmo espaço acima da borda, e é a faixa que o substitui — o
-              raio abre nela. Trocar não pisca, e a razão é geométrica: a
+              raio abre nela. A troca não pisca, e a razão é geométrica: a
               metade de fora do raio fica dentro dos ~42px que a faixa passa a
               cobrir, então o cursor que o alcançou continua sobre um
               descendente do card, e o `group-hover` não cai. Fosse o raio mais
@@ -227,12 +232,30 @@ function RunningCard({
               piscaria enquanto o cursor estivesse ali. */}
           <span
             aria-hidden
-            className="group-hover:hidden group-focus-within:hidden absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center p-1 rounded-full bg-surface text-accent-text"
+            className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center p-1 rounded-full bg-surface border border-border text-accent-text transition duration-150 group-hover:opacity-0 group-hover:pointer-events-none group-focus-within:opacity-0 group-focus-within:pointer-events-none"
           >
             <Zap size={14} />
           </span>
 
-          <div className="hidden group-hover:flex group-focus-within:flex absolute bottom-full left-0 right-0 z-10 flex-wrap gap-1.5 px-3 py-2 bg-surface border-t border-border shadow-lg">
+          {/* **Opacidade, e não `hidden`**: `display` não anima, e era `hidden`
+              que impedia a faixa de abrir suave. O que a troca custa é
+              vigilância sobre o ponteiro — invisível, ela continua no fluxo de
+              hit-test, e é o `pointer-events-none` que devolve à lista os
+              cliques na área que ela cobre.
+
+              O raio segue o caminho inverso: em repouso ele **tem** ponteiro, e
+              é o que faz a metade dele que fica fora do card ser alvo de hover;
+              com a faixa aberta ele o perde, ou o span invisível engoliria o
+              clique no chip que calhasse de cair no centro. As duas trocas
+              acontecem no mesmo estado de hover, então não há quadro em que
+              nenhum dos dois responda — o cursor passa de um descendente do
+              card para outro, e o `group-hover` não cai no meio.
+
+              Ganho de acessibilidade que veio junto: em `hidden` os chips
+              saíam da ordem de Tab; agora eles a recebem, e o
+              `group-focus-within` revela a faixa no instante em que o foco
+              chega. */}
+          <div className="absolute bottom-full left-0 right-0 z-10 flex flex-wrap gap-1.5 px-3 py-2 bg-surface border-t border-border shadow-lg opacity-0 pointer-events-none translate-y-1 transition duration-150 ease-out group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0">
             {actions.map((action, i) => (
               <ActionChip key={i} action={action} />
             ))}
