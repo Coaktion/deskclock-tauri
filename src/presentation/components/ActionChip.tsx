@@ -1,18 +1,27 @@
 import { ArrowUpRight, FolderOpen, Globe } from "lucide-react";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
-import { executeActions } from "@domain/utils/actions";
+import { actionDestinationLabel, executeActions } from "@domain/utils/actions";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 
 /**
- * O que o chip escreve: o nome dado à ação, ou — na ação sem nome, que é toda
- * a que foi criada antes do campo existir — o rótulo derivado do próprio valor,
- * hostname na URL e nome do arquivo no caminho.
+ * O que o chip escreve, em três degraus: o nome dado à ação; o **destino** por
+ * extenso, quando o host é conhecido; e, só então, o rótulo cru do valor —
+ * hostname na URL, nome do arquivo no caminho.
+ *
+ * **O degrau do meio é o que atende a ação sem nome**, que é toda a criada antes
+ * de o campo existir. Ela nunca vai ganhar `label` — nomear é escrita, e o dado
+ * antigo não se reescreve sozinho —, então sem esta derivação o acervo inteiro
+ * continuaria escrevendo `meet.google.com` ao lado das ações novas escrevendo
+ * "Meet". Deriva em tempo de desenho, e não no banco: a ação segue sem nome, e
+ * gravar um nome que a pessoa não escolheu tiraria dela o "sem nome" como estado.
  */
 export function actionLabel(action: PlannedTaskAction): string {
   const named = action.label?.trim();
   if (named) return named;
 
   if (action.type === "open_url") {
+    const destination = actionDestinationLabel(action.value);
+    if (destination) return destination;
     try {
       const normalized = action.value.startsWith("http") ? action.value : `https://${action.value}`;
       return new URL(normalized).hostname.replace(/^www\./, "");

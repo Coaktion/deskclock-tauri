@@ -118,7 +118,9 @@
 
 > **O `label` da ação entrou sem migration** (2026-08-13), e é a coluna ser JSON que
 > permitiu: linha antiga desserializa com o campo ausente, e é justamente a ausência que
-> o `actionLabel` trata — sem nome, o chip deriva o rótulo do valor. **Nome vazio não é
+> o `actionLabel` trata — sem nome, o chip deriva o destino do host e, não o reconhecendo,
+> o rótulo do valor. A linha antiga **não é reescrita**: ela continua sem nome, e o que
+> muda é só o que se lê na tela. **Nome vazio não é
 > gravado como `label: ""`**: quem constrói a ação é o `buildPlannedAction`, e é ele que
 > faz a string de espaços e a ausência do campo significarem a mesma coisa nas três
 > integrações que criam ação e nas três telas que as editam. A regra de quem escreve o

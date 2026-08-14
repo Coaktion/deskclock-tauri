@@ -2,31 +2,44 @@ import { describe, it, expect } from "vitest";
 import { actionLabel } from "@presentation/components/ActionChip";
 
 /**
- * O nome é opcional, e é a **ausência** dele que precisa continuar funcionando:
- * toda ação gravada antes do campo existir vem sem ele, e o chip tem de escrever
- * o mesmo que escrevia — hostname na URL, nome do arquivo no caminho.
+ * Três degraus, e é a ordem entre eles que este arquivo trava: o nome gravado, o
+ * destino derivado do host, e o rótulo cru do valor. A ação **sem nome** é a que
+ * precisa continuar funcionando — é toda a que foi criada antes do campo existir,
+ * e ela nunca vai ganhar `label`.
  */
 describe("actionLabel", () => {
-  it("nomeada, escreve o nome", () => {
+  it("nomeada, o nome vence o destino derivado", () => {
     expect(
-      actionLabel({ type: "open_url", value: "https://meet.google.com/abc", label: "Meet" })
-    ).toBe("Meet");
+      actionLabel({ type: "open_url", value: "https://meet.google.com/abc", label: "Daily" })
+    ).toBe("Daily");
   });
 
   it("nome só de espaços não conta como nome", () => {
     expect(
       actionLabel({ type: "open_url", value: "https://meet.google.com/abc", label: "  " })
-    ).toBe("meet.google.com");
+    ).toBe("Meet");
   });
 
-  it("sem nome, a URL vira hostname sem o www", () => {
+  it("sem nome, o host conhecido vira o destino por extenso", () => {
     expect(actionLabel({ type: "open_url", value: "https://www.monday.com/boards/1" })).toBe(
-      "monday.com"
+      "Monday"
     );
   });
 
-  it("sem nome e sem esquema, ainda resolve o hostname", () => {
-    expect(actionLabel({ type: "open_url", value: "meet.google.com/abc" })).toBe("meet.google.com");
+  it("o htmlLink da Agenda é destino, não hostname", () => {
+    expect(
+      actionLabel({ type: "open_url", value: "https://www.google.com/calendar/event?eid=abc" })
+    ).toBe("Google Agenda");
+  });
+
+  it("sem nome e sem esquema, ainda reconhece o destino", () => {
+    expect(actionLabel({ type: "open_url", value: "meet.google.com/abc" })).toBe("Meet");
+  });
+
+  it("host desconhecido cai no hostname sem o www", () => {
+    expect(actionLabel({ type: "open_url", value: "https://www.exemplo.com.br/x" })).toBe(
+      "exemplo.com.br"
+    );
   });
 
   it("URL que não parseia cai no próprio valor", () => {

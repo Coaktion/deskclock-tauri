@@ -55,9 +55,17 @@ export function buildPlannedAction(
  * e nomear a ação com o mesmo texto faria o chip ecoar, uma linha acima, o nome
  * que o card mostra logo abaixo. "Meet" diz o que o nome da reunião não diz.
  *
- * Host desconhecido devolve `undefined` — de propósito. Sem nome, o chip deriva
- * o rótulo do valor, que é exatamente o que ele escreve hoje; inventar um nome
- * aqui só duplicaria a derivação que o `actionLabel` já faz.
+ * Host desconhecido devolve `undefined` — de propósito: sem destino reconhecido,
+ * quem escreve o rótulo é o próprio valor (hostname), e inventar um nome aqui
+ * seria pior que não ter nenhum.
+ *
+ * **Também é chamada em tempo de desenho, pelo `actionLabel` do chip.** Era só de
+ * criação, sob o argumento de que o chip já derivava o rótulo do valor — mas o
+ * que ele derivava era o hostname, então a ação criada antes do campo existir
+ * escrevia `meet.google.com` ao lado da nova escrevendo "Meet", e nomear o
+ * acervo antigo não é possível (nomear é escrita, e a lista de ações só cria e
+ * apaga). Chamada nos dois momentos, o nome do destino é o mesmo tenha a ação
+ * sido criada antes ou depois — e o `label` gravado continua vencendo os dois.
  */
 export function actionDestinationLabel(url: string): string | undefined {
   let parsed: URL;
