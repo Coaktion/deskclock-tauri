@@ -165,6 +165,17 @@ export function OmniboxRunning({
         >
           {formatHHMMSS(seconds)}
         </span>
+
+        {/* Cancelar mora aqui, na ponta superior direita, pelo mesmo motivo do
+            overlay popup: encostado no Parar, o descarte ficava a um pixel da
+            ação que salva. */}
+        <button
+          onClick={() => void cancelTask()}
+          title="Cancelar tarefa"
+          className="shrink-0 p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
+        >
+          <X size={14} />
+        </button>
       </div>
 
       {/* Linha 2 — a faixa de chips do repouso, no mesmo eixo do botão. À direita,
@@ -333,22 +344,13 @@ export function OmniboxRunning({
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleStopClick}
-                title="Parar tarefa"
-                className="px-3 py-0.75 text-sm font-medium bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 rounded-control transition-colors"
-              >
-                Parar
-              </button>
-              <button
-                onClick={() => void cancelTask()}
-                title="Cancelar tarefa"
-                className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </div>
+            <button
+              onClick={handleStopClick}
+              title="Parar tarefa"
+              className="px-3 py-0.75 text-sm font-medium bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 rounded-control transition-colors"
+            >
+              Parar
+            </button>
           )}
         </div>
       </div>
