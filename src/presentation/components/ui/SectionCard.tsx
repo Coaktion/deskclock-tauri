@@ -124,7 +124,11 @@ export function SectionCard({
   );
 }
 
-/** Linha de um `SectionCard` dividido. */
+/**
+ * Linha de um `SectionCard` dividido. O padding é o mesmo nos dois eixos, e o x
+ * é o `px-3` da faixa do cabeçalho: em 16 o rótulo da linha ficava para fora do
+ * nome do grupo que a encabeça.
+ */
 export function SectionRow({
   children,
   className = "",
@@ -132,5 +136,5 @@ export function SectionRow({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={`px-4 py-3 ${className}`}>{children}</div>;
+  return <div className={`p-3 ${className}`}>{children}</div>;
 }

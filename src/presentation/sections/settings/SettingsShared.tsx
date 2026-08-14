@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Field, Input, Select } from "@presentation/components/ui";
+import { Field, Input, Select, SettingLabel } from "@presentation/components/ui";
 
 export function SliderRow({
   label,
@@ -20,12 +20,9 @@ export function SliderRow({
 }) {
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-fg">{label}</p>
-          {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
-        </div>
-        <span className="text-sm font-mono tabular-nums text-fg-secondary">
+      <div className="flex items-center justify-between gap-4">
+        <SettingLabel label={label} description={description} />
+        <span className="text-sm font-mono tabular-nums text-fg-secondary shrink-0">
           {value}
           {unit}
         </span>
@@ -57,10 +54,7 @@ export function SelectRow({
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-fg">{label}</p>
-        {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
-      </div>
+      <SettingLabel label={label} description={description} />
       <Select
         aria-label={label}
         value={value}
@@ -78,6 +72,7 @@ export function SelectRow({
 }
 
 export function NumberInputWithCommit({
+  id,
   label,
   min,
   max,
@@ -85,6 +80,7 @@ export function NumberInputWithCommit({
   onCommit,
   inputClassName,
 }: {
+  id?: string;
   /** Ausente, o campo fica sem rótulo próprio: quem o nomeia é a linha em
    *  volta, com o texto à esquerda e o controle à direita (a porta da API). */
   label?: string;
@@ -111,6 +107,7 @@ export function NumberInputWithCommit({
 
   const field = (
     <Input
+      id={id}
       type="number"
       variant={label ? "bare" : "boxed"}
       min={min}

@@ -57,7 +57,7 @@ export function AtalhosTab() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {displayServer === "wayland" && (
         <div className="flex items-start gap-2 rounded-control bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
           <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />

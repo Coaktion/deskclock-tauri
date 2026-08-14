@@ -108,7 +108,7 @@ export function GeralTab() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <SectionCard title="Conta">
         <SectionRow className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-accent-text text-lg font-semibold shrink-0 select-none">

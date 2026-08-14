@@ -44,17 +44,12 @@ export function SettingsPage() {
             key={tab.id}
             active={activeTab === tab.id}
             onClick={() => setActiveTab(tab.id)}
-            size="sm"
           >
             {tab.label}
           </FilterPill>
         ))}
         actions={
-          <Button
-            variant="accent"
-            onClick={() => void openInBrowser(MANUAL_URL)}
-            icon={<BookOpen size={14} />}
-          >
+          <Button onClick={() => void openInBrowser(MANUAL_URL)} icon={<BookOpen size={14} />}>
             Manual
           </Button>
         }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { AlertCircle, ExternalLink } from "lucide-react";
-import { SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
+import { SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
 import { NumberInputWithCommit } from "./SettingsShared";
 
 interface ApiStatus {
@@ -71,7 +71,7 @@ export function ApiTab() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <SectionCard title="API local" divided>
         <SectionRow>
           <Toggle
@@ -84,19 +84,19 @@ export function ApiTab() {
         </SectionRow>
 
         {localApiEnabled && !localApiLoading && (
-          <SectionRow className="space-y-1.5">
-            <div>
-              <p className="text-sm text-fg">Porta</p>
-              <p className="text-xs text-fg-muted mt-0.5">
-                Entre 1024 e 65535. Alterações reiniciam o servidor.
-              </p>
-            </div>
+          <SectionRow className="flex items-center justify-between gap-4">
+            <SettingLabel
+              label="Porta"
+              description="Entre 1024 e 65535. Alterações reiniciam o servidor."
+              htmlFor="settings-api-port"
+            />
             <NumberInputWithCommit
+              id="settings-api-port"
               min={1024}
               max={65535}
               committed={localApiPort}
               onCommit={handlePortCommit}
-              inputClassName="w-32 font-mono tabular-nums"
+              inputClassName="w-32 shrink-0 font-mono tabular-nums"
             />
           </SectionRow>
         )}

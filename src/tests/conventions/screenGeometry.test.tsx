@@ -885,12 +885,37 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       rotulo: s3d.byText("Iniciar com o sistema"),
       dica: s3d.byText("Abre o DeskClock ao ligar o computador"),
       campo: s3d.byText("Rafael"),
+      aba: s3d.byText("Atalhos"),
     };
 
     it("o corpo tem o padding de página e a coluna de leitura do spec", () => {
       const source = sourceOf("src/presentation/pages/SettingsPage.tsx");
       expectPadding(classNameContaining(source, "overflow-y-auto"), SPEC_3D.corpo);
       expect(source).toContain(`max-w-[${numberOf(SPEC_3D.coluna, "max-width")}px]`);
+    });
+
+    /**
+     * A pilha de cartões respira mais que a lista de Dados — 20 contra 12, e as
+     * duas medidas são do spec da tela em que aparecem. Ela mora nas abas que
+     * têm mais de um cartão, e não na página, que hospeda uma aba por vez.
+     */
+    it("a pilha de cartões respira no degrau do spec", () => {
+      for (const aba of ["GeralTab", "AtalhosTab", "ApiTab"]) {
+        const source = sourceOf(`src/presentation/sections/settings/${aba}.tsx`);
+        expect(geometryOf(classNameContaining(source, "space-y-")).gap).toBe(
+          numberOf(SPEC_3D.coluna, "gap")
+        );
+      }
+    });
+
+    /**
+     * As abas são a pílula no tamanho cheio, como as de Dados — o `sm` que a
+     * tela passava é o degrau da pílula de semana do Planejamento.
+     */
+    it("as abas são a pílula de 6/12, sem tamanho próprio", () => {
+      const aba = shellOf(<FilterPill onClick={() => {}}>Atalhos</FilterPill>);
+      expectPadding(aba, SPEC_3D.aba);
+      expect(sourceOf("src/presentation/pages/SettingsPage.tsx")).not.toContain('size="sm"');
     });
 
     it("a chave é 40×20 com knob de 16, e a linha dela tem o gap do spec", () => {
@@ -927,9 +952,9 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       expect(geometryOf(dica.className).fontSize).toBe(numberOf(SPEC_3D.dica, "font-size"));
     });
 
-    /** O mesmo 1px que o `TaskRow` já usa no subtítulo (`mt-px`), e que aqui
-     *  ficou em `mt-0.5`. */
-    divergente("a dica encosta no rótulo com 1px, não 2 — divergente", () => {
+    /** O mesmo 1px que o `TaskRow` já usa no subtítulo. Ele vale para as cinco
+     *  linhas de configuração porque o par rótulo+dica mora no `SettingLabel`. */
+    it("a dica encosta no rótulo com 1px", () => {
       const linha = shellOf(
         <Toggle
           checked={false}
@@ -942,7 +967,7 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       expect(geometryOf(dica.className).marginTop).toBe(numberOf(SPEC_3D.dica, "margin-top"));
     });
 
-    divergente("a linha de configuração tem o padding do spec — divergente, 12/16 hoje", () => {
+    it("a linha de configuração tem o padding do spec", () => {
       const linha = shellOf(<SectionRow>linha</SectionRow>);
       expectPadding(linha, SPEC_3D.linha);
     });

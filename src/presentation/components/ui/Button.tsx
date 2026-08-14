@@ -12,8 +12,9 @@ import { Loader2 } from "lucide-react";
  * contrário.
  *
  * `accent` é o degrau entre `primary` e `secondary` — a ação que convida sem
- * disputar com a principal ("Buscar" do Histórico, "Manual" das Configurações),
- * e o estado ligado de um botão de alternância ("Filtros").
+ * disputar com a principal ("Buscar" do Histórico) e o estado ligado de um
+ * botão de alternância ("Filtros"). A ação do cabeçalho de página é
+ * `secondary`, como o design a desenha em Dados e em Configurações.
  */
 export type ButtonVariant = "primary" | "accent" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";

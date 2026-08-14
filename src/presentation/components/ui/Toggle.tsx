@@ -1,3 +1,5 @@
+import { SettingLabel } from "./SettingLabel";
+
 interface ToggleProps {
   checked: boolean;
   onChange: (value: boolean) => void;
@@ -43,10 +45,7 @@ export function Toggle({
 
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm ${disabled ? "text-fg-muted" : "text-fg"}`}>{label}</p>
-        {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
-      </div>
+      <SettingLabel label={label} description={description} disabled={disabled} />
       {knob}
     </div>
   );

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { SettingLabel } from "@presentation/components/ui";
 
 const MODIFIER_KEYS = new Set(["Control", "Shift", "Alt", "Meta", "CmdOrCtrl"]);
 const KEY_MAP: Record<string, string> = {
@@ -73,10 +74,7 @@ export function ShortcutRow({
 
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-fg">{label}</p>
-        {description && <p className="text-xs text-fg-muted mt-0.5">{description}</p>}
-      </div>
+      <SettingLabel label={label} description={description} />
       <div className="flex items-center gap-2 shrink-0">
         {failed && (
           <AlertTriangle
