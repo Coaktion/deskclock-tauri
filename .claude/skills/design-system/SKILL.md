@@ -11,7 +11,7 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
 > deles ficavam inexequíveis e travavam agentes na primeira mudança visual. Abaixo está o que
 > existe de fato.
 
-> **A rodada de fidelidade em curso está em `docs/specs/design-system-fidelity.md`** — etapas,
+> **A rodada de fidelidade em curso está em `docs-internal/specs/design-system-fidelity.md`** — etapas,
 > o que já foi feito, as decisões pendentes do usuário e as regras de processo que ela
 > deliberadamente contraria (branch única, reviewer só no fim). Antes de qualquer mudança visual
 > nova, conferir se ela não é uma etapa de lá.
@@ -710,7 +710,7 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > junto por aparecer em **todas** as telas, embora não estivesse em nenhum PR do plano.
 - **A geometria é travada contra o design medido, não contra prosa.**
   `scripts/extract-design-spec.mjs` lê o wireframe versionado
-  (`docs/design-spec/raw/telas-redesenhadas.html`) e emite `docs/design-spec/*.json`: um nó por
+  (`docs-internal/design-spec/raw/telas-redesenhadas.html`) e emite `docs-internal/design-spec/*.json`: um nó por
   elemento, com toda propriedade geométrica em px. `src/tests/conventions/screenGeometry.test.tsx`
   renderiza o componente real, resolve cada utilitário do Tailwind para px e compara com o JSON.
   **Toda decisão visual cita `spec[...]`; onde prosa e JSON discordam, vale o JSON** — foi assim
@@ -729,7 +729,7 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
 - **Quatro lugares em que a tela diverge do mock de propósito.** São **exceções declaradas**, e
   não dívida por pagar: `screenGeometry.test.tsx` não as cobra, e quem for "corrigi-las" está
   desfazendo decisão tomada. Fora destas quatro, divergir do spec extraído
-  (`docs/design-spec/*.json`) é defeito.
+  (`docs-internal/design-spec/*.json`) é defeito.
 
   - **A tela de Tarefas pareia KPI e Planejadas na linha do meio**, e as Entradas ficam com a
     altura do que listam. O design os empilha; medido na bancada, a pilha deixava **96px** para

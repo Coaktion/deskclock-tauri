@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 /**
  * Acesso ao spec extraído dos wireframes do Claude Design
- * (`docs/design-spec/telas-redesenhadas.json`, gerado por
+ * (`docs-internal/design-spec/telas-redesenhadas.json`, gerado por
  * `scripts/extract-design-spec.mjs`).
  *
  * A ancoragem é **por texto**, não por caminho: `node("3a", "Daily do time de
@@ -13,7 +13,11 @@ import { resolve } from "node:path";
  * ponto de cor.
  */
 
-const SPEC_PATH = resolve(__dirname, "../../..", "docs/design-spec/telas-redesenhadas.json");
+const SPEC_PATH = resolve(
+  __dirname,
+  "../../..",
+  "docs-internal/design-spec/telas-redesenhadas.json"
+);
 
 export interface SpecNode {
   tag: string;

@@ -590,7 +590,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
  * chaves — e é aqui que o aviso de reconexão precisa estar.
  *
  * Não há seletor de workspace, e não é esquecimento: o backup é do banco
- * inteiro, que atravessa todos eles (§2.1 de `docs/specs/backup-google-drive.md`).
+ * inteiro, que atravessa todos eles (§2.1 de `docs-internal/specs/backup-google-drive.md`).
  */
 function BackupSection({ disabled }: { disabled: boolean }) {
   const config = useAppConfig();

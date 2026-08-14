@@ -39,7 +39,7 @@ const PROJETOS = [
 export interface VisualCase {
   /** Id do caso; nomeia o PNG e a linha do relatório. */
   id: string;
-  /** Tela do spec (`docs/design-spec/telas-redesenhadas.json`). */
+  /** Tela do spec (`docs-internal/design-spec/telas-redesenhadas.json`). */
   screen: string;
   /** Caminho do nó equivalente no spec — o mesmo do screenGeometry. */
   anchor: string;

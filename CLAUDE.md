@@ -52,7 +52,7 @@ src/
 100, `useEffect` > 8 ou `useState` > 15 por componente ⇒ refatorar **antes** da próxima feature.
 
 O detalhamento — checagem anti-DRY, roteiro para integração nova, porta estreita de config — está
-em `docs/guardrails.md`. Leia antes de criar abstração ou integração.
+em `docs-internal/guardrails.md`. Leia antes de criar abstração ou integração.
 
 ## 4. Fluxo de trabalho
 
@@ -72,18 +72,25 @@ compila → `pnpm lint` → commit semântico → PR.
 
 ## 5. Onde está o resto — e quando ler
 
+**Documentação interna mora em `docs-internal/`, nunca em `docs/`.** O `docs/` é a pasta que o
+GitHub Pages publica (`main:/docs` → `coaktion.github.io/deskclock-tauri`), e o repositório é
+**público**: arquivo colocado ali vai ao ar no merge, sem ninguém decidir isso. Ele tem três
+arquivos e só deve ter três — `index.html` (o manual do usuário), `favicon.svg` e `favicon.png`.
+Já esteve com os specs do Monday dentro, board ids da Aktie e tudo, servidos em HTML na internet
+aberta. Doc novo de arquitetura, tela, integração ou spec: `docs-internal/`.
+
 | Leia quando… | Documento |
 |---|---|
 | a tarefa toca **aparência** (componente, classe, cor, tamanho, raio, modal, chip) | **skill `design-system`** — invoque, não leia à mão |
-| vai mexer numa **tela** específica | `docs/telas/<tela>.md` — `tarefas`, `planejamento`, `historico`, `dados`, `configuracoes`, `lancamento-retroativo`, `exportacao`, `overlays`, `primeira-execucao` |
-| vai mexer em **integração** | `docs/integracoes/README.md` (contrato comum) + `google.md`, `clockify.md`, `monday.md` |
-| vai mexer em **entidade, repositório ou migration** | `docs/modelo-de-dados.md` |
-| a dúvida é de **comportamento** (billable, agrupamento, autocomplete, data de referência, workspace, recorrência) | `docs/regras-de-negocio.md` |
-| vai **escrever teste** | `docs/testes.md` |
-| vai criar **abstração ou integração nova** | `docs/guardrails.md` |
-| a rodada de **fidelidade do design** está em curso | `docs/specs/design-system-fidelity.md` — conferir se a mudança visual não é uma etapa de lá |
-| vai mexer no **backup do banco no Drive** | `docs/specs/backup-google-drive.md` — execução em fases, uma por sessão |
-| quer saber **por que** algo é assim | `docs/historico-de-decisoes.md` e `git log` |
+| vai mexer numa **tela** específica | `docs-internal/telas/<tela>.md` — `tarefas`, `planejamento`, `historico`, `dados`, `configuracoes`, `lancamento-retroativo`, `exportacao`, `overlays`, `primeira-execucao` |
+| vai mexer em **integração** | `docs-internal/integracoes/README.md` (contrato comum) + `google.md`, `clockify.md`, `monday.md` |
+| vai mexer em **entidade, repositório ou migration** | `docs-internal/modelo-de-dados.md` |
+| a dúvida é de **comportamento** (billable, agrupamento, autocomplete, data de referência, workspace, recorrência) | `docs-internal/regras-de-negocio.md` |
+| vai **escrever teste** | `docs-internal/testes.md` |
+| vai criar **abstração ou integração nova** | `docs-internal/guardrails.md` |
+| a rodada de **fidelidade do design** está em curso | `docs-internal/specs/design-system-fidelity.md` — conferir se a mudança visual não é uma etapa de lá |
+| vai mexer no **backup do banco no Drive** | `docs-internal/specs/backup-google-drive.md` — execução em fases, uma por sessão |
+| quer saber **por que** algo é assim | `docs-internal/historico-de-decisoes.md` e `git log` |
 
 ### 5.1 De-para das seções antigas
 
@@ -95,18 +102,18 @@ valendo e resolve aqui:
 | Citação | Onde está agora |
 |---|---|
 | §1, §2, §3 | este arquivo, §1–§3 |
-| §4, §4.x | `docs/modelo-de-dados.md` |
-| §5.1 | `docs/telas/overlays.md` |
-| §5.2 · §5.3 · §5.4 | `docs/telas/tarefas.md` · `planejamento.md` · `historico.md` |
-| §5.5 · §5.6 | `docs/telas/exportacao.md` · `dados.md` |
-| §5.7 | `docs/telas/configuracoes.md` e, na parte de integração, `docs/integracoes/` |
-| §5.8 · §5.9 | `docs/telas/lancamento-retroativo.md` · `primeira-execucao.md` |
-| §6, §6.x | `docs/regras-de-negocio.md` |
+| §4, §4.x | `docs-internal/modelo-de-dados.md` |
+| §5.1 | `docs-internal/telas/overlays.md` |
+| §5.2 · §5.3 · §5.4 | `docs-internal/telas/tarefas.md` · `planejamento.md` · `historico.md` |
+| §5.5 · §5.6 | `docs-internal/telas/exportacao.md` · `dados.md` |
+| §5.7 | `docs-internal/telas/configuracoes.md` e, na parte de integração, `docs-internal/integracoes/` |
+| §5.8 · §5.9 | `docs-internal/telas/lancamento-retroativo.md` · `primeira-execucao.md` |
+| §6, §6.x | `docs-internal/regras-de-negocio.md` |
 | §7.1–§7.5 | este arquivo, §4 |
-| §7.6 | `docs/testes.md` |
+| §7.6 | `docs-internal/testes.md` |
 | §8.1–§8.3 | este arquivo, §7 |
 | §8.4 e "Fonte da verdade visual" | **skill `design-system`** |
-| §9, §9.x | `docs/guardrails.md` (§9.2 e os limites de tamanho também resumidos na §3 daqui) |
+| §9, §9.x | `docs-internal/guardrails.md` (§9.2 e os limites de tamanho também resumidos na §3 daqui) |
 
 ## 6. O que o teste garante — não repita em prosa
 
@@ -122,7 +129,7 @@ numa destas.**
 | `meaningColors.test.ts` | cor crua do Tailwind em cromo (`bg-gray-800`, `text-emerald-500`) |
 | `componentPrimitives.test.ts` | `<button>` com caixa própria em vez de `Button`/`IconButton`; campo cru fora de `components/ui/` |
 | `inputAutocomplete.test.ts` | `<input>` sem `autoComplete="off"` |
-| `screenGeometry.test.tsx` | geometria do componente divergente do spec extraído do design (`docs/design-spec/`) |
+| `screenGeometry.test.tsx` | geometria do componente divergente do spec extraído do design (`docs-internal/design-spec/`) |
 
 Os dois últimos travam por **baseline que só encolhe** e falham nos dois sentidos: descer o número
 sem atualizar a lista deixa folga onde a próxima regressão se esconde.

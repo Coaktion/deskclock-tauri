@@ -1,7 +1,7 @@
 # Google Sheets, Google Agenda e backup do banco
 
 > Extraído da §5.7 do CLAUDE.md em 2026-08-10, verbatim.
-> Contrato comum a todas as integrações: `docs/integracoes/README.md`.
+> Contrato comum a todas as integrações: `docs-internal/integracoes/README.md`.
 
 **Google Sheets:**
 | Campo | Tipo |
@@ -211,7 +211,7 @@
 ## Backup do banco no Drive
 
 Terceira subseção do card do Google, ao lado de Sheets e Agenda — **mesma conexão OAuth, um card,
-N chaves**. O plano de execução inteiro está em `docs/specs/backup-google-drive.md`; aqui fica o
+N chaves**. O plano de execução inteiro está em `docs-internal/specs/backup-google-drive.md`; aqui fica o
 que a tela promete.
 
 | Campo | Tipo |
@@ -251,7 +251,7 @@ que a tela promete.
 > **Os segredos são expurgados do snapshot antes de subir.** O banco guarda `googleRefreshToken`,
 > `clockifyApiKey`, `mondayApiKey` e os tokens do Zendesk (`SECRET_CONFIG_KEYS`), e um arquivo no
 > Drive é bem mais exposto que o `app_config_dir`. Preço aceito: **restaurar exige reconectar as
-> integrações** — o procedimento está em `docs/telas/dados.md`. A lista mora ao lado do `AppConfig`,
+> integrações** — o procedimento está em `docs-internal/telas/dados.md`. A lista mora ao lado do `AppConfig`,
 > e não cravada no Rust, porque é lá que uma integração nova acrescenta o token dela;
 > `secretConfigKeys.test.ts` reprova a chave que casa `/token|apikey|secret|password/i` e não está
 > na lista nem entre as isentas.
@@ -273,9 +273,9 @@ que a tela promete.
 > diz quantos arquivos ficam; o excedente é apagado. Higiene de pasta não pode custar o backup que
 > já subiu — solto, o erro viraria o `driveBackupLastError` de um arquivo que está lá, e o usuário
 > reconectaria o Google por nada. Mesmo raciocínio do `removeOrphans` do Monday
-> (`docs/integracoes/README.md`). Zero ou negativo é "não podar", nunca "apagar tudo".
+> (`docs-internal/integracoes/README.md`). Zero ou negativo é "não podar", nunca "apagar tudo".
 
-> **Não há seletor de workspace, e não é esquecimento.** O §9.5 item 7 do `docs/guardrails.md`
+> **Não há seletor de workspace, e não é esquecimento.** O §9.5 item 7 do `docs-internal/guardrails.md`
 > manda escopar toda integração por workspace; aqui não se aplica — o backup é do banco inteiro,
 > que atravessa todos eles. Escopar seria errado, não incompleto.
 

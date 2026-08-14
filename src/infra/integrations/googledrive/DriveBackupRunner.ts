@@ -68,7 +68,7 @@ export class DriveBackupRunner implements IDriveBackupRunner {
    * Solto, ele viraria o `driveBackupLastError` de um backup que já subiu — a
    * tela diria "falhou" sobre o arquivo que está lá, e o usuário reconectaria o
    * Google por nada. Mesmo raciocínio do `removeOrphans` do Monday
-   * (`docs/integracoes/README.md`).
+   * (`docs-internal/integracoes/README.md`).
    */
   private async prune(client: GoogleDriveClient, folderId: string): Promise<void> {
     try {

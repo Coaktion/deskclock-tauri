@@ -60,7 +60,7 @@
 
 #### Integrações externas
 
-Estão em `docs/integracoes/` — o contrato comum em `README.md`, e uma doc por
+Estão em `docs-internal/integracoes/` — o contrato comum em `README.md`, e uma doc por
 integração. Eram 58KB desta seção.
 
 #### Feedback

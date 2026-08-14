@@ -35,7 +35,7 @@ import { geometryOf } from "../helpers/tailwindGeometry";
 
 /**
  * A geometria dos componentes contra o spec extraído dos wireframes
- * (`docs/design-spec/`, gerado por `scripts/extract-design-spec.mjs`).
+ * (`docs-internal/design-spec/`, gerado por `scripts/extract-design-spec.mjs`).
  *
  * É a trava que faltava nas duas primeiras rodadas de fidelidade. As cinco
  * travas anteriores medem **token e uso de primitivo**: reprovam cor crua,

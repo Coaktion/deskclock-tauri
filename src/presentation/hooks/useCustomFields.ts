@@ -18,7 +18,7 @@ import type { UUID } from "@shared/types";
 
 /**
  * Campos personalizados são **globais**: ao contrário de `useProjects`, este
- * hook não lê o workspace ativo. Ver `docs/specs/workspaces-custom-fields.md`.
+ * hook não lê o workspace ativo. Ver `docs-internal/specs/workspaces-custom-fields.md`.
  */
 export function useCustomFields() {
   const { customFieldRepo } = useRepositories();

@@ -10,7 +10,7 @@ import type { ConfigKey } from "@shared/types/appConfig";
  * quem a acrescenta esbarra na lista.
  *
  * O preço da decisão é conhecido: restaurar um backup exige reconectar as
- * integrações. Ver `docs/specs/backup-google-drive.md` §2.
+ * integrações. Ver `docs-internal/specs/backup-google-drive.md` §2.
  *
  * `secretConfigKeys.test.ts` reprova a chave de credencial que nascer fora
  * daqui — não conte com ninguém lembrando de vir editar este arquivo.

@@ -124,7 +124,7 @@
 > gravado como `label: ""`**: quem constrói a ação é o `buildPlannedAction`, e é ele que
 > faz a string de espaços e a ausência do campo significarem a mesma coisa nas três
 > integrações que criam ação e nas três telas que as editam. A regra de quem escreve o
-> nome está em `docs/regras-de-negocio.md` §6.5.
+> nome está em `docs-internal/regras-de-negocio.md` §6.5.
 
 ### 4.3 Project
 
@@ -189,7 +189,7 @@
 
 Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 `ExportProfile`. **Custom fields, quando existirem, serão globais** — ver
-`docs/specs/workspaces-custom-fields.md`.
+`docs-internal/specs/workspaces-custom-fields.md`.
 
 ### 4.7 Config (chave-valor)
 

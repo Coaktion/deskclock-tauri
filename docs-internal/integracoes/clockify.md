@@ -1,7 +1,7 @@
 # Clockify
 
 > Extraído da §5.7 do CLAUDE.md em 2026-08-10, verbatim.
-> Contrato comum a todas as integrações: `docs/integracoes/README.md`.
+> Contrato comum a todas as integrações: `docs-internal/integracoes/README.md`.
 
 **Clockify:**
 | Campo | Tipo |

@@ -98,6 +98,6 @@
 
 ## Por integração
 
-- Google Sheets e Google Agenda — `docs/integracoes/google.md`
-- Clockify — `docs/integracoes/clockify.md`
-- Monday.com — `docs/integracoes/monday.md`
+- Google Sheets e Google Agenda — `docs-internal/integracoes/google.md`
+- Clockify — `docs-internal/integracoes/clockify.md`
+- Monday.com — `docs-internal/integracoes/monday.md`

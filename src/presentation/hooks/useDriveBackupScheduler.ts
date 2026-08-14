@@ -13,7 +13,7 @@ import type { ConfigContextValue } from "@shared/types/appConfig";
  * dúvida sobre quando ela rodou. Para backup é o defeito: um mensal às 03:00 do
  * dia 1 pode nunca acontecer. Aqui o backup **vence** e roda na primeira
  * oportunidade em que o app estiver aberto. Quem for uniformizar os dois está
- * desfazendo decisão tomada (§2.2 de `docs/specs/backup-google-drive.md`).
+ * desfazendo decisão tomada (§2.2 de `docs-internal/specs/backup-google-drive.md`).
  *
  * Só monta na janela principal: `App` é renderizado apenas quando o label da
  * janela não é overlay nem toast (`main.tsx`), e sem isso seriam quatro backups

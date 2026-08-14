@@ -29,8 +29,8 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = resolve(ROOT, ".visual");
-const MOCK = resolve(ROOT, "docs/design-spec/raw/telas-redesenhadas.html");
-const SPEC = JSON.parse(readFileSync(resolve(ROOT, "docs/design-spec/telas-redesenhadas.json")));
+const MOCK = resolve(ROOT, "docs-internal/design-spec/raw/telas-redesenhadas.html");
+const SPEC = JSON.parse(readFileSync(resolve(ROOT, "docs-internal/design-spec/telas-redesenhadas.json")));
 
 /** Diferença de pixel acima disto vira falha declarada no relatório. */
 const LIMITE_DIFF = 0.02;

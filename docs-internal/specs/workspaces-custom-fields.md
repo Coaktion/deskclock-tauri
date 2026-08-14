@@ -182,7 +182,7 @@ padrão de fallback) foi considerada e **descartada** por ser mais complexa que 
 2. `pnpm test` + `pnpm lint` + `pnpm format` no que já existe.
 3. Gate `@code-quality-reviewer` sobre o diff atual.
 4. Commit `feat(monday): integração de envio de horas ao Monday.com`.
-5. Marcar em `docs/specs/monday-integration.md` os dois checkboxes de governança do
+5. Marcar em `docs-internal/specs/monday-integration.md` os dois checkboxes de governança do
    `mondayApiKey` (registro em `Coaktion/security-inventory`) — hoje abertos e declarados como
    bloqueio de merge.
 

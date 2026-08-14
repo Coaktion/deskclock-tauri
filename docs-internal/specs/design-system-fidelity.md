@@ -710,7 +710,7 @@ no sistema inteiro**. `TaskRow` ser flex é divergência sistêmica, não da tel
 ### 7.3 O mecanismo de garantia
 
 1. **Spec mecânico versionado** — `scripts/extract-design-spec.mjs` lê os 5 documentos via MCP
-   `DesignSync` e emite `docs/design-spec/*.json`: um nó por elemento, com toda propriedade
+   `DesignSync` e emite `docs-internal/design-spec/*.json`: um nó por elemento, com toda propriedade
    geométrica (font-size, weight, line-height, color, padding, gap, radius, border, medida fixa,
    `grid-template-columns`, display). Protótipo validado em 2026-08-10 — produziu §7.2 e §7.4.
    **Toda decisão daqui em diante cita `spec[...]`, não prosa.**
@@ -803,9 +803,9 @@ Uma por sessão, como o resto da rodada (§0). `pnpm lint && pnpm test && pnpm b
 visual 2 modos × 4 acentos ao fim de cada uma.
 
 - **F0 · Spec + escala + trava** — ✅ **feita (2026-08-10)**. O que entrou:
-  - `docs/design-spec/raw/telas-redesenhadas.html` — o export do Claude Design, versionado: é a
+  - `docs-internal/design-spec/raw/telas-redesenhadas.html` — o export do Claude Design, versionado: é a
     entrada do extrator, e é o que torna o spec reproduzível sem MCP.
-  - `scripts/extract-design-spec.mjs` → `docs/design-spec/telas-redesenhadas.json`: **7 telas, 920
+  - `scripts/extract-design-spec.mjs` → `docs-internal/design-spec/telas-redesenhadas.json`: **7 telas, 920
     nós**, com toda propriedade geométrica normalizada em px. Sem dependência nova (tokenizador
     próprio, ~40 linhas — a entrada é gerada por máquina).
   - `src/index.css`: `--text-nav` (9px), `--text-micro` (11px), `--text-lead` (15px), com
@@ -1275,7 +1275,7 @@ visual 2 modos × 4 acentos ao fim de cada uma.
 - **F8 · A tela de Dados** — ✅ **feita (2026-08-14)**. A tela que as fases anteriores só tocaram
   por tabela de token: a `screenGeometry` cobria dela **duas** assertivas (padding do corpo, coluna
   de 720) e a composição inteira estava fora. A auditoria que abriu a etapa comparou as duas
-  fontes, e o **comportamento** do `docs/telas/dados.md` conferiu item a item — o que faltava era a
+  fontes, e o **comportamento** do `docs-internal/telas/dados.md` conferiu item a item — o que faltava era a
   anatomia da 3c, resumida na própria nota do design: _"as abas sobem para o cabeçalho, a lista
   ganha contorno e o campo de adicionar passa a ser a última linha dela, não um bloco solto"_. As
   abas já tinham subido; as outras duas não.
@@ -1361,13 +1361,13 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   - **A caixa de seleção segue sendo o checkbox nativo**, e no mock ela é um quadro de 14 com borda
     e raio 4. Vale para o app inteiro (Histórico, Planejamento, Tarefas), e o `Checkbox` canônico
     continua sendo trabalho próprio, como `selectionStyles.ts` já declara.
-  - **A aba Campos não está no `docs/telas/dados.md`** — nunca esteve; ela vive em
-    `docs/specs/workspaces-custom-fields.md`.
+  - **A aba Campos não está no `docs-internal/telas/dados.md`** — nunca esteve; ela vive em
+    `docs-internal/specs/workspaces-custom-fields.md`.
 
 - **F9 · A tela de Configurações** — ✅ **feita (2026-08-14)**. A outra tela de leitura em coluna de
   720, e a que carregava os **dois** `divergente` mais antigos ainda abertos — os da F6, que
   atravessavam o app inteiro porque moram em primitivos. A auditoria que abriu a etapa comparou o
-  spec da 3d, o `docs/telas/configuracoes.md` e o código; o comportamento conferiu item a item,
+  spec da 3d, o `docs-internal/telas/configuracoes.md` e o código; o comportamento conferiu item a item,
   **menos um** (abaixo).
 
   **Escopo: as seis abas.** O mock desenha só a Geral; as outras cinco herdam as mesmas medidas,

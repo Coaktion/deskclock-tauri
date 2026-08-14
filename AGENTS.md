@@ -5,12 +5,16 @@ um mapa de qual documento ler para cada tipo de tarefa (§5 de lá).
 
 **Não leia tudo antes de começar.** Este repo tinha 180KB de especificação carregada em todo
 request, e a instrução anterior aqui era literalmente "leia o arquivo completo antes de qualquer
-mudança". O conteúdo continua todo disponível, agora sob demanda: `docs/telas/`,
-`docs/integracoes/`, `docs/modelo-de-dados.md`, `docs/regras-de-negocio.md`, `docs/testes.md`,
-`docs/guardrails.md`, e a skill `design-system` para qualquer coisa visual.
+mudança". O conteúdo continua todo disponível, agora sob demanda: `docs-internal/telas/`,
+`docs-internal/integracoes/`, `docs-internal/modelo-de-dados.md`,
+`docs-internal/regras-de-negocio.md`, `docs-internal/testes.md`, `docs-internal/guardrails.md`, e
+a skill `design-system` para qualquer coisa visual.
+
+**`docs/` não é onde a documentação interna mora** — é a pasta que o GitHub Pages publica, num
+repositório público. Doc novo vai em `docs-internal/` (CLAUDE.md §5).
 
 Antes de implementar feature ou refactor, valide o plano contra a §3 (regras de dependência) e
-`docs/guardrails.md`.
+`docs-internal/guardrails.md`.
 
 ---
 

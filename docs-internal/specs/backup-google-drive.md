@@ -12,7 +12,7 @@
 
 Backup recorrente do banco do DeskClock numa pasta do Google Drive do próprio usuário. **Só
 gerar backups** — restaurar não tem UI e não está no escopo; o procedimento manual fica
-documentado em `docs/telas/dados.md`.
+documentado em `docs-internal/telas/dados.md`.
 
 Recorrência: diária, semanal ou mensal.
 
@@ -30,7 +30,7 @@ Todas do usuário, em 2026-08-12.
 
 ### 2.1 Duas coisas que parecem descuido e são decisão
 
-- **Não existe `driveDeskclockWorkspaceId`.** O §9.5 item 7 do `docs/guardrails.md` manda escopar
+- **Não existe `driveDeskclockWorkspaceId`.** O §9.5 item 7 do `docs-internal/guardrails.md` manda escopar
   toda integração por workspace. Aqui **não se aplica**: o backup é do banco inteiro, que atravessa
   todos os workspaces. Escopar seria errado, não incompleto.
 - **Não existe `SyncStrategy`.** O item 3 do mesmo roteiro também não se aplica — isto não
@@ -149,7 +149,7 @@ Nome do arquivo: `deskclock-2026-08-12-1430.db`.
 
 - **A poda roda depois** de gravar o timestamp e dentro de `try` próprio. Higiene de pasta não pode
   custar o backup que já subiu — mesmo raciocínio do `removeOrphans` do Monday
-  (`docs/integracoes/README.md`).
+  (`docs-internal/integracoes/README.md`).
 - **403 tem tratamento próprio**: vira "reconecte o Google para conceder acesso ao Drive", não o
   texto cru da API. Sem isso, escopo faltante aparece como falha genérica e ninguém descobre o que
   fazer.
@@ -199,7 +199,7 @@ backup: …" ou o erro, no molde da `SyncFeedbackLine`.
 Restrições da fase: tudo por primitivo (`Button`, `IconButton`, `Toggle`, `SegmentedControl`) —
 `componentPrimitives.test.ts` tem baseline **por arquivo**, e um `<button>` novo à mão em
 `GoogleIntegrationSection.tsx` reprova. Token semântico, nunca cor crua. Verificar nos 2 modos ×
-4 acentos. A rodada de `docs/specs/design-system-fidelity.md` **não** tem etapa sobre esta tela —
+4 acentos. A rodada de `docs-internal/specs/design-system-fidelity.md` **não** tem etapa sobre esta tela —
 conferido em 2026-08-12.
 
 ### Fase 5 · Testes e docs
@@ -214,8 +214,8 @@ conferido em 2026-08-12.
 - `src/tests/shared/secretConfigKeys.test.ts` — trava no molde das outras: toda chave de `AppConfig`
   que casa `/token|apikey|secret|password/i` está em `SECRET_CONFIG_KEYS` ou numa lista explícita de
   isentas. É o que impede a integração nº 6 de mandar o token dela para o Drive sem ninguém notar.
-- `docs/integracoes/google.md` — a subseção, o escopo `drive.file`, o recado de reconexão.
-- `docs/telas/dados.md` — o restore manual: fechar o app, substituir o arquivo em `app_config_dir`,
+- `docs-internal/integracoes/google.md` — a subseção, o escopo `drive.file`, o recado de reconexão.
+- `docs-internal/telas/dados.md` — o restore manual: fechar o app, substituir o arquivo em `app_config_dir`,
   reconectar as integrações. É o contrapeso de termos expurgado os segredos.
 
 ## 4. O que fica sem cobertura, declaradamente

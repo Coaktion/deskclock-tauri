@@ -11,7 +11,7 @@ export interface CustomFieldOption {
 /**
  * Campo personalizado da tarefa. **Global**, não escopado por workspace: mover
  * uma tarefa entre workspaces só é viável se o valor sobreviver sem
- * reconciliação (ver `docs/specs/workspaces-custom-fields.md`).
+ * reconciliação (ver `docs-internal/specs/workspaces-custom-fields.md`).
  */
 export interface CustomField {
   id: UUID;

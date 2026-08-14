@@ -55,7 +55,7 @@ Vale para as quatro abas, e é a anatomia da tela 3c do design (a medida está n
 #### Restaurar um backup do Drive — procedimento manual
 
 O backup do banco é gerado pela subseção "Backup do banco" do card do Google, em Integrações
-(`docs/integracoes/google.md`). **Restaurar não tem UI, e é decisão declarada** — o passo a passo
+(`docs-internal/integracoes/google.md`). **Restaurar não tem UI, e é decisão declarada** — o passo a passo
 é este, e mora aqui porque é o contrapeso de o snapshot subir sem os segredos.
 
 1. **Feche o DeskClock por inteiro** — as quatro janelas. Substituir o arquivo com o app aberto

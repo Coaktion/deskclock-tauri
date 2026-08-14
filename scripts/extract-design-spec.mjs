@@ -24,8 +24,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE = "docs/design-spec/raw/telas-redesenhadas.html";
-const OUT = "docs/design-spec/telas-redesenhadas.json";
+const SOURCE = "docs-internal/design-spec/raw/telas-redesenhadas.html";
+const OUT = "docs-internal/design-spec/telas-redesenhadas.json";
 
 /** A raiz do documento de design é 16px, como a do app — daí `rem × 16`. */
 const ROOT_FONT_SIZE = 16;
