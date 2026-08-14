@@ -9,12 +9,14 @@ import { SliderRow } from "./SettingsShared";
 export function OverlayTab() {
   const config = useAppConfig();
 
+  const [overlayShowOnStart, setOverlayShowOnStart] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [displayServer, setDisplayServer] = useState("");
 
   useEffect(() => {
     if (!config.isLoaded) return;
+    setOverlayShowOnStart(config.get("overlayShowOnStart"));
     setOverlayOpacity(config.get("overlayOpacity"));
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -24,6 +26,15 @@ export function OverlayTab() {
       .then(setDisplayServer)
       .catch(() => {});
   }, []);
+
+  async function handleShowOnStart(value: boolean) {
+    setOverlayShowOnStart(value);
+    await config.set("overlayShowOnStart", value);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "overlayShowOnStart",
+      value,
+    } satisfies OverlayConfigChangedPayload);
+  }
 
   async function handleSlider(value: number) {
     setOverlayOpacity(value);
@@ -45,6 +56,14 @@ export function OverlayTab() {
 
   return (
     <SectionCard title="Overlay compacto" divided>
+      <SectionRow>
+        <Toggle
+          label="Mostrar ao iniciar tarefa"
+          description="Abre o overlay assim que uma tarefa começa a rodar"
+          checked={overlayShowOnStart}
+          onChange={handleShowOnStart}
+        />
+      </SectionRow>
       <SectionRow>
         <SliderRow
           label="Opacidade em repouso"

@@ -50,6 +50,12 @@ const EXEMPT_INPUT_TYPES = /type="(checkbox|radio|range|file|hidden)"/;
  * permissão: o número desce quando a tela migra e a linha some quando chega a
  * zero. A F8 apagou as **oito** linhas da tela de Dados de uma vez — ✎/🗑 viraram
  * `IconButton`, e "Importar"/"Criar"/"Adicionar", `Button`.
+ *
+ * A F9 apagou a linha do `AtualizacoesTab`. As duas que sobram em Configurações
+ * ficam por motivo próprio: o `ChoiceChip` do `GeralTab` é vocabulário da tela
+ * (decisão do usuário, 2026-08-14), e o botão que grava o atalho precisa de
+ * `ref`, `onKeyDown` e `onBlur` — é superfície de captura de tecla, e abrir as
+ * três props no `Button` por um call site custa mais que a cópia.
  */
 const BUTTON_BASELINE: Record<string, number> = {
   "src/App.tsx": 1,
@@ -79,7 +85,6 @@ const BUTTON_BASELINE: Record<string, number> = {
   "src/presentation/pages/RetroactivePage.tsx": 1,
   "src/presentation/sections/integrations/clockify/ClockifyMappingsSection.tsx": 1,
   "src/presentation/sections/integrations/shared.tsx": 1,
-  "src/presentation/sections/settings/AtualizacoesTab.tsx": 4,
   "src/presentation/sections/settings/GeralTab.tsx": 1,
   "src/presentation/sections/settings/ShortcutRow.tsx": 1,
 };

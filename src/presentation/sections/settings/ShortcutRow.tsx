@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
-import { SettingLabel } from "@presentation/components/ui";
+import { AlertTriangle, X } from "lucide-react";
+import { IconButton, SettingLabel } from "@presentation/components/ui";
 
 const MODIFIER_KEYS = new Set(["Control", "Shift", "Alt", "Meta", "CmdOrCtrl"]);
 const KEY_MAP: Record<string, string> = {
@@ -79,13 +79,13 @@ export function ShortcutRow({
         {failed && (
           <AlertTriangle
             size={14}
-            className="text-amber-400 shrink-0"
+            className="text-warning shrink-0"
             aria-label="Falha ao registrar atalho"
           />
         )}
         {value && !recording && (
           <span
-            className={`font-mono text-xs bg-raised border px-2 py-1 rounded-chip ${failed ? "border-amber-600 text-amber-300" : "border-border text-fg-secondary"}`}
+            className={`font-mono text-xs bg-raised border px-2 py-1 rounded-chip ${failed ? "border-warning/50 text-warning" : "border-border text-fg-secondary"}`}
           >
             {value}
           </span>
@@ -104,13 +104,13 @@ export function ShortcutRow({
           {recording ? "Pressione a combinação…" : value ? "Alterar" : "Gravar"}
         </button>
         {value && !recording && (
-          <button
+          <IconButton
+            icon={<X size={14} />}
             onClick={() => onSave("")}
-            className="text-sm text-fg-muted hover:text-danger transition-colors"
+            variant="danger"
+            size="sm"
             title="Remover atalho"
-          >
-            ✕
-          </button>
+          />
         )}
       </div>
     </div>

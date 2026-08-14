@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useUpdater } from "@presentation/hooks/useUpdater";
 import { RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2 } from "lucide-react";
-import { SectionCard, SectionRow } from "@presentation/components/ui";
+import { Button, SectionCard, SectionRow } from "@presentation/components/ui";
 
 const SECTION_LABELS: Record<string, string> = {
   Features: "Novidades",
@@ -73,13 +73,9 @@ function UpdaterSection() {
       </div>
 
       {state.status === "idle" && (
-        <button
-          onClick={check}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-control bg-raised border border-border text-sm text-fg hover:border-fg-muted transition-colors"
-        >
-          <RefreshCw size={14} />
+        <Button onClick={check} icon={<RefreshCw size={14} />}>
           Verificar atualizações
-        </button>
+        </Button>
       )}
 
       {state.status === "checking" && (
@@ -96,13 +92,9 @@ function UpdaterSection() {
             DeskClock {state.version} disponível
           </p>
           {state.body && <ReleaseNotes body={state.body} />}
-          <button
-            onClick={downloadAndInstall}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-control text-sm font-medium text-accent-text bg-accent/10 border border-accent/30 hover:bg-accent/20 hover:border-accent/50 transition-colors"
-          >
-            <Download size={14} />
+          <Button variant="accent" onClick={downloadAndInstall} icon={<Download size={14} />}>
             Baixar e instalar
-          </button>
+          </Button>
         </div>
       )}
 
@@ -127,13 +119,9 @@ function UpdaterSection() {
             <CheckCircle2 size={14} />
             Pronto para instalar
           </p>
-          <button
-            onClick={relaunch}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-control text-sm font-medium text-accent-text bg-accent/10 border border-accent/30 hover:bg-accent/20 hover:border-accent/50 transition-colors"
-          >
-            <RotateCcw size={14} />
+          <Button variant="accent" onClick={relaunch} icon={<RotateCcw size={14} />}>
             Reiniciar agora
-          </button>
+          </Button>
         </div>
       )}
 
@@ -148,13 +136,9 @@ function UpdaterSection() {
               {state.error}
             </p>
           )}
-          <button
-            onClick={check}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-control bg-raised border border-border text-sm text-fg hover:border-fg-muted transition-colors"
-          >
-            <RefreshCw size={14} />
+          <Button onClick={check} icon={<RefreshCw size={14} />}>
             Tentar novamente
-          </button>
+          </Button>
         </div>
       )}
     </div>

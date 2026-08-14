@@ -5,6 +5,16 @@ import { AlertTriangle } from "lucide-react";
 import { ShortcutRow } from "./ShortcutRow";
 import { SectionCard, SectionRow } from "@presentation/components/ui";
 
+/** Mesma caixa do aviso de erro da API, no token de aviso. */
+function WarningBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 rounded-control bg-warning/10 border border-warning/30 px-3 py-2.5">
+      <AlertTriangle size={14} className="text-warning mt-0.5 shrink-0" />
+      <p className="text-xs text-warning">{children}</p>
+    </div>
+  );
+}
+
 export function AtalhosTab() {
   const config = useAppConfig();
 
@@ -59,23 +69,17 @@ export function AtalhosTab() {
   return (
     <div className="space-y-5">
       {displayServer === "wayland" && (
-        <div className="flex items-start gap-2 rounded-control bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
-          <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-300">
-            Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou
-            mude para uma sessão X11 para usar este recurso.
-          </p>
-        </div>
+        <WarningBanner>
+          Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou
+          mude para uma sessão X11 para usar este recurso.
+        </WarningBanner>
       )}
       {failedShortcuts.length > 0 && displayServer !== "wayland" && (
-        <div className="flex items-start gap-2 rounded-control bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
-          <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-300">
-            {failedShortcuts.length === 1
-              ? "Um atalho não pôde ser registrado — pode estar em uso por outro aplicativo."
-              : `${failedShortcuts.length} atalhos não puderam ser registrados — podem estar em uso por outro aplicativo.`}
-          </p>
-        </div>
+        <WarningBanner>
+          {failedShortcuts.length === 1
+            ? "Um atalho não pôde ser registrado — pode estar em uso por outro aplicativo."
+            : `${failedShortcuts.length} atalhos não puderam ser registrados — podem estar em uso por outro aplicativo.`}
+        </WarningBanner>
       )}
 
       <SectionCard title="Tarefa e janelas" divided>
