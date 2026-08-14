@@ -56,7 +56,7 @@ export function IntegrationsModalsHost() {
   const { modal, closeModal } = useIntegrationsUi();
   const config = useAppConfig();
   const factories = useIntegrations();
-  const { plannedTaskRepo } = useRepositories();
+  const { plannedTaskRepo, trackedMeetingRepo } = useRepositories();
   const { projects, categories } = useIntegrationCatalogs(
     modal ? MODAL_WORKSPACE_KEY[modal] : null
   );
@@ -113,15 +113,20 @@ export function IntegrationsModalsHost() {
       <ImportCalendarModal
         importer={calendarImporter}
         repo={plannedTaskRepo}
+        trackedRepo={trackedMeetingRepo}
         defaultFromISO={defaultFromISO}
         defaultToISO={defaultToISO}
         projects={projects}
         categories={categories}
-        onImported={(count) => {
+        onImported={(count, tracked) => {
           closeModal();
+          const rastreadas =
+            tracked > 0
+              ? ` ${tracked} ${tracked === 1 ? "reunião rastreada" : "reuniões rastreadas"}.`
+              : "";
           showToast(
             "success",
-            `${count} evento${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.`
+            `${count} evento${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.${rastreadas}`
           );
         }}
         onClose={closeModal}

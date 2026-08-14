@@ -1,7 +1,10 @@
 import type { Category } from "@domain/entities/Category";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICalendarImporter";
+import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import { trackImportedMeetings } from "@domain/usecases/calendar/trackImportedMeetings";
 import { dedupeCalendarEvents } from "@domain/usecases/plannedTasks/DedupeCalendarEvents";
 import {
   importCalendarEvents,
@@ -12,6 +15,7 @@ import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Badge, Button, Modal, Toggle } from "@presentation/components/ui";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
+import { todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
 import {
   AlertCircle,
@@ -338,17 +342,20 @@ function EventRow({
 interface ImportCalendarModalProps {
   importer: ICalendarImporter;
   repo: IPlannedTaskRepository;
+  trackedRepo: ITrackedMeetingRepository;
   defaultFromISO: string;
   defaultToISO: string;
   projects: Project[];
   categories: Category[];
-  onImported: (count: number) => void;
+  /** `tracked` conta as reuniões que passaram a avisar — ver {@link trackImportedMeetings}. */
+  onImported: (count: number, tracked: number) => void;
   onClose: () => void;
 }
 
 export function ImportCalendarModal({
   importer,
   repo,
+  trackedRepo,
   defaultFromISO,
   defaultToISO,
   projects,
@@ -378,6 +385,9 @@ export function ImportCalendarModal({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
+  // Desligado por padrão: rastrear é assumir que o dia inteiro importado vira
+  // aviso na tela, e quem importa uma semana de agenda raramente quer isso.
+  const [trackMeetings, setTrackMeetings] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -513,6 +523,35 @@ export function ImportCalendarModal({
     setEditMap((prev) => new Map(prev).set(id, state));
   }
 
+  /**
+   * Faz as reuniões da importação avisarem no início e no fim, emparelhando cada
+   * evento com a planejada que ele criou — `importCalendarEvents` devolve as
+   * planejadas na ordem das entradas, e é esse contrato que sustenta o par.
+   *
+   * **Falha aqui não é falha da importação.** As planejadas já estão gravadas
+   * quando este passo roda; pintar "erro ao importar eventos" por cima levaria o
+   * usuário a repetir o import e duplicar tudo. Fica no console.
+   */
+  async function trackSelectedMeetings(
+    inputs: ImportEventInput[],
+    created: PlannedTask[]
+  ): Promise<number> {
+    try {
+      const { tracked, errors } = await trackImportedMeetings(
+        trackedRepo,
+        inputs.map((input, i) => ({ event: input.event, plannedTaskId: created[i].id })),
+        todayISO()
+      );
+      if (errors.length > 0) {
+        console.error("[importCalendar] falha ao rastrear reuniões", errors);
+      }
+      return tracked;
+    } catch (err) {
+      console.error("[importCalendar] falha ao rastrear reuniões", err);
+      return 0;
+    }
+  }
+
   async function handleImport() {
     const inputs: ImportEventInput[] = events
       .filter((e) => selected.has(e.id) && !dedupedEventIds.has(e.id))
@@ -533,17 +572,16 @@ export function ImportCalendarModal({
 
     setImporting(true);
     try {
-      const count = (
-        await importCalendarEvents(
-          repo,
-          inputs,
-          new Date().toISOString(),
-          workspaceId,
-          addOpenUrlAction
-        )
-      ).length;
-      if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-      onImported(count);
+      const created = await importCalendarEvents(
+        repo,
+        inputs,
+        new Date().toISOString(),
+        workspaceId,
+        addOpenUrlAction
+      );
+      if (created.length > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+      const tracked = trackMeetings ? await trackSelectedMeetings(inputs, created) : 0;
+      onImported(created.length, tracked);
     } catch (err) {
       const msg =
         err instanceof Error
@@ -669,19 +707,31 @@ export function ImportCalendarModal({
           />
         </div>
       }
-      // A chave decide algo sobre a importação inteira, e fica fora do corpo por
-      // isso: dentro, rolaria para fora da vista junto com a lista de eventos.
+      // As chaves decidem algo sobre a importação inteira, e ficam fora do corpo
+      // por isso: dentro, rolariam para fora da vista junto com a lista de eventos.
       notice={
         !loading && !error && events.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <Toggle
-              checked={addOpenUrlAction}
-              onChange={setAddOpenUrlAction}
-              ariaLabel="Adicionar automaticamente uma ação de abrir URL do evento"
-            />
-            <span className="text-sm text-fg-secondary">
-              Adicionar automaticamente uma ação de abrir URL do evento
-            </span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={addOpenUrlAction}
+                onChange={setAddOpenUrlAction}
+                ariaLabel="Adicionar automaticamente uma ação de abrir URL do evento"
+              />
+              <span className="text-sm text-fg-secondary">
+                Adicionar automaticamente uma ação de abrir URL do evento
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={trackMeetings}
+                onChange={setTrackMeetings}
+                ariaLabel="Rastrear reuniões (avisar no início e no fim)"
+              />
+              <span className="text-sm text-fg-secondary">
+                Rastrear reuniões (avisar no início e no fim)
+              </span>
+            </div>
           </div>
         ) : null
       }

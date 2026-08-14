@@ -165,14 +165,46 @@
 
 > **O rastreio de reuniões espera o workspace resolver, e o gate é no efeito.** Enquanto o
 > `WorkspaceContext` carrega, o id ativo é o do workspace "Padrão" — um palpite, não uma escolha, e
-> sincronizar antes criaria a planejada no lugar errado. O gate **não** pode ficar no `enabled()` de
-> dentro do tick: ali ele não adiaria o primeiro ciclo por um tick, e sim pelo intervalo inteiro. No
+> sincronizar antes criaria a planejada no lugar errado. O gate **não** pode ficar junto dos
+> `discoveryEnabled()`/`trackingEnabled()` de dentro do tick: ali ele não adiaria o primeiro ciclo
+> por um tick, e sim pelo intervalo inteiro. No
 > efeito, `loading` faz true→false uma vez por mount, o efeito reexecuta e o atraso inicial passa a
 > contar da resolução.
 >
 > **Vale só para o `useMeetingTracker`**, e é consequência da exceção da Agenda abaixo: os
 > rastreadores do Monday leem o workspace da **config** e não dependem mais dessa resolução — o gate
 > deles saiu junto com o `useRef` que carregava o id ativo.
+
+> **O import manual também rastreia, com uma chave própria no rodapé do modal** — "Rastrear reuniões
+> (avisar no início e no fim)", **desligada por padrão**, valendo para a importação inteira. Ela
+> semeia `calendar_tracked_meetings` (`trackImportedMeetings`) com o vínculo da planejada **já
+> preenchido**: o par sai da ordem em que `importCalendarEvents` devolve as planejadas, o mesmo
+> contrato que o ciclo automático usa. Só entra quem virou planejada — a ocorrência que o
+> `dedupeCalendarEvents` absorveu não gera linha, porque não há planejada própria a que vinculá-la.
+>
+> **O evento futuro é semeado de propósito.** A poda apaga por data (`date < hoje`), então a linha de
+> quinta espera no banco até quinta, quando a checagem de prompts — que lê o dia corrente — a
+> encontra. Ficam de fora o evento de dia todo e o sem hora de início (sem `startISO` não há instante
+> em que o prompt dispare) e o de data passada, que nasceria já podável.
+>
+> **Evento já rastreado é pulado, nunca reescrito.** A linha existente pode estar no meio de uma
+> reunião (`startedTaskId`) ou dispensada, e um `upsert` de linha inteira ressuscitaria o prompt de
+> início e apontaria o vínculo para uma planejada duplicada — a mesma razão de `setPlannedTaskId` e
+> `setStartedTaskId` serem escritas estreitas. Falha do rastreamento **não** é falha do import: as
+> planejadas já estão gravadas quando o passo roda, e pintar "erro ao importar" por cima levaria o
+> usuário a repetir o import e duplicar tudo.
+
+> **O toggle de rastreamento automático passou a governar só a descoberta.** São dois interruptores:
+> buscar a agenda de dois em dois minutos é o que ele liga; **avisar** sobre reunião já rastreada só
+> exige o Google conectado. Enquanto os dois estiveram atrás da mesma chave, a reunião semeada pelo
+> import manual ficava inerte no banco — o usuário ligava a chave na importação e nada avisava. O
+> "Buscar eventos agora" continua exigindo o toggle, porque ele **busca**.
+>
+> **O preço é declarado, e foi escolha do usuário (2026-08-14):** sem descoberta não há
+> `reconcileTracked`, então reunião cancelada ou remarcada no Google depois do import ainda avisa no
+> horário antigo. A poda também vive dentro do `syncTodayMeetings`, então o caminho de prompts poda
+> uma vez por dia quando a descoberta está desligada — senão as linhas semeadas ficariam no banco
+> para sempre.
 
 ---
 
