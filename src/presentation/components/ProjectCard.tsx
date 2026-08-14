@@ -82,10 +82,7 @@ export function ProjectCard({
           title="Selecionar projeto"
           className={selectionBoxClass}
         />
-        <span
-          className="shrink-0 w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: color }}
-        />
+        <span className="shrink-0 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
 
         {editing ? (
           <>

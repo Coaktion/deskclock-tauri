@@ -3,13 +3,7 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
-import {
-  Input,
-  SectionCard,
-  SectionRow,
-  SettingLabel,
-  Toggle,
-} from "@presentation/components/ui";
+import { Input, SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
 import { NumberInputWithCommit } from "./SettingsShared";
 
 /** Escolha dentro de um grupo — retangular, ao contrário da pílula de filtro. */

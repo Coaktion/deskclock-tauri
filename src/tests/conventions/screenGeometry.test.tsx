@@ -856,9 +856,7 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
         </AddRow>
       );
       expectPadding(linha, SPEC_3C.adicionar);
-      expect(geometryOf(linha.children[0].className).gap).toBe(
-        numberOf(SPEC_3C.adicionar, "gap")
-      );
+      expect(geometryOf(linha.children[0].className).gap).toBe(numberOf(SPEC_3C.adicionar, "gap"));
       expect(linha.className).not.toMatch(/border-dashed|rounded-/);
     });
 

@@ -1,11 +1,7 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { TaskGroup } from "@domain/utils/groupTasks";
-import {
-  isPlayBlocked,
-  playTitle,
-  resolvePlayBlock,
-} from "@presentation/components/playAction";
+import { isPlayBlocked, playTitle, resolvePlayBlock } from "@presentation/components/playAction";
 import { IconButton, TaskRow } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { getProjectColor } from "@shared/utils/projectColor";

@@ -3,10 +3,10 @@ import { snapPositionToGrid } from "@shared/utils/snapToGrid";
 import { clampIntoMonitor, positionNearTaskbar } from "@shared/utils/windowPosition";
 import { PhysicalPosition } from "@tauri-apps/api/dpi";
 import {
-    currentMonitor,
-    getCurrentWindow,
-    monitorFromPoint,
-    primaryMonitor,
+  currentMonitor,
+  getCurrentWindow,
+  monitorFromPoint,
+  primaryMonitor,
 } from "@tauri-apps/api/window";
 import { useCallback, useEffect, useRef } from "react";
 

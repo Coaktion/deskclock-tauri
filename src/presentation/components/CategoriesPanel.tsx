@@ -2,13 +2,7 @@ import { useMemo, useState } from "react";
 import type { UseCategoriesResult } from "@presentation/hooks/useCategories";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import {
-  AddRow,
-  BillableChip,
-  Input,
-  SectionCard,
-  SearchInput,
-} from "@presentation/components/ui";
+import { AddRow, BillableChip, Input, SectionCard, SearchInput } from "@presentation/components/ui";
 import { CategoryCard } from "./CategoryCard";
 import { SelectAllBox, SelectionActions } from "./SelectionHeader";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
