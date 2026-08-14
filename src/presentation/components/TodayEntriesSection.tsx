@@ -3,7 +3,8 @@ import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
-import type { TaskGroup } from "@domain/utils/groupTasks";
+import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
+import { resolvePlayBlock } from "@presentation/components/playAction";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { EditGroupModal } from "@presentation/modals/EditGroupModal";
@@ -41,6 +42,11 @@ export function TodayEntriesSection({
   const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
   const { workspaces } = useWorkspaces();
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+
+  // Aqui a execução em curso é **outro registro**, sem id que a ligue à linha:
+  // quem as identifica é a chave de agrupamento (§6.3), a mesma que o ▶ desta
+  // tela usa para decidir o que repetir.
+  const runningGroupKey = runningTask ? taskGroupKey(runningTask) : null;
 
   useEffect(() => {
     const today = todayISO();
@@ -120,7 +126,7 @@ export function TodayEntriesSection({
               projects={projects}
               categories={categories}
               sentIds={sentIds}
-              playDisabled={!!runningTask}
+              playBlock={resolvePlayBlock(runningGroupKey, g.key)}
               onPlay={handlePlay}
               onEdit={setEditingTask}
               onDelete={handleDelete}

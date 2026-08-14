@@ -4,14 +4,16 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { TaskRow } from "@presentation/components/ui";
+import { IconButton, TaskRow } from "@presentation/components/ui";
+import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
 
 interface TaskCardProps {
   task: Task;
   projects: Project[];
   categories: Category[];
   sent?: boolean;
-  playDisabled?: boolean;
+  /** Se a execução em curso impede este ▶ — e, quando ela tem a chave desta linha, quem o diz. */
+  playBlock?: PlayBlock;
   /** Dentro de um grupo aberto — a linha ganha o trilho que a prende à de cima. */
   nested?: boolean;
   onPlay: (task: Task) => void;
@@ -25,7 +27,7 @@ export function TaskCard({
   projects,
   categories,
   sent = false,
-  playDisabled = false,
+  playBlock = "none",
   nested = false,
   onPlay,
   onEdit,
@@ -62,15 +64,13 @@ export function TaskCard({
       }
       actions={
         <>
-          {!playDisabled && (
-            <button
-              onClick={() => onPlay(task)}
-              title="Iniciar com estes dados"
-              className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-            >
-              <Play size={14} />
-            </button>
-          )}
+          <IconButton
+            icon={<Play size={14} />}
+            title={playTitle(playBlock, "Iniciar com estes dados")}
+            size="sm"
+            disabled={isPlayBlocked(playBlock)}
+            onClick={() => onPlay(task)}
+          />
           <button
             onClick={() => onEdit(task)}
             title="Editar"

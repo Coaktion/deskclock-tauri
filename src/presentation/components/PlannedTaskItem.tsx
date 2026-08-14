@@ -10,6 +10,7 @@ import {
 } from "@presentation/modals/EditPlannedTaskModal";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { IconButton, TaskRow } from "@presentation/components/ui";
+import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
 import { getProjectColor } from "@shared/utils/projectColor";
 
 interface PlannedTaskItemProps {
@@ -17,7 +18,8 @@ interface PlannedTaskItemProps {
   dateISO: string;
   projects: Project[];
   categories: Category[];
-  playDisabled?: boolean;
+  /** Se a execução em curso impede este ▶ — e, quando ela é esta mesma tarefa, quem o diz. */
+  playBlock?: PlayBlock;
   /** true quando o rastreamento automático está acompanhando esta reunião para notificar. */
   tracked?: boolean;
   onPlay: (task: PlannedTask) => void;
@@ -50,7 +52,7 @@ export function PlannedTaskItem({
   dateISO,
   projects,
   categories,
-  playDisabled = false,
+  playBlock = "none",
   tracked = false,
   onPlay,
   onUpdate,
@@ -134,11 +136,12 @@ export function PlannedTaskItem({
         actions={
           !selectMode && (
             <>
-              {!isCompleted && !playDisabled && (
+              {!isCompleted && (
                 <IconButton
                   icon={<Play size={14} />}
-                  title="Iniciar"
+                  title={playTitle(playBlock)}
                   size="sm"
+                  disabled={isPlayBlocked(playBlock)}
                   onClick={() => onPlay(task)}
                 />
               )}

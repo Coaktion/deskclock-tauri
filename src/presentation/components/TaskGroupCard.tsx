@@ -8,6 +8,7 @@ import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/
 import { getProjectColor } from "@shared/utils/projectColor";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { TaskRow } from "@presentation/components/ui";
+import type { PlayBlock } from "@presentation/components/playAction";
 import { TaskCard } from "./TaskCard";
 
 interface TaskGroupCardProps {
@@ -15,7 +16,11 @@ interface TaskGroupCardProps {
   projects: Project[];
   categories: Category[];
   sentIds?: Set<string>;
-  playDisabled?: boolean;
+  /**
+   * Todas as tarefas de um grupo compartilham a chave (§6.3), então o bloqueio
+   * do ▶ é o mesmo para o cabeçalho e para as filhas — o pai resolve uma vez.
+   */
+  playBlock?: PlayBlock;
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: (group: TaskGroup) => void;
@@ -34,7 +39,7 @@ export function TaskGroupCard({
   projects,
   categories,
   sentIds,
-  playDisabled = false,
+  playBlock = "none",
   selectable = false,
   selected = false,
   onToggleSelect,
@@ -74,7 +79,7 @@ export function TaskGroupCard({
         projects={projects}
         categories={categories}
         sent={sentIds?.has(first.id)}
-        playDisabled={playDisabled}
+        playBlock={playBlock}
         onPlay={onPlay}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -197,7 +202,7 @@ export function TaskGroupCard({
             projects={projects}
             categories={categories}
             sent={sentIds?.has(t.id)}
-            playDisabled={playDisabled}
+            playBlock={playBlock}
             onPlay={onPlay}
             onEdit={onEdit}
             onDelete={onDelete}

@@ -1,6 +1,11 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { TaskGroup } from "@domain/utils/groupTasks";
+import {
+  isPlayBlocked,
+  playTitle,
+  resolvePlayBlock,
+} from "@presentation/components/playAction";
 import { IconButton, TaskRow } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { getProjectColor } from "@shared/utils/projectColor";
@@ -12,6 +17,12 @@ interface CompletedTasksSectionProps {
   totalSeconds: number;
   projects: Project[];
   categories: Category[];
+  /**
+   * Chave de agrupamento da execução em curso (§6.3), ou `null` sem execução.
+   * A linha que a compartilha diz "já está em execução"; as demais, que não dá
+   * para iniciar outra.
+   */
+  runningGroupKey: string | null;
   /** Inicia uma nova execução com os dados da tarefa concluída (repetir). */
   onRepeat: (group: TaskGroup) => void;
   /** Abre a edição do grupo no painel que cobre o popup. */
@@ -28,6 +39,7 @@ export function CompletedTasksSection({
   totalSeconds,
   projects,
   categories,
+  runningGroupKey,
   onRepeat,
   onEdit,
 }: CompletedTasksSectionProps) {
@@ -59,6 +71,7 @@ export function CompletedTasksSection({
           const category = categories.find((c) => c.id === first.categoryId);
           const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
           const count = group.tasks.length;
+          const block = resolvePlayBlock(runningGroupKey, group.key);
 
           return (
             <TaskRow
@@ -91,8 +104,9 @@ export function CompletedTasksSection({
                   />
                   <IconButton
                     icon={<Play size={14} fill="currentColor" />}
-                    title="Repetir tarefa"
+                    title={playTitle(block, "Repetir tarefa")}
                     size="sm"
+                    disabled={isPlayBlocked(block)}
                     onClick={() => onRepeat(group)}
                   />
                 </>

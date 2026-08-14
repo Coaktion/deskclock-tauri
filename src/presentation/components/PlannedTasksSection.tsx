@@ -2,7 +2,8 @@ import { Play } from "lucide-react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { SectionCard, TaskRow } from "@presentation/components/ui";
+import { IconButton, SectionCard, TaskRow } from "@presentation/components/ui";
+import { isPlayBlocked, playTitle, resolvePlayBlock } from "@presentation/components/playAction";
 import { pendingPlannedTasks } from "@domain/utils/plannedPending";
 import { getProjectColor } from "@shared/utils/projectColor";
 
@@ -11,7 +12,8 @@ interface PlannedTasksSectionProps {
   projects: Project[];
   categories?: Category[];
   dateISO: string;
-  playDisabled?: boolean;
+  /** De qual planejada veio a execução em curso — é ela que ganha o "já está em execução". */
+  runningPlannedTaskId?: string | null;
   onPlay: (task: PlannedTask) => void;
   /** O chip de faturamento é controle em toda parte, então a lista precisa saber gravá-lo. */
   onToggleBillable: (task: PlannedTask) => void;
@@ -23,7 +25,7 @@ export function PlannedTasksSection({
   projects,
   categories = [],
   dateISO,
-  playDisabled = false,
+  runningPlannedTaskId = null,
   onPlay,
   onToggleBillable,
   onNavigatePlanning,
@@ -53,6 +55,7 @@ export function PlannedTasksSection({
           const project = projects.find((p) => p.id === task.projectId);
           const category = categories.find((c) => c.id === task.categoryId);
           const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+          const block = resolvePlayBlock(runningPlannedTaskId, task.id);
 
           return (
             <TaskRow
@@ -63,15 +66,13 @@ export function PlannedTasksSection({
               onToggleBillable={() => onToggleBillable(task)}
               dotColor={getProjectColor(project)}
               actions={
-                playDisabled ? undefined : (
-                  <button
-                    onClick={() => onPlay(task)}
-                    className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-                    title="Iniciar"
-                  >
-                    <Play size={14} />
-                  </button>
-                )
+                <IconButton
+                  icon={<Play size={14} />}
+                  title={playTitle(block)}
+                  size="sm"
+                  disabled={isPlayBlocked(block)}
+                  onClick={() => onPlay(task)}
+                />
               }
             />
           );

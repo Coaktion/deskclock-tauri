@@ -11,6 +11,8 @@ import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { runningPlannedTaskId } from "@domain/utils/plannedLink";
+import { resolvePlayBlock } from "@presentation/components/playAction";
 import { useTour } from "@presentation/hooks/useTour";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -85,8 +87,9 @@ export function WeekPlanningView() {
   const { categories } = useCategories();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
-  const { startTask, runningTask } = useRunningTask();
+  const { startTask, runningTask, activePlannedTaskId } = useRunningTask();
   const { plannedIds: trackedIds, today: trackedToday } = useTrackedMeetingPlannedIds();
+  const runningPlannedId = runningPlannedTaskId(activePlannedTaskId, runningTask);
 
   const formColumn = usePersistedFlag("planningFormCollapsed");
 
@@ -411,7 +414,7 @@ export function WeekPlanningView() {
                         dateISO={day}
                         projects={projects}
                         categories={categories}
-                        playDisabled={!!runningTask}
+                        playBlock={resolvePlayBlock(runningPlannedId, task.id)}
                         tracked={day === trackedToday && trackedIds.has(task.id)}
                         onPlay={handlePlay}
                         onUpdate={update}

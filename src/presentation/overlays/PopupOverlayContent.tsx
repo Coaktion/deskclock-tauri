@@ -3,9 +3,15 @@ import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
-import type { TaskGroup } from "@domain/utils/groupTasks";
+import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
+import {
+  isPlayBlocked,
+  playTitle,
+  resolvePlayBlock,
+  type PlayBlock,
+} from "@presentation/components/playAction";
 import { Button, IconButton, Input, TaskRow } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -419,6 +425,8 @@ interface PlannedRowProps {
   categories: Category[];
   /** O rastreamento automático vai lembrar de iniciar esta reunião. */
   tracked: boolean;
+  /** Se a execução em curso impede este ▶ — e, quando ela nasceu desta planejada, quem o diz. */
+  playBlock: PlayBlock;
   onEdit: (task: PlannedTask) => void;
   onComplete: (task: PlannedTask) => void;
   onPlay: (task: PlannedTask) => void;
@@ -439,6 +447,7 @@ function PlannedRow({
   projects,
   categories,
   tracked,
+  playBlock,
   onEdit,
   onComplete,
   onPlay,
@@ -484,8 +493,9 @@ function PlannedRow({
           />
           <IconButton
             icon={<Play size={14} fill="currentColor" />}
-            title="Iniciar"
+            title={playTitle(playBlock)}
             size="sm"
+            disabled={isPlayBlocked(playBlock)}
             onClick={() => onPlay(task)}
           />
         </>
@@ -525,6 +535,13 @@ export function PopupOverlayContent({
   // Com um grupo só, o rótulo é ruído sobre uma lista que já é homogênea.
   const { timed, untimed } = groupPlannedBySchedule(pending);
   const showHeadings = timed.length > 0 && untimed.length > 0;
+  // O popup guarda a planejada de origem num `ref` (que não redesenha), então
+  // aqui o vínculo é o gravado na própria tarefa — que é o que viaja no
+  // `RUNNING_TASK_CHANGED` quando quem iniciou foi a janela principal.
+  const runningPlannedId = runningTask?.plannedTaskId ?? null;
+  // Na aba Executadas não há id ligando a linha à execução: quem as identifica é
+  // a chave de agrupamento (§6.3), a mesma que o "Repetir tarefa" já usa.
+  const runningGroupKey = runningTask ? taskGroupKey(runningTask) : null;
   const [activeTab, setActiveTab] = useState<"planned" | "completed">("planned");
 
   const [confirmingStop, setConfirmingStop] = useState(false);
@@ -644,6 +661,7 @@ export function PopupOverlayContent({
                     projects={projects}
                     categories={categories}
                     tracked={trackedIds.has(task.id)}
+                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
                     onEdit={setEditingTask}
                     onComplete={(t) => void complete(t.id, today)}
                     onPlay={handlePlay}
@@ -657,6 +675,7 @@ export function PopupOverlayContent({
                     projects={projects}
                     categories={categories}
                     tracked={trackedIds.has(task.id)}
+                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
                     onEdit={setEditingTask}
                     onComplete={(t) => void complete(t.id, today)}
                     onPlay={handlePlay}
@@ -671,6 +690,7 @@ export function PopupOverlayContent({
             totalSeconds={completedTotalSeconds}
             projects={projects}
             categories={categories}
+            runningGroupKey={runningGroupKey}
             onRepeat={handleRepeat}
             onEdit={setEditingCompleted}
           />

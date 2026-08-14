@@ -17,6 +17,15 @@ const VARIANT: Record<IconButtonVariant, string> = {
   danger: "text-fg-muted hover:text-danger hover:bg-danger/10",
 };
 
+/**
+ * Desabilitado, o botão fica no **repouso** das três variantes e não ganha
+ * hover nenhum. Anular as classes de hover com `disabled:hover:*` seria disputa
+ * de especificidade decidida pela ordem em que o Tailwind emite os utilitários,
+ * e não pela ordem em que estão escritas aqui; trocar a string inteira não
+ * disputa nada.
+ */
+const DISABLED = "text-fg-muted";
+
 const SIZE: Record<IconButtonSize, string> = {
   sm: "p-1",
   md: "p-1.5",
@@ -54,7 +63,7 @@ export function IconButton({
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`inline-flex items-center justify-center shrink-0 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${VARIANT[variant]} ${SIZE[size]} ${className}`}
+      className={`inline-flex items-center justify-center shrink-0 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${disabled ? DISABLED : VARIANT[variant]} ${SIZE[size]} ${className}`}
     >
       {icon}
     </button>

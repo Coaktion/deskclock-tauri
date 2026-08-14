@@ -7,6 +7,7 @@ import { TotalsSection } from "@presentation/components/TotalsSection";
 import { PageHeader } from "@presentation/components/ui";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { runningPlannedTaskId } from "@domain/utils/plannedLink";
 import { useTour } from "@presentation/hooks/useTour";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
@@ -31,7 +32,7 @@ export function TasksPage({
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { groups, totals, reload } = useTasks();
-  const { startTask, runningTask } = useRunningTask();
+  const { startTask, runningTask, activePlannedTaskId } = useRunningTask();
   const {
     tasks: plannedTasks,
     reload: reloadPlanned,
@@ -115,7 +116,7 @@ export function TasksPage({
                 tasks={plannedTasks}
                 projects={projects}
                 dateISO={today}
-                playDisabled={!!runningTask}
+                runningPlannedTaskId={runningPlannedTaskId(activePlannedTaskId, runningTask)}
                 onPlay={handlePlayPlanned}
                 onToggleBillable={handleTogglePlannedBillable}
                 onNavigatePlanning={onNavigatePlanning}
