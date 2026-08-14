@@ -3,8 +3,13 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
-import { fieldLabelClass } from "@presentation/components/fieldStyles";
-import { Input, SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
+import {
+  Input,
+  SectionCard,
+  SectionRow,
+  SettingLabel,
+  Toggle,
+} from "@presentation/components/ui";
 import { NumberInputWithCommit } from "./SettingsShared";
 
 /** Escolha dentro de um grupo — retangular, ao contrário da pílula de filtro. */
@@ -110,27 +115,19 @@ export function GeralTab() {
   return (
     <div className="space-y-5">
       <SectionCard title="Conta">
-        <SectionRow className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center text-accent-text text-lg font-semibold shrink-0 select-none">
-            {userName ? userName[0].toUpperCase() : "?"}
-          </div>
-          {/* O campo é `plain` — a linha do cartão já espaça, e uma caixa aqui
-              o desalinharia do avatar ao lado —, então o rótulo é o overline
-              solto: não há caixa para o `Field` desenhar. */}
-          <div className="flex-1 min-w-0">
-            <label htmlFor="settings-user-name" className={`block ${fieldLabelClass}`}>
-              Como quer ser chamado?
-            </label>
-            <Input
-              id="settings-user-name"
-              variant="plain"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              onBlur={handleUserNameBlur}
-              placeholder="Seu nome"
-              className="font-medium"
-            />
-          </div>
+        <SectionRow className="flex items-center justify-between gap-4">
+          <SettingLabel
+            label="Seu nome"
+            description="Aparece no cabeçalho da tela de Tarefas"
+            htmlFor="settings-user-name"
+          />
+          <Input
+            id="settings-user-name"
+            value={userName}
+            onChange={(e) => setUserName(e.target.value)}
+            onBlur={handleUserNameBlur}
+            className="w-45 shrink-0"
+          />
         </SectionRow>
       </SectionCard>
 

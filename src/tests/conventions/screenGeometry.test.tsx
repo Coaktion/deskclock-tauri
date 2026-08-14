@@ -987,6 +987,19 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       const campo = shellOf(<Input value="Rafael" onChange={() => {}} />);
       expectPadding(campo, SPEC_3D.campo);
     });
+
+    /**
+     * A linha do nome é a linha comum da tela — rótulo e dica à esquerda, campo
+     * de largura fixa à direita —, e não o bloco de perfil com avatar que ela
+     * foi até a F9. A largura é do call site, então é lá que se mede.
+     */
+    it("o campo do nome tem a largura do spec", () => {
+      const campo = classNameContaining(
+        sourceOf("src/presentation/sections/settings/GeralTab.tsx"),
+        "shrink-0"
+      );
+      expect(geometryOf(campo).width).toBe(numberOf(SPEC_3D.campo, "width"));
+    });
   });
 
   describe("3e · Planejamento", () => {
