@@ -2,14 +2,21 @@ import { Play } from "lucide-react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import { IconButton, SectionCard, TaskRow } from "@presentation/components/ui";
+import { isPlayBlocked, playTitle, resolvePlayBlock } from "@presentation/components/playAction";
+import { pendingPlannedTasks } from "@domain/utils/plannedPending";
+import { getProjectColor } from "@shared/utils/projectColor";
 
 interface PlannedTasksSectionProps {
   tasks: PlannedTask[];
   projects: Project[];
   categories?: Category[];
   dateISO: string;
-  playDisabled?: boolean;
+  /** De qual planejada veio a execução em curso — é ela que ganha o "já está em execução". */
+  runningPlannedTaskId?: string | null;
   onPlay: (task: PlannedTask) => void;
+  /** O chip de faturamento é controle em toda parte, então a lista precisa saber gravá-lo. */
+  onToggleBillable: (task: PlannedTask) => void;
   onNavigatePlanning?: () => void;
 }
 
@@ -18,76 +25,59 @@ export function PlannedTasksSection({
   projects,
   categories = [],
   dateISO,
-  playDisabled = false,
+  runningPlannedTaskId = null,
   onPlay,
+  onToggleBillable,
   onNavigatePlanning,
 }: PlannedTasksSectionProps) {
-  const pending = tasks.filter((t) => !t.completedDates.includes(dateISO));
+  const pending = pendingPlannedTasks(tasks, dateISO);
   if (pending.length === 0) return null;
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          Planejadas para hoje
-          <span className="ml-1.5 text-gray-600 normal-case font-normal">{pending.length}</span>
-        </h2>
-        {onNavigatePlanning && (
+    <SectionCard
+      title="Planejadas para hoje"
+      count={pending.length}
+      action={
+        onNavigatePlanning && (
           <button
             onClick={onNavigatePlanning}
-            className="text-[10px] text-gray-600 hover:text-blue-400 transition-colors"
+            className="text-accent-text hover:opacity-80 transition-opacity"
           >
             Ver semana →
           </button>
-        )}
-      </div>
-      <div className="flex flex-col gap-1 max-h-44 overflow-y-auto">
+        )
+      }
+    >
+      {/* 166px: é o que faz o cartão cheio terminar no mesmo nível do bloco de
+          KPI ao lado (dois cartões mais o degrau, menos este cabeçalho). */}
+      <div className="max-h-[166px] overflow-y-auto">
         {pending.map((task) => {
           const project = projects.find((p) => p.id === task.projectId);
           const category = categories.find((c) => c.id === task.categoryId);
-          const dotColor = task.billable ? "bg-emerald-400" : "bg-gray-500";
-
-          const subParts = [project?.name, category?.name].filter(Boolean);
+          const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+          const block = resolvePlayBlock(runningPlannedTaskId, task.id);
 
           return (
-            <div
+            <TaskRow
               key={task.id}
-              className="group relative flex items-center gap-2 pl-3 pr-2 py-2 bg-gray-800/60 hover:bg-gray-800 rounded-lg transition-colors"
-            >
-              {/* Billable left accent bar */}
-              {task.billable && (
-                <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
-              )}
-
-              {/* Play button */}
-              {!playDisabled && (
-                <button
+              title={task.name || "(sem nome)"}
+              subtitle={subtitle || undefined}
+              billable={task.billable}
+              onToggleBillable={() => onToggleBillable(task)}
+              dotColor={getProjectColor(project)}
+              actions={
+                <IconButton
+                  icon={<Play size={14} />}
+                  title={playTitle(block)}
+                  size="sm"
+                  disabled={isPlayBlocked(block)}
                   onClick={() => onPlay(task)}
-                  className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 opacity-0 group-hover:opacity-100 hover:text-blue-400 hover:bg-blue-500/10 transition-all"
-                  title="Iniciar"
-                >
-                  <Play size={11} />
-                </button>
-              )}
-
-              {/* Color dot */}
-              <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${dotColor}`} />
-
-              {/* Name + sub-label */}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-gray-200 truncate leading-snug">
-                  {task.name || "(sem nome)"}
-                </p>
-                {subParts.length > 0 && (
-                  <p className="text-[10px] text-gray-500 truncate leading-snug">
-                    {subParts.join(" · ")}
-                  </p>
-                )}
-              </div>
-            </div>
+                />
+              }
+            />
           );
         })}
       </div>
-    </section>
+    </SectionCard>
   );
 }

@@ -3,6 +3,7 @@ import { MondayAutoImportSection } from "./MondayAutoImportSection";
 import { MondayAutoSyncSection } from "./MondayAutoSyncSection";
 import { MondayImportSection } from "./MondayImportSection";
 import { MondayBoardsSection } from "./MondayBoardsSection";
+import { Button } from "@presentation/components/ui";
 import { DeskclockWorkspaceRow } from "../shared";
 
 interface MondayConnectedSectionsProps {
@@ -12,9 +13,6 @@ interface MondayConnectedSectionsProps {
   onShowImportModal: () => void;
   onShowEntriesModal: () => void;
 }
-
-const ACTION_CLASS =
-  "w-full flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded transition-colors justify-center border border-gray-700";
 
 export function MondayConnectedSections({
   reloadProjects,
@@ -33,19 +31,16 @@ export function MondayConnectedSections({
       <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
       <MondayAutoSyncSection />
       <MondayAutoImportSection />
-      <div className="border-t border-gray-800 px-4 py-3 space-y-2">
-        <button onClick={onShowSendModal} className={ACTION_CLASS}>
-          <Send size={12} />
+      <div className="border-t border-border-subtle px-4 py-3 space-y-2">
+        <Button onClick={onShowSendModal} icon={<Send size={14} />} className="w-full">
           Enviar tarefas manualmente…
-        </button>
-        <button onClick={onShowImportModal} className={ACTION_CLASS}>
-          <DownloadCloud size={12} />
+        </Button>
+        <Button onClick={onShowImportModal} icon={<DownloadCloud size={14} />} className="w-full">
           Importar itens como planejadas…
-        </button>
-        <button onClick={onShowEntriesModal} className={ACTION_CLASS}>
-          <ListChecks size={12} />
+        </Button>
+        <Button onClick={onShowEntriesModal} icon={<ListChecks size={14} />} className="w-full">
           Gerenciar atividades…
-        </button>
+        </Button>
       </div>
     </>
   );

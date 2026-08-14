@@ -81,18 +81,12 @@ impl ApiServerState {
     }
 }
 
+// O caminho vem de `database::resolve_db_path` para que a API local, o plugin sql e
+// a migração do boot abram sempre o mesmo arquivo. O fallback para `app_data_dir`
+// que existia aqui era uma divergência silenciosa: se `app_config_dir` falhasse, a
+// API leria um banco que ninguém migra.
 fn resolve_db_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let dir = app
-        .path()
-        .app_config_dir()
-        .or_else(|_| app.path().app_data_dir())
-        .map_err(|e| format!("Não foi possível obter o diretório do app: {e}"))?;
-    let db_file = if cfg!(debug_assertions) {
-        "deskclock-dev.db"
-    } else {
-        "deskclock.db"
-    };
-    Ok(dir.join(db_file))
+    crate::database::resolve_db_path(app)
 }
 
 /// Lê a configuração `localApiEnabled` do SQLite (valor JSON).

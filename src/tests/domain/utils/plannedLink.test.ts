@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveActivePlannedLink } from "@domain/utils/plannedLink";
+import { resolveActivePlannedLink, runningPlannedTaskId } from "@domain/utils/plannedLink";
 import type { Task } from "@domain/entities/Task";
 
 const TASK: Task = {
@@ -37,5 +37,25 @@ describe("resolveActivePlannedLink", () => {
 
   it("sem tarefa não há origem, ainda que o vínculo anterior exista", () => {
     expect(resolveActivePlannedLink("pt-1", null, undefined)).toBeNull();
+  });
+});
+
+describe("runningPlannedTaskId", () => {
+  it("o vínculo vivo tem precedência sobre o gravado na tarefa", () => {
+    expect(runningPlannedTaskId("pt-1", { ...TASK, plannedTaskId: "pt-velho" })).toBe("pt-1");
+  });
+
+  it("sem vínculo vivo, vale o gravado na tarefa", () => {
+    // É o caso da janela que só recebeu o `RUNNING_TASK_CHANGED` de outra: o
+    // campo do evento é opcional, e a tarefa carrega a origem consigo.
+    expect(runningPlannedTaskId(null, { ...TASK, plannedTaskId: "pt-2" })).toBe("pt-2");
+  });
+
+  it("execução que não nasceu de planejada não tem origem", () => {
+    expect(runningPlannedTaskId(null, TASK)).toBeNull();
+  });
+
+  it("sem tarefa não há origem", () => {
+    expect(runningPlannedTaskId("pt-1", null)).toBeNull();
   });
 });

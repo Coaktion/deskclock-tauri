@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Copy, X } from "lucide-react";
+import { ArrowRight, Copy } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -11,7 +11,7 @@ import { moveTasksToWorkspace } from "@domain/usecases/tasks/MoveTasksToWorkspac
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { Button, Modal, Select } from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface MoveToWorkspaceModalProps {
@@ -51,26 +51,26 @@ function ResolutionRow({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[11px] uppercase tracking-wide text-gray-500">{label}</span>
+      <span className="text-overline uppercase text-fg-muted">{label}</span>
       {sourceName ? (
         <>
-          <span className="text-xs text-gray-400">
-            Na origem: <span className="text-gray-200">{sourceName}</span>
+          <span className="text-sm text-fg-secondary">
+            Na origem: <span className="text-fg">{sourceName}</span>
           </span>
-          <select
+          <Select
+            aria-label={label}
             value={kind}
             onChange={(e) => onKindChange(e.target.value as Kind)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
             {options.map(([k, text]) => (
               <option key={k} value={k}>
                 {text}
               </option>
             ))}
-          </select>
+          </Select>
         </>
       ) : (
-        <span className="text-xs text-gray-600">Sem {label.toLowerCase()} na origem.</span>
+        <span className="text-xs text-fg-muted">Sem {label.toLowerCase()} na origem.</span>
       )}
     </div>
   );
@@ -115,7 +115,6 @@ export function MoveToWorkspaceModal({
   const sourceProjectName = projects.find((p) => p.id === first?.projectId)?.name ?? null;
   const sourceCategoryName = categories.find((c) => c.id === first?.categoryId)?.name ?? null;
 
-  useEscapeToClose(onClose);
   const handleKeyDown = useSubmitOnEnter(() => void handleConfirm(), {
     disabled: busy || loading || others.length === 0,
   });
@@ -184,120 +183,109 @@ export function MoveToWorkspaceModal({
   const target = workspaces.find((w) => w.id === targetId) ?? null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div
-        onKeyDown={handleKeyDown}
-        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl"
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-100">
-            {mode === "move" ? "Mover" : "Copiar"} {tasks.length}{" "}
-            {tasks.length === 1 ? "tarefa" : "tarefas"}
-          </h2>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-            <X size={16} />
-          </button>
-        </div>
-
-        {others.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-gray-500 text-center">
-            Não há outro workspace para onde mover. Crie um em Dados → Workspaces.
-          </p>
-        ) : (
-          <div className="px-5 py-4 flex flex-col gap-4">
-            <div className="flex gap-1.5">
-              {(
-                [
-                  ["move", "Mover", <ArrowRight key="m" size={13} />],
-                  ["copy", "Copiar", <Copy key="c" size={13} />],
-                ] as const
-              ).map(([k, label, icon]) => (
-                <button
-                  key={k}
-                  onClick={() => setMode(k)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                    mode === k
-                      ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                      : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200"
-                  }`}
-                >
-                  {icon}
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-[11px] uppercase tracking-wide text-gray-500">Destino</span>
-              <div className="flex items-center gap-2">
-                {target && <WorkspaceDot color={target.color} />}
-                <select
-                  value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  {others.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {loading ? (
-              <p className="text-xs text-gray-500">Carregando catálogo do destino...</p>
-            ) : (
-              <>
-                <ResolutionRow
-                  label="Projeto"
-                  sourceName={sourceProjectName}
-                  suggestion={projectSuggestion}
-                  kind={projectKind}
-                  onKindChange={setProjectKind}
-                  destinationName={
-                    projectSuggestion.kind === "match"
-                      ? (destProjects.find((p) => p.id === projectSuggestion.targetId)?.name ??
-                        null)
-                      : null
-                  }
-                />
-                <ResolutionRow
-                  label="Categoria"
-                  sourceName={sourceCategoryName}
-                  suggestion={categorySuggestion}
-                  kind={categoryKind}
-                  onKindChange={setCategoryKind}
-                  destinationName={
-                    categorySuggestion.kind === "match"
-                      ? (destCategories.find((c) => c.id === categorySuggestion.targetId)?.name ??
-                        null)
-                      : null
-                  }
-                />
-              </>
-            )}
-
-            {error && <p className="text-xs text-red-400">{error}</p>}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-700">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200"
-          >
+    <Modal
+      title={`${mode === "move" ? "Mover" : "Copiar"} ${tasks.length} ${
+        tasks.length === 1 ? "tarefa" : "tarefas"
+      }`}
+      onClose={onClose}
+      onKeyDown={handleKeyDown}
+      bodyClassName="p-5 flex flex-col gap-4"
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={() => void handleConfirm()}
-            disabled={busy || loading || others.length === 0}
-            className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg transition-colors"
+            disabled={loading || others.length === 0}
+            loading={busy}
           >
             {busy ? "Aplicando..." : mode === "move" ? "Mover" : "Copiar"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      {others.length === 0 ? (
+        <p className="py-2 text-sm text-fg-muted text-center">
+          Não há outro workspace para onde mover. Crie um em Dados → Workspaces.
+        </p>
+      ) : (
+        <>
+          {/* Alternância entre duas ações, escrita como o botão "Filtros" do
+              Histórico: aceso é `accent`, apagado é `secondary`. */}
+          <div className="flex gap-1.5">
+            {(
+              [
+                ["move", "Mover", <ArrowRight key="m" size={14} />],
+                ["copy", "Copiar", <Copy key="c" size={14} />],
+              ] as const
+            ).map(([k, label, icon]) => (
+              <Button
+                key={k}
+                variant={mode === k ? "accent" : "secondary"}
+                onClick={() => setMode(k)}
+                icon={icon}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-overline uppercase text-fg-muted">Destino</span>
+            <div className="flex items-center gap-2">
+              {target && <WorkspaceDot color={target.color} />}
+              <Select
+                aria-label="Workspace de destino"
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                className="flex-1"
+              >
+                {others.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="text-xs text-fg-muted">Carregando catálogo do destino...</p>
+          ) : (
+            <>
+              <ResolutionRow
+                label="Projeto"
+                sourceName={sourceProjectName}
+                suggestion={projectSuggestion}
+                kind={projectKind}
+                onKindChange={setProjectKind}
+                destinationName={
+                  projectSuggestion.kind === "match"
+                    ? (destProjects.find((p) => p.id === projectSuggestion.targetId)?.name ?? null)
+                    : null
+                }
+              />
+              <ResolutionRow
+                label="Categoria"
+                sourceName={sourceCategoryName}
+                suggestion={categorySuggestion}
+                kind={categoryKind}
+                onKindChange={setCategoryKind}
+                destinationName={
+                  categorySuggestion.kind === "match"
+                    ? (destCategories.find((c) => c.id === categorySuggestion.targetId)?.name ??
+                      null)
+                    : null
+                }
+              />
+            </>
+          )}
+
+          {error && <p className="text-xs text-danger">{error}</p>}
+        </>
+      )}
+    </Modal>
   );
 }

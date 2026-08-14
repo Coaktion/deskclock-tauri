@@ -7,7 +7,7 @@ import {
 import type { IMondayApi } from "@domain/integrations/IMondayApi";
 import type { MondayBoardSchema, MondayColumn } from "@shared/types/monday";
 
-const REPORT_BOARD = "18422834169";
+const REPORT_BOARD = "90000000002";
 
 /** `settings_str` de uma coluna `status`, como o Monday devolve. */
 function statusColumn(id: string, labels: Record<string, string>): MondayColumn {

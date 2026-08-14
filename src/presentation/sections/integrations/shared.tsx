@@ -4,6 +4,7 @@ import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resol
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import type { SyncFeedback } from "@presentation/hooks/useSyncNowButton";
+import { Badge, Select } from "@presentation/components/ui";
 import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 
 /* ── helpers ── */
@@ -33,7 +34,7 @@ export function DeskclockWorkspaceRow({
   // SubSection o `px-4` já veio do pai, e repeti-lo indentaria a linha duas
   // vezes — daí o wrapper ser do componente, e não do chamador: com um
   // workspace só ele some inteiro, sem deixar uma borda vazia para trás.
-  className = "border-t border-gray-800 px-4 py-3",
+  className = "border-t border-border-subtle px-4 py-3",
 }: {
   configKey: IntegrationWorkspaceKey;
   hint: string;
@@ -61,20 +62,22 @@ export function DeskclockWorkspaceRow({
     <div className={className}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <span className="text-sm text-gray-300">Workspace DeskClock</span>
-          <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>
+          <span className="text-sm text-fg-secondary">Workspace DeskClock</span>
+          <p className="text-xs text-fg-muted mt-0.5">{hint}</p>
         </div>
-        <select
+        <Select
+          aria-label="Workspace DeskClock"
+          size="sm"
           value={selected}
           onChange={(e) => void handleChange(e.target.value)}
-          className="shrink-0 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500 max-w-[180px]"
+          className="shrink-0 max-w-[180px]"
         >
           {workspaces.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
     </div>
   );
@@ -93,12 +96,12 @@ export function DeskclockWorkspaceRow({
 export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
   return (
     <p
-      className={`flex items-start gap-1.5 mt-2 text-[11px] leading-relaxed ${
-        feedback.ok ? "text-green-400" : "text-rose-400"
+      className={`flex items-start gap-1.5 mt-2 text-xs leading-relaxed ${
+        feedback.ok ? "text-billable" : "text-danger"
       }`}
     >
       {feedback.ok ? (
-        <CheckCircle2 size={12} className="mt-px shrink-0" />
+        <CheckCircle2 size={14} className="mt-px shrink-0" />
       ) : (
         // O `title` vai no wrapper, não no ícone: em SVG inline o atributo não
         // vira tooltip — o navegador só o reconhece como elemento filho.
@@ -106,7 +109,7 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
           className={`mt-px shrink-0 ${feedback.detail ? "cursor-help" : ""}`}
           title={feedback.detail}
         >
-          <AlertCircle size={12} />
+          <AlertCircle size={14} />
         </span>
       )}
       {feedback.text}
@@ -116,38 +119,15 @@ export function SyncFeedbackLine({ feedback }: { feedback: SyncFeedback }) {
 
 export function StatusBadge({ connected, email }: { connected: boolean; email?: string }) {
   return connected ? (
-    <span className="flex items-center gap-1 text-xs text-green-400">
-      <CheckCircle2 size={12} />
+    <span className="flex items-center gap-1 text-xs text-billable">
+      <CheckCircle2 size={14} />
       {email ? `Conectado como ${email}` : "Conectado"}
     </span>
   ) : (
-    <span className="flex items-center gap-1 text-xs text-gray-500">
-      <Circle size={12} />
+    <span className="flex items-center gap-1 text-xs text-fg-muted">
+      <Circle size={14} />
       Não configurado
     </span>
-  );
-}
-
-export function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        checked ? "bg-blue-600" : "bg-gray-700"
-      }`}
-    >
-      <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-          checked ? "translate-x-5" : "translate-x-1"
-        }`}
-      />
-    </button>
   );
 }
 
@@ -162,9 +142,9 @@ export function Row({
 }) {
   return (
     <div
-      className={`flex items-center justify-between py-2.5 border-b border-gray-800 last:border-0 ${disabled ? "opacity-40 pointer-events-none" : ""}`}
+      className={`flex items-center justify-between py-2.5 border-b border-border-subtle last:border-0 ${disabled ? "opacity-40 pointer-events-none" : ""}`}
     >
-      <span className="text-sm text-gray-300">{label}</span>
+      <span className="text-sm text-fg-secondary">{label}</span>
       <div className="flex items-center gap-2">{children}</div>
     </div>
   );
@@ -176,24 +156,38 @@ export function SubSection({
   children,
   defaultOpen = false,
   badge,
+  onOpen,
 }: {
   icon: React.ReactNode;
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
   badge?: React.ReactNode;
+  /**
+   * Disparado ao **abrir**, nunca ao fechar — é o gancho da seção que só busca
+   * dados quando alguém olha para ela. Sem ele, a de Mapeamentos do Clockify
+   * reimplementava este cabeçalho inteiro à mão, caractere por caractere, só
+   * para poder disparar as duas buscas.
+   */
+  onOpen?: () => void;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-t border-gray-800">
+    <div className="border-t border-border-subtle">
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-gray-800/30 transition-colors"
+        type="button"
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) onOpen?.();
+        }}
+        aria-expanded={open}
+        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-raised transition-colors"
       >
-        <span className="text-gray-500">{icon}</span>
-        <span className="text-sm font-medium text-gray-200">{title}</span>
+        <span className="text-fg-muted">{icon}</span>
+        <span className="text-sm font-medium text-fg">{title}</span>
         {badge}
-        <span className="ml-auto text-gray-600">
+        <span className="ml-auto text-fg-muted">
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </button>
@@ -224,37 +218,30 @@ export function IntegrationTile({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl border border-gray-800 bg-gray-900/50 hover:bg-gray-800/40 transition-colors text-left group"
+      className="w-full flex items-center gap-4 px-4 py-3.5 rounded-card border border-border-subtle bg-surface hover:bg-raised transition-colors text-left group"
     >
-      <div className="shrink-0 w-9 h-9 rounded-lg bg-gray-800/60 flex items-center justify-center">
+      <div className="shrink-0 w-9 h-9 rounded-control bg-raised flex items-center justify-center">
         {logo}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold text-gray-100">{name}</div>
-        <div className="text-xs text-gray-500 mt-0.5">{description}</div>
+        <div className="text-sm font-semibold text-fg">{name}</div>
+        <div className="text-xs text-fg-muted mt-0.5">{description}</div>
       </div>
       <div className="flex flex-col items-end gap-1.5 shrink-0 mr-1">
         <StatusBadge connected={connected} email={email} />
         {subBadges && subBadges.length > 0 && (
           <div className="flex gap-1.5">
             {subBadges.map((b) => (
-              <span
-                key={b.label}
-                className={`text-[10.5px] px-1.5 py-0.5 rounded border ${
-                  b.active
-                    ? "bg-green-500/10 border-green-500/20 text-green-400"
-                    : "bg-gray-800/50 border-gray-700/50 text-gray-600"
-                }`}
-              >
+              <Badge key={b.label} tone={b.active ? "success" : "neutral"}>
                 {b.label}
-              </span>
+              </Badge>
             ))}
           </div>
         )}
       </div>
       <ChevronRight
         size={14}
-        className="text-gray-600 shrink-0 group-hover:text-gray-400 transition-colors"
+        className="text-fg-muted shrink-0 group-hover:text-fg-secondary transition-colors"
       />
     </button>
   );

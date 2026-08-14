@@ -32,7 +32,8 @@ describe("bulkImportProjects", () => {
   it("reporta duplicatas em skipped sem interromper o import", async () => {
     const repo = makeRepo({
       findByName: vi.fn(async (name) => {
-        if (name === "Existente") return { id: "x", workspaceId: "ws-1", name: "Existente" };
+        if (name === "Existente")
+          return { id: "x", workspaceId: "ws-1", name: "Existente", colorIndex: 0 };
         return null;
       }),
       save: vi.fn(async () => {}),

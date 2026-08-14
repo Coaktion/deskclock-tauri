@@ -3,18 +3,11 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import {
-  bareInputClass,
-  boxClass,
-  fieldClass,
-  formColumnClass,
-  notchedBoxClass,
-  notchedLabelClass,
-} from "@presentation/components/fieldStyles";
+import { formColumnClass } from "@presentation/components/fieldStyles";
+import { BillableChip, Field, Input } from "@presentation/components/ui";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { DollarSign } from "lucide-react";
 
 interface RetroactiveEntryFormProps {
   form: ReturnType<typeof useRetroactiveForm>;
@@ -29,8 +22,12 @@ interface RetroactiveEntryFormProps {
  * personalizados o formulário cresce sem limite, e empilhado sobre a lista ele
  * empurrava os registros do dia para fora da tela.
  *
- * Os rótulos são placeholders — inclusive os dos campos personalizados — para
- * a coluna não virar uma alternância de texto e caixa a cada linha.
+ * **Todo campo tem rótulo em overline acima da caixa** (`Field`), como o spec da
+ * 3f desenha. Eram placeholders, com o argumento de que o rótulo faria a coluna
+ * alternar texto e caixa a cada linha — mas metade dela já tinha rótulo (o
+ * entalhe da duração e das horas), então o que existia era a alternância entre
+ * dois desenhos de campo, não a economia dela. O placeholder continua, dizendo
+ * o formato ("Buscar projeto…", "HH:MM"); o rótulo diz o que é.
  */
 export function RetroactiveEntryForm({
   form,
@@ -44,29 +41,35 @@ export function RetroactiveEntryForm({
 
   return (
     <div className={formColumnClass} onKeyDown={handleKeyDown}>
-      <input
-        ref={form.nameRef}
-        type="text"
-        value={form.name}
-        onChange={(e) => form.setName(e.target.value)}
-        placeholder="Nome da tarefa"
-        autoComplete="off"
-        className={fieldClass}
-      />
+      <Field label="Nome" htmlFor="retro-name">
+        <Input
+          id="retro-name"
+          ref={form.nameRef}
+          variant="bare"
+          value={form.name}
+          onChange={(e) => form.setName(e.target.value)}
+          placeholder="Nome da tarefa"
+        />
+      </Field>
 
-      <Autocomplete
-        value={form.projectName}
-        onChange={form.setProjectName}
-        onSelect={(o) => {
-          form.setSelectedProjectId(o.id);
-          form.clearCategory();
-        }}
-        options={projects}
-        placeholder="Projeto"
-      />
-
-      <div className={`${boxClass} flex items-center pr-2`}>
+      <Field label="Projeto" htmlFor="retro-project">
         <Autocomplete
+          id="retro-project"
+          value={form.projectName}
+          onChange={form.setProjectName}
+          onSelect={(o) => {
+            form.setSelectedProjectId(o.id);
+            form.clearCategory();
+          }}
+          options={projects}
+          placeholder="Buscar projeto…"
+          variant="bare"
+        />
+      </Field>
+
+      <Field label="Categoria" htmlFor="retro-category" boxClassName="flex items-center pr-2">
+        <Autocomplete
+          id="retro-category"
           value={form.categoryName}
           onChange={(v) => {
             form.setCategoryName(v);
@@ -79,25 +82,12 @@ export function RetroactiveEntryForm({
             if (cat) form.setBillable(cat.defaultBillable);
           }}
           options={categoryOptions}
-          placeholder="Categoria"
+          placeholder="Buscar categoria…"
           className="flex-1"
-          inputClassName={bareInputClass}
+          variant="bare"
         />
-        <button
-          type="button"
-          onClick={() => form.setBillable((b) => !b)}
-          title={
-            form.billable
-              ? "Billable — clique para alternar"
-              : "Non-billable — clique para alternar"
-          }
-          className={`flex items-center gap-1 shrink-0 transition-colors ${
-            form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
-          }`}
-        >
-          <DollarSign size={14} />
-        </button>
-      </div>
+        <BillableChip billable={form.billable} onToggle={() => form.setBillable((b) => !b)} />
+      </Field>
 
       <CustomFieldInputs
         fields={customFields}
@@ -107,50 +97,36 @@ export function RetroactiveEntryForm({
         className="space-y-3"
       />
 
-      {/* O wrapper existe só para receber o `space-y-3` do pai. Sem ele, o
-          `mt-1.5` da caixa cairia no mesmo elemento e *substituiria* a margem do
-          space-y em vez de somar — foi por isso que, no rascunho, a duração
-          precisou de 16px enquanto início e fim se resolveram com 6px. */}
-      <div>
-        <div className={`${boxClass} ${notchedBoxClass} mt-4.5 flex items-center`}>
-          <label htmlFor="retro-duration" className={notchedLabelClass}>
-            Duração
-          </label>
-          <input
-            id="retro-duration"
-            data-tour="retroactive-duration"
-            type="text"
-            value={form.durationInput}
-            onChange={(e) => form.setDurationInput(e.target.value)}
-            onBlur={form.commitDuration}
-            onKeyDown={(e) => {
-              // Consome porque tem trabalho próprio antes do submit: o Enter não
-              // dispara o `onBlur`, então a duração digitada precisa virar hora
-              // de fim aqui — senão a tarefa nasceria com o fim antigo.
-              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-              e.preventDefault();
-              const newEnd = form.commitDuration();
-              void form.handleAdd(newEnd || undefined);
-            }}
-            placeholder="HH:MM"
-            autoComplete="off"
-            title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className={`${bareInputClass} w-20! pt-3 text-gray-100 placeholder-gray-600`}
-          />
-          <span className="w-full pt-3 pb-1.5 pr-2.5 text-xs text-gray-600 truncate">
-            Use: 1h30, 1h, 30...
-          </span>
-        </div>
-      </div>
+      <Field label="Duração" htmlFor="retro-duration" boxClassName="flex items-center">
+        <Input
+          id="retro-duration"
+          data-tour="retroactive-duration"
+          variant="bare"
+          value={form.durationInput}
+          onChange={(e) => form.setDurationInput(e.target.value)}
+          onBlur={form.commitDuration}
+          onKeyDown={(e) => {
+            // Consome porque tem trabalho próprio antes do submit: o Enter não
+            // dispara o `onBlur`, então a duração digitada precisa virar hora
+            // de fim aqui — senão a tarefa nasceria com o fim antigo.
+            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+            e.preventDefault();
+            const newEnd = form.commitDuration();
+            void form.handleAdd(newEnd || undefined);
+          }}
+          placeholder="HH:MM"
+          title="Aceita: 1:30, 90, 1h, 1h 30m"
+          className="w-20!"
+        />
+        <span className="w-full pr-2.5 text-xs text-fg-muted truncate">Use: 1h30, 1h, 30...</span>
+      </Field>
 
       <div data-tour="retroactive-timeinputs" className="flex gap-2">
-        <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
-          <label htmlFor="retro-start" className={notchedLabelClass}>
-            Início
-          </label>
-          <input
+        <Field label="Início" htmlFor="retro-start" className="flex-1">
+          <Input
             id="retro-start"
             type="time"
+            variant="bare"
             value={form.startTime}
             onChange={(e) => form.handleStartChange(e.target.value)}
             onBlur={(e) => form.handleStartCommit(e.target.value)}
@@ -161,17 +137,13 @@ export function RetroactiveEntryForm({
               e.preventDefault();
               form.handleStartCommit("");
             }}
-            autoComplete="off"
-            className={`${bareInputClass} pt-3`}
           />
-        </div>
-        <div className={`${boxClass} ${notchedBoxClass} flex-1`}>
-          <label htmlFor="retro-end" className={notchedLabelClass}>
-            Fim
-          </label>
-          <input
+        </Field>
+        <Field label="Fim" htmlFor="retro-end" className="flex-1">
+          <Input
             id="retro-end"
             type="time"
+            variant="bare"
             value={form.endTime}
             onChange={(e) => form.handleEndChange(e.target.value)}
             onBlur={(e) => form.handleEndCommit(e.target.value)}
@@ -180,18 +152,16 @@ export function RetroactiveEntryForm({
               e.preventDefault();
               form.handleEndCommit("");
             }}
-            autoComplete="off"
-            className={`${bareInputClass} pt-3`}
           />
-        </div>
+        </Field>
       </div>
 
-      {form.error && <p className="text-xs text-red-400">{form.error}</p>}
+      {form.error && <p className="text-xs text-danger">{form.error}</p>}
 
       <button
         onClick={() => void form.handleAdd()}
         disabled={form.saving}
-        className="w-full px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
+        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 text-white rounded-control transition-opacity disabled:opacity-50"
       >
         Adicionar
       </button>

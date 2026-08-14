@@ -1,4 +1,5 @@
 import { Autocomplete } from "@presentation/components/Autocomplete";
+import { IconButton } from "@presentation/components/ui";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -26,7 +27,7 @@ export function ProjectMappingRow({
 
   return (
     <div className="flex items-center gap-2 py-1">
-      <span className="text-xs text-gray-300 flex-1 truncate min-w-0">{project.name}</span>
+      <span className="text-sm text-fg-secondary flex-1 truncate min-w-0">{project.name}</span>
       <div className="flex items-center gap-1 w-[210px] shrink-0">
         <div className="flex-1">
           <Autocomplete
@@ -41,16 +42,16 @@ export function ProjectMappingRow({
           />
         </div>
         {mapped?.clockifyProjectId && (
-          <button
+          <IconButton
+            icon={<X size={14} />}
+            title="Remover mapeamento"
+            variant="neutral"
+            size="sm"
             onClick={() => {
               setInputValue("");
               onUpdate(project.id, "");
             }}
-            title="Remover mapeamento"
-            className="text-gray-600 hover:text-gray-400 transition-colors shrink-0"
-          >
-            <X size={11} />
-          </button>
+          />
         )}
       </div>
     </div>

@@ -1,8 +1,6 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useEffect, useState, type ReactNode } from "react";
-
-const INPUT_CLASS =
-  "shrink-0 w-36 bg-gray-800 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500";
+import { Input } from "@presentation/components/ui";
 
 /** Rótulo + descrição à esquerda, controle à direita — o arranjo de toda a seção. */
 function SettingRow({
@@ -17,8 +15,8 @@ function SettingRow({
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="min-w-0">
-        <span className="text-sm text-gray-300">{label}</span>
-        {hint && <p className="text-[11px] text-gray-500 mt-0.5">{hint}</p>}
+        <span className="text-sm text-fg-secondary">{label}</span>
+        {hint && <p className="text-xs text-fg-muted mt-0.5">{hint}</p>}
       </div>
       {children}
     </div>
@@ -52,17 +50,21 @@ function BoardIdInput({
     void onSave(next);
   }
 
+  // A largura vai no elemento em volta, nunca no campo: o `Input` é sempre
+  // `w-full` e a classe de largura passada a ele morre na ordem do CSS — o
+  // campo ficaria com 100% da linha e, como não encolhe, esmagaria o rótulo.
   return (
-    <input
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-      placeholder={placeholder}
-      inputMode="numeric"
-      className={INPUT_CLASS}
-      autoComplete="off"
-    />
+    <div className="w-36 shrink-0">
+      <Input
+        size="sm"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+        placeholder={placeholder}
+        inputMode="numeric"
+      />
+    </div>
   );
 }
 
@@ -99,7 +101,7 @@ export function MondayBoardsSection() {
   }
 
   return (
-    <div className="border-t border-gray-800 px-4 py-3 space-y-3">
+    <div className="border-t border-border-subtle px-4 py-3 space-y-3">
       <SettingRow
         label="Board de Portfólio"
         hint="Lista os projetos. Cada item vira um projeto e diz em qual quadro as horas dele são gravadas."

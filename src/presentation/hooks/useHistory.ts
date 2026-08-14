@@ -5,6 +5,7 @@ import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { getHistoryTotals, type HistoryTotals } from "@domain/usecases/tasks/GetHistoryTotals";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { listen } from "@tauri-apps/api/event";
@@ -163,6 +164,24 @@ export function useHistory() {
 
   const reload = useCallback(() => search(filters), [search, filters]);
 
+  /**
+   * Alterna o faturamento da entrada e das irmãs do grupo dela — a mesma regra
+   * da tela de Tarefas, e o recorte que `setGroupBillable` prevê para o dia
+   * aberto no histórico.
+   *
+   * Recarrega em vez de remendar o estado local, como faz o `remove`: a
+   * alternância mexe em N tarefas e move segundos entre os dois totais, e um
+   * remendo que erre a conta fica na tela dizendo um total que o banco não tem.
+   */
+  const toggleBillable = useCallback(
+    async (task: Task) => {
+      await setGroupBillable(taskRepo, task, !task.billable, new Date().toISOString());
+      void notifyTasksChanged();
+      await reload();
+    },
+    [taskRepo, reload]
+  );
+
   // Trocar de workspace não emite TASKS_CHANGED — nenhuma tarefa mudou, mudou o
   // recorte. Sem isto os resultados na tela continuam sendo os do workspace
   // anterior, já que a busca só roda quando o usuário a dispara.
@@ -187,5 +206,16 @@ export function useHistory() {
     };
   }, [searched, reload]);
 
-  return { filters, groups, totals, searched, search, updateFilter, setQuick, remove, reload };
+  return {
+    filters,
+    groups,
+    totals,
+    searched,
+    search,
+    updateFilter,
+    setQuick,
+    remove,
+    toggleBillable,
+    reload,
+  };
 }

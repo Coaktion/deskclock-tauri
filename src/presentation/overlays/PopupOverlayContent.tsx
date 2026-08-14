@@ -1,27 +1,36 @@
 import type { Category } from "@domain/entities/Category";
-import type { CustomField, CustomValues } from "@domain/entities/CustomField";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
-import type { TaskGroup } from "@domain/utils/groupTasks";
-import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
+import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
+import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
-import { Autocomplete } from "@presentation/components/Autocomplete";
+import {
+  isPlayBlocked,
+  playTitle,
+  resolvePlayBlock,
+  type PlayBlock,
+} from "@presentation/components/playAction";
+import { Button, IconButton, Input, TaskRow } from "@presentation/components/ui";
+import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
-import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
-import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
-import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
-import { RunningCustomFieldsSheet } from "@presentation/overlays/RunningCustomFieldsSheet";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
-import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
+import { CompletedTaskEditSheet } from "@presentation/overlays/CompletedTaskEditSheet";
+import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChip";
+import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
+import { RunningTaskEditSheet } from "@presentation/overlays/RunningTaskEditSheet";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
+import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import { emit } from "@tauri-apps/api/event";
 import {
   ArrowRight,
@@ -30,59 +39,54 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  DollarSign,
-  ListChecks,
-  Pause,
   Pen,
   Play,
-  Square,
   X,
+  Zap,
 } from "lucide-react";
-import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-const POPUP_W = 288;
-const HEADER_H = 37;
-const FOOTER_H = 34;
-
-// Idle state layout
-const NEW_TASK_H = 45;
-const TABS_H = 32;
-const CONTENT_H = 188; // área da aba ativa (altura fixa; a lista rola internamente)
-const ROW_H = 44;
-
-// Running state layout (execution section fills popup body)
-const EXEC_H = 262; // status + name + timer + start-time + project + category + billable + divider + controls
-const EXEC_H_CONFIRMING = 302; // EXEC_H + extra rows for end-time input + Concluída/Pendente buttons
-const ACTIONS_SECTION_H = 48; // section label + one row of action chips
-// Uma linha só, com o chip que abre o painel — e por isso constante: os campos
-// personalizados são quantos o usuário quiser, e empilhá-los aqui faria a altura
-// da janela depender do cadastro dele.
-const CUSTOM_FIELDS_ROW_H = 36; // chip (28) + o gap-2 da coluna
-
-/**
- * Typeahead dos chips de Projeto e Categoria: com o chip focado pelo teclado,
- * qualquer caractere abre a lista já filtrando por ele, como faz um `<select>`
- * nativo. Antes só Enter e espaço abriam — as demais teclas caíam no vazio, e
- * quem chegava ao chip pelo Tab não tinha sinal de que ele era editável.
+/*
+ * **O popup tem uma altura só, e ela não depende do estado.** Idle e running
+ * medem o mesmo `POPUP_SIZE.height`, então iniciar ou parar uma tarefa não mexe
+ * na janela — que é o que tirava o overlay do canto onde o usuário o deixou, e o
+ * que fazia a lista saltar sob o cursor. Os 380px são escolha do usuário
+ * (2026-08-12).
  *
- * Enter e as teclas de navegação têm `key` com mais de um caractere e passam
- * direto: o Enter continua abrindo pelo clique nativo do botão. O espaço abre
- * sem semear, e é o único que precisa de `preventDefault` — sem ele o botão
- * ainda dispararia o clique, abrindo duas vezes.
+ * **A lista continua visível durante a execução**, e é isso que decide o
+ * arranjo: a tarefa em execução é o rodapé, não uma tela que substitui a lista.
+ * De cima para baixo: header, barra de abas (sempre visível), conteúdo da aba —
+ * o único `flex-1`, e por isso o único que cede espaço quando o rodapé aparece
+ * ou cresce (a confirmação de parada) — e o rodapé. Enquanto a altura era somada
+ * por estado, ela mentia em três lugares ao mesmo tempo, e a soma máxima passava
+ * do teto do `setMaxSize`, que cortava o excedente calado.
+ *
+ * **O rodapé é um espaço só, disputado por dois estados**: parado, ele é o
+ * "Nova tarefa"; em execução, é o card do cronômetro. Nunca os dois — e é essa
+ * exclusão que ainda impede a segunda tarefa simultânea, já que
+ * `handleStartTask` não tem a guarda que o `handlePlay` tem.
+ *
+ * **A cor separa cromo de conteúdo**: o corpo (abas e lista) fica no `canvas`, e
+ * header e rodapé em execução no `surface`, um degrau acima. O contorno da
+ * janela é do `canvas`, então quem encosta na borda arredondada precisa levar o
+ * arredondamento junto.
+ *
+ * O que varia com o cadastro do usuário — nome, projeto, categoria, hora, campos
+ * personalizados e ações — mora no `RunningTaskEditSheet`, painel que cobre o
+ * popup no tamanho que ele já tem. Enquanto esses campos ficavam no corpo, o
+ * tamanho do popup dependia de quantos campos alguém tinha cadastrado.
+ *
+ * As alturas abaixo são px de um conteúdo que é todo em rem: qualquer mudança na
+ * raiz do documento as desatualiza por inteiro.
  */
-function chipTypeahead(open: (seed?: string) => void) {
-  return (e: React.KeyboardEvent) => {
-    if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
-    e.preventDefault();
-    open(e.key === " " ? undefined : e.key);
-  };
-}
+const POPUP_W = POPUP_SIZE.width;
+const HEADER_H = 42;
+const FOOTER_H = 39;
+const TABS_H = 37;
 
 interface PopupOverlayContentProps {
   runningTask: Task | null;
   activePlannedTaskActions: PlannedTaskAction[];
-  onClose: () => void;
   onNavigatePlanning: () => void;
   onResize: (width: number, height: number) => void;
   /**
@@ -112,57 +116,53 @@ interface PopupOverlayContentProps {
   }) => Promise<void>;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Running card ────────────────────────────────────────────────────────────
 
-function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-// ─── Execution section (running mode) ────────────────────────────────────────
-
-interface ExecSectionProps {
+interface RunningCardProps {
   task: Task;
-  projectName?: string;
-  categoryName?: string;
-  projects: Project[];
-  categories: Category[];
-  customFields: CustomField[];
+  /** Ações da planejada de origem — disparadas daqui, nunca editadas. */
   actions: PlannedTaskAction[];
   confirmingStop: boolean;
   setConfirmingStop: (v: boolean) => void;
-  onOpenCustomFields: () => void;
-  onUpdateTask: (input: {
-    name?: string | null;
-    projectId?: string | null;
-    categoryId?: string | null;
-    billable?: boolean;
-    startTime?: string;
-    customValues?: CustomValues;
-  }) => Promise<void>;
+  /** Abre o painel com nome, projeto, categoria, billable, hora, campos e ações. */
+  onEdit: () => void;
   onPause: () => Promise<void>;
   onResume: () => Promise<void>;
   onStop: (completed: boolean, endTimeISO?: string) => Promise<void>;
   onCancel: () => Promise<void>;
 }
 
-function ExecSection({
+/**
+ * A tarefa em execução em duas linhas, no rodapé do popup: ponto de estado,
+ * nome e editar em cima; cronômetro e controles embaixo.
+ *
+ * **O estado é o ponto e a cor do cronômetro**, sem o rótulo "Rodando"/"Pausada"
+ * que ficava acima do nome — acento pulsando enquanto roda, âmbar parado quando
+ * pausada. O que a linha economiza em altura é o que a lista de planejadas ganha
+ * logo acima.
+ *
+ * O `✎` fica na linha da identidade, no lugar onde ficava o chip de billable:
+ * ele abre o painel que edita o nome ao lado do qual está, e a linha de baixo
+ * fica só com o que opera o relógio. **O billable saiu do card** — alterná-lo
+ * agora é dentro do painel, junto da categoria de que ele é atributo.
+ *
+ * **As ações voltaram ao card, e como faixa que flutua.** Elas tinham seção
+ * própria antes de a execução virar rodapé, e ficaram só dentro do
+ * `RunningTaskEditSheet` — três interações para o clique que a reunião pede no
+ * segundo em que começa. Aqui a faixa não ocupa altura nenhuma em repouso e não
+ * empurra a lista ao abrir: ela cobre a última linha, e nada no fluxo se mexe.
+ */
+function RunningCard({
   task,
-  projectName,
-  categoryName,
-  projects,
-  categories,
-  customFields,
   actions,
   confirmingStop,
   setConfirmingStop,
-  onOpenCustomFields,
-  onUpdateTask,
+  onEdit,
   onPause,
   onResume,
   onStop,
   onCancel,
-}: ExecSectionProps) {
+}: RunningCardProps) {
   const seconds = useTaskTimer(task);
   const isRunning = task.status === "running";
   const [endTimeInput, setEndTimeInput] = useState("");
@@ -196,403 +196,311 @@ function ExecSection({
     { disabled: !!endTimeResolved.error }
   );
 
-  // ── name ──────────────────────────────────────────────────────────────────
-  const [editingName, setEditingName] = useState(false);
-  const [nameValue, setNameValue] = useState(task.name ?? "");
-  useEffect(() => {
-    if (!editingName) setNameValue(task.name ?? "");
-  }, [task.name]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function saveName() {
-    setEditingName(false);
-    const n = nameValue.trim() || null;
-    if (n !== task.name) await onUpdateTask({ name: n });
-  }
-
-  // ── start time ────────────────────────────────────────────────────────────
-  const [editingStartTime, setEditingStartTime] = useState(false);
-  const [startTimeValue, setStartTimeValue] = useState(() => fmtTime(task.startTime));
-  useEffect(() => {
-    if (!editingStartTime) setStartTimeValue(fmtTime(task.startTime));
-  }, [task.startTime]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function saveStartTime() {
-    setEditingStartTime(false);
-    const newISO = parseStartTimeInput(startTimeValue, task.startTime);
-    if (newISO && newISO !== task.startTime) await onUpdateTask({ startTime: newISO });
-  }
-
-  // ── project ───────────────────────────────────────────────────────────────
-  const [editingProject, setEditingProject] = useState(false);
-  const [editProjectName, setEditProjectName] = useState(projectName ?? "");
-  const editProjectIdRef = useRef<string | null>(task.projectId ?? null);
-  useEffect(() => {
-    if (!editingProject) {
-      setEditProjectName(projectName ?? "");
-      editProjectIdRef.current = task.projectId ?? null;
-    }
-  }, [projectName, task.projectId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // `seed` é o caractere que abriu a edição pelo teclado: entra no lugar do
-  // nome atual para a lista já nascer filtrada. O id continua apontando para o
-  // projeto de antes — sair sem escolher nada não pode apagar o vínculo por
-  // causa de uma tecla.
-  function openProjectEdit(seed?: string) {
-    editProjectIdRef.current = task.projectId ?? null;
-    setEditProjectName(seed ?? projectName ?? "");
-    setEditingProject(true);
-  }
-  async function closeProjectEdit() {
-    setEditingProject(false);
-    if (editProjectIdRef.current !== task.projectId) {
-      // Mesma regra do `onSelect`: projeto novo, categoria zerada.
-      editCategoryIdRef.current = null;
-      setEditCategoryName("");
-      await onUpdateTask({ projectId: editProjectIdRef.current, categoryId: null });
-    }
-  }
-
-  // ── category ──────────────────────────────────────────────────────────────
-  // Só as `options`: `categoryName` continua vindo do catálogo cheio, ou
-  // desassociar a categoria apagaria o rótulo do chip da tarefa que já a usa.
-  const { categoriesFor } = useProjectCategoryMap();
-  const categoryOptions = categoriesFor(categories, task.projectId);
-  const [editingCategory, setEditingCategory] = useState(false);
-  const [editCategoryName, setEditCategoryName] = useState(categoryName ?? "");
-  const editCategoryIdRef = useRef<string | null>(task.categoryId ?? null);
-  useEffect(() => {
-    if (!editingCategory) {
-      setEditCategoryName(categoryName ?? "");
-      editCategoryIdRef.current = task.categoryId ?? null;
-    }
-  }, [categoryName, task.categoryId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function openCategoryEdit(seed?: string) {
-    editCategoryIdRef.current = task.categoryId ?? null;
-    setEditCategoryName(seed ?? categoryName ?? "");
-    setEditingCategory(true);
-  }
-  async function closeCategoryEdit() {
-    setEditingCategory(false);
-    if (editCategoryIdRef.current !== task.categoryId)
-      await onUpdateTask({ categoryId: editCategoryIdRef.current });
-  }
-
   return (
-    <div className="flex flex-col flex-1 px-4 py-3 gap-2 min-h-0 overflow-visible">
-      {/* Status */}
-      <div className="flex items-center gap-1.5">
-        <span
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-blue-500" : "bg-amber-500"}`}
-        />
-        <span
-          className={`text-[9px] font-semibold uppercase tracking-[0.12em] ${isRunning ? "text-blue-400" : "text-amber-400"}`}
-        >
-          {isRunning ? "Rodando" : "Pausada"}
-        </span>
-      </div>
+    <div className="group relative shrink-0 flex flex-col gap-2 px-3 py-2.5 bg-surface border-t border-border rounded-b-card">
+      {/* A faixa das ações **cresce para cima e não empurra ninguém**. As duas
+          propriedades são o que a tornam viável num card que se hover para
+          clicar: fora do fluxo, a lista não reflui a cada vez que o cursor
+          cruza o rodapé; acima do nome, o que se move é a aresta de cima — o
+          cronômetro e os botões ficam parados no mesmo y. Abrindo abaixo do
+          nome, a faixa empurraria o Parar para debaixo do cursor no exato
+          gesto de ir clicar nele.
 
-      {/* Name */}
-      {editingName ? (
-        <input
-          autoFocus
-          type="text"
-          value={nameValue}
-          onChange={(e) => setNameValue(e.target.value)}
-          onBlur={saveName}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void saveName();
-            if (e.key === "Escape") {
-              e.stopPropagation();
-              setNameValue(task.name ?? "");
-              setEditingName(false);
-            }
-          }}
-          placeholder="Nome da tarefa"
-          className="w-full px-0 text-[13px] font-medium bg-transparent border-b border-gray-600 text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-          autoComplete="off"
-        />
-      ) : (
-        <button
-          onClick={() => setEditingName(true)}
-          className="group flex items-center gap-1 text-left text-[13px] font-medium text-gray-100 hover:text-white leading-snug transition-colors cursor-text w-full"
-        >
-          <span className="truncate">
-            {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
-          </span>
-          <Pen size={11} className="shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" />
-        </button>
-      )}
+          Ela é filha do card, e é isso que sustenta o `group-hover`: `:hover`
+          sobe pela **árvore**, não pela geometria, então o cursor sobre a
+          faixa — que está fora da caixa do card — mantém o card em hover. Como
+          irmã, ela morreria ao subir o cursor.
 
-      {/* Timer */}
-      <p
-        className={`font-mono text-[22px] font-semibold tabular-nums leading-none ${isRunning ? "text-blue-400" : "text-amber-400"}`}
-      >
-        {formatHHMMSS(seconds)}
-      </p>
+          `group-focus-within` é o mesmo bloco para quem navega pelo teclado, o
+          par que a linha do Planejamento já usa (§5.3).
 
-      {/* Project */}
-      {editingProject ? (
-        <div
-          className="w-full"
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) void closeProjectEdit();
-          }}
-        >
-          <Autocomplete
-            autoFocus
-            value={editProjectName}
-            onChange={(v) => {
-              setEditProjectName(v);
-              if (!v) editProjectIdRef.current = null;
-            }}
-            onSelect={(o) => {
-              editProjectIdRef.current = o.id;
-              setEditProjectName(o.name);
-              // A categoria vai junto: o recorte de opções mudou, e aqui a
-              // edição é gravada na hora — deixá-la para trás manteria na
-              // tarefa uma categoria que o chip já não oferece.
-              editCategoryIdRef.current = null;
-              setEditCategoryName("");
-              void onUpdateTask({ projectId: o.id, categoryId: null });
-              setEditingProject(false);
-            }}
-            options={projects}
-            placeholder="Projeto"
-            className="w-full text-[12px]"
-            dropUp
-          />
-        </div>
-      ) : (
-        <button
-          onClick={() => openProjectEdit()}
-          onKeyDown={chipTypeahead(openProjectEdit)}
-          className={`text-left self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
-            projectName
-              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
-          }`}
-        >
-          {projectName ?? "+ Projeto"}
-        </button>
-      )}
+          Fora durante a confirmação de parada: ali o card já cresceu, e quem
+          está escolhendo Concluída/Pendente não vai abrir o link. */}
+      {actions.length > 0 && !confirmingStop && (
+        <>
+          {/* O raio cavalga a borda de cima — metade dentro do card, metade
+              fora — e é ele que diz que há o que abrir ali. Custa **zero** de
+              altura, porque está fora do fluxo: é o afford permanente que a
+              faixa flutuante não podia pagar em linha própria.
 
-      {/* Category */}
-      {editingCategory ? (
-        <div
-          className="w-full"
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) void closeCategoryEdit();
-          }}
-        >
-          <Autocomplete
-            autoFocus
-            value={editCategoryName}
-            onChange={(v) => {
-              setEditCategoryName(v);
-              if (!v) editCategoryIdRef.current = null;
-            }}
-            onSelect={(o) => {
-              editCategoryIdRef.current = o.id;
-              setEditCategoryName(o.name);
-              const cat = categories.find((c) => c.id === o.id);
-              void onUpdateTask({
-                categoryId: o.id,
-                billable: cat?.defaultBillable ?? task.billable,
-              });
-              setEditingCategory(false);
-            }}
-            options={categoryOptions}
-            placeholder="Categoria"
-            className="w-full text-[12px]"
-            dropUp
-          />
-        </div>
-      ) : (
-        <button
-          onClick={() => openCategoryEdit()}
-          onKeyDown={chipTypeahead(openCategoryEdit)}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
-            categoryName
-              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
-          }`}
-        >
-          {categoryName ?? "+ Categoria"}
-        </button>
-      )}
+              A borda fecha o contorno do caroço: sem ela, o `bg-surface`
+              mascara a borda do card por baixo de si e o traço fica
+              interrompido, com a metade de fora boiando sobre o `canvas` da
+              lista sem nada que a delimite.
 
-      <div className="flex gap-1.5 items-center">
-        {/* Billable */}
-        <button
-          onClick={() => void onUpdateTask({ billable: !task.billable })}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-medium rounded-lg border transition-colors ${
-            task.billable
-              ? "bg-green-900/40 border-green-700 text-green-400 hover:bg-green-900/60"
-              : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500"
-          }`}
-        >
-          <DollarSign size={11} />
-          {task.billable ? "Billable" : "Non-billable"}
-        </button>
-
-        {/* Start time */}
-        {editingStartTime ? (
-          <div className="flex items-center gap-2">
-            <Clock size={11} className="text-gray-500 shrink-0" />
-            <input
-              autoFocus
-              type="time"
-              value={startTimeValue}
-              onChange={(e) => setStartTimeValue(e.target.value)}
-              onBlur={saveStartTime}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void saveStartTime();
-                if (e.key === "Escape") {
-                  e.stopPropagation();
-                  setStartTimeValue(fmtTime(task.startTime));
-                  setEditingStartTime(false);
-                }
-              }}
-              className="flex-1 bg-transparent border-b border-gray-600 focus:outline-none focus:border-blue-500 text-[12px] text-gray-300"
-              autoComplete="off"
-            />
-          </div>
-        ) : (
-          <button
-            onClick={() => setEditingStartTime(true)}
-            className="self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] text-gray-300 bg-gray-800 border border-gray-700 rounded-lg hover:border-gray-500 transition-colors"
+              Ele **apaga no hover**, e não convive com a faixa: os dois ocupam
+              o mesmo espaço acima da borda, e é a faixa que o substitui — o
+              raio abre nela. A troca não pisca, e a razão é geométrica: a
+              metade de fora do raio fica dentro dos ~42px que a faixa passa a
+              cobrir, então o cursor que o alcançou continua sobre um
+              descendente do card, e o `group-hover` não cai. Fosse o raio mais
+              alto que a faixa, ele sumiria, o hover cairia, ele voltaria — e
+              piscaria enquanto o cursor estivesse ali. */}
+          <span
+            aria-hidden
+            className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 flex items-center justify-center p-1 rounded-full bg-surface border border-border text-accent-text transition duration-150 group-hover:opacity-0 group-hover:pointer-events-none group-focus-within:opacity-0 group-focus-within:pointer-events-none"
           >
-            <Clock size={11} className="text-gray-500 shrink-0" />
-            {fmtTime(task.startTime)}
-          </button>
-        )}
-      </div>
+            <Zap size={14} />
+          </span>
 
-      {/* Campos personalizados: só o chip fica aqui, com o quanto já foi
-          preenchido. Os campos em si abrem no painel que cobre o popup — é o que
-          mantém a altura da janela independente de quantos campos existem. */}
-      {customFields.length > 0 && (
-        <button
-          onClick={onOpenCustomFields}
-          className={`self-start flex items-center gap-1.5 px-2.5 py-1 text-[12px] rounded-lg border transition-colors ${
-            countFilledCustomValues(customFields, task.customValues) > 0
-              ? "text-gray-300 bg-gray-800 border-gray-700 hover:border-gray-500"
-              : "text-gray-600 bg-gray-800/50 border-dashed border-gray-700/50 hover:border-gray-600"
-          }`}
-        >
-          <ListChecks size={11} className="shrink-0" />
-          Campos · {countFilledCustomValues(customFields, task.customValues)}/{customFields.length}
-        </button>
-      )}
+          {/* **Opacidade, e não `hidden`**: `display` não anima, e era `hidden`
+              que impedia a faixa de abrir suave. O que a troca custa é
+              vigilância sobre o ponteiro — invisível, ela continua no fluxo de
+              hit-test, e é o `pointer-events-none` que devolve à lista os
+              cliques na área que ela cobre.
 
-      {/* Actions section */}
-      {actions.length > 0 && (
-        <div>
-          <p className="text-[9px] font-bold uppercase tracking-widest text-gray-600 mb-1.5">
-            Ações
-          </p>
-          <div className="flex flex-wrap gap-1.5">
+              O raio segue o caminho inverso: em repouso ele **tem** ponteiro, e
+              é o que faz a metade dele que fica fora do card ser alvo de hover;
+              com a faixa aberta ele o perde, ou o span invisível engoliria o
+              clique no chip que calhasse de cair no centro. As duas trocas
+              acontecem no mesmo estado de hover, então não há quadro em que
+              nenhum dos dois responda — o cursor passa de um descendente do
+              card para outro, e o `group-hover` não cai no meio.
+
+              Ganho de acessibilidade que veio junto: em `hidden` os chips
+              saíam da ordem de Tab; agora eles a recebem, e o
+              `group-focus-within` revela a faixa no instante em que o foco
+              chega. */}
+          <div className="absolute bottom-full left-0 right-0 z-10 flex flex-wrap gap-1.5 px-3 py-2 bg-surface border-t border-border shadow-lg opacity-0 pointer-events-none translate-y-1 transition duration-150 ease-out group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0">
             {actions.map((action, i) => (
               <ActionChip key={i} action={action} />
             ))}
           </div>
-        </div>
+        </>
       )}
 
-      {/* Divider */}
-      <div className="border-t border-gray-800 mt-auto" />
+      {/* Identidade */}
+      {/* **O `✎` cola no fim do nome, e é por isso que o nome não é `flex-1`.**
+          Clicar no nome já abre a edição — o botão é indicação visual de que
+          aquilo se edita, e indicação que flutua a 100px do texto não indica
+          nada. Sem o `flex-1`, o botão do nome encolhe ao conteúdo e o `✎` vem
+          logo atrás; o `min-w-0` é o que permite ao `truncate` agir quando o
+          nome é longo (medido: ele para em 190px e a linha fecha exata). Quem
+          ocupa a folga passa a ser o `ml-auto` do cancelar. */}
+      <div className="flex items-center gap-1.5">
+        <span
+          title={isRunning ? "Rodando" : "Pausada"}
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-accent" : "bg-paused"}`}
+        />
+        <button
+          onClick={onEdit}
+          title="Editar tarefa"
+          className="min-w-0 text-left text-sm font-medium text-fg truncate"
+        >
+          {task.name ?? <span className="text-fg-muted italic">(sem nome)</span>}
+        </button>
+        <IconButton icon={<Pen size={14} />} title="Editar tarefa" onClick={onEdit} />
+        {/* Cancelar mora na ponta oposta ao que opera o relógio, e nesta linha
+            porque descartar a tarefa é ação sobre a **tarefa**, não sobre o
+            tempo. Encostado no Parar — que era onde ele morava — o descarte
+            ficava a um pixel da ação que salva, e o usuário passava a mirar.
+            `px-1!` estreita a caixa ao glifo: sem o `!`, o `px-2.5` do próprio
+            `size` vence, porque as duas classes têm a mesma especificidade e
+            quem decide passa a ser a ordem em que o Tailwind as emite, não a
+            ordem em que estão escritas aqui. */}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="px-1! shrink-0 ml-auto"
+          title="Cancelar"
+          onClick={() => void onCancel()}
+        >
+          <X size={14} className="text-danger" />
+        </Button>
+      </div>
 
-      {/* Controls */}
       {confirmingStop ? (
         // Enter no campo de hora encerra como **Concluída** — a ação primária do
         // painel, e a única que cabe num atalho: "Pendente" é a escolha
         // alternativa, e continua exigindo o clique que a diferencia.
         <div className="flex flex-col gap-1.5" onKeyDown={handleConfirmStopKeyDown}>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-gray-400">Encerrar às</span>
-            <div className="flex items-center gap-1.5 flex-1">
-              <Clock size={11} className="text-gray-500 shrink-0" />
-              <input
-                type="time"
-                value={endTimeInput}
-                onChange={(e) => {
-                  setEndTimeInput(e.target.value);
-                  setEndTimeTouched(true);
-                }}
-                className={`flex-1 bg-transparent border-b focus:outline-none text-[12px] text-gray-200 ${
-                  endTimeResolved.error
-                    ? "border-red-500 focus:border-red-400"
-                    : "border-gray-600 focus:border-blue-500"
-                }`}
-                autoComplete="off"
-              />
-            </div>
-            <button
-              onClick={() => setConfirmingStop(false)}
-              className="p-1 text-gray-500 hover:text-blue-400 rounded-lg transition-colors"
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-fg-secondary shrink-0">Encerrar às</span>
+            <Clock size={14} className="text-fg-muted shrink-0" />
+            <Input
+              type="time"
+              variant="plain"
+              size="sm"
+              aria-label="Hora de término"
+              value={endTimeInput}
+              onChange={(e) => {
+                setEndTimeInput(e.target.value);
+                setEndTimeTouched(true);
+              }}
+              className={`flex-1 min-w-0 border-b ${
+                endTimeResolved.error
+                  ? "border-danger focus:border-danger"
+                  : "border-border focus:border-accent"
+              }`}
+            />
+            <IconButton
+              icon={<Play size={14} />}
               title="Retomar"
-            >
-              <Play size={11} />
-            </button>
+              onClick={() => setConfirmingStop(false)}
+            />
           </div>
           {endTimeResolved.error && (
-            <span className="text-[10px] text-red-400">{endTimeResolved.error}</span>
+            <span className="text-xs text-danger">{endTimeResolved.error}</span>
           )}
           <div className="flex items-center gap-1.5">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<CheckCircle2 size={14} />}
               disabled={!!endTimeResolved.error}
               onClick={() => {
                 setConfirmingStop(false);
                 void onStop(true, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] bg-green-700/80 hover:bg-green-600 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
             >
-              <CheckCircle2 size={10} /> Concluída
-            </button>
-            <button
+              Concluída
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<Clock size={14} />}
               disabled={!!endTimeResolved.error}
               onClick={() => {
                 setConfirmingStop(false);
                 void onStop(false, endTimeResolved.iso);
               }}
-              className="flex items-center gap-1 px-2 py-1 text-[11px] bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-gray-200 rounded-lg transition-colors"
             >
-              <Clock size={10} /> Pendente
-            </button>
+              Pendente
+            </Button>
           </div>
         </div>
       ) : (
+        // A linha do relógio fica só com o que opera o tempo, e os dois botões
+        // dizem o que fazem **por escrito** — sem glifo. Não é preferência: o
+        // card tem 264px úteis (popup de 288 menos o `px-3`) e o cronômetro em
+        // `display/timer` come 112 deles, então rótulo **e** ícone nos dois
+        // mede 270px rodando e 279px pausado. "Retomar" é 9px mais largo que
+        // "Pausar", e por isso é sempre o estado pausado que decide se um
+        // arranjo cabe. Escrito e sem ícone, o pior caso fecha em 239px — e em
+        // 253px com cronômetro de três dígitos de hora, que é o timer esquecido
+        // rodando o fim de semana.
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={isRunning ? onPause : onResume}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
+          <p
+            className={`shrink-0 font-mono text-2xl font-medium tabular-nums leading-none ${isRunning ? "text-accent-text" : "text-paused"}`}
           >
-            {isRunning ? (
-              <>
-                <Pause size={11} /> Pausar
-              </>
-            ) : (
-              <>
-                <Play size={11} /> Retomar
-              </>
-            )}
-          </button>
-          <button
+            {formatHHMMSS(seconds)}
+          </p>
+          {/* O rótulo herda a cor do **destino** da ação — âmbar para o estado a
+              que ele leva a tarefa, acento para a volta —, que é o que o glifo
+              carregava antes de sair. Vai num `<span>` e não na `className` do
+              botão porque o `text-fg-secondary` da variante `secondary` tem a
+              mesma especificidade: no elemento, quem venceria seria a ordem de
+              emissão do Tailwind; num filho, não há disputa. */}
+          <Button
+            variant="secondary"
+            size="sm"
+            className="shrink-0 ml-auto"
+            title={isRunning ? "Pausar" : "Retomar"}
+            onClick={() => void (isRunning ? onPause() : onResume())}
+          >
+            <span className={isRunning ? "text-paused" : "text-accent-text"}>
+              {isRunning ? "Pausar" : "Retomar"}
+            </span>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            className="shrink-0"
+            title="Parar"
             onClick={openConfirmStop}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-[12px] font-medium text-gray-300 hover:text-gray-100 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
-            <Square size={11} /> Parar
-          </button>
-          <button
-            onClick={onCancel}
-            className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg border border-red-900/40 transition-colors"
-          >
-            <X size={10} /> Cancelar
-          </button>
+            Parar
+          </Button>
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Planned list ────────────────────────────────────────────────────────────
+
+interface PlannedRowProps {
+  task: PlannedTask;
+  projects: Project[];
+  categories: Category[];
+  /** O rastreamento automático vai lembrar de iniciar esta reunião. */
+  tracked: boolean;
+  /** Se a execução em curso impede este ▶ — e, quando ela nasceu desta planejada, quem o diz. */
+  playBlock: PlayBlock;
+  onEdit: (task: PlannedTask) => void;
+  onComplete: (task: PlannedTask) => void;
+  onPlay: (task: PlannedTask) => void;
+}
+
+/**
+ * A linha da planejada no popup, no mesmo primitivo das demais telas.
+ *
+ * O horário ocupa o slot da **duração**, que é a célula que recua no hover para
+ * as ações entrarem no lugar dela: em repouso a linha mostra o que ela é, e os
+ * botões só aparecem quando o cursor chega. Sem horário não há o que recuar, e
+ * aí quem fecha é a **largura** (`collapseActions`) — é o que dá o mesmo
+ * comportamento às duas seções em vez de deixar metade da lista com três botões
+ * permanentes comendo o `1fr` do nome.
+ */
+function PlannedRow({
+  task,
+  projects,
+  categories,
+  tracked,
+  playBlock,
+  onEdit,
+  onComplete,
+  onPlay,
+}: PlannedRowProps) {
+  const project = projects.find((p) => p.id === task.projectId);
+  const category = categories.find((c) => c.id === task.categoryId);
+  const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+  // A mesma leitura de `groupPlannedBySchedule`, ou a linha em branco cairia na
+  // seção "sem hora" e ainda assim desenharia a célula do horário.
+  const startTime = task.startTime?.trim() || undefined;
+
+  return (
+    <TaskRow
+      title={task.name}
+      titleMarks={
+        tracked ? (
+          <span
+            className="shrink-0 flex items-center text-accent-text/80"
+            title="Rastreada — o app vai lembrar de iniciar esta reunião"
+          >
+            <Bell size={14} />
+          </span>
+        ) : undefined
+      }
+      subtitle={subtitle || undefined}
+      dotColor={getProjectColor(project)}
+      duration={startTime}
+      collapseActions={!startTime}
+      actions={
+        <>
+          <IconButton
+            icon={<Pen size={14} />}
+            title="Editar"
+            size="sm"
+            variant="neutral"
+            onClick={() => onEdit(task)}
+          />
+          <IconButton
+            icon={<Check size={14} />}
+            title="Concluir"
+            size="sm"
+            onClick={() => onComplete(task)}
+          />
+          <IconButton
+            icon={<Play size={14} fill="currentColor" />}
+            title={playTitle(playBlock)}
+            size="sm"
+            disabled={isPlayBlocked(playBlock)}
+            onClick={() => onPlay(task)}
+          />
+        </>
+      }
+    />
   );
 }
 
@@ -601,7 +509,6 @@ function ExecSection({
 export function PopupOverlayContent({
   runningTask,
   activePlannedTaskActions,
-  onClose,
   onNavigatePlanning,
   onResize,
   onModalOpenChange,
@@ -615,60 +522,55 @@ export function PopupOverlayContent({
 }: PopupOverlayContentProps) {
   const today = todayISO();
   const { tasks, reload, complete, update } = usePlannedTasksForDate(today);
-  const { titles: trackedTitles } = useTrackedMeetingTitles();
-  const { groups: completedGroups, totalSeconds: completedTotalSeconds } =
-    useCompletedTasksForDate(today);
+  const { plannedIds: trackedIds } = useTrackedMeetingPlannedIds();
+  const {
+    groups: completedGroups,
+    totalSeconds: completedTotalSeconds,
+    updateGroup: updateCompletedGroup,
+  } = useCompletedTasksForDate(today);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { activeFields } = useCustomFields();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
+  // Com um grupo só, o rótulo é ruído sobre uma lista que já é homogênea.
+  const { timed, untimed } = groupPlannedBySchedule(pending);
+  const showHeadings = timed.length > 0 && untimed.length > 0;
+  // O popup guarda a planejada de origem num `ref` (que não redesenha), então
+  // aqui o vínculo é o gravado na própria tarefa — que é o que viaja no
+  // `RUNNING_TASK_CHANGED` quando quem iniciou foi a janela principal.
+  const runningPlannedId = runningTask?.plannedTaskId ?? null;
+  // Na aba Executadas não há id ligando a linha à execução: quem as identifica é
+  // a chave de agrupamento (§6.3), a mesma que o "Repetir tarefa" já usa.
+  const runningGroupKey = runningTask ? taskGroupKey(runningTask) : null;
   const [activeTab, setActiveTab] = useState<"planned" | "completed">("planned");
 
-  const projectName = projects.find((p) => p.id === runningTask?.projectId)?.name;
-  const categoryName = categories.find((c) => c.id === runningTask?.categoryId)?.name;
-  const hasActions = activePlannedTaskActions.length > 0;
-  const hasCustomFields = activeFields.length > 0;
   const [confirmingStop, setConfirmingStop] = useState(false);
   const [editingTask, setEditingTask] = useState<PlannedTask | null>(null);
-  const [editingCustomFields, setEditingCustomFields] = useState(false);
+  const [editingCompleted, setEditingCompleted] = useState<TaskGroup | null>(null);
+  const [editingRunning, setEditingRunning] = useState(false);
 
   // Reset confirm state whenever the running task changes (started/stopped).
-  // O painel de campos vai junto: sem tarefa ele editaria o que já não está em
+  // O painel da execução vai junto: sem tarefa ele editaria o que já não está em
   // execução, e o `Salvar` gravaria numa tarefa parada por outra janela.
   useEffect(() => {
     if (!runningTask) {
       setConfirmingStop(false);
-      setEditingCustomFields(false);
+      setEditingRunning(false);
     }
   }, [runningTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Os dois painéis seguram o fechamento automático pelo mesmo motivo: o popup
-  // some no blur, e o dos campos personalizados guarda texto digitado que
-  // ninguém salvou ainda.
+  // Os três painéis seguram o fechamento automático pelo mesmo motivo: o popup
+  // some no blur, e todos eles guardam texto digitado que ninguém salvou ainda.
   useEffect(() => {
-    onModalOpenChange(!!editingTask || editingCustomFields);
-  }, [editingTask, editingCustomFields, onModalOpenChange]);
+    onModalOpenChange(!!editingTask || !!editingCompleted || editingRunning);
+  }, [editingTask, editingCompleted, editingRunning, onModalOpenChange]);
 
-  // Resize based on state. A edição de planejada **não** entra aqui: o painel
-  // cabe no popup como ele já é, e crescer a janela para editar tiraria o
-  // overlay do lugar onde o usuário o deixou.
+  // A janela é dimensionada **uma vez**, e não por estado: a altura é a mesma em
+  // todo estado, e crescer a janela para editar tiraria o overlay do lugar onde
+  // o usuário o deixou.
   useEffect(() => {
-    if (runningTask) {
-      const execH = confirmingStop ? EXEC_H_CONFIRMING : EXEC_H;
-      onResize(
-        POPUP_W,
-        HEADER_H +
-          execH +
-          (hasActions ? ACTIONS_SECTION_H : 0) +
-          (hasCustomFields ? CUSTOM_FIELDS_ROW_H : 0) +
-          FOOTER_H
-      );
-    } else {
-      // Altura fixa: abas + área de conteúdo com scroll interno, independente do
-      // tamanho das listas (resolve o crescimento do popup em listas grandes).
-      onResize(POPUP_W, HEADER_H + NEW_TASK_H + TABS_H + CONTENT_H + FOOTER_H);
-    }
-  }, [!!runningTask, hasActions, hasCustomFields, confirmingStop, onResize]); // eslint-disable-line react-hooks/exhaustive-deps
+    onResize(POPUP_W, POPUP_SIZE.height);
+  }, [onResize]);
 
   async function handlePlay(task: PlannedTask) {
     await onPlay(task);
@@ -690,189 +592,141 @@ export function PopupOverlayContent({
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col bg-gray-900 border border-gray-700 rounded-xl shadow-2xl overflow-visible">
-      {/* Header */}
+    <div className="relative w-full h-full flex flex-col bg-canvas border border-border rounded-card shadow-2xl overflow-visible">
+      {/* Header. Não há botão de fechar: o popup some no ESC e ao perder o foco,
+          e o espaço vale mais para o "Abrir app", que não tem outro caminho. */}
       <div
-        className="flex items-center justify-between px-3 bg-gray-800 border-b border-gray-700 shrink-0 rounded-t-xl overflow-hidden"
+        className="flex items-center justify-between gap-1 px-3 bg-surface border-b border-border shrink-0 rounded-t-card overflow-hidden"
         style={{ height: HEADER_H }}
       >
-        <span className="text-xs font-medium text-gray-300 select-none pointer-events-none truncate">
-          {runningTask ? "Em execução" : "Tarefas de Hoje"}
-        </span>
-        <div className="flex items-center gap-1">
+        <div className="min-w-0 flex items-center gap-1">
           <OverlayWorkspaceChip runningTask={runningTask} onStop={onStop} />
           <button
             onClick={onNavigatePlanning}
             title="Ir para planejamento"
-            className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-1 text-fg-secondary hover:text-fg hover:bg-border rounded-control transition-colors"
           >
-            <CalendarDays size={13} />
-          </button>
-          <button
-            onClick={onClose}
-            title="Fechar"
-            className="p-1 text-gray-400 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <X size={13} />
+            <CalendarDays size={14} />
           </button>
         </div>
+        <button
+          onClick={handleOpenApp}
+          className="shrink-0 flex items-center gap-1 text-sm text-fg-muted hover:text-fg-secondary transition-colors"
+        >
+          Abrir app
+          <ArrowRight size={14} />
+        </button>
       </div>
 
-      {/* ── Running state: focused execution view ── */}
+      {/* Tab bar */}
+      <div className="flex border-b border-border-subtle shrink-0" style={{ height: TABS_H }}>
+        <button
+          onClick={() => setActiveTab("planned")}
+          className={`flex-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "planned"
+              ? "text-fg border-accent"
+              : "text-fg-muted border-transparent hover:text-fg-secondary"
+          }`}
+        >
+          Planejadas · {pending.length}
+        </button>
+        <button
+          onClick={() => setActiveTab("completed")}
+          className={`flex-1 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "completed"
+              ? "text-fg border-accent"
+              : "text-fg-muted border-transparent hover:text-fg-secondary"
+          }`}
+        >
+          Executadas · {completedGroups.length}
+        </button>
+      </div>
+
+      {/* Conteúdo da aba ativa: o único `flex-1` do corpo, e por isso o que cede
+          altura quando o card da execução aparece ou cresce. */}
+      <div className="flex-1 min-h-0">
+        {activeTab === "planned" ? (
+          <div className="h-full overflow-y-auto">
+            {pending.length === 0 ? (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-center text-fg-muted text-xs">Nenhuma tarefa pendente</p>
+              </div>
+            ) : (
+              <>
+                {showHeadings && <SectionHeading>Com hora de início</SectionHeading>}
+                {timed.map((task) => (
+                  <PlannedRow
+                    key={task.id}
+                    task={task}
+                    projects={projects}
+                    categories={categories}
+                    tracked={trackedIds.has(task.id)}
+                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
+                    onEdit={setEditingTask}
+                    onComplete={(t) => void complete(t.id, today)}
+                    onPlay={handlePlay}
+                  />
+                ))}
+                {showHeadings && <SectionHeading>Sem hora definida</SectionHeading>}
+                {untimed.map((task) => (
+                  <PlannedRow
+                    key={task.id}
+                    task={task}
+                    projects={projects}
+                    categories={categories}
+                    tracked={trackedIds.has(task.id)}
+                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
+                    onEdit={setEditingTask}
+                    onComplete={(t) => void complete(t.id, today)}
+                    onPlay={handlePlay}
+                  />
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
+          <CompletedTasksSection
+            groups={completedGroups}
+            totalSeconds={completedTotalSeconds}
+            projects={projects}
+            categories={categories}
+            runningGroupKey={runningGroupKey}
+            onRepeat={handleRepeat}
+            onEdit={setEditingCompleted}
+          />
+        )}
+      </div>
+
+      {/* Rodapé: o card da execução ou o "Nova tarefa", nunca os dois. O botão
+          ficar **fora** do estado running é de propósito — `handleStartTask` não
+          tem a guarda de tarefa em execução que o `handlePlay` tem, e o que hoje
+          impede a segunda tarefa é ele não existir enquanto uma roda. */}
       {runningTask ? (
-        <ExecSection
+        <RunningCard
           task={runningTask}
-          projectName={projectName}
-          categoryName={categoryName}
-          projects={projects}
-          categories={categories}
-          customFields={activeFields}
           actions={activePlannedTaskActions}
           confirmingStop={confirmingStop}
           setConfirmingStop={setConfirmingStop}
-          onOpenCustomFields={() => setEditingCustomFields(true)}
-          onUpdateTask={onUpdateTask}
+          onEdit={() => setEditingRunning(true)}
           onPause={onPause}
           onResume={onResume}
           onStop={onStop}
           onCancel={onCancel}
         />
       ) : (
-        <>
-          {/* ── Idle state: new task + planned list ── */}
-
-          {/* New task button */}
-          <div className="p-2 border-b border-gray-700/60 shrink-0" style={{ height: NEW_TASK_H }}>
-            <button
-              onClick={() => onStartTask({ billable: true })}
-              className="w-full h-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700/80 rounded-lg transition-colors"
-            >
-              <Play size={11} fill="currentColor" />
-              Nova tarefa
-            </button>
-          </div>
-
-          {/* Tab bar */}
-          <div className="flex border-b border-gray-800 shrink-0" style={{ height: TABS_H }}>
-            <button
-              onClick={() => setActiveTab("planned")}
-              className={`flex-1 text-[11px] font-medium border-b-2 transition-colors ${
-                activeTab === "planned"
-                  ? "text-gray-200 border-blue-500"
-                  : "text-gray-500 border-transparent hover:text-gray-300"
-              }`}
-            >
-              Planejadas · {pending.length}
-            </button>
-            <button
-              onClick={() => setActiveTab("completed")}
-              className={`flex-1 text-[11px] font-medium border-b-2 transition-colors ${
-                activeTab === "completed"
-                  ? "text-gray-200 border-blue-500"
-                  : "text-gray-500 border-transparent hover:text-gray-300"
-              }`}
-            >
-              Executadas · {completedGroups.length}
-            </button>
-          </div>
-
-          {/* Conteúdo da aba ativa (altura fixa, scroll interno) */}
-          <div className="shrink-0" style={{ height: CONTENT_H }}>
-            {activeTab === "planned" ? (
-              <div className="h-full overflow-y-auto">
-                {pending.length === 0 ? (
-                  <div className="h-full flex items-center justify-center">
-                    <p className="text-center text-gray-600 text-[11px]">Nenhuma tarefa pendente</p>
-                  </div>
-                ) : (
-                  pending.map((task) => {
-                    const project = projects.find((p) => p.id === task.projectId);
-                    const category = categories.find((c) => c.id === task.categoryId);
-                    const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-                    const railColor = getProjectColor(task.projectId);
-
-                    return (
-                      <div
-                        key={task.id}
-                        className="relative flex items-center gap-2 px-3 border-b border-gray-800/70 hover:bg-gray-800/40 transition-colors"
-                        style={{ height: ROW_H }}
-                      >
-                        <span
-                          className="absolute left-0 top-2.5 bottom-2.5 w-0.5 rounded-r-full"
-                          style={{ backgroundColor: railColor }}
-                        />
-                        <div className="flex-1 min-w-0 pl-1.5">
-                          <div className="flex items-center gap-1 min-w-0">
-                            <p className="text-[12px] font-medium text-gray-200 truncate leading-tight">
-                              {task.name}
-                            </p>
-                            {trackedTitles.has((task.name ?? "").toLowerCase().trim()) && (
-                              <span
-                                className="shrink-0 flex items-center text-blue-400/80"
-                                title="Rastreada — o app vai lembrar de iniciar esta reunião"
-                              >
-                                <Bell size={10} />
-                              </span>
-                            )}
-                          </div>
-                          {subtitle && (
-                            <p className="text-[10px] text-gray-500 truncate leading-tight mt-0.5">
-                              {subtitle}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => setEditingTask(task)}
-                          title="Editar"
-                          className="p-1 text-gray-500 hover:text-gray-200 hover:bg-gray-700/40 rounded-lg transition-colors shrink-0"
-                        >
-                          <Pen size={11} />
-                        </button>
-                        <button
-                          onClick={() => void complete(task.id, today)}
-                          title="Concluir"
-                          className="p-1 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors shrink-0"
-                        >
-                          <Check size={11} />
-                        </button>
-                        <button
-                          onClick={() => handlePlay(task)}
-                          title="Iniciar"
-                          className="p-1 text-gray-500 hover:text-green-400 hover:bg-green-900/20 rounded-lg transition-colors shrink-0"
-                        >
-                          <Play size={11} fill="currentColor" />
-                        </button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
-              <CompletedTasksSection
-                groups={completedGroups}
-                totalSeconds={completedTotalSeconds}
-                projects={projects}
-                categories={categories}
-                onRepeat={handleRepeat}
-              />
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Footer */}
-      <div
-        className="flex items-center px-3 border-t border-gray-700/60 shrink-0"
-        style={{ height: FOOTER_H }}
-      >
-        <button
-          onClick={handleOpenApp}
-          className="ml-auto flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-300 transition-colors"
+        <div
+          className="flex items-center px-3 border-t border-border/60 shrink-0"
+          style={{ height: FOOTER_H }}
         >
-          Abrir app
-          <ArrowRight size={11} />
-        </button>
-      </div>
+          <Button
+            variant="ghost"
+            icon={<Play size={10} fill="currentColor" />}
+            onClick={() => onStartTask({ billable: true })}
+          >
+            Nova tarefa
+          </Button>
+        </div>
+      )}
 
       {/* Edição da planejada sem sair do overlay e sem mexer no tamanho da
           janela. Os campos são os do modal do planejamento, pelo mesmo
@@ -887,14 +741,30 @@ export function PopupOverlayContent({
         />
       )}
 
-      {/* Campos personalizados da tarefa em execução, no mesmo desenho de painel
-          e pela mesma razão: a janela não cresce. */}
-      {editingCustomFields && runningTask && (
-        <RunningCustomFieldsSheet
+      {/* Edição da executada, no mesmo desenho de painel. Ela edita o **grupo**
+          que a linha representa (§6.3) — os campos da chave valem para todas as
+          irmãs, e só o grupo de uma tarefa mostra horário. */}
+      {editingCompleted && (
+        <CompletedTaskEditSheet
+          group={editingCompleted}
+          projects={projects}
+          categories={categories}
+          onSave={updateCompletedGroup}
+          onClose={() => setEditingCompleted(null)}
+        />
+      )}
+
+      {/* Tudo o que a tarefa em execução tem além do cronômetro, no mesmo
+          desenho de painel e pela mesma razão: a janela não cresce. */}
+      {editingRunning && runningTask && (
+        <RunningTaskEditSheet
           task={runningTask}
-          fields={activeFields}
-          onSave={(customValues) => onUpdateTask({ customValues })}
-          onClose={() => setEditingCustomFields(false)}
+          projects={projects}
+          categories={categories}
+          customFields={activeFields}
+          actions={activePlannedTaskActions}
+          onSave={onUpdateTask}
+          onClose={() => setEditingRunning(false)}
         />
       )}
     </div>

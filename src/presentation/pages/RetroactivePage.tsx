@@ -4,12 +4,15 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
+import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
+import { Button, IconButton, PageHeader, SectionCard, TaskRow } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -22,19 +25,12 @@ import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { getProjectColor } from "@shared/utils/projectColor";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
-import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
+import { addDaysISO, formatHHMMSS, formatRegisteredTimeRange, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import {
-  ChevronLeft,
-  ChevronRight,
-  DollarSign,
-  ListChecks,
-  Pencil,
-  Play,
-  Trash2,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ListChecks, Pencil, Play, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 /**
@@ -45,139 +41,80 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
  */
 const PLANNED_LIST_HEIGHT = { min: 72, max: 480, default: 144 } as const;
 
-const DAY_NAMES_PT = [
-  "domingo",
-  "segunda-feira",
-  "terça-feira",
-  "quarta-feira",
-  "quinta-feira",
-  "sexta-feira",
-  "sábado",
-];
-const MONTH_NAMES_PT = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-];
-
-function formatDateHeader(dateISO: string): string {
-  const d = new Date(dateISO + "T12:00:00Z");
-  const day = DAY_NAMES_PT[d.getUTCDay()];
-  const num = d.getUTCDate();
-  const month = MONTH_NAMES_PT[d.getUTCMonth()];
-  const year = d.getUTCFullYear();
-  return `${day.charAt(0).toUpperCase() + day.slice(1)}, ${num} de ${month} de ${year}`;
-}
-
-function isoToHHMM(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function formatTimeRange(startISO: string, endISO: string | null): string {
-  const s = isoToHHMM(startISO);
-  if (!endISO) return s;
-  return `${s} – ${isoToHHMM(endISO)}`;
-}
-
-interface TaskRowProps {
+interface DayTaskRowProps {
   task: Task;
   projects: Project[];
   categories: Category[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onToggleBillable: (task: Task) => void;
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
-function TaskRow({
+function DayTaskRow({
   task,
   projects,
   categories,
   onEdit,
   onDelete,
+  onToggleBillable,
   selectMode = false,
   selected = false,
   onToggleSelect,
-}: TaskRowProps) {
-  const projectName = projects.find((p) => p.id === task.projectId)?.name;
+}: DayTaskRowProps) {
+  const project = projects.find((p) => p.id === task.projectId);
   const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+  const subtitle = [project?.name, categoryName].filter(Boolean).join(" · ");
 
   return (
-    <div
-      className={`flex items-center gap-3 px-5 py-3 border-b border-gray-800 transition-colors ${
-        selectMode
-          ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-900/50"}`
-          : "hover:bg-gray-900/50"
-      }`}
+    <TaskRow
+      title={task.name ?? "(sem nome)"}
+      subtitle={subtitle || undefined}
+      meta={
+        <span className="text-micro font-mono tabular-nums text-fg-muted">
+          {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
+        </span>
+      }
+      duration={formatHHMMSS(task.durationSeconds ?? 0)}
+      billable={task.billable}
+      onToggleBillable={() => onToggleBillable(task)}
+      dotColor={getProjectColor(project)}
+      selected={selected}
       onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-    >
-      {selectMode ? (
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => onToggleSelect?.(task.id)}
-          onClick={(e) => e.stopPropagation()}
-          className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
-        />
-      ) : (
-        <DollarSign
-          size={13}
-          className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
-        />
-      )}
-      {/* Nome em cima, sozinho e com a linha inteira: é por ele que se procura
-          um apontamento, e disputando espaço com horário, projeto e categoria
-          ele era o primeiro a ser truncado. Os demais campos descem para uma
-          segunda linha, lado a lado, como legenda do que está acima. */}
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <div className="flex items-baseline gap-3">
-          <span className="flex-1 min-w-0 text-sm text-gray-200 truncate">
-            {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
-          </span>
-          {/* O horário sobe para a linha do nome e encosta na direita, alinhado
-              com a duração logo abaixo: os dois são a mesma informação vista de
-              dois jeitos, e juntos liberam a linha de baixo inteira para projeto
-              e categoria, que são os campos que truncavam. */}
-          <span className="shrink-0 text-xs text-gray-500 font-mono tabular-nums">
-            {formatTimeRange(task.startTime, task.endTime)}
-          </span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-gray-500">
-          {projectName && <span className="truncate">{projectName}</span>}
-          {categoryName && <span className="truncate">{categoryName}</span>}
-          <span className="ml-auto shrink-0 font-mono tabular-nums">
-            {formatHHMMSS(task.durationSeconds ?? 0)}
-          </span>
-        </div>
-      </div>
-      {!selectMode && (
-        <>
-          <button
-            onClick={() => onEdit(task)}
-            className="text-gray-700 hover:text-gray-300 transition-colors shrink-0"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => onDelete(task.id)}
-            className="text-gray-700 hover:text-red-400 transition-colors shrink-0 mr-1"
-          >
-            <Trash2 size={14} />
-          </button>
-        </>
-      )}
-    </div>
+      leading={
+        selectMode ? (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(task.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
+            className={selectionBoxClass}
+          />
+        ) : undefined
+      }
+      actions={
+        selectMode ? undefined : (
+          <>
+            <IconButton
+              icon={<Pencil size={14} />}
+              title="Editar"
+              size="sm"
+              onClick={() => onEdit(task)}
+            />
+            <IconButton
+              icon={<Trash2 size={14} />}
+              title="Excluir"
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(task.id)}
+            />
+          </>
+        )
+      }
+    />
   );
 }
 
@@ -325,6 +262,17 @@ export function RetroactivePage() {
     await loadTasks();
   }
 
+  /**
+   * Arrasta as irmãs do grupo junto, como a tela de Tarefas: `billable` não
+   * compõe a chave de agrupamento (§6.3), então alternar só a clicada deixaria o
+   * cabeçalho do grupo mentindo sobre as outras.
+   */
+  async function handleToggleBillable(task: Task) {
+    await setGroupBillable(taskRepo, task, !task.billable, new Date().toISOString());
+    void notifyTasksChanged();
+    await loadTasks();
+  }
+
   // Avisar as outras janelas e recarregar a tela é o mesmo desfecho para um
   // lançamento e para o lote inteiro — no lote, uma vez só no fim, em vez de uma
   // recarga por tarefa lançada.
@@ -432,44 +380,43 @@ export function RetroactivePage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div
-        data-tour="retroactive-header"
-        className="px-5 py-3 border-b border-gray-800 flex items-center gap-3"
-      >
-        <button
-          onClick={() => goToDate(addDaysISO(selectedDate, -1))}
-          className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <DatePickerInput
-          value={selectedDate}
-          onChange={goToDate}
-          className="text-sm font-medium text-gray-200 w-30"
-          maxDate={new Date()}
-        />
-        <button
-          onClick={() => goToDate(addDaysISO(selectedDate, 1))}
-          disabled={selectedDate >= today}
-          className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronRight size={16} />
-        </button>
-        <span className="ml-7 flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
-        {totalSeconds > 0 && (
-          <span className="text-xs text-gray-500 font-mono tabular-nums">
-            {formatHHMMSS(totalSeconds)} total
-          </span>
-        )}
-        <button
-          onClick={() => startTour()}
-          title="Ver tour da página"
-          className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
-        >
-          ?
-        </button>
-      </div>
+      <PageHeader
+        title="Lançamento manual"
+        tourId="retroactive-header"
+        onStartTour={startTour}
+        context={
+          <div className="flex items-center gap-3 min-w-0">
+            <IconButton
+              icon={<ChevronLeft size={16} />}
+              title="Dia anterior"
+              variant="neutral"
+              size="sm"
+              onClick={() => goToDate(addDaysISO(selectedDate, -1))}
+            />
+            <DatePickerInput
+              value={selectedDate}
+              onChange={goToDate}
+              className="text-sm font-medium text-fg w-30"
+              maxDate={new Date()}
+            />
+            <IconButton
+              icon={<ChevronRight size={16} />}
+              title="Dia seguinte"
+              variant="neutral"
+              size="sm"
+              onClick={() => goToDate(addDaysISO(selectedDate, 1))}
+              disabled={selectedDate >= today}
+            />
+          </div>
+        }
+        actions={
+          totalSeconds > 0 ? (
+            <span className="text-xs text-fg-muted font-mono tabular-nums">
+              {formatHHMMSS(totalSeconds)} total
+            </span>
+          ) : undefined
+        }
+      />
 
       {/* Formulário à esquerda, dia à direita: com campos personalizados o
           formulário cresce e, empilhado, empurrava a lista para fora da tela. */}
@@ -489,177 +436,191 @@ export function RetroactivePage() {
           />
         </CollapsibleFormColumn>
 
-        <div className="flex-1 min-w-0 flex flex-col">
-          {/* Tarefas planejadas para o dia — sugestões para lançamento. Sem
-              `border-b`: quem desenha a linha é o `ResizeHandle` abaixo, ou
-              haveria linha dupla. */}
+        <div className="flex-1 min-w-0 flex flex-col p-5 gap-5">
           {plannedTasks.length > 0 && (
-            <div className="shrink-0">
-              <div className="flex items-center gap-3 px-5 pt-2.5 pb-1">
-                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                  Planejadas para este dia
-                </p>
-                {/* Com uma só, o ▶ da própria linha já é este botão — o lote
-                    existe para o dia cheio de reuniões importadas. */}
-                {timedPlannedTasks.length > 1 && (
-                  <button
-                    onClick={() => void handleLaunchAllTimed()}
-                    disabled={launchingAll}
-                    title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
-                    className="ml-auto flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ListChecks size={13} />
-                    {launchingAll ? "Lançando…" : `Lançar ${timedPlannedTasks.length} com horário`}
-                  </button>
-                )}
-              </div>
-              {launchError && <p className="px-5 pb-1 text-xs text-red-400">{launchError}</p>}
-              {/* `maxHeight`, não `height`: com duas planejadas a seção encolhe
-                  até o conteúdo, como fazia com o `max-h-36` que isto substitui
-                  — altura fixa deixaria espaço vazio todo dia. */}
-              <div
-                ref={plannedListRef}
-                className="overflow-y-auto"
-                style={{ maxHeight: plannedPanel.size }}
-              >
-                {plannedTasks.map((task) => {
-                  const projectName = projects.find((p) => p.id === task.projectId)?.name;
-                  const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-                  const hasTime = !!(task.startTime && task.endTime);
-                  return (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
+            <div>
+              <SectionCard
+                title="Planejadas para este dia"
+                count={plannedTasks.length}
+                className="border-b-0 rounded-b-none"
+                action={
+                  timedPlannedTasks.length > 1 && (
+                    <button
+                      onClick={() => void handleLaunchAllTimed()}
+                      disabled={launchingAll}
+                      title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
+                      className="ml-auto flex items-center gap-1.5 text-sm text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
-                      <button
-                        onClick={() => {
-                          if (hasTime) {
-                            void handleDirectLaunch(task);
-                            return;
-                          }
-                          // Pré-preencher é um convite a revisar os campos: com a
-                          // coluna recolhida, o clique não mostraria nada.
-                          formColumn.set(false);
-                          form.prefill(task);
-                        }}
-                        // Com o lote em curso, o clique aqui lançaria de novo o
-                        // que a fila já está lançando — a lista só se atualiza
-                        // no fim.
-                        disabled={launchingAll}
-                        title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                        className={`shrink-0 p-1 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                          hasTime
-                            ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                            : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-                        }`}
+                      <ListChecks size={14} />
+                      {launchingAll
+                        ? "Lançando…"
+                        : `Lançar ${timedPlannedTasks.length} com horário`}
+                    </button>
+                  )
+                }
+              >
+                {/* Fora da rolagem: o lote pode falhar com a lista rolada, e
+                    dentro dela o aviso nasceria fora de vista. */}
+                {launchError && (
+                  <p className="px-3 py-2 text-xs text-danger border-b border-border-subtle">
+                    {launchError}
+                  </p>
+                )}
+                <div
+                  ref={plannedListRef}
+                  className="overflow-y-auto"
+                  style={{ maxHeight: plannedPanel.size }}
+                >
+                  {plannedTasks.map((task) => {
+                    const project = projects.find((p) => p.id === task.projectId);
+                    const projectName = project?.name;
+                    const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+                    const hasTime = !!(task.startTime && task.endTime);
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-2.5 py-2.5 px-3 hover:bg-raised transition-colors border-b border-border-subtle last:border-b-0"
                       >
-                        <Play size={12} />
-                      </button>
-                      <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
-                      {hasTime && (
-                        <span className="text-xs text-gray-500 font-mono shrink-0">
-                          {task.startTime}–{task.endTime}
-                        </span>
-                      )}
-                      {projectName && (
-                        <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                          {projectName}
-                        </span>
-                      )}
-                      {categoryName && (
-                        <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                          {categoryName}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        <div className="min-w-0 w-full flex items-center gap-2">
+                          <span
+                            className="shrink-0 w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: getProjectColor(project) }}
+                            aria-hidden
+                          />
+                          <div className="min-w-0 w-full">
+                            <p className="text-sm text-fg truncate">{task.name}</p>
+                            {(projectName || categoryName) && (
+                              <p className="text-xs text-fg-muted truncate mt-px">
+                                {projectName} {projectName && categoryName ? "·" : ""}{" "}
+                                {categoryName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {hasTime && (
+                          <span className="text-xs text-fg-muted font-mono tabular-nums shrink-0">
+                            {task.startTime}–{task.endTime}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (hasTime) {
+                              void handleDirectLaunch(task);
+                              return;
+                            }
+                            formColumn.set(false);
+                            form.prefill(task);
+                          }}
+                          disabled={launchingAll}
+                          title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
+                          className={`shrink-0 p-1.5 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            hasTime
+                              ? "text-accent-text hover:bg-accent/10"
+                              : "text-fg-muted hover:text-fg hover:bg-raised"
+                          }`}
+                        >
+                          <Play size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+              <ResizeHandle
+                {...plannedPanel.handleProps}
+                active={plannedPanel.isDragging}
+                className="-mt-0.5"
+                aria-label="Altura da lista de planejadas"
+                title="Arraste para redimensionar. Duplo clique volta ao padrão."
+              />
             </div>
-          )}
-
-          {plannedTasks.length > 0 && (
-            <ResizeHandle
-              {...plannedPanel.handleProps}
-              active={plannedPanel.isDragging}
-              aria-label="Altura da lista de planejadas"
-              title="Arraste para redimensionar. Duplo clique volta ao padrão."
-            />
           )}
 
           {/* Lista de tarefas */}
           <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
-            {/* Barra de seleção: mora aqui, e não no header, porque age sobre
-                esta lista — e o header já estava disputando espaço com a
-                navegação de data. Sem tarefas não há o que selecionar. */}
-            {tasks.length > 0 && (
-              <div className="shrink-0 flex items-center justify-end gap-3 px-5 py-2 border-b border-gray-800">
-                {selectMode ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        const allSelected = selectedIds.size >= tasks.length;
-                        setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
-                      }}
-                      className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
-                    >
-                      {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
-                    </button>
-                    {workspaces.length > 1 && (
-                      <button
-                        onClick={() => setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))}
-                        disabled={selectedIds.size === 0}
-                        className="text-xs text-gray-400 hover:text-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Mover para workspace
-                      </button>
+            <SectionCard
+              title="Apontamentos do dia"
+              // O cartão acompanha o conteúdo **até** o fim do espaço, e daí em
+              // diante rola. É o `flex: 0 1 auto` padrão com `min-h-0`: sem ele
+              // o item de flex não encolhe abaixo do próprio conteúdo, e a
+              // casca — que tem `overflow-hidden` — recortava a lista em
+              // silêncio, sem barra, escondendo justamente o apontamento
+              // recém-lançado. `flex-1` resolveria a rolagem e cobraria o
+              // contrário: o cartão esticado até o rodapé num dia de duas
+              // linhas. Quem rola é o corpo, com o cabeçalho e a barra de
+              // seleção sempre à vista.
+              className="min-h-0 flex flex-col"
+              bodyClassName="min-h-0 overflow-y-auto"
+              action={
+                tasks.length > 0 && (
+                  <div className="shrink-0 flex items-center justify-end gap-3">
+                    {selectMode ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            const allSelected = selectedIds.size >= tasks.length;
+                            setSelectedIds(
+                              allSelected ? new Set() : new Set(tasks.map((t) => t.id))
+                            );
+                          }}
+                        >
+                          {selectedIds.size >= tasks.length
+                            ? "Desmarcar todas"
+                            : "Selecionar todas"}
+                        </Button>
+                        {workspaces.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))
+                            }
+                            disabled={selectedIds.size === 0}
+                          >
+                            Mover para workspace
+                          </Button>
+                        )}
+                        <Button
+                          variant="danger"
+                          onClick={() => void handleBulkDelete()}
+                          disabled={selectedIds.size === 0}
+                        >
+                          Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                        </Button>
+                        <Button variant="ghost" onClick={exitSelectMode}>
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => setSelectMode(true)}>
+                        Selecionar tarefas
+                      </Button>
                     )}
-                    <button
-                      onClick={() => void handleBulkDelete()}
-                      disabled={selectedIds.size === 0}
-                      className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-                    </button>
-                    <button
-                      onClick={exitSelectMode}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setSelectMode(true)}
-                    className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
-                  >
-                    Selecionar tarefas
-                  </button>
-                )}
-              </div>
-            )}
-
-            <div className="flex-1 overflow-y-auto pr-2">
+                  </div>
+                )
+              }
+            >
               {tasks.length === 0 ? (
-                <p className="text-center text-gray-600 text-sm py-10">
+                <p className="text-center text-fg-muted text-sm py-10">
                   Nenhuma entrada para este dia
                 </p>
               ) : (
                 tasks.map((t) => (
-                  <TaskRow
+                  <DayTaskRow
                     key={t.id}
                     task={t}
                     projects={projects}
                     categories={categories}
                     onEdit={setEditingTask}
                     onDelete={handleDelete}
+                    onToggleBillable={handleToggleBillable}
                     selectMode={selectMode}
                     selected={selectedIds.has(t.id)}
                     onToggleSelect={toggleSelectTask}
                   />
                 ))
               )}
-            </div>
+            </SectionCard>
           </div>
         </div>
       </div>

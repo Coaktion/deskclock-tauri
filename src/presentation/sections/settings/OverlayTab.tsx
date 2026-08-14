@@ -1,22 +1,27 @@
-import { useEffect, useState } from "react";
-import { emit } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
+import { SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
-import { ToggleRow, SliderRow, SettingsCard, CardRow } from "./SettingsShared";
+import { invoke } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
+import { useEffect, useState } from "react";
+import { SliderRow } from "./SettingsShared";
 
+/**
+ * O cartão é "Overlay", e não "Overlay compacto": a opacidade vale para as duas
+ * janelas e o "mostrar ao iniciar" é do popup.
+ */
 export function OverlayTab() {
   const config = useAppConfig();
 
+  const [overlayShowOnStart, setOverlayShowOnStart] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
-  const [overlaySize, setOverlaySize] = useState<"big" | "small">("big");
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [displayServer, setDisplayServer] = useState("");
 
   useEffect(() => {
     if (!config.isLoaded) return;
+    setOverlayShowOnStart(config.get("overlayShowOnStart"));
     setOverlayOpacity(config.get("overlayOpacity"));
-    setOverlaySize((config.get("overlaySize") as "big" | "small") ?? "big");
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -26,20 +31,20 @@ export function OverlayTab() {
       .catch(() => {});
   }, []);
 
+  async function handleShowOnStart(value: boolean) {
+    setOverlayShowOnStart(value);
+    await config.set("overlayShowOnStart", value);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "overlayShowOnStart",
+      value,
+    } satisfies OverlayConfigChangedPayload);
+  }
+
   async function handleSlider(value: number) {
     setOverlayOpacity(value);
     await config.set("overlayOpacity", value);
     await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
       key: "overlayOpacity",
-      value,
-    } satisfies OverlayConfigChangedPayload);
-  }
-
-  async function handleSize(value: "big" | "small") {
-    setOverlaySize(value);
-    await config.set("overlaySize", value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "overlaySize",
       value,
     } satisfies OverlayConfigChangedPayload);
   }
@@ -54,31 +59,16 @@ export function OverlayTab() {
   }
 
   return (
-    <SettingsCard>
-      <CardRow>
-        <div className="flex flex-1 items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium text-gray-200">Tamanho</p>
-            <p className="text-xs text-gray-400">Tamanho visual do overlay compacto</p>
-          </div>
-          <div className="flex rounded-lg overflow-hidden border border-gray-700 shrink-0">
-            {(["big", "small"] as const).map((size) => (
-              <button
-                key={size}
-                onClick={() => handleSize(size)}
-                className={`px-3 py-1.5 text-sm font-medium transition-colors ${
-                  overlaySize === size
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                {size === "big" ? "Grande" : "Pequeno"}
-              </button>
-            ))}
-          </div>
-        </div>
-      </CardRow>
-      <CardRow>
+    <SectionCard title="Overlay" divided>
+      <SectionRow>
+        <Toggle
+          label="Mostrar ao iniciar tarefa"
+          description="Abre o overlay assim que uma tarefa começa a rodar"
+          checked={overlayShowOnStart}
+          onChange={handleShowOnStart}
+        />
+      </SectionRow>
+      <SectionRow>
         <SliderRow
           label="Opacidade em repouso"
           description="Opacidade quando o cursor não está sobre o overlay"
@@ -88,19 +78,19 @@ export function OverlayTab() {
           unit="%"
           onChange={handleSlider}
         />
-      </CardRow>
-      <CardRow>
-        <ToggleRow
+      </SectionRow>
+      <SectionRow>
+        <Toggle
           label="Snap to grid"
           description={
             displayServer === "wayland"
               ? "Não disponível no Wayland — o compositor controla o posicionamento das janelas"
               : "Encaixa o overlay em grade ao soltar o arraste"
           }
-          value={overlaySnapToGrid}
+          checked={overlaySnapToGrid}
           onChange={handleSnapToGrid}
         />
-      </CardRow>
-    </SettingsCard>
+      </SectionRow>
+    </SectionCard>
   );
 }

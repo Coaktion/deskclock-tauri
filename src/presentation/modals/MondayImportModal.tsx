@@ -8,7 +8,6 @@ import {
   DownloadCloud,
   Loader2,
   Square,
-  X,
 } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import type { Category } from "@domain/entities/Category";
@@ -33,6 +32,7 @@ import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProje
 import { resolveTimelineByBoard } from "@domain/usecases/monday/resolveTimelineColumns";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { Badge, Button, FilterPill, Modal, Toggle } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -41,7 +41,6 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { addDaysISO, todayISO, weekBoundsISO } from "@shared/utils/time";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 type PeriodFilter = "today" | "week" | "next30";
 
@@ -156,7 +155,6 @@ export function MondayImportModal({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
-  useEscapeToClose(onClose);
 
   // Só projeto com quadro de destino: sem ele não há board de onde ler itens.
   const mappings = useMemo(
@@ -360,184 +358,164 @@ export function MondayImportModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <DownloadCloud size={16} className="text-blue-400 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-sm font-semibold text-gray-100">Importar itens do Monday</h2>
-              <p className="text-[11px] text-gray-500 mt-0.5 truncate">
-                Somente os seus, nos {availableBoards.length} board(s) vinculados
-              </p>
-            </div>
-            <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                  period === p
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                {PERIOD_LABELS[p]}
-              </button>
-            ))}
-          </div>
+    // `lg` (720) e não `xl`: a lista é uma coluna só, e eram 672 px em
+    // `max-w-2xl` — fora das quatro larguras da casca.
+    <Modal
+      title={
+        <>
+          <DownloadCloud size={16} className="text-accent-text shrink-0" />
+          Importar itens do Monday
+        </>
+      }
+      description={`Somente os seus, nos ${availableBoards.length} board(s) vinculados`}
+      size="lg"
+      tall
+      onClose={onClose}
+      // Sem padding: cada linha da lista desenha o próprio `px-4`, e o cabeçalho
+      // de grupo é `sticky` — com padding no scrollport ele grudaria deslocado.
+      bodyClassName=""
+      toolbar={
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(Object.keys(PERIOD_LABELS) as PeriodFilter[]).map((p) => (
+            <FilterPill key={p} size="sm" active={period === p} onClick={() => setPeriod(p)}>
+              {PERIOD_LABELS[p]}
+            </FilterPill>
+          ))}
         </div>
-
-        <div className="flex-1 overflow-y-auto">
-          {availableBoards.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-12 px-4">
-              {mappings.length === 0
-                ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
-                : "Os boards vinculados apontam para projetos de outro workspace. Confira o workspace escolhido na integração ou importe os projetos nele."}
-            </p>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Buscando itens…</span>
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-              <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-300">{error}</p>
-            </div>
-          )}
-
-          {!loading && !error && availableBoards.length > 0 && visibleRows.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-12 px-4">
-              {rows.length === 0
-                ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
-                : hiddenImported > 0
-                  ? `Todas as suas ${hiddenImported} tarefas deste período já estão no planejamento.`
-                  : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
-            </p>
-          )}
-
-          {!loading &&
-            groups.map(([projectName, groupRows]) => {
-              const allSelected = groupRows.every((r) => selected.has(r.item.id));
-              const someSelected = !allSelected && groupRows.some((r) => selected.has(r.item.id));
-              return (
-                <div key={projectName} className="border-b border-gray-800 last:border-0">
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/40 sticky top-0 z-10">
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(groupRows)}
-                      className="shrink-0 text-gray-400 hover:text-gray-200"
-                    >
-                      {allSelected ? (
-                        <CheckSquare size={13} />
-                      ) : (
-                        <Square size={13} className={someSelected ? "opacity-50" : ""} />
-                      )}
-                    </button>
-                    <span className="text-xs font-semibold text-gray-300 flex-1 truncate">
-                      {projectName}
-                    </span>
-                    <span className="text-xs text-gray-600">
-                      {groupRows.filter((r) => selected.has(r.item.id)).length}/{groupRows.length}
-                    </span>
-                  </div>
-
-                  {groupRows.map((row) => (
-                    <ItemRow
-                      key={row.item.id}
-                      row={row}
-                      selected={selected.has(row.item.id)}
-                      editState={
-                        editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField)
-                      }
-                      categories={categories}
-                      categoryOptionsFor={categoryOptionsFor}
-                      stageField={stageField}
-                      isDuplicate={existingNames.has(row.item.name.toLowerCase().trim())}
-                      onToggleSelect={() => toggleItem(row.item.id)}
-                      onEditChange={(s) => updateEdit(row.item.id, s)}
-                    />
-                  ))}
-                </div>
-              );
-            })}
-        </div>
-
-        {visibleRows.length > 0 && (
-          <div className="flex flex-col gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
+      }
+      // O recorte, os avisos e a chave ficam fora do corpo: rolariam junto com a
+      // lista que descrevem, e a chave decide algo sobre a importação inteira.
+      notice={
+        visibleRows.length > 0 ? (
+          <>
             {unavailableCount > 0 && (
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-fg-muted">
                 {unavailableCount} board(s) vinculados a projetos de outro workspace estão fora
                 desta lista.
               </p>
             )}
             {hiddenImported > 0 && (
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-fg-muted">
                 {hiddenImported} item(ns) já importado(s) estão fora desta lista.
               </p>
             )}
             {!stageField && (
-              <p className="text-[11px] text-gray-600">
+              <p className="text-xs text-fg-muted">
                 Project Stage não aparece nos itens: crie o campo personalizado a partir da coluna
                 do board, em Integrações → Monday → Importação de dados.
               </p>
             )}
-            <label
-              className="flex items-center gap-2 cursor-pointer select-none"
-              onClick={() => setAddOpenUrlAction((v) => !v)}
-            >
-              <div
-                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                  addOpenUrlAction ? "bg-blue-600" : "bg-gray-700"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                    addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
-              </div>
-              <span className="text-xs text-gray-400">
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={addOpenUrlAction}
+                onChange={setAddOpenUrlAction}
+                ariaLabel="Adicionar uma ação de abrir o item no Monday"
+              />
+              <span className="text-sm text-fg-secondary">
                 Adicionar uma ação de abrir o item no Monday
               </span>
-            </label>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={onClose}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={importing || selectedVisible.length === 0}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
-              >
-                {importing ? (
-                  <>
-                    <Loader2 size={12} className="animate-spin" />
-                    Importando…
-                  </>
-                ) : (
-                  <>Importar selecionados ({selectedVisible.length})</>
-                )}
-              </button>
             </div>
+          </>
+        ) : null
+      }
+      footer={
+        visibleRows.length > 0 ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleImport}
+              loading={importing}
+              disabled={selectedVisible.length === 0}
+            >
+              {importing ? "Importando…" : `Importar selecionados (${selectedVisible.length})`}
+            </Button>
+          </>
+        ) : null
+      }
+    >
+      <>
+        {availableBoards.length === 0 && (
+          <p className="text-sm text-fg-muted text-center py-12 px-4">
+            {mappings.length === 0
+              ? "Nenhum board vinculado. Importe os projetos na tela de Integrações primeiro."
+              : "Os boards vinculados apontam para projetos de outro workspace. Confira o workspace escolhido na integração ou importe os projetos nele."}
+          </p>
+        )}
+
+        {loading && (
+          <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-sm">Buscando itens…</span>
           </div>
         )}
-      </div>
-    </div>
+
+        {!loading && error && (
+          <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
+            <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+            <p className="text-xs text-danger">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && availableBoards.length > 0 && visibleRows.length === 0 && (
+          <p className="text-sm text-fg-muted text-center py-12 px-4">
+            {rows.length === 0
+              ? "Nenhuma tarefa sua nos boards vinculados, fora do grupo Activities."
+              : hiddenImported > 0
+                ? `Todas as suas ${hiddenImported} tarefas deste período já estão no planejamento.`
+                : `Nenhuma das suas ${rows.length} tarefas cai neste período. Tente um filtro mais largo.`}
+          </p>
+        )}
+
+        {!loading &&
+          groups.map(([projectName, groupRows]) => {
+            const allSelected = groupRows.every((r) => selected.has(r.item.id));
+            const someSelected = !allSelected && groupRows.some((r) => selected.has(r.item.id));
+            return (
+              <div key={projectName} className="border-b border-border-subtle last:border-0">
+                <div className="flex items-center gap-2 px-4 py-2 bg-raised/40 sticky top-0 z-10">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(groupRows)}
+                    className="shrink-0 text-fg-secondary hover:text-fg"
+                  >
+                    {allSelected ? (
+                      <CheckSquare size={14} />
+                    ) : (
+                      <Square size={14} className={someSelected ? "opacity-50" : ""} />
+                    )}
+                  </button>
+                  <span className="text-sm font-semibold text-fg-secondary flex-1 truncate">
+                    {projectName}
+                  </span>
+                  <span className="text-xs text-fg-muted">
+                    {groupRows.filter((r) => selected.has(r.item.id)).length}/{groupRows.length}
+                  </span>
+                </div>
+
+                {groupRows.map((row) => (
+                  <ItemRow
+                    key={row.item.id}
+                    row={row}
+                    selected={selected.has(row.item.id)}
+                    editState={
+                      editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField)
+                    }
+                    categories={categories}
+                    categoryOptionsFor={categoryOptionsFor}
+                    stageField={stageField}
+                    isDuplicate={existingNames.has(row.item.name.toLowerCase().trim())}
+                    onToggleSelect={() => toggleItem(row.item.id)}
+                    onEditChange={(s) => updateEdit(row.item.id, s)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+      </>
+    </Modal>
   );
 }
 
@@ -571,7 +549,7 @@ function ItemRow({
     : "";
   return (
     <div
-      className="border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors"
+      className="border-b border-border-subtle last:border-0 cursor-pointer hover:bg-raised/30 transition-colors"
       onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
     >
       <div className="flex items-start gap-2 px-4 py-2.5">
@@ -580,31 +558,31 @@ function ItemRow({
           checked={selected}
           onChange={onToggleSelect}
           onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 accent-blue-500 shrink-0"
+          className="mt-0.5 accent-accent shrink-0"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-gray-100 truncate">{row.item.name}</span>
+            <span className="text-sm text-fg truncate">{row.item.name}</span>
             {isDuplicate && (
-              <span
+              <Badge
+                tone="warning"
+                icon={<AlertTriangle size={14} />}
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-[10px] leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
               >
-                <AlertTriangle size={9} />
                 já existe
-              </span>
+              </Badge>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-fg-muted mt-0.5">
             {periodLabel(row.period)}
             {editState.categoryName && (
-              <span className="ml-2 text-blue-400">{editState.categoryName}</span>
+              <span className="ml-2 text-accent-text">{editState.categoryName}</span>
             )}
-            {stageLabel && <span className="ml-2 text-gray-400">{stageLabel}</span>}
+            {stageLabel && <span className="ml-2 text-fg-secondary">{stageLabel}</span>}
           </p>
         </div>
-        <span className="p-1 text-gray-600 shrink-0">
-          {editState.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        <span className="p-1 text-fg-muted shrink-0">
+          {editState.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </div>
 

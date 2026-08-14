@@ -76,19 +76,19 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
     // o setup abre (`useStartupWindow`), então o conteúdo rola: `my-auto` centra
     // quando cabe e vira 0 quando não cabe, sem cortar o topo como `items-center`
     // cortaria.
-    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-gray-950">
+    <div className="fixed inset-0 z-50 flex justify-center overflow-y-auto bg-canvas">
       <div
         onKeyDown={handleKeyDown}
         className="w-full max-w-lg mx-4 my-auto py-8 flex flex-col gap-8"
       >
         {/* Logo + título */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="p-3 bg-blue-600/20 rounded-2xl">
-            <Clock size={32} className="text-blue-400" />
+          <div className="p-3 bg-accent/20 rounded-card">
+            <Clock size={32} className="text-accent-text" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-gray-100">Bem-vindo ao DeskClock</h1>
-            <p className="text-sm text-gray-400 mt-1">
+            <h1 className="text-xl font-semibold text-fg">Bem-vindo ao DeskClock</h1>
+            <p className="text-sm text-fg-secondary mt-1">
               Vamos configurar o básico para você começar
             </p>
           </div>
@@ -100,13 +100,13 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
             <div key={label} className="flex items-center gap-2 flex-1">
               <div
                 className={`flex-1 h-1 rounded-full transition-colors ${
-                  i <= step ? "bg-blue-500" : "bg-gray-800"
+                  i <= step ? "bg-accent" : "bg-raised"
                 }`}
               />
               {i === STEPS.length - 1 && (
                 <div
                   className={`w-2 h-2 rounded-full shrink-0 transition-colors ${
-                    i < step ? "bg-blue-500" : i === step ? "bg-blue-400" : "bg-gray-700"
+                    i < step ? "bg-accent" : i === step ? "bg-accent" : "bg-border"
                   }`}
                 />
               )}
@@ -115,12 +115,12 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
         </div>
 
         {/* Conteúdo do passo */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 flex flex-col gap-4">
+        <div className="bg-surface border border-border-subtle rounded-card p-6 flex flex-col gap-4">
           {step === 0 && (
             <>
               <div>
-                <h2 className="text-base font-medium text-gray-100">Como quer ser chamado?</h2>
-                <p className="text-sm text-gray-400 mt-1">
+                <h2 className="text-base font-medium text-fg">Como quer ser chamado?</h2>
+                <p className="text-sm text-fg-secondary mt-1">
                   Usado na mensagem de boas-vindas ao abrir o app.
                 </p>
               </div>
@@ -131,7 +131,7 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
                 onChange={(e) => setUserName(e.target.value)}
                 placeholder="Seu nome (opcional)"
                 autoComplete="off"
-                className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm bg-raised border border-border rounded-control text-fg placeholder-fg-muted focus:outline-none focus:border-accent"
               />
             </>
           )}
@@ -139,8 +139,8 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
           {step === 1 && (
             <>
               <div>
-                <h2 className="text-base font-medium text-gray-100">Conecte suas ferramentas</h2>
-                <p className="text-sm text-gray-400 mt-1">
+                <h2 className="text-base font-medium text-fg">Conecte suas ferramentas</h2>
+                <p className="text-sm text-fg-secondary mt-1">
                   Uma integração traz projetos, categorias e tarefas planejadas prontos — e devolve
                   as horas para onde o time já as consulta.
                 </p>
@@ -150,20 +150,20 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
                 {SUGGESTIONS.map((s) => (
                   <li
                     key={s.name}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-800 bg-gray-800/30"
+                    className="flex items-center gap-3 px-3 py-2 rounded-control border border-border-subtle bg-raised/30"
                   >
-                    <span className="shrink-0 w-8 h-8 rounded-lg bg-gray-800/60 flex items-center justify-center text-gray-300">
+                    <span className="shrink-0 w-8 h-8 rounded-control bg-raised/60 flex items-center justify-center text-fg-secondary">
                       {s.logo}
                     </span>
                     <div className="min-w-0">
-                      <div className="text-sm font-medium text-gray-100">{s.name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{s.description}</div>
+                      <div className="text-sm font-medium text-fg">{s.name}</div>
+                      <div className="text-xs text-fg-muted mt-0.5">{s.description}</div>
                     </div>
                   </li>
                 ))}
               </ul>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-fg-muted">
                 Sem integração nenhuma o app funciona igual: projetos e categorias se cadastram a
                 qualquer momento na tela de Dados.
               </p>
@@ -176,7 +176,7 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
           {step > 0 ? (
             <button
               onClick={() => setStep((s) => s - 1)}
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+              className="flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg transition-colors"
             >
               <ChevronLeft size={16} />
               Voltar
@@ -190,7 +190,7 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
               <button
                 onClick={() => void handleComplete()}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-gray-300 disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-fg-muted hover:text-fg-secondary disabled:opacity-50 transition-colors"
               >
                 Agora não
               </button>
@@ -198,7 +198,7 @@ export function SetupModal({ config, onComplete }: SetupModalProps) {
             <button
               onClick={advance}
               disabled={saving}
-              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm bg-accent hover:opacity-90 disabled:opacity-50 text-white rounded-control transition font-medium"
             >
               {isLast ? (
                 <>

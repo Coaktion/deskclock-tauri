@@ -37,7 +37,7 @@ export const tasksTourSteps: DriveStep[] = [
       title: "Resumo do dia",
       description:
         "Acompanhe horas billable, non-billable, total de hoje e progresso da semana em relação às suas metas configuradas.",
-      side: "top",
+      side: "bottom",
       align: "start",
     },
   },

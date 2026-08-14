@@ -45,7 +45,7 @@ function row(overrides: Partial<MondayImportRow> = {}): MondayImportRow {
   };
   return {
     item,
-    project: { id: "p1", workspaceId: "ws-1", name: "Cliente A" },
+    project: { id: "p1", workspaceId: "ws-1", name: "Cliente A", colorIndex: 0 },
     period: { startDayISO: "2026-08-03", endDayISO: "2026-08-03" },
     activityTypeLabel: "Development",
     projectStageLabel: "UAT",

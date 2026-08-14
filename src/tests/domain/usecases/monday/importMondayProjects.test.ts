@@ -11,7 +11,7 @@ import type { MondayBoardSchema, MondayItem } from "@shared/types/monday";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { localISO } from "../../../helpers/localTime";
 
-const PORTFOLIO_ID = "18418432045";
+const PORTFOLIO_ID = "90000000001";
 const DESKCLOCK_WS = "ws-1";
 
 /** Um item do Portfólio, com as duas colunas que a importação lê. */
@@ -79,7 +79,11 @@ function makeApi(items: MondayItem[], schemas: Record<string, MondayBoardSchema>
 }
 
 function makeProjectRepo(existing: { id: string; name: string }[] = []): IProjectRepository {
-  const store: Project[] = existing.map((p) => ({ ...p, workspaceId: DESKCLOCK_WS }));
+  const store: Project[] = existing.map((p, i) => ({
+    ...p,
+    workspaceId: DESKCLOCK_WS,
+    colorIndex: i,
+  }));
   return {
     findAll: vi.fn(async (workspaceId?: string) =>
       workspaceId ? store.filter((p) => p.workspaceId === workspaceId) : store

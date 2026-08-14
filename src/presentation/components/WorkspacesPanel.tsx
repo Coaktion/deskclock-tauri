@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, CheckCircle2, Clock, Pen, Plus, Trash2, X } from "lucide-react";
+import { Check, CheckCircle2, Clock, Pen, Trash2, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import { WORKSPACE_COLORS } from "@domain/utils/workspaceColor";
 import { integrationsBoundToWorkspace } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
@@ -10,6 +10,7 @@ import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchG
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
+import { AddRow, Button, IconButton, Input, SectionCard } from "@presentation/components/ui";
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
@@ -22,16 +23,16 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
           title={c}
           className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform ${
             workspaceClasses(c).dot
-          } ${value === c ? "ring-2 ring-offset-2 ring-offset-gray-900 ring-gray-300 scale-105" : "opacity-60 hover:opacity-100"}`}
+          } ${value === c ? "ring-2 ring-offset-2 ring-offset-surface ring-fg-secondary scale-105" : "opacity-60 hover:opacity-100"}`}
         >
-          {value === c && <Check size={11} className="text-gray-900" />}
+          {value === c && <Check size={14} className="text-canvas" />}
         </button>
       ))}
     </div>
   );
 }
 
-export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
+export function WorkspacesPanel() {
   const { workspaces, activeWorkspaceId, create, update, remove } = useWorkspaceAdmin();
   const config = useAppConfig();
   const { runningTask, stopTask } = useRunningTask();
@@ -89,45 +90,14 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {showTitle && <h2 className="text-base font-semibold text-gray-100">Workspaces</h2>}
-
-      <p className="text-xs text-gray-500 leading-relaxed">
-        Cada workspace tem seus próprios projetos, categorias, tarefas, planejadas e perfis de
-        exportação. As integrações continuam enxergando todos.
-      </p>
-
-      {/* Criação */}
-      <div
-        onKeyDown={handleAddKeyDown}
-        className="flex flex-col gap-2 px-3 py-2.5 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <WorkspaceDot color={previewColor} size={10} />
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Adicionar novo workspace (Enter para salvar)"
-            autoComplete="off"
-            className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => void handleAdd()}
-            disabled={!newName.trim()}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-300 rounded-lg disabled:opacity-40 transition-colors"
-          >
-            <Plus size={13} />
-            Criar
-          </button>
-        </div>
-        <ColorPicker value={previewColor} onChange={setNewColor} />
-      </div>
-
-      {error && <p className="text-xs text-red-400">{error}</p>}
-
-      <div className="flex flex-col gap-1.5">
+    <SectionCard
+      className="min-h-0 flex flex-col"
+      bodyClassName="min-h-0 flex flex-col"
+      title="Workspaces"
+      count={workspaces.length}
+      description="Cada workspace tem seus próprios projetos, categorias, tarefas, planejadas e perfis de exportação. Cada integração escolhe em qual deles trabalha."
+    >
+      <div className="min-h-0 overflow-y-auto divide-y divide-border-subtle">
         {workspaces.map((w) => {
           const isActive = w.id === activeWorkspaceId;
           const isEditing = editingId === w.id;
@@ -135,16 +105,19 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
           return (
             <div
               key={w.id}
-              className={`flex flex-col gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                isActive ? workspaceClasses(w.color).soft : "bg-gray-900 border-gray-800"
+              // O ativo se diz pelo tom da própria cor, que é cor de entidade — a
+              // casca com borda que ele tinha reintroduzia a pílula que a linha
+              // deixou de ser.
+              className={`flex flex-col gap-2 px-3 py-2.5 transition-colors ${
+                isActive ? workspaceClasses(w.color).soft : ""
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <WorkspaceDot color={isEditing ? editColor : w.color} size={10} />
 
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <Input
+                    variant="plain"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => {
@@ -152,65 +125,66 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
                       if (e.key === "Escape") setEditingId(null);
                     }}
                     autoFocus
-                    className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
-                    autoComplete="off"
+                    className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
                   />
                 ) : (
-                  <span className="flex-1 text-sm text-gray-200 truncate">{w.name}</span>
+                  <span className="flex-1 text-sm text-fg truncate">{w.name}</span>
                 )}
 
                 {!isEditing &&
                   (isActive ? (
-                    <span className="text-[10px] uppercase tracking-wide text-gray-500">ativo</span>
+                    <span className="text-overline uppercase text-fg-muted">ativo</span>
                   ) : (
                     <button
                       onClick={() => void request(w.id)}
-                      className="text-[10px] uppercase tracking-wide text-gray-500 hover:text-blue-400 transition-colors"
+                      className="text-overline uppercase text-fg-muted hover:text-accent-text transition-colors"
                     >
                       tornar ativo
                     </button>
                   ))}
 
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={() => void commitEdit()}
-                      title="Salvar"
-                      className="p-1 text-green-400 hover:text-green-300 rounded-lg"
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      title="Cancelar"
-                      className="p-1 text-gray-500 hover:text-gray-300 rounded-lg"
-                    >
-                      <X size={14} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => startEdit(w)}
-                      title="Editar"
-                      className="p-1 text-gray-500 hover:text-gray-200 rounded-lg"
-                    >
-                      <Pen size={13} />
-                    </button>
-                    <button
-                      onClick={() => setDeleting(w)}
-                      disabled={workspaces.length <= 1}
-                      title={
-                        workspaces.length <= 1
-                          ? "Não é possível excluir o último workspace"
-                          : "Excluir"
-                      }
-                      className="p-1 text-gray-500 hover:text-red-400 rounded-lg disabled:opacity-30 disabled:hover:text-gray-500"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </>
-                )}
+                <div className="flex gap-0.5 shrink-0">
+                  {isEditing ? (
+                    <>
+                      {/* O ✓ era verde nos quatro editores de linha de Dados, e
+                          verde é `billable`: confirmar uma edição é acento. */}
+                      <IconButton
+                        onClick={() => void commitEdit()}
+                        title="Salvar"
+                        icon={<Check size={14} />}
+                        size="sm"
+                      />
+                      <IconButton
+                        onClick={() => setEditingId(null)}
+                        title="Cancelar"
+                        icon={<X size={14} />}
+                        variant="neutral"
+                        size="sm"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <IconButton
+                        onClick={() => startEdit(w)}
+                        title="Editar"
+                        icon={<Pen size={14} />}
+                        size="sm"
+                      />
+                      <IconButton
+                        onClick={() => setDeleting(w)}
+                        disabled={workspaces.length <= 1}
+                        title={
+                          workspaces.length <= 1
+                            ? "Não é possível excluir o último workspace"
+                            : "Excluir"
+                        }
+                        icon={<Trash2 size={14} />}
+                        variant="danger"
+                        size="sm"
+                      />
+                    </>
+                  )}
+                </div>
               </div>
 
               {isEditing && <ColorPicker value={editColor} onChange={setEditColor} />}
@@ -219,34 +193,53 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
         })}
       </div>
 
+      {error && <p className="shrink-0 px-3 py-2 text-xs text-danger">{error}</p>}
+
+      <AddRow
+        onKeyDown={handleAddKeyDown}
+        className="shrink-0 border-t border-border-subtle"
+        extra={<ColorPicker value={previewColor} onChange={setNewColor} />}
+      >
+        <WorkspaceDot color={previewColor} size={10} />
+        <Input
+          variant="plain"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Adicionar novo workspace — Enter para salvar"
+          className="flex-1"
+        />
+        <Button onClick={() => void handleAdd()} disabled={!newName.trim()}>
+          Criar
+        </Button>
+      </AddRow>
+
       {pending && (
-        <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/5">
-          <p className="text-xs text-gray-300 leading-snug">
+        <div className="shrink-0 flex flex-col gap-1.5 px-3 py-2.5 border-t border-paused/40 bg-paused/5">
+          <p className="text-sm text-fg-secondary leading-snug">
             Há uma tarefa em execução. Parar e trocar para{" "}
-            <span className="text-gray-100 font-medium">{pending.name}</span>?
+            <span className="text-fg font-medium">{pending.name}</span>?
           </p>
-          <span className="text-[10px] text-gray-500">Marcar a tarefa como:</span>
+          <span className="text-sm text-fg-muted">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
-            <button
+            <Button
+              variant="accent"
+              size="sm"
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
+              icon={<CheckCircle2 size={14} />}
             >
-              <CheckCircle2 size={12} />
               Concluída
-            </button>
-            <button
-              onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
-            >
-              <Clock size={12} />
+            </Button>
+            <Button size="sm" onClick={() => void confirm(false)} icon={<Clock size={14} />}>
               Pendente
-            </button>
-            <button
+            </Button>
+            <IconButton
               onClick={cancel}
-              className="ml-auto p-1 text-gray-600 hover:text-gray-400 rounded-lg"
-            >
-              <X size={13} />
-            </button>
+              title="Cancelar a troca de workspace"
+              icon={<X size={14} />}
+              variant="neutral"
+              size="sm"
+              className="ml-auto"
+            />
           </div>
         </div>
       )}
@@ -260,6 +253,6 @@ export function WorkspacesPanel({ showTitle = true }: { showTitle?: boolean }) {
           onClose={() => setDeleting(null)}
         />
       )}
-    </div>
+    </SectionCard>
   );
 }

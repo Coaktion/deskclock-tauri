@@ -3,14 +3,18 @@ import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTa
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
+import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
-import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
+import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { runningPlannedTaskId } from "@domain/utils/plannedLink";
+import { resolvePlayBlock } from "@presentation/components/playAction";
 import { useTour } from "@presentation/hooks/useTour";
-import { useTrackedMeetingTitles } from "@presentation/hooks/useTrackedMeetingTitles";
+import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
@@ -83,8 +87,9 @@ export function WeekPlanningView() {
   const { categories } = useCategories();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
-  const { startTask, runningTask } = useRunningTask();
-  const { titles: trackedTitles, today: trackedToday } = useTrackedMeetingTitles();
+  const { startTask, runningTask, activePlannedTaskId } = useRunningTask();
+  const { plannedIds: trackedIds, today: trackedToday } = useTrackedMeetingPlannedIds();
+  const runningPlannedId = runningPlannedTaskId(activePlannedTaskId, runningTask);
 
   const formColumn = usePersistedFlag("planningFormCollapsed");
 
@@ -156,7 +161,10 @@ export function WeekPlanningView() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const filteredDays = dayFilter === "all" ? visibleDays : [dayFilter];
+  const filteredDays = useMemo(
+    () => (dayFilter === "all" ? visibleDays : [dayFilter]),
+    [dayFilter, visibleDays]
+  );
 
   const allVisibleTaskIds = useMemo(() => {
     const ids = new Set<string>();
@@ -168,12 +176,13 @@ export function WeekPlanningView() {
     return ids;
   }, [tasks, filteredDays]);
 
-  function toggleSelectAllForDay(day: string) {
-    const dayTaskIds = tasks.filter((t) => isTaskOnDate(t, day)).map((t) => t.id);
-    const allSelected = dayTaskIds.length > 0 && dayTaskIds.every((id) => selectedIds.has(id));
+  function toggleSelectAllForDay(dayTaskIds: string[]) {
     setSelectedIds((prev) => {
+      // A decisão sai de `prev`, não do closure do render: o updater tem de
+      // valer sozinho na fila do React.
+      const todas = dayTaskIds.every((id) => prev.has(id));
       const next = new Set(prev);
-      if (allSelected) dayTaskIds.forEach((id) => next.delete(id));
+      if (todas) dayTaskIds.forEach((id) => next.delete(id));
       else dayTaskIds.forEach((id) => next.add(id));
       return next;
     });
@@ -181,66 +190,58 @@ export function WeekPlanningView() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* ── Header: week selector + completed count ─────────────────────────── */}
-      <div
-        data-tour="planning-header"
-        className="flex items-center gap-2 px-5 py-3 border-b border-gray-800 h-[52px]"
-      >
-        <button
-          onClick={() => {
-            setWeekOffset((o) => o - 1);
-            setDayFilter("all");
-          }}
-          className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
-        >
-          <ChevronLeft size={15} />
-        </button>
+      <PageHeader
+        title="Planejamento"
+        tourId="planning-header"
+        onStartTour={startTour}
+        context={
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              onClick={() => {
+                setWeekOffset((o) => o - 1);
+                setDayFilter("all");
+              }}
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors shrink-0"
+            >
+              <ChevronLeft size={14} />
+            </button>
 
-        <span className="text-sm font-medium text-gray-100 truncate">{label}</span>
+            <span className="text-sm font-medium text-fg truncate">{label}</span>
 
-        <button
-          onClick={() => {
-            setWeekOffset((o) => o + 1);
-            setDayFilter("all");
-          }}
-          className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors shrink-0"
-        >
-          <ChevronRight size={15} />
-        </button>
+            <button
+              onClick={() => {
+                setWeekOffset((o) => o + 1);
+                setDayFilter("all");
+              }}
+              className="p-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-control transition-colors shrink-0"
+            >
+              <ChevronRight size={14} />
+            </button>
 
-        {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:
-            navegando algumas semanas, o intervalo em dd/mm não responde sozinho
-            "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. Segue
-            o mesmo vocabulário da pílula "Hoje" do formulário, que faz o
-            equivalente para o campo de data. */}
-        <button
-          onClick={() => {
-            setWeekOffset(0);
-            setDayFilter("all");
-          }}
-          title="Voltar para a semana atual"
-          className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap shrink-0 ${
-            weekOffset === 0
-              ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-              : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-          }`}
-        >
-          Semana atual
-        </button>
-
-        <div className="ml-auto flex items-center gap-3 shrink-0">
-          <span className="text-xs text-gray-400 whitespace-nowrap">
+            {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:
+                navegando algumas semanas, o intervalo em dd/mm não responde sozinho
+                "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. É o
+                último atalho desse tipo: a pílula "Hoje" do formulário saiu, porque
+                ali o campo de data já diz que dia é. */}
+            <FilterPill
+              size="sm"
+              active={weekOffset === 0}
+              onClick={() => {
+                setWeekOffset(0);
+                setDayFilter("all");
+              }}
+              title="Voltar para a semana atual"
+            >
+              Semana atual
+            </FilterPill>
+          </div>
+        }
+        actions={
+          <span className="text-xs text-fg-secondary whitespace-nowrap">
             {completedCount} de {totalCount} concluídas
           </span>
-          <button
-            onClick={() => startTour()}
-            title="Ver tour da página"
-            className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
-          >
-            ?
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Formulário à esquerda, semana à direita — mesmo arranjo do Lançamento
           Manual, para as duas telas de entrada não parecerem coisas distintas. */}
@@ -276,7 +277,7 @@ export function WeekPlanningView() {
               seleção sairiam da tela junto. */}
           <div
             data-tour="planning-day-filter"
-            className="border-b border-gray-800 shrink-0 flex items-center gap-3 px-4 py-2.5"
+            className="border-b border-border-subtle shrink-0 flex items-center gap-3 px-5 py-2.5"
           >
             {/* O padding de 2px acomoda o ponto de "hoje", que sai 2px para fora
                 da pílula: sendo hoje o último dia visível, esses 2px viravam
@@ -285,36 +286,22 @@ export function WeekPlanningView() {
                 se desloca — e o padding no topo é o que impede o ponto de ser
                 cortado pelo próprio overflow. */}
             <div className="flex gap-1.5 min-w-0 overflow-x-auto pt-0.5 pr-0.5 -mt-0.5 -mr-0.5">
-              <button
-                onClick={() => setDayFilter("all")}
-                className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap ${
-                  dayFilter === "all"
-                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                    : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-                }`}
-              >
+              <FilterPill active={dayFilter === "all"} onClick={() => setDayFilter("all")}>
                 Todos
-              </button>
+              </FilterPill>
               {visibleDays.map((day) => {
                 const isToday = day === today;
                 const dow = new Date(day + "T12:00:00Z").getUTCDay();
                 return (
-                  <button
+                  <FilterPill
                     key={day}
+                    active={dayFilter === day}
+                    highlighted={isToday}
+                    marker={isToday}
                     onClick={() => setDayFilter((prev) => (prev === day ? "all" : day))}
-                    className={`px-3 py-1.5 text-xs rounded-full border transition-colors whitespace-nowrap relative ${
-                      dayFilter === day
-                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                        : isToday
-                          ? "bg-transparent border-blue-500/20 text-gray-300 hover:border-blue-500/40"
-                          : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-                    }`}
                   >
                     {DAY_SHORT[dow]}
-                    {isToday && (
-                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
-                    )}
-                  </button>
+                  </FilterPill>
                 );
               })}
             </div>
@@ -331,7 +318,7 @@ export function WeekPlanningView() {
                           allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size;
                         setSelectedIds(allSelected ? new Set() : new Set(allVisibleTaskIds));
                       }}
-                      className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
+                      className="text-sm text-fg-muted hover:text-fg transition-colors"
                     >
                       {allVisibleTaskIds.size > 0 && selectedIds.size >= allVisibleTaskIds.size
                         ? "Desmarcar todas"
@@ -340,13 +327,13 @@ export function WeekPlanningView() {
                     <button
                       onClick={() => void handleBulkDelete()}
                       disabled={selectedIds.size === 0}
-                      className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                      className="text-sm text-danger hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
                     >
                       Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
                     </button>
                     <button
                       onClick={exitSelectMode}
-                      className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                      className="text-sm text-fg-muted hover:text-fg transition-colors"
                     >
                       Cancelar
                     </button>
@@ -354,7 +341,7 @@ export function WeekPlanningView() {
                 ) : (
                   <button
                     onClick={() => setSelectMode(true)}
-                    className="text-xs text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
+                    className="text-sm px-2.5 py-1 border border-border text-fg-muted hover:text-fg hover:border-fg-muted rounded-control transition-colors"
                   >
                     Selecionar tarefas
                   </button>
@@ -363,8 +350,14 @@ export function WeekPlanningView() {
             )}
           </div>
 
-          {/* ── Task list grouped by day ────────────────────────────────────── */}
-          <div data-tour="planning-task-list" className="flex-1 min-h-0 overflow-y-auto">
+          {/* ── Um cartão por dia ────────────────────────────────────────────
+              O corpo é o `p-5` de página com o degrau de 16 entre os cartões
+              (spec `1/1/1/1/1` da 3e), e o dia corrente é o mesmo cartão no tom
+              de acento. */}
+          <div
+            data-tour="planning-task-list"
+            className="flex-1 min-h-0 overflow-y-auto p-5 flex flex-col gap-4"
+          >
             {filteredDays.map((day) => {
               const dayTasks = tasks.filter((t) => isTaskOnDate(t, day));
               if (dayTasks.length === 0 && dayFilter !== "all") return null;
@@ -373,44 +366,46 @@ export function WeekPlanningView() {
               const isToday = day === today;
               const dayLabel = `${DAY_SHORT[dayDate.getUTCDay()]}, ${String(dayDate.getUTCDate()).padStart(2, "0")}/${String(dayDate.getUTCMonth() + 1).padStart(2, "0")}`;
               const dayCompleted = dayTasks.filter((t) => t.completedDates.includes(day)).length;
+              const dayTaskIds = dayTasks.map((t) => t.id);
+              const allInDay =
+                dayTaskIds.length > 0 && dayTaskIds.every((id) => selectedIds.has(id));
+              const someInDay = dayTaskIds.some((id) => selectedIds.has(id));
 
               return (
-                <div key={day}>
-                  <div
-                    className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-800 ${isToday ? "bg-blue-500/5" : "bg-gray-900/60"}`}
-                  >
-                    <span
-                      className={`text-[11px] font-semibold uppercase tracking-widest ${isToday ? "text-blue-400" : "text-gray-400"}`}
-                    >
-                      {dayLabel}
-                      {isToday && (
-                        <span className="ml-1.5 normal-case font-medium text-blue-400/70">
-                          hoje
-                        </span>
-                      )}
-                    </span>
-                    <div className="ml-auto flex items-center gap-2">
-                      {selectMode && dayTasks.length > 0 && (
-                        <button
-                          onClick={() => toggleSelectAllForDay(day)}
-                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
-                        >
-                          {dayTasks.every((t) => selectedIds.has(t.id))
-                            ? "Desmarcar"
-                            : "Selecionar"}
-                        </button>
-                      )}
-                      {dayTasks.length > 0 && (
-                        <span className="text-[10px] font-medium text-gray-500 bg-gray-800 rounded-full px-1.5 py-0.5 leading-none">
-                          {dayCompleted > 0
-                            ? `${dayCompleted}/${dayTasks.length}`
-                            : dayTasks.length}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                <SectionCard
+                  key={day}
+                  className="shrink-0"
+                  title={isToday ? `${dayLabel} · hoje` : dayLabel}
+                  tone={isToday ? "accent" : "default"}
+                  leading={
+                    selectMode && dayTaskIds.length > 0 ? (
+                      <input
+                        type="checkbox"
+                        checked={allInDay}
+                        // Seleção parcial: traço em vez de vazio, senão o dia com
+                        // metade das linhas marcadas lê como dia sem nada marcado.
+                        ref={(el) => {
+                          if (el) el.indeterminate = someInDay && !allInDay;
+                        }}
+                        onChange={() => toggleSelectAllForDay(dayTaskIds)}
+                        aria-label={`Selecionar ${dayLabel}`}
+                        className={selectionBoxClass}
+                      />
+                    ) : undefined
+                  }
+                  action={
+                    dayTasks.length > 0 && (
+                      <Badge
+                        tone={isToday ? "accent" : "neutral"}
+                        className="font-mono tabular-nums"
+                      >
+                        {dayCompleted > 0 ? `${dayCompleted}/${dayTasks.length}` : dayTasks.length}
+                      </Badge>
+                    )
+                  }
+                >
                   {dayTasks.length === 0 ? (
-                    <p className="px-4 py-3 text-xs text-gray-600">Nenhuma tarefa planejada</p>
+                    <p className="px-3 py-2.5 text-xs text-fg-muted">Nenhuma tarefa planejada</p>
                   ) : (
                     dayTasks.map((task) => (
                       <PlannedTaskItem
@@ -419,10 +414,8 @@ export function WeekPlanningView() {
                         dateISO={day}
                         projects={projects}
                         categories={categories}
-                        playDisabled={!!runningTask}
-                        tracked={
-                          day === trackedToday && trackedTitles.has(task.name.toLowerCase().trim())
-                        }
+                        playBlock={resolvePlayBlock(runningPlannedId, task.id)}
+                        tracked={day === trackedToday && trackedIds.has(task.id)}
                         onPlay={handlePlay}
                         onUpdate={update}
                         onComplete={complete}
@@ -435,7 +428,7 @@ export function WeekPlanningView() {
                       />
                     ))
                   )}
-                </div>
+                </SectionCard>
               );
             })}
           </div>

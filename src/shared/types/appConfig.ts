@@ -1,16 +1,19 @@
-import type { SheetColumnMapping } from "@shared/types/sheetsConfig";
-import type { RoundingSlot } from "@shared/utils/roundDuration";
 import type {
-  ClockifyWorkspaceRef,
-  ClockifyProjectMapping,
   ClockifyCategoryMapping,
+  ClockifyProjectMapping,
+  ClockifyWorkspaceRef,
 } from "@shared/types/clockifyConfig";
 import type { MondayFieldCatalogs, MondayProjectMapping } from "@shared/types/mondayConfig";
+import type { SheetColumnMapping } from "@shared/types/sheetsConfig";
+import type { RoundingSlot } from "@shared/utils/roundDuration";
 
 export interface OverlayPosition {
   x: number;
   y: number;
 }
+
+/** Periodicidade do backup do banco no Drive. Contada por intervalo desde o último sucesso. */
+export type BackupFrequency = "daily" | "weekly" | "monthly";
 
 /**
  * Workspace do DeskClock em que cada integração trabalha.
@@ -42,7 +45,6 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   // Geral
   setupCompleted: boolean;
   userName: string;
-  showWelcomeMessage: boolean;
   startOnBoot: boolean;
   liveTrayTimer: boolean;
   closeOnFocusLoss: boolean;
@@ -70,19 +72,23 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
    */
   retroactivePlannedHeight: number;
   // Acessibilidade
-  fontSize: "P" | "M" | "G" | "GG";
+  /**
+   * Modo e acento são eixos independentes. Vazio significa "nunca escolhido" e
+   * é migrado do `theme` legado na leitura (`resolveAppearance`), sem gravar
+   * nada — quem nunca abrir Aparência não percebe a mudança.
+   */
+  mode: "" | "escuro" | "claro";
+  accent: "" | "azul" | "verde" | "roxo" | "ambar";
+  /** @deprecated Substituído por `mode` + `accent`; só é lido para migrar. */
   theme: "azul" | "verde" | "escuro" | "claro";
   // Atalhos globais
   shortcutToggleTask: string;
   shortcutStopTask: string;
   shortcutToggleOverlay: string;
   shortcutToggleWindow: string;
-  // Atalho da janela
-  shortcutCommandPalette: string;
   // Overlay
   overlayAlwaysVisible: boolean;
   overlayShowOnStart: boolean;
-  overlaySize: "big" | "small";
   overlayOpacity: number;
   overlaySnapToGrid: boolean;
   overlayPosition_execution: OverlayPosition;
@@ -108,6 +114,25 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
    * silêncio — sem este rastro, reunião que não vira planejada é indiagnosticável.
    */
   calendarLastSyncError: string;
+  // Backup do banco no Google Drive
+  driveBackupEnabled: boolean;
+  driveBackupFrequency: BackupFrequency;
+  /**
+   * Pasta "DeskClock Backups" no Drive do usuário. Vazio = ainda não criada; o
+   * cliente cria na primeira execução e persiste o id aqui. Ela é **visível**
+   * de propósito: baixar o backup sem passar pelo app é o motivo de ele existir.
+   */
+  driveBackupFolderId: string;
+  /**
+   * Instante do último backup bem-sucedido. `0` = nunca. É daqui que sai o
+   * vencimento — não há âncora de calendário, então não há borda de dia 31 e o
+   * backup vencido roda assim que o app abre.
+   */
+  driveBackupLastRunAt: number;
+  /** Falha do último ciclo, exibida na subseção. "" quando correu bem. */
+  driveBackupLastError: string;
+  /** Quantos arquivos ficam na pasta; o excedente é podado após cada envio. */
+  driveBackupKeepCount: number;
   // Tokens Google OAuth
   googleAccessToken: string;
   googleRefreshToken: string;

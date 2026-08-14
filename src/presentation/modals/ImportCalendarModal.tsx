@@ -1,7 +1,10 @@
 import type { Category } from "@domain/entities/Category";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICalendarImporter";
+import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import { trackImportedMeetings } from "@domain/usecases/calendar/trackImportedMeetings";
 import { dedupeCalendarEvents } from "@domain/usecases/plannedTasks/DedupeCalendarEvents";
 import {
   importCalendarEvents,
@@ -9,8 +12,10 @@ import {
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { Badge, Button, Modal, Toggle } from "@presentation/components/ui";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
+import { todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
 import {
   AlertCircle,
@@ -22,13 +27,11 @@ import {
   Loader2,
   Repeat2,
   Square,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 
 const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
@@ -171,14 +174,14 @@ function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: E
       />
 
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500 shrink-0">Agendamento:</span>
-        <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-0.5">
+        <span className="text-sm text-fg-muted shrink-0">Agendamento:</span>
+        <div className="flex items-center gap-1 bg-raised rounded-control p-0.5">
           <button
             onClick={() => onChange({ ...state, scheduleType: "specific_date" })}
-            className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+            className={`px-2 py-0.5 text-sm rounded-control transition-colors ${
               state.scheduleType === "specific_date"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-gray-200"
+                ? "bg-accent text-white"
+                : "text-fg-secondary hover:text-fg"
             }`}
           >
             Específica
@@ -190,10 +193,10 @@ function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: E
                 : onlyWeekdays(event.suggestedRecurringDays ?? []);
               onChange({ ...state, scheduleType: "recurring", recurringDays: days });
             }}
-            className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
+            className={`px-2 py-0.5 text-sm rounded-control transition-colors ${
               state.scheduleType === "recurring"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-gray-200"
+                ? "bg-accent text-white"
+                : "text-fg-secondary hover:text-fg"
             }`}
           >
             Recorrente
@@ -203,16 +206,16 @@ function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: E
 
       {state.scheduleType === "recurring" && (
         <div className="flex items-center gap-1">
-          <span className="text-xs text-gray-500 shrink-0 mr-1">Dias:</span>
+          <span className="text-sm text-fg-muted shrink-0 mr-1">Dias:</span>
           {WEEKDAY_VALUES.map((day) => (
             <button
               key={day}
               onClick={() => toggleDay(day)}
               title={DAY_LABELS[day]}
-              className={`w-7 h-7 text-xs rounded-lg transition-colors ${
+              className={`w-7 h-7 text-sm rounded-control transition-colors ${
                 state.recurringDays.includes(day)
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-800 text-gray-500 hover:text-gray-200"
+                  ? "bg-accent text-white"
+                  : "bg-raised text-fg-muted hover:text-fg"
               }`}
             >
               {DAY_LABELS[day][0]}
@@ -263,7 +266,7 @@ function EventRow({
 
   return (
     <div
-      className={`border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors ${isDeduped ? "opacity-60" : ""}`}
+      className={`border-b border-border-subtle last:border-0 cursor-pointer hover:bg-raised/30 transition-colors ${isDeduped ? "opacity-60" : ""}`}
       onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
     >
       <div className="flex items-start gap-2 px-4 py-2.5">
@@ -272,42 +275,39 @@ function EventRow({
           checked={selected}
           onChange={onToggleSelect}
           onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 accent-blue-500 shrink-0"
+          className="mt-0.5 accent-accent shrink-0"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-gray-100 truncate">{event.title}</span>
+            <span className="text-sm text-fg truncate">{event.title}</span>
             {event.recurringEventId && (
               <span title="Evento recorrente">
-                <Repeat2 size={11} className="text-blue-400 shrink-0" />
+                <Repeat2 size={14} className="text-accent-text shrink-0" />
               </span>
             )}
             {isDeduped && (
-              <span
-                title="Mesma tarefa recorrente já incluída — não criará tarefa separada"
-                className="px-1 py-0.5 text-[10px] leading-none rounded bg-gray-700 text-gray-400 shrink-0"
-              >
+              <Badge title="Mesma tarefa recorrente já incluída — não criará tarefa separada">
                 recorrente
-              </span>
+              </Badge>
             )}
             {isDuplicateOfExisting && (
-              <span
+              <Badge
+                tone="warning"
+                icon={<AlertTriangle size={14} />}
                 title="Já existe uma tarefa planejada com este nome"
-                className="flex items-center gap-0.5 px-1 py-0.5 text-[10px] leading-none rounded bg-yellow-900/50 text-yellow-400 shrink-0"
               >
-                <AlertTriangle size={9} />
                 já existe
-              </span>
+              </Badge>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-fg-muted mt-0.5">
             {event.allDay
               ? "Dia todo"
               : event.startTime
                 ? `${event.startTime}${event.endTime ? ` – ${event.endTime}` : ""}`
                 : ""}
             {hasEdits && (
-              <span className="ml-2 text-blue-400">
+              <span className="ml-2 text-accent-text">
                 {editState.projectName || ""}
                 {editState.scheduleType === "recurring" && effectiveRecurringDays.length > 0
                   ? ` · ${[...effectiveRecurringDays]
@@ -319,8 +319,8 @@ function EventRow({
             )}
           </p>
         </div>
-        <span className="p-1 text-gray-600 shrink-0">
-          {editState.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        <span className="p-1 text-fg-muted shrink-0">
+          {editState.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </div>
 
@@ -342,17 +342,20 @@ function EventRow({
 interface ImportCalendarModalProps {
   importer: ICalendarImporter;
   repo: IPlannedTaskRepository;
+  trackedRepo: ITrackedMeetingRepository;
   defaultFromISO: string;
   defaultToISO: string;
   projects: Project[];
   categories: Category[];
-  onImported: (count: number) => void;
+  /** `tracked` conta as reuniões que passaram a avisar — ver {@link trackImportedMeetings}. */
+  onImported: (count: number, tracked: number) => void;
   onClose: () => void;
 }
 
 export function ImportCalendarModal({
   importer,
   repo,
+  trackedRepo,
   defaultFromISO,
   defaultToISO,
   projects,
@@ -382,7 +385,9 @@ export function ImportCalendarModal({
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
-  useEscapeToClose(onClose);
+  // Desligado por padrão: rastrear é assumir que o dia inteiro importado vira
+  // aviso na tela, e quem importa uma semana de agenda raramente quer isso.
+  const [trackMeetings, setTrackMeetings] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -518,6 +523,35 @@ export function ImportCalendarModal({
     setEditMap((prev) => new Map(prev).set(id, state));
   }
 
+  /**
+   * Faz as reuniões da importação avisarem no início e no fim, emparelhando cada
+   * evento com a planejada que ele criou — `importCalendarEvents` devolve as
+   * planejadas na ordem das entradas, e é esse contrato que sustenta o par.
+   *
+   * **Falha aqui não é falha da importação.** As planejadas já estão gravadas
+   * quando este passo roda; pintar "erro ao importar eventos" por cima levaria o
+   * usuário a repetir o import e duplicar tudo. Fica no console.
+   */
+  async function trackSelectedMeetings(
+    inputs: ImportEventInput[],
+    created: PlannedTask[]
+  ): Promise<number> {
+    try {
+      const { tracked, errors } = await trackImportedMeetings(
+        trackedRepo,
+        inputs.map((input, i) => ({ event: input.event, plannedTaskId: created[i].id })),
+        todayISO()
+      );
+      if (errors.length > 0) {
+        console.error("[importCalendar] falha ao rastrear reuniões", errors);
+      }
+      return tracked;
+    } catch (err) {
+      console.error("[importCalendar] falha ao rastrear reuniões", err);
+      return 0;
+    }
+  }
+
   async function handleImport() {
     const inputs: ImportEventInput[] = events
       .filter((e) => selected.has(e.id) && !dedupedEventIds.has(e.id))
@@ -538,17 +572,16 @@ export function ImportCalendarModal({
 
     setImporting(true);
     try {
-      const count = (
-        await importCalendarEvents(
-          repo,
-          inputs,
-          new Date().toISOString(),
-          workspaceId,
-          addOpenUrlAction
-        )
-      ).length;
-      if (count > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-      onImported(count);
+      const created = await importCalendarEvents(
+        repo,
+        inputs,
+        new Date().toISOString(),
+        workspaceId,
+        addOpenUrlAction
+      );
+      if (created.length > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+      const tracked = trackMeetings ? await trackSelectedMeetings(inputs, created) : 0;
+      onImported(created.length, tracked);
     } catch (err) {
       const msg =
         err instanceof Error
@@ -573,31 +606,31 @@ export function ImportCalendarModal({
     const dayShort = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 
     return (
-      <div key={date} className="border-b border-gray-800 last:border-0">
-        <div className="flex items-center gap-2 px-4 py-2 bg-gray-800/40">
+      <div key={date} className="border-b border-border-subtle last:border-0">
+        <div className="flex items-center gap-2 px-4 py-2 bg-raised/40">
           {hasEvents ? (
             <button
               type="button"
               onClick={() => toggleDayEvents(date)}
-              className="shrink-0 text-gray-400 hover:text-gray-200"
+              className="shrink-0 text-fg-secondary hover:text-fg"
             >
               {allDaySelected ? (
-                <CheckSquare size={13} />
+                <CheckSquare size={14} />
               ) : someDaySelected ? (
-                <Square size={13} className="opacity-50" />
+                <Square size={14} className="opacity-50" />
               ) : (
-                <Square size={13} />
+                <Square size={14} />
               )}
             </button>
           ) : (
             <div className="w-[13px] shrink-0" />
           )}
-          <span className="text-xs font-semibold text-gray-300 capitalize flex-1">
+          <span className="text-sm font-semibold text-fg-secondary capitalize flex-1">
             {dayOfWeek}
-            <span className="ml-1.5 font-normal text-gray-500">{dayShort}</span>
+            <span className="ml-1.5 font-normal text-fg-muted">{dayShort}</span>
           </span>
           {hasEvents && (
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-fg-muted">
               {dayEvents.filter((e) => selected.has(e.id)).length}/{dayEvents.length}
             </span>
           )}
@@ -625,7 +658,7 @@ export function ImportCalendarModal({
             />
           ))
         ) : (
-          <p className="text-xs text-gray-700 italic px-4 py-2">Nenhum evento neste dia</p>
+          <p className="text-xs text-fg-muted italic px-4 py-2">Nenhum evento neste dia</p>
         )}
       </div>
     );
@@ -635,191 +668,181 @@ export function ImportCalendarModal({
     selectedWeekEvents.length > 0 && selectedWeekEvents.every((e) => selected.has(e.id));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4 flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-800 shrink-0">
-          <div className="flex items-center gap-3">
-            <Calendar size={16} className="text-blue-400 shrink-0" />
-            <h2 className="text-sm font-semibold text-gray-100 flex-1">
-              Importar do Google Calendar
-            </h2>
-            <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-              <X size={16} />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="shrink-0">De</span>
-            <DatePickerInput
-              value={fromDate}
-              onChange={(d) => {
-                setFromDate(d);
-                if (d > toDate) setToDate(d);
-              }}
-              className="flex-1"
-            />
-            <span className="shrink-0">até</span>
-            <DatePickerInput
-              value={toDate}
-              onChange={(d) => {
-                setToDate(d);
-                if (d < fromDate) setFromDate(d);
-              }}
-              className="flex-1"
-            />
-          </div>
+    // `xl` (900) e não `lg`: é o único modal de duas colunas — a lista de semanas
+    // come 192 px, e em 720 sobravam 528 para linhas que editam projeto e
+    // categoria em linha. Eram 672 px em `max-w-2xl`, fora das quatro larguras.
+    <Modal
+      title={
+        <>
+          <Calendar size={16} className="text-accent-text shrink-0" />
+          Importar do Google Calendar
+        </>
+      }
+      size="xl"
+      tall
+      onClose={onClose}
+      // A linha das duas colunas, sem padding: cada coluna rola por si e desenha
+      // o próprio espaçamento, e com isso o `overflow` do corpo fica inerte —
+      // ele nunca transborda porque a altura dos filhos é a dele.
+      bodyClassName="flex"
+      toolbar={
+        <div className="flex items-center gap-2 text-sm text-fg-secondary">
+          <span className="shrink-0">De</span>
+          <DatePickerInput
+            value={fromDate}
+            onChange={(d) => {
+              setFromDate(d);
+              if (d > toDate) setToDate(d);
+            }}
+            className="flex-1"
+          />
+          <span className="shrink-0">até</span>
+          <DatePickerInput
+            value={toDate}
+            onChange={(d) => {
+              setToDate(d);
+              if (d < fromDate) setFromDate(d);
+            }}
+            className="flex-1"
+          />
         </div>
-
-        {/* Corpo */}
-        {loading || error || events.length === 0 ? (
-          <div className="flex-1 overflow-y-auto">
-            {loading && (
-              <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
-                <Loader2 size={16} className="animate-spin" />
-                <span className="text-sm">Buscando eventos…</span>
-              </div>
-            )}
-            {!loading && error && (
-              <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-                <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
-                <p className="text-xs text-red-300">{error}</p>
-              </div>
-            )}
-            {!loading && !error && (
-              <p className="text-sm text-gray-500 text-center py-12">
-                Nenhum evento encontrado neste período.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-1 overflow-hidden">
-            {/* Sidebar — lista de semanas */}
-            <div className="w-48 shrink-0 border-r border-gray-800 overflow-y-auto bg-gray-900/50 flex flex-col">
-              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-600 border-b border-gray-800">
-                Semanas
-              </div>
-              {allWeekKeys.map((weekKey) => {
-                const count = events.filter((e) => getMondayISO(e.date) === weekKey).length;
-                const selCount = events.filter(
-                  (e) => getMondayISO(e.date) === weekKey && selected.has(e.id)
-                ).length;
-                const isActive = selectedWeek === weekKey;
-                return (
-                  <button
-                    key={weekKey}
-                    onClick={() => setSelectedWeek(weekKey)}
-                    className={`w-full text-left flex items-start gap-2 px-3 py-2.5 transition-colors border-l-2 ${
-                      isActive
-                        ? "bg-gray-800 border-blue-500"
-                        : "border-transparent hover:bg-gray-800/50"
-                    }`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div
-                        className={`text-xs font-medium truncate ${isActive ? "text-gray-100" : "text-gray-400"}`}
-                      >
-                        {weekRangeLabel(weekKey)}
-                      </div>
-                      <div className="text-[10px] text-gray-600 mt-0.5">seg a sex</div>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                          isActive ? "bg-blue-900/50 text-blue-400" : "bg-gray-800 text-gray-600"
-                        }`}
-                      >
-                        {count} ev.
-                      </span>
-                      {selCount > 0 && (
-                        <span className="text-[10px] text-green-500">{selCount} ✓</span>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Painel — dias e eventos da semana selecionada */}
-            <div className="flex-1 overflow-y-auto flex flex-col">
-              {selectedWeek ? (
-                <>
-                  <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-gray-800/90 backdrop-blur-sm border-b border-gray-800 shrink-0">
-                    <span className="text-xs font-semibold text-gray-200 flex-1 capitalize">
-                      {weekRangeLabelLong(selectedWeek)}
-                    </span>
-                    <button
-                      onClick={toggleWeekEvents}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors shrink-0"
-                    >
-                      {allWeekSelected ? "Desmarcar todos" : "Selecionar todos"}
-                    </button>
-                  </div>
-                  {selectedWeekDays.map((date) => renderDayGroup(date))}
-                </>
-              ) : (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-gray-600">
-                    <Calendar size={28} className="mx-auto mb-2 opacity-30" />
-                    <p className="text-xs">Selecione uma semana</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        {!loading && !error && events.length > 0 && (
-          <div className="flex flex-col gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
-            <label
-              className="flex items-center gap-2 cursor-pointer select-none"
-              onClick={() => setAddOpenUrlAction((v) => !v)}
-            >
-              <div
-                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                  addOpenUrlAction ? "bg-blue-600" : "bg-gray-700"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                    addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
-              </div>
-              <span className="text-xs text-gray-400">
+      }
+      // As chaves decidem algo sobre a importação inteira, e ficam fora do corpo
+      // por isso: dentro, rolariam para fora da vista junto com a lista de eventos.
+      notice={
+        !loading && !error && events.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={addOpenUrlAction}
+                onChange={setAddOpenUrlAction}
+                ariaLabel="Adicionar automaticamente uma ação de abrir URL do evento"
+              />
+              <span className="text-sm text-fg-secondary">
                 Adicionar automaticamente uma ação de abrir URL do evento
               </span>
-            </label>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={onClose}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={importing || effectiveTaskCount === 0}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
-              >
-                {importing ? (
-                  <>
-                    <Loader2 size={12} className="animate-spin" />
-                    Importando…
-                  </>
-                ) : effectiveTaskCount < selected.size ? (
-                  <>
-                    Importar {selected.size} evento(s) → {effectiveTaskCount} tarefa(s)
-                  </>
-                ) : (
-                  <>Importar selecionados ({selected.size})</>
-                )}
-              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Toggle
+                checked={trackMeetings}
+                onChange={setTrackMeetings}
+                ariaLabel="Rastrear reuniões (avisar no início e no fim)"
+              />
+              <span className="text-sm text-fg-secondary">
+                Rastrear reuniões (avisar no início e no fim)
+              </span>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        ) : null
+      }
+      footer={
+        !loading && !error && events.length > 0 ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleImport}
+              loading={importing}
+              disabled={effectiveTaskCount === 0}
+            >
+              {importing
+                ? "Importando…"
+                : effectiveTaskCount < selected.size
+                  ? `Importar ${selected.size} evento(s) → ${effectiveTaskCount} tarefa(s)`
+                  : `Importar selecionados (${selected.size})`}
+            </Button>
+          </>
+        ) : null
+      }
+    >
+      {loading || error || events.length === 0 ? (
+        <div className="flex-1 overflow-y-auto">
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
+              <Loader2 size={16} className="animate-spin" />
+              <span className="text-sm">Buscando eventos…</span>
+            </div>
+          )}
+          {!loading && error && (
+            <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
+              <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+              <p className="text-xs text-danger">{error}</p>
+            </div>
+          )}
+          {!loading && !error && (
+            <p className="text-sm text-fg-muted text-center py-12">
+              Nenhum evento encontrado neste período.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar — lista de semanas */}
+          <div className="w-48 shrink-0 border-r border-border-subtle overflow-y-auto bg-surface/50 flex flex-col">
+            <div className="px-3 py-2 text-overline uppercase text-fg-muted border-b border-border-subtle">
+              Semanas
+            </div>
+            {allWeekKeys.map((weekKey) => {
+              const count = events.filter((e) => getMondayISO(e.date) === weekKey).length;
+              const selCount = events.filter(
+                (e) => getMondayISO(e.date) === weekKey && selected.has(e.id)
+              ).length;
+              const isActive = selectedWeek === weekKey;
+              return (
+                <button
+                  key={weekKey}
+                  onClick={() => setSelectedWeek(weekKey)}
+                  className={`w-full text-left flex items-start gap-2 px-3 py-2.5 transition-colors border-l-2 ${
+                    isActive ? "bg-raised border-accent" : "border-transparent hover:bg-raised/50"
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div
+                      className={`text-sm font-medium truncate ${isActive ? "text-fg" : "text-fg-secondary"}`}
+                    >
+                      {weekRangeLabel(weekKey)}
+                    </div>
+                    <div className="text-xs text-fg-muted mt-0.5">seg a sex</div>
+                  </div>
+                  <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
+                    <Badge tone={isActive ? "accent" : "neutral"}>{count} ev.</Badge>
+                    {selCount > 0 && <span className="text-xs text-billable">{selCount} ✓</span>}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Painel — dias e eventos da semana selecionada */}
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            {selectedWeek ? (
+              <>
+                <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-raised/90 backdrop-blur-sm border-b border-border-subtle shrink-0">
+                  <span className="text-sm font-semibold text-fg flex-1 capitalize">
+                    {weekRangeLabelLong(selectedWeek)}
+                  </span>
+                  <button
+                    onClick={toggleWeekEvents}
+                    className="text-sm text-accent-text hover:text-fg transition-colors shrink-0"
+                  >
+                    {allWeekSelected ? "Desmarcar todos" : "Selecionar todos"}
+                  </button>
+                </div>
+                {selectedWeekDays.map((date) => renderDayGroup(date))}
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-fg-muted">
+                  <Calendar size={28} className="mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">Selecione uma semana</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }

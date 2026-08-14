@@ -152,7 +152,7 @@ export function useOverlayDrag(
       unlisten.then((fn) => fn());
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [config, configKey, snapToGrid, onPositionChange, overlaySize]);
+  }, [config, configKey, snapToGrid, onPositionChange]);
 
   return restore;
 }

@@ -3,7 +3,17 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { AlertTriangle } from "lucide-react";
 import { ShortcutRow } from "./ShortcutRow";
-import { SettingsCard, CardRow } from "./SettingsShared";
+import { SectionCard, SectionRow } from "@presentation/components/ui";
+
+/** Mesma caixa do aviso de erro da API, no token de aviso. */
+function WarningBanner({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 rounded-control bg-warning/10 border border-warning/30 px-3 py-2.5">
+      <AlertTriangle size={14} className="text-warning mt-0.5 shrink-0" />
+      <p className="text-xs text-warning">{children}</p>
+    </div>
+  );
+}
 
 export function AtalhosTab() {
   const config = useAppConfig();
@@ -12,7 +22,6 @@ export function AtalhosTab() {
   const [shortcutStopTask, setShortcutStopTask] = useState("");
   const [shortcutToggleOverlay, setShortcutToggleOverlay] = useState("");
   const [shortcutToggleWindow, setShortcutToggleWindow] = useState("");
-  const [shortcutCommandPalette, setShortcutCommandPalette] = useState("");
   const [displayServer, setDisplayServer] = useState("");
   const [failedShortcuts, setFailedShortcuts] = useState<string[]>([]);
 
@@ -22,7 +31,6 @@ export function AtalhosTab() {
     setShortcutStopTask(config.get("shortcutStopTask"));
     setShortcutToggleOverlay(config.get("shortcutToggleOverlay"));
     setShortcutToggleWindow(config.get("shortcutToggleWindow"));
-    setShortcutCommandPalette(config.get("shortcutCommandPalette"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -37,21 +45,18 @@ export function AtalhosTab() {
       stopTask: string;
       toggleOverlay: string;
       toggleWindow: string;
-      commandPalette: string;
     }>
   ) {
     const t = overrides?.toggleTask ?? shortcutToggleTask;
     const s = overrides?.stopTask ?? shortcutStopTask;
     const o = overrides?.toggleOverlay ?? shortcutToggleOverlay;
     const w = overrides?.toggleWindow ?? shortcutToggleWindow;
-    const cp = overrides?.commandPalette ?? shortcutCommandPalette;
     const failed = await invoke<string[]>("update_shortcuts", {
       shortcuts: [
         { action: "toggle-task", accelerator: t },
         { action: "stop-task", accelerator: s },
         { action: "toggle-overlay", accelerator: o },
         { action: "toggle-window", accelerator: w },
-        { action: "toggle-command-palette", accelerator: cp },
       ],
     });
     setFailedShortcuts(failed);
@@ -59,48 +64,26 @@ export function AtalhosTab() {
     await config.set("shortcutStopTask", s);
     await config.set("shortcutToggleOverlay", o);
     await config.set("shortcutToggleWindow", w);
-    await config.set("shortcutCommandPalette", cp);
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {displayServer === "wayland" && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
-          <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-300">
-            Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou
-            mude para uma sessão X11 para usar este recurso.
-          </p>
-        </div>
+        <WarningBanner>
+          Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou
+          mude para uma sessão X11 para usar este recurso.
+        </WarningBanner>
       )}
       {failedShortcuts.length > 0 && displayServer !== "wayland" && (
-        <div className="flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-800/50 px-3 py-2.5">
-          <AlertTriangle size={14} className="text-amber-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-300">
-            {failedShortcuts.length === 1
-              ? "Um atalho não pôde ser registrado — pode estar em uso por outro aplicativo."
-              : `${failedShortcuts.length} atalhos não puderam ser registrados — podem estar em uso por outro aplicativo.`}
-          </p>
-        </div>
+        <WarningBanner>
+          {failedShortcuts.length === 1
+            ? "Um atalho não pôde ser registrado — pode estar em uso por outro aplicativo."
+            : `${failedShortcuts.length} atalhos não puderam ser registrados — podem estar em uso por outro aplicativo.`}
+        </WarningBanner>
       )}
 
-      <SettingsCard>
-        <CardRow>
-          <ShortcutRow
-            label="Acesso rápido (Command Palette)"
-            description="Abre o painel de ações de qualquer lugar, mesmo com a janela fechada"
-            value={shortcutCommandPalette}
-            failed={failedShortcuts.includes(shortcutCommandPalette) && !!shortcutCommandPalette}
-            onSave={(v) => {
-              setShortcutCommandPalette(v);
-              applyShortcuts({ commandPalette: v });
-            }}
-          />
-        </CardRow>
-      </SettingsCard>
-
-      <SettingsCard>
-        <CardRow>
+      <SectionCard title="Tarefa e janelas" divided>
+        <SectionRow>
           <ShortcutRow
             label="Iniciar / Pausar / Retomar"
             description="Alterna execução da tarefa atual"
@@ -111,8 +94,8 @@ export function AtalhosTab() {
               applyShortcuts({ toggleTask: v });
             }}
           />
-        </CardRow>
-        <CardRow>
+        </SectionRow>
+        <SectionRow>
           <ShortcutRow
             label="Parar"
             description="Para a tarefa em execução"
@@ -123,8 +106,8 @@ export function AtalhosTab() {
               applyShortcuts({ stopTask: v });
             }}
           />
-        </CardRow>
-        <CardRow>
+        </SectionRow>
+        <SectionRow>
           <ShortcutRow
             label="Mostrar / Ocultar overlay"
             description="Alterna visibilidade do overlay"
@@ -135,8 +118,8 @@ export function AtalhosTab() {
               applyShortcuts({ toggleOverlay: v });
             }}
           />
-        </CardRow>
-        <CardRow>
+        </SectionRow>
+        <SectionRow>
           <ShortcutRow
             label="Mostrar / Ocultar janela"
             description="Alterna visibilidade da janela principal"
@@ -147,8 +130,8 @@ export function AtalhosTab() {
               applyShortcuts({ toggleWindow: v });
             }}
           />
-        </CardRow>
-      </SettingsCard>
+        </SectionRow>
+      </SectionCard>
     </div>
   );
 }

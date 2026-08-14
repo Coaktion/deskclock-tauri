@@ -3,8 +3,9 @@ import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext"
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { MondayConnectModal } from "@presentation/modals/MondayConnectModal";
-import { Loader2, LogIn, LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Button } from "@presentation/components/ui";
 import { StatusBadge } from "../shared";
 import { MondayConnectedSections } from "./MondayConnectedSections";
 import { MondayLogo } from "./MondayLogo";
@@ -49,38 +50,33 @@ export function MondayIntegrationCard() {
 
   return (
     <>
-      <div className="rounded-xl border border-gray-800 bg-gray-900/50">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-800 rounded-t-xl overflow-hidden">
+      <div className="rounded-card border border-border-subtle bg-surface">
+        <div className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-card overflow-hidden">
           <div className="mt-0.5 shrink-0">
             <MondayLogo size={20} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-gray-100">Monday</h2>
+              <h2 className="text-sm font-semibold text-fg">Monday</h2>
               <StatusBadge connected={connected} email={email} />
             </div>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-fg-muted mt-0.5">
               Registre horas como atividades nos boards de projeto do Monday.
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-2">
             {connected ? (
-              <button
-                onClick={handleDisconnect}
-                disabled={loading}
-                className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded transition-colors"
-              >
-                {loading ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+              <Button onClick={handleDisconnect} loading={loading} icon={<LogOut size={14} />}>
                 Desconectar
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
+                variant="primary"
                 onClick={() => setShowConnectModal(true)}
-                className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
+                icon={<LogIn size={14} />}
               >
-                <LogIn size={12} />
                 Conectar
-              </button>
+              </Button>
             )}
           </div>
         </div>

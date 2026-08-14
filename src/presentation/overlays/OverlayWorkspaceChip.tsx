@@ -19,8 +19,8 @@ const MENU_POS = { top: "2rem", right: "4rem" } as const;
  * Os menus usam `position: fixed`, não `absolute`: o cabeçalho do popup tem
  * `overflow-hidden` (para o arredondamento do topo), então um menu ancorado no
  * chip seria recortado pelo pai. `fixed` tira o menu do fluxo e do clipping —
- * o que também preserva as alturas fixas por estado do popup (`EXEC_H`,
- * `CONTENT_H`…), que redimensionam a janela do Tauri a cada mudança.
+ * e, de quebra, não empurra nada do corpo, cujo conteúdo divide a altura fixa da
+ * janela com o card da execução.
  *
  * Some quando só existe um workspace, igual ao switcher da sidebar.
  */
@@ -57,26 +57,26 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
       <button
         onClick={() => setOpen((v) => !v)}
         title={`Workspace: ${activeWorkspace.name}`}
-        className="flex items-center gap-1 max-w-[92px] px-1.5 py-0.5 rounded-lg hover:bg-gray-700 transition-colors"
+        className="flex items-center gap-1 max-w-[92px] px-1.5 py-0.5 rounded-control hover:bg-border transition-colors"
       >
         <WorkspaceDot color={activeWorkspace.color} size={7} />
-        <span className="text-[10px] text-gray-400 truncate">{activeWorkspace.name}</span>
+        <span className="text-sm text-fg-secondary truncate">{activeWorkspace.name}</span>
       </button>
 
       {open && (
         <div
           style={MENU_POS}
-          className="fixed z-50 w-44 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl py-1"
+          className="fixed z-50 w-44 bg-surface border border-border rounded-control shadow-2xl py-1"
         >
           {workspaces.map((w) => (
             <button
               key={w.id}
               onClick={() => void handlePick(w.id)}
-              className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] text-gray-300 hover:bg-gray-800 transition-colors"
+              className="w-full flex items-center gap-1.5 px-2 py-1 text-sm text-fg-secondary hover:bg-raised transition-colors"
             >
               <WorkspaceDot color={w.color} size={7} />
               <span className="flex-1 text-left truncate">{w.name}</span>
-              {w.id === activeWorkspaceId && <Check size={11} className="text-gray-500" />}
+              {w.id === activeWorkspaceId && <Check size={14} className="text-fg-muted" />}
             </button>
           ))}
         </div>
@@ -85,29 +85,29 @@ export function OverlayWorkspaceChip({ runningTask, onStop }: OverlayWorkspaceCh
       {pending && (
         <div
           style={MENU_POS}
-          className="fixed z-50 w-52 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-2"
+          className="fixed z-50 w-52 bg-surface border border-border rounded-control shadow-2xl p-2"
         >
-          <p className="text-[11px] text-gray-300 leading-snug mb-1.5">
-            Parar a tarefa e trocar para <span className="text-gray-100">{pending.name}</span>?
+          <p className="text-sm text-fg-secondary leading-snug mb-1.5">
+            Parar a tarefa e trocar para <span className="text-fg">{pending.name}</span>?
           </p>
           <div className="flex items-center gap-1">
             <button
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] bg-green-700 hover:bg-green-600 text-white rounded transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-sm bg-billable hover:opacity-90 text-white rounded-chip transition"
             >
-              <CheckCircle2 size={11} />
+              <CheckCircle2 size={14} />
               Concluída
             </button>
             <button
               onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] bg-gray-700 hover:bg-gray-600 text-gray-200 rounded transition-colors"
+              className="flex items-center gap-1 px-1.5 py-0.5 text-sm bg-border hover:opacity-90 text-fg rounded-chip transition"
             >
-              <Clock size={11} />
+              <Clock size={14} />
               Pendente
             </button>
             <button
               onClick={cancel}
-              className="ml-auto px-1 text-[11px] text-gray-500 hover:text-gray-300"
+              className="ml-auto px-1 text-sm text-fg-muted hover:text-fg-secondary"
             >
               ✕
             </button>

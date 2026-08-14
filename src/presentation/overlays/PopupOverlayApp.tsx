@@ -22,28 +22,30 @@ import {
   type OverlayConfigChangedPayload,
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
-import { applyFontSize } from "@shared/utils/fontSize";
-import { applyTheme } from "@shared/utils/theme";
-import { positionPopupNearCompact } from "@shared/utils/windowPosition";
-import type { Theme } from "@shared/utils/theme";
+import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
+import { positionPopupNearCompact, POPUP_SIZE } from "@shared/utils/windowPosition";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { PopupOverlayContent } from "./PopupOverlayContent";
 import { MeetingPromptView } from "./MeetingPromptView";
 import { useMeetingPrompt } from "./useMeetingPrompt";
 
-const POPUP_W = 288;
-const POPUP_H_ESTIMATE = 380;
+const POPUP_W = POPUP_SIZE.width;
+// A altura do popup em todo estado, e por isso também o teto do `setMaxSize`:
+// enquanto ela foi estimativa, o running com ações e campos pedia mais do que o
+// teto e o excedente era cortado calado.
+const POPUP_H = POPUP_SIZE.height;
 
 const appWindow = getCurrentWindow();
 
 function PopupOverlayAppInner() {
   const config = useAppConfig();
+  useAppearanceSync(config);
   const { taskRepo, plannedTaskRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
   const [runningTask, setRunningTask] = useState<Task | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
-  const intendedSizeRef = useRef({ width: POPUP_W, height: POPUP_H_ESTIMATE });
+  const intendedSizeRef = useRef({ width: POPUP_W, height: POPUP_H });
   const isProgrammaticResizeRef = useRef(false);
   const isStartingTaskRef = useRef(false);
   const activePlannedTaskId = useRef<string | null>(null);
@@ -55,6 +57,9 @@ function PopupOverlayAppInner() {
   // levantam a marca de propósito — eles nada dizem sobre a origem, e abortar a
   // restauração por causa deles deixaria os chips de "Ações" vazios.
   const liveTaskStateRef = useRef(false);
+  /** Em ref, e não em `config.get`: esta janela carrega a config no boot, e a
+   *  troca feita na janela principal só chega por evento. */
+  const showOnStartRef = useRef(true);
   // Modal aberto no conteúdo do popup (hoje, a edição de planejada). Segura o
   // fechamento automático: perder o foco ou apertar ESC com o modal aberto
   // jogaria fora o que o usuário está editando.
@@ -67,7 +72,7 @@ function PopupOverlayAppInner() {
     prompt: meetingPrompt,
     respond: respondMeetingPrompt,
     activeRef: meetingPromptActiveRef,
-  } = useMeetingPrompt({ width: POPUP_W, height: POPUP_H_ESTIMATE });
+  } = useMeetingPrompt({ width: POPUP_W, height: POPUP_H });
 
   // Programmatic resize with min/max locking to prevent manual resize
   const programmaticSetSize = useCallback(async (width: number, height: number) => {
@@ -111,11 +116,10 @@ function PopupOverlayAppInner() {
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    applyFontSize(config.get("fontSize"));
-    applyTheme(config.get("theme") as Theme);
     setOverlayOpacity(config.get("overlayOpacity") as number);
+    showOnStartRef.current = config.get("overlayShowOnStart");
     void appWindow.setMinSize(new LogicalSize(POPUP_W, 100));
-    void appWindow.setMaxSize(new LogicalSize(POPUP_W, POPUP_H_ESTIMATE));
+    void appWindow.setMaxSize(new LogicalSize(POPUP_W, POPUP_H));
     // Load initial running task — RUNNING_TASK_CHANGED is only emitted on mutations,
     // not on startup, so we query the DB directly.
     void getActiveTasks(taskRepo).then(async (tasks) => {
@@ -143,8 +147,7 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED,
       ({ payload }) => {
         if (payload.key === "overlayOpacity") setOverlayOpacity(payload.value as number);
-        else if (payload.key === "fontSize") applyFontSize(payload.value as string);
-        else if (payload.key === "theme") applyTheme(payload.value as Theme);
+        if (payload.key === "overlayShowOnStart") showOnStartRef.current = payload.value as boolean;
       }
     );
     return () => {
@@ -181,7 +184,7 @@ function PopupOverlayAppInner() {
           }
         }
         if (payload.task) {
-          if (config.get("overlayShowOnStart")) {
+          if (showOnStartRef.current) {
             const isVis = await appWindow.isVisible();
             if (!isVis) {
               const mainWin = await WebviewWindow.getByLabel("main");
@@ -189,7 +192,7 @@ function PopupOverlayAppInner() {
               if (!mainIsVisible) {
                 await positionPopupNearCompact(appWindow, {
                   width: POPUP_W,
-                  height: POPUP_H_ESTIMATE,
+                  height: POPUP_H,
                 });
                 await appWindow.show();
                 await appWindow.setFocus();
@@ -203,7 +206,7 @@ function PopupOverlayAppInner() {
             if (!isVis) {
               await positionPopupNearCompact(appWindow, {
                 width: POPUP_W,
-                height: POPUP_H_ESTIMATE,
+                height: POPUP_H,
               });
               await appWindow.show();
               await appWindow.setFocus();
@@ -369,11 +372,6 @@ function PopupOverlayAppInner() {
     [taskRepo, plannedTaskRepo, runningTask]
   );
 
-  const handleClose = useCallback(async () => {
-    await emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {});
-    await appWindow.hide();
-  }, []);
-
   const handleNavigatePlanning = useCallback(async () => {
     await emit(OVERLAY_EVENTS.OVERLAY_NAVIGATE_PLANNING, {});
   }, []);
@@ -393,7 +391,6 @@ function PopupOverlayAppInner() {
         <PopupOverlayContent
           runningTask={runningTask}
           activePlannedTaskActions={activePlannedTaskActions}
-          onClose={handleClose}
           onNavigatePlanning={handleNavigatePlanning}
           onResize={programmaticSetSize}
           onModalOpenChange={handleModalOpenChange}

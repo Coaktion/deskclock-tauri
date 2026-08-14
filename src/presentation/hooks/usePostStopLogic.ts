@@ -1,12 +1,13 @@
 import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
-import { shouldDiscardTask, computeRoundedDuration } from "@domain/utils/taskStopRules";
+import { shouldDiscardTask, computeRoundedStop } from "@domain/utils/taskStopRules";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { Task } from "@domain/entities/Task";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import { emit } from "@tauri-apps/api/event";
@@ -63,26 +64,35 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
       if (shouldDiscardTask(duration, config.get("discardTasksUnderOneMinute"))) {
         await cancelTaskUC(taskRepo, task.id);
         triggerReload();
+        // O descarte apaga um registro que o `stopTask` já gravou como concluído
+        // — e o TASK_STOPPED já fez a aba "Executadas" recarregar e mostrá-lo.
+        // Sem este aviso, a linha fica na tela de uma tarefa que não existe mais.
+        await notifyTasksChanged();
         await showToast("info", "Tarefa descartada (menos de 1 minuto)");
         return null;
       }
 
       let finalTask = task;
-      const rounded = computeRoundedDuration(
+      const rounded = computeRoundedStop(
+        task.startTime,
         duration,
         config.get("roundingEnabled"),
         config.get("roundingSlots"),
         config.get("roundingTolerance")
       );
       if (rounded !== null) {
-        finalTask = await updateTaskUC(
-          taskRepo,
-          task.id,
-          { durationSeconds: rounded },
-          task.updatedAt
-        );
+        finalTask = await updateTaskUC(taskRepo, task.id, rounded, task.updatedAt);
         triggerReload();
       }
+
+      // O `triggerReload` só alcança quem vive no contexto desta janela (a tela de
+      // Tarefas). Lançamento manual e Histórico se atualizam por evento, e parar
+      // uma tarefa era a única mutação de registro que nunca emitia TASKS_CHANGED:
+      // com uma tarefa avulsa nem o PLANNED_TASKS_CHANGED saía, e a tela aberta
+      // ficava sem sinal nenhum. Vai **depois** do arredondamento para que quem
+      // recarregar leia a duração final, e antes do envio automático para que o
+      // registro apareça sem esperar rede.
+      await notifyTasksChanged();
 
       if (completed) {
         // O vínculo atravessa janelas e eventos de mão em mão (§4.1), e quem

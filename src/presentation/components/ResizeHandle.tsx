@@ -26,10 +26,9 @@ interface ResizeHandleProps extends React.ComponentPropsWithoutRef<"div"> {
  * divisor a ser um risco grosso permanente no meio da tela, quando o que se
  * quer é um traço fino que responde ao cursor.
  *
- * **A caixa do grip usa o fundo da superfície** (`bg-gray-950`, o mesmo da
- * janela) para apagar o trecho de linha que passa por trás dela — a mesma
- * técnica do `notchedLabelClass`. Sem o recorte apareceriam três linhas em vez
- * de duas barras.
+ * **A caixa do grip usa o fundo da superfície** (`bg-canvas`, o mesmo da
+ * janela) para apagar o trecho de linha que passa por trás dela. Sem o recorte
+ * apareceriam três linhas em vez de duas barras.
  *
  * O gutter de 6px é largura (ou altura) de layout de verdade, não sobreposição:
  * o grip cabe nele sem invadir os painéis vizinhos. O `after` estende a área de
@@ -43,11 +42,11 @@ interface ResizeHandleProps extends React.ComponentPropsWithoutRef<"div"> {
  */
 export function ResizeHandle({ active = false, className = "", ...props }: ResizeHandleProps) {
   const isVertical = props["aria-orientation"] !== "horizontal";
-  const barColor = active ? "bg-blue-500" : "bg-gray-700 group-hover/rh:bg-gray-500";
+  const barColor = active ? "bg-accent" : "bg-border group-hover/rh:bg-fg-muted";
 
   const lineColor = active
-    ? "before:bg-blue-500"
-    : "before:bg-gray-800 hover:before:bg-gray-600 focus-visible:before:bg-blue-500";
+    ? "before:bg-accent"
+    : "before:bg-border-subtle hover:before:bg-border focus-visible:before:bg-accent";
 
   return (
     <div
@@ -68,7 +67,7 @@ export function ResizeHandle({ active = false, className = "", ...props }: Resiz
       ].join(" ")}
     >
       <div
-        className={`relative flex items-center gap-px bg-gray-950 ${
+        className={`relative flex items-center gap-px bg-canvas ${
           isVertical ? "flex-row py-1" : "flex-col px-1"
         }`}
       >

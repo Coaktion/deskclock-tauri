@@ -36,3 +36,6 @@ coverage/
 *.xlsx
 *.json.export
 .gitnexus
+
+# Bancada visual — PNG e relatório gerados por `pnpm visual`
+.visual/

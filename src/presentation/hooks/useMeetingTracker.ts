@@ -35,10 +35,16 @@ const START_REPROMPT_MS = 5 * 60 * 1000;
 const INITIAL_TICK_DELAY_MS = 4000;
 
 /**
- * Orquestra o rastreamento automático de reuniões do Google Agenda. Deve rodar
- * dentro do RunningTaskProvider (usa startTask/stopTask). Toda a decisão de
- * negócio vive em use cases de domínio (syncTodayMeetings, computeMeetingPromptActions);
- * este hook apenas agenda ticks, emite prompts e aplica a resposta do usuário.
+ * Orquestra o rastreamento de reuniões do Google Agenda. Deve rodar dentro do
+ * RunningTaskProvider (usa startTask/stopTask). Toda a decisão de negócio vive em
+ * use cases de domínio (syncTodayMeetings, computeMeetingPromptActions); este hook
+ * apenas agenda ticks, emite prompts e aplica a resposta do usuário.
+ *
+ * **São dois interruptores, não um.** Buscar a agenda é o que o toggle de
+ * rastreamento automático liga; avisar sobre reunião **já rastreada** só depende
+ * do Google estar conectado — senão a reunião semeada pelo import manual ficaria
+ * inerte no banco. O preço é declarado: sem descoberta não há reconcile, então
+ * reunião cancelada ou remarcada no Google ainda avisa no horário antigo.
  */
 export function useMeetingTracker() {
   const config = useAppConfig();
@@ -74,9 +80,20 @@ export function useMeetingTracker() {
     let disposed = false;
     let inFlight = false;
     let lastSyncMs = 0;
+    let lastPrunedDay = "";
 
-    const enabled = () =>
+    /**
+     * Buscar a agenda. É o que o toggle de rastreamento automático governa —
+     * varrer o Google de dois em dois minutos é o que ele liga e desliga.
+     */
+    const discoveryEnabled = () =>
       config.get("calendarAutoTrackingEnabled") && !!config.get("googleRefreshToken");
+    /**
+     * Avisar sobre reunião já rastreada. Não depende do toggle: o import manual
+     * também semeia reuniões, e mantê-las atrás da chave da descoberta as deixaria
+     * inertes no banco — o usuário liga o rastreamento na importação e nada avisa.
+     */
+    const trackingEnabled = () => !!config.get("googleRefreshToken");
 
     async function runSync() {
       const today = todayISO();
@@ -123,9 +140,11 @@ export function useMeetingTracker() {
         error: failure,
       } satisfies MeetingTrackerSyncResultPayload);
 
-      // Planejada criada ou adotada (que ganha a ação do Meet) → refresh da lista.
+      // Planejada criada, adotada (que ganha a ação do Meet) ou com o horário
+      // alinhado ao evento → refresh da lista. O alinhamento entra na conta porque
+      // muda a linha de seção no popup: ganhando hora ela sai de "Sem hora".
       // Vale também no ciclo parcial: o que foi criado antes da falha está gravado.
-      if (result && result.plannedCreated + result.plannedLinked > 0) {
+      if (result && result.plannedCreated + result.plannedLinked + result.plannedRetimed > 0) {
         await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       }
       return result;
@@ -180,17 +199,40 @@ export function useMeetingTracker() {
       } satisfies MeetingPromptPayload);
     }
 
+    /**
+     * Apaga as reuniões de dias passados quando a descoberta está desligada.
+     *
+     * Com ela ligada, quem poda é o `syncTodayMeetings` ao fim de cada ciclo. Sem
+     * ela, nada podaria — e as reuniões semeadas pelo import manual ficariam no
+     * banco para sempre. Uma vez por dia basta: a poda apaga por data, e repeti-la
+     * a cada minuto seria um DELETE que nunca acha nada.
+     */
+    async function pruneStaleMeetings(today: string) {
+      if (lastPrunedDay === today) return;
+      try {
+        await trackedMeetingRepo.pruneBefore(today);
+        lastPrunedDay = today;
+      } catch (err: unknown) {
+        // Poda é higiene: falhar aqui não pode derrubar a checagem de prompts.
+        console.error("[meetingTracker] falha ao podar reuniões passadas", err);
+      }
+    }
+
     async function tick() {
-      if (disposed || inFlight || !enabled()) return;
+      if (disposed || inFlight || !trackingEnabled()) return;
       // Guarda de re-entrância: se o trabalho assíncrono de um tick exceder TICK_MS,
       // impede que o próximo tick leia/emita antes do upsert do anterior (evita
       // prompt duplicado e double-increment de endPromptCount).
       inFlight = true;
       try {
         const nowMs = Date.now();
-        if (nowMs - lastSyncMs >= SYNC_INTERVAL_MS) {
-          lastSyncMs = nowMs;
-          await runSync();
+        if (discoveryEnabled()) {
+          if (nowMs - lastSyncMs >= SYNC_INTERVAL_MS) {
+            lastSyncMs = nowMs;
+            await runSync();
+          }
+        } else {
+          await pruneStaleMeetings(todayISO());
         }
         await runTrackingCheck();
       } finally {
@@ -247,8 +289,10 @@ export function useMeetingTracker() {
     // Busca manual disparada pelo botão "Buscar eventos agora" nas Configurações.
     // O botão fica travado até o evento de resultado chegar, então **todo** caminho
     // de saída precisa publicá-lo — inclusive os que não fazem busca nenhuma.
+    // Este caminho **busca** a agenda, então continua exigindo o toggle: é ele que
+    // governa a descoberta, e a mensagem abaixo é a que diz isso ao usuário.
     async function handleSyncNow() {
-      if (disposed || inFlight || !enabled()) {
+      if (disposed || inFlight || !discoveryEnabled()) {
         await emit(OVERLAY_EVENTS.MEETING_TRACKER_SYNC_RESULT, {
           tracked: 0,
           plannedCreated: 0,

@@ -7,7 +7,7 @@ import {
 function makeState(overrides: Partial<MondayProjectsSyncState> = {}): MondayProjectsSyncState {
   return {
     apiKey: "key",
-    portfolioBoardId: "18418432045",
+    portfolioBoardId: "90000000001",
     lastSyncDate: "2026-08-04",
     todayISO: "2026-08-05",
     ...overrides,

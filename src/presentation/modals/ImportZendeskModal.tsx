@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import {
-  X,
   Loader2,
   AlertCircle,
   CheckSquare,
@@ -23,7 +22,7 @@ import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { todayISO } from "@shared/utils/time";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { Button, Input, Modal, SegmentedControl, Toggle } from "@presentation/components/ui";
 
 const STATUS_LABELS: Record<ZendeskTicket["status"], string> = {
   new: "Novo",
@@ -33,8 +32,8 @@ const STATUS_LABELS: Record<ZendeskTicket["status"], string> = {
 };
 
 const STATUS_COLORS: Record<ZendeskTicket["status"], string> = {
-  new: "bg-blue-500/20 text-blue-300",
-  open: "bg-green-500/20 text-green-300",
+  new: "bg-accent/20 text-accent-text",
+  open: "bg-billable/20 text-billable",
   pending: "bg-yellow-500/20 text-yellow-300",
   hold: "bg-orange-500/20 text-orange-300",
 };
@@ -105,49 +104,29 @@ function TicketEditor({ state, projects, categoryOptionsFor, onChange }: TicketE
 
       {/* Toggle abrir URL */}
       <div className="flex items-center justify-between py-0.5">
-        <span className="text-xs text-gray-400 flex items-center gap-1">
-          <ExternalLink size={11} />
+        <span className="text-sm text-fg-secondary flex items-center gap-1">
+          <ExternalLink size={14} />
           Adicionar automaticamente uma ação de abrir o ticket
         </span>
-        <button
-          onClick={() => onChange({ ...state, addOpenUrlAction: !state.addOpenUrlAction })}
-          className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
-            state.addOpenUrlAction ? "bg-blue-600" : "bg-gray-700"
-          }`}
-        >
-          <span
-            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-              state.addOpenUrlAction ? "translate-x-4" : "translate-x-0.5"
-            }`}
-          />
-        </button>
+        <Toggle
+          checked={state.addOpenUrlAction}
+          onChange={(v) => onChange({ ...state, addOpenUrlAction: v })}
+          ariaLabel="Adicionar automaticamente uma ação de abrir o ticket"
+        />
       </div>
 
       {/* Tipo de agendamento */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500 shrink-0">Agendamento:</span>
-        <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-0.5">
-          <button
-            onClick={() => onChange({ ...state, scheduleType: "recurring" })}
-            className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
-              state.scheduleType === "recurring"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            Recorrente
-          </button>
-          <button
-            onClick={() => onChange({ ...state, scheduleType: "specific_date" })}
-            className={`px-2 py-0.5 text-xs rounded-lg transition-colors ${
-              state.scheduleType === "specific_date"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            Data específica
-          </button>
-        </div>
+        <span className="text-sm text-fg-muted shrink-0">Agendamento:</span>
+        <SegmentedControl
+          ariaLabel="Tipo de agendamento"
+          value={state.scheduleType}
+          onChange={(v) => onChange({ ...state, scheduleType: v })}
+          options={[
+            { value: "recurring", label: "Recorrente" },
+            { value: "specific_date", label: "Data específica" },
+          ]}
+        />
       </div>
 
       {state.scheduleType === "specific_date" && (
@@ -184,7 +163,7 @@ function TicketRow({
 }: TicketRowProps) {
   return (
     <div
-      className="border-b border-gray-800 last:border-0 cursor-pointer hover:bg-gray-800/30 transition-colors"
+      className="border-b border-border-subtle last:border-0 cursor-pointer hover:bg-raised/30 transition-colors"
       onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
     >
       <div className="flex items-start gap-2 px-4 py-2.5">
@@ -193,32 +172,31 @@ function TicketRow({
           checked={selected}
           onChange={onToggleSelect}
           onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 accent-blue-500 shrink-0"
+          className="mt-0.5 accent-accent shrink-0"
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${STATUS_COLORS[ticket.status]}`}
+              className={`shrink-0 text-xs font-medium px-1.5 py-0.5 rounded-chip ${STATUS_COLORS[ticket.status]}`}
             >
               {STATUS_LABELS[ticket.status]}
             </span>
-            <input
-              type="text"
+            <Input
+              variant="plain"
               value={editState.name}
               onChange={(e) => onEditChange({ ...editState, name: e.target.value })}
               onClick={(e) => e.stopPropagation()}
-              className="flex-1 min-w-0 text-sm text-gray-100 bg-transparent outline-none focus:bg-gray-800 focus:px-1 rounded transition-all truncate"
-              autoComplete="off"
+              className="flex-1 min-w-0 focus:bg-raised focus:px-1 rounded-chip truncate"
             />
           </div>
           {(editState.projectName || editState.categoryName) && (
-            <p className="text-xs text-blue-400 mt-0.5 ml-0.5 truncate">
+            <p className="text-xs text-accent-text mt-0.5 ml-0.5 truncate">
               {[editState.projectName, editState.categoryName].filter(Boolean).join(" · ")}
             </p>
           )}
         </div>
-        <span className="p-1 text-gray-600 shrink-0">
-          {editState.expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        <span className="p-1 text-fg-muted shrink-0">
+          {editState.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </div>
 
@@ -268,8 +246,6 @@ export function ImportZendeskModal({
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  useEscapeToClose(onClose);
-
   useEffect(() => {
     setLoading(true);
     setError(null);
@@ -334,11 +310,12 @@ export function ImportZendeskModal({
 
   const allSelected = tickets.length > 0 && selected.size === tickets.length;
 
+  const hasList = !loading && !error && tickets.length > 0;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800 shrink-0">
+    <Modal
+      title={
+        <>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -351,92 +328,74 @@ export function ImportZendeskModal({
               d="M12 8.2v14.5H0zM12 3c0 3.3-2.7 6-6 6S0 6.3 0 3h12zm2 19.7c0-3.3 2.7-6 6-6s6 2.7 6 6H14zm0-5.2V3h12z"
             />
           </svg>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-gray-100">Importar do Zendesk</h2>
-            <p className="text-xs text-gray-500">Tickets atribuídos a você em aberto</p>
-          </div>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Corpo */}
-        <div className="flex-1 overflow-y-auto">
-          {loading && (
-            <div className="flex items-center justify-center gap-2 py-12 text-gray-500">
-              <Loader2 size={16} className="animate-spin" />
-              <span className="text-sm">Buscando tickets…</span>
-            </div>
-          )}
-
-          {!loading && error && (
-            <div className="flex items-start gap-2 m-4 p-3 bg-red-900/30 border border-red-700 rounded-lg">
-              <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-red-300">{error}</p>
-            </div>
-          )}
-
-          {!loading && !error && tickets.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-12">
-              Nenhum ticket em aberto encontrado.
-            </p>
-          )}
-
-          {!loading && !error && tickets.length > 0 && (
-            <>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800">
-                <button
-                  onClick={toggleAll}
-                  className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-200"
-                >
-                  {allSelected ? <CheckSquare size={13} /> : <Square size={13} />}
-                  {allSelected ? "Desmarcar todos" : "Selecionar todos"}
-                  <span className="text-gray-600">({tickets.length})</span>
-                </button>
-              </div>
-
-              {tickets.map((ticket) => (
-                <TicketRow
-                  key={ticket.id}
-                  ticket={ticket}
-                  selected={selected.has(ticket.id)}
-                  editState={editMap.get(ticket.id) ?? defaultEditState(ticket)}
-                  projects={projects}
-                  categoryOptionsFor={categoryOptionsFor}
-                  onToggleSelect={() => toggleTicket(ticket.id)}
-                  onEditChange={(s) => updateEdit(ticket.id, s)}
-                />
-              ))}
-            </>
-          )}
-        </div>
-
-        {/* Footer */}
-        {!loading && !error && tickets.length > 0 && (
-          <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-gray-800 shrink-0">
-            <button
-              onClick={onClose}
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            >
+          Importar do Zendesk
+        </>
+      }
+      description="Tickets atribuídos a você em aberto"
+      size="lg"
+      tall
+      onClose={onClose}
+      bodyClassName="p-0"
+      toolbar={
+        hasList ? (
+          <Button variant="ghost" onClick={toggleAll}>
+            {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+            {allSelected ? "Desmarcar todos" : "Selecionar todos"}
+            <span className="text-fg-muted">({tickets.length})</span>
+          </Button>
+        ) : undefined
+      }
+      footer={
+        hasList ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleImport}
-              disabled={importing || selected.size === 0}
-              className="flex items-center gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors"
+              disabled={selected.size === 0}
+              loading={importing}
             >
-              {importing ? (
-                <>
-                  <Loader2 size={12} className="animate-spin" />
-                  Importando…
-                </>
-              ) : (
-                <>Importar selecionados ({selected.size})</>
-              )}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+              {importing ? "Importando…" : `Importar selecionados (${selected.size})`}
+            </Button>
+          </>
+        ) : undefined
+      }
+    >
+      {loading && (
+        <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="text-sm">Buscando tickets…</span>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
+          <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
+          <p className="text-xs text-danger">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && tickets.length === 0 && (
+        <p className="text-sm text-fg-muted text-center py-12">
+          Nenhum ticket em aberto encontrado.
+        </p>
+      )}
+
+      {hasList &&
+        tickets.map((ticket) => (
+          <TicketRow
+            key={ticket.id}
+            ticket={ticket}
+            selected={selected.has(ticket.id)}
+            editState={editMap.get(ticket.id) ?? defaultEditState(ticket)}
+            projects={projects}
+            categoryOptionsFor={categoryOptionsFor}
+            onToggleSelect={() => toggleTicket(ticket.id)}
+            onEditChange={(s) => updateEdit(ticket.id, s)}
+          />
+        ))}
+    </Modal>
   );
 }

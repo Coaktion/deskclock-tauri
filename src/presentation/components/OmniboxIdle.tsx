@@ -1,10 +1,16 @@
 import { Play } from "lucide-react";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import { Input } from "@presentation/components/ui";
 import { Autocomplete } from "./Autocomplete";
+import {
+  chipBillableClass,
+  chipEmptyClass,
+  chipFilledClass,
+  chipNonBillableClass,
+} from "./chipStyles";
 import type { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
-import type { SuggestionItem } from "@presentation/hooks/useOmniboxSuggestions";
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
 
@@ -17,40 +23,16 @@ interface ChipProps {
 }
 
 function Chip({ label, filled, billable, isBillableChip, onClick }: ChipProps) {
-  if (isBillableChip) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`px-2 py-0.5 rounded text-xs border transition-colors cursor-pointer ${
-          billable
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-            : "bg-gray-800/60 border-gray-700/50 text-gray-500 hover:border-gray-600 hover:text-gray-400"
-        }`}
-      >
-        {label}
-      </button>
-    );
-  }
-
-  if (filled) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 cursor-pointer hover:bg-gray-700 transition-colors"
-      >
-        {label}
-      </button>
-    );
-  }
+  const className = isBillableChip
+    ? billable
+      ? chipBillableClass
+      : chipNonBillableClass
+    : filled
+      ? chipFilledClass
+      : chipEmptyClass;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 cursor-pointer hover:border-gray-500 hover:text-gray-400 transition-colors"
-    >
+    <button type="button" onClick={onClick} className={className}>
       {label}
     </button>
   );
@@ -74,16 +56,10 @@ export function OmniboxIdle({
   setDraft,
   focused,
   setFocused,
-  showSuggestions,
-  setShowSuggestions,
-  activeSuggIdx,
-  setActiveSuggIdx,
   editingChip,
   setEditingChip,
   inputRef,
-  suggestions,
   handleStart,
-  handleSuggestionSelect,
   handleInputKeyDown,
 }: OmniboxIdleProps) {
   const { categoriesFor } = useProjectCategoryMap();
@@ -92,8 +68,8 @@ export function OmniboxIdle({
   return (
     <div
       ref={containerRef}
-      className={`bg-gradient-to-b from-gray-800/80 to-gray-900/80 border rounded-xl overflow-visible transition-all ${
-        focused ? "border-blue-500/50 ring-2 ring-blue-500/20" : "border-gray-700"
+      className={`bg-surface border rounded-card overflow-visible transition-all ${
+        focused ? "border-accent ring-2 ring-accent/20" : "border-border"
       }`}
     >
       {/* Main input row */}
@@ -102,34 +78,26 @@ export function OmniboxIdle({
           type="button"
           onClick={() => void handleStart()}
           title="Iniciar tarefa"
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors"
+          className="shrink-0 w-10 h-10 rounded-full bg-accent hover:opacity-90 text-white flex items-center justify-center transition-opacity"
         >
           <Play size={18} />
         </button>
 
-        <input
+        <Input
           ref={inputRef}
-          type="text"
+          variant="plain"
           value={draft.name}
-          onChange={(e) => {
-            setDraft((d) => ({ ...d, name: e.target.value }));
-            setShowSuggestions(true);
-            setActiveSuggIdx(0);
-          }}
-          onFocus={() => {
-            setFocused(true);
-            setShowSuggestions(true);
-          }}
+          onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+          onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
-          className="flex-1 bg-transparent text-[15px] font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
-          autoComplete="off"
+          className="flex-1 text-lead! font-medium"
         />
       </div>
 
       {/* Chips row */}
-      <div className="flex gap-2 px-4 pb-3 flex-wrap">
+      <div className="flex gap-2 px-3 pb-3 flex-wrap">
         {editingChip === "project" ? (
           <div className="w-40">
             <Autocomplete
@@ -197,45 +165,6 @@ export function OmniboxIdle({
           onClick={() => setDraft((d) => ({ ...d, billable: !d.billable }))}
         />
       </div>
-
-      {/* Suggestions dropdown */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="border-t border-gray-700/60 bg-gray-900/95 rounded-b-xl overflow-hidden">
-          <ul>
-            {suggestions.map((s: SuggestionItem, idx: number) => (
-              <li
-                key={s.key}
-                onMouseDown={() => handleSuggestionSelect(s)}
-                onMouseEnter={() => setActiveSuggIdx(idx)}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                  idx === activeSuggIdx
-                    ? "bg-blue-600/20 text-gray-100"
-                    : "text-gray-300 hover:bg-gray-800/60"
-                }`}
-              >
-                <span
-                  className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                    s.billable ? "bg-blue-400" : "bg-gray-500"
-                  }`}
-                />
-                <span className="flex-1 text-sm truncate">{s.name}</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {s.isPlanned && (
-                    <span className="text-[10px] text-blue-400 font-medium uppercase tracking-wide">
-                      planejada
-                    </span>
-                  )}
-                  {s.projectName && (
-                    <span className="text-xs text-gray-500 truncate max-w-[80px]">
-                      {s.projectName}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

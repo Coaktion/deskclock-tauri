@@ -18,7 +18,12 @@ const WORKSPACE_ID = "ws-1";
 const NOW_ISO = localISO(2026, 8, 3, 12);
 const WINDOW = { start: "2026-08-03", end: "2026-08-09" };
 
-const PROJECT: Project = { id: "p1", workspaceId: WORKSPACE_ID, name: "Cliente A" };
+const PROJECT: Project = {
+  id: "p1",
+  workspaceId: WORKSPACE_ID,
+  name: "Cliente A",
+  colorIndex: 0,
+};
 const CATEGORIES: Category[] = [
   { id: "c1", workspaceId: WORKSPACE_ID, name: "Development", defaultBillable: true },
   { id: "c2", workspaceId: WORKSPACE_ID, name: "Reuniões", defaultBillable: false },

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { AlertTriangle, X } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import type { WorkspaceDeletionTarget } from "@domain/usecases/workspaces/DeleteWorkspace";
 import type { IntegrationWorkspaceBinding } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
 import { WorkspaceDot } from "@presentation/components/WorkspaceDot";
-import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
+import { Button, Modal, Select } from "@presentation/components/ui";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 interface DeleteWorkspaceModalProps {
@@ -30,7 +30,7 @@ interface DeleteWorkspaceModalProps {
  */
 function IntegrationsWarning({ bindings }: { bindings: IntegrationWorkspaceBinding[] }) {
   return (
-    <div className="flex gap-2 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2.5">
+    <div className="flex gap-2 rounded-control border border-amber-500/20 bg-amber-500/10 px-3 py-2.5">
       <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-400" />
       <div className="min-w-0">
         <p className="text-xs text-amber-200 leading-relaxed">
@@ -40,7 +40,7 @@ function IntegrationsWarning({ bindings }: { bindings: IntegrationWorkspaceBindi
         </p>
         <ul className="mt-1.5 flex flex-col gap-1">
           {bindings.map((b) => (
-            <li key={b.key} className="text-[11px] text-amber-200/80 leading-snug">
+            <li key={b.key} className="text-xs text-amber-200/80 leading-snug">
               <span className="font-medium text-amber-200">{b.label}</span> {b.consequence}
               {/* A chave está vazia: a tela de Integrações não nomeia este
                   workspace, e sem a ressalva o aviso pareceria engano. */}
@@ -48,7 +48,7 @@ function IntegrationsWarning({ bindings }: { bindings: IntegrationWorkspaceBindi
             </li>
           ))}
         </ul>
-        <p className="mt-1.5 text-[11px] text-amber-200/60 leading-snug">
+        <p className="mt-1.5 text-xs text-amber-200/60 leading-snug">
           Para voltar a funcionar, escolha outro workspace em Integrações depois de excluir.
         </p>
       </div>
@@ -74,7 +74,6 @@ export function DeleteWorkspaceModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEscapeToClose(onClose);
   // Enter confirma também aqui, por decisão explícita do usuário — a guarda
   // deste modal continua sendo a escolha obrigatória do destino dos dados, não
   // a dificuldade de acionar o botão.
@@ -98,97 +97,90 @@ export function DeleteWorkspaceModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/80">
-      <div
-        onKeyDown={handleKeyDown}
-        className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-md shadow-2xl"
-      >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-100 flex items-center gap-2">
-            <WorkspaceDot color={workspace.color} />
-            Excluir {workspace.name}
-          </h2>
-          <button onClick={onClose} className="p-1 text-gray-500 hover:text-gray-300 rounded-lg">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="px-5 py-4 flex flex-col gap-3">
-          {/* Antes do destino: é a consequência que a escolha de destino não
-              resolve — mover os dados não move a integração junto. */}
-          {boundIntegrations.length > 0 && <IntegrationsWarning bindings={boundIntegrations} />}
-
-          <p className="text-xs text-gray-400 leading-relaxed">
-            Tarefas, planejadas, projetos, categorias e perfis de exportação deste workspace
-            precisam de um destino.
-          </p>
-
-          {others.length > 0 && (
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={mode === "move"}
-                onChange={() => setMode("move")}
-                className="mt-1 accent-blue-500"
-              />
-              <span className="flex-1">
-                <span className="block text-sm text-gray-200">Mover para outro workspace</span>
-                <select
-                  value={targetId}
-                  onChange={(e) => setTargetId(e.target.value)}
-                  onFocus={() => setMode("move")}
-                  className="mt-1.5 w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  {others.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="block mt-1 text-[11px] text-gray-500 leading-snug">
-                  Projetos e categorias de mesmo nome no destino são reaproveitados, não duplicados.
-                </span>
-              </span>
-            </label>
-          )}
-
-          <label className="flex items-start gap-2 cursor-pointer">
-            <input
-              type="radio"
-              checked={mode === "delete"}
-              onChange={() => setMode("delete")}
-              className="mt-1 accent-red-500"
-            />
-            <span className="flex-1">
-              <span className="block text-sm text-gray-200">Apagar todos os dados</span>
-              <span className="block mt-0.5 text-[11px] text-red-400/80 leading-snug">
-                Todas as horas registradas neste workspace são perdidas. Não há desfazer.
-              </span>
-            </span>
-          </label>
-
-          {error && <p className="text-xs text-red-400">{error}</p>}
-        </div>
-
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-700">
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200"
-          >
+    <Modal
+      title={
+        <>
+          <WorkspaceDot color={workspace.color} />
+          Excluir {workspace.name}
+        </>
+      }
+      onClose={onClose}
+      onKeyDown={handleKeyDown}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button
+          </Button>
+          {/* O único botão cheio em `danger` do app — o `!` é o que o faz vencer
+              o `bg-accent` do `primary`, que é a mesma caixa. */}
+          <Button
+            variant="primary"
+            className={mode === "delete" ? "bg-danger!" : ""}
             onClick={() => void handleConfirm()}
-            disabled={busy || (mode === "move" && !targetId)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg text-white transition-colors disabled:opacity-40 ${
-              mode === "delete" ? "bg-red-700 hover:bg-red-600" : "bg-blue-600 hover:bg-blue-500"
-            }`}
+            disabled={mode === "move" && !targetId}
+            loading={busy}
+            icon={mode === "delete" ? <AlertTriangle size={14} /> : undefined}
           >
-            {mode === "delete" && <AlertTriangle size={14} />}
             {busy ? "Excluindo..." : mode === "delete" ? "Excluir com os dados" : "Mover e excluir"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      {/* Antes do destino: é a consequência que a escolha de destino não
+          resolve — mover os dados não move a integração junto. */}
+      {boundIntegrations.length > 0 && <IntegrationsWarning bindings={boundIntegrations} />}
+
+      <p className="text-body text-fg-secondary leading-relaxed">
+        Tarefas, planejadas, projetos, categorias e perfis de exportação deste workspace precisam de
+        um destino.
+      </p>
+
+      {others.length > 0 && (
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="radio"
+            checked={mode === "move"}
+            onChange={() => setMode("move")}
+            className="mt-1 accent-accent"
+          />
+          <span className="flex-1">
+            <span className="block text-sm text-fg">Mover para outro workspace</span>
+            <Select
+              aria-label="Workspace de destino"
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+              onFocus={() => setMode("move")}
+              className="mt-1.5 w-full"
+            >
+              {others.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </Select>
+            <span className="block mt-1 text-xs text-fg-muted leading-snug">
+              Projetos e categorias de mesmo nome no destino são reaproveitados, não duplicados.
+            </span>
+          </span>
+        </label>
+      )}
+
+      <label className="flex items-start gap-2 cursor-pointer">
+        <input
+          type="radio"
+          checked={mode === "delete"}
+          onChange={() => setMode("delete")}
+          className="mt-1 accent-danger"
+        />
+        <span className="flex-1">
+          <span className="block text-sm text-fg">Apagar todos os dados</span>
+          <span className="block mt-0.5 text-xs text-danger/80 leading-snug">
+            Todas as horas registradas neste workspace são perdidas. Não há desfazer.
+          </span>
+        </span>
+      </label>
+
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </Modal>
   );
 }

@@ -3,9 +3,10 @@ import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import type { AppConfig } from "@shared/types/appConfig";
 import { formatLastSync, todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
-import { Loader2, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Row, SubSection, Toggle } from "./shared";
+import { Button, Input, SegmentedControl, Toggle } from "@presentation/components/ui";
+import { Row, SubSection } from "./shared";
 
 /**
  * Chaves de `AppConfig` que uma integração usa para auto-sync. Cada integração
@@ -36,8 +37,14 @@ export interface AutoSyncNow {
   successMessage: (count: number) => string;
 }
 
-const MODES = ["per-task", "daily"] as const;
-const TRIGGERS = ["on-open", "fixed-time"] as const;
+const MODES = [
+  { value: "per-task", label: "Por tarefa" },
+  { value: "daily", label: "Diário" },
+] as const;
+const TRIGGERS = [
+  { value: "on-open", label: "Ao abrir o app" },
+  { value: "fixed-time", label: "Horário fixo" },
+] as const;
 
 export function AutoSyncControls({
   keys,
@@ -100,16 +107,17 @@ export function AutoSyncControls({
 
   return (
     <SubSection
-      icon={<RefreshCw size={15} />}
+      icon={<RefreshCw size={14} />}
       title="Sincronização automática"
       badge={
         autoSync ? (
-          <span className="ml-1 text-[10.5px] text-blue-400 font-medium">Ativa</span>
+          <span className="ml-1 text-xs text-accent-text font-medium">Ativa</span>
         ) : undefined
       }
     >
       <Row label="Ativar">
         <Toggle
+          ariaLabel="Ativar sincronização automática"
           checked={autoSync}
           onChange={async (v) => {
             setAutoSync(v);
@@ -119,30 +127,21 @@ export function AutoSyncControls({
       </Row>
 
       {autoSync && (
-        <div className="pl-4 border-l border-gray-800 ml-1 mb-1">
-          <div className="py-2.5 border-b border-gray-800">
+        <div className="pl-4 border-l border-border-subtle ml-1 mb-1">
+          <div className="py-2.5 border-b border-border-subtle">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-300">Modo</span>
-              <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
-                {MODES.map((m) => (
-                  <button
-                    key={m}
-                    onClick={async () => {
-                      setSyncMode(m);
-                      await config.set(keys.mode, m);
-                    }}
-                    className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                      syncMode === m
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    {m === "per-task" ? "Por tarefa" : "Diário"}
-                  </button>
-                ))}
-              </div>
+              <span className="text-sm text-fg-secondary">Modo</span>
+              <SegmentedControl
+                value={syncMode}
+                options={MODES}
+                ariaLabel="Modo de sincronização"
+                onChange={async (m) => {
+                  setSyncMode(m);
+                  await config.set(keys.mode, m);
+                }}
+              />
             </div>
-            <p className="text-xs text-gray-500 mt-1.5">
+            <p className="text-xs text-fg-muted mt-1.5">
               {syncMode === "per-task"
                 ? "Envia cada tarefa automaticamente ao ser concluída."
                 : "Agrupa e envia de uma vez, cobrindo fins de semana e dias perdidos."}
@@ -151,68 +150,55 @@ export function AutoSyncControls({
 
           {syncMode === "daily" && (
             <>
-              <div className="py-2.5 border-b border-gray-800">
+              <div className="py-2.5 border-b border-border-subtle">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-300">Gatilho</span>
-                  <div className="flex items-center gap-1 bg-gray-800 rounded p-0.5">
-                    {TRIGGERS.map((t) => (
-                      <button
-                        key={t}
-                        onClick={async () => {
-                          setSyncTrigger(t);
-                          await config.set(keys.trigger, t);
-                        }}
-                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                          syncTrigger === t
-                            ? "bg-blue-600 text-white"
-                            : "text-gray-400 hover:text-gray-200"
-                        }`}
-                      >
-                        {t === "on-open" ? "Ao abrir o app" : "Horário fixo"}
-                      </button>
-                    ))}
-                  </div>
+                  <span className="text-sm text-fg-secondary">Gatilho</span>
+                  <SegmentedControl
+                    value={syncTrigger}
+                    options={TRIGGERS}
+                    ariaLabel="Gatilho da sincronização"
+                    onChange={async (t) => {
+                      setSyncTrigger(t);
+                      await config.set(keys.trigger, t);
+                    }}
+                  />
                 </div>
               </div>
 
               {syncTrigger === "fixed-time" && (
                 <Row label="Horário">
-                  <input
+                  <Input
                     type="time"
+                    size="sm"
                     value={syncTime}
                     onChange={(e) => setSyncTime(e.target.value)}
                     onBlur={() => config.set(keys.time, syncTime)}
-                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200 focus:outline-none focus:border-blue-500"
-                    autoComplete="off"
+                    className="w-auto!"
                   />
                 </Row>
               )}
 
               <div className="py-2.5 flex items-center justify-between gap-3">
-                <span className="text-xs text-gray-500 shrink-0">
+                <span className="text-xs text-fg-muted shrink-0">
                   Último envio:{" "}
-                  <span className="text-gray-300">
+                  <span className="text-fg-secondary">
                     {lastSyncTs ? formatLastSync(lastSyncTs) : "Nunca"}
                   </span>
                 </span>
                 {syncNow && (
-                  <button
+                  <Button
                     onClick={handleSyncNow}
-                    disabled={syncing || autoSyncing}
+                    loading={syncing || autoSyncing}
                     title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-                    className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 px-2.5 py-1.5 rounded transition-colors shrink-0"
+                    icon={<RefreshCw size={14} />}
+                    className="shrink-0"
                   >
-                    {syncing || autoSyncing ? (
-                      <Loader2 size={11} className="animate-spin" />
-                    ) : (
-                      <RefreshCw size={11} />
-                    )}
                     {autoSyncing
                       ? "Sincronização automática…"
                       : syncing
                         ? "Sincronizando…"
                         : "Sincronizar agora"}
-                  </button>
+                  </Button>
                 )}
               </div>
             </>

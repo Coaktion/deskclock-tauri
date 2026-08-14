@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
+import { Input } from "@presentation/components/ui";
+import type { ControlSize, ControlVariant } from "@presentation/components/ui";
 
 interface Option {
   id: string;
@@ -66,11 +68,15 @@ interface AutocompleteProps {
   placeholder?: string;
   className?: string;
   /**
-   * Substitui — não complementa — o visual do input. Existe para quem embute o
-   * autocomplete dentro de uma caixa que já desenha fundo, borda e raio, caso em
-   * que o input precisa ficar transparente para os dois parecerem um só campo.
+   * `bare` para quem embute o autocomplete numa caixa que já desenha fundo,
+   * borda e raio — o input fica transparente e os dois leem como um campo só.
+   *
+   * Isto era um `inputClassName` que **substituía** o visual inteiro do campo:
+   * cinco call sites passavam a mesma constante e um sexto reescreveu a classe
+   * à mão, que foi como o campo do popup perdeu o tamanho de fonte dos demais.
    */
-  inputClassName?: string;
+  variant?: ControlVariant;
+  size?: ControlSize;
   autoFocus?: boolean;
   dropUp?: boolean;
 }
@@ -84,7 +90,8 @@ export function Autocomplete({
   options,
   placeholder = "",
   className = "",
-  inputClassName = "w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500",
+  variant = "boxed",
+  size = "md",
   autoFocus = false,
   dropUp = false,
 }: AutocompleteProps) {
@@ -172,9 +179,8 @@ export function Autocomplete({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      <input
+      <Input
         id={id}
-        type="text"
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -185,8 +191,8 @@ export function Autocomplete({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className={inputClassName}
-        autoComplete="off"
+        variant={variant}
+        size={size}
       />
       {open && filtered.length > 0 && (
         <ul
@@ -196,7 +202,7 @@ export function Autocomplete({
           // dentro da janela. O nome que ainda assim não couber quebra em duas
           // linhas — truncar devolveria o problema que isto veio resolver.
           style={{ maxWidth: listBox?.maxWidth }}
-          className={`absolute z-50 w-max min-w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto ${listBox?.alignRight ? "right-0" : "left-0"} ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
+          className={`absolute z-50 w-max min-w-full bg-raised border border-border rounded-control shadow-lg max-h-40 overflow-y-auto ${listBox?.alignRight ? "right-0" : "left-0"} ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
         >
           {filtered.map((o, idx) => (
             <li
@@ -204,9 +210,7 @@ export function Autocomplete({
               onMouseDown={() => handleSelect(o)}
               onMouseEnter={() => setActiveIdx(idx)}
               className={`px-2.5 py-1.5 text-sm cursor-pointer transition-colors ${
-                idx === activeIdx
-                  ? "bg-blue-600/40 text-gray-100"
-                  : "text-gray-200 hover:bg-gray-700"
+                idx === activeIdx ? "bg-accent/25 text-fg" : "text-fg-secondary hover:bg-surface"
               }`}
             >
               {o.name}

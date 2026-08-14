@@ -30,8 +30,8 @@ function mapping(overrides: Partial<MondayProjectMapping> = {}): MondayProjectMa
 function config(overrides: Partial<MondayReadinessConfig> = {}): MondayReadinessConfig {
   return {
     apiKey: "key",
-    portfolioBoardId: "18418432045",
-    reportBoardId: "18422834169",
+    portfolioBoardId: "90000000001",
+    reportBoardId: "90000000002",
     projectMapping: [mapping()],
     ...overrides,
   };

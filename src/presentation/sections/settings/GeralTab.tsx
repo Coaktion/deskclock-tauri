@@ -3,13 +3,39 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
-import { ToggleRow, NumberInputWithCommit, SettingsCard, CardRow } from "./SettingsShared";
+import { Input, SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
+import { NumberInputWithCommit } from "./SettingsShared";
+
+/** Escolha dentro de um grupo — retangular, ao contrário da pílula de filtro. */
+function ChoiceChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`px-2.5 py-1 rounded-chip text-sm font-medium border transition-colors ${
+        active
+          ? "bg-accent/10 border-accent/40 text-accent-text"
+          : "bg-raised border-border text-fg-muted hover:border-fg-muted hover:text-fg"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function GeralTab() {
   const config = useAppConfig();
 
   const [userName, setUserName] = useState("");
-  const [showWelcome, setShowWelcome] = useState(true);
   const [startOnBoot, setStartOnBoot] = useState(false);
   const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [closeOnFocusLoss, setCloseOnFocusLoss] = useState(false);
@@ -24,7 +50,6 @@ export function GeralTab() {
   useEffect(() => {
     if (!config.isLoaded) return;
     setUserName(config.get("userName"));
-    setShowWelcome(config.get("showWelcomeMessage"));
     setLiveTrayTimer(config.get("liveTrayTimer"));
     setCloseOnFocusLoss(config.get("closeOnFocusLoss"));
     setDiscardTasksUnderOneMinute(config.get("discardTasksUnderOneMinute"));
@@ -41,11 +66,7 @@ export function GeralTab() {
 
   async function handleToggle(
     key:
-      | "showWelcomeMessage"
-      | "liveTrayTimer"
-      | "closeOnFocusLoss"
-      | "discardTasksUnderOneMinute"
-      | "showIntegrationsRail",
+      "liveTrayTimer" | "closeOnFocusLoss" | "discardTasksUnderOneMinute" | "showIntegrationsRail",
     setter: (v: boolean) => void,
     value: boolean
   ) {
@@ -86,168 +107,147 @@ export function GeralTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-4 p-4 bg-gray-900 border border-gray-800 rounded-xl">
-        <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg font-semibold flex-shrink-0 select-none">
-          {userName ? userName[0].toUpperCase() : "?"}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">
-            Como quer ser chamado?
-          </p>
-          <input
-            type="text"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            onBlur={handleUserNameBlur}
-            placeholder="Seu nome"
-            className="w-full bg-transparent text-sm font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
-            autoComplete="off"
+    <div className="space-y-5">
+      <SectionCard title="Conta">
+        <SectionRow className="flex items-center justify-between gap-4">
+          <SettingLabel
+            label="Seu nome"
+            description="Aparece no cabeçalho da tela de Tarefas"
+            htmlFor="settings-user-name"
           />
-        </div>
-      </div>
+          {/* A largura mora no invólucro: o campo é `w-full` por dentro, e uma
+              classe de largura nele perde para essa na cascata. */}
+          <div className="w-45 shrink-0">
+            <Input
+              id="settings-user-name"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              onBlur={handleUserNameBlur}
+            />
+          </div>
+        </SectionRow>
+      </SectionCard>
 
-      <SettingsCard>
-        <CardRow>
-          <ToggleRow
-            label="Abrir acesso rápido ao iniciar"
-            description="Exibe o painel de ações ao abrir o app. Use Ctrl+K para abrí-lo a qualquer momento."
-            value={showWelcome}
-            onChange={(v) => handleToggle("showWelcomeMessage", setShowWelcome, v)}
-          />
-        </CardRow>
-        <CardRow>
-          <ToggleRow
+      <SectionCard title="Comportamento" divided>
+        <SectionRow>
+          <Toggle
             label="Iniciar na inicialização do computador"
             description="Abre o DeskClock automaticamente ao ligar o computador"
-            value={startOnBoot}
+            checked={startOnBoot}
             onChange={handleStartOnBoot}
           />
-        </CardRow>
-        <CardRow>
-          <ToggleRow
+        </SectionRow>
+        <SectionRow>
+          <Toggle
             label="Timer ao vivo no ícone da bandeja"
             description="Mostra o tempo da tarefa em execução no tooltip do ícone"
-            value={liveTrayTimer}
+            checked={liveTrayTimer}
             onChange={(v) => handleToggle("liveTrayTimer", setLiveTrayTimer, v)}
           />
-        </CardRow>
-        <CardRow>
-          <ToggleRow
+        </SectionRow>
+        <SectionRow>
+          <Toggle
             label="Fechar ao perder foco"
             description="Oculta a janela automaticamente ao clicar fora dela. Use o pin na barra de título para fixá-la temporariamente."
-            value={closeOnFocusLoss}
+            checked={closeOnFocusLoss}
             onChange={(v) => handleToggle("closeOnFocusLoss", setCloseOnFocusLoss, v)}
           />
-        </CardRow>
-        <CardRow>
-          <ToggleRow
+        </SectionRow>
+        <SectionRow>
+          <Toggle
             label="Mostrar rail de integrações"
             description="Exibe uma coluna estreita à direita com atalhos para as integrações conectadas (Sheets, Agenda, Clockify)."
-            value={showIntegrationsRail}
+            checked={showIntegrationsRail}
             onChange={(v) => handleToggle("showIntegrationsRail", setShowIntegrationsRail, v)}
           />
-        </CardRow>
-        <CardRow>
-          <ToggleRow
+        </SectionRow>
+      </SectionCard>
+
+      <SectionCard title="Duração" divided>
+        <SectionRow>
+          <Toggle
             label="Descartar tarefas com menos de 1 minuto"
             description="Ao parar uma tarefa com duração inferior a 1 minuto, ela é descartada automaticamente."
-            value={discardTasksUnderOneMinute}
+            checked={discardTasksUnderOneMinute}
             onChange={(v) =>
               handleToggle("discardTasksUnderOneMinute", setDiscardTasksUnderOneMinute, v)
             }
           />
-        </CardRow>
-        <CardRow>
-          <ToggleRow
+        </SectionRow>
+        <SectionRow>
+          <Toggle
             label="Arredondar duração ao parar"
             description="Arredonda a duração registrada para o slot de tempo ativo mais próximo."
-            value={roundingEnabled}
+            checked={roundingEnabled}
             onChange={handleRoundingEnabled}
           />
           {roundingEnabled && (
             <div className="mt-3 space-y-3">
               <div>
-                <p className="text-xs text-gray-400 mb-2">Slots ativos</p>
+                <p className="text-sm text-fg-secondary mb-2">Slots ativos</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {ALL_ROUNDING_SLOTS.map((slot) => {
-                    const active = roundingSlots.includes(slot);
-                    return (
-                      <button
-                        key={slot}
-                        onClick={() => handleRoundingSlotToggle(slot)}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
-                          active
-                            ? "bg-blue-600 border-blue-600 text-white"
-                            : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200"
-                        }`}
-                      >
-                        {slot === 60 ? "1h" : `${slot}m`}
-                      </button>
-                    );
-                  })}
+                  {ALL_ROUNDING_SLOTS.map((slot) => (
+                    <ChoiceChip
+                      key={slot}
+                      active={roundingSlots.includes(slot)}
+                      onClick={() => handleRoundingSlotToggle(slot)}
+                    >
+                      {slot === 60 ? "1h" : `${slot}m`}
+                    </ChoiceChip>
+                  ))}
                 </div>
               </div>
               <div>
-                <p className="text-xs text-gray-400 mb-1">Tolerância</p>
-                <p className="text-xs text-gray-500 mb-2">
+                <p className="text-sm text-fg-secondary mb-1">Tolerância</p>
+                <p className="text-xs text-fg-muted mb-2">
                   Quando uma tarefa passa de um slot ativo, se for encerrada ainda dentro desta
                   tolerância, é arredondada para o slot recém ultrapassado. Do contrário, irá para o
                   próximo slot.
                 </p>
                 <div className="flex gap-1.5 flex-wrap">
                   {[0, 1, 2, 5, 10, 15].map((min) => (
-                    <button
+                    <ChoiceChip
                       key={min}
+                      active={roundingTolerance === min}
                       onClick={() => handleRoundingTolerance(min)}
-                      className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
-                        roundingTolerance === min
-                          ? "bg-blue-600 border-blue-600 text-white"
-                          : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200"
-                      }`}
                     >
                       {min === 0 ? "0m (sempre sobe)" : `${min}m`}
-                    </button>
+                    </ChoiceChip>
                   ))}
                 </div>
               </div>
             </div>
           )}
-        </CardRow>
-      </SettingsCard>
+        </SectionRow>
+      </SectionCard>
 
-      <SettingsCard>
-        <CardRow>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-500 mb-3">
-            Jornada
-          </p>
-          <div className="flex gap-4">
-            <NumberInputWithCommit
-              label="Meta diária (horas)"
-              min={1}
-              max={24}
-              committed={dailyGoalHours}
-              onCommit={async (v) => {
-                setDailyGoalHours(v);
-                await config.set("dailyGoalHours", v);
-              }}
-            />
-            <NumberInputWithCommit
-              label="Meta semanal (horas)"
-              min={1}
-              max={168}
-              committed={weeklyGoalHours}
-              onCommit={async (v) => {
-                setWeeklyGoalHours(v);
-                await config.set("weeklyGoalHours", v);
-              }}
-            />
-          </div>
-        </CardRow>
-      </SettingsCard>
+      <SectionCard title="Jornada">
+        <SectionRow className="flex gap-4">
+          <NumberInputWithCommit
+            label="Meta diária (horas)"
+            min={1}
+            max={24}
+            committed={dailyGoalHours}
+            onCommit={async (v) => {
+              setDailyGoalHours(v);
+              await config.set("dailyGoalHours", v);
+            }}
+          />
+          <NumberInputWithCommit
+            label="Meta semanal (horas)"
+            min={1}
+            max={168}
+            committed={weeklyGoalHours}
+            onCommit={async (v) => {
+              setWeeklyGoalHours(v);
+              await config.set("weeklyGoalHours", v);
+            }}
+          />
+        </SectionRow>
+      </SectionCard>
 
-      <SettingsCard>
-        <CardRow>
+      <SectionCard title="Janelas">
+        <SectionRow>
           <button
             onClick={async () => {
               await config.set("mainWindowPosition", { x: -1, y: -1 });
@@ -255,12 +255,12 @@ export function GeralTab() {
               await config.set("overlayPosition_planning", { x: -1, y: -1 });
               await config.set("overlayPosition_compact", { x: -1, y: -1 });
             }}
-            className="text-xs text-gray-400 hover:text-gray-200 underline underline-offset-2 transition-colors"
+            className="text-sm text-fg-secondary hover:text-fg underline underline-offset-2 transition-colors"
           >
             Redefinir posições salvas das janelas
           </button>
-        </CardRow>
-      </SettingsCard>
+        </SectionRow>
+      </SectionCard>
     </div>
   );
 }

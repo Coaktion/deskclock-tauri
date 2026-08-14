@@ -49,7 +49,9 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   };
 }
 
-const projects: Project[] = [{ id: "proj1", workspaceId: "ws-1", name: "Projeto A" }];
+const projects: Project[] = [
+  { id: "proj1", workspaceId: "ws-1", name: "Projeto A", colorIndex: 0 },
+];
 const categories: Category[] = [
   { id: "cat1", workspaceId: "ws-1", name: "Dev", defaultBillable: true },
 ];

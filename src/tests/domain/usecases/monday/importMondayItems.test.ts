@@ -172,8 +172,15 @@ describe("importMondayItems", () => {
       WORKSPACE_ID
     );
 
+    // Nomeada pelo destino, e não pelo item: o nome do item a planejada já leva,
+    // e repeti-lo no chip ecoaria o nome logo acima dele. O subdomínio da conta
+    // cai no mesmo destino que `monday.com`.
     expect(ctx.saved[0].actions).toEqual([
-      { type: "open_url", value: "https://coaktion.monday.com/boards/1/pulses/12664376489" },
+      {
+        type: "open_url",
+        value: "https://coaktion.monday.com/boards/1/pulses/12664376489",
+        label: "Monday",
+      },
     ]);
     expect(ctx.saved[1].actions).toEqual([]);
   });

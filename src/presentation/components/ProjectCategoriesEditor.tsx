@@ -3,7 +3,7 @@ import type { Category } from "@domain/entities/Category";
 import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { UUID } from "@shared/types";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
-import { SearchInput } from "./SearchInput";
+import { Badge, SearchInput } from "@presentation/components/ui";
 
 interface ProjectCategoriesEditorProps {
   categories: Category[];
@@ -38,7 +38,7 @@ export function ProjectCategoriesEditor({
 
   if (categories.length === 0) {
     return (
-      <p className="text-xs text-gray-500 py-2">
+      <p className="text-sm text-fg-muted py-2">
         Nenhuma categoria cadastrada neste workspace — não há o que associar.
       </p>
     );
@@ -58,7 +58,7 @@ export function ProjectCategoriesEditor({
         <button
           type="button"
           onClick={onClearAll}
-          className="self-start px-2 py-1 text-[11px] bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-200 hover:text-gray-100 rounded-lg transition-colors"
+          className="self-start px-2 py-1 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary hover:text-fg rounded-control transition-colors"
         >
           Desmarcar todas ({sourceById.size})
         </button>
@@ -66,29 +66,26 @@ export function ProjectCategoriesEditor({
 
       <div className="max-h-48 overflow-y-auto flex flex-col">
         {filtered.length === 0 ? (
-          <p className="text-xs text-gray-500 py-2 text-center">Nenhuma categoria encontrada.</p>
+          <p className="text-xs text-fg-muted py-2 text-center">Nenhuma categoria encontrada.</p>
         ) : (
           filtered.map((c) => {
             const source = sourceById.get(c.id);
             return (
               <label
                 key={c.id}
-                className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-gray-800/50 cursor-pointer"
+                className="flex items-center gap-2 px-2 py-1 rounded-control hover:bg-raised cursor-pointer"
               >
                 <input
                   type="checkbox"
                   checked={source !== undefined}
                   onChange={() => onToggle(c.id)}
-                  className="shrink-0 accent-blue-500 cursor-pointer"
+                  className="shrink-0 accent-accent cursor-pointer"
                 />
-                <span className="flex-1 text-xs text-gray-300 truncate">{c.name}</span>
+                <span className="flex-1 text-sm text-fg-secondary truncate">{c.name}</span>
                 {source === "monday" && (
-                  <span
-                    title="Veio da varredura do Monday. Desmarcar vale até a próxima varredura — para tirar de vez, remova o Activity Type do quadro."
-                    className="shrink-0 px-1 py-0.5 text-[10px] leading-none rounded bg-violet-900/50 text-violet-300"
-                  >
+                  <Badge title="Veio da varredura do Monday. Desmarcar vale até a próxima varredura — para tirar de vez, remova o Activity Type do quadro.">
                     Monday
-                  </span>
+                  </Badge>
                 )}
               </label>
             );

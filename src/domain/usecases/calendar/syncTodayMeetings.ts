@@ -2,15 +2,13 @@ import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICal
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { TrackedMeeting } from "@domain/integrations/TrackedMeeting";
 import type { Category } from "@domain/entities/Category";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
-import {
-  createPlannedTaskFromEvent,
-  openUrlAction,
-} from "@domain/usecases/plannedTasks/ImportCalendarEvents";
+import { createPlannedTaskFromEvent } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
+import { openUrlAction } from "@domain/utils/actions";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { composeLocalISO, composeMeetingEndISO } from "./meetingTime";
 import { nameKey } from "./nameKey";
@@ -30,6 +28,12 @@ export interface SyncTodayMeetingsResult {
   plannedCreated: number;
   /** Quantas reuniões adotaram uma planejada que já existia, em vez de criar outra. */
   plannedLinked: number;
+  /**
+   * Quantas planejadas **já vinculadas** tiveram o horário alinhado ao do evento
+   * (ver {@link syncPlannedTimes}). Conta para o refresh da lista, como as duas
+   * acima: a linha muda de seção no popup e passa a poder ser lançada.
+   */
+  plannedRetimed: number;
   /**
    * Falhas por reunião, uma mensagem cada. O ciclo **não** aborta: a reunião que
    * falhou fica sem vínculo e é tentada de novo no ciclo seguinte, e o chamador
@@ -63,7 +67,9 @@ export interface SyncTodayMeetingsRange {
  *    não iniciadas são removidas, para não notificar um horário que não existe mais.
  * 3. Garante a PlannedTask de cada reunião rastreada sem vínculo (ver
  *    {@link ensurePlannedTasks}).
- * 4. Poda reuniões rastreadas de dias anteriores.
+ * 4. Alinha o horário das planejadas **já vinculadas** ao do evento (ver
+ *    {@link syncPlannedTimes}).
+ * 5. Poda reuniões rastreadas de dias anteriores.
  *
  * **Rastrear e planejar são etapas separadas de propósito.** Enquanto a criação
  * da planejada vivia dentro do laço que rastreia, ela só acontecia para evento
@@ -107,6 +113,13 @@ export async function syncTodayMeetings(
     .filter((m) => !m.plannedTaskId && timedById.has(m.calendarEventId))
     .map((m) => ({ calendarEventId: m.calendarEventId, event: timedById.get(m.calendarEventId)! }));
 
+  // O oposto de `pending`: reunião **já tratada**, cuja planejada pode ter ficado
+  // sem hora ou ter sido remarcada. Sem evento na agenda fica de fora — não há de
+  // onde tirar horário, e a reunião sumida que já foi iniciada cai justamente aí.
+  const linked: LinkedMeeting[] = reconciled
+    .filter((m) => m.plannedTaskId && timedById.has(m.calendarEventId))
+    .map((m) => ({ plannedTaskId: m.plannedTaskId!, event: timedById.get(m.calendarEventId)! }));
+
   let tracked = 0;
   for (const event of timed) {
     if (existingIds.has(event.id)) continue;
@@ -133,9 +146,15 @@ export async function syncTodayMeetings(
   }
 
   const planned = await ensurePlannedTasks(deps, range, pending, projects, categories);
+  const retimed = await syncPlannedTimes(deps, linked);
 
   await trackedRepo.pruneBefore(todayISO);
-  return { tracked, ...planned };
+  return {
+    tracked,
+    ...planned,
+    plannedRetimed: retimed.plannedRetimed,
+    errors: [...planned.errors, ...retimed.errors],
+  };
 }
 
 /**
@@ -148,6 +167,16 @@ export async function syncTodayMeetings(
  */
 interface PendingMeeting {
   calendarEventId: string;
+  event: CalendarEvent;
+}
+
+/**
+ * Reunião rastreada que **já tem** planejada, emparelhada com seu evento. Carrega
+ * o id da planejada porque é por ele que o horário é lido e regravado; o
+ * `calendarEventId` não teria uso aqui — nada neste passo escreve no rastreamento.
+ */
+interface LinkedMeeting {
+  plannedTaskId: string;
   event: CalendarEvent;
 }
 
@@ -230,7 +259,38 @@ async function ensurePlannedTasks(
 }
 
 /**
- * Soma à planejada adotada a ação de entrar na reunião, se ela ainda não tiver.
+ * Horário que a planejada deve receber do evento, ou `{}` quando não há o que
+ * escrever. É a regra única de "quando o horário do evento entra na planejada",
+ * e por isso mora fora dos dois passos que a aplicam — a adoção e o
+ * {@link syncPlannedTimes}.
+ *
+ * **Só planejada de dia único.** O horário é atributo da planejada, não da
+ * ocorrência: numa recorrente ou de período ele valeria para todos os dias em que
+ * ela cai, inclusive aqueles em que a reunião não acontece — e o Lançamento
+ * Manual, que lista exatamente as planejadas com hora, ofereceria lançar um
+ * horário que ninguém marcou. Enquanto horário for da planejada, a resposta certa
+ * para elas é continuar sem horário.
+ *
+ * Campo a campo, para o evento sem `endTime` ainda preencher o `startTime` — que
+ * é o que tira a linha do grupo "sem hora" do popup. E nunca devolve o que já
+ * está igual: este passo roda a cada ciclo de sync, e escrever sempre seria um
+ * UPDATE a cada 2 minutos para não dizer nada de novo.
+ */
+function plannedTimeUpdates(
+  planned: PlannedTask,
+  event: CalendarEvent
+): Partial<Pick<PlannedTask, "startTime" | "endTime">> {
+  if (planned.scheduleType !== "specific_date") return {};
+
+  const updates: Partial<Pick<PlannedTask, "startTime" | "endTime">> = {};
+  if (event.startTime && event.startTime !== planned.startTime) updates.startTime = event.startTime;
+  if (event.endTime && event.endTime !== planned.endTime) updates.endTime = event.endTime;
+  return updates;
+}
+
+/**
+ * A ação de entrar na reunião, quando ela ainda falta na planejada — `null` se
+ * não há link ou se ele já está lá.
  *
  * **Só o link de conferência, nunca o `htmlLink` do evento.** A planejada adotada
  * costuma ser de longa vida — recorrente, ou de período, como as que a importação
@@ -240,15 +300,84 @@ async function ensurePlannedTasks(
  * de conferência de uma recorrente é o mesmo em toda ocorrência, e é o único que
  * serve para entrar na reunião.
  */
+function missingOpenUrlAction(
+  planned: PlannedTask,
+  event: CalendarEvent
+): PlannedTaskAction | null {
+  const action = openUrlAction(event.conferenceLink);
+  if (!action) return null;
+  const has = planned.actions.some((a) => a.type === action.type && a.value === action.value);
+  return has ? null : action;
+}
+
+/**
+ * Ajusta a planejada adotada ao evento: soma a ação de entrar na reunião e, sendo
+ * ela de dia único, escreve o horário.
+ *
+ * **As duas coisas numa gravação só, e nenhuma delas com saída antecipada.**
+ * Enquanto o horário não entrava aqui, a função desistia no primeiro `return`
+ * quando não havia link de conferência — e como quem não tem link é justamente a
+ * reunião sem Meet, a planejada adotada ficava sem hora, caía no grupo "sem hora"
+ * do popup e não aparecia no Lançamento Manual, apesar de o evento ter horário.
+ */
 async function adoptPlannedTask(
   plannedRepo: IPlannedTaskRepository,
   planned: PlannedTask,
   event: CalendarEvent
 ): Promise<void> {
-  const action = openUrlAction(event.conferenceLink);
-  if (!action) return;
-  if (planned.actions.some((a) => a.type === action.type && a.value === action.value)) return;
-  await plannedRepo.update({ ...planned, actions: [...planned.actions, action] });
+  const action = missingOpenUrlAction(planned, event);
+  const times = plannedTimeUpdates(planned, event);
+  if (!action && Object.keys(times).length === 0) return;
+
+  await plannedRepo.update({
+    ...planned,
+    ...times,
+    actions: action ? [...planned.actions, action] : planned.actions,
+  });
+}
+
+/**
+ * Mantém o horário da planejada **já vinculada** igual ao do evento.
+ *
+ * Existe porque reunião com vínculo não passa pela adoção nunca mais (é o que
+ * garante que planejada apagada à mão não volte), e havia dois jeitos de a hora
+ * ficar errada depois dele: a planejada adotada antes desta correção, que nasceu
+ * sem hora nenhuma; e a reunião **remarcada**, que o reconcile atualiza no
+ * rastreamento — reabrindo o prompt no horário novo — sem que a planejada
+ * soubesse, deixando o popup e o Lançamento Manual no horário velho.
+ *
+ * Parte do vínculo, e não do nome: `findById` devolvendo nada é planejada apagada
+ * à mão, e aí o passo não faz nada — não é papel dele ressuscitá-la. Como a
+ * escrita só acontece quando há diferença, o caso comum (nada mudou) não custa
+ * nenhum UPDATE, só a leitura.
+ *
+ * Falha de uma planejada não leva as outras, pela mesma razão do
+ * {@link ensurePlannedTasks}: a mensagem volta em `errors` e o ciclo seguinte
+ * tenta de novo.
+ */
+async function syncPlannedTimes(
+  { plannedRepo }: SyncTodayMeetingsDeps,
+  linked: LinkedMeeting[]
+): Promise<Pick<SyncTodayMeetingsResult, "plannedRetimed" | "errors">> {
+  let plannedRetimed = 0;
+  const errors: string[] = [];
+
+  for (const { plannedTaskId, event } of linked) {
+    try {
+      const planned = await plannedRepo.findById(plannedTaskId);
+      if (!planned) continue;
+
+      const times = plannedTimeUpdates(planned, event);
+      if (Object.keys(times).length === 0) continue;
+
+      await plannedRepo.update({ ...planned, ...times });
+      plannedRetimed++;
+    } catch (err: unknown) {
+      errors.push(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  return { plannedRetimed, errors };
 }
 
 /**

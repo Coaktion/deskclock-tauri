@@ -4,6 +4,7 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { UpdateCustomFieldInput } from "@domain/usecases/customFields/UpdateCustomField";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import type { UUID } from "@shared/types";
+import { Badge, IconButton, Input, Textarea } from "@presentation/components/ui";
 
 interface CustomFieldCardProps {
   field: CustomField;
@@ -55,44 +56,39 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
 
   if (editing) {
     return (
-      <div
-        onKeyDown={handleKeyDown}
-        className="flex flex-col gap-2 px-3 py-2.5 rounded-lg bg-gray-800/50"
-      >
-        <div className="flex items-center gap-2">
-          <input
+      <div onKeyDown={handleKeyDown} className="flex flex-col gap-2 px-3 py-2.5 bg-raised">
+        <div className="flex items-center gap-2.5">
+          <Input
             ref={inputRef}
+            variant="plain"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Escape") cancelEdit();
             }}
-            autoComplete="off"
-            className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+            className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
-          <button
+          <IconButton
             onClick={() => void confirmEdit()}
             title="Salvar"
-            className="p-1 text-green-400 hover:text-green-300 shrink-0"
-          >
-            <Check size={13} />
-          </button>
-          <button
+            icon={<Check size={14} />}
+            size="sm"
+          />
+          <IconButton
             onClick={cancelEdit}
             title="Cancelar"
-            className="p-1 text-gray-500 hover:text-gray-300 shrink-0"
-          >
-            <X size={13} />
-          </button>
+            icon={<X size={14} />}
+            variant="neutral"
+            size="sm"
+          />
         </div>
         {field.type === "select" && (
-          <textarea
+          <Textarea
             value={options}
             onChange={(e) => setOptions(e.target.value)}
             rows={3}
             placeholder="Uma opção por linha"
             title="Renomear uma opção preserva o valor já gravado nas tarefas; remover a linha apaga a opção."
-            className="text-sm bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-gray-100 placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-y"
           />
         )}
       </div>
@@ -100,43 +96,42 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors">
-      <span
-        className={`flex-1 text-sm truncate ${field.archived ? "text-gray-500" : "text-gray-100"}`}
-      >
+    <div className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface group transition-colors">
+      <span className={`flex-1 text-sm truncate ${field.archived ? "text-fg-muted" : "text-fg"}`}>
         {field.label}
       </span>
-      <span className="shrink-0 text-xs text-gray-600">{TYPE_LABEL[field.type]}</span>
+      <span className="shrink-0 text-xs text-fg-muted">{TYPE_LABEL[field.type]}</span>
       {field.type === "select" && (
-        <span className="shrink-0 text-xs text-gray-600">{field.options.length} opções</span>
+        <span className="shrink-0 text-xs font-mono tabular-nums text-fg-muted">
+          {field.options.length} opções
+        </span>
       )}
-      {field.archived && <span className="shrink-0 text-xs text-amber-500">Arquivado</span>}
+      {field.archived && <Badge tone="warning">Arquivado</Badge>}
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
+        <IconButton
           onClick={startEdit}
           title="Editar campo"
-          className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
-        >
-          <Pencil size={13} />
-        </button>
-        <button
+          icon={<Pencil size={14} />}
+          size="sm"
+        />
+        <IconButton
           onClick={() => void onUpdate(field.id, { archived: !field.archived })}
           title={
             field.archived
               ? "Reativar campo"
               : "Arquivar: some dos formulários, mas os valores já gravados continuam valendo"
           }
-          className="p-1 text-gray-500 hover:text-amber-400 rounded-lg"
-        >
-          {field.archived ? <ArchiveRestore size={13} /> : <Archive size={13} />}
-        </button>
-        <button
+          icon={field.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+          variant="neutral"
+          size="sm"
+        />
+        <IconButton
           onClick={() => onDelete(field.id)}
           title="Excluir campo e todos os valores gravados"
-          className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
-        >
-          <Trash2 size={13} />
-        </button>
+          icon={<Trash2 size={14} />}
+          variant="danger"
+          size="sm"
+        />
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { CalendarEvent } from "@domain/integrations/ICalendarImporter";
-import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { UUID } from "@shared/types";
+import { openUrlAction } from "@domain/utils/actions";
 import { createPlannedTask } from "./CreatePlannedTask";
 
 export interface ImportEventInput {
@@ -66,9 +67,4 @@ export async function createPlannedTaskFromEvent(
     },
     nowISO
   );
-}
-
-/** Ação de abrir uma URL, ou nada quando não há URL. */
-export function openUrlAction(url: string | undefined): PlannedTaskAction | null {
-  return url ? { type: "open_url", value: url } : null;
 }

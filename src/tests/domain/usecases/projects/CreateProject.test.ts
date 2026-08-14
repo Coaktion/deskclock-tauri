@@ -25,6 +25,20 @@ describe("createProject", () => {
     expect(repo.save).toHaveBeenCalledWith(result);
   });
 
+  it("pega o menor slot de cor livre no workspace", async () => {
+    // A cor não vem do id nem do nome: vem do catálogo do workspace, e o slot 1
+    // está vago porque um projeto foi excluído.
+    const repo = makeRepo({
+      findAll: vi.fn(async () => [
+        { id: "a", workspaceId: "ws-1", name: "A", colorIndex: 0 },
+        { id: "c", workspaceId: "ws-1", name: "C", colorIndex: 2 },
+      ]),
+    });
+    const result = await createProject(repo, "Novo", "ws-1");
+    expect(result.colorIndex).toBe(1);
+    expect(repo.findAll).toHaveBeenCalledWith("ws-1");
+  });
+
   it("faz trim no nome antes de salvar", async () => {
     const repo = makeRepo();
     const result = await createProject(repo, "  Projeto  ", "ws-1");
@@ -38,7 +52,7 @@ describe("createProject", () => {
   });
 
   it("lança DuplicateNameError se o nome já existir", async () => {
-    const existing: Project = { id: "abc", workspaceId: "ws-1", name: "Existente" };
+    const existing: Project = { id: "abc", workspaceId: "ws-1", name: "Existente", colorIndex: 0 };
     const repo = makeRepo({ findByName: vi.fn(async () => existing) });
     await expect(createProject(repo, "Existente", "ws-1")).rejects.toThrow(DuplicateNameError);
   });

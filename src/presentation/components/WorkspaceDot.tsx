@@ -105,12 +105,11 @@ export function WorkspaceDot({ color, size = 8 }: { color: string; size?: number
  * no CSS, elementos posicionados pintam acima de conteúdo estático no fluxo,
  * mesmo vindo antes no DOM.
  */
-export function WorkspaceEdge({ color, className = "" }: { color: string; className?: string }) {
-  const slot = workspaceClasses(color);
+export function WorkspaceEdge({ color }: { color: string }) {
   return (
     <span
       aria-hidden
-      className={`absolute inset-0 pointer-events-none bg-gradient-to-r ${slot.from} via-transparent ${slot.to} ${className}`}
+      className={`absolute left-0 top-0 bottom-0 w-1 pointer-events-none bg-${color}-500`}
     />
   );
 }

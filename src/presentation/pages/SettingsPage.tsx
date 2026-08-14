@@ -6,6 +6,7 @@ import { AparenciaTab } from "@presentation/sections/settings/AparenciaTab";
 import { OverlayTab } from "@presentation/sections/settings/OverlayTab";
 import { ApiTab } from "@presentation/sections/settings/ApiTab";
 import { AtualizacoesTab } from "@presentation/sections/settings/AtualizacoesTab";
+import { Button, FilterPill, PageHeader } from "@presentation/components/ui";
 import { openInBrowser } from "@shared/utils/shell";
 import { BookOpen } from "lucide-react";
 
@@ -28,48 +29,40 @@ export function SettingsPage() {
 
   if (!config.isLoaded) {
     return (
-      <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+      <div className="flex items-center justify-center h-full text-fg-muted text-sm">
         Carregando…
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="max-w-xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-semibold text-gray-100">Configurações</h1>
-          <button
-            onClick={() => void openInBrowser(MANUAL_URL)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-400 bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20 hover:border-blue-500/50 hover:text-blue-300 transition-colors cursor-pointer"
+    <div className="h-full flex flex-col">
+      <PageHeader
+        title="Configurações"
+        tabs={SETTINGS_TABS.map((tab) => (
+          <FilterPill
+            key={tab.id}
+            active={activeTab === tab.id}
+            onClick={() => setActiveTab(tab.id)}
           >
-            <BookOpen size={15} />
+            {tab.label}
+          </FilterPill>
+        ))}
+        actions={
+          <Button onClick={() => void openInBrowser(MANUAL_URL)} icon={<BookOpen size={14} />}>
             Manual
-          </button>
+          </Button>
+        }
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto p-5">
+        <div className="max-w-[720px] mx-auto">
+          {activeTab === "geral" && <GeralTab />}
+          {activeTab === "atalhos" && <AtalhosTab />}
+          {activeTab === "aparencia" && <AparenciaTab />}
+          {activeTab === "overlay" && <OverlayTab />}
+          {activeTab === "api" && <ApiTab />}
+          {activeTab === "atualizacoes" && <AtualizacoesTab />}
         </div>
-
-        <div className="flex gap-1.5 flex-wrap mb-6">
-          {SETTINGS_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                activeTab === tab.id
-                  ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                  : "bg-transparent border-gray-700 text-gray-400 hover:border-gray-600 hover:text-gray-300"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === "geral" && <GeralTab />}
-        {activeTab === "atalhos" && <AtalhosTab />}
-        {activeTab === "aparencia" && <AparenciaTab />}
-        {activeTab === "overlay" && <OverlayTab />}
-        {activeTab === "api" && <ApiTab />}
-        {activeTab === "atualizacoes" && <AtualizacoesTab />}
       </div>
     </div>
   );

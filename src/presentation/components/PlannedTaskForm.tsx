@@ -5,17 +5,13 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import {
-  bareInputClass,
-  boxClass,
-  fieldClass,
-  formColumnClass,
-} from "@presentation/components/fieldStyles";
+import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
+import { BillableChip, Field, Input } from "@presentation/components/ui";
+import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO } from "@shared/utils/time";
-import { DollarSign, ExternalLink, FolderOpen, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 interface FormState {
@@ -71,7 +67,7 @@ const SCHEDULE_LABELS: Record<ScheduleType, string> = {
 
 /** Título das seções que quebram a coluna em blocos (Ações, Agendamento). */
 const sectionLabelClass =
-  "text-[11px] font-medium text-gray-500 uppercase tracking-wide pt-1 border-t border-gray-800";
+  "text-overline uppercase text-fg-muted pt-1 border-t border-border-subtle";
 
 interface PlannedTaskFormProps {
   projects: Project[];
@@ -109,13 +105,16 @@ export function PlannedTaskForm({
   defaultDate = "",
   onSubmit,
 }: PlannedTaskFormProps) {
-  const [form, setForm] = useState<FormState>({ ...INITIAL, scheduleDate: defaultDate });
+  // Sem `defaultDate` (a tela que não navega por dia), o campo abre em hoje —
+  // é o que substituiu a pílula "Hoje" que ficava ao lado dele.
+  const [form, setForm] = useState<FormState>({
+    ...INITIAL,
+    scheduleDate: defaultDate || todayISO(),
+  });
   const { activeFields } = useCustomFields();
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, form.projectId);
   const [submitting, setSubmitting] = useState(false);
-  const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
-  const [newActionValue, setNewActionValue] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
   const handleKeyDown = useSubmitOnEnter(() => void handleSubmit());
 
@@ -140,13 +139,6 @@ export function PlannedTaskForm({
         : [...prev.recurringDays, day].sort();
       return { ...prev, recurringDays: days };
     });
-  }
-
-  function handleAddAction() {
-    const value = newActionValue.trim();
-    if (!value) return;
-    set("actions", [...form.actions, { type: newActionType, value }]);
-    setNewActionValue("");
   }
 
   // Só é "invertido" com as duas datas preenchidas: enquanto falta uma, o
@@ -203,36 +195,42 @@ export function PlannedTaskForm({
     // navegador cobriria só parte dos campos, e é ele que o hook cancela para o
     // Enter ter uma regra só em todo o app (`useSubmitOnEnter`).
     <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className={formColumnClass}>
-      <input
-        ref={nameRef}
-        type="text"
-        value={form.name}
-        onChange={(e) => set("name", e.target.value)}
-        placeholder="Nome da tarefa"
-        autoComplete="off"
-        className={fieldClass}
-      />
+      <Field label="Nome" htmlFor="planned-name">
+        <Input
+          id="planned-name"
+          ref={nameRef}
+          variant="bare"
+          value={form.name}
+          onChange={(e) => set("name", e.target.value)}
+          placeholder="Nome da tarefa"
+        />
+      </Field>
 
-      <Autocomplete
-        value={form.projectName}
-        onChange={(v) => {
-          set("projectName", v);
-          if (!v) {
-            set("projectId", null);
-            clearCategory();
-          }
-        }}
-        onSelect={(o) => {
-          set("projectId", o.id);
-          set("projectName", o.name);
-          clearCategory();
-        }}
-        options={projects}
-        placeholder="Projeto"
-      />
-
-      <div className={`${boxClass} flex items-center pr-2`}>
+      <Field label="Projeto" htmlFor="planned-project">
         <Autocomplete
+          id="planned-project"
+          value={form.projectName}
+          onChange={(v) => {
+            set("projectName", v);
+            if (!v) {
+              set("projectId", null);
+              clearCategory();
+            }
+          }}
+          onSelect={(o) => {
+            set("projectId", o.id);
+            set("projectName", o.name);
+            clearCategory();
+          }}
+          options={projects}
+          placeholder="Buscar projeto…"
+          variant="bare"
+        />
+      </Field>
+
+      <Field label="Categoria" htmlFor="planned-category" boxClassName="flex items-center pr-2">
+        <Autocomplete
+          id="planned-category"
           value={form.categoryName}
           onChange={(v) => {
             set("categoryName", v);
@@ -248,25 +246,12 @@ export function PlannedTaskForm({
             }));
           }}
           options={categoryOptions}
-          placeholder="Categoria"
+          placeholder="Buscar categoria…"
           className="flex-1"
-          inputClassName={bareInputClass}
+          variant="bare"
         />
-        <button
-          type="button"
-          onClick={() => set("billable", !form.billable)}
-          title={
-            form.billable
-              ? "Billable — clique para alternar"
-              : "Non-billable — clique para alternar"
-          }
-          className={`flex items-center gap-1 shrink-0 transition-colors ${
-            form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
-          }`}
-        >
-          <DollarSign size={14} />
-        </button>
-      </div>
+        <BillableChip billable={form.billable} onToggle={() => set("billable", !form.billable)} />
+      </Field>
 
       <CustomFieldInputs
         fields={activeFields}
@@ -281,16 +266,16 @@ export function PlannedTaskForm({
         <>
           <p className={sectionLabelClass}>Agendamento</p>
 
-          <div className="flex bg-gray-800 p-1 rounded-lg gap-1">
+          <div className="flex bg-raised p-1 rounded-control gap-1">
             {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
               <button
                 key={type}
                 type="button"
                 onClick={() => set("scheduleType", type)}
-                className={`flex-1 py-1 text-[11px] rounded-md transition-colors ${
+                className={`flex-1 py-1 text-sm font-medium rounded-chip transition-colors ${
                   form.scheduleType === type
-                    ? "bg-blue-500 text-white"
-                    : "bg-transparent text-gray-400 hover:text-gray-200"
+                    ? "bg-accent text-white"
+                    : "bg-transparent text-fg-muted hover:text-fg"
                 }`}
               >
                 {SCHEDULE_LABELS[type]}
@@ -298,25 +283,16 @@ export function PlannedTaskForm({
             ))}
           </div>
 
+          {/* Sem pílula "Hoje": o campo já nasce preenchido — com o dia
+              navegado, ou com hoje quando não há um. O atalho dizia duas coisas
+              ao mesmo tempo ("a data é hoje" e "leve a data para hoje"), e
+              aceso lia como filtro. */}
           {form.scheduleType === "specific_date" && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => set("scheduleDate", todayISO())}
-                className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
-                  form.scheduleDate === todayISO()
-                    ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                    : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-                }`}
-              >
-                Hoje
-              </button>
-              <DatePickerInput
-                value={form.scheduleDate}
-                onChange={(v) => set("scheduleDate", v)}
-                className="flex-1"
-              />
-            </div>
+            <DatePickerInput
+              value={form.scheduleDate}
+              onChange={(v) => set("scheduleDate", v)}
+              className="w-full"
+            />
           )}
 
           {form.scheduleType === "recurring" && (
@@ -326,10 +302,10 @@ export function PlannedTaskForm({
                   key={value}
                   type="button"
                   onClick={() => toggleDay(value)}
-                  className={`flex-1 py-1.5 text-[11px] rounded-full border transition-colors ${
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-full border transition-colors ${
                     form.recurringDays.includes(value)
-                      ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                      : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
+                      ? "bg-accent/10 border-accent/40 text-accent-text"
+                      : "bg-transparent border-border text-fg-muted hover:border-fg-muted hover:text-fg"
                   }`}
                 >
                   {label}
@@ -352,7 +328,7 @@ export function PlannedTaskForm({
                 invalid={isPeriodInverted}
               />
               {isPeriodInverted && (
-                <p className="text-xs text-red-400">O fim não pode ser antes do início.</p>
+                <p className="text-xs text-danger">O fim não pode ser antes do início.</p>
               )}
             </div>
           )}
@@ -362,76 +338,16 @@ export function PlannedTaskForm({
       {/* ── Ações ao iniciar ────────────────────────────────────────────────── */}
       <p className={sectionLabelClass}>Ações ao iniciar</p>
 
-      {form.actions.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {form.actions.map((action, i) => (
-            <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg">
-              <span
-                className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}
-              >
-                {action.type === "open_url" ? <ExternalLink size={13} /> : <FolderOpen size={13} />}
-              </span>
-              <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
-                {action.value}
-              </span>
-              <button
-                type="button"
-                onClick={() =>
-                  set(
-                    "actions",
-                    form.actions.filter((_, j) => j !== i)
-                  )
-                }
-                className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
-                title="Remover"
-              >
-                <Trash2 size={13} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <select
-        value={newActionType}
-        onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-        className="w-full px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
-      >
-        <option value="open_url">URL</option>
-        <option value="open_file">Arquivo</option>
-      </select>
-
-      <div className={`${boxClass} flex items-center pr-1`}>
-        <input
-          type="text"
-          value={newActionValue}
-          onChange={(e) => setNewActionValue(e.target.value)}
-          onKeyDown={(e) => {
-            // Sub-formulário: aqui o Enter adiciona a ação, não cria a tarefa.
-            // O `preventDefault` é o que avisa isso ao `useSubmitOnEnter`.
-            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            handleAddAction();
-          }}
-          placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
-          autoComplete="off"
-          className={`${bareInputClass} text-xs`}
-        />
-        <button
-          type="button"
-          onClick={handleAddAction}
-          disabled={!newActionValue.trim()}
-          title="Adicionar ação"
-          className="shrink-0 p-1 text-gray-500 hover:text-gray-200 disabled:opacity-40 disabled:hover:text-gray-500 transition-colors"
-        >
-          <Plus size={14} />
-        </button>
-      </div>
+      <PlannedActionsField
+        actions={form.actions}
+        onChange={(actions) => set("actions", actions)}
+        compact
+      />
 
       <button
         type="submit"
         disabled={!form.name.trim() || !isScheduleValid() || submitting}
-        className="w-full px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-sm transition-colors"
+        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 disabled:opacity-40 text-white rounded-control transition-opacity"
       >
         Adicionar
       </button>
