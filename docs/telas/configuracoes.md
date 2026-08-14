@@ -34,7 +34,7 @@
 #### Overlay
 | Configuração | Tipo | Descrição |
 |---|---|---|
-| Mostrar ao iniciar tarefa | toggle | Execution Overlay aparece ao iniciar tarefa |
+| Mostrar ao iniciar tarefa | toggle | Popup Flyout aparece ao iniciar tarefa (`overlayShowOnStart`). O popup lê a chave de um ref alimentado pelo evento `OVERLAY_CONFIG_CHANGED` — a config dele é a do boot, e sem o evento a troca só valeria no próximo start |
 | Opacidade em repouso | slider (%) | Opacidade do overlay quando não está em interação |
 | Snap to grid | toggle | Encaixa overlay em grade ao soltar arraste |
 

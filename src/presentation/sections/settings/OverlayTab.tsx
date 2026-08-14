@@ -6,6 +6,10 @@ import { emit } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import { SliderRow } from "./SettingsShared";
 
+/**
+ * O cartão é "Overlay", e não "Overlay compacto": a opacidade vale para as duas
+ * janelas e o "mostrar ao iniciar" é do popup.
+ */
 export function OverlayTab() {
   const config = useAppConfig();
 
@@ -55,7 +59,7 @@ export function OverlayTab() {
   }
 
   return (
-    <SectionCard title="Overlay compacto" divided>
+    <SectionCard title="Overlay" divided>
       <SectionRow>
         <Toggle
           label="Mostrar ao iniciar tarefa"

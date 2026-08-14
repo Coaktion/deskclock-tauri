@@ -1363,3 +1363,82 @@ visual 2 modos × 4 acentos ao fim de cada uma.
     continua sendo trabalho próprio, como `selectionStyles.ts` já declara.
   - **A aba Campos não está no `docs/telas/dados.md`** — nunca esteve; ela vive em
     `docs/specs/workspaces-custom-fields.md`.
+
+- **F9 · A tela de Configurações** — ✅ **feita (2026-08-14)**. A outra tela de leitura em coluna de
+  720, e a que carregava os **dois** `divergente` mais antigos ainda abertos — os da F6, que
+  atravessavam o app inteiro porque moram em primitivos. A auditoria que abriu a etapa comparou o
+  spec da 3d, o `docs/telas/configuracoes.md` e o código; o comportamento conferiu item a item,
+  **menos um** (abaixo).
+
+  **Escopo: as seis abas.** O mock desenha só a Geral; as outras cinco herdam as mesmas medidas,
+  pela mesma razão da F8 — abas vizinhas da mesma tela em dois desenhos é o pior resultado
+  possível.
+
+  O que entrou:
+
+  - **As abas voltaram ao tamanho cheio da pílula.** A tela passava `size="sm"` (4/10), que é o
+    degrau da pílula de semana do Planejamento; o spec mede **6/12**, o mesmo de Dados. Eram as
+    duas únicas telas com `tabs`, e estavam em dois tamanhos.
+  - **A ação do cabeçalho é `secondary`.** O "Manual" era `accent`; o spec o desenha idêntico ao
+    "Importar" da 3c — borda neutra, sem fundo. A docstring do `Button` citava "'Manual' das
+    Configurações" como o caso de uso do `accent`, e essa é a prosa que o JSON desempata.
+  - **A pilha de cartões respira 20**, contra os 12 que estavam escritos. Não é o degrau da 3c: a
+    lista de Dados respira 12 e a pilha de Configurações, 20, cada uma medida na sua tela. Ela mora
+    nas abas com mais de um cartão, não na página, que hospeda uma aba por vez.
+  - **`SectionRow` passa a 12 nos dois eixos** (era 12/16). Além do número, o x da linha discordava
+    do `px-3` da faixa que a encabeça — o rótulo da linha ficava para fora do nome do grupo.
+  - **`ui/SettingLabel`** é o par rótulo + dica. Estava escrito **cinco** vezes (`Toggle`,
+    `SelectRow`, `SliderRow`, `ShortcutRow`, a porta da API), e as cinco carregavam o mesmo
+    `mt-0.5` onde o design mede 1px. A porta da API ganhou de quebra a anatomia
+    rótulo-esquerda/controle-direita: era a única linha da tela que empilhava os dois.
+  - **A linha do nome virou a linha comum da tela.** Saíram o avatar de 48px e o rótulo em overline
+    solto; entraram o `SettingLabel` e o campo de **180px** à direita, que é o que o spec desenha —
+    o avatar não aparece em nó nenhum da 3d. O placeholder saiu junto, porque repetia o rótulo.
+  - **Os 11 âmbar crus viraram `--color-warning`**, que existia desde a E1 e não tinha consumidor
+    aqui; a skill nomeava o `AtalhosTab` como a dívida restante. Os dois banners eram a mesma
+    string escrita duas vezes no mesmo arquivo, e colapsaram num componente local com a caixa do
+    aviso de erro da API.
+  - **Os quatro `<button>` do `AtualizacoesTab` viraram `Button`** — dois batiam classe por classe
+    com `secondary` e dois com `accent` — e o ✕ do `ShortcutRow` virou `IconButton`. O baseline do
+    `componentPrimitives` perde a linha do updater.
+
+  **A trava vai de 81 para 84 assertivas, e a 3d fecha com zero `divergente`** — restam **3** no
+  arquivo, nas outras telas. As três novas: o degrau da pilha, o tamanho das abas e a largura do
+  campo do nome. **As três foram verificadas reprovando pela medida**, com sonda simultânea
+  (`space-y-5`→`space-y-3`, `size="sm"` de volta, `w-45`→`w-44`); os dois `divergente` da F6
+  falharam como `it.fails` antes de virarem `it`, que é a catraca fazendo o seu trabalho.
+
+  **O requisito que faltava, e é a única mudança de comportamento:** `overlayShowOnStart` existia em
+  `AppConfig`, tinha padrão `true` e era lido pelo `PopupOverlayApp` — **sem controle nenhum que a
+  alcançasse**, embora o `configuracoes.md` a liste desde sempre. Entrou como toggle no Overlay. O
+  popup passou a ler a chave de um **ref alimentado pelo evento**, e não de `config.get`: aquela
+  janela carrega a config no boot, então a troca feita na janela principal só valeria no próximo
+  start — é o mesmo motivo pelo qual a opacidade já viajava por evento.
+
+  **Divergências declaradas da 3d** — não são dívida, e quem "corrigi-las" desfaz decisão tomada:
+  1. **O cartão Jornada mantém dois campos numéricos**, e o mock desenha rótulo + valor em mono +
+     slider (decisão do usuário, 2026-08-14, revendo a própria decisão anterior na mesma sessão). A
+     digitação exata da meta vale mais que a forma.
+  2. **O `ChoiceChip` do arredondamento continua sendo vocabulário da tela** (mesma decisão) — é a
+     terceira gramática de chip da base, e o mock não desenha os slots.
+  3. Os **nomes dos grupos** são os da app (Conta, Comportamento, Duração, Jornada, Janelas), não os
+     do mock (Identificação, Inicialização, Metas): eles vieram da decisão da F-anterior de que o
+     nome do cartão dispensa a explicação.
+  4. A faixa do cabeçalho é 10/12, não o 8/12 do mock (§7.5.7, a mesma da 3c).
+  5. A coluna é centrada, como em Dados e Integrações.
+
+  **Fora, e registrado:**
+  - **O botão que grava o atalho fica literal**, e não entra no `Button`: ele precisa de `ref`,
+    `onKeyDown` e `onBlur` — é superfície de captura de tecla, não ação comum —, e abrir as três
+    props no primitivo por um call site custa mais que a cópia. Com o `ChoiceChip`, são os **dois**
+    literais que sobram em Configurações.
+  - **O cartão do Overlay virou "Overlay"**, sem o "compacto": a opacidade vale para as duas
+    janelas e o toggle novo é do popup, então o título nomeava errado um terço do próprio conteúdo.
+  - **A pele do range nativo continua fora.** O mock mede trilho de 4px e thumb de 14 com borda de
+    2; o `SliderRow` usa `<input type="range">` com `accent-accent`. Bater isso pede pseudo-elemento
+    em `index.css` — CSS global, fora do vocabulário Tailwind — e toca as duas abas que usam slider.
+    É item próprio, e por isso a trava afirma a linha da meta mas **não** o trilho: o resolvedor lê
+    classe, e ali não há nenhuma.
+  - **A bancada visual não ganhou caso desta tela.** O `section-card` e o `field-sm` já cobrem as
+    duas peças que a compõem, e a linha de configuração é `SectionRow` + `SettingLabel`, ambos
+    medidos pela trava.
