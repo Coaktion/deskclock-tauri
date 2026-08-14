@@ -1,4 +1,4 @@
-import { Check, Clock, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
@@ -7,7 +7,7 @@ import type { Task } from "@domain/entities/Task";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { BillableChip, Button, IconButton, Input } from "@presentation/components/ui";
+import { BillableChip, Button, Field, IconButton, Input } from "@presentation/components/ui";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import {
   useRunningTaskEditor,
@@ -113,19 +113,20 @@ export function RunningTaskEditSheet({
           />
         </div>
 
-        {/* Hora de início: alterá-la recalcula o cronômetro (§5.1.2). */}
-        <div className="flex items-center gap-1.5 pl-2 bg-raised border border-border rounded-control focus-within:border-accent transition-colors">
-          <Clock size={14} className="text-fg-muted shrink-0" />
+        {/* Hora de início: alterá-la recalcula o cronômetro (§5.1.2). O rótulo é
+            o mesmo `Field` do `CompletedTaskEditSheet` — o relógio que ficava
+            dentro da caixa dizia "isto é uma hora" e não *qual* hora, que é
+            justamente o que o campo precisava anunciar. */}
+        <Field label="Início" htmlFor="popup-running-start">
           <Input
+            id="popup-running-start"
             type="time"
             variant="bare"
             size="sm"
-            aria-label="Hora de início"
             value={editor.startTime}
             onChange={(e) => editor.setStartTime(e.target.value)}
-            className="flex-1 min-w-0"
           />
-        </div>
+        </Field>
 
         {customFields.length > 0 && (
           <>
