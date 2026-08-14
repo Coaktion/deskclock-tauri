@@ -100,6 +100,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GCP_CLIENT_ID: ${{ secrets.GCP_CLIENT_ID }}
           GCP_CLIENT_SECRET: ${{ secrets.GCP_CLIENT_SECRET }}
+          # `vars`, não `secrets`: id de board não é segredo, é configuração de
+          # conta. O que se quer é mantê-los fora do código-fonte de um
+          # repositório público, e Variables já entrega isso — usar Secrets aqui
+          # só diria a quem lê que existe algo a proteger que não existe.
+          # Ausentes, o build passa e o app abre com os campos do Monday vazios.
+          MONDAY_PORTFOLIO_BOARD_ID: ${{ vars.MONDAY_PORTFOLIO_BOARD_ID }}
+          MONDAY_REPORT_BOARD_ID: ${{ vars.MONDAY_REPORT_BOARD_ID }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:

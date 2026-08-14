@@ -32,7 +32,7 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
-  envPrefix: ["VITE_", "TAURI_ENV_*", "GCP_"],
+  envPrefix: ["VITE_", "TAURI_ENV_*", "GCP_", "MONDAY_"],
   build: {
     target: ["es2021", "chrome100", "safari13"],
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,

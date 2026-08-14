@@ -118,10 +118,17 @@
 > **A configuração são dois ids de board**, e não cinco escolhas. Antes pedia workspace do Monday,
 > pasta de clientes, pasta de projetos internos, board interno e um mapeamento manual board ↔
 > Project — tudo para descrever à mão o que o próprio Monday já descreve. Hoje pede o **Portfólio**
-> (`mondayPortfolioBoardId`, padrão `18418432045`), que lista os projetos, e o **Report de Horas**
-> (`mondayReportBoardId`, padrão `18422834169`), que guarda o catálogo dos rótulos. Os dois vêm
-> preenchidos com os ids da conta em que a integração foi desenhada e são trocáveis pelos campos da
+> (`mondayPortfolioBoardId`), que lista os projetos, e o **Report de Horas**
+> (`mondayReportBoardId`), que guarda o catálogo dos rótulos. Os dois são trocáveis pelos campos da
 > seção: outra conta troca os dois e o resto segue igual.
+>
+> **Os padrões vêm do `.env`**, não do código: `MONDAY_PORTFOLIO_BOARD_ID` e
+> `MONDAY_REPORT_BOARD_ID`, prefixo liberado no `vite.config.ts` como o `GCP_`. Id de board
+> descreve a **conta**, não o produto, e cravado no `DEFAULTS` ele viajava no bundle de todo
+> instalador publicado num repositório público. **Ausente resolve para vazio** — a integração pede
+> os dois na tela, e é o `isMondayReady` que já barra o envio sem eles. No CI eles entram como
+> **Variables** (`vars.`), não Secrets: o que se quer é mantê-los fora do código-fonte, e chamá-los
+> de segredo diria que há algo a proteger que não há.
 >
 > **Desconectar não os apaga**: descrevem a conta, não a sessão, e limpá-los faria a reconexão exigir
 > dois ids que ninguém tem à mão. `mondayUserId` continua derivado da apiKey no `MondayConnectModal`

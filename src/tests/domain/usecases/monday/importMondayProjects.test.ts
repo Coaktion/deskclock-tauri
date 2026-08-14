@@ -11,7 +11,7 @@ import type { MondayBoardSchema, MondayItem } from "@shared/types/monday";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { localISO } from "../../../helpers/localTime";
 
-const PORTFOLIO_ID = "18418432045";
+const PORTFOLIO_ID = "90000000001";
 const DESKCLOCK_WS = "ws-1";
 
 /** Um item do Portfólio, com as duas colunas que a importação lê. */

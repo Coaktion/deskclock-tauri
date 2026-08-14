@@ -103,8 +103,15 @@ const DEFAULTS: AppConfig = {
   // Os dois boards da conta em que a integração foi desenhada. São padrões
   // trocáveis pelos campos da seção, não constantes: outra conta troca os dois
   // ids e o resto da integração segue igual.
-  mondayPortfolioBoardId: "18418432045",
-  mondayReportBoardId: "18422834169",
+  //
+  // Vêm do `.env` (prefixo `MONDAY_`, liberado no `vite.config.ts`) pelo mesmo
+  // motivo que as credenciais do Google: id de board descreve a **conta**, não
+  // o produto, e cravado aqui ele viajava no bundle de todo instalador
+  // publicado num repositório público. Ausente resolve para vazio — a
+  // integração pede os dois ids na tela, e é isso que o `isMondayReady` já
+  // checa.
+  mondayPortfolioBoardId: (import.meta.env.MONDAY_PORTFOLIO_BOARD_ID as string) ?? "",
+  mondayReportBoardId: (import.meta.env.MONDAY_REPORT_BOARD_ID as string) ?? "",
   mondayProjectStageFieldId: "",
   mondayReportTypeFieldId: "",
   mondayNonBillableReasonFieldId: "",
