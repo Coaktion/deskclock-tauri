@@ -2,6 +2,67 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.11.0...v2.0.0) (2026-08-14)
+
+
+### BREAKING CHANGES
+
+* **aparência:** o tema virou dois eixos — modo (claro/escuro) e cor de destaque. Quem estava no tema `escuro` legado perde o tom e escolhe de novo. O seletor de tamanho de fonte saiu.
+* **google:** quem já conectou o Google precisa reconectar. O backup no Drive depende de uma permissão nova, que só entra num consentimento novo.
+* o command palette saiu, e com ele o atalho global que o abria — o app passa a sempre abrir na janela principal.
+* **overlay:** a escolha entre overlay grande e pequeno saiu; o overlay tem um tamanho só.
+* **planejamento:** sábado e domingo saíram da semana — o planejamento é só de dias úteis.
+
+### Features
+
+* **workspaces:** o app passa a separar projetos, categorias e apontamentos em workspaces independentes — o ativo se troca pela tela de Dados
+* **workspaces:** mova ou copie tarefas entre workspaces, inclusive pelo lançamento manual
+* **workspaces:** cada integração escolhe em qual workspace do DeskClock trabalha, e excluir um workspace avisa quais integrações param junto
+* **monday:** nova integração — as horas viram atividades no quadro do projeto, e os itens do quadro viram tarefas planejadas
+* **monday:** os projetos vêm do quadro de Portfólio e os catálogos do de Report, que semeiam categorias e campos personalizados
+* **monday:** a lista de projetos se atualiza sozinha uma vez por dia, e as atividades já enviadas se gerenciam pelo app
+* **backup:** o banco vai sozinho para o Google Drive quando o backup vence, com poda das cópias antigas
+* **campos personalizados:** campos por projeto em tarefas e planejadas, editáveis também durante a execução
+* **dados:** associe categorias ao projeto — o autocomplete de categoria passa a recortar por ele
+* **dados:** exclusão em massa de projetos e categorias
+* **projetos:** a cor do projeto é atribuída, e a paleta vai a 24
+* **agenda:** o alerta de reunião leva projeto, categoria e os campos personalizados da planejada
+* **agenda:** iniciar a reunião à mão também passa a rastreá-la
+* **aparência:** o app foi redesenhado — modo e cor de destaque como eixos separados, tipografia própria (Source Sans 3 e Source Code Pro) e as sete telas sobre os mesmos componentes
+* **planejamento:** a semana vira um cartão por dia, com hoje em destaque, e o formulário em coluna recolhível
+* **planejamento:** pílula "Semana atual" para voltar de qualquer semana, e chip de faturamento na linha da tarefa
+* **lançamento manual:** lance de uma vez as planejadas que já trazem horário
+* **overlay:** edite a tarefa em execução e as planejadas sem sair do popup, com typeahead nos chips de projeto e categoria
+* **overlay:** contador de planejadas no centro do compact, as ações no próprio card, e o workspace ativo nas bordas
+* **formulários:** Enter submete o formulário a partir de qualquer campo
+* **integrações:** painéis redimensionáveis por arraste, e o tooltip do ícone mostra a causa técnica do erro
+* **primeira execução:** o onboarding sugere integrações em vez de pedir cadastro de catálogo
+* **tours:** o Monday e a tela de Dados ganham tour, e os demais alcançam os workspaces, o backup no Drive e os campos personalizados
+
+### Bug Fixes
+
+* **agenda:** o import criava uma tarefa por série do Google, não por reunião
+* **agenda:** o import trazia sábado e domingo
+* **agenda:** a planejada adotada não recebia o horário do evento
+* **agenda:** o aviso de reunião iniciava sem projeto nem categoria
+* **agenda:** reunião iniciada à mão era re-perguntada a cada 5 minutos
+* **agenda:** reunião rastreada nunca virava tarefa planejada
+* **tarefas:** a hora de fim da lista não batia com a duração
+* **tarefas:** a edição trazia a duração do intervalo, não a registrada
+* **tarefas:** o vínculo com a tarefa planejada se perdia ao pausar, reexecutar ou reabrir o app
+* **tarefas:** parar uma tarefa não avisava as outras telas
+* **tarefas:** o faturamento passa a valer para o grupo, não só para a linha clicada
+* **tempo:** o total da semana usava meia-noite UTC como limite do dia
+* **overlay:** não voltava a abrir na última posição salva
+* **overlay:** o aviso de reunião não aparecia sozinho, e quando aparecia tirava o foco de quem digitava
+* **overlay:** projetos e categorias criados depois da abertura do app não apareciam
+* **integrações:** marcava como enviado o que a integração não tinha confirmado
+* **planejadas:** o campo de data nasce preenchido
+* **planejadas:** a edição saía do padrão dos outros formulários
+* **lançamento manual:** a lista de apontamentos do dia voltou a rolar, e a tela reflete o que muda em outras janelas
+* **autocomplete:** a lista deixou de ficar presa à largura do campo
+* **banco:** as migrações passam a rodar no boot do app, antes da primeira tela
+
 ## [1.11.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.10.0...v1.11.0) (2026-07-17)
 
 
