@@ -269,6 +269,36 @@
   --color-warning: oklch(0.62 0.14 75);
 }
 
+/* ── Cursor de mão no que se clica ─────────────────────────────────────────────
+ *
+ * O Tailwind v4 **tirou do Preflight** o `button, [role="button"] { cursor:
+ * pointer }` que o v3 emitia — o preflight instalado não tem nenhuma ocorrência
+ * de `cursor: pointer`. Sem esta regra, os 154 `<button>` do app mostram a seta,
+ * e só 14 deles escrevem o cursor à mão. Um `cursor-pointer` no `Button` e no
+ * `IconButton` cobriria 130, e deixaria de fora os `<button>` literais que
+ * sobraram, os três primitivos locais das integrações e toda caixa de seleção.
+ *
+ * **Não se descobre isto desenvolvendo no WSLg**: o WSLg não troca a forma do
+ * ponteiro, então a seta e a mão são o mesmo desenho na tela. Foi assim que a
+ * regressão atravessou a migração inteira do design system sem ser vista.
+ *
+ * Mora em `@layer base` de propósito: utilitário vence base, então os
+ * `disabled:cursor-not-allowed` dos primitivos e o `cursor-help` das integrações
+ * continuam valendo por cima. E o `[data-tauri-drag-region]` abaixo está fora de
+ * layer, que é o que faz o `grab` da região de arraste vencer esta regra.
+ *
+ * `:not(:disabled)` porque mão em botão desabilitado promete o que ele não faz.
+ * O `label:has(…)` cobre o texto ao lado da caixa: sem ele, o rótulo mostra a
+ * seta enquanto a caixa que ele aciona mostra a mão. */
+@layer base {
+  button:not(:disabled),
+  select:not(:disabled),
+  input:where([type="checkbox"], [type="radio"]):not(:disabled),
+  label:has(input:where([type="checkbox"], [type="radio"]):not(:disabled)) {
+    cursor: pointer;
+  }
+}
+
 /* ── Cursor de arraste em regiões drag ── */
 [data-tauri-drag-region] {
   cursor: grab;

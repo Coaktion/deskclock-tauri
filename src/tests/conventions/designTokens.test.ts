@@ -285,6 +285,24 @@ describe("convenção: tokens semânticos do design system", () => {
       expect(depth).toBe(0);
     }
   );
+
+  it("devolve o cursor de mão ao que se clica", () => {
+    // O Tailwind v4 tirou do Preflight o `button { cursor: pointer }` que o v3
+    // emitia. Apagar esta regra não quebra build, teste nem tela — e **no WSLg a
+    // seta e a mão são o mesmo desenho**, então quem desenvolve em Linux não vê
+    // nada. Aparece só no Windows, uma release depois, que é exatamente como ela
+    // atravessou a migração do design system inteira sem ser notada.
+    const base = blockBody(css, "@layer base {");
+    expect(base).toContain("cursor: pointer");
+    for (const selector of [
+      "button:not(:disabled)",
+      "select:not(:disabled)",
+      'input:where([type="checkbox"], [type="radio"]):not(:disabled)',
+      'label:has(input:where([type="checkbox"], [type="radio"]):not(:disabled))',
+    ]) {
+      expect(base).toContain(selector);
+    }
+  });
 });
 
 /**
