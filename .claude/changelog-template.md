@@ -100,7 +100,23 @@ pnpm release:patch   # ou release:minor / release:major
 git add CHANGELOG.md
 git commit --amend --no-edit
 
-# 4. Empurra branch e tag — o push da tag dispara o workflow
+# 4. Re-aponta a tag — o amend reescreveu o commit, e ela ficou no antigo
+git tag -f vX.Y.Z HEAD
+git rev-parse vX.Y.Z HEAD   # os dois hashes têm que bater
+
+# 5. Empurra branch e tag — o push da tag dispara o workflow
 git push origin develop
 git push origin vX.Y.Z
 ```
+
+### Por que o passo 4 existe
+
+O `standard-version` cria o commit `chore(release): x.y.z` **e** a tag apontando para ele. O
+`--amend` do passo 3 troca o commit por outro, de hash diferente — e a tag **não** acompanha:
+ela fica no commit órfão, o que tinha o CHANGELOG cru.
+
+O estrago é silencioso. O push da tag funciona, o `release.yml` roda e passa, os instaladores
+saem — só que buildados do commit sem o texto reescrito, e o `AtualizacoesTab` do app mostra
+ao usuário os bullets do standard-version com hash e URL. Nada falha para avisar.
+
+`git rev-parse vX.Y.Z HEAD` imprime dois hashes: se forem diferentes, a tag está órfã.
