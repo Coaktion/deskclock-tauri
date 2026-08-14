@@ -121,13 +121,16 @@ export function GeralTab() {
             description="Aparece no cabeçalho da tela de Tarefas"
             htmlFor="settings-user-name"
           />
-          <Input
-            id="settings-user-name"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            onBlur={handleUserNameBlur}
-            className="w-45 shrink-0"
-          />
+          {/* A largura mora no invólucro: o campo é `w-full` por dentro, e uma
+              classe de largura nele perde para essa na cascata. */}
+          <div className="w-45 shrink-0">
+            <Input
+              id="settings-user-name"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              onBlur={handleUserNameBlur}
+            />
+          </div>
         </SectionRow>
       </SectionCard>
 

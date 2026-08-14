@@ -992,13 +992,21 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
      * A linha do nome é a linha comum da tela — rótulo e dica à esquerda, campo
      * de largura fixa à direita —, e não o bloco de perfil com avatar que ela
      * foi até a F9. A largura é do call site, então é lá que se mede.
+     *
+     * **Ela tem de estar no invólucro, e a segunda assertiva é o que garante.**
+     * `controlClass` emite `w-full`, e entre dois utilitários de `width` quem
+     * vence é a ordem de emissão do Tailwind, não a ordem na string — uma
+     * largura passada ao campo resolve 180 aqui e renderiza cheia na tela.
+     * Foi o que aconteceu na primeira versão desta linha.
      */
-    it("o campo do nome tem a largura do spec", () => {
-      const campo = classNameContaining(
-        sourceOf("src/presentation/sections/settings/GeralTab.tsx"),
-        "shrink-0"
+    it("o campo do nome tem a largura do spec, e ela mora no invólucro", () => {
+      const source = sourceOf("src/presentation/sections/settings/GeralTab.tsx");
+      expect(geometryOf(classNameContaining(source, "w-45")).width).toBe(
+        numberOf(SPEC_3D.campo, "width")
       );
-      expect(geometryOf(campo).width).toBe(numberOf(SPEC_3D.campo, "width"));
+
+      const campo = /<Input\b[\s\S]*?\/>/.exec(source)?.[0] ?? "";
+      expect(campo).not.toMatch(/\bw-/);
     });
   });
 
