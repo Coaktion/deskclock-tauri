@@ -2,7 +2,8 @@ import { useState, useRef } from "react";
 import { Pencil, Trash2, Check, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { UUID } from "@shared/types";
-import { BillableChip, Input } from "@presentation/components/ui";
+import { BillableChip, IconButton, Input } from "@presentation/components/ui";
+import { selectionBoxClass } from "./selectionStyles";
 
 interface CategoryCardProps {
   category: Category;
@@ -54,7 +55,7 @@ export function CategoryCard({
   return (
     <div
       onClick={editing ? undefined : () => onToggleSelect(category.id)}
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-control hover:bg-raised group transition-colors ${
+      className={`flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface group transition-colors ${
         editing ? "" : "cursor-pointer"
       }`}
     >
@@ -64,7 +65,7 @@ export function CategoryCard({
         onChange={() => onToggleSelect(category.id)}
         onClick={(e) => e.stopPropagation()}
         title="Selecionar categoria"
-        className="shrink-0 accent-accent cursor-pointer"
+        className={selectionBoxClass}
       />
 
       {editing ? (
@@ -78,12 +79,19 @@ export function CategoryCard({
             className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
           <BillableChip billable={editBillable} onToggle={() => setEditBillable((b) => !b)} />
-          <button onClick={confirmEdit} className="p-1 text-billable hover:opacity-80 shrink-0">
-            <Check size={14} />
-          </button>
-          <button onClick={cancelEdit} className="p-1 text-fg-muted hover:text-fg shrink-0">
-            <X size={14} />
-          </button>
+          <IconButton
+            onClick={() => void confirmEdit()}
+            title="Salvar"
+            icon={<Check size={14} />}
+            size="sm"
+          />
+          <IconButton
+            onClick={cancelEdit}
+            title="Cancelar"
+            icon={<X size={14} />}
+            variant="neutral"
+            size="sm"
+          />
         </>
       ) : (
         <>
@@ -95,27 +103,23 @@ export function CategoryCard({
             billable={category.defaultBillable}
             onToggle={() => void onUpdate(category.id, category.name, !category.defaultBillable)}
           />
-          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                startEdit();
-              }}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          >
+            <IconButton
+              onClick={startEdit}
               title="Editar categoria"
-              className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(category.id);
-              }}
+              icon={<Pencil size={14} />}
+              size="sm"
+            />
+            <IconButton
+              onClick={() => onDelete(category.id)}
               title="Excluir categoria"
-              className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
-            >
-              <Trash2 size={14} />
-            </button>
+              icon={<Trash2 size={14} />}
+              variant="danger"
+              size="sm"
+            />
           </div>
         </>
       )}

@@ -102,7 +102,9 @@ export function SectionCard({
               alguns décimos abaixo do eixo do título. */}
           {leading && <div className="shrink-0 flex items-center justify-center">{leading}</div>}
           <div className="min-w-0">
-            {title && <p className={`text-overline uppercase ${colors.title}`}>{title}</p>}
+            {title && (
+              <p className={`text-overline uppercase leading-none ${colors.title}`}>{title}</p>
+            )}
             {description && (
               <p className="text-xs text-fg-muted mt-1 leading-relaxed">{description}</p>
             )}

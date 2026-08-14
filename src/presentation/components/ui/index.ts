@@ -17,3 +17,4 @@ export { type ControlVariant, type ControlSize } from "./controlStyles";
 export { Modal, type ModalSize } from "./Modal";
 export { PageHeader } from "./PageHeader";
 export { SectionCard, SectionRow } from "./SectionCard";
+export { AddRow } from "./AddRow";

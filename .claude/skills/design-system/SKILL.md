@@ -527,6 +527,23 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > Dados era largura cheia em `p-5` — trocar de aba mudava a medida da linha de leitura no mesmo
   > app. É a única tela de leitura que não usa a largura toda, e de propósito: linha de
   > configuração é rótulo à esquerda e controle à direita, e esticá-la separa os dois pelo vazio.
+  > **As abas ficam coladas ao título** (`ml-2`, gap 6) e o `ml-auto` é das **ações** — enquanto os
+  > dois dividiram o mesmo grupo, as abas herdavam o gap dele e atravessavam o cabeçalho.
+  >
+  > **A lista de Dados tem uma anatomia só, nas quatro abas** (spec da 3c): a busca fica **fora**
+  > do cartão, na coluna; a **faixa de seleção é o cabeçalho** do `SectionCard` — caixa em
+  > `leading`, contador na pílula, rótulo e "Excluir selecionados" em `action` —; a linha é faixa
+  > de borda a borda (`px-3 py-2.5`, gap 10, régua pelo `divide-y`, hover `bg-surface`, ponto de
+  > 6px) e nunca pílula; e a **linha que cadastra é uma linha da lista** (`ui/AddRow`), não um
+  > bloco tracejado acima dela. A **importação em massa é ação do cabeçalho da página**, não do
+  > painel.
+  >
+  > **A lista rola por dentro do cartão, e é divergência declarada do mock** (decisão do usuário,
+  > 2026-08-14): o cartão para na altura da coluna (`min-h-0` na casca e no corpo,
+  > `overflow-y-auto` nas linhas, `shrink-0` no rodapé), e com isso o "adicionar" e a faixa de
+  > seleção ficam **sempre visíveis**. No design a lista cresce sem fim, e ali cadastrar custa
+  > rolar o catálogo inteiro — o custo cresce com ele. Com poucos itens o cartão tem a altura do
+  > conteúdo, como o mock desenha.
   >
   > **Cada grupo é um `SectionCard` com nome**, e é o nome que dispensa a explicação: "Comportamento",
   > "Duração", "Jornada", "Janelas" dizem o que a lista de chaves não dizia. `divided` desenha a

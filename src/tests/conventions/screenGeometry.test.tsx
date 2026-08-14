@@ -6,7 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { FORM_COLUMN_WIDTH, formColumnClass } from "@presentation/components/fieldStyles";
 import { OmniboxIdle } from "@presentation/components/OmniboxIdle";
+import { ProjectCard } from "@presentation/components/ProjectCard";
 import { Sidebar } from "@presentation/components/Sidebar";
+import { AddRow } from "@presentation/components/ui/AddRow";
 import { Badge } from "@presentation/components/ui/Badge";
 import { Button } from "@presentation/components/ui/Button";
 import { Field } from "@presentation/components/ui/Field";
@@ -737,7 +739,37 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       corpo: s3c.byPath("1/1/1"),
       coluna: s3c.byPath("1/1/1/0"),
       abas: s3c.byPath("1/1/0/1"),
+      importar: s3c.byText("Importar"),
+      linha: s3c.byPath("1/1/1/0/1/1"),
+      ponto: s3c.byPath("1/1/1/0/1/1/1"),
+      nome: s3c.byText("Cliente A"),
+      pilula: s3c.byPath("1/1/1/0/1/1/3"),
+      adicionar: s3c.byPath("1/1/1/0/1/5"),
+      adicionarTexto: s3c.byText("Adicionar novo projeto — Enter para salvar"),
     };
+
+    /** Um projeto qualquer: a linha mede a mesma coisa com qualquer nome. */
+    const projeto = { id: "p1", workspaceId: "w1", name: "Cliente A", colorIndex: 0 };
+
+    /** `associadas` governa o rótulo da pílula: o mock desenha as duas formas. */
+    function linhaDeProjeto(associadas = 0): HTMLElement {
+      const sourceById = new Map(
+        Array.from({ length: associadas }, (_, i) => [`c${i}`, "manual" as const])
+      );
+      return shellOf(
+        <ProjectCard
+          project={projeto}
+          selected={false}
+          onToggleSelect={() => {}}
+          onUpdate={async () => {}}
+          onDelete={() => {}}
+          categories={[]}
+          sourceById={sourceById}
+          onToggleCategory={() => {}}
+          onClearCategories={() => {}}
+        />
+      ).children[0] as HTMLElement;
+    }
 
     it("o corpo tem o padding de página e a coluna de leitura do spec", () => {
       const source = sourceOf("src/presentation/pages/DataPage.tsx");
@@ -746,16 +778,100 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * No design as abas ficam **coladas ao título** (`margin-left: 8`, gap 6) e
-     * só as ações vão para a direita. Hoje elas dividem o grupo `ml-auto` com
-     * as ações, e herdam dele o gap de 8 — o que também as afasta do título.
+     * A coluna é a pilha de busca + cartão, e o degrau entre os dois é dela. Ele
+     * só existe desde que a busca saiu de dentro do cartão — antes ela dividia
+     * uma linha com o botão de importar, que é ação da tela e subiu para o
+     * cabeçalho.
      */
-    divergente("as abas ficam coladas ao título, no gap do spec — divergente", () => {
+    it("a coluna empilha busca e cartão no degrau do spec", () => {
+      const coluna = classNameContaining(
+        sourceOf("src/presentation/pages/DataPage.tsx"),
+        "max-w-\\[720px\\]"
+      );
+      expect(geometryOf(coluna).gap).toBe(numberOf(SPEC_3C.coluna, "gap"));
+      expect(coluna).toContain("flex-col");
+    });
+
+    it("as abas ficam coladas ao título, no gap do spec", () => {
       const header = shellOf(<PageHeader title="Dados" tabs={<span data-abas="" />} />);
       const abas = header.querySelector("[data-abas]")!.parentElement!;
       const actual = geometryOf(abas.className);
       expect(actual.gap).toBe(numberOf(SPEC_3C.abas, "gap"));
       expect(actual.marginLeft).toBe(numberOf(SPEC_3C.abas, "margin-left"));
+    });
+
+    it("a importação em massa é a ação do cabeçalho, no padding e no raio do spec", () => {
+      const botao = shellOf(<Button icon={<span />}>Importar</Button>);
+      const actual = geometryOf(botao.className);
+      expectPadding(botao, SPEC_3C.importar);
+      expect(actual.borderRadius).toBe(radiusOf(SPEC_3C.importar));
+      expect(actual.gap).toBe(numberOf(SPEC_3C.importar, "gap"));
+
+      // Medir o `Button` só vale enquanto for a página que o monta: de volta ao
+      // painel, ele estaria certo no lugar errado com esta trava verde.
+      expect(sourceOf("src/presentation/pages/DataPage.tsx")).toContain("Importar");
+    });
+
+    it("a linha da lista tem o padding, o gap e a régua do spec", () => {
+      const linha = linhaDeProjeto();
+      expectPadding(linha, SPEC_3C.linha);
+      expect(geometryOf(linha.className).gap).toBe(numberOf(SPEC_3C.linha, "gap"));
+
+      // A régua vem do `divide-y` do contêiner, como no cartão de configurações
+      // — a linha não a escreve, e escrevê-la duplicaria o filete no rodapé.
+      expect(linha.className).not.toMatch(/(?:^|\s)rounded-/);
+      expect(sourceOf("src/presentation/components/ProjectsPanel.tsx")).toContain(
+        "divide-y divide-border-subtle"
+      );
+    });
+
+    it("o ponto de projeto tem o diâmetro do spec", () => {
+      const ponto = linhaDeProjeto().children[1];
+      const actual = geometryOf(ponto.className);
+      expect(actual.width).toBe(numberOf(SPEC_3C.ponto, "width"));
+      expect(actual.height).toBe(numberOf(SPEC_3C.ponto, "height"));
+    });
+
+    it("a pílula de categorias é o `Badge`, e diz quantas são", () => {
+      const pilula = linhaDeProjeto(4).querySelector("[aria-expanded] > span")!;
+      const actual = geometryOf(pilula.className);
+      expectPadding(pilula, SPEC_3C.pilula);
+      expect(actual.borderRadius).toBe(radiusOf(SPEC_3C.pilula));
+      expect(actual.fontSize).toBe(numberOf(SPEC_3C.pilula, "font-size"));
+      expect(actual.gap).toBe(numberOf(SPEC_3C.pilula, "gap"));
+
+      // O mock escreve o substantivo (`4 categorias`), e o número sozinho não
+      // diz de quê. Sem associação a pílula é tracejada e diz "todas" — é o
+      // projeto que oferece o catálogo inteiro (§6.4).
+      expect(pilula.textContent).toBe(`4 ${SPEC_3C.pilula.text}`);
+      expect(linhaDeProjeto().querySelector("[aria-expanded] > span")!.className).toContain(
+        "border-dashed"
+      );
+    });
+
+    it("a linha de adicionar tem o padding e o gap do spec, e não é bloco solto", () => {
+      const linha = shellOf(
+        <AddRow>
+          <span />
+        </AddRow>
+      );
+      expectPadding(linha, SPEC_3C.adicionar);
+      expect(geometryOf(linha.children[0].className).gap).toBe(
+        numberOf(SPEC_3C.adicionar, "gap")
+      );
+      expect(linha.className).not.toMatch(/border-dashed|rounded-/);
+    });
+
+    it("o placeholder de adicionar lê no degrau do spec", () => {
+      const linha = shellOf(
+        <AddRow>
+          <Input variant="plain" value="" onChange={() => {}} placeholder="Adicionar" />
+        </AddRow>
+      );
+      const campo = linha.querySelector("input")!;
+      expect(geometryOf(campo.className).fontSize).toBe(
+        numberOf(SPEC_3C.adicionarTexto, "font-size")
+      );
     });
   });
 

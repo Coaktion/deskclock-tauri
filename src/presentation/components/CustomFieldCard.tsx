@@ -4,7 +4,7 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { UpdateCustomFieldInput } from "@domain/usecases/customFields/UpdateCustomField";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import type { UUID } from "@shared/types";
-import { Input, Textarea } from "@presentation/components/ui";
+import { Badge, IconButton, Input, Textarea } from "@presentation/components/ui";
 
 interface CustomFieldCardProps {
   field: CustomField;
@@ -56,11 +56,8 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
 
   if (editing) {
     return (
-      <div
-        onKeyDown={handleKeyDown}
-        className="flex flex-col gap-2 px-3 py-2 rounded-control bg-raised"
-      >
-        <div className="flex items-center gap-2">
+      <div onKeyDown={handleKeyDown} className="flex flex-col gap-2 px-3 py-2.5 bg-raised">
+        <div className="flex items-center gap-2.5">
           <Input
             ref={inputRef}
             variant="plain"
@@ -71,20 +68,19 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
             }}
             className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
-          <button
+          <IconButton
             onClick={() => void confirmEdit()}
             title="Salvar"
-            className="p-1 text-billable hover:opacity-80 shrink-0"
-          >
-            <Check size={14} />
-          </button>
-          <button
+            icon={<Check size={14} />}
+            size="sm"
+          />
+          <IconButton
             onClick={cancelEdit}
             title="Cancelar"
-            className="p-1 text-fg-muted hover:text-fg shrink-0"
-          >
-            <X size={14} />
-          </button>
+            icon={<X size={14} />}
+            variant="neutral"
+            size="sm"
+          />
         </div>
         {field.type === "select" && (
           <Textarea
@@ -100,7 +96,7 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2 rounded-control hover:bg-raised group transition-colors">
+    <div className="flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface group transition-colors">
       <span className={`flex-1 text-sm truncate ${field.archived ? "text-fg-muted" : "text-fg"}`}>
         {field.label}
       </span>
@@ -110,33 +106,32 @@ export function CustomFieldCard({ field, onUpdate, onDelete }: CustomFieldCardPr
           {field.options.length} opções
         </span>
       )}
-      {field.archived && <span className="shrink-0 text-xs text-amber-500">Arquivado</span>}
+      {field.archived && <Badge tone="warning">Arquivado</Badge>}
       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <button
+        <IconButton
           onClick={startEdit}
           title="Editar campo"
-          className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-        >
-          <Pencil size={14} />
-        </button>
-        <button
+          icon={<Pencil size={14} />}
+          size="sm"
+        />
+        <IconButton
           onClick={() => void onUpdate(field.id, { archived: !field.archived })}
           title={
             field.archived
               ? "Reativar campo"
               : "Arquivar: some dos formulários, mas os valores já gravados continuam valendo"
           }
-          className="p-1 text-fg-muted hover:text-amber-400 rounded-control transition-colors"
-        >
-          {field.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
-        </button>
-        <button
+          icon={field.archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+          variant="neutral"
+          size="sm"
+        />
+        <IconButton
           onClick={() => onDelete(field.id)}
           title="Excluir campo e todos os valores gravados"
-          className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
-        >
-          <Trash2 size={14} />
-        </button>
+          icon={<Trash2 size={14} />}
+          variant="danger"
+          size="sm"
+        />
       </div>
     </div>
   );

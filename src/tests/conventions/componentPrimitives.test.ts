@@ -48,31 +48,24 @@ const EXEMPT_INPUT_TYPES = /type="(checkbox|radio|range|file|hidden)"/;
 /**
  * Medido em 2026-08-10, ao fim da fase C. Cada linha é dívida a pagar, não
  * permissão: o número desce quando a tela migra e a linha some quando chega a
- * zero.
+ * zero. A F8 apagou as **oito** linhas da tela de Dados de uma vez — ✎/🗑 viraram
+ * `IconButton`, e "Importar"/"Criar"/"Adicionar", `Button`.
  */
 const BUTTON_BASELINE: Record<string, number> = {
   "src/App.tsx": 1,
   "src/presentation/components/ActionChip.tsx": 1,
-  "src/presentation/components/CategoriesPanel.tsx": 1,
-  "src/presentation/components/CategoryCard.tsx": 2,
-  "src/presentation/components/CustomFieldCard.tsx": 3,
-  "src/presentation/components/CustomFieldsPanel.tsx": 1,
   "src/presentation/components/IntegrationsRail.tsx": 1,
   "src/presentation/components/OmniboxCustomFieldsPanel.tsx": 1,
   "src/presentation/components/OmniboxRunning.tsx": 7,
   "src/presentation/components/PlannedTaskForm.tsx": 3,
-  "src/presentation/components/ProjectCard.tsx": 3,
   "src/presentation/components/ProjectCategoriesEditor.tsx": 1,
-  "src/presentation/components/ProjectsPanel.tsx": 1,
   "src/presentation/components/RetroactiveEntryForm.tsx": 1,
-  "src/presentation/components/SelectionBar.tsx": 1,
   "src/presentation/components/Sidebar.tsx": 2,
   "src/presentation/components/TagMultiSelect.tsx": 1,
   "src/presentation/components/TaskCard.tsx": 2,
   "src/presentation/components/TaskGroupCard.tsx": 3,
   "src/presentation/components/WeekPlanningView.tsx": 3,
   "src/presentation/components/WorkspaceSwitcher.tsx": 4,
-  "src/presentation/components/WorkspacesPanel.tsx": 8,
   "src/presentation/modals/ClockifyEntriesModal.tsx": 3,
   "src/presentation/modals/ImportCalendarModal.tsx": 2,
   "src/presentation/modals/MondayEntriesModal.tsx": 5,

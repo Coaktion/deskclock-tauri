@@ -2,6 +2,9 @@ import { ChevronRight, Play } from "lucide-react";
 import type { ReactElement } from "react";
 
 import { chipBillableClass, chipEmptyClass } from "@presentation/components/chipStyles";
+import { ProjectCard } from "@presentation/components/ProjectCard";
+import { SelectAllBox, SelectionActions } from "@presentation/components/SelectionHeader";
+import { AddRow } from "@presentation/components/ui/AddRow";
 import { Badge } from "@presentation/components/ui/Badge";
 import { Field } from "@presentation/components/ui/Field";
 import { Input } from "@presentation/components/ui/Input";
@@ -24,6 +27,14 @@ import { TourButton } from "@presentation/components/ui/TourButton";
  */
 /** A bancada mede caixa, não comportamento: o chip precisa de ação, e nada faz. */
 const noop = () => {};
+
+/** Os quatro projetos do mock da 3c, com os slots de cor que ele desenha. */
+const PROJETOS = [
+  { id: "p1", workspaceId: "w1", name: "Cliente A", colorIndex: 0 },
+  { id: "p2", workspaceId: "w1", name: "Coaktion", colorIndex: 6 },
+  { id: "p3", workspaceId: "w1", name: "Interno", colorIndex: 12 },
+  { id: "p4", workspaceId: "w1", name: "Cliente B — Suporte", colorIndex: 3 },
+];
 
 export interface VisualCase {
   /** Id do caso; nomeia o PNG e a linha do relatório. */
@@ -226,6 +237,64 @@ export const CASES: VisualCase[] = [
       <Field label="Nome" htmlFor="bancada-nome">
         <Input id="bancada-nome" variant="bare" size="sm" placeholder="Nome da tarefa" readOnly />
       </Field>
+    ),
+  },
+  {
+    // A lista de Dados inteira: faixa de seleção, quatro linhas e a linha de
+    // adicionar. Na app ela para na altura da coluna e rola por dentro; aqui vai
+    // na altura do conteúdo, que é a forma que o mock desenha — e é a altura de
+    // linha e a quebra do nome que este caso existe para medir.
+    id: "dados-lista",
+    screen: "3c",
+    anchor: "1/1/1/0/1",
+    width: 720,
+    element: (
+      <SectionCard
+        title="Projetos"
+        count={4}
+        leading={
+          <SelectAllBox
+            id="bancada-selecionar-todos"
+            allSelected={false}
+            partial={false}
+            onToggle={noop}
+            title="Selecionar todos os projetos"
+          />
+        }
+        action={
+          <SelectionActions boxId="bancada-selecionar-todos" count={0} onDelete={noop} />
+        }
+      >
+        <div className="divide-y divide-border-subtle">
+          {PROJETOS.map((p, i) => (
+            <ProjectCard
+              key={p.id}
+              project={p}
+              selected={false}
+              onToggleSelect={noop}
+              onUpdate={async () => {}}
+              onDelete={noop}
+              categories={[]}
+              // As duas formas da pílula convivem no mock: contada e "todas".
+              sourceById={
+                new Map(Array.from({ length: i % 2 ? 0 : 4 }, (_, c) => [`c${c}`, "manual"]))
+              }
+              onToggleCategory={noop}
+              onClearCategories={noop}
+            />
+          ))}
+        </div>
+        <AddRow className="border-t border-border-subtle">
+          <Input
+            variant="plain"
+            value=""
+            onChange={noop}
+            placeholder="Adicionar novo projeto — Enter para salvar"
+            className="flex-1"
+            readOnly
+          />
+        </AddRow>
+      </SectionCard>
     ),
   },
 ];

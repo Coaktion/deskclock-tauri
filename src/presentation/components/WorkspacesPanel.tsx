@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, CheckCircle2, Clock, Pen, Plus, Trash2, X } from "lucide-react";
+import { Check, CheckCircle2, Clock, Pen, Trash2, X } from "lucide-react";
 import type { Workspace } from "@domain/entities/Workspace";
 import { WORKSPACE_COLORS } from "@domain/utils/workspaceColor";
 import { integrationsBoundToWorkspace } from "@domain/usecases/workspaces/integrationsBoundToWorkspace";
@@ -10,7 +10,7 @@ import { useWorkspaceSwitchGuard } from "@presentation/hooks/useWorkspaceSwitchG
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { WorkspaceDot, workspaceClasses } from "@presentation/components/WorkspaceDot";
 import { DeleteWorkspaceModal } from "@presentation/modals/DeleteWorkspaceModal";
-import { Input, SectionCard } from "@presentation/components/ui";
+import { AddRow, Button, IconButton, Input, SectionCard } from "@presentation/components/ui";
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
@@ -91,40 +91,13 @@ export function WorkspacesPanel() {
 
   return (
     <SectionCard
+      className="min-h-0 flex flex-col"
+      bodyClassName="min-h-0 flex flex-col"
       title="Workspaces"
+      count={workspaces.length}
       description="Cada workspace tem seus próprios projetos, categorias, tarefas, planejadas e perfis de exportação. Cada integração escolhe em qual deles trabalha."
-      bodyClassName="p-3 flex flex-col gap-3"
     >
-      {/* Criação */}
-      <div
-        onKeyDown={handleAddKeyDown}
-        className="flex flex-col gap-2 px-3 py-2.5 border border-dashed border-border rounded-control hover:border-fg-muted transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <WorkspaceDot color={previewColor} size={10} />
-          <Input
-            variant="plain"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Adicionar novo workspace (Enter para salvar)"
-            className="flex-1"
-          />
-          <button
-            type="button"
-            onClick={() => void handleAdd()}
-            disabled={!newName.trim()}
-            className="flex items-center gap-1 px-2 py-1 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control disabled:opacity-40 transition-colors"
-          >
-            <Plus size={14} />
-            Criar
-          </button>
-        </div>
-        <ColorPicker value={previewColor} onChange={setNewColor} />
-      </div>
-
-      {error && <p className="text-xs text-danger">{error}</p>}
-
-      <div className="flex flex-col gap-1.5">
+      <div className="min-h-0 overflow-y-auto divide-y divide-border-subtle">
         {workspaces.map((w) => {
           const isActive = w.id === activeWorkspaceId;
           const isEditing = editingId === w.id;
@@ -132,11 +105,14 @@ export function WorkspacesPanel() {
           return (
             <div
               key={w.id}
-              className={`flex flex-col gap-2 px-3 py-2 rounded-control border transition-colors ${
-                isActive ? workspaceClasses(w.color).soft : "bg-surface border-border-subtle"
+              // O ativo se diz pelo tom da própria cor, que é cor de entidade — a
+              // casca com borda que ele tinha reintroduzia a pílula que a linha
+              // deixou de ser.
+              className={`flex flex-col gap-2 px-3 py-2.5 transition-colors ${
+                isActive ? workspaceClasses(w.color).soft : ""
               }`}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <WorkspaceDot color={isEditing ? editColor : w.color} size={10} />
 
                 {isEditing ? (
@@ -167,46 +143,48 @@ export function WorkspacesPanel() {
                     </button>
                   ))}
 
-                {isEditing ? (
-                  <>
-                    <button
-                      onClick={() => void commitEdit()}
-                      title="Salvar"
-                      className="p-1 text-billable hover:opacity-80 rounded-control"
-                    >
-                      <Check size={14} />
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      title="Cancelar"
-                      className="p-1 text-fg-muted hover:text-fg rounded-control"
-                    >
-                      <X size={14} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => startEdit(w)}
-                      title="Editar"
-                      className="p-1 text-fg-muted hover:text-fg rounded-control transition-colors"
-                    >
-                      <Pen size={14} />
-                    </button>
-                    <button
-                      onClick={() => setDeleting(w)}
-                      disabled={workspaces.length <= 1}
-                      title={
-                        workspaces.length <= 1
-                          ? "Não é possível excluir o último workspace"
-                          : "Excluir"
-                      }
-                      className="p-1 text-fg-muted hover:text-danger rounded-control transition-colors disabled:opacity-30 disabled:hover:text-fg-muted"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </>
-                )}
+                <div className="flex gap-0.5 shrink-0">
+                  {isEditing ? (
+                    <>
+                      {/* O ✓ era verde nos quatro editores de linha de Dados, e
+                          verde é `billable`: confirmar uma edição é acento. */}
+                      <IconButton
+                        onClick={() => void commitEdit()}
+                        title="Salvar"
+                        icon={<Check size={14} />}
+                        size="sm"
+                      />
+                      <IconButton
+                        onClick={() => setEditingId(null)}
+                        title="Cancelar"
+                        icon={<X size={14} />}
+                        variant="neutral"
+                        size="sm"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <IconButton
+                        onClick={() => startEdit(w)}
+                        title="Editar"
+                        icon={<Pen size={14} />}
+                        size="sm"
+                      />
+                      <IconButton
+                        onClick={() => setDeleting(w)}
+                        disabled={workspaces.length <= 1}
+                        title={
+                          workspaces.length <= 1
+                            ? "Não é possível excluir o último workspace"
+                            : "Excluir"
+                        }
+                        icon={<Trash2 size={14} />}
+                        variant="danger"
+                        size="sm"
+                      />
+                    </>
+                  )}
+                </div>
               </div>
 
               {isEditing && <ColorPicker value={editColor} onChange={setEditColor} />}
@@ -215,34 +193,53 @@ export function WorkspacesPanel() {
         })}
       </div>
 
+      {error && <p className="shrink-0 px-3 py-2 text-xs text-danger">{error}</p>}
+
+      <AddRow
+        onKeyDown={handleAddKeyDown}
+        className="shrink-0 border-t border-border-subtle"
+        extra={<ColorPicker value={previewColor} onChange={setNewColor} />}
+      >
+        <WorkspaceDot color={previewColor} size={10} />
+        <Input
+          variant="plain"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Adicionar novo workspace — Enter para salvar"
+          className="flex-1"
+        />
+        <Button onClick={() => void handleAdd()} disabled={!newName.trim()}>
+          Criar
+        </Button>
+      </AddRow>
+
       {pending && (
-        <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-control border border-paused/40 bg-paused/5">
+        <div className="shrink-0 flex flex-col gap-1.5 px-3 py-2.5 border-t border-paused/40 bg-paused/5">
           <p className="text-sm text-fg-secondary leading-snug">
             Há uma tarefa em execução. Parar e trocar para{" "}
             <span className="text-fg font-medium">{pending.name}</span>?
           </p>
           <span className="text-sm text-fg-muted">Marcar a tarefa como:</span>
           <div className="flex items-center gap-1.5">
-            <button
+            <Button
+              variant="accent"
+              size="sm"
               onClick={() => void confirm(true)}
-              className="flex items-center gap-1 px-2 py-1 text-sm font-medium text-billable bg-billable/10 border border-billable/30 hover:bg-billable/20 rounded-control transition-colors"
+              icon={<CheckCircle2 size={14} />}
             >
-              <CheckCircle2 size={14} />
               Concluída
-            </button>
-            <button
-              onClick={() => void confirm(false)}
-              className="flex items-center gap-1 px-2 py-1 text-sm bg-raised border border-border hover:border-fg-muted text-fg-secondary rounded-control transition-colors"
-            >
-              <Clock size={14} />
+            </Button>
+            <Button size="sm" onClick={() => void confirm(false)} icon={<Clock size={14} />}>
               Pendente
-            </button>
-            <button
+            </Button>
+            <IconButton
               onClick={cancel}
-              className="ml-auto p-1 text-fg-muted hover:text-fg rounded-control transition-colors"
-            >
-              <X size={14} />
-            </button>
+              title="Cancelar a troca de workspace"
+              icon={<X size={14} />}
+              variant="neutral"
+              size="sm"
+              className="ml-auto"
+            />
           </div>
         </div>
       )}

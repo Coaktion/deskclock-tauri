@@ -42,9 +42,13 @@ export function PageHeader({
           {subtitle && <p className="text-xs text-fg-muted truncate">{subtitle}</p>}
         </div>
       )}
+      {/* As abas nomeiam recortes **do que o título anuncia**, então ficam coladas
+          a ele; o canto direito é das ações, que agem sobre a tela. Enquanto os
+          dois dividiram o mesmo grupo `ml-auto`, as abas herdavam o gap dele e
+          atravessavam o cabeçalho para longe do título. */}
+      {tabs && <div className="ml-2 flex items-center gap-1.5 shrink-0">{tabs}</div>}
       {context}
       <div className="ml-auto flex items-center gap-2 shrink-0">
-        {tabs}
         {actions}
         {onStartTour && <TourButton onClick={onStartTour} />}
       </div>

@@ -1271,3 +1271,95 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   - **A faixa do cabeçalho da coluna não pinta fundo**, e o spec a mede em `bg-surface`.
   - O `<label>` "Horas" do `MondayEntriesModal` fica em `text-sm`: é rótulo **ao lado** de um
     controle numa fileira, não acima de uma caixa, e o design não desenha esse nó.
+
+- **F8 · A tela de Dados** — ✅ **feita (2026-08-14)**. A tela que as fases anteriores só tocaram
+  por tabela de token: a `screenGeometry` cobria dela **duas** assertivas (padding do corpo, coluna
+  de 720) e a composição inteira estava fora. A auditoria que abriu a etapa comparou as duas
+  fontes, e o **comportamento** do `docs/telas/dados.md` conferiu item a item — o que faltava era a
+  anatomia da 3c, resumida na própria nota do design: _"as abas sobem para o cabeçalho, a lista
+  ganha contorno e o campo de adicionar passa a ser a última linha dela, não um bloco solto"_. As
+  abas já tinham subido; as outras duas não.
+
+  **Escopo: as quatro abas.** O mock desenha só a de Projetos; Categorias, Workspaces e Campos
+  herdam a mesma anatomia por decisão do usuário — abas vizinhas da mesma tela em dois desenhos é
+  o pior resultado possível.
+
+  O que entrou:
+
+  - **A faixa de seleção virou o cabeçalho do cartão.** Eram **duas** faixas empilhadas onde o
+    design tem uma: a do `SectionCard` (título + pílula) e a `SelectionBar` dentro do corpo. As
+    duas metades foram para encaixes que a casca já tinha — a caixa em `leading`, o rótulo e o
+    "Excluir selecionados" em `action` —, e `SelectionBar.tsx` virou `SelectionHeader.tsx` com
+    `SelectAllBox` + `SelectionActions`. O rótulo continua clicável a meia faixa da caixa, por
+    `htmlFor`. Workspaces e Campos não têm seleção múltipla: o cabeçalho deles é título + contador.
+  - **A busca saiu de dentro do cartão** e virou irmã dele na coluna, no gap de 12 do spec. Era ela
+    que dividia uma linha com "Importar em massa", e é isso que a etapa desfaz: **a importação é
+    ação da tela e subiu para o `PageHeader`**, onde o mock a desenha. A página passou a hospedar o
+    `BulkImportModal` (os hooks já viviam lá), e com isso a mesma composição saiu de dois painéis.
+  - **As abas ficam coladas ao título** (`ml-2`, gap 6), e o `ml-auto` fica com as ações. Era o
+    único `divergente` arquivado sob a 3c, e tocar nele toca **duas** telas — Dados e Configurações
+    são as únicas que passam `tabs`, e nenhuma tela usa `tabs` e `context` juntos.
+  - **A lista é lista:** régua entre as linhas pelo `divide-y` do contêiner, linha `px-3 py-2.5`
+    com gap 10 e **sem raio** — a pílula virou faixa, como o `TaskRow` na F2 —, hover em
+    `bg-surface` (o valor medido, e o que a linha de tarefa já usava), ponto de projeto em 6px
+    (era 8) e a caixa de seleção pelo `selectionBoxClass`, que era a **quinta** grafia: as três
+    daqui escreviam `shrink-0 accent-accent cursor-pointer` sem os 14px do spec.
+  - **A pílula de categorias virou `<button>` vestindo `Badge`**, o padrão que a E1 fixou, e passou
+    a escrever `4 categorias` — mostrava só o número, e número sozinho não diz de quê.
+  - **`ui/AddRow.tsx`** é a linha que cadastra, e ela **é uma linha da lista**: eram quatro cópias
+    de um bloco `border-dashed rounded-control` acima dela. O texto passou a ser o do mock
+    (`Adicionar novo projeto — Enter para salvar`).
+  - **Os 20 `<button>` com caixa própria da tela foram a zero**, e com eles as **oito** linhas de
+    Dados no baseline do `componentPrimitives`: ✎/🗑/✓/✕ viraram `IconButton size="sm"`, e
+    Importar/Criar/Adicionar/Concluída/Pendente viraram `Button`.
+
+  **Divergência do mock decidida pelo usuário, e é a única de comportamento:** **a lista rola por
+  dentro do cartão**, que para na altura da coluna (`min-h-0` na casca e no corpo, `overflow-y-auto`
+  no contêiner das linhas, `shrink-0` no rodapé). O design põe o "adicionar" no fim de uma lista que
+  cresce sem fim, e ali criar o 61º projeto custa rolar 60 linhas — o custo cresce com o catálogo. É
+  a mesma forma da §7.5.8, e é o que faz o desenho **valer**: com o cartão limitado, o "adicionar"
+  é a última linha e está sempre visível, junto com a faixa de seleção no topo. Com poucos itens o
+  cartão tem a altura do conteúdo, como o mock.
+
+  **A trava vai de 74 para 81 assertivas, e a 3c fecha com zero `divergente`** — restam **5** no
+  arquivo, todas nas outras telas. As sete novas: o gap da coluna, o botão de importar, o padding e
+  o gap da linha, o ponto, a pílula (padding, raio, gap, degrau e o substantivo), a linha de
+  adicionar e o degrau do placeholder — mais as abas, que saíram de `divergente` para `it`.
+  **Seis foram verificadas reprovando pela medida**, com sonda
+  simultânea (`py-2.5`→`py-2`, ponto 6→8, gap da coluna 12→16, abas 6→8, `rounded-control` na linha
+  de adicionar, gap do badge 4→2); as duas restantes medem primitivos que outras assertivas já
+  cobrem.
+
+  **O `Badge` mudou de gap: 2 → 4.** A 3a não desenha badge com ícone e por isso não declara gap
+  nenhum; as **duas** pílulas com ícone que o spec mede são as da 3c, e as duas dizem 4. É medida
+  contra ausência de medida, não gosto — e toca os cinco call sites com ícone (`TaskSendModal`,
+  `ImportCalendarModal`, `MondayImportModal`).
+
+  **A bancada ganhou `dados-lista`** (`3c:1/1/1/0/1`, 720): faixa, quatro linhas e a linha de
+  adicionar, na forma de altura de conteúdo que o mock desenha. Mede **720×248,53 contra 720×238,
+  com zero divergência de propriedade** — a altura é a soma das decisões declaradas que engordam o
+  cartão (a faixa em 10/12 com a pílula do contador, contra os 8/12 e o número concatenado do mock,
+  §7.5.7; e o ícone de 14 na pílula, contra os 11 dele), descontado o line-height que segura a
+  linha desde a F2.
+
+  **Divergências declaradas da 3c** — não são dívida, e quem "corrigi-las" desfaz decisão tomada:
+  1. o ícone da pílula é 14, contra os 11 do mock (a escala 14/16/18 está em "já fiel — não mexer",
+     e os cinco `Badge` com ícone do app usam 14);
+  2. o contador é a pílula do `SectionCard`, não o número concatenado ao título (§7.5.7);
+  3. a faixa é 10/12, não o 8/12 do mock (mesma decisão);
+  4. a coluna é centrada, como em Configurações e Integrações;
+  5. o "Excluir selecionados" não existe no mock — é requisito do `dados.md`, e mora no `action`;
+  6. a lista rola por dentro, acima.
+
+  **Fora, e registrado:**
+  - **O ✓ dos quatro editores de linha era verde**, e verde é `billable`: confirmar uma edição
+    virou acento, junto com o par Concluída/Pendente da guarda de troca de workspace. É a mesma
+    régua que a migração aplicou ao estado de execução.
+  - No `CustomFieldCard`, "Arquivado" virou `Badge tone="warning"` e o hover âmbar cru do arquivar
+    virou `neutral` — não há variante `warning` de `IconButton`, e abrir uma para um call site não
+    se justifica.
+  - **A caixa de seleção segue sendo o checkbox nativo**, e no mock ela é um quadro de 14 com borda
+    e raio 4. Vale para o app inteiro (Histórico, Planejamento, Tarefas), e o `Checkbox` canônico
+    continua sendo trabalho próprio, como `selectionStyles.ts` já declara.
+  - **A aba Campos não está no `docs/telas/dados.md`** — nunca esteve; ela vive em
+    `docs/specs/workspaces-custom-fields.md`.

@@ -4,6 +4,21 @@
 
 ### 5.6 Tela de Dados
 
+#### Onde cada coisa mora na tela
+
+Vale para as quatro abas, e é a anatomia da tela 3c do design (a medida está na skill
+`design-system`; aqui fica só o que muda de comportamento):
+
+- **A importação em massa é ação do cabeçalho da página** — "Importar", ao lado das abas. Ela some
+  em Workspaces e Campos, que não têm importação em massa.
+- **O filtro fica acima do cartão**, e a **barra de seleção é o cabeçalho dele**: caixa à esquerda,
+  contador ao lado do nome, "Selecionar todos" e "Excluir selecionados" à direita.
+- **A linha que cadastra é a última linha do cartão**, e não um bloco acima da lista.
+- **A lista rola dentro do cartão**, que para na altura da coluna. É divergência deliberada do
+  design, pedida em 2026-08-14: com o "adicionar" no fim de uma lista que cresce, cadastrar passa a
+  custar rolar o catálogo inteiro, e o custo cresce com ele. Presas as duas pontas, o cadastro e a
+  seleção ficam sempre ao alcance.
+
 #### Projetos
 - **Importação em massa:** Textarea, um projeto por linha.
 - **Lista:** Filtro por nome + adicionar individualmente + excluir sem confirmação.

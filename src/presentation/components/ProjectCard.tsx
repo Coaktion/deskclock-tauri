@@ -5,7 +5,8 @@ import type { Project } from "@domain/entities/Project";
 import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
 import type { UUID } from "@shared/types";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { Input } from "@presentation/components/ui";
+import { Badge, IconButton, Input } from "@presentation/components/ui";
+import { selectionBoxClass } from "./selectionStyles";
 import { ProjectCategoriesEditor } from "./ProjectCategoriesEditor";
 
 interface ProjectCardProps {
@@ -69,7 +70,7 @@ export function ProjectCard({
     <div className="flex flex-col">
       <div
         onClick={editing ? undefined : () => onToggleSelect(project.id)}
-        className={`flex items-center gap-2.5 px-3 py-2 rounded-control hover:bg-raised group transition-colors ${
+        className={`flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface group transition-colors ${
           editing ? "" : "cursor-pointer"
         }`}
       >
@@ -79,9 +80,12 @@ export function ProjectCard({
           onChange={() => onToggleSelect(project.id)}
           onClick={(e) => e.stopPropagation()}
           title="Selecionar projeto"
-          className="shrink-0 accent-accent cursor-pointer"
+          className={selectionBoxClass}
         />
-        <span className="shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+        <span
+          className="shrink-0 w-1.5 h-1.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
 
         {editing ? (
           <>
@@ -93,12 +97,19 @@ export function ProjectCard({
               onKeyDown={handleKeyDown}
               className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
             />
-            <button onClick={confirmEdit} className="p-1 text-billable hover:opacity-80 shrink-0">
-              <Check size={14} />
-            </button>
-            <button onClick={cancelEdit} className="p-1 text-fg-muted hover:text-fg shrink-0">
-              <X size={14} />
-            </button>
+            <IconButton
+              onClick={() => void confirmEdit()}
+              title="Salvar"
+              icon={<Check size={14} />}
+              size="sm"
+            />
+            <IconButton
+              onClick={cancelEdit}
+              title="Cancelar"
+              icon={<X size={14} />}
+              variant="neutral"
+              size="sm"
+            />
           </>
         ) : (
           <>
@@ -106,7 +117,10 @@ export function ProjectCard({
             {/* Fica sempre visível, ao contrário dos dois botões ao lado: carrega
               estado — quantas categorias o projeto oferece —, e esconder no
               hover esconderia a informação junto com o controle. */}
+            {/* Clicável, o chip é um `<button>` vestindo um `Badge` — a fronteira
+                do `Badge` é não responder ao clique (§8.4). */}
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowCategories((v) => !v);
@@ -116,38 +130,34 @@ export function ProjectCard({
                   ? "Sem associação: este projeto oferece todas as categorias"
                   : `${associatedCount} categoria(s) associada(s)`
               }
-              className={`flex items-center gap-1 shrink-0 px-1.5 py-0.5 text-sm rounded-chip border transition-colors ${
-                showCategories
-                  ? "text-accent-text bg-accent/10 border-accent/40"
-                  : associatedCount > 0
-                    ? "text-fg-secondary bg-raised border-border hover:border-fg-muted"
-                    : "text-fg-muted bg-raised/50 border-dashed border-border hover:border-fg-muted"
-              }`}
+              aria-expanded={showCategories}
+              className="shrink-0 flex rounded-full cursor-pointer hover:opacity-80 transition-opacity"
             >
-              <Tags size={14} className="shrink-0" />
-              {associatedCount > 0 ? associatedCount : "todas"}
+              <Badge
+                tone={showCategories ? "accent" : "neutral"}
+                icon={<Tags size={14} className="shrink-0" />}
+                className={associatedCount > 0 ? "" : "border-dashed"}
+              >
+                {associatedCount > 0 ? `${associatedCount} categorias` : "todas"}
+              </Badge>
             </button>
-            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  startEdit();
-                }}
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            >
+              <IconButton
+                onClick={startEdit}
                 title="Renomear projeto"
-                className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-              >
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(project.id);
-                }}
+                icon={<Pencil size={14} />}
+                size="sm"
+              />
+              <IconButton
+                onClick={() => onDelete(project.id)}
                 title="Excluir projeto"
-                className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
+                icon={<Trash2 size={14} />}
+                variant="danger"
+                size="sm"
+              />
             </div>
           </>
         )}
