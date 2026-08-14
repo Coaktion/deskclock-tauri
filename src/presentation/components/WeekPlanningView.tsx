@@ -217,9 +217,9 @@ export function WeekPlanningView() {
 
             {/* Volta para a semana atual e, ao mesmo tempo, diz quando se está nela:
                 navegando algumas semanas, o intervalo em dd/mm não responde sozinho
-                "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. Segue
-                o mesmo vocabulário da pílula "Hoje" do formulário, que faz o
-                equivalente para o campo de data. */}
+                "é esta?". Aceso, é a resposta; apagado, é o caminho de volta. É o
+                último atalho desse tipo: a pílula "Hoje" do formulário saiu, porque
+                ali o campo de data já diz que dia é. */}
             <FilterPill
               size="sm"
               active={weekOffset === 0}

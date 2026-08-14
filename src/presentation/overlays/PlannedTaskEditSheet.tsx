@@ -14,7 +14,6 @@ import {
   usePlannedTaskEditor,
   type EditPlannedTaskInput,
 } from "@presentation/hooks/usePlannedTaskEditor";
-import { todayISO } from "@shared/utils/time";
 
 interface PlannedTaskEditSheetProps {
   task: PlannedTask;
@@ -162,25 +161,15 @@ export function PlannedTaskEditSheet({
           ))}
         </div>
 
+        {/* Sem botão "Hoje", como no `EditPlannedTaskModal`: o campo já abre em
+            hoje quando a tarefa não tem data gravada
+            (`usePlannedTaskEditor`). */}
         {editor.scheduleType === "specific_date" && (
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => editor.setScheduleDate(todayISO())}
-              className={`shrink-0 ${chipClass} ${
-                editor.scheduleDate === todayISO()
-                  ? "bg-accent/10 border-accent text-accent-text"
-                  : "bg-raised border-border text-fg-secondary hover:text-fg"
-              }`}
-            >
-              Hoje
-            </button>
-            <DatePickerInput
-              value={editor.scheduleDate}
-              onChange={editor.setScheduleDate}
-              className="flex-1"
-            />
-          </div>
+          <DatePickerInput
+            value={editor.scheduleDate}
+            onChange={editor.setScheduleDate}
+            className="w-full"
+          />
         )}
 
         {editor.scheduleType === "recurring" && (

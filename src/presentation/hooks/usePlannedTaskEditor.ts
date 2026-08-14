@@ -5,6 +5,7 @@ import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entit
 import type { Project } from "@domain/entities/Project";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import type { UUID } from "@shared/types";
+import { todayISO } from "@shared/utils/time";
 
 export interface EditPlannedTaskInput {
   name?: string;
@@ -54,7 +55,12 @@ export function usePlannedTaskEditor({
   );
   const [billable, setBillable] = useState(task.billable);
   const [scheduleType, setScheduleType] = useState<ScheduleType>(task.scheduleType);
-  const [scheduleDate, setScheduleDate] = useState(task.scheduleDate ?? "");
+  /**
+   * Sem data gravada, o campo nasce em hoje — é o que substituiu o botão
+   * "Hoje" que ficava ao lado dele. A tarefa que **tem** data volta com a dela:
+   * alternar para "Recorrente" e de volta não pode apagar o dia escolhido.
+   */
+  const [scheduleDate, setScheduleDate] = useState(task.scheduleDate || todayISO());
   const [recurringDays, setRecurringDays] = useState<number[]>(task.recurringDays ?? []);
   const [periodStart, setPeriodStart] = useState(task.periodStart ?? "");
   const [periodEnd, setPeriodEnd] = useState(task.periodEnd ?? "");

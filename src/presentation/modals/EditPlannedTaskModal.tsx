@@ -12,7 +12,6 @@ import {
   type EditPlannedTaskInput,
 } from "@presentation/hooks/usePlannedTaskEditor";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { todayISO } from "@shared/utils/time";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 export type { EditPlannedTaskInput };
@@ -166,16 +165,12 @@ export function EditPlannedTaskModal({
           ))}
         </div>
 
+        {/* Sem botão "Hoje": quem abre em hoje é o próprio campo, quando a
+            tarefa não tem data gravada (`usePlannedTaskEditor`). O botão dizia
+            duas coisas ao mesmo tempo — "a data é hoje" e "leve a data para
+            hoje" — e o estado aceso lia como um filtro. */}
         {scheduleType === "specific_date" && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant={scheduleDate === todayISO() ? "accent" : "secondary"}
-              onClick={() => setScheduleDate(todayISO())}
-            >
-              Hoje
-            </Button>
-            <DatePickerInput value={scheduleDate} onChange={setScheduleDate} className="flex-1" />
-          </div>
+          <DatePickerInput value={scheduleDate} onChange={setScheduleDate} className="w-full" />
         )}
 
         {scheduleType === "recurring" && (

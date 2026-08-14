@@ -6,7 +6,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
-import { BillableChip, Field, FilterPill, Input } from "@presentation/components/ui";
+import { BillableChip, Field, Input } from "@presentation/components/ui";
 import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
@@ -105,7 +105,12 @@ export function PlannedTaskForm({
   defaultDate = "",
   onSubmit,
 }: PlannedTaskFormProps) {
-  const [form, setForm] = useState<FormState>({ ...INITIAL, scheduleDate: defaultDate });
+  // Sem `defaultDate` (a tela que não navega por dia), o campo abre em hoje —
+  // é o que substituiu a pílula "Hoje" que ficava ao lado dele.
+  const [form, setForm] = useState<FormState>({
+    ...INITIAL,
+    scheduleDate: defaultDate || todayISO(),
+  });
   const { activeFields } = useCustomFields();
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, form.projectId);
@@ -278,21 +283,16 @@ export function PlannedTaskForm({
             ))}
           </div>
 
+          {/* Sem pílula "Hoje": o campo já nasce preenchido — com o dia
+              navegado, ou com hoje quando não há um. O atalho dizia duas coisas
+              ao mesmo tempo ("a data é hoje" e "leve a data para hoje"), e
+              aceso lia como filtro. */}
           {form.scheduleType === "specific_date" && (
-            <div className="flex items-center gap-2">
-              <FilterPill
-                size="sm"
-                active={form.scheduleDate === todayISO()}
-                onClick={() => set("scheduleDate", todayISO())}
-              >
-                Hoje
-              </FilterPill>
-              <DatePickerInput
-                value={form.scheduleDate}
-                onChange={(v) => set("scheduleDate", v)}
-                className="flex-1"
-              />
-            </div>
+            <DatePickerInput
+              value={form.scheduleDate}
+              onChange={(v) => set("scheduleDate", v)}
+              className="w-full"
+            />
           )}
 
           {form.scheduleType === "recurring" && (
