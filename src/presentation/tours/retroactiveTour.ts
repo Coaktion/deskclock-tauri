@@ -51,4 +51,11 @@ export const retroactiveTourSteps: DriveStep[] = [
       align: "start",
     },
   },
+  {
+    popover: {
+      title: "As planejadas que já têm horário",
+      description:
+        "Se o dia tem tarefas planejadas com início e fim — vindas da sua Agenda, por exemplo —, elas aparecem como sugestão e podem ser lançadas de uma vez, sem redigitar nada.",
+    },
+  },
 ];

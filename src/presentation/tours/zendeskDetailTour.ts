@@ -35,4 +35,11 @@ export const zendeskDetailTourSteps: DriveStep[] = [
         "Tickets importados aparecem na tela de Planejamento. Reimportar não duplica — tickets já adicionados são reconhecidos e ignorados.",
     },
   },
+  {
+    popover: {
+      title: "Workspace do DeskClock",
+      description:
+        "Se você usa mais de um workspace, o Zendesk escolhe em qual deles as planejadas são criadas. A escolha é da integração, e não muda quando você troca o workspace aberto na tela.",
+    },
+  },
 ];

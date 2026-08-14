@@ -26,7 +26,7 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Criar tarefa planejada",
       description:
-        "Adicione tarefas com nome, projeto e categoria. Escolha entre data única, recorrente (dias da semana) ou período com início e fim.",
+        "Adicione tarefas com nome, projeto, categoria e campos personalizados. Escolha entre data única, recorrente (dias da semana) ou período com início e fim. A coluna se recolhe quando você precisa de espaço para a lista.",
       side: "right",
       align: "start",
     },
@@ -39,6 +39,13 @@ export const planningTourSteps: DriveStep[] = [
         "Cada tarefa pode ser iniciada, concluída, duplicada ou excluída. Tarefas recorrentes aparecem em todos os dias configurados. Use 'Selecionar tarefas', acima da lista, para excluir várias de uma vez.",
       side: "left",
       align: "start",
+    },
+  },
+  {
+    popover: {
+      title: "A semana não precisa ser digitada",
+      description:
+        "Pelo rail de integrações, na lateral, você importa os eventos da sua Agenda do Google e os itens atribuídos a você no Monday — todos viram tarefas planejadas, com horário quando o evento tem. Reimportar não duplica.",
     },
   },
 ];

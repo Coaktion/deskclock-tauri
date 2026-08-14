@@ -803,9 +803,11 @@ export function GoogleIntegrationCard() {
           <CalendarSection disabled={!connected} />
         </SubSection>
       </div>
-      <SubSection icon={<DatabaseBackup size={14} />} title="Backup do banco">
-        <BackupSection disabled={!connected} />
-      </SubSection>
+      <div data-tour="google-drive-backup">
+        <SubSection icon={<DatabaseBackup size={14} />} title="Backup do banco">
+          <BackupSection disabled={!connected} />
+        </SubSection>
+      </div>
     </div>
   );
 }
