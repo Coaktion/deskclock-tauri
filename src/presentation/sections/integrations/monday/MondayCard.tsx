@@ -2,10 +2,11 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useTour } from "@presentation/hooks/useTour";
 import { MondayConnectModal } from "@presentation/modals/MondayConnectModal";
 import { LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button } from "@presentation/components/ui";
+import { Button, TourButton } from "@presentation/components/ui";
 import { StatusBadge } from "../shared";
 import { MondayConnectedSections } from "./MondayConnectedSections";
 import { MondayLogo } from "./MondayLogo";
@@ -18,6 +19,7 @@ export function MondayIntegrationCard() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const { startTour, hasSeenTour } = useTour("monday-detail");
   const { openModal } = useIntegrationsUi();
 
   useEffect(() => {
@@ -27,6 +29,13 @@ export function MondayIntegrationCard() {
     // Hidratação única do estado local a partir da config já carregada;
     // `config` muda de identidade a cada set() e reabriria o card em loop.
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleConnected() {
     setConnected(true);
@@ -51,7 +60,10 @@ export function MondayIntegrationCard() {
   return (
     <>
       <div className="rounded-card border border-border-subtle bg-surface">
-        <div className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-card overflow-hidden">
+        <div
+          data-tour="monday-header"
+          className="flex items-start gap-3 px-4 py-3 border-b border-border-subtle rounded-t-card overflow-hidden"
+        >
           <div className="mt-0.5 shrink-0">
             <MondayLogo size={20} />
           </div>
@@ -65,6 +77,7 @@ export function MondayIntegrationCard() {
             </p>
           </div>
           <div className="shrink-0 flex items-center gap-2">
+            <TourButton onClick={() => startTour()} label="Ver tour da integração" />
             {connected ? (
               <Button onClick={handleDisconnect} loading={loading} icon={<LogOut size={14} />}>
                 Desconectar

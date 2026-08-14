@@ -42,6 +42,23 @@ export const integrationsTourSteps: DriveStep[] = [
     },
   },
   {
+    element: '[data-tour="integrations-monday-tile"]',
+    popover: {
+      title: "Monday",
+      description:
+        "Envie suas horas como atividades nos quadros de projeto do Monday, e traga os itens atribuídos a você como tarefas planejadas. Os projetos e as categorias vêm dos próprios quadros.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    popover: {
+      title: "Cada integração no seu workspace",
+      description:
+        "Se você usa mais de um workspace, cada integração escolhe em qual deles trabalhar — é onde ela cria projetos e planejadas, e de onde saem as horas que ela envia. A escolha é dela, e não muda quando você troca o workspace aberto na tela.",
+    },
+  },
+  {
     popover: {
       title: "Sincronização automática",
       description:

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Upload } from "lucide-react";
 import { ProjectsPanel } from "@presentation/components/ProjectsPanel";
 import { CategoriesPanel } from "@presentation/components/CategoriesPanel";
@@ -9,6 +9,7 @@ import { BulkImportModal } from "@presentation/modals/BulkImportModal";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useTour } from "@presentation/hooks/useTour";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 
 type Section = "projetos" | "categorias" | "workspaces" | "campos";
@@ -22,6 +23,14 @@ export function DataPage() {
   const categoriesData = useCategories();
   const customFieldsData = useCustomFields();
   const { workspaces } = useWorkspaces();
+  const { startTour, hasSeenTour } = useTour("data");
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [hasSeenTour]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs: [Section, string, number][] = [
     ["projetos", "Projetos", projectsData.projects.length],
@@ -55,6 +64,8 @@ export function DataPage() {
     <div className="h-full flex flex-col">
       <PageHeader
         title="Dados"
+        tourId="data-header"
+        onStartTour={startTour}
         tabs={tabs.map(([key, label, count]) => (
           <FilterPill
             key={key}
@@ -77,7 +88,7 @@ export function DataPage() {
         {/* `h-full` é o que dá altura definida ao cartão de dentro: é contra ela
             que a lista para de crescer e passa a rolar por dentro, mantendo a
             linha de adicionar sempre à vista. */}
-        <div className="h-full max-w-[720px] mx-auto flex flex-col gap-3">
+        <div data-tour="data-panel" className="h-full max-w-[720px] mx-auto flex flex-col gap-3">
           {section === "projetos" && (
             <ProjectsPanel data={projectsData} categories={categoriesData.categories} />
           )}

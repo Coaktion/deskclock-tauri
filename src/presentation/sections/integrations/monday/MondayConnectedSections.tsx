@@ -27,11 +27,17 @@ export function MondayConnectedSections({
         configKey="mondayDeskclockWorkspaceId"
         hint="Onde os projetos e as planejadas do Monday são criados, e de onde saem as horas enviadas. Não depende do workspace aberto na tela."
       />
-      <MondayBoardsSection />
-      <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
+      <div data-tour="monday-boards">
+        <MondayBoardsSection />
+      </div>
+      <div data-tour="monday-catalogs">
+        <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
+      </div>
       <MondayAutoSyncSection />
-      <MondayAutoImportSection />
-      <div className="border-t border-border-subtle px-4 py-3 space-y-2">
+      <div data-tour="monday-auto-import">
+        <MondayAutoImportSection />
+      </div>
+      <div data-tour="monday-actions" className="border-t border-border-subtle px-4 py-3 space-y-2">
         <Button onClick={onShowSendModal} icon={<Send size={14} />} className="w-full">
           Enviar tarefas manualmente…
         </Button>
