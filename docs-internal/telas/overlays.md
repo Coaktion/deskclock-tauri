@@ -25,9 +25,10 @@
 #### 5.1.1 Compact Overlay
 
 - **Sempre visível** (always-on-top), arrastável, com persistência de posição.
-- **Estado idle** (sem tarefa em execução): ícone do app + badge com contador de tarefas planejadas pendentes.
-- **Estado running**: timer `MM:SS` pulsante substituindo o ícone; anel com glow animado no estilo da cor de status.
+- **Estado idle** (sem tarefa em execução): havendo planejadas pendentes, o **contador ocupa o centro** do botão, no lugar do ícone; sem nenhuma, o ícone (`ListTodo`, 18 px, em `accent-text`). O badge de canto saiu — a 68 px ele era pequeno demais para se ler de relance, e em repouso o número *é* a informação: o ícone só repetiria o que o overlay já é.
+- **Estado running**: timer `HH:MM:SS` pulsante no lugar do ícone; anel com glow animado no estilo da cor de status.
 - **Estado paused**: indicador visual de pausa.
+- **O número pesa 500** — cronômetro e contador —, como todo numérico da escala (skill `design-system`: 400 para texto lido, 500 para clicável ou numérico). Esteve em 600 e **nada reprovava**: `fontWeights.test.ts` afirma só o conjunto {400, 500, 600}, e não existe nó do overlay compacto em `docs-internal/design-spec/` — então nenhuma trava mede este componente, e a verificação é a inspeção em 2 modos × 4 acentos. O par de referência é o cronômetro do popup (`PopupOverlayContent`, `display/timer`, 500): é o mesmo valor lido nas duas janelas, uma logo depois da outra, e divergir de peso ali se vê.
 - **Clique:** abre o Popup Flyout.
 - **Grip bar** para arraste, com snap-to-grid opcional.
 - **Workspace:** com mais de um workspace, a cor do ativo aparece como duas faixas nas bordas do botão, com o miolo aberto pelo fundo do ícone. Some quando só existe um.

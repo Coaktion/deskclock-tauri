@@ -75,7 +75,7 @@ export function CompactOverlayContent({
         {showWorkspace && <WorkspaceEdge color={activeWorkspace!.color} />}
         {hasTask ? (
           <span
-            className={`relative font-mono ${timerSize} font-semibold tabular-nums pointer-events-none leading-none ${timerColor}`}
+            className={`relative font-mono ${timerSize} font-medium tabular-nums pointer-events-none leading-none ${timerColor}`}
           >
             {formatHHMMSS(seconds)}
           </span>
@@ -84,7 +84,7 @@ export function CompactOverlayContent({
           // overlay já é. Fica no centro, no lugar do ícone, e não como badge de
           // canto: a 68px o badge era pequeno demais para se ler de relance.
           <span
-            className={`relative ${countSize} font-semibold tabular-nums pointer-events-none leading-none text-fg`}
+            className={`relative ${countSize} font-medium tabular-nums pointer-events-none leading-none text-fg`}
           >
             {pendingCount > 99 ? "99+" : pendingCount}
           </span>
