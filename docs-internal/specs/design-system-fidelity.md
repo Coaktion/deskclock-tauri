@@ -224,7 +224,8 @@ não no significado.
 - **Fora, e de propósito:** os quatro `STATUS_COLORS` do `ImportZendeskModal` — é cor de
   **entidade** (quatro status do Zendesk), como a paleta de workspace, e colapsá-los nos tons
   semânticos apagaria a distinção entre "pendente" e "em espera". O chip de atalho do `ShortcutRow`
-  (mono, é tecla) e o contador circular do `CompactOverlay` (16 px fixos) também.
+  (mono, é tecla) e o contador circular do `CompactOverlay` (16 px fixos) também — este último
+  deixou de existir em 2026-08-17, com o componente, que ninguém importava.
 - **Duas mudanças visíveis:** o chip de billable do `PlannedTaskItem` e as três pílulas do
   `TaskSendModal` perderam o `rounded-full`; e o "Faltando: …" saiu do laranja para `danger`,
   porque ele **desabilita a seleção do grupo** — é impedimento, não aviso, e o "Parcial" ao lado
