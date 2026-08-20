@@ -1146,6 +1146,11 @@ visual 2 modos × 4 acentos ao fim de cada uma.
   (§7.5.5). Elas estão escritas como o que são — decisão tomada, não dívida —, e com o aviso de
   que fora delas divergir do JSON é defeito.
 
+  > **São três desde 2026-08-19**, e a skill é quem manda: o bloco de planejadas saiu da tela de
+  > Tarefas — as planejadas do dia viraram a lista suspensa do omnibox —, e com ele foram embora
+  > *duas* das quatro (o par KPI+Planejadas e o teto de 166px). No lugar entrou uma só: a 3a não
+  > desenha o nó `1/1/1/2`. O parágrafo acima é o registro do que a F7 fez, não a lista corrente.
+
   **A trava passou de 22 para 68 assertivas**, e as 46 novas são o que **só** as outras seis telas
   mostram: a coluna de leitura de 720px, a linha de configuração, a chave, o campo de formulário
   em dois tamanhos, as duas pílulas, o ladrilho de integração e a grade de 88px do Lançamento

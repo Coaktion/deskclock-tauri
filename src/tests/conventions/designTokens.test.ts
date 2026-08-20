@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { listSourceFiles } from "../helpers/sourceFiles";
+
 /**
  * Os tokens semânticos precisam continuar existindo depois de cada PR da migração.
  *
@@ -16,7 +18,8 @@ import { describe, expect, it } from "vitest";
  * declarado, e onde.
  */
 
-const CSS_PATH = resolve(__dirname, "../../..", "src/index.css");
+const root = resolve(__dirname, "../../..");
+const CSS_PATH = resolve(root, "src/index.css");
 
 /** Tokens do bloco @theme — a paleta base, modo escuro. */
 const THEME_TOKENS = [
@@ -40,6 +43,7 @@ const THEME_TOKENS = [
   "--radius-chip",
   "--radius-control",
   "--radius-card",
+  "--shadow-overlay",
 ];
 
 /**
@@ -47,6 +51,10 @@ const THEME_TOKENS = [
  *
  * Fica de fora o que é deliberadamente comum aos dois modos: raio, e as cores
  * de projeto, que em L 0.65 ainda contrastam sobre branco num ponto ou chip.
+ *
+ * A sombra de sobreposição **entra**: ela é preta e opaca no escuro, onde o
+ * canvas de L 0.13 engole qualquer sombra discreta, e sobre branco o mesmo
+ * valor vira borrão.
  */
 const LIGHT_MODE_TOKENS = [
   "--color-canvas",
@@ -64,6 +72,7 @@ const LIGHT_MODE_TOKENS = [
   "--color-danger",
   "--color-success",
   "--color-warning",
+  "--shadow-overlay",
 ];
 
 /**
@@ -254,6 +263,39 @@ describe("convenção: tokens semânticos do design system", () => {
     // Inversão de rampa é o que o tema legado faz; a paleta clara nova é
     // escrita à mão, então nenhum token dela pode apontar para as cópias fixas.
     expect(body).not.toContain("--tw-gray-");
+  });
+
+  /**
+   * **`shadow-overlay` e `shadow-(--shadow-overlay)` não são a mesma coisa**, e
+   * a diferença é invisível na tela escura.
+   *
+   * O utilitário que o `@theme` gera **embute o valor** no CSS, em vez de
+   * emitir `var(--shadow-overlay)` — medido no Chromium: com `shadow-overlay`,
+   * o modo claro renderiza o preto a 0,85 do modo escuro, e a redefinição do
+   * bloco `[data-mode="claro"]` não chega a ser lida. Como no escuro os dois
+   * ficam idênticos, só quem abrir o painel no modo claro vê o borrão — que é
+   * a definição de regressão que ninguém pega.
+   *
+   * A forma que lê a variável em tempo de uso é a de parênteses. Esta trava
+   * existe porque a errada é a que se escreve por instinto.
+   */
+  it("a sombra de sobreposição é usada pela variável, não pelo utilitário gerado", () => {
+    const arquivos = listSourceFiles(root).filter((file) => file.endsWith(".tsx"));
+    const embutido: string[] = [];
+    const porVariavel: string[] = [];
+
+    for (const file of arquivos) {
+      const source = readFileSync(resolve(root, file), "utf8");
+      // O `(?<!-)` é o que separa a classe do nome do token: sem ele,
+      // `shadow-(--shadow-overlay)` contém `shadow-overlay` e a trava se acusa.
+      if (/(?<!-)\bshadow-overlay\b/.test(source)) embutido.push(file);
+      if (source.includes("shadow-(--shadow-overlay)")) porVariavel.push(file);
+    }
+
+    expect(embutido, "use shadow-(--shadow-overlay): o utilitário gerado embute o valor").toEqual(
+      []
+    );
+    expect(porVariavel.length, "o token perdeu o último consumidor").toBeGreaterThan(0);
   });
 
   it("não sobrou nada do tema legado", () => {

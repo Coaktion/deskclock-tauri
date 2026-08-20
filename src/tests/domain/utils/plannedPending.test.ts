@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pendingPlannedTasks } from "@domain/utils/plannedPending";
+import { matchPlannedTasks, pendingPlannedTasks } from "@domain/utils/plannedPending";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
 function planned(id: string, completedDates: string[]): PlannedTask {
@@ -36,7 +36,38 @@ describe("pendingPlannedTasks", () => {
     ]);
   });
 
-  it("dia sem pendente devolve lista vazia — é o que decide o arranjo da tela", () => {
+  it("dia sem pendente devolve lista vazia — é o que impede a lista do omnibox de abrir", () => {
     expect(pendingPlannedTasks([planned("única", ["2026-08-10"])], "2026-08-10")).toEqual([]);
+  });
+});
+
+describe("matchPlannedTasks", () => {
+  const tasks = [
+    planned("Daily do time", []),
+    planned("Revisão do fluxo", []),
+    planned("Daily concluída", ["2026-08-10"]),
+  ];
+
+  it("sem busca, devolve as pendentes do dia na ordem em que vieram", () => {
+    expect(matchPlannedTasks(tasks, "2026-08-10", "").map((t) => t.id)).toEqual([
+      "Daily do time",
+      "Revisão do fluxo",
+    ]);
+  });
+
+  it("filtra por nome, e a concluída do dia não volta pela busca", () => {
+    expect(matchPlannedTasks(tasks, "2026-08-10", "daily").map((t) => t.id)).toEqual([
+      "Daily do time",
+    ]);
+  });
+
+  it("busca é fuzzy e ignora caixa, como o autocomplete", () => {
+    expect(matchPlannedTasks(tasks, "2026-08-10", "RVFLX").map((t) => t.id)).toEqual([
+      "Revisão do fluxo",
+    ]);
+  });
+
+  it("busca sem correspondência devolve vazio — é o que fecha a lista", () => {
+    expect(matchPlannedTasks(tasks, "2026-08-10", "zzz")).toEqual([]);
   });
 });

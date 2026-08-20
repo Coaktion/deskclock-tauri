@@ -104,6 +104,15 @@
   --color-success: oklch(0.72 0.15 162);
   --color-warning: oklch(0.78 0.15 85);
 
+  /* Sombra do painel que **sobrepõe** a página — hoje, a lista de planejadas do
+     omnibox. É token porque a sombra do Tailwind é preto translúcido e, sobre um
+     canvas de L 0.13, não pinta nada: medido na bancada, o painel e a faixa de
+     KPI atrás dele ficavam a 0,025 de lightness um do outro. A escala de
+     superfície não resolve — `raised` já é o degrau mais alto —, então a
+     profundidade vem daqui. No claro o valor é outro: o mesmo preto vira mancha
+     sobre branco. */
+  --shadow-overlay: 0 18px 44px -12px oklch(0 0 0 / 0.85);
+
   /* Cores de projeto — 24 slots, gerados por `scripts/generate-project-palette.mjs`.
      Não edite os valores à mão: eles saem de um empacotamento que maximiza a menor
      distância OKLab entre qualquer par, sob dois pisos de contraste.
@@ -267,6 +276,9 @@
   --color-success: oklch(0.62 0.15 162);
   /* Pelo mesmo motivo do âmbar de pausa: em L 0.78 o aviso sobre branco some. */
   --color-warning: oklch(0.62 0.14 75);
+  /* Cinza da própria rampa, não preto: sobre branco o preto a 0.85 lê como
+     borrão, e o que separa aqui é o desfoque, não a densidade. */
+  --shadow-overlay: 0 18px 44px -12px oklch(0.446 0.03 257 / 0.28);
 }
 
 /* ── Cursor de mão no que se clica ─────────────────────────────────────────────
