@@ -92,6 +92,7 @@ function makeWrapper(taskRepo: ITaskRepository) {
     }),
     runDaily: vi.fn(async () => []),
     runDailyFor: vi.fn(async () => null),
+    isDailyEnabled: () => false,
     isSyncing: () => false,
   };
 

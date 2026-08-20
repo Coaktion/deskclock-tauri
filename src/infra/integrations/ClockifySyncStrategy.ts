@@ -8,8 +8,10 @@ import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resol
 import { runDailyTemplate, taskSendFeedback } from "./runDailyTemplate";
 import { ClockifyTaskSender } from "./ClockifyTaskSender";
 
+export const CLOCKIFY_INTEGRATION_NAME = "Clockify";
+
 export class ClockifySyncStrategy implements ISyncStrategy {
-  readonly integrationName = "Clockify";
+  readonly integrationName = CLOCKIFY_INTEGRATION_NAME;
 
   constructor(
     private config: IClockifyConfigPort,
