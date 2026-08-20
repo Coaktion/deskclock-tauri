@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.1](https://github.com/Coaktion/deskclock-tauri/compare/v2.0.0...v2.0.1) (2026-08-20)
+
+
+### Features
+
+* **tarefas:** as tarefas planejadas para hoje voltaram para a caixa de tarefa — clique no campo para vê-las, digite para filtrar, e escolher uma já inicia a tarefa
+* **tarefas:** sem o bloco de planejadas ocupando a tela, os indicadores do dia ocupam a linha inteira e a lista de registros de hoje mostra quase o dobro de tarefas sem rolar
+* **tours:** o tour do Monday passa a explicar o envio automático
+
+### Bug Fixes
+
+* **integrações:** o envio automático diário do Monday ignorava o horário configurado — ele só subia de carona quando outra integração vencia
+* **integrações:** o horário de uma integração deixa de arrastar as outras; o Clockify marcado para as 18h subia às 9h se o Sheets estivesse em "ao abrir o app"
+* **monday:** o envio diário informava mais tarefas do que tinha enviado — a contagem passa a ser só do que de fato foi gravado no Monday
+* **overlay:** o cronômetro e o contador do overlay compacto ficaram com o mesmo peso do popup
+
 ## [2.0.0](https://github.com/Coaktion/deskclock-tauri/compare/v1.11.0...v2.0.0) (2026-08-14)
 
 
