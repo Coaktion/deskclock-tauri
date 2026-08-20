@@ -21,6 +21,19 @@ export interface TaskSendOutcome {
    */
   sentTaskIds: string[];
   /**
+   * **Subconjunto de `sentTaskIds` cujo grupo já estava no destino igualzinho.**
+   *
+   * O destino tem o dado, então elas são "enviadas" para todo efeito de badge e
+   * de timestamp — mas **nada foi escrito neste envio**, e contá-las como envio
+   * inflava o número que a tela mostra. O envio diário reabre a janela desde o
+   * último ciclo limpo, então os dias já enviados voltam a cada execução: o
+   * "Enviar agora" de um dia com 4 grupos reportava 8 no dia seguinte.
+   *
+   * Só o Monday preenche — é o único sender com upsert idempotente. Ausente
+   * significa "não sei dizer", que é o mesmo que nenhum pulo.
+   */
+  skippedTaskIds?: string[];
+  /**
    * **Recusa: o destino não aceita este dado, e quem resolve é o usuário.**
    * Hora não faturável de cliente sem motivo, rótulo que não existe na coluna,
    * board sem grupo para o Report Type. Tentar de novo sem mudar nada dá no

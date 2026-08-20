@@ -77,7 +77,15 @@ export async function runMondayDailySync(
     // "enviado" ao grupo que o sender recusou (hora não faturável sem motivo,
     // board sem grupo para o Report Type) ou que falhou na escrita.
     const sentIds = new Set(outcome.sentTaskIds);
-    const sentGroups = groups.filter((g) => g.tasks.some((t) => sentIds.has(t.id)));
+
+    // Conta o que **foi escrito**, não o que estava no envio: a janela do ciclo
+    // reabre nos dias já enviados (`calcDailyRange`), e o sender pula o grupo
+    // cujo payload não mudou. Contá-los somava o dia anterior ao de hoje — o
+    // "Enviar agora" de um dia com 4 grupos reportava 8.
+    const skippedIds = new Set(outcome.skippedTaskIds ?? []);
+    const writtenGroups = groups.filter((g) =>
+      g.tasks.some((t) => sentIds.has(t.id) && !skippedIds.has(t.id))
+    );
 
     if (outcome.sentTaskIds.length > 0) {
       await deps.logRepo.markSent(outcome.sentTaskIds, MONDAY_LOG_KEY);
@@ -93,7 +101,7 @@ export async function runMondayDailySync(
 
     return {
       integration: deps.integrationName,
-      count: sentGroups.length,
+      count: writtenGroups.length,
       ...dailySendFeedback(warning, outcome, "Monday"),
     };
   } catch (err) {

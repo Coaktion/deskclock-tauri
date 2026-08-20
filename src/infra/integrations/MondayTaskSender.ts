@@ -163,11 +163,13 @@ export class MondayTaskSender implements ITaskSender {
     // que se fundiu, inflando o total reportado. O motivo entra em `refused`
     // com o nome da tarefa, que é o que a tela precisa exibir.
     const applied: ActivityPlan[] = [];
+    const skipped: ActivityPlan[] = [];
     const failed: string[] = [];
     for (const plan of plans) {
       try {
-        await this.applyPlan(plan);
+        const wrote = await this.applyPlan(plan);
         applied.push(plan);
+        if (!wrote) skipped.push(plan);
       } catch (err) {
         // Erro da API ou da rede: `failed`, não `refused` — não há campo a
         // preencher, é para tentar de novo, e a tela precisa distinguir os dois.
@@ -186,7 +188,12 @@ export class MondayTaskSender implements ITaskSender {
       failed.push(`limpeza de itens órfãos: ${err instanceof Error ? err.message : String(err)}.`);
     }
 
-    return { sentTaskIds: applied.flatMap((p) => p.taskIds), refused, failed };
+    return {
+      sentTaskIds: applied.flatMap((p) => p.taskIds),
+      skippedTaskIds: skipped.flatMap((p) => p.taskIds),
+      refused,
+      failed,
+    };
   }
 
   /**
@@ -399,7 +406,8 @@ export class MondayTaskSender implements ITaskSender {
     }
   }
 
-  private async applyPlan(plan: ActivityPlan): Promise<void> {
+  /** Devolve se **escreveu** no Monday — `false` é o pulo por payload igual. */
+  private async applyPlan(plan: ActivityPlan): Promise<boolean> {
     const existing = plan.claimed;
 
     // Compara o payload inteiro, não só a duração: alternar billable, renomear a
@@ -411,7 +419,7 @@ export class MondayTaskSender implements ITaskSender {
       existing.payload === plan.payload &&
       existing.signature === plan.signature
     ) {
-      return;
+      return false;
     }
 
     const itemId = existing
@@ -433,6 +441,7 @@ export class MondayTaskSender implements ITaskSender {
       taskIds: plan.taskIds,
       payload: plan.payload,
     });
+    return true;
   }
 
   /** Se o item foi apagado no Monday, o rastreamento fica órfão — recria em vez de travar. */
