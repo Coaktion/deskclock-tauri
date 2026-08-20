@@ -46,9 +46,9 @@ const noop = () => {};
  * aqui é a altura que ele ocupa. A anatomia é a do `OmniboxIdle` — linha de
  * 40px com `px-3 py-3`, faixa de chips com `px-3 pb-3`, no eixo do botão.
  */
-function OmniboxStub() {
+function OmniboxStub({ aberto = false }: { aberto?: boolean } = {}) {
   return (
-    <div className="shrink-0 bg-surface border border-border rounded-card">
+    <div className="relative z-50 shrink-0 bg-surface border border-border rounded-card">
       <div className="flex items-center gap-3 px-3 py-3">
         <span className="shrink-0 w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white">
           <Play size={18} />
@@ -65,6 +65,19 @@ function OmniboxStub() {
           Categoria
         </span>
       </div>
+
+      {/* As classes do painel são cópia do `OmniboxIdle`, pelo mesmo motivo que
+          a anatomia acima: o componente de verdade não posa para a bancada. */}
+      {aberto && (
+        <div className="absolute z-50 top-full left-2 right-2 mt-2 bg-raised border border-border-subtle rounded-card shadow-(--shadow-overlay) overflow-hidden">
+          <div className="max-h-59 overflow-y-auto" data-lista-planejadas>
+            <LinhasPlanejadas />
+          </div>
+          <div className="border-t border-border-subtle px-3 py-2 text-right">
+            <span className="text-micro text-accent-text">Ver semana →</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -81,6 +94,12 @@ const PLANEJADAS = [
     nome: "Preparar apresentação do trimestre",
     meta: "Interno · Gestão",
     cor: "var(--color-project-2)",
+  },
+  // A quinta existe para a foto mostrar o corte: o teto da lista é de quatro.
+  {
+    nome: "Revisar o plano de testes da release",
+    meta: "Cliente B · Qualidade",
+    cor: "var(--color-project-4)",
   },
 ];
 
@@ -178,7 +197,6 @@ function LinhasEntradas() {
   );
 }
 
-const VER_SEMANA = <span className="text-accent-text">Ver semana →</span>;
 const TOTAL_DIA = <span className="font-mono tabular-nums text-fg-secondary">05:48:40</span>;
 
 /**
@@ -192,12 +210,10 @@ function Corpo({ children }: { children: ReactNode }) {
   return <div className="h-full overflow-y-auto flex flex-col gap-5 bg-canvas">{children}</div>;
 }
 
-/** A faixa de KPI nos dois arranjos — é a única coisa que muda entre as duas telas. */
-function Kpis({ layout }: { layout: "row" | "grid" }) {
+/** A faixa de KPI: quatro em linha, na largura toda, como o spec da 3a desenha. */
+function Kpis() {
   return (
-    <section
-      className={`flex-1 min-w-0 ${layout === "grid" ? "grid grid-cols-2 gap-3" : "flex gap-3"}`}
-    >
+    <section className="flex-1 min-w-0 flex gap-3">
       <KpiCard
         label="Billable hoje"
         value="04:12:38"
@@ -320,24 +336,13 @@ export const COMPOSICOES: Composicao[] = [
   },
   {
     id: "tasks-corpo",
-    nota: "Com planejadas: KPI em 2×2 ao lado da lista, e as Entradas com a altura do que listam.",
+    nota: "A tela em repouso: o bloco de planejadas saiu, a faixa de KPI ocupa a linha e as Entradas ficam com o que sobra.",
     width: LARGURA,
     height: ALTURA,
     element: (
       <Corpo>
         <OmniboxStub />
-        <div className="shrink-0 flex gap-5 items-start">
-          <SectionCard
-            className="flex-1 min-w-0"
-            title="Planejadas para hoje"
-            count={4}
-            action={VER_SEMANA}
-            bodyClassName="max-h-[166px] overflow-y-auto"
-          >
-            <LinhasPlanejadas />
-          </SectionCard>
-          <Kpis layout="grid" />
-        </div>
+        <Kpis />
         <SectionCard className="shrink-0" title="Entradas de hoje" action={TOTAL_DIA}>
           <LinhasEntradas />
         </SectionCard>
@@ -345,16 +350,14 @@ export const COMPOSICOES: Composicao[] = [
     ),
   },
   {
-    id: "tasks-corpo-sem-planejadas",
-    nota: "Sem planejadas: a faixa de KPI volta aos quatro em linha, na largura toda.",
+    id: "tasks-omnibox-aberto",
+    nota: "O campo focado: as planejadas do dia caem sobre a faixa de KPI. É esta foto que responde se o painel se separa do fundo.",
     width: LARGURA,
     height: ALTURA,
     element: (
       <Corpo>
-        <OmniboxStub />
-        <div className="shrink-0 flex gap-5 items-start">
-          <Kpis layout="row" />
-        </div>
+        <OmniboxStub aberto />
+        <Kpis />
         <SectionCard className="shrink-0" title="Entradas de hoje" action={TOTAL_DIA}>
           <LinhasEntradas />
         </SectionCard>

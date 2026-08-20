@@ -21,6 +21,11 @@
   ela abre ao focar o campo e o texto digitado a filtra (`matchPlannedTasks`, busca fuzzy pelo nome).
 - A lista é **flutuante** — pendurada no card, fora do fluxo. Em fluxo, abri-la a cada foco
   empurraria KPIs e Entradas tela abaixo, que é metade da queixa que a tirou daqui em `86e3245`.
+- Ela **sobrepõe** de fato: recuada 8px de cada lado do card e 8px abaixo dele, com a sombra
+  `--shadow-overlay`. Sem isso, painel e faixa de KPI ficavam a 0,025 de lightness um do outro no
+  modo escuro, e a lista lia como mais uma seção da página. Ver a skill `design-system`.
+- Mostra **quatro tarefas inteiras** (236px de teto) e deixa a quinta assomar cortada, que é o que
+  indica que a lista rola.
 - Cada linha é um `TaskRow`: ponto na cor do projeto, nome, `projeto · categoria` e o chip de
   faturamento, que **continua alternando** (o `BillableChip` barra a propagação, então alterná-lo
   não dispara a linha).

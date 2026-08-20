@@ -195,8 +195,13 @@ export function OmniboxIdle({
        * disparar a linha em volta.
        */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-raised border border-border rounded-card shadow-lg overflow-hidden">
-          <div className="max-h-40 overflow-y-auto">
+        <div className="absolute z-50 top-full left-2 right-2 mt-2 bg-raised border border-border-subtle rounded-card shadow-(--shadow-overlay) overflow-hidden">
+          {/* 236px: quatro linhas cheias — nome, projeto · categoria e chip —,
+              medidas em Chromium na bancada (53,22 cada, e a quarta sem a régua
+              de baixo, 212 no total), mais 24px da quinta. A meia-linha é o que
+              diz que a lista continua: parando em 212 o corte fica limpo e nada
+              na tela avisa que há mais. */}
+          <div className="max-h-59 overflow-y-auto">
             {suggestions.map((task, idx) => {
               const project = projects.find((p) => p.id === task.projectId);
               const category = categories.find((c) => c.id === task.categoryId);
