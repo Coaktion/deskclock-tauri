@@ -726,24 +726,25 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > bancada visual (`pnpm visual`), que compara componente e wireframe em Chromium, e a inspeção
   > em 1100×700 nos 2 modos × 4 acentos.
 
-- **Quatro lugares em que a tela diverge do mock de propósito.** São **exceções declaradas**, e
+- **Três lugares em que a tela diverge do mock de propósito.** São **exceções declaradas**, e
   não dívida por pagar: `screenGeometry.test.tsx` não as cobra, e quem for "corrigi-las" está
-  desfazendo decisão tomada. Fora destas quatro, divergir do spec extraído
+  desfazendo decisão tomada. Fora destas três, divergir do spec extraído
   (`docs-internal/design-spec/*.json`) é defeito.
 
-  - **A tela de Tarefas pareia KPI e Planejadas na linha do meio**, e as Entradas ficam com a
-    altura do que listam. O design os empilha; medido na bancada, a pilha deixava **96px** para
-    as Entradas num orçamento de 572 — cabeçalho de seção e uma linha e pouco. Pareadas, elas
-    passam a 213px. **O par é KPI+Planejadas, e não as duas listas lado a lado**, porque a linha
-    de Entradas carrega ~250px de coluna fixa em volta do nome (chevron, faixa de 88, chip,
-    duração): em meia largura o nome cairia para ~185px. Sem planejadas, a faixa de KPI volta aos
-    quatro em linha. **A ordem do design vale para as duas pontas** — Omnibox abre, Entradas
-    fecham —, e é isso que a trava continua afirmando pelo JSON.
+  - **A tela de Tarefas não desenha o bloco de planejadas** (o nó `1/1/1/2` da 3a). As planejadas
+    pendentes do dia são a **lista suspensa do omnibox**, que abre ao focar o campo, filtra pelo
+    que se digita e inicia a tarefa ao clique. Decisão do usuário, 2026-08-19. O que a troca
+    comprou é vertical: a linha do meio cai de **206,16px** (KPI em 2×2 ao lado da lista) para a
+    fileira de quatro em largura cheia, e as Entradas passam de 213px para ~322px. **A faixa de
+    KPI em linha é a do design**, então a trava a cobra pelo JSON, e a ordem das seções deixou de
+    ser afirmada só pelas pontas: descontado o nó ausente, página e design coincidem inteiros.
+
+    > **Revoga duas exceções anteriores**, ambas de 2026-08-10: o pareamento KPI+Planejadas na
+    > linha do meio e o teto de 166px da lista de planejadas. Não procure por elas — saíram com o
+    > bloco.
   - **O `WorkspaceSwitcher` fica na sidebar.** O mock não desenha o seletor, e é por isso que a
     trava o mocka para `null` ao medir a nav: o que ela compara é o nó do spec, não uma versão
     amputada dele.
-  - **O teto das planejadas de hoje é 166px** — é o que faz o cartão cheio terminar no mesmo
-    nível do bloco de KPI ao lado (206,16 dos dois lados, medido).
   - **Não há pílula de `Ctrl K` no omnibox.** O mock é anterior à remoção do command palette
     (`bcf09ff`); a feature não existe mais.
 

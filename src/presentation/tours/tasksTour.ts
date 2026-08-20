@@ -16,17 +16,7 @@ export const tasksTourSteps: DriveStep[] = [
     popover: {
       title: "Caixa de tarefa",
       description:
-        "Digite o nome do que vai fazer e pressione Enter (ou clique no botão play) para iniciar. Você pode adicionar projeto, categoria e indicar se é billable antes de começar — e, com a tarefa correndo, preencher os campos personalizados sem parar o relógio.",
-      side: "bottom",
-      align: "start",
-    },
-  },
-  {
-    element: '[data-tour="tasks-planned-section"]',
-    popover: {
-      title: "Tarefas planejadas para hoje",
-      description:
-        "Tarefas que você programou para este dia aparecem aqui. Clique no botão de play em qualquer uma para iniciá-la instantaneamente.",
+        "Digite o nome do que vai fazer e pressione Enter (ou clique no botão play) para iniciar. Ao clicar no campo, as tarefas planejadas para hoje aparecem logo abaixo: escolher uma inicia na hora, e digitar filtra a lista. Você pode adicionar projeto, categoria e indicar se é billable antes de começar — e, com a tarefa correndo, preencher os campos personalizados sem parar o relógio.",
       side: "bottom",
       align: "start",
     },

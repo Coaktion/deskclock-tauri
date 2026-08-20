@@ -7,11 +7,6 @@ interface TotalsSectionProps {
   nonBillableSeconds: number;
   weekSeconds: number;
   weekDays: number;
-  /**
-   * `row` — os quatro lado a lado, na largura toda. `grid` — 2×2, para quando a
-   * faixa divide a linha com outra coisa e cada cartão tem metade da largura.
-   */
-  layout?: "row" | "grid";
 }
 
 export function TotalsSection({
@@ -19,7 +14,6 @@ export function TotalsSection({
   nonBillableSeconds,
   weekSeconds,
   weekDays,
-  layout = "row",
 }: TotalsSectionProps) {
   const config = useAppConfig();
   const dailyGoalSec = (config.isLoaded ? config.get("dailyGoalHours") : 8) * 3600;
@@ -47,7 +41,7 @@ export function TotalsSection({
   }`;
 
   return (
-    <section className={layout === "grid" ? "grid grid-cols-2 gap-3" : "flex gap-3"}>
+    <section className="flex gap-3">
       <KpiCard
         label="Billable hoje"
         value={formatHHMMSS(billableSeconds)}

@@ -305,13 +305,20 @@ describe("geometria: tela 3a contra o spec do design", () => {
         projects={[]}
         categories={[]}
         containerRef={createRef<HTMLDivElement>()}
+        onToggleBillable={() => {}}
         draft={draft}
         setDraft={() => {}}
         focused={false}
         setFocused={() => {}}
+        showSuggestions={false}
+        setShowSuggestions={() => {}}
+        activeSuggIdx={0}
+        setActiveSuggIdx={() => {}}
         editingChip={null}
         setEditingChip={() => {}}
         inputRef={createRef<HTMLInputElement>()}
+        suggestions={[]}
+        startPlanned={() => Promise.resolve()}
         handleStart={() => Promise.resolve()}
         handleInputKeyDown={() => {}}
         reset={() => {}}
@@ -583,7 +590,6 @@ describe("geometria: tela 3a contra o spec do design", () => {
     const sections = {
       Omnibox: s3a.byText("Em que você está trabalhando?"),
       TotalsSection: s3a.byText("Billable hoje"),
-      PlannedTasksSection: s3a.byText("Planejadas para hoje"),
       TodayEntriesSection: s3a.byText("Entradas de hoje"),
     };
 
@@ -605,35 +611,37 @@ describe("geometria: tela 3a contra o spec do design", () => {
         .map(([name]) => name);
     }
 
-    it("o Omnibox abre a tela e as Entradas fecham, como no design", () => {
+    /**
+     * A ordem é afirmada **inteira**, e não mais só pelas pontas.
+     *
+     * Ela era de pontas porque a página pareava KPI e Planejadas numa linha só,
+     * contra a pilha que o design desenha — exceção declarada em 2026-08-10.
+     * Com o bloco de planejadas fora da tela (2026-08-19), o que sobra da tela
+     * 3a cai na ordem exata do JSON, e a trava pode voltar a cobrá-la toda.
+     */
+    it("a página monta as seções na ordem do design", () => {
       const design = Object.entries(sections)
         .sort(([, a], [, b]) => bodyIndex(a) - bodyIndex(b))
         .map(([name]) => name);
-      const pagina = ordemNaPagina();
 
-      expect(pagina[0]).toBe(design[0]);
-      expect(pagina.at(-1)).toBe(design.at(-1));
+      expect(ordemNaPagina()).toEqual(design);
     });
 
     /**
-     * **Exceção declarada (decisão do usuário, 2026-08-10).** O design empilha
-     * KPI e Planejadas, um sob o outro, e é isso que o JSON diz. Medido na
-     * bancada, a pilha deixava **96px** para as Entradas numa janela de 700 —
-     * cabeçalho da seção e uma linha e pouco. Pareadas numa linha, as Entradas
-     * passam a 213px e três linhas e meia, e o que se move são os **números**,
-     * não os nomes: o cartão de KPI cai de 225,5 para 223,5 de largura, e a
-     * linha de tarefa não encolhe em nenhuma das duas listas.
+     * **Exceção declarada (decisão do usuário, 2026-08-19).** O design desenha o
+     * bloco "Planejadas para hoje" entre os KPIs e as Entradas (nó `1/1/1/2`); a
+     * tela não o tem mais. As planejadas do dia passaram a ser a lista suspensa
+     * do omnibox, e o que a troca comprou é vertical: a linha do meio cai de
+     * 206,16px (KPI em 2×2 ao lado da lista) para a fileira de quatro em largura
+     * cheia — que é, esta sim, a que o JSON desenha.
      *
-     * A afirmação aqui é a decisão, não o mock — mas as duas pontas acima
-     * continuam vindo do JSON, e é o que impede a exceção de virar licença.
+     * A afirmação aqui é a decisão. O que continua vindo do JSON é a fileira: se
+     * ela voltar a ser 2×2, a assertiva de largura do `KpiCard` reprova.
      */
-    it("KPI e Planejadas dividem a linha do meio", () => {
-      expect(ordemNaPagina().slice(1, 3).sort()).toEqual(
-        ["PlannedTasksSection", "TotalsSection"].sort()
-      );
-      // Uma linha só, e as duas metades pelo mesmo `flex-1`.
-      expect(source).toMatch(/<div className="shrink-0 flex gap-5 items-start">/);
-      expect(source.match(/className="flex-1 min-w-0"/g)).toHaveLength(2);
+    it("a faixa de KPI ocupa a linha inteira, sem par ao lado", () => {
+      expect(source).not.toMatch(/PlannedTasksSection/);
+      expect(source).not.toMatch(/layout=/);
+      expect(s3a.byPath("1/1/1/1").children).toHaveLength(4);
     });
   });
 

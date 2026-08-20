@@ -1,6 +1,8 @@
 # 5.2 Tela de Tarefas (página principal)
 
-> Extraído da §5.2 do CLAUDE.md em 2026-08-10, verbatim.
+> Extraído da §5.2 do CLAUDE.md em 2026-08-10, verbatim. **A seção 2 foi reescrita em
+> 2026-08-19**, quando as planejadas do dia deixaram o bloco próprio e voltaram a ser a lista
+> suspensa do omnibox.
 
 ### 5.2 Tela de Tarefas (página principal)
 
@@ -14,14 +16,26 @@
 - **Cancel:** Descarta a tarefa imediatamente, sem confirmação.
 - **Atalhos globais:** Se configurados, exibir abaixo como texto informativo (ex: "Ctrl+Shift+S para parar").
 
-#### Seção 2 — Tarefas planejadas para hoje
-- Lista compacta: Nome + botão Play.
-- Play inicia execução com dados da tarefa planejada preenchidos. As ações configuradas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução (ver §6.5).
+#### Seção 2 — Tarefas planejadas para hoje (dentro do omnibox)
+- **Não há bloco próprio na tela.** As planejadas pendentes do dia são a lista suspensa do omnibox:
+  ela abre ao focar o campo e o texto digitado a filtra (`matchPlannedTasks`, busca fuzzy pelo nome).
+- A lista é **flutuante** — pendurada no card, fora do fluxo. Em fluxo, abri-la a cada foco
+  empurraria KPIs e Entradas tela abaixo, que é metade da queixa que a tirou daqui em `86e3245`.
+- Cada linha é um `TaskRow`: ponto na cor do projeto, nome, `projeto · categoria` e o chip de
+  faturamento, que **continua alternando** (o `BillableChip` barra a propagação, então alterná-lo
+  não dispara a linha).
+- **Clicar na linha inicia a tarefa na hora**, com o vínculo (`plannedTaskId`) e os campos
+  personalizados da planejada. Pelo teclado: ↑/↓ andam pela lista e Enter inicia a ativa; com a
+  lista fechada ou vazia, Enter inicia o rascunho como tarefa avulsa. ESC fecha só a lista.
+- Rodapé da lista: **"Ver semana →"**, que leva ao Planejamento.
+- As ações configuradas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução (ver §6.5).
 
 > **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
 
 #### Seção 3 — Totalizadores
 - Horas billable hoje | Horas non-billable hoje | Total semana com dias (ex: "15:00 2d").
+- Os quatro cartões ocupam a **linha inteira**, como o design desenha. O arranjo em 2×2 existia
+  para dividir a linha com o bloco de planejadas e saiu com ele.
 
 #### Seção 4 — Entradas de hoje
 - **Header:** Título "Entradas de Hoje" + total de horas hoje.
