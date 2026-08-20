@@ -13,8 +13,6 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Category } from "@domain/entities/Category";
-import type { Project } from "@domain/entities/Project";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
 import {
@@ -23,16 +21,10 @@ import {
   backupFolderName,
 } from "@infra/integrations/googledrive/GoogleDriveClient";
 import { isDevDatabase } from "@infra/database/db";
-import { runDailyTemplate } from "@infra/integrations/runDailyTemplate";
-import { validateTaskForSheets } from "@domain/integrations/taskValidation";
-import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useAutoSync, SHEETS_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { useProjects } from "@presentation/hooks/useProjects";
 import { useTour } from "@presentation/hooks/useTour";
 import { useSyncNowButton, type SyncFeedback } from "@presentation/hooks/useSyncNowButton";
 import type { BackupFrequency } from "@shared/types/appConfig";
@@ -41,7 +33,7 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
-import { formatLastSync, todayISO } from "@shared/utils/time";
+import { formatLastSync } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
   AlertTriangle,
@@ -68,20 +60,14 @@ import {
   SyncFeedbackLine,
 } from "./shared";
 import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
+import { AutoSyncControls, type AutoSyncNow } from "./AutoSyncControls";
+import { SHEETS_AUTO_SYNC_KEYS } from "./autoSyncIntegrations";
 import { GoogleLogo } from "./google/GoogleLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
 const DURATION_FORMATS = [
   { value: "HH:MM", label: "HH:MM" },
   { value: "HH:MM:SS", label: "HH:MM:SS" },
-] as const;
-const SYNC_MODES = [
-  { value: "per-task", label: "Por tarefa" },
-  { value: "daily", label: "Diário" },
-] as const;
-const SYNC_TRIGGERS = [
-  { value: "on-open", label: "Ao abrir o app" },
-  { value: "fixed-time", label: "Horário fixo" },
 ] as const;
 const BACKUP_FREQUENCIES = [
   { value: "daily", label: "Diário" },
@@ -194,31 +180,23 @@ function ColumnMappingEditor({
 
 /* ── Sub-seção Google Sheets ── */
 
-function SheetsSection({
-  disabled,
-  projects,
-  categories,
-}: {
-  disabled: boolean;
-  projects: Project[];
-  categories: Category[];
-}) {
-  const { taskRepo, taskLogRepo } = useRepositories();
+function SheetsSection({ disabled }: { disabled: boolean }) {
   const config = useAppConfig();
-  const factories = useIntegrations();
   const { isSyncing } = useAutoSync();
+  const syncNow: AutoSyncNow = {
+    integrationName: SHEETS_INTEGRATION_NAME,
+    successMessage: (count) => `${count} tarefa(s) enviada(s) para o Sheets.`,
+    guard: () =>
+      config.get("integrationGoogleSheetsSpreadsheetId")
+        ? null
+        : "Configure o ID da planilha antes de enviar.",
+  };
   const autoSyncing = isSyncing(SHEETS_INTEGRATION_NAME);
   const [spreadsheetId, setSpreadsheetId] = useState("");
   const [sheetName, setSheetName] = useState("DeskClock");
   const [columnMapping, setColumnMapping] = useState<SheetColumnMapping>(DEFAULT_COLUMN_MAPPING);
   const [durationFormat, setDurationFormat] = useState<"HH:MM" | "HH:MM:SS">("HH:MM");
-  const [autoSync, setAutoSync] = useState(false);
-  const [syncMode, setSyncMode] = useState<"per-task" | "daily">("per-task");
-  const [syncTrigger, setSyncTrigger] = useState<"fixed-time" | "on-open">("on-open");
-  const [syncTime, setSyncTime] = useState("18:00");
-  const [lastSyncTs, setLastSyncTs] = useState("");
   const [colsOpen, setColsOpen] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const { openModal } = useIntegrationsUi();
 
   useEffect(() => {
@@ -227,11 +205,6 @@ function SheetsSection({
     setSheetName(config.get("integrationGoogleSheetsSheetName") || "DeskClock");
     setColumnMapping(config.get("integrationGoogleSheetsColumnMapping") ?? DEFAULT_COLUMN_MAPPING);
     setDurationFormat(config.get("integrationGoogleSheetsDurationFormat") ?? "HH:MM");
-    setAutoSync(config.get("integrationGoogleSheetsAutoSync"));
-    setSyncMode(config.get("sheetsAutoSyncMode") ?? "per-task");
-    setSyncTrigger(config.get("sheetsAutoSyncTrigger") ?? "on-open");
-    setSyncTime(config.get("sheetsAutoSyncTime") ?? "18:00");
-    setLastSyncTs(config.get("sheetsDailySyncLastTimestamp") ?? "");
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleColumnMappingChange(next: SheetColumnMapping) {
@@ -242,62 +215,6 @@ function SheetsSection({
   async function handleDurationFormat(value: "HH:MM" | "HH:MM:SS") {
     setDurationFormat(value);
     await config.set("integrationGoogleSheetsDurationFormat", value);
-  }
-
-  async function handleSyncNow() {
-    const spreadsheet = config.get("integrationGoogleSheetsSpreadsheetId");
-    if (!spreadsheet) {
-      await showToast("error", "Configure o ID da planilha antes de sincronizar.");
-      return;
-    }
-    setSyncing(true);
-    try {
-      const result = await runDailyTemplate(
-        {
-          integrationName: "Google Sheets",
-          integrationLabel: "Google Sheets",
-          logKey: "google_sheets",
-          taskRepo,
-          logRepo: taskLogRepo,
-          // O mesmo recorte do envio automático: o botão manda o dia do
-          // workspace da integração, não o de quem estiver aberto na tela.
-          workspaceId: resolveIntegrationWorkspaceId(config.get("sheetsDeskclockWorkspaceId")),
-          timestampPort: {
-            get: () => config.get("sheetsDailySyncLastTimestamp"),
-            set: (iso) => config.set("sheetsDailySyncLastTimestamp", iso),
-          },
-          validate: (t) => validateTaskForSheets(t).ok,
-          createSender: () =>
-            factories.createSheetsTaskSender({ spreadsheetId: spreadsheet, projects, categories }),
-        },
-        todayISO()
-      );
-
-      if (result.error) {
-        await showToast("error", result.error.message);
-        return;
-      }
-
-      if (result.count === 0) {
-        if (result.warning) {
-          await showToast("warning", result.warning, 6000);
-        } else {
-          await showToast("success", "Tudo sincronizado — nenhuma tarefa nova encontrada.");
-        }
-        return;
-      }
-
-      // template já atualizou timestamp via timestampPort.set
-      setLastSyncTs(config.get("sheetsDailySyncLastTimestamp"));
-      const successMsg = `${result.count} tarefa(s) enviada(s) para o Sheets.`;
-      if (result.warning) {
-        await showToast("warning", `${successMsg} ${result.warning}`, 6000);
-      } else {
-        await showToast("success", successMsg);
-      }
-    } finally {
-      setSyncing(false);
-    }
   }
 
   return (
@@ -366,115 +283,26 @@ function SheetsSection({
           />
         </Row>
 
-        {/* Sincronização automática */}
-        <div data-tour="google-sheets-autosync">
-          <Row label="Sincronização automática">
-            <Toggle
-              ariaLabel="Ativar sincronização automática"
-              checked={autoSync}
-              onChange={async (v) => {
-                setAutoSync(v);
-                await config.set("integrationGoogleSheetsAutoSync", v);
-              }}
-            />
-          </Row>
-
-          {autoSync && (
-            <div className="pl-4 border-l border-border-subtle ml-1 mb-1">
-              {/* Modo */}
-              <div className="py-2.5 border-b border-border-subtle">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-fg-secondary">Modo</span>
-                  <SegmentedControl
-                    value={syncMode}
-                    options={SYNC_MODES}
-                    ariaLabel="Modo de sincronização"
-                    onChange={async (m) => {
-                      setSyncMode(m);
-                      await config.set("sheetsAutoSyncMode", m);
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-fg-muted mt-1.5">
-                  {syncMode === "per-task"
-                    ? "Envia cada tarefa automaticamente ao ser concluída, em tempo real."
-                    : "Agrupa e envia de uma vez, cobrindo fins de semana e dias perdidos."}
-                </p>
-              </div>
-
-              {syncMode === "daily" && (
-                <>
-                  {/* Gatilho */}
-                  <div className="py-2.5 border-b border-border-subtle">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-fg-secondary">Gatilho</span>
-                      <SegmentedControl
-                        value={syncTrigger}
-                        options={SYNC_TRIGGERS}
-                        ariaLabel="Gatilho da sincronização"
-                        onChange={async (t) => {
-                          setSyncTrigger(t);
-                          await config.set("sheetsAutoSyncTrigger", t);
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-fg-muted mt-1.5">
-                      {syncTrigger === "on-open"
-                        ? "Envia ao abrir o app as tarefas de ontem para trás, desde o último envio automático."
-                        : "Envia no horário definido as tarefas do dia corrente e dias anteriores não sincronizados."}
-                    </p>
-                  </div>
-
-                  {syncTrigger === "fixed-time" && (
-                    <Row label="Horário">
-                      <Input
-                        type="time"
-                        size="sm"
-                        value={syncTime}
-                        onChange={(e) => setSyncTime(e.target.value)}
-                        onBlur={() => config.set("sheetsAutoSyncTime", syncTime)}
-                        className="w-auto!"
-                      />
-                    </Row>
-                  )}
-
-                  {/* Último envio + Sincronizar agora */}
-                  <div className="py-2.5 flex items-center justify-between gap-3">
-                    <span className="text-xs text-fg-muted shrink-0">
-                      Último envio:{" "}
-                      <span className="text-fg-secondary">{formatLastSync(lastSyncTs)}</span>
-                    </span>
-                    <Button
-                      onClick={handleSyncNow}
-                      loading={syncing || autoSyncing}
-                      title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
-                      icon={<RefreshCw size={14} />}
-                      className="shrink-0"
-                    >
-                      {autoSyncing
-                        ? "Sincronização automática…"
-                        : syncing
-                          ? "Sincronizando…"
-                          : "Sincronizar agora"}
-                    </Button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-        {/* /google-sheets-autosync */}
+        <AutoSyncControls
+          keys={SHEETS_AUTO_SYNC_KEYS}
+          syncNow={syncNow}
+          shell="inline"
+          tourId="google-sheets-autosync"
+        />
 
         {/* Envio manual */}
         <div className="pt-2.5">
           <Button
             onClick={() => openModal("sheets-send")}
             loading={autoSyncing}
-            title={autoSyncing ? "Sincronização automática em andamento…" : undefined}
+            // "Envio em andamento", não "envio automático": desde que o
+            // "Enviar agora" passou pelo runner, este sinal também acende no
+            // envio que o usuário pediu com o clique.
+            title={autoSyncing ? "Envio em andamento…" : undefined}
             icon={<Send size={14} />}
             className="w-full"
           >
-            {autoSyncing ? "Sincronização automática em andamento…" : "Enviar tarefas manualmente…"}
+            {autoSyncing ? "Envio em andamento…" : "Enviar tarefas manualmente…"}
           </Button>
         </div>
       </div>
@@ -709,8 +537,6 @@ function BackupSection({ disabled }: { disabled: boolean }) {
 
 export function GoogleIntegrationCard() {
   const config = useAppConfig();
-  const { projects } = useProjects();
-  const { categories } = useCategories();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -795,7 +621,7 @@ export function GoogleIntegrationCard() {
       {/* Sub-seções */}
       <div data-tour="google-sheets-section">
         <SubSection icon={<TableProperties size={14} />} title="Google Sheets">
-          <SheetsSection disabled={!connected} projects={projects} categories={categories} />
+          <SheetsSection disabled={!connected} />
         </SubSection>
       </div>
       <div data-tour="google-calendar-section">
