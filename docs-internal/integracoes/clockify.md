@@ -14,5 +14,5 @@
 | Mapeamento de projetos | tabela DeskClock Project ↔ Clockify Project (por workspace) |
 | Mapeamento de categorias | tabela DeskClock Category ↔ Clockify Tags (multi-select, por workspace) |
 | Tags padrão | multi-select de tags sempre incluídas em todo envio |
-| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
+| Envio automático | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
 | Gerenciar apontamentos | botão abre modal com CRUD direto sobre as time entries do workspace ativo (filtro por período + filtro por tags padrão; entries em andamento são ocultadas) |

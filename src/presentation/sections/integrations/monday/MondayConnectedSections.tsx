@@ -33,7 +33,9 @@ export function MondayConnectedSections({
       <div data-tour="monday-catalogs">
         <MondayImportSection reloadProjects={reloadProjects} reloadCategories={reloadCategories} />
       </div>
-      <MondayAutoSyncSection />
+      <div data-tour="monday-autosync">
+        <MondayAutoSyncSection />
+      </div>
       <div data-tour="monday-auto-import">
         <MondayAutoImportSection />
       </div>

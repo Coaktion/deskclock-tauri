@@ -7,9 +7,17 @@
 | Campo | Tipo |
 |---|---|
 | ID da Planilha | text input |
-| Sincronização automática | toggle (envia tarefa ao concluir) |
+| Envio automático | `AutoSyncControls` com `shell="inline"` (ver abaixo) |
 | Envio manual | botão na tela de Integrações para enviar tarefas selecionadas sob demanda |
 | Autorização | botão OAuth |
+
+> **O envio automático do Sheets usa o `AutoSyncControls` compartilhado, no modo `inline`.** A tela
+> tinha uma cópia manual dos mesmos controles e — pior — um `handleSyncNow` que **remontava as deps
+> do `runDailyTemplate` dentro do componente**, reimplementando `SheetsSyncStrategy.runDaily`: uma
+> correção na estratégia não chegava ao botão. Hoje o botão é `runDailyFor(SHEETS_INTEGRATION_NAME)`,
+> como o do Monday. O `shell="inline"` existe porque aqui os controles vivem **dentro** do accordion
+> "Google Sheets": a casca `SubSection` que o Clockify e o Monday usam aninharia accordion em
+> accordion. O `tourId` mantém a âncora `google-sheets-autosync` que o tour aponta.
 
 **Google Agenda:**
 | Campo | Tipo |

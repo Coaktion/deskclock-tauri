@@ -13,7 +13,10 @@ import {
   SheetsSyncStrategy,
   SHEETS_INTEGRATION_NAME,
 } from "@infra/integrations/SheetsSyncStrategy";
-import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
+import {
+  ClockifySyncStrategy,
+  CLOCKIFY_INTEGRATION_NAME,
+} from "@infra/integrations/ClockifySyncStrategy";
 import {
   MondaySyncStrategy,
   MONDAY_INTEGRATION_NAME,
@@ -24,14 +27,16 @@ import type { Task } from "@domain/entities/Task";
 export interface AutoSyncApi {
   runPerTask(task: Task): Promise<AutoSyncResult[]>;
   runDaily(endDateISO: string): Promise<AutoSyncResult[]>;
-  /** Envio diário de uma integração só — o "Sincronizar agora" de cada card. */
+  /** Envio diário de uma integração só — o "Enviar agora" de cada card. */
   runDailyFor(integrationName: string, endDateISO: string): Promise<AutoSyncResult | null>;
+  /** A integração está com o envio diário habilitado? Ver `AutoSyncRunner`. */
+  isDailyEnabled(integrationName: string): boolean;
   isSyncing(integrationName?: string): boolean;
 }
 
 const AutoSyncContext = createContext<AutoSyncApi | null>(null);
 
-export { SHEETS_INTEGRATION_NAME, MONDAY_INTEGRATION_NAME };
+export { SHEETS_INTEGRATION_NAME, CLOCKIFY_INTEGRATION_NAME, MONDAY_INTEGRATION_NAME };
 
 export function AutoSyncProvider({
   children,
@@ -83,6 +88,7 @@ export function AutoSyncProvider({
       runPerTask: (t) => runner.runPerTask(t),
       runDaily: (d) => runner.runDaily(d),
       runDailyFor: (name, d) => runner.runDailyFor(name, d),
+      isDailyEnabled: (name) => runner.isDailyEnabled(name),
       isSyncing: (name?: string) => {
         void version;
         return runner.isSyncing(name);

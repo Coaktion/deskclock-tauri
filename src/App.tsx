@@ -256,7 +256,7 @@ function MainContent({
 
 function AppInner() {
   const config = useAppConfig();
-  const { runDaily } = useAutoSync();
+  const autoSync = useAutoSync();
   const { createDriveBackupRunner } = useIntegrations();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
@@ -276,7 +276,7 @@ function AppInner() {
   useAppearanceSync(config);
   useGlobalShortcuts(config);
   const { showMainWindow } = useStartupWindow(config, ignoreBlurRef, isPinnedRef);
-  useDailySyncScheduler(config, runDaily);
+  useDailySyncScheduler(config, autoSync);
   useDriveBackupScheduler(config, createDriveBackupRunner);
   useUpdateNotifier();
   useAppRouter({

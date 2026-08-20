@@ -27,7 +27,7 @@ export class AutoSyncRunner {
   }
 
   /**
-   * Envio diário de **uma** integração, para o botão "Sincronizar agora".
+   * Envio diário de **uma** integração, para o botão "Enviar agora".
    *
    * `runDaily` dispararia todas as habilitadas — o clique num card mandaria
    * tarefas para as outras integrações sem o usuário ter pedido. O gatilho aqui
@@ -39,6 +39,21 @@ export class AutoSyncRunner {
     if (!strategy) return null;
     const [result] = await this.withTracking([strategy], (s) => s.runDaily(endDateISO));
     return result;
+  }
+
+  /**
+   * A integração está com o envio diário habilitado?
+   *
+   * Existe para o agendador: o gatilho (horário fixo, ao abrir) mora na config
+   * da tela, mas "habilitada" é mais do que o toggle — o Monday também exige
+   * API key e board de Portfólio. Reimplementar isso no hook era duplicar a
+   * regra num lugar que não conhece as integrações. Devolve `false` para nome
+   * não registrado, que é o mesmo que não ter o que disparar.
+   */
+  isDailyEnabled(integrationName: string): boolean {
+    return (
+      this.strategies.find((s) => s.integrationName === integrationName)?.isDailyEnabled() ?? false
+    );
   }
 
   isSyncing(integrationName?: string): boolean {

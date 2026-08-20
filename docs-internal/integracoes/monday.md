@@ -11,7 +11,7 @@
 | Board de Portfólio | input com o id do board que lista os projetos (`mondayPortfolioBoardId`) |
 | Board de Report de Horas | input com o id do board que guarda o catálogo dos rótulos (`mondayReportBoardId`) |
 | Importação de dados | seis blocos: Projetos, Catálogos, Categorias e os três campos de atividade (Project Stage, Report Type, Non Billable reason). O destino é o Workspace DeskClock da integração — o seletor local que existia aqui era estado de tela e morria ao sair |
-| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) + "Sincronizar agora" no modo diário |
+| Envio automático | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) + "Enviar agora" no modo diário |
 | Importação automática de itens | toggle (`mondayAutoImportEnabled`, padrão desativado) + botão "Buscar itens agora" |
 | Enviar tarefas manualmente | botão abre o `TaskSendModal` genérico |
 | Importar itens como planejadas | botão abre o `MondayImportModal` |
@@ -109,11 +109,18 @@
 > **uma** tarefa já enviada na seleção para ele aparecer: exigir o grupo inteiro calava o aviso no
 > caso mais arriscado, o grupo parcialmente enviado.
 
-> **"Sincronizar agora" dispara só o Monday** (`AutoSyncRunner.runDailyFor`). O `runDaily` do
+> **"Enviar agora" dispara só o Monday** (`AutoSyncRunner.runDailyFor`). O `runDaily` do
 > runner roda todas as integrações com o modo diário ligado — o botão de um card mandaria tarefas
 > para as outras sem ninguém pedir. O botão vive no `AutoSyncControls` compartilhado, atrás da prop
 > opcional `syncNow`, e o modo diário é a condição para ele aparecer, como no Google Sheets: no modo
 > por tarefa o envio já acontece ao concluir.
+
+> **O gatilho do envio diário é por integração** (`useDailySyncScheduler` + `AUTO_SYNC_INTEGRATIONS`).
+> O agendador percorre o registro, avalia o gatilho de cada uma e dispara só a que venceu, via
+> `runDailyFor`. Antes ele conhecia só o Sheets e o Clockify e disparava o `runDaily` global: o
+> horário fixo do Monday **nunca** rodava — ele só subia de carona quando outra integração vencia —
+> e, no sentido inverso, o Clockify marcado para as 18h subia às 9h porque o Sheets estava em "ao
+> abrir o app". Integração nova entra no registro (§9.5 item 4.1) ou repete o defeito.
 
 > **A configuração são dois ids de board**, e não cinco escolhas. Antes pedia workspace do Monday,
 > pasta de clientes, pasta de projetos internos, board interno e um mapeamento manual board ↔

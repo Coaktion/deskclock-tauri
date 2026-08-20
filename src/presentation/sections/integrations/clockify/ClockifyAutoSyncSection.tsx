@@ -1,13 +1,6 @@
-import { AutoSyncControls, type AutoSyncConfigKeys } from "../AutoSyncControls";
-
-const CLOCKIFY_KEYS: AutoSyncConfigKeys = {
-  enabled: "clockifyAutoSync",
-  mode: "clockifyAutoSyncMode",
-  trigger: "clockifyAutoSyncTrigger",
-  time: "clockifyAutoSyncTime",
-  lastSync: "clockifyDailySyncLastTimestamp",
-};
+import { AutoSyncControls } from "../AutoSyncControls";
+import { CLOCKIFY_AUTO_SYNC_KEYS } from "../autoSyncIntegrations";
 
 export function ClockifyAutoSyncSection() {
-  return <AutoSyncControls keys={CLOCKIFY_KEYS} />;
+  return <AutoSyncControls keys={CLOCKIFY_AUTO_SYNC_KEYS} />;
 }

@@ -79,6 +79,13 @@
 > agrupar e o Monday é upsert por assinatura, então repetir o dia não duplica. Vale também para o
 > `onSendSuccess` do envio manual, que mexe na mesma chave.
 >
+> **A contagem exibida conta o que foi escrito, não o que estava no envio** (`skippedTaskIds`). Como
+> a janela reabre nos dias já enviados, eles voltam a cada ciclo e o sender do Monday os pula por
+> payload igual — contá-los somava o dia anterior ao de hoje, e o "Enviar agora" de um dia com 4
+> grupos reportava 8. As puladas continuam em `sentTaskIds`: o destino tem o dado, então o badge e o
+> timestamp dependem delas. Envio inteiro pulado dá `count: 0`, que é a frase certa — "tudo enviado,
+> nenhuma tarefa nova".
+>
 > **A mensagem do resultado não é mais apagada pelo próprio reload.** O envio termina em
 > `triggerReload()`, e o efeito de carga começava zerando a mensagem — a frase sumia no instante em
 > que aparecia. Valia para o sucesso desde sempre, e passou a doer quando o resultado parcial virou a

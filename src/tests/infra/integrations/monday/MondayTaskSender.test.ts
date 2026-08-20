@@ -485,6 +485,26 @@ describe("MondayTaskSender", () => {
       expect(client.changeColumnValues).not.toHaveBeenCalled();
     });
 
+    it("reporta em skippedTaskIds o que pulou, sem tirar de sentTaskIds", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      const first = await sender.send([makeTask()]);
+      const second = await sender.send([makeTask()]);
+
+      // O destino tem o dado nas duas vezes — o badge e o timestamp dependem
+      // disso —, mas só a primeira escreveu.
+      expect(first.skippedTaskIds).toEqual([]);
+      expect(second.sentTaskIds).toEqual(first.sentTaskIds);
+      expect(second.skippedTaskIds).toEqual(second.sentTaskIds);
+    });
+
     it("forceWrite reescreve mesmo sem nada ter mudado", async () => {
       const client = makeClient();
       const sender = new MondayTaskSender(

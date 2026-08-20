@@ -32,6 +32,16 @@ export const mondayDetailTourSteps: DriveStep[] = [
     },
   },
   {
+    element: '[data-tour="monday-autosync"]',
+    popover: {
+      title: "Envio automático",
+      description:
+        "'Por tarefa' envia ao concluir; 'Diário' agrupa e envia de uma vez, ao abrir o app ou em horário fixo — e 'Enviar agora' não espera o horário. Cada dia, projeto e tipo de cobrança vira uma atividade no quadro do projeto; reenviar atualiza a mesma atividade em vez de duplicar.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
     element: '[data-tour="monday-auto-import"]',
     popover: {
       title: "Importação automática",

@@ -52,7 +52,8 @@ Se você está prestes a:
 
 - **Copiar lógica de uma SyncStrategy** → use `BaseSyncStrategy`/template existente (a ser introduzido pelo item 2 do refactor).
 - **Copiar UI de seleção de tarefas (toggleGroup, toggleDay, selKey, hasSentSelected)** → use `<TaskSendModal>`/`useTaskSendSelection` (item 1 do refactor).
-- **Copiar UI de auto-sync (Modo / Gatilho / Horário / Último envio)** → use `<AutoSyncControls integrationKey="...">`.
+- **Copiar UI de envio automático (Modo / Gatilho / Horário / Último envio)** → use `<AutoSyncControls keys={...}>` com as chaves vindas de `autoSyncIntegrations.ts`. Dentro de uma seção que já existe, `shell="inline"`; no nível do card, o padrão `section`.
+- **Escrever um "Enviar agora" que monta as deps do `runDailyTemplate` à mão** → é `runDailyFor(nome, todayISO())`. A estratégia já faz isso, e a cópia no componente diverge em silêncio quando a estratégia muda.
 - **Copiar lógica de import de catálogo (fetch → find/create → mapping → persist)** → use helper `runIntegrationImport(...)`.
 
 Se a abstração ainda não existe (porque o item de refactor está pending), **pare e pergunte** se vale criá-la agora vs esperar o refactor agendado.
@@ -64,6 +65,11 @@ Roteiro obrigatório:
 2. Implementar adaptador em `infra/integrations/toggl/` que `implements` a interface.
 3. Se sincroniza tarefas: criar `TogglSyncStrategy implements ISyncStrategy`.
 4. Registrar a strategy no Provider central de auto-sync (não em `App.tsx` nem em `usePostStopLogic` — esses dois lugares hoje têm cópias hardcoded; novo trabalho deve usar o ponto único).
+4.1. **Registrar as chaves de envio automático em `AUTO_SYNC_INTEGRATIONS`**
+   (`presentation/sections/integrations/autoSyncIntegrations.ts`) — inclusive a
+   `<integração>AutoSyncLastFiredDate`. É de lá que o `useDailySyncScheduler` descobre o gatilho, e
+   é o passo que faltou no Monday: a tela gravava horário fixo, nenhum código lia a chave e o envio
+   nunca disparava. Strategy registrada sem entrada aqui só sobe no modo por tarefa.
 5. UI consome via hook injetado, **nunca** `new TogglClient()` direto em componente.
 6. Adicionar testes em `tests/infra/integrations/toggl/` espelhando a estrutura dos existentes.
 7. **Escopar as leituras pelo workspace da integração.** Declare a chave

@@ -250,4 +250,52 @@ describe("runMondayDailySync", () => {
       expect(result.warning).toContain("sem grupo para o Report Type");
     });
   });
+  describe("contagem", () => {
+    it("não conta o grupo que o sender pulou por payload igual", async () => {
+      // A janela do ciclo reabre no dia já enviado: ele volta no envio, é pulado
+      // pelo sender e não pode somar ao número que a tela mostra.
+      const ontem = makeTask({
+        id: "ontem",
+        name: "Trabalho de ontem",
+        startTime: "2026-07-29T12:00:00.000Z",
+        endTime: "2026-07-29T13:00:00.000Z",
+      });
+      const hoje = makeTask({ id: "hoje", name: "Trabalho de hoje" });
+      const { deps, sender } = makeDeps([ontem, hoje]);
+      vi.mocked(sender.send).mockResolvedValueOnce({
+        sentTaskIds: ["ontem", "hoje"],
+        skippedTaskIds: ["ontem"],
+        refused: [],
+        failed: [],
+      });
+
+      const result = await runMondayDailySync(deps, END_DATE);
+
+      expect(result.count).toBe(1);
+    });
+
+    it("envio inteiro pulado conta zero, mas ainda marca e avança o timestamp", async () => {
+      const { deps, sender, logRepo, setTimestamp } = makeDeps([makeTask({ id: "a" })]);
+      vi.mocked(sender.send).mockResolvedValueOnce({
+        sentTaskIds: ["a"],
+        skippedTaskIds: ["a"],
+        refused: [],
+        failed: [],
+      });
+
+      const result = await runMondayDailySync(deps, END_DATE);
+
+      expect(result.count).toBe(0);
+      expect(logRepo.markSent).toHaveBeenCalledWith(["a"], "monday");
+      expect(setTimestamp).toHaveBeenCalled();
+    });
+
+    it("sender sem `skippedTaskIds` conta tudo que subiu", async () => {
+      const { deps } = makeDeps([makeTask({ id: "a" })]);
+
+      const result = await runMondayDailySync(deps, END_DATE);
+
+      expect(result.count).toBe(1);
+    });
+  });
 });
