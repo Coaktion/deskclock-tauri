@@ -34,9 +34,9 @@ export const googleDetailTourSteps: DriveStep[] = [
   {
     element: '[data-tour="google-sheets-autosync"]',
     popover: {
-      title: "Sincronização automática",
+      title: "Envio automático",
       description:
-        "'Por tarefa' envia ao concluir, em tempo real. 'Diário' agrupa e envia de uma vez — ao abrir o app ou em horário fixo — cobrindo fins de semana e dias não sincronizados.",
+        "'Por tarefa' envia ao concluir, em tempo real. 'Diário' agrupa e envia de uma vez — ao abrir o app ou em horário fixo — cobrindo fins de semana e dias não enviados.",
       side: "top",
       align: "start",
     },

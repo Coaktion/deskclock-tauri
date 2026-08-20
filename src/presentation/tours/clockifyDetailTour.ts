@@ -41,9 +41,9 @@ export const clockifyDetailTourSteps: DriveStep[] = [
   },
   {
     popover: {
-      title: "Sincronização e envios",
+      title: "Envios",
       description:
-        "Ative a sincronização automática ('Por tarefa' ou 'Diária') ou use 'Enviar tarefas manualmente' para selecionar o que enviar. 'Gerenciar apontamentos' permite editar entradas existentes no Clockify sem sair do app.",
+        "Ative o envio automático ('Por tarefa' ou 'Diário') ou use 'Enviar tarefas manualmente' para selecionar o que enviar. 'Gerenciar apontamentos' permite editar entradas existentes no Clockify sem sair do app.",
     },
   },
 ];

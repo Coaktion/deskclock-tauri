@@ -60,7 +60,7 @@ interface ButtonProps {
   disabled?: boolean;
   /**
    * Troca o ícone pelo spinner e desabilita — o par que todo botão de envio
-   * repetia à mão. O rótulo continua sendo de quem chama: "Sincronizando…" e
+   * repetia à mão. O rótulo continua sendo de quem chama: "Enviando…" e
    * "Aguardando…" dizem coisas diferentes sobre a mesma espera.
    */
   loading?: boolean;

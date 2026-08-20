@@ -60,7 +60,7 @@ export const integrationsTourSteps: DriveStep[] = [
   },
   {
     popover: {
-      title: "Sincronização automática",
+      title: "Envio automático",
       description:
         "Após conectar uma integração, configure o envio automático nas configurações dela: por tarefa (envia em tempo real ao concluir) ou diário (agrupa e envia de uma vez no horário definido).",
     },
