@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
+import { IconButton, SettingLabel } from "@presentation/components/ui";
 
 const MODIFIER_KEYS = new Set(["Control", "Shift", "Alt", "Meta", "CmdOrCtrl"]);
 const KEY_MAP: Record<string, string> = {
@@ -73,21 +74,18 @@ export function ShortcutRow({
 
   return (
     <div className="flex items-center justify-between gap-4">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-200">{label}</p>
-        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
-      </div>
+      <SettingLabel label={label} description={description} />
       <div className="flex items-center gap-2 shrink-0">
         {failed && (
           <AlertTriangle
             size={14}
-            className="text-amber-400 shrink-0"
+            className="text-warning shrink-0"
             aria-label="Falha ao registrar atalho"
           />
         )}
         {value && !recording && (
           <span
-            className={`font-mono text-xs bg-gray-800 border px-2 py-1 rounded ${failed ? "border-amber-600 text-amber-300" : "border-gray-700 text-gray-300"}`}
+            className={`font-mono text-xs bg-raised border px-2 py-1 rounded-chip ${failed ? "border-warning/50 text-warning" : "border-border text-fg-secondary"}`}
           >
             {value}
           </span>
@@ -97,22 +95,22 @@ export function ShortcutRow({
           onClick={startRecording}
           onKeyDown={handleKeyDown}
           onBlur={() => setRecording(false)}
-          className={`px-3 py-1.5 text-xs rounded border transition-colors focus:outline-none ${
+          className={`px-3 py-1.5 text-sm rounded-control border transition-colors focus:outline-none ${
             recording
-              ? "bg-blue-900/40 border-blue-500 text-blue-300 animate-pulse"
-              : "bg-gray-800 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-500"
+              ? "bg-accent/15 border-accent text-accent-text animate-pulse"
+              : "bg-raised border-border text-fg-muted hover:text-fg hover:border-fg-muted"
           }`}
         >
           {recording ? "Pressione a combinação…" : value ? "Alterar" : "Gravar"}
         </button>
         {value && !recording && (
-          <button
+          <IconButton
+            icon={<X size={14} />}
             onClick={() => onSave("")}
-            className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+            variant="danger"
+            size="sm"
             title="Remover atalho"
-          >
-            ✕
-          </button>
+          />
         )}
       </div>
     </div>

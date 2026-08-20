@@ -15,6 +15,7 @@ const { PlannedTaskRepository } = await import("@infra/database/PlannedTaskRepos
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Reunião",
     project_id: null,
     category_id: null,
@@ -35,6 +36,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
 function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Reunião",
     projectId: null,
     categoryId: null,
@@ -48,6 +50,7 @@ function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
     actions: [],
     sortOrder: 0,
     createdAt: "2026-04-08T09:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -145,6 +148,15 @@ describe("PlannedTaskRepository", () => {
       const args = mockDb.execute.mock.calls[0][1] as unknown[];
       expect(args).toContain(1);
     });
+
+    it("grava os valores personalizados junto com a tarefa planejada", async () => {
+      const repo = new PlannedTaskRepository();
+      await repo.save(makeTask({ customValues: { "f-stage": "o1" } }));
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO planned_task_custom_values"),
+        ["pt1", "f-stage", "o1"]
+      );
+    });
   });
 
   describe("update", () => {
@@ -207,6 +219,16 @@ describe("PlannedTaskRepository", () => {
       const repo = new PlannedTaskRepository();
       const result = await repo.findForDate("2026-04-08");
       expect(result).toHaveLength(1);
+    });
+
+    it("costura os valores personalizados numa segunda query", async () => {
+      mockDb.select
+        .mockResolvedValueOnce([makeRow()])
+        .mockResolvedValueOnce([{ owner_id: "pt1", field_id: "f-stage", value: "o1" }]);
+      const repo = new PlannedTaskRepository();
+      const result = await repo.findForDate("2026-04-08");
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+      expect(result[0].customValues).toEqual({ "f-stage": "o1" });
     });
   });
 });

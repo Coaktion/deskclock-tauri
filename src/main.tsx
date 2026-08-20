@@ -6,7 +6,6 @@ import App from "./App";
 import { CompactOverlayApp } from "@presentation/overlays/CompactOverlayApp";
 import { PopupOverlayApp } from "@presentation/overlays/PopupOverlayApp";
 import { ToastApp } from "@presentation/overlays/ToastApp";
-import { CommandPaletteApp } from "@presentation/overlays/CommandPaletteApp";
 
 const label = getCurrentWindow().label;
 
@@ -28,12 +27,6 @@ if (label === "overlay-compact") {
   root.render(
     <StrictMode>
       <ToastApp />
-    </StrictMode>
-  );
-} else if (label === "command-palette") {
-  root.render(
-    <StrictMode>
-      <CommandPaletteApp />
     </StrictMode>
   );
 } else {

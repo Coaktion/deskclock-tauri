@@ -1,10 +1,7 @@
-import { useCallback, useRef, useState } from "react";
-import type { Category } from "@domain/entities/Category";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import type { Project } from "@domain/entities/Project";
-import type { Task } from "@domain/entities/Task";
+import { matchPlannedTasks } from "@domain/utils/plannedPending";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
-import { useOmniboxSuggestions, type SuggestionItem } from "./useOmniboxSuggestions";
 
 export interface DraftState {
   name: string;
@@ -13,7 +10,6 @@ export interface DraftState {
   categoryName: string;
   categoryId: string | null;
   billable: boolean;
-  plannedTaskId: string | null;
 }
 
 const INITIAL_DRAFT: DraftState = {
@@ -23,23 +19,19 @@ const INITIAL_DRAFT: DraftState = {
   categoryName: "",
   categoryId: null,
   billable: true,
-  plannedTaskId: null,
 };
 
 interface UseOmniboxDraftParams {
   plannedTasks: PlannedTask[];
-  recentTasks: Task[];
-  projects: Project[];
-  categories: Category[];
+  /** O dia de que as planejadas são recortadas — é ele que decide o que é pendente. */
+  today: string;
   startTask: RunningTaskContextValue["startTask"];
   onStarted?: () => void;
 }
 
 export function useOmniboxDraft({
   plannedTasks,
-  recentTasks,
-  projects,
-  categories,
+  today,
   startTask,
   onStarted,
 }: UseOmniboxDraftParams) {
@@ -50,13 +42,13 @@ export function useOmniboxDraft({
   const [editingChip, setEditingChip] = useState<"project" | "category" | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const suggestions = useOmniboxSuggestions(
-    plannedTasks,
-    recentTasks,
-    projects,
-    categories,
-    draft.name
+  const suggestions = useMemo(
+    () => matchPlannedTasks(plannedTasks, today, draft.name),
+    [plannedTasks, today, draft.name]
   );
+
+  // A lista se reordena a cada tecla; o índice antigo apontaria para outra tarefa.
+  useEffect(() => setActiveSuggIdx(0), [draft.name]);
 
   async function handleStart() {
     await startTask({
@@ -64,28 +56,39 @@ export function useOmniboxDraft({
       projectId: draft.projectId,
       categoryId: draft.categoryId,
       billable: draft.billable,
-      plannedTaskId: draft.plannedTaskId,
+      // O rascunho cria tarefa avulsa: quem carrega o vínculo e os campos
+      // personalizados é a planejada escolhida na lista, por `startPlanned`.
+      plannedTaskId: null,
+      customValues: {},
     });
     setDraft(INITIAL_DRAFT);
     setShowSuggestions(false);
     onStarted?.();
   }
 
-  function handleSuggestionSelect(s: SuggestionItem) {
-    setDraft({
-      name: s.name === "(sem nome)" ? "" : s.name,
-      projectName: s.projectName ?? "",
-      projectId: s.projectId,
-      categoryName: s.categoryName ?? "",
-      categoryId: s.categoryId,
-      billable: s.billable,
-      plannedTaskId: s.plannedTaskId,
+  /**
+   * Escolher uma planejada **inicia** — não preenche o rascunho. É o que mantém
+   * o `DraftState` sem `plannedTaskId` nem `customValues`: os dois viajam daqui
+   * direto para o `startTask`, e o vínculo (§4.1) é o que faz parar a tarefa
+   * marcar a planejada como concluída.
+   */
+  async function startPlanned(task: PlannedTask) {
+    await startTask({
+      name: task.name,
+      projectId: task.projectId,
+      categoryId: task.categoryId,
+      billable: task.billable,
+      plannedTaskId: task.id,
+      customValues: task.customValues,
     });
+    setDraft(INITIAL_DRAFT);
     setShowSuggestions(false);
-    inputRef.current?.focus();
+    onStarted?.();
   }
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    const listOpen = showSuggestions && suggestions.length > 0;
+
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActiveSuggIdx((i) => Math.min(i + 1, suggestions.length - 1));
@@ -94,12 +97,16 @@ export function useOmniboxDraft({
       setActiveSuggIdx((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (showSuggestions && suggestions.length > 0) {
-        handleSuggestionSelect(suggestions[activeSuggIdx] ?? suggestions[0]);
+      if (listOpen) {
+        void startPlanned(suggestions[activeSuggIdx] ?? suggestions[0]);
       } else {
         void handleStart();
       }
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" && listOpen) {
+      // Sinaliza que o ESC foi consumido: sem isto ele desceria para quem
+      // escuta a tecla acima do campo.
+      e.stopPropagation();
+      e.preventDefault();
       setShowSuggestions(false);
     }
   }
@@ -125,7 +132,7 @@ export function useOmniboxDraft({
     inputRef,
     suggestions,
     handleStart,
-    handleSuggestionSelect,
+    startPlanned,
     handleInputKeyDown,
     reset,
   };

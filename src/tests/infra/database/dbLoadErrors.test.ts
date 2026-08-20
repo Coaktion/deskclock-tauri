@@ -2,10 +2,13 @@ import { describe, it, expect } from "vitest";
 import { isRetriableDbLoadError } from "@infra/database/dbLoadErrors";
 
 describe("isRetriableDbLoadError", () => {
-  it("re-tenta erros de checksum de migration em estado parcial", () => {
-    expect(isRetriableDbLoadError("migration 9 was previously applied")).toBe(true);
+  // Com a migração no boot do Rust, o load só conecta: divergência de checksum
+  // passou a significar banco de fato incompatível com o binário, e re-tentar
+  // esconderia isso — que foi exatamente o defeito que essa lista já mascarou.
+  it("não re-tenta erros de checksum de migration", () => {
+    expect(isRetriableDbLoadError("migration 9 was previously applied")).toBe(false);
     expect(isRetriableDbLoadError("migration was previously applied but has been modified")).toBe(
-      true
+      false
     );
   });
 
@@ -27,7 +30,7 @@ describe("isRetriableDbLoadError", () => {
 
   it("é case-insensitive", () => {
     expect(isRetriableDbLoadError("DATABASE IS LOCKED")).toBe(true);
-    expect(isRetriableDbLoadError("Has Been Modified")).toBe(true);
+    expect(isRetriableDbLoadError("Unable To Open Database File")).toBe(true);
   });
 
   it("não re-tenta erros permanentes / não relacionados", () => {

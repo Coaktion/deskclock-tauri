@@ -21,6 +21,7 @@ function makeRepo(overrides: Partial<IPlannedTaskRepository> = {}): IPlannedTask
 function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Original",
     projectId: null,
     categoryId: null,
@@ -34,6 +35,7 @@ function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
     actions: [],
     sortOrder: 0,
     createdAt: "2026-04-08T09:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }

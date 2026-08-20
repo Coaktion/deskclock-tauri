@@ -24,6 +24,7 @@ export const DEFAULT_COLUMNS: ExportColumn[] = [
 
 export interface ExportProfile {
   id: UUID;
+  workspaceId: UUID;
   name: string;
   isDefault: boolean;
   format: ExportFormat;

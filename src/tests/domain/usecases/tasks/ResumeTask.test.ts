@@ -7,6 +7,7 @@ import type { Task } from "@domain/entities/Task";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     projectId: null,
     categoryId: null,
@@ -17,6 +18,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "paused",
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T09:05:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }

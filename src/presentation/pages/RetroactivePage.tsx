@@ -2,160 +2,126 @@ import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
-import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
-import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
+import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { Autocomplete } from "@presentation/components/Autocomplete";
+import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
+import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
+import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { ResizeHandle } from "@presentation/components/ResizeHandle";
+import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
+import { Button, IconButton, PageHeader, SectionCard, TaskRow } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
+import { useResizablePanel } from "@presentation/hooks/useResizablePanel";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
-import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
-import { notifyTasksChanged } from "@shared/utils/taskSync";
+import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { ChevronLeft, ChevronRight, DollarSign, Pencil, Play, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { getProjectColor } from "@shared/utils/projectColor";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
+import { addDaysISO, formatHHMMSS, formatRegisteredTimeRange, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
+import { emit, listen } from "@tauri-apps/api/event";
+import { ChevronLeft, ChevronRight, ListChecks, Pencil, Play, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-const DAY_NAMES_PT = [
-  "domingo",
-  "segunda-feira",
-  "terça-feira",
-  "quarta-feira",
-  "quinta-feira",
-  "sexta-feira",
-  "sábado",
-];
-const MONTH_NAMES_PT = [
-  "janeiro",
-  "fevereiro",
-  "março",
-  "abril",
-  "maio",
-  "junho",
-  "julho",
-  "agosto",
-  "setembro",
-  "outubro",
-  "novembro",
-  "dezembro",
-];
+/**
+ * Limites do arraste da lista de planejadas. O padrão é a altura que ela tinha
+ * fixa (`max-h-36` = 144px), então quem nunca arrastar não vê diferença. O
+ * mínimo cabe duas linhas — menos que isso a seção deixa de informar e só ocupa
+ * espaço, e quem não a quer tem o dia sem planejadas, em que ela não aparece.
+ */
+const PLANNED_LIST_HEIGHT = { min: 72, max: 480, default: 144 } as const;
 
-function formatDateHeader(dateISO: string): string {
-  const d = new Date(dateISO + "T12:00:00Z");
-  const day = DAY_NAMES_PT[d.getUTCDay()];
-  const num = d.getUTCDate();
-  const month = MONTH_NAMES_PT[d.getUTCMonth()];
-  const year = d.getUTCFullYear();
-  return `${day.charAt(0).toUpperCase() + day.slice(1)}, ${num} de ${month} de ${year}`;
-}
-
-function isoToHHMM(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildLocalISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(dateISO + "T00:00:00");
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
-}
-
-function formatTimeRange(startISO: string, endISO: string | null): string {
-  const s = isoToHHMM(startISO);
-  if (!endISO) return s;
-  return `${s} – ${isoToHHMM(endISO)}`;
-}
-
-interface TaskRowProps {
+interface DayTaskRowProps {
   task: Task;
   projects: Project[];
   categories: Category[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onToggleBillable: (task: Task) => void;
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }
 
-function TaskRow({
+function DayTaskRow({
   task,
   projects,
   categories,
   onEdit,
   onDelete,
+  onToggleBillable,
   selectMode = false,
   selected = false,
   onToggleSelect,
-}: TaskRowProps) {
-  const projectName = projects.find((p) => p.id === task.projectId)?.name;
+}: DayTaskRowProps) {
+  const project = projects.find((p) => p.id === task.projectId);
   const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+  const subtitle = [project?.name, categoryName].filter(Boolean).join(" · ");
 
   return (
-    <div
-      className={`flex items-center gap-3 px-5 py-3 border-b border-gray-800 transition-colors ${
-        selectMode
-          ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-900/50"}`
-          : "hover:bg-gray-900/50"
-      }`}
+    <TaskRow
+      title={task.name ?? "(sem nome)"}
+      subtitle={subtitle || undefined}
+      meta={
+        <span className="text-micro font-mono tabular-nums text-fg-muted">
+          {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
+        </span>
+      }
+      duration={formatHHMMSS(task.durationSeconds ?? 0)}
+      billable={task.billable}
+      onToggleBillable={() => onToggleBillable(task)}
+      dotColor={getProjectColor(project)}
+      selected={selected}
       onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-    >
-      {selectMode ? (
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => onToggleSelect?.(task.id)}
-          onClick={(e) => e.stopPropagation()}
-          className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
-        />
-      ) : (
-        <DollarSign
-          size={13}
-          className={`shrink-0 ${task.billable ? "text-green-400" : "text-gray-500"}`}
-        />
-      )}
-      <span className="text-xs text-gray-500 shrink-0 font-mono tabular-nums w-28">
-        {formatTimeRange(task.startTime, task.endTime)}
-      </span>
-      <span className="flex-1 text-sm text-gray-200 truncate">
-        {task.name ?? <span className="text-gray-500 italic">(sem nome)</span>}
-      </span>
-      {projectName && (
-        <span className="text-xs text-gray-500 truncate max-w-24">{projectName}</span>
-      )}
-      {categoryName && (
-        <span className="text-xs text-gray-500 truncate max-w-24">{categoryName}</span>
-      )}
-      <span className="text-xs text-gray-500 font-mono tabular-nums shrink-0">
-        {formatHHMMSS(task.durationSeconds ?? 0)}
-      </span>
-      {!selectMode && (
-        <>
-          <button
-            onClick={() => onEdit(task)}
-            className="text-gray-700 hover:text-gray-300 transition-colors shrink-0"
-          >
-            <Pencil size={13} />
-          </button>
-          <button
-            onClick={() => onDelete(task.id)}
-            className="text-gray-700 hover:text-red-400 transition-colors shrink-0 mr-1"
-          >
-            <Trash2 size={14} />
-          </button>
-        </>
-      )}
-    </div>
+      leading={
+        selectMode ? (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect?.(task.id)}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
+            className={selectionBoxClass}
+          />
+        ) : undefined
+      }
+      actions={
+        selectMode ? undefined : (
+          <>
+            <IconButton
+              icon={<Pencil size={14} />}
+              title="Editar"
+              size="sm"
+              onClick={() => onEdit(task)}
+            />
+            <IconButton
+              icon={<Trash2 size={14} />}
+              title="Excluir"
+              variant="danger"
+              size="sm"
+              onClick={() => onDelete(task.id)}
+            />
+          </>
+        )
+      }
+    />
   );
 }
 
 export function RetroactivePage() {
   const { taskRepo, plannedTaskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
+  const { workspaces } = useWorkspaces();
   const today = todayISO();
   const { projects } = useProjects();
   const { categories } = useCategories();
@@ -166,21 +132,62 @@ export function RetroactivePage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [launchingAll, setLaunchingAll] = useState(false);
+  const [launchError, setLaunchError] = useState("");
 
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
+
+  // Em ordem cronológica: é assim que o lote encadeia o início do formulário no
+  // fim da última, e é a ordem em que as reuniões aconteceram.
+  const timedPlannedTasks = useMemo(
+    () =>
+      plannedTasks
+        .filter((t) => t.startTime && t.endTime)
+        .sort((a, b) => a.startTime!.localeCompare(b.startTime!)),
+    [plannedTasks]
+  );
+
+  // Pelos use cases, e sempre com o workspace ativo. Ir direto ao repositório
+  // sem o terceiro argumento é o caminho das integrações (§6.7) e devolvia as
+  // tarefas de todos os workspaces — a tela não mudava nada ao trocar de um
+  // para outro. `workspaceId` nas dependências é o que faz a troca recarregar.
   const loadTasks = useCallback(async () => {
-    const startBound = new Date(selectedDate + "T00:00:00").toISOString();
-    const endBound = new Date(selectedDate + "T23:59:59.999").toISOString();
-    const all = await taskRepo.findByDateRange(startBound, endBound);
+    const all = await getTasksForDate(taskRepo, selectedDate, workspaceId);
     const completed = all.filter((t) => t.status === "completed");
     setTasks([...completed].sort((a, b) => b.startTime.localeCompare(a.startTime)));
-  }, [taskRepo, selectedDate]);
+  }, [taskRepo, selectedDate, workspaceId]);
 
   const loadPlannedTasks = useCallback(async () => {
-    const all = await plannedTaskRepo.findForDate(selectedDate);
+    const all = await getPlannedTasksForDate(plannedTaskRepo, selectedDate, workspaceId);
     setPlannedTasks(all.filter((t) => !t.completedDates.includes(selectedDate)));
-  }, [plannedTaskRepo, selectedDate]);
+  }, [plannedTaskRepo, selectedDate, workspaceId]);
 
+  const { activeFields } = useCustomFields();
+  const formColumn = usePersistedFlag("retroactiveFormCollapsed");
+
+  // ── Altura da lista de planejadas ──────────────────────────────────────────
+  // O teto do arraste é o **conteúdo**, não o limite duro: passado ele não há
+  // mais nada a revelar, e deixar o divisor seguir o cursor no vazio faz o
+  // gesto parecer quebrado — arrasta-se 200px e nada se move, e o caminho de
+  // volta só responde depois de recuperar os mesmos 200px. Parar onde a lista
+  // acaba é a mesma resposta de bater no máximo.
+  const plannedListRef = useRef<HTMLDivElement | null>(null);
+  const [plannedContentHeight, setPlannedContentHeight] = useState<number>(PLANNED_LIST_HEIGHT.max);
+  useLayoutEffect(() => {
+    const el = plannedListRef.current;
+    if (el) setPlannedContentHeight(el.scrollHeight);
+  }, [plannedTasks]);
+
+  const plannedPanel = useResizablePanel({
+    key: "retroactivePlannedHeight",
+    min: PLANNED_LIST_HEIGHT.min,
+    // O `Math.max` protege a invariante do clamp: com uma planejada só, o
+    // conteúdo é menor que o mínimo e um `max` abaixo do `min` inverteria os dois.
+    max: Math.max(PLANNED_LIST_HEIGHT.min, Math.min(PLANNED_LIST_HEIGHT.max, plannedContentHeight)),
+    defaultSize: PLANNED_LIST_HEIGHT.default,
+    anchor: "top",
+  });
   const form = useRetroactiveForm({
     selectedDate,
     projects,
@@ -195,6 +202,25 @@ export function RetroactivePage() {
     void loadPlannedTasks();
   }, [loadTasks, loadPlannedTasks]);
 
+  // Esta tela era a única lista de tarefas que não escutava os dois avisos entre
+  // janelas: concluir uma planejada pelo popup não sumia com a sugestão daqui, e
+  // parar uma tarefa pelo overlay não trazia o registro para a lista do dia. As
+  // recargas são as mesmas do efeito acima, então elas já recortam pelo dia
+  // selecionado — e por isso os callbacks precisam ficar nas dependências: presos
+  // ao mount, o listener recarregaria para sempre a data de quando a tela abriu.
+  useEffect(() => {
+    const unlistenPlanned = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => {
+      void loadPlannedTasks();
+    });
+    const unlistenTasks = listen(OVERLAY_EVENTS.TASKS_CHANGED, () => {
+      void loadTasks();
+    });
+    return () => {
+      unlistenPlanned.then((fn) => fn());
+      unlistenTasks.then((fn) => fn());
+    };
+  }, [loadTasks, loadPlannedTasks]);
+
   useEffect(() => {
     type Prefill = {
       date?: string | null;
@@ -206,6 +232,9 @@ export function RetroactivePage() {
     };
 
     function applyPrefill(p: Prefill) {
+      // Preencher um formulário recolhido não teria efeito visível nenhum — quem
+      // chegou por deeplink veio para conferir e completar os campos.
+      formColumn.set(false);
       if (p.date) setSelectedDate(p.date);
       if (p.name != null) form.setName(p.name);
       if (p.projectName != null) form.setProjectName(p.projectName);
@@ -233,32 +262,79 @@ export function RetroactivePage() {
     await loadTasks();
   }
 
+  /**
+   * Arrasta as irmãs do grupo junto, como a tela de Tarefas: `billable` não
+   * compõe a chave de agrupamento (§6.3), então alternar só a clicada deixaria o
+   * cabeçalho do grupo mentindo sobre as outras.
+   */
+  async function handleToggleBillable(task: Task) {
+    await setGroupBillable(taskRepo, task, !task.billable, new Date().toISOString());
+    void notifyTasksChanged();
+    await loadTasks();
+  }
+
+  // Avisar as outras janelas e recarregar a tela é o mesmo desfecho para um
+  // lançamento e para o lote inteiro — no lote, uma vez só no fim, em vez de uma
+  // recarga por tarefa lançada.
+  async function afterLaunch(lastEndHHMM: string | null) {
+    void notifyTasksChanged();
+    // O mesmo defeito na direção contrária: lançar direto conclui a planejada, e
+    // sem o aviso ela seguia pendente no popup e no planejamento.
+    void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+    // Nada lançado não move a cadeia — reaplicar o início atual só reescreveria
+    // o fim do formulário que o usuário talvez já tenha ajustado.
+    if (lastEndHHMM) form.advanceChainStart(lastEndHHMM);
+    await Promise.all([loadTasks(), loadPlannedTasks()]);
+  }
+
   async function handleDirectLaunch(task: PlannedTask) {
-    const startISO = buildLocalISO(selectedDate, task.startTime!);
-    let endISO = buildLocalISO(selectedDate, task.endTime!);
-    if (new Date(endISO) <= new Date(startISO)) {
-      endISO = buildLocalISO(addDaysISO(selectedDate, 1), task.endTime!);
-    }
-    const durationSeconds = Math.round(
-      (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
-    );
-    await createRetroactiveTask(
+    await launchPlannedTaskRetroactively(
       taskRepo,
-      {
-        name: task.name || null,
-        projectId: task.projectId,
-        categoryId: task.categoryId,
-        billable: task.billable,
-        startTime: startISO,
-        endTime: endISO,
-        durationSeconds,
-      },
+      plannedTaskRepo,
+      task,
+      selectedDate,
       new Date().toISOString()
     );
-    await completePlannedTask(plannedTaskRepo, task.id, selectedDate);
-    void notifyTasksChanged();
-    form.advanceChainStart(task.endTime!);
-    await Promise.all([loadTasks(), loadPlannedTasks()]);
+    await afterLaunch(task.endTime!);
+  }
+
+  /**
+   * Lança de uma vez todas as planejadas do dia que já trazem horário — na
+   * prática, as importadas do Google Agenda e do Monday. Elas não têm nada a
+   * revisar: o intervalo veio do evento, e o clique a clique só repetia a mesma
+   * confirmação por linha num dia cheio de reuniões.
+   *
+   * Falha de uma não interrompe as seguintes, pela mesma razão do envio de horas
+   * (§5.7): o que já foi gravado fica, e o que não deu certo continua pendente na
+   * lista para ser tentado de novo — abortar deixaria o resultado do lote
+   * dependendo de qual tarefa falhou primeiro.
+   */
+  async function handleLaunchAllTimed() {
+    if (launchingAll || timedPlannedTasks.length === 0) return;
+    setLaunchingAll(true);
+    setLaunchError("");
+
+    const nowISO = new Date().toISOString();
+    let lastEnd = "";
+    let failed = 0;
+    for (const task of timedPlannedTasks) {
+      try {
+        await launchPlannedTaskRetroactively(taskRepo, plannedTaskRepo, task, selectedDate, nowISO);
+        if (task.endTime! > lastEnd) lastEnd = task.endTime!;
+      } catch {
+        failed += 1;
+      }
+    }
+
+    setLaunchingAll(false);
+    if (failed > 0) {
+      setLaunchError(
+        failed === 1
+          ? "1 tarefa não pôde ser lançada."
+          : `${failed} tarefas não puderam ser lançadas.`
+      );
+    }
+    await afterLaunch(lastEnd || null);
   }
 
   function toggleSelectTask(id: string) {
@@ -295,278 +371,257 @@ export function RetroactivePage() {
 
   const totalSeconds = tasks.reduce((acc, t) => acc + (t.durationSeconds ?? 0), 0);
 
+  // O aviso do lote descreve a lista de um dia — trocar de dia o deixaria falando
+  // de tarefas que saíram da tela, como a mensagem do envio manual (§5.7).
+  function goToDate(dateISO: string) {
+    setLaunchError("");
+    setSelectedDate(dateISO);
+  }
+
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div
-        data-tour="retroactive-header"
-        className="px-5 py-3 border-b border-gray-800 flex items-center gap-3"
-      >
-        <button
-          onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))}
-          className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors"
-        >
-          <ChevronLeft size={16} />
-        </button>
-        <DatePickerInput
-          value={selectedDate}
-          onChange={setSelectedDate}
-          className="text-sm font-medium text-gray-200"
-          maxDate={new Date()}
-        />
-        <button
-          onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))}
-          disabled={selectedDate >= today}
-          className="text-gray-500 hover:text-gray-200 p-1 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <ChevronRight size={16} />
-        </button>
-        <span className="flex-1 text-sm text-gray-400">{formatDateHeader(selectedDate)}</span>
-        {tasks.length > 0 &&
-          (selectMode ? (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  const allSelected = selectedIds.size >= tasks.length;
-                  setSelectedIds(allSelected ? new Set() : new Set(tasks.map((t) => t.id)));
-                }}
-                className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
-              >
-                {selectedIds.size >= tasks.length ? "Desmarcar todas" : "Selecionar todas"}
-              </button>
-              <button
-                onClick={() => void handleBulkDelete()}
-                disabled={selectedIds.size === 0}
-                className="text-xs text-red-400 hover:text-red-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
-              >
-                Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
-              </button>
-              <button
-                onClick={exitSelectMode}
-                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {totalSeconds > 0 && (
-                <span className="text-xs text-gray-500 font-mono tabular-nums">
-                  {formatHHMMSS(totalSeconds)} total
-                </span>
-              )}
-              <button
-                onClick={() => setSelectMode(true)}
-                className="text-xs px-2.5 py-1 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-gray-200 rounded-lg transition-colors"
-              >
-                Selecionar tarefas
-              </button>
-            </div>
-          ))}
-        <button
-          onClick={() => startTour()}
-          title="Ver tour da página"
-          className="w-5 h-5 shrink-0 rounded-full border border-gray-700 text-gray-600 hover:border-gray-500 hover:text-gray-400 transition-colors text-[11px] font-medium flex items-center justify-center"
-        >
-          ?
-        </button>
-      </div>
-
-      {/* Tarefas planejadas para o dia — sugestões para lançamento */}
-      {plannedTasks.length > 0 && (
-        <div className="border-b border-gray-800 shrink-0">
-          <p className="px-5 pt-2.5 pb-1 text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-            Planejadas para este dia
-          </p>
-          <div className="max-h-36 overflow-y-auto">
-            {plannedTasks.map((task) => {
-              const projectName = projects.find((p) => p.id === task.projectId)?.name;
-              const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-              const hasTime = !!(task.startTime && task.endTime);
-              return (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-2 px-5 py-2 hover:bg-gray-800/40 transition-colors"
-                >
-                  <button
-                    onClick={() => (hasTime ? void handleDirectLaunch(task) : form.prefill(task))}
-                    title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
-                    className={`shrink-0 p-1 rounded-lg transition-colors ${
-                      hasTime
-                        ? "text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                        : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
-                    }`}
-                  >
-                    <Play size={12} />
-                  </button>
-                  <span className="flex-1 text-sm text-gray-200 truncate">{task.name}</span>
-                  {hasTime && (
-                    <span className="text-xs text-gray-500 font-mono shrink-0">
-                      {task.startTime}–{task.endTime}
-                    </span>
-                  )}
-                  {projectName && (
-                    <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                      {projectName}
-                    </span>
-                  )}
-                  {categoryName && (
-                    <span className="text-xs text-gray-600 truncate max-w-20 shrink-0">
-                      {categoryName}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+      <PageHeader
+        title="Lançamento manual"
+        tourId="retroactive-header"
+        onStartTour={startTour}
+        context={
+          <div className="flex items-center gap-3 min-w-0">
+            <IconButton
+              icon={<ChevronLeft size={16} />}
+              title="Dia anterior"
+              variant="neutral"
+              size="sm"
+              onClick={() => goToDate(addDaysISO(selectedDate, -1))}
+            />
+            <DatePickerInput
+              value={selectedDate}
+              onChange={goToDate}
+              className="text-sm font-medium text-fg w-30"
+              maxDate={new Date()}
+            />
+            <IconButton
+              icon={<ChevronRight size={16} />}
+              title="Dia seguinte"
+              variant="neutral"
+              size="sm"
+              onClick={() => goToDate(addDaysISO(selectedDate, 1))}
+              disabled={selectedDate >= today}
+            />
           </div>
-        </div>
-      )}
+        }
+        actions={
+          totalSeconds > 0 ? (
+            <span className="text-xs text-fg-muted font-mono tabular-nums">
+              {formatHHMMSS(totalSeconds)} total
+            </span>
+          ) : undefined
+        }
+      />
 
-      {/* Formulário inline */}
-      <div data-tour="retroactive-form" className="px-5 py-4 border-b border-gray-800 space-y-3">
-        <input
-          ref={form.nameRef}
-          type="text"
-          value={form.name}
-          onChange={(e) => form.setName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) void form.handleAdd();
-          }}
-          placeholder="Nome da tarefa (opcional)"
-          className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-        />
+      {/* Formulário à esquerda, dia à direita: com campos personalizados o
+          formulário cresce e, empilhado, empurrava a lista para fora da tela. */}
+      <div className="flex-1 min-h-0 flex">
+        <CollapsibleFormColumn
+          collapsed={formColumn.value}
+          onToggle={formColumn.toggle}
+          label="Novo apontamento"
+          widthKey="retroactiveFormWidth"
+          tourId="retroactive-form"
+        >
+          <RetroactiveEntryForm
+            form={form}
+            projects={projects}
+            categories={categories}
+            customFields={activeFields}
+          />
+        </CollapsibleFormColumn>
 
-        <div className="flex gap-2 items-center">
-          <Autocomplete
-            value={form.projectName}
-            onChange={form.setProjectName}
-            onSelect={(o) => form.setSelectedProjectId(o.id)}
-            onEnter={form.handleAdd}
-            options={projects}
-            placeholder="Projeto"
-            className="flex-1"
-          />
-          <Autocomplete
-            value={form.categoryName}
-            onChange={(v) => {
-              form.setCategoryName(v);
-              const cat = categories.find((c) => c.name === v);
-              if (cat) form.setBillable(cat.defaultBillable);
-            }}
-            onSelect={(o) => {
-              form.setSelectedCategoryId(o.id);
-              const cat = categories.find((c) => c.id === o.id);
-              if (cat) form.setBillable(cat.defaultBillable);
-            }}
-            onEnter={form.handleAdd}
-            options={categories}
-            placeholder="Categoria"
-            className="flex-1"
-          />
-          <button
-            type="button"
-            onClick={() => form.setBillable((b) => !b)}
-            title={
-              form.billable
-                ? "Billable — clique para alternar"
-                : "Non-billable — clique para alternar"
-            }
-            className={`flex items-center gap-1 shrink-0 transition-colors ${
-              form.billable ? "text-green-400" : "text-gray-500 hover:text-gray-400"
-            }`}
-          >
-            <DollarSign size={14} />
-          </button>
-        </div>
-
-        {/* Início, Fim, Duração */}
-        <div data-tour="retroactive-timeinputs" className="flex gap-2 items-center">
-          <span className="text-xs text-gray-500 shrink-0">Duração</span>
-          <input
-            data-tour="retroactive-duration"
-            type="text"
-            value={form.durationInput}
-            onChange={(e) => form.setDurationInput(e.target.value)}
-            onBlur={form.commitDuration}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const newEnd = form.commitDuration();
-                if (newEnd) void form.handleAdd(newEnd);
-              }
-            }}
-            placeholder="HH:MM"
-            title="Aceita: 1:30, 90, 1h, 1h 30m"
-            className="w-20 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-400 placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:text-gray-100"
-          />
-          <span className="text-xs text-gray-600 shrink-0">Utilize 1:30, 90, 1h, 30, 15...</span>
-          <span className="text-xs text-gray-500 shrink-0 ml-auto">Início</span>
-          <input
-            type="time"
-            value={form.startTime}
-            onChange={(e) => form.handleStartChange(e.target.value)}
-            onBlur={(e) => form.handleStartCommit(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                if (!form.startTime) {
-                  form.handleStartCommit("");
-                  return;
+        <div className="flex-1 min-w-0 flex flex-col p-5 gap-5">
+          {plannedTasks.length > 0 && (
+            <div>
+              <SectionCard
+                title="Planejadas para este dia"
+                count={plannedTasks.length}
+                className="border-b-0 rounded-b-none"
+                action={
+                  timedPlannedTasks.length > 1 && (
+                    <button
+                      onClick={() => void handleLaunchAllTimed()}
+                      disabled={launchingAll}
+                      title="Cria um apontamento para cada planejada que já traz horário, usando o intervalo do evento"
+                      className="ml-auto flex items-center gap-1.5 text-sm text-accent-text hover:opacity-80 disabled:text-fg-muted/50 disabled:opacity-100 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <ListChecks size={14} />
+                      {launchingAll
+                        ? "Lançando…"
+                        : `Lançar ${timedPlannedTasks.length} com horário`}
+                    </button>
+                  )
                 }
-                void form.handleAdd();
-              }
-            }}
-            className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
-          />
-          <span className="text-xs text-gray-500 shrink-0">Fim</span>
-          <input
-            type="time"
-            value={form.endTime}
-            onChange={(e) => form.handleEndChange(e.target.value)}
-            onBlur={(e) => form.handleEndCommit(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.stopPropagation();
-                if (!form.endTime) {
-                  form.handleEndCommit("");
-                  return;
-                }
-                void form.handleAdd();
-              }
-            }}
-            className="w-28 px-2 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500"
-          />
-
-          <button
-            onClick={() => void form.handleAdd()}
-            disabled={form.saving}
-            className="px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
-          >
-            Adicionar
-          </button>
-        </div>
-
-        {form.error && <p className="text-xs text-red-400">{form.error}</p>}
-      </div>
-
-      {/* Lista de tarefas */}
-      <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
-        <div className="flex-1 overflow-y-auto pr-2">
-          {tasks.length === 0 ? (
-            <p className="text-center text-gray-600 text-sm py-10">Nenhuma entrada para este dia</p>
-          ) : (
-            tasks.map((t) => (
-              <TaskRow
-                key={t.id}
-                task={t}
-                projects={projects}
-                categories={categories}
-                onEdit={setEditingTask}
-                onDelete={handleDelete}
-                selectMode={selectMode}
-                selected={selectedIds.has(t.id)}
-                onToggleSelect={toggleSelectTask}
+              >
+                {/* Fora da rolagem: o lote pode falhar com a lista rolada, e
+                    dentro dela o aviso nasceria fora de vista. */}
+                {launchError && (
+                  <p className="px-3 py-2 text-xs text-danger border-b border-border-subtle">
+                    {launchError}
+                  </p>
+                )}
+                <div
+                  ref={plannedListRef}
+                  className="overflow-y-auto"
+                  style={{ maxHeight: plannedPanel.size }}
+                >
+                  {plannedTasks.map((task) => {
+                    const project = projects.find((p) => p.id === task.projectId);
+                    const projectName = project?.name;
+                    const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
+                    const hasTime = !!(task.startTime && task.endTime);
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-2.5 py-2.5 px-3 hover:bg-raised transition-colors border-b border-border-subtle last:border-b-0"
+                      >
+                        <div className="min-w-0 w-full flex items-center gap-2">
+                          <span
+                            className="shrink-0 w-1.5 h-1.5 rounded-full"
+                            style={{ backgroundColor: getProjectColor(project) }}
+                            aria-hidden
+                          />
+                          <div className="min-w-0 w-full">
+                            <p className="text-sm text-fg truncate">{task.name}</p>
+                            {(projectName || categoryName) && (
+                              <p className="text-xs text-fg-muted truncate mt-px">
+                                {projectName} {projectName && categoryName ? "·" : ""}{" "}
+                                {categoryName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {hasTime && (
+                          <span className="text-xs text-fg-muted font-mono tabular-nums shrink-0">
+                            {task.startTime}–{task.endTime}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (hasTime) {
+                              void handleDirectLaunch(task);
+                              return;
+                            }
+                            formColumn.set(false);
+                            form.prefill(task);
+                          }}
+                          disabled={launchingAll}
+                          title={hasTime ? "Lançar diretamente" : "Pré-preencher formulário"}
+                          className={`shrink-0 p-1.5 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                            hasTime
+                              ? "text-accent-text hover:bg-accent/10"
+                              : "text-fg-muted hover:text-fg hover:bg-raised"
+                          }`}
+                        >
+                          <Play size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionCard>
+              <ResizeHandle
+                {...plannedPanel.handleProps}
+                active={plannedPanel.isDragging}
+                className="-mt-0.5"
+                aria-label="Altura da lista de planejadas"
+                title="Arraste para redimensionar. Duplo clique volta ao padrão."
               />
-            ))
+            </div>
           )}
+
+          {/* Lista de tarefas */}
+          <div data-tour="retroactive-task-list" className="flex-1 min-h-0 flex flex-col">
+            <SectionCard
+              title="Apontamentos do dia"
+              // O cartão acompanha o conteúdo **até** o fim do espaço, e daí em
+              // diante rola. É o `flex: 0 1 auto` padrão com `min-h-0`: sem ele
+              // o item de flex não encolhe abaixo do próprio conteúdo, e a
+              // casca — que tem `overflow-hidden` — recortava a lista em
+              // silêncio, sem barra, escondendo justamente o apontamento
+              // recém-lançado. `flex-1` resolveria a rolagem e cobraria o
+              // contrário: o cartão esticado até o rodapé num dia de duas
+              // linhas. Quem rola é o corpo, com o cabeçalho e a barra de
+              // seleção sempre à vista.
+              className="min-h-0 flex flex-col"
+              bodyClassName="min-h-0 overflow-y-auto"
+              action={
+                tasks.length > 0 && (
+                  <div className="shrink-0 flex items-center justify-end gap-3">
+                    {selectMode ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            const allSelected = selectedIds.size >= tasks.length;
+                            setSelectedIds(
+                              allSelected ? new Set() : new Set(tasks.map((t) => t.id))
+                            );
+                          }}
+                        >
+                          {selectedIds.size >= tasks.length
+                            ? "Desmarcar todas"
+                            : "Selecionar todas"}
+                        </Button>
+                        {workspaces.length > 1 && (
+                          <Button
+                            variant="ghost"
+                            onClick={() =>
+                              setMovingTasks(tasks.filter((t) => selectedIds.has(t.id)))
+                            }
+                            disabled={selectedIds.size === 0}
+                          >
+                            Mover para workspace
+                          </Button>
+                        )}
+                        <Button
+                          variant="danger"
+                          onClick={() => void handleBulkDelete()}
+                          disabled={selectedIds.size === 0}
+                        >
+                          Excluir{selectedIds.size > 0 ? ` (${selectedIds.size})` : ""}
+                        </Button>
+                        <Button variant="ghost" onClick={exitSelectMode}>
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="ghost" size="sm" onClick={() => setSelectMode(true)}>
+                        Selecionar tarefas
+                      </Button>
+                    )}
+                  </div>
+                )
+              }
+            >
+              {tasks.length === 0 ? (
+                <p className="text-center text-fg-muted text-sm py-10">
+                  Nenhuma entrada para este dia
+                </p>
+              ) : (
+                tasks.map((t) => (
+                  <DayTaskRow
+                    key={t.id}
+                    task={t}
+                    projects={projects}
+                    categories={categories}
+                    onEdit={setEditingTask}
+                    onDelete={handleDelete}
+                    onToggleBillable={handleToggleBillable}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(t.id)}
+                    onToggleSelect={toggleSelectTask}
+                  />
+                ))
+              )}
+            </SectionCard>
+          </div>
         </div>
       </div>
 
@@ -577,6 +632,23 @@ export function RetroactivePage() {
           categories={categories}
           onSave={loadTasks}
           onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {movingTasks && (
+        <MoveToWorkspaceModal
+          tasks={movingTasks}
+          projects={projects}
+          categories={categories}
+          onMoved={() => {
+            // Mover tira a tarefa do workspace ativo, então some daqui — e
+            // some também das listas das outras janelas, que só recarregam
+            // pelo aviso, como em toda mutação desta tela.
+            void notifyTasksChanged();
+            exitSelectMode();
+            void loadTasks();
+          }}
+          onClose={() => setMovingTasks(null)}
         />
       )}
     </div>

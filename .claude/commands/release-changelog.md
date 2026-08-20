@@ -1,6 +1,6 @@
 ---
 description: Analisa os commits da versão recém-gerada pelo standard-version e reescreve o CHANGELOG.md com linguagem orientada ao usuário
-allowed-tools: Bash(git log:*), Bash(git describe:*), Bash(git diff:*), Read, Edit, Bash(git add:*), Bash(git commit:*)
+allowed-tools: Bash(git log:*), Bash(git describe:*), Bash(git diff:*), Read, Edit, Bash(git add:*), Bash(git commit:*), Bash(git tag:*), Bash(git rev-parse:*)
 ---
 
 ## Template de referência
@@ -38,6 +38,15 @@ Ao terminar a edição, mostre o diff com `git diff CHANGELOG.md` e aguarde conf
 ```
 git add CHANGELOG.md
 git commit --amend --no-edit
+git tag -f vX.Y.Z HEAD
 ```
 
 Não execute o commit sem confirmação.
+
+**O `git tag -f` não é opcional.** O `standard-version` criou a tag apontando para o commit de
+release; o `--amend` acabou de trocar esse commit por outro, de hash diferente, e a tag ficou no
+órfão — o que tem o CHANGELOG cru. Sem re-apontar, o `release.yml` builda o commit errado: os
+instaladores saem, o workflow passa verde, e o usuário vê no `AtualizacoesTab` os bullets do
+standard-version com hash e URL. Nada falha para avisar.
+
+Confirme com `git rev-parse vX.Y.Z HEAD` antes de liberar o push: os dois hashes têm que bater.

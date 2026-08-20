@@ -14,7 +14,16 @@ export interface IClockifyApi {
   listProjects(workspaceId: string): Promise<ClockifyProject[]>;
   listTags(workspaceId: string): Promise<ClockifyTag[]>;
   createTimeEntry(workspaceId: string, entry: ClockifyTimeEntryPayload): Promise<ClockifyTimeEntry>;
-  listTimeEntries(workspaceId: string, userId: string, start: string, end: string): Promise<ClockifyTimeEntryFull[]>;
-  updateTimeEntry(workspaceId: string, entryId: string, payload: ClockifyTimeEntryPayload): Promise<ClockifyTimeEntryFull>;
+  listTimeEntries(
+    workspaceId: string,
+    userId: string,
+    start: string,
+    end: string
+  ): Promise<ClockifyTimeEntryFull[]>;
+  updateTimeEntry(
+    workspaceId: string,
+    entryId: string,
+    payload: ClockifyTimeEntryPayload
+  ): Promise<ClockifyTimeEntryFull>;
   deleteTimeEntry(workspaceId: string, entryId: string): Promise<void>;
 }

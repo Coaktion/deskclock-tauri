@@ -1,14 +1,20 @@
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { generateUUID } from "@shared/utils/uuid";
 import { effectiveDuration } from "./_helpers";
 
 interface StartTaskInput {
+  workspaceId: string;
   name?: string | null;
   projectId?: string | null;
   categoryId?: string | null;
   billable: boolean;
   startTime?: string;
+  /** PlannedTask de origem, quando o início partiu de uma. Persistido na tarefa
+   *  desde a migration 015: em memória, o vínculo morria ao reabrir o app. */
+  plannedTaskId?: string | null;
+  customValues?: CustomValues;
 }
 
 export async function startTask(
@@ -35,6 +41,7 @@ export async function startTask(
 
   const task: Task = {
     id: generateUUID(),
+    workspaceId: input.workspaceId,
     name: input.name ?? null,
     projectId: input.projectId ?? null,
     categoryId: input.categoryId ?? null,
@@ -45,6 +52,8 @@ export async function startTask(
     status: "running",
     createdAt: nowISO,
     updatedAt: nowISO,
+    plannedTaskId: input.plannedTaskId ?? null,
+    customValues: input.customValues ?? {},
   };
   await repo.save(task);
   return task;

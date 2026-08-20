@@ -13,9 +13,16 @@ export const clockifyDetailTourSteps: DriveStep[] = [
   },
   {
     popover: {
-      title: "Workspace ativo",
+      title: "Workspace do Clockify",
       description:
-        "Após conectar, selecione o workspace onde as entradas de tempo serão registradas. Você pode alternar entre workspaces sem precisar desconectar.",
+        "Após conectar, selecione o workspace do Clockify onde as entradas de tempo serão registradas. Você pode alternar entre workspaces sem precisar desconectar.",
+    },
+  },
+  {
+    popover: {
+      title: "Workspace do DeskClock",
+      description:
+        "Se você usa mais de um workspace aqui no DeskClock, o Clockify escolhe de qual deles saem as horas enviadas. A escolha é da integração, e não muda quando você troca o workspace aberto na tela.",
     },
   },
   {
@@ -34,9 +41,9 @@ export const clockifyDetailTourSteps: DriveStep[] = [
   },
   {
     popover: {
-      title: "Sincronização e envios",
+      title: "Envios",
       description:
-        "Ative a sincronização automática ('Por tarefa' ou 'Diária') ou use 'Enviar tarefas manualmente' para selecionar o que enviar. 'Gerenciar apontamentos' permite editar entradas existentes no Clockify sem sair do app.",
+        "Ative o envio automático ('Por tarefa' ou 'Diário') ou use 'Enviar tarefas manualmente' para selecionar o que enviar. 'Gerenciar apontamentos' permite editar entradas existentes no Clockify sem sair do app.",
     },
   },
 ];

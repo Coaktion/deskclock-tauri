@@ -44,10 +44,9 @@ export class ClockifyClient implements IClockifyApi {
     if (res.status === 429) throw new ClockifyRateLimitError();
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      const msg = typeof body.message === "string"
-        ? body.message
-        : `Erro HTTP ${res.status} no Clockify.`;
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      const msg =
+        typeof body.message === "string" ? body.message : `Erro HTTP ${res.status} no Clockify.`;
       throw new ClockifyValidationError(msg);
     }
 
@@ -91,26 +90,29 @@ export class ClockifyClient implements IClockifyApi {
     return all;
   }
 
-  createTimeEntry(workspaceId: string, entry: ClockifyTimeEntryPayload): Promise<ClockifyTimeEntry> {
-    return this.request<ClockifyTimeEntry>(
-      `/workspaces/${workspaceId}/time-entries`,
-      { method: "POST", body: JSON.stringify(entry) }
-    );
+  createTimeEntry(
+    workspaceId: string,
+    entry: ClockifyTimeEntryPayload
+  ): Promise<ClockifyTimeEntry> {
+    return this.request<ClockifyTimeEntry>(`/workspaces/${workspaceId}/time-entries`, {
+      method: "POST",
+      body: JSON.stringify(entry),
+    });
   }
 
   async listTimeEntries(
     workspaceId: string,
     userId: string,
     start: string,
-    end: string,
+    end: string
   ): Promise<ClockifyTimeEntryFull[]> {
     const all: ClockifyTimeEntryFull[] = [];
     let page = 1;
     while (true) {
       const chunk = await this.request<ClockifyTimeEntryFull[]>(
-        `/workspaces/${workspaceId}/user/${userId}/time-entries`
-          + `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-          + `&hydrated=true&page-size=${TIME_ENTRIES_PAGE_SIZE}&page=${page}`
+        `/workspaces/${workspaceId}/user/${userId}/time-entries` +
+          `?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}` +
+          `&hydrated=true&page-size=${TIME_ENTRIES_PAGE_SIZE}&page=${page}`
       );
       all.push(...chunk);
       if (chunk.length < TIME_ENTRIES_PAGE_SIZE) break;
@@ -122,7 +124,7 @@ export class ClockifyClient implements IClockifyApi {
   updateTimeEntry(
     workspaceId: string,
     entryId: string,
-    payload: ClockifyTimeEntryPayload,
+    payload: ClockifyTimeEntryPayload
   ): Promise<ClockifyTimeEntryFull> {
     return this.request<ClockifyTimeEntryFull>(
       `/workspaces/${workspaceId}/time-entries/${entryId}`,
@@ -131,9 +133,8 @@ export class ClockifyClient implements IClockifyApi {
   }
 
   async deleteTimeEntry(workspaceId: string, entryId: string): Promise<void> {
-    await this.request<void>(
-      `/workspaces/${workspaceId}/time-entries/${entryId}`,
-      { method: "DELETE" }
-    );
+    await this.request<void>(`/workspaces/${workspaceId}/time-entries/${entryId}`, {
+      method: "DELETE",
+    });
   }
 }

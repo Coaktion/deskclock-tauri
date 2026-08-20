@@ -1,12 +1,14 @@
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
-import { addDaysISO, computeEndHHMM, parseDurationInput } from "@shared/utils/time";
+import { addDaysISO, buildLocalISO, computeEndHHMM, parseDurationInput } from "@shared/utils/time";
 import { useRef, useState } from "react";
 
 const DEFAULT_DURATION_SECS = 3600;
@@ -14,13 +16,6 @@ const DEFAULT_DURATION_SECS = 3600;
 function nowHHMM(): string {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(dateISO + "T00:00:00");
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 
 function isoToHHMM(iso: string): string {
@@ -42,6 +37,7 @@ export function useRetroactiveForm({
   onTaskAdded,
 }: UseRetroactiveFormOptions) {
   const { taskRepo, plannedTaskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [name, setName] = useState("");
   const [projectName, setProjectName] = useState("");
   const [categoryName, setCategoryName] = useState("");
@@ -50,6 +46,9 @@ export function useRetroactiveForm({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  // Persistem entre lançamentos da cadeia, como projeto e categoria: entradas
+  // consecutivas do mesmo dia costumam compartilhar o mesmo valor.
+  const [customValues, setCustomValues] = useState<CustomValues>({});
 
   const initialStart = nowHHMM();
   const {
@@ -84,10 +83,10 @@ export function useRetroactiveForm({
     setError("");
     const st = startTime || prevStart.current;
     const et = overrideEndHHMM ?? (endTime || prevEnd.current);
-    const startISO = buildISO(selectedDate, st);
-    let endISO = buildISO(selectedDate, et);
+    const startISO = buildLocalISO(selectedDate, st);
+    let endISO = buildLocalISO(selectedDate, et);
     if (new Date(endISO) < new Date(startISO)) {
-      endISO = buildISO(addDaysISO(selectedDate, 1), et);
+      endISO = buildLocalISO(addDaysISO(selectedDate, 1), et);
     }
     const durationSeconds = Math.round(
       (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
@@ -104,6 +103,7 @@ export function useRetroactiveForm({
     await createRetroactiveTask(
       taskRepo,
       {
+        workspaceId,
         name: name.trim() || null,
         projectId: pId,
         categoryId: cId,
@@ -111,6 +111,7 @@ export function useRetroactiveForm({
         startTime: startISO,
         endTime: endISO,
         durationSeconds,
+        customValues,
       },
       new Date().toISOString()
     );
@@ -152,7 +153,20 @@ export function useRetroactiveForm({
     setCategoryName(category?.name ?? "");
     setSelectedCategoryId(task.categoryId);
     setBillable(task.billable);
+    setCustomValues(task.customValues);
     nameRef.current?.focus();
+  }
+
+  /**
+   * Zera a categoria ao trocar de projeto. Vive aqui, e não num `useEffect`
+   * keyed em `selectedProjectId`, porque `prefill` preenche projeto e categoria
+   * **juntos**: um efeito apagaria a categoria que acabou de chegar ao lado
+   * dela. Quem chama é o `onSelect` do autocomplete de projeto — escolha de
+   * verdade —, nunca o `onChange`, que dispara a cada tecla.
+   */
+  function clearCategory() {
+    setCategoryName("");
+    setSelectedCategoryId(null);
   }
 
   function advanceChainStart(newStartHHMM: string) {
@@ -179,8 +193,12 @@ export function useRetroactiveForm({
     setCategoryName,
     billable,
     setBillable,
+    customValues,
+    setCustomValues,
+    selectedProjectId,
     setSelectedProjectId,
     setSelectedCategoryId,
+    clearCategory,
     startTime,
     endTime,
     durationInput,

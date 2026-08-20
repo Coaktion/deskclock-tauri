@@ -1,0 +1,236 @@
+import { describe, it, expect } from "vitest";
+import {
+  buildActivityColumnValues,
+  buildActivityDateColumns,
+  secondsToDecimalHours,
+  serializeNumber,
+  serializePerson,
+  serializeStatus,
+  serializeDropdown,
+  MONDAY_BILLABLE_LABEL,
+  MONDAY_NON_BILLABLE_LABEL,
+  MONDAY_COMPLETED_LABEL,
+} from "@domain/usecases/monday/buildActivityColumnValues";
+import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
+import { localISO } from "../../../helpers/localTime";
+
+// `satisfies` em vez de anotação: com Billing type, Status e Project Stage
+// opcionais no tipo, anotar tornaria `COLUMNS.status` um `string | undefined` e
+// as asserções abaixo não poderiam indexar por ele.
+const COLUMNS = {
+  reportedHours: "numeric_mm33gj5m",
+  billingType: "color_mm33rxm7",
+  activityType: "color_mm19csp3",
+  projectStage: "color_mm19zrwg",
+  status: "status",
+  person: "person",
+} satisfies MondayActivityColumnIds;
+
+describe("serializadores de coluna do Monday", () => {
+  it("serializa numbers como string", () => {
+    expect(serializeNumber(1.83)).toBe("1.83");
+  });
+
+  it("serializa status pelo rótulo visível", () => {
+    expect(serializeStatus("Development")).toEqual({ label: "Development" });
+  });
+
+  it("serializa dropdown como lista de rótulos, mesmo com um só", () => {
+    // O `status` grava `{ label }`; passar um formato pelo outro faz o Monday
+    // recusar a mutation inteira.
+    expect(serializeDropdown("Internal Planning")).toEqual({ labels: ["Internal Planning"] });
+  });
+
+  it("serializa people no formato personsAndTeams com id numérico", () => {
+    expect(serializePerson("21181483")).toEqual({
+      personsAndTeams: [{ id: 21181483, kind: "person" }],
+    });
+  });
+});
+
+describe("secondsToDecimalHours", () => {
+  it("converte segundos em horas decimais com 2 casas", () => {
+    expect(secondsToDecimalHours(6600)).toBe(1.83);
+  });
+
+  it("retorna 0 para duração zero", () => {
+    expect(secondsToDecimalHours(0)).toBe(0);
+  });
+
+  it("arredonda para cima na terceira casa", () => {
+    expect(secondsToDecimalHours(3599)).toBe(1);
+  });
+});
+
+describe("buildActivityColumnValues", () => {
+  it("monta as colunas obrigatórias de uma atividade billable", () => {
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 1.83,
+      billable: true,
+      userId: "21181483",
+    });
+
+    expect(values).toEqual({
+      [COLUMNS.reportedHours]: "1.83",
+      [COLUMNS.billingType]: { label: MONDAY_BILLABLE_LABEL },
+      [COLUMNS.status]: { label: MONDAY_COMPLETED_LABEL },
+      [COLUMNS.person]: { personsAndTeams: [{ id: 21181483, kind: "person" }] },
+    });
+  });
+
+  it("usa o rótulo Non Billable quando a tarefa não é faturável", () => {
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 0.5,
+      billable: false,
+      userId: "1",
+    });
+
+    expect(values[COLUMNS.billingType]).toEqual({ label: MONDAY_NON_BILLABLE_LABEL });
+  });
+
+  it("inclui Activity Type e Project Stage quando há mapeamento", () => {
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 2,
+      billable: true,
+      userId: "1",
+      activityTypeLabel: "Development",
+      projectStageLabel: "Execução",
+    });
+
+    expect(values[COLUMNS.activityType]).toEqual({ label: "Development" });
+    expect(values[COLUMNS.projectStage]).toEqual({ label: "Execução" });
+  });
+
+  it("omite Project Stage quando o board não tem a coluna", () => {
+    const withoutStage: MondayActivityColumnIds = { ...COLUMNS };
+    delete withoutStage.projectStage;
+    const values = buildActivityColumnValues({
+      columnIds: withoutStage,
+      hoursDecimal: 2,
+      billable: true,
+      userId: "1",
+      projectStageLabel: "Execução",
+    });
+
+    expect(Object.keys(values)).not.toContain("color_mm19zrwg");
+  });
+
+  it("omite Billing type e Status quando o board não tem as colunas", () => {
+    // O board fora do template deixou de ser recusado na importação, então ele
+    // chega aqui. Mandar o id assim mesmo faria o Monday recusar a mutation
+    // inteira — e o "não existe" da resposta é lido pelo sender como item
+    // apagado, que responde recriando: duplicaria a atividade a cada ciclo.
+    const minimal: MondayActivityColumnIds = {
+      reportedHours: COLUMNS.reportedHours,
+      activityType: COLUMNS.activityType,
+      person: COLUMNS.person,
+    };
+
+    const values = buildActivityColumnValues({
+      columnIds: minimal,
+      hoursDecimal: 1.5,
+      billable: true,
+      userId: "1",
+      statusLabel: "Working on it",
+      activityTypeLabel: "Development",
+    });
+
+    expect(values).toEqual({
+      [COLUMNS.reportedHours]: "1.5",
+      [COLUMNS.activityType]: { label: "Development" },
+      [COLUMNS.person]: { personsAndTeams: [{ id: 1, kind: "person" }] },
+    });
+  });
+
+  it("grava o motivo de não faturável na coluna dropdown", () => {
+    const values = buildActivityColumnValues({
+      columnIds: { ...COLUMNS, nonBillableReason: "dropdown_mm33hnk6" },
+      hoursDecimal: 1,
+      billable: false,
+      userId: "1",
+      nonBillableReasonLabel: "Internal Planning",
+    });
+
+    expect(values["dropdown_mm33hnk6"]).toEqual({ labels: ["Internal Planning"] });
+  });
+
+  it("não grava o motivo numa hora faturável", () => {
+    // O motivo responde "por que **esta** hora não foi faturada": junto de um
+    // Billing type "Billable" ele contradiria a coluna ao lado.
+    const values = buildActivityColumnValues({
+      columnIds: { ...COLUMNS, nonBillableReason: "dropdown_mm33hnk6" },
+      hoursDecimal: 1,
+      billable: true,
+      userId: "1",
+      nonBillableReasonLabel: "Internal Planning",
+    });
+
+    expect(Object.keys(values)).not.toContain("dropdown_mm33hnk6");
+  });
+
+  it("omite o motivo quando o board não tem a coluna", () => {
+    // Ausente em 3 dos 4 boards internos; mandar o id assim mesmo derrubaria a
+    // mutation inteira.
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 1,
+      billable: false,
+      userId: "1",
+      nonBillableReasonLabel: "Internal Planning",
+    });
+
+    expect(Object.keys(values)).not.toContain("dropdown_mm33hnk6");
+  });
+
+  it("grava Start Date e End Date com o dia trabalhado, sem hora", () => {
+    const values = buildActivityDateColumns(
+      { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
+      localISO(2026, 7, 28, 12),
+      localISO(2026, 7, 28, 14, 30)
+    );
+
+    expect(values).toEqual({
+      date_mm33tthy: { date: "2026-07-28" },
+      date_mm33zcmr: { date: "2026-07-28" },
+    });
+  });
+
+  it("usa o dia **local** do instante, não o dia em UTC", () => {
+    // Uma tarefa das 23h em fuso negativo é do dia 28 para quem a trabalhou e do
+    // dia 29 em UTC. Sem hora junto, o Monday não tem como reconverter: mandar o
+    // dia UTC jogaria a atividade para o dia seguinte no board.
+    const iso = localISO(2026, 7, 28, 23);
+
+    const values = buildActivityDateColumns(
+      { ...COLUMNS, startDate: "date_mm33tthy", endDate: "date_mm33zcmr" },
+      iso,
+      iso
+    );
+
+    expect(values).toEqual({
+      date_mm33tthy: { date: "2026-07-28" },
+      date_mm33zcmr: { date: "2026-07-28" },
+    });
+  });
+
+  it("omite as datas quando o board não tem as colunas", () => {
+    expect(
+      buildActivityDateColumns(COLUMNS, "2026-07-31T18:05:09.000Z", "2026-07-31T19:05:09.000Z")
+    ).toEqual({});
+  });
+
+  it("permite sobrescrever o status final", () => {
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 1,
+      billable: true,
+      userId: "1",
+      statusLabel: "Working on it",
+    });
+
+    expect(values[COLUMNS.status]).toEqual({ label: "Working on it" });
+  });
+});

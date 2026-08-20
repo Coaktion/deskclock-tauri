@@ -9,23 +9,26 @@ import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { ITaskSender } from "@domain/integrations/ITaskSender";
 import { startOfDayISO, endOfDayISO, addDaysISO } from "@shared/utils/time";
+import { localISO } from "../../helpers/localTime";
 
 const TODAY = "2026-05-06";
-const NOW_ISO = "2026-05-06T15:00:00.000Z";
+const NOW_ISO = localISO(2026, 5, 6, 15);
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: "Tarefa teste",
     projectId: "proj-1",
     categoryId: "cat-1",
     billable: true,
-    startTime: "2026-05-06T09:00:00.000Z",
-    endTime: "2026-05-06T10:00:00.000Z",
+    startTime: localISO(2026, 5, 6, 9),
+    endTime: localISO(2026, 5, 6, 10),
     durationSeconds: 3600,
     status: "completed",
-    createdAt: "2026-05-06T09:00:00.000Z",
-    updatedAt: "2026-05-06T10:00:00.000Z",
+    createdAt: localISO(2026, 5, 6, 9),
+    updatedAt: localISO(2026, 5, 6, 10),
+    customValues: {},
     ...overrides,
   };
 }
@@ -43,10 +46,15 @@ function makeLogRepo(sentIds: string[] = []): ITaskIntegrationLogRepository {
   } as unknown as ITaskIntegrationLogRepository;
 }
 
+/** Sender que aceita tudo: devolve como enviado exatamente o que recebeu. */
 function makeSender(): ITaskSender {
   return {
     integrationName: "TestInteg",
-    send: vi.fn().mockResolvedValue(undefined),
+    send: vi.fn(async (tasks: Task[]) => ({
+      sentTaskIds: tasks.map((t) => t.id),
+      refused: [],
+      failed: [],
+    })),
   };
 }
 
@@ -57,6 +65,7 @@ function makeDeps(overrides: Partial<DailyTemplateDeps> = {}): DailyTemplateDeps
     logKey: "test_key",
     taskRepo: makeTaskRepo(),
     logRepo: makeLogRepo(),
+    workspaceId: "ws-integracao",
     timestampPort: {
       get: vi.fn().mockReturnValue(""),
       set: vi.fn().mockResolvedValue(undefined),
@@ -73,7 +82,9 @@ function makeDeps(overrides: Partial<DailyTemplateDeps> = {}): DailyTemplateDeps
 describe("calcDailyRange", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-05-06T12:00:00Z"));
+    // Relógio no meio-dia **local** de TODAY: `calcDailyRange` parte de
+    // `todayISO()`, que é local, e 12:00Z já é o dia seguinte em fuso positivo.
+    vi.setSystemTime(new Date(localISO(2026, 5, 6, 12)));
   });
   afterEach(() => vi.useRealTimers());
 
@@ -85,21 +96,21 @@ describe("calcDailyRange", () => {
   });
 
   it("timestamp = ontem → start = startOfDay(ontem)", () => {
-    const result = calcDailyRange("2026-05-05T10:00:00.000Z", TODAY);
+    const result = calcDailyRange(localISO(2026, 5, 5, 10), TODAY);
     expect(result).not.toBeNull();
     expect(result!.start).toBe(startOfDayISO("2026-05-05"));
     expect(result!.end).toBe(endOfDayISO(TODAY));
   });
 
   it("timestamp = hoje → range cobre hoje (dedup via log)", () => {
-    const result = calcDailyRange("2026-05-06T10:00:00.000Z", TODAY);
+    const result = calcDailyRange(localISO(2026, 5, 6, 10), TODAY);
     expect(result).not.toBeNull();
     expect(result!.start).toBe(startOfDayISO(TODAY));
     expect(result!.end).toBe(endOfDayISO(TODAY));
   });
 
   it("timestamp = futuro → null", () => {
-    expect(calcDailyRange("2026-05-10T10:00:00.000Z", TODAY)).toBeNull();
+    expect(calcDailyRange(localISO(2026, 5, 10, 10), TODAY)).toBeNull();
   });
 });
 
@@ -110,7 +121,7 @@ describe("runDailyTemplate", () => {
     const taskRepo = makeTaskRepo();
     const deps = makeDeps({
       taskRepo,
-      timestampPort: { get: () => "2026-05-10T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 10, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result).toEqual({ integration: "TestInteg", count: 0 });
@@ -125,7 +136,7 @@ describe("runDailyTemplate", () => {
     ];
     const deps = makeDeps({
       taskRepo: makeTaskRepo(tasks),
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(0);
@@ -134,9 +145,9 @@ describe("runDailyTemplate", () => {
   });
 
   it("algumas inválidas → warning com count exato; só válidas enviadas", async () => {
-    const valid = makeTask({ id: "t1", name: "ok" });
-    const invalid1 = makeTask({ id: "t2", name: "bad1" });
-    const invalid2 = makeTask({ id: "t3", name: "bad2" });
+    const valid = makeTask({ id: "t1", workspaceId: "ws-1", name: "ok" });
+    const invalid1 = makeTask({ id: "t2", workspaceId: "ws-1", name: "bad1" });
+    const invalid2 = makeTask({ id: "t3", workspaceId: "ws-1", name: "bad2" });
     const logRepo = makeLogRepo([]);
     const sender = makeSender();
     const deps = makeDeps({
@@ -144,7 +155,7 @@ describe("runDailyTemplate", () => {
       logRepo,
       validate: (t: Task) => t.id === "t1",
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.warning).toBe(
@@ -163,7 +174,7 @@ describe("runDailyTemplate", () => {
     const deps = makeDeps({
       taskRepo: makeTaskRepo([task]),
       logRepo,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: tsSet },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(0);
@@ -173,11 +184,46 @@ describe("runDailyTemplate", () => {
 
   it("caso feliz: 3 grupos / 5 tasks → count=3; sender com 3 tasks; markSent com 5 ids; timestamp atualizado", async () => {
     const tasks = [
-      makeTask({ id: "t1", name: "A", projectId: "p1", categoryId: "c1", durationSeconds: 1000 }),
-      makeTask({ id: "t2", name: "A", projectId: "p1", categoryId: "c1", durationSeconds: 500 }),
-      makeTask({ id: "t3", name: "B", projectId: "p1", categoryId: "c1", durationSeconds: 1800 }),
-      makeTask({ id: "t4", name: "B", projectId: "p1", categoryId: "c1", durationSeconds: 600 }),
-      makeTask({ id: "t5", name: "C", projectId: "p2", categoryId: "c1", durationSeconds: 900 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "A",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 1000,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "A",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 500,
+      }),
+      makeTask({
+        id: "t3",
+        workspaceId: "ws-1",
+        name: "B",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t4",
+        workspaceId: "ws-1",
+        name: "B",
+        projectId: "p1",
+        categoryId: "c1",
+        durationSeconds: 600,
+      }),
+      makeTask({
+        id: "t5",
+        workspaceId: "ws-1",
+        name: "C",
+        projectId: "p2",
+        categoryId: "c1",
+        durationSeconds: 900,
+      }),
     ];
     const logRepo = makeLogRepo([]);
     const sender = makeSender();
@@ -186,7 +232,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: tsSet },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(3);
@@ -213,15 +259,27 @@ describe("runDailyTemplate", () => {
     const yesterdayStart = new Date(2026, 4, 5, 9, 0).toISOString();
     const todayStart = new Date(2026, 4, 6, 9, 0).toISOString();
     const tasks = [
-      makeTask({ id: "t1", name: "Daily", startTime: yesterdayStart, durationSeconds: 1800 }),
-      makeTask({ id: "t2", name: "Daily", startTime: todayStart, durationSeconds: 2700 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: yesterdayStart,
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: todayStart,
+        durationSeconds: 2700,
+      }),
     ];
     const sender = makeSender();
     const deps = makeDeps({
       taskRepo: makeTaskRepo(tasks),
       logRepo: makeLogRepo([]),
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(2);
@@ -238,8 +296,20 @@ describe("runDailyTemplate", () => {
     const yesterdayStart = new Date(2026, 4, 5, 9, 0).toISOString();
     const todayStart = new Date(2026, 4, 6, 9, 0).toISOString();
     const tasks = [
-      makeTask({ id: "t1", name: "Daily", startTime: yesterdayStart, durationSeconds: 1800 }),
-      makeTask({ id: "t2", name: "Daily", startTime: todayStart, durationSeconds: 2700 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: yesterdayStart,
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "Daily",
+        startTime: todayStart,
+        durationSeconds: 2700,
+      }),
     ];
     const logRepo = makeLogRepo(["t1"]);
     const sender = makeSender();
@@ -247,7 +317,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(1);
@@ -263,8 +333,20 @@ describe("runDailyTemplate", () => {
     const morning = new Date(2026, 4, 6, 9, 0).toISOString();
     const afternoon = new Date(2026, 4, 6, 14, 0).toISOString();
     const tasks = [
-      makeTask({ id: "t1", name: "A", startTime: morning, durationSeconds: 1800 }),
-      makeTask({ id: "t2", name: "A", startTime: afternoon, durationSeconds: 2700 }),
+      makeTask({
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "A",
+        startTime: morning,
+        durationSeconds: 1800,
+      }),
+      makeTask({
+        id: "t2",
+        workspaceId: "ws-1",
+        name: "A",
+        startTime: afternoon,
+        durationSeconds: 2700,
+      }),
     ];
     const logRepo = makeLogRepo(["t1"]);
     const sender = makeSender();
@@ -272,7 +354,7 @@ describe("runDailyTemplate", () => {
       taskRepo: makeTaskRepo(tasks),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-06T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 6, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(1);
@@ -286,13 +368,16 @@ describe("runDailyTemplate", () => {
   it("sender lança erro → {count: 0, error}; markSent NÃO chamado; timestamp NÃO atualizado", async () => {
     const task = makeTask();
     const logRepo = makeLogRepo([]);
-    const sender = { integrationName: "TestInteg", send: vi.fn().mockRejectedValue(new Error("network failure")) };
+    const sender = {
+      integrationName: "TestInteg",
+      send: vi.fn().mockRejectedValue(new Error("network failure")),
+    };
     const tsSet = vi.fn();
     const deps = makeDeps({
       taskRepo: makeTaskRepo([task]),
       logRepo,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: tsSet },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.count).toBe(0);
@@ -302,7 +387,10 @@ describe("runDailyTemplate", () => {
   });
 
   it("validate: () => true (cenário UI) → zero invalids, warning undefined, flow normal", async () => {
-    const tasks = [makeTask({ id: "t1" }), makeTask({ id: "t2", name: "outra" })];
+    const tasks = [
+      makeTask({ id: "t1" }),
+      makeTask({ id: "t2", workspaceId: "ws-1", name: "outra" }),
+    ];
     const logRepo = makeLogRepo([]);
     const sender = makeSender();
     const deps = makeDeps({
@@ -310,10 +398,77 @@ describe("runDailyTemplate", () => {
       logRepo,
       validate: () => true,
       createSender: () => sender,
-      timestampPort: { get: () => "2026-05-04T10:00:00.000Z", set: vi.fn() },
+      timestampPort: { get: () => localISO(2026, 5, 4, 10), set: vi.fn() },
     });
     const result = await runDailyTemplate(deps, TODAY);
     expect(result.warning).toBeUndefined();
     expect(sender.send as ReturnType<typeof vi.fn>).toHaveBeenCalledOnce();
+  });
+
+  describe("envio parcial", () => {
+    it("expande o representante e marca só as tarefas dos grupos que subiram", async () => {
+      // O sender vê um representante por grupo; quem conhece o agrupamento é
+      // este template. Marcar todos os ids daria o badge "enviado" a tarefas de
+      // grupos que ficaram no caminho.
+      const tasks = [
+        makeTask({ id: "a1", name: "Grupo A" }),
+        makeTask({ id: "a2", name: "Grupo A" }),
+        makeTask({ id: "b1", name: "Grupo B" }),
+      ];
+      const logRepo = makeLogRepo([]);
+      const tsSet = vi.fn();
+      const sender = {
+        integrationName: "TestInteg",
+        // Só o representante do grupo A volta como enviado.
+        send: vi.fn(async (sent: Task[]) => ({
+          sentTaskIds: [sent.find((t) => t.name === "Grupo A")!.id],
+          refused: ['"Grupo B": HTTP 500.'],
+          failed: [],
+        })),
+      };
+      const deps = makeDeps({
+        taskRepo: makeTaskRepo(tasks),
+        logRepo,
+        createSender: () => sender,
+        timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
+      });
+
+      const result = await runDailyTemplate(deps, TODAY);
+
+      expect(result.count).toBe(1);
+      expect(logRepo.markSent as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
+        ["a1", "a2"],
+        "test_key"
+      );
+      expect(result.warning).toContain("HTTP 500");
+      // `calcDailyRange` deriva o início da janela do dia local do timestamp:
+      // avançá-lo com o grupo B recusado o tiraria da busca do ciclo seguinte.
+      expect(tsSet).not.toHaveBeenCalled();
+    });
+
+    it("nada confirmado não marca nem avança o timestamp", async () => {
+      const logRepo = makeLogRepo([]);
+      const tsSet = vi.fn();
+      const sender = {
+        integrationName: "TestInteg",
+        send: vi.fn(async () => ({
+          sentTaskIds: [],
+          refused: ['"X": falta o motivo.'],
+          failed: [],
+        })),
+      };
+      const deps = makeDeps({
+        taskRepo: makeTaskRepo([makeTask()]),
+        logRepo,
+        createSender: () => sender,
+        timestampPort: { get: () => localISO(2026, 5, 4, 10), set: tsSet },
+      });
+
+      const result = await runDailyTemplate(deps, TODAY);
+
+      expect(result.count).toBe(0);
+      expect(logRepo.markSent as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+      expect(tsSet).not.toHaveBeenCalled();
+    });
   });
 });

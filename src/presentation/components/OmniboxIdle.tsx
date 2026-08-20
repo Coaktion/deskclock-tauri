@@ -1,9 +1,18 @@
 import { Play } from "lucide-react";
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import { Input, TaskRow } from "@presentation/components/ui";
+import { getProjectColor } from "@shared/utils/projectColor";
 import { Autocomplete } from "./Autocomplete";
+import {
+  chipBillableClass,
+  chipEmptyClass,
+  chipFilledClass,
+  chipNonBillableClass,
+} from "./chipStyles";
 import type { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
-import type { SuggestionItem } from "@presentation/hooks/useOmniboxSuggestions";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
 
@@ -16,40 +25,16 @@ interface ChipProps {
 }
 
 function Chip({ label, filled, billable, isBillableChip, onClick }: ChipProps) {
-  if (isBillableChip) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`px-2 py-0.5 rounded text-xs border transition-colors cursor-pointer ${
-          billable
-            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-            : "bg-gray-800/60 border-gray-700/50 text-gray-500 hover:border-gray-600 hover:text-gray-400"
-        }`}
-      >
-        {label}
-      </button>
-    );
-  }
-
-  if (filled) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 cursor-pointer hover:bg-gray-700 transition-colors"
-      >
-        {label}
-      </button>
-    );
-  }
+  const className = isBillableChip
+    ? billable
+      ? chipBillableClass
+      : chipNonBillableClass
+    : filled
+      ? chipFilledClass
+      : chipEmptyClass;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 cursor-pointer hover:border-gray-500 hover:text-gray-400 transition-colors"
-    >
+    <button type="button" onClick={onClick} className={className}>
       {label}
     </button>
   );
@@ -63,12 +48,18 @@ interface OmniboxIdleProps extends DraftHookState {
   projects: Project[];
   categories: Category[];
   containerRef: React.RefObject<HTMLDivElement | null>;
+  /** O chip de faturamento é controle em toda parte, inclusive na sugestão. */
+  onToggleBillable: (task: PlannedTask) => void;
+  /** Destino do "Ver semana →" no rodapé da lista. */
+  onNavigatePlanning?: () => void;
 }
 
 export function OmniboxIdle({
   projects,
   categories,
   containerRef,
+  onToggleBillable,
+  onNavigatePlanning,
   draft,
   setDraft,
   focused,
@@ -76,20 +67,22 @@ export function OmniboxIdle({
   showSuggestions,
   setShowSuggestions,
   activeSuggIdx,
-  setActiveSuggIdx,
   editingChip,
   setEditingChip,
   inputRef,
   suggestions,
+  startPlanned,
   handleStart,
-  handleSuggestionSelect,
   handleInputKeyDown,
 }: OmniboxIdleProps) {
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, draft.projectId);
+
   return (
     <div
       ref={containerRef}
-      className={`bg-gradient-to-b from-gray-800/80 to-gray-900/80 border rounded-xl overflow-visible transition-all ${
-        focused ? "border-blue-500/50 ring-2 ring-blue-500/20" : "border-gray-700"
+      className={`relative bg-surface border rounded-card overflow-visible transition-all ${
+        focused ? "border-accent ring-2 ring-accent/20" : "border-border"
       }`}
     >
       {/* Main input row */}
@@ -98,19 +91,18 @@ export function OmniboxIdle({
           type="button"
           onClick={() => void handleStart()}
           title="Iniciar tarefa"
-          className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors"
+          className="shrink-0 w-10 h-10 rounded-full bg-accent hover:opacity-90 text-white flex items-center justify-center transition-opacity"
         >
           <Play size={18} />
         </button>
 
-        <input
+        <Input
           ref={inputRef}
-          type="text"
+          variant="plain"
           value={draft.name}
           onChange={(e) => {
             setDraft((d) => ({ ...d, name: e.target.value }));
             setShowSuggestions(true);
-            setActiveSuggIdx(0);
           }}
           onFocus={() => {
             setFocused(true);
@@ -119,19 +111,26 @@ export function OmniboxIdle({
           onBlur={() => setFocused(false)}
           onKeyDown={handleInputKeyDown}
           placeholder="Em que você está trabalhando?"
-          className="flex-1 bg-transparent text-[15px] font-medium text-gray-100 placeholder-gray-500 focus:outline-none"
+          className="flex-1 text-lead! font-medium"
         />
       </div>
 
       {/* Chips row */}
-      <div className="flex gap-2 px-4 pb-3 flex-wrap">
+      <div className="flex gap-2 px-3 pb-3 flex-wrap">
         {editingChip === "project" ? (
           <div className="w-40">
             <Autocomplete
               value={draft.projectName}
               onChange={(v) => setDraft((d) => ({ ...d, projectName: v }))}
               onSelect={(o) => {
-                setDraft((d) => ({ ...d, projectName: o.name, projectId: o.id }));
+                // Trocar o projeto zera a categoria: o recorte de opções mudou.
+                setDraft((d) => ({
+                  ...d,
+                  projectName: o.name,
+                  projectId: o.id,
+                  categoryName: "",
+                  categoryId: null,
+                }));
                 setEditingChip(null);
               }}
               onEnter={() => setEditingChip(null)}
@@ -164,7 +163,7 @@ export function OmniboxIdle({
                 setEditingChip(null);
               }}
               onEnter={() => setEditingChip(null)}
-              options={categories}
+              options={categoryOptions}
               placeholder="Categoria"
               autoFocus
             />
@@ -186,42 +185,54 @@ export function OmniboxIdle({
         />
       </div>
 
-      {/* Suggestions dropdown */}
+      {/*
+       * As planejadas do dia, penduradas no card e **fora do fluxo**: em fluxo,
+       * abri-la a cada foco empurraria os KPIs e as Entradas tela abaixo — que é
+       * metade da queixa que tirou a lista daqui em `86e3245`.
+       *
+       * Escolher uma **inicia** a tarefa; o chip de faturamento barra a
+       * propagação por conta própria, então ele continua alternando sem
+       * disparar a linha em volta.
+       */}
       {showSuggestions && suggestions.length > 0 && (
-        <div className="border-t border-gray-700/60 bg-gray-900/95 rounded-b-xl overflow-hidden">
-          <ul>
-            {suggestions.map((s: SuggestionItem, idx: number) => (
-              <li
-                key={s.key}
-                onMouseDown={() => handleSuggestionSelect(s)}
-                onMouseEnter={() => setActiveSuggIdx(idx)}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${
-                  idx === activeSuggIdx
-                    ? "bg-blue-600/20 text-gray-100"
-                    : "text-gray-300 hover:bg-gray-800/60"
-                }`}
-              >
-                <span
-                  className={`flex-shrink-0 w-2 h-2 rounded-full ${
-                    s.billable ? "bg-blue-400" : "bg-gray-500"
-                  }`}
+        <div className="absolute z-50 top-full left-2 right-2 mt-2 bg-raised border border-border-subtle rounded-card shadow-(--shadow-overlay) overflow-hidden">
+          {/* 236px: quatro linhas cheias — nome, projeto · categoria e chip —,
+              medidas em Chromium na bancada (53,22 cada, e a quarta sem a régua
+              de baixo, 212 no total), mais 24px da quinta. A meia-linha é o que
+              diz que a lista continua: parando em 212 o corte fica limpo e nada
+              na tela avisa que há mais. */}
+          <div className="max-h-59 overflow-y-auto">
+            {suggestions.map((task, idx) => {
+              const project = projects.find((p) => p.id === task.projectId);
+              const category = categories.find((c) => c.id === task.categoryId);
+              const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+
+              return (
+                <TaskRow
+                  key={task.id}
+                  title={task.name || "(sem nome)"}
+                  subtitle={subtitle || undefined}
+                  billable={task.billable}
+                  onToggleBillable={() => onToggleBillable(task)}
+                  dotColor={getProjectColor(project)}
+                  selected={idx === activeSuggIdx}
+                  onClick={() => void startPlanned(task)}
                 />
-                <span className="flex-1 text-sm truncate">{s.name}</span>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {s.isPlanned && (
-                    <span className="text-[10px] text-blue-400 font-medium uppercase tracking-wide">
-                      planejada
-                    </span>
-                  )}
-                  {s.projectName && (
-                    <span className="text-xs text-gray-500 truncate max-w-[80px]">
-                      {s.projectName}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+              );
+            })}
+          </div>
+
+          {onNavigatePlanning && (
+            <div className="border-t border-border-subtle px-3 py-2 text-right">
+              <button
+                type="button"
+                onClick={onNavigatePlanning}
+                className="text-micro text-accent-text hover:opacity-80 transition-opacity"
+              >
+                Ver semana →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

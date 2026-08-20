@@ -35,6 +35,7 @@ function makeTaskRepo(overrides: Partial<ITaskRepository> = {}): ITaskRepository
 function makePlannedTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
     id: "pt1",
+    workspaceId: "ws-1",
     name: "Reunião",
     projectId: "p1",
     categoryId: "c1",
@@ -48,6 +49,7 @@ function makePlannedTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
     actions: [],
     sortOrder: 0,
     createdAt: "2026-04-08T09:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -78,6 +80,7 @@ describe("startPlannedTask", () => {
     const plannedRepo = makePlannedRepo({ findById: vi.fn(async () => planned) });
     const runningTask = {
       id: "old",
+      workspaceId: "ws-1",
       name: null,
       projectId: null,
       categoryId: null,
@@ -88,12 +91,22 @@ describe("startPlannedTask", () => {
       status: "running" as const,
       createdAt: NOW,
       updatedAt: NOW,
+      customValues: {},
     };
     const taskRepo = makeTaskRepo({ findByStatus: vi.fn(async () => [runningTask]) });
     await startPlannedTask(plannedRepo, taskRepo, "pt1", NOW);
     expect(taskRepo.update).toHaveBeenCalledWith(
       expect.objectContaining({ id: "old", status: "completed" })
     );
+  });
+
+  it("copia os valores personalizados da planejada", async () => {
+    // É por isso que `planned_task_custom_values` existe: dar Play já traz o
+    // valor preenchido, sem o usuário reinformar.
+    const planned = makePlannedTask({ customValues: { "f-stage": "o1" } });
+    const plannedRepo = makePlannedRepo({ findById: vi.fn(async () => planned) });
+    const task = await startPlannedTask(plannedRepo, makeTaskRepo(), "pt1", NOW);
+    expect(task.customValues).toEqual({ "f-stage": "o1" });
   });
 
   it("salva nova task no repositório", async () => {

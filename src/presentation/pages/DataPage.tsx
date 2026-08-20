@@ -1,44 +1,110 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Upload } from "lucide-react";
 import { ProjectsPanel } from "@presentation/components/ProjectsPanel";
 import { CategoriesPanel } from "@presentation/components/CategoriesPanel";
+import { WorkspacesPanel } from "@presentation/components/WorkspacesPanel";
+import { CustomFieldsPanel } from "@presentation/components/CustomFieldsPanel";
+import { Button, FilterPill, PageHeader } from "@presentation/components/ui";
+import { BulkImportModal } from "@presentation/modals/BulkImportModal";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useTour } from "@presentation/hooks/useTour";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
+
+type Section = "projetos" | "categorias" | "workspaces" | "campos";
 
 export function DataPage() {
-  const [section, setSection] = useState<"projetos" | "categorias">("projetos");
-  const { projects } = useProjects();
-  const { categories } = useCategories();
+  const [section, setSection] = useState<Section>("projetos");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  // Os hooks vivem aqui, não dentro dos painéis: duas instâncias teriam estados
+  // independentes e o contador da aba ficaria velho a cada exclusão.
+  const projectsData = useProjects();
+  const categoriesData = useCategories();
+  const customFieldsData = useCustomFields();
+  const { workspaces } = useWorkspaces();
+  const { startTour, hasSeenTour } = useTour("data");
+
+  useEffect(() => {
+    if (!hasSeenTour) {
+      const t = setTimeout(() => startTour(), 400);
+      return () => clearTimeout(t);
+    }
+  }, [hasSeenTour]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tabs: [Section, string, number][] = [
+    ["projetos", "Projetos", projectsData.projects.length],
+    ["categorias", "Categorias", categoriesData.categories.length],
+    ["workspaces", "Workspaces", workspaces.length],
+    ["campos", "Campos", customFieldsData.fields.length],
+  ];
+
+  /**
+   * A importação em massa é ação **da tela**, e por isso mora no cabeçalho — no
+   * painel ela dividia a linha com a busca, que é do conteúdo. Workspaces e
+   * Campos não a têm: workspace se cria com cor, e campo com tipo.
+   */
+  const bulkImport =
+    section === "projetos"
+      ? {
+          title: "Importar projetos em massa",
+          placeholder: "Um projeto por linha.\nEx: Cliente A\nCliente B",
+          onImport: projectsData.bulkImportProjects,
+        }
+      : section === "categorias"
+        ? {
+            title: "Importar categorias em massa",
+            placeholder:
+              "Uma categoria por linha.\nPrefixo ! = non-billable.\nEx: Desenvolvimento\n!Reuniões",
+            onImport: categoriesData.bulkImportCategories,
+          }
+        : null;
 
   return (
-    <div className="h-full overflow-y-auto p-5">
-      <h1 className="text-lg font-semibold text-gray-100 mb-4">Dados</h1>
-      <div className="flex gap-2 mb-5">
-        {(
-          [
-            ["projetos", "Projetos", projects.length],
-            ["categorias", "Categorias", categories.length],
-          ] as const
-        ).map(([key, label, count]) => (
-          <button
+    <div className="h-full flex flex-col">
+      <PageHeader
+        title="Dados"
+        tourId="data-header"
+        onStartTour={startTour}
+        tabs={tabs.map(([key, label, count]) => (
+          <FilterPill
             key={key}
+            active={section === key}
             onClick={() => setSection(key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
-              section === key
-                ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                : "bg-gray-900 border-gray-700 text-gray-400 hover:text-gray-200 hover:border-gray-600"
-            }`}
+            count={count}
           >
             {label}
-            <span className={`ml-1.5 ${section === key ? "text-blue-400/60" : "text-gray-600"}`}>
-              {count}
-            </span>
-          </button>
+          </FilterPill>
         ))}
+        actions={
+          bulkImport && (
+            <Button onClick={() => setBulkOpen(true)} icon={<Upload size={14} />}>
+              Importar
+            </Button>
+          )
+        }
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto p-5">
+        {/* `h-full` é o que dá altura definida ao cartão de dentro: é contra ela
+            que a lista para de crescer e passa a rolar por dentro, mantendo a
+            linha de adicionar sempre à vista. */}
+        <div data-tour="data-panel" className="h-full max-w-[720px] mx-auto flex flex-col gap-3">
+          {section === "projetos" && (
+            <ProjectsPanel data={projectsData} categories={categoriesData.categories} />
+          )}
+          {section === "categorias" && <CategoriesPanel data={categoriesData} />}
+          {section === "workspaces" && <WorkspacesPanel />}
+          {section === "campos" && <CustomFieldsPanel data={customFieldsData} />}
+        </div>
       </div>
-      {section === "projetos" ? (
-        <ProjectsPanel showTitle={false} />
-      ) : (
-        <CategoriesPanel showTitle={false} />
+
+      {bulkOpen && bulkImport && (
+        <BulkImportModal
+          title={bulkImport.title}
+          placeholder={bulkImport.placeholder}
+          onImport={bulkImport.onImport}
+          onClose={() => setBulkOpen(false)}
+        />
       )}
     </div>
   );

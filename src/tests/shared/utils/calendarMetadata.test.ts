@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  parseCalendarMetadata,
-  findByNameCaseInsensitive,
-} from "@shared/utils/calendarMetadata";
+import { parseCalendarMetadata, findByNameCaseInsensitive } from "@shared/utils/calendarMetadata";
 
 describe("parseCalendarMetadata", () => {
   it("extrai projeto e categoria de descrição bem formada", () => {
@@ -59,9 +56,9 @@ describe("parseCalendarMetadata", () => {
 
 describe("findByNameCaseInsensitive", () => {
   const items = [
-    { id: "1", name: "Tech Interno2" },
-    { id: "2", name: "Reunião do Time" },
-    { id: "3", name: "Dev" },
+    { id: "1", workspaceId: "ws-1", name: "Tech Interno2" },
+    { id: "2", workspaceId: "ws-1", name: "Reunião do Time" },
+    { id: "3", workspaceId: "ws-1", name: "Dev" },
   ];
 
   it("encontra por nome exato", () => {

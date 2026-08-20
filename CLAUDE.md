@@ -1,647 +1,194 @@
-# CLAUDE.md — Especificação do Projeto DeskClock
+# CLAUDE.md — DeskClock
 
-> **Propósito deste documento:** Servir como fonte única de verdade para agentes de IA durante todo o ciclo de desenvolvimento. Toda decisão de implementação, arquitetura e design deve ser validada contra este documento. Atualize-o sempre que padrões ou decisões mudarem.
+**Este arquivo é índice, não manual.** Ele carrega em todo request: só entra aqui o que vale
+para *qualquer* tarefa. O resto está mapeado na §5, com o gatilho de leitura ao lado.
 
----
-
-## 1. VISÃO GERAL DO PROJETO
-
-**Nome:** DeskClock  
-**Tipo:** Aplicativo desktop multiplataforma  
-**Objetivo:** Registro de horas trabalhadas com flexibilidade total — o app se adapta ao modo de trabalho do usuário, não o contrário.
-
-**Princípios de design:**
-- Cadastros devem exigir o mínimo de cliques possível.
-- Edições sempre em modais.
-- Exclusões sem confirmação — a ação é imediata.
-- Overlays arrastáveis com persistência de posição.
-- Atalhos globais para operações frequentes.
-- Lançamento retroativo como tela dedicada — fluxo de entrada rápida em sequência, sem modal.
+> **Era 180KB até 2026-08-10** — ~50k tokens gastos antes de você digitar a primeira palavra, e
+> 69% disso era consulta por tela carregada como se fosse regra. Nada se perdeu: o conteúdo foi
+> redistribuído (§5), e o histórico está em `git log`. **Ao acrescentar algo, pergunte primeiro
+> se vale para toda tarefa.** Se não vale, o lugar é um dos documentos da §5.
 
 ---
 
-## 2. STACK TECNOLÓGICA
+## 1. O produto
 
-| Camada | Tecnologia |
-|---|---|
-| Framework desktop | Tauri |
-| Frontend | React + TypeScript |
-| Estilização | Tailwind CSS |
-| Ícones | Lucide React |
-| Banco de dados | SQLite (via Tauri) |
-| Arquitetura | Clean Architecture |
-| Linting | ESLint + Prettier |
-| Testes | Vitest (unit) |
-| Build targets | Windows, Ubuntu, Arch Linux |
+**DeskClock** — app desktop (Tauri) de registro de horas. A premissa é que **o app se adapta ao
+modo de trabalho do usuário, não o contrário**.
 
----
+Princípios que decidem discussão de UX:
 
-## 3. ARQUITETURA
+- Cadastro com o mínimo de cliques.
+- Edição sempre em modal.
+- **Exclusão sem confirmação** — a ação é imediata. As duas exceções (workspace, atividade do
+  Monday) exigem uma escolha, não um "tem certeza?".
+- Overlay arrastável com posição persistida.
+- Lançamento retroativo é tela dedicada, em sequência, sem modal.
+
+## 2. Stack
+
+Tauri · React + TypeScript · Tailwind CSS · Lucide · SQLite (plugin Tauri) · Clean Architecture ·
+ESLint + Prettier · **Vitest** (só unit) · builds para Windows, Ubuntu e Arch.
+
+`pnpm` para instalar — nunca `npm`.
+
+## 3. Arquitetura e regras de dependência
 
 ```
 src/
-├── domain/           # Entidades, interfaces de repositório, casos de uso
-│   ├── entities/     # Task, Project, Category, ExportProfile, Config
-│   ├── repositories/ # Interfaces (ports)
-│   └── usecases/     # Lógica de negócio pura
-├── infra/            # Implementações concretas
-│   ├── database/     # SQLite repositories
-│   ├── integrations/ # Google Sheets, Google Calendar
-│   └── system/       # Atalhos globais, tray, overlay window management
-├── presentation/     # React UI
-│   ├── pages/        # Tasks, Planning, History, Retroactive, Data, Settings
-│   ├── components/   # Componentes reutilizáveis (Autocomplete, DatePickerInput…)
-│   ├── overlays/     # CompactOverlay, PopupFlyout, CommandPaletteApp, Toast
-│   ├── modals/       # Modais de edição (EditTaskModal, ExportModal…)
-│   └── hooks/        # Custom hooks
-├── shared/           # Types, utils, constants
-└── tests/            # Espelha a estrutura de src/
+├── domain/         entidades, interfaces de repositório (ports), use cases
+├── infra/          implementações: database/, integrations/, system/
+├── presentation/   pages/, components/ (+ components/ui/), overlays/, modals/, hooks/, contexts/
+├── shared/         types, utils, constants — puros
+└── tests/          espelha src/
 ```
 
-**Regras de dependência (Clean Architecture):**
-- `domain/` não importa nada de `infra/` ou `presentation/`.
-- `infra/` implementa interfaces definidas em `domain/`.
-- `presentation/` consome `domain/` via hooks/contextos, nunca acessa `infra/` diretamente.
-- Novas integrações e bancos de dados devem ser adicionados em `infra/` sem alterar `domain/`.
+- `domain/` não importa de `infra/` nem `presentation/`, e **nada** de `@tauri-apps/*` ou `react`.
+- `infra/` implementa interface declarada em `domain/`, e não importa de `presentation/`.
+- `presentation/` consome `domain/` via hook/contexto e **nunca instancia classe de `infra/`** —
+  se aparecer `new GoogleSheetsTaskSender(...)` num componente, pare e injete via Provider.
+- `shared/` é util puro. Se é regra de negócio, é `domain/`.
 
----
+**Limites de tamanho** (orientação, não regra): componente > 350 linhas, hook > 150, use case >
+100, `useEffect` > 8 ou `useState` > 15 por componente ⇒ refatorar **antes** da próxima feature.
 
-## 4. MODELO DE DADOS
+O detalhamento — checagem anti-DRY, roteiro para integração nova, porta estreita de config — está
+em `docs-internal/guardrails.md`. Leia antes de criar abstração ou integração.
 
-### 4.1 Task (Registro de hora)
+## 4. Fluxo de trabalho
 
-| Campo | Tipo | Regras |
-|---|---|---|
-| id | UUID | PK, gerado automaticamente |
-| name | string \| null | Exibir "(sem nome)" se vazio |
-| project_id | UUID \| null | FK → Project |
-| category_id | UUID \| null | FK → Category |
-| billable | boolean | Padrão herdado da Category selecionada |
-| start_time | datetime | Obrigatório |
-| end_time | datetime \| null | null = em execução |
-| duration_seconds | integer \| null | Calculado: end_time - start_time |
-| status | enum | `running` \| `paused` \| `completed` |
-| created_at | datetime | Auto |
-| updated_at | datetime | Auto |
+**Ciclo:** planejar → aprovar → testar (TDD onde a camada permite) → implementar → validar que
+compila → `pnpm lint` → commit semântico → PR.
 
-### 4.2 PlannedTask (Tarefa planejada)
+- `main` exige PR, sempre buildável. Branches: `feat/`, `fix/`, `refactor/`.
+- Commits: `<tipo>(<escopo>): <assunto>` — `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+- Antes de criar branch, conferir mergeadas pendentes: `git branch --merged main`.
+- **Verificação visual não é opcional** em mudança de aparência: `pnpm tauri dev` nos **2 modos ×
+  4 acentos**.
+- **`pnpm visual`** compara o componente renderizado em Chromium com o wireframe do design, medida
+  a medida e pixel a pixel (`.visual/`). Fora do `pnpm test` de propósito — diff de pixel depende
+  de fonte e de browser, e num gate obrigatório viraria a falha que todo mundo aprende a ignorar.
+  Rode quando estiver mexendo em aparência; ele mede o que o `screenGeometry` não alcança (altura
+  real da linha, largura que a coluna do grid recebe, quebra de texto).
 
-| Campo | Tipo | Regras |
-|---|---|---|
-| id | UUID | PK |
-| name | string | Obrigatório |
-| project_id | UUID \| null | FK → Project |
-| category_id | UUID \| null | FK → Category |
-| billable | boolean | Herdado da Category |
-| schedule_type | enum | `specific_date` \| `recurring` \| `period` |
-| schedule_date | date \| null | Para `specific_date` |
-| recurring_days | integer[] \| null | Para `recurring` (0=Dom, 1=Seg...6=Sáb) |
-| period_start | date \| null | Para `period` |
-| period_end | date \| null | Para `period` |
-| completed_dates | date[] | Datas em que foi marcada como concluída |
-| actions | JSON | Array de `{ type: "open_url" \| "open_file", value: string }` |
-| sort_order | integer | Para ordenação manual |
-| created_at | datetime | Auto |
+## 5. Onde está o resto — e quando ler
 
-### 4.3 Project
+**Documentação interna mora em `docs-internal/`, nunca em `docs/`.** O `docs/` é a pasta que o
+GitHub Pages publica (`main:/docs` → `coaktion.github.io/deskclock-tauri`), e o repositório é
+**público**: arquivo colocado ali vai ao ar no merge, sem ninguém decidir isso. Ele tem três
+arquivos e só deve ter três — `index.html` (o manual do usuário), `favicon.svg` e `favicon.png`.
+Já esteve com os specs do Monday dentro, board ids da Aktie e tudo, servidos em HTML na internet
+aberta. Doc novo de arquitetura, tela, integração ou spec: `docs-internal/`.
 
-| Campo | Tipo | Regras |
-|---|---|---|
-| id | UUID | PK |
-| name | string | Único, obrigatório |
-
-### 4.4 Category
-
-| Campo | Tipo | Regras |
-|---|---|---|
-| id | UUID | PK |
-| name | string | Único, obrigatório |
-| default_billable | boolean | Padrão para novas tarefas com esta categoria |
-
-### 4.5 ExportProfile
-
-| Campo | Tipo | Regras |
-|---|---|---|
-| id | UUID | PK |
-| name | string | Obrigatório |
-| is_default | boolean | Apenas um pode ser default |
-| format | enum | `csv` \| `json` |
-| separator | enum | `comma` \| `semicolon` (apenas CSV) |
-| duration_format | enum | `hh:mm:ss` \| `decimal` \| `minutes` |
-| date_format | enum | `iso` \| `dd/mm/yyyy` |
-| columns | JSON | Array de `{ field, label, visible, order }` |
-
-### 4.6 Config (chave-valor)
-
-| Campo | Tipo |
+| Leia quando… | Documento |
 |---|---|
-| key | string (PK) |
-| value | JSON |
+| a tarefa toca **aparência** (componente, classe, cor, tamanho, raio, modal, chip) | **skill `design-system`** — invoque, não leia à mão |
+| vai mexer numa **tela** específica | `docs-internal/telas/<tela>.md` — `tarefas`, `planejamento`, `historico`, `dados`, `configuracoes`, `lancamento-retroativo`, `exportacao`, `overlays`, `primeira-execucao` |
+| vai mexer em **integração** | `docs-internal/integracoes/README.md` (contrato comum) + `google.md`, `clockify.md`, `monday.md` |
+| vai mexer em **entidade, repositório ou migration** | `docs-internal/modelo-de-dados.md` |
+| a dúvida é de **comportamento** (billable, agrupamento, autocomplete, data de referência, workspace, recorrência) | `docs-internal/regras-de-negocio.md` |
+| vai **escrever teste** | `docs-internal/testes.md` |
+| vai criar **abstração ou integração nova** | `docs-internal/guardrails.md` |
+| a rodada de **fidelidade do design** está em curso | `docs-internal/specs/design-system-fidelity.md` — conferir se a mudança visual não é uma etapa de lá |
+| vai mexer no **backup do banco no Drive** | `docs-internal/specs/backup-google-drive.md` — execução em fases, uma por sessão |
+| quer saber **por que** algo é assim | `docs-internal/historico-de-decisoes.md` e `git log` |
 
----
+### 5.1 De-para das seções antigas
 
-## 5. TELAS E FUNCIONALIDADES
+Há **340 citações de `§`** em comentários de código e nos próprios documentos — `(§6.7)`, `§8.4`,
+`§5.7`. Renumerar todas seria mexer em centenas de linhas para não mudar comportamento nenhum, e
+cada erro de renumeração aponta para o lugar errado calado. Então a numeração antiga continua
+valendo e resolve aqui:
 
-### 5.1 Overlays (Janelas flutuantes)
-
-> **Arquitetura atual:** 2 janelas independentes — Compact Overlay (sempre visível) + Popup Flyout (aparece ao clicar). O Welcome Overlay foi substituído pelo Command Palette. O Execution Overlay foi unificado no Popup Flyout.
-
-#### 5.1.1 Compact Overlay
-- **Sempre visível** (always-on-top), arrastável, com persistência de posição.
-- **Estado idle** (sem tarefa em execução): ícone do app + badge com contador de tarefas planejadas pendentes.
-- **Estado running**: timer `MM:SS` pulsante substituindo o ícone; anel com glow animado no estilo da cor de status.
-- **Estado paused**: indicador visual de pausa.
-- **Clique:** abre o Popup Flyout.
-- **Grip bar** para arraste, com snap-to-grid opcional.
-
-#### 5.1.2 Popup Flyout (Overlay de execução)
-- **Aparece ao clicar** no Compact Overlay — flyout acoplado, não janela separada.
-- **Estado idle:** lista de tarefas planejadas para hoje + botão "Nova tarefa". Cada linha tem botões `Concluir` (✓) e `Iniciar` (▶) — concluir marca a tarefa como concluída no dia atual sem precisar abrir o planejamento, útil para corrigir tarefas que pararam com "Pendente" mas estavam de fato finalizadas. Botões do header: `Ir para planejamento` | `Fechar`.
-- **Estado running/paused:** nome da tarefa, timer ao vivo, borda lateral colorida (billable/non-billable). Controles: Play/Pause, Stop (com confirmação Concluída/Pendente), Cancelar, Fechar.
-- **Confirmação de Stop:** ao clicar em Parar, abre um painel inline com input `HH:MM` da hora de término (preenchido com a hora atual) e botões `Concluída` / `Pendente`. Se o usuário não tocar no campo, o término é gravado como agora. Se backdatear, a hora informada vira o `endTime` e a `durationSeconds` é recalculada — atendendo ao caso "esqueci de parar o timer". Validação inline rejeita horas anteriores ao `startTime`.
-- **Edição inline por campo:** clique em nome, projeto ou categoria abre edição in-place sem modal.
-- **Hora de início** editável — recalcula o timer ao alterar.
-- **Seção "Ações"** (quando a tarefa em execução tiver ações configuradas): chips clicáveis que disparam cada ação sob demanda — não há mais execução automática ao iniciar.
-
----
-
-### 5.2 Tela de Tarefas (página principal)
-
-**Layout de cima para baixo:**
-
-#### Seção 1 — Tarefa atual em execução
-- Exibe todos os dados preenchidos + timer ativo.
-- Campo de hora de início editável — ao alterar, recalcula o timer.
-- **Botões:** Play/Pause | Stop | Edit | Cancel
-- **Edit:** Abre campos inline: Nome, Projeto (autocomplete), Categoria (autocomplete), Billable toggle. Botões: Salvar / Cancelar.
-- **Cancel:** Descarta a tarefa imediatamente, sem confirmação.
-- **Atalhos globais:** Se configurados, exibir abaixo como texto informativo (ex: "Ctrl+Shift+S para parar").
-
-#### Seção 2 — Tarefas planejadas para hoje
-- Lista compacta: Nome + botão Play.
-- Play inicia execução com dados da tarefa planejada preenchidos. As ações configuradas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução (ver §6.5).
-
-> **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
-
-#### Seção 3 — Totalizadores
-- Horas billable hoje | Horas non-billable hoje | Total semana com dias (ex: "15:00 2d").
-
-#### Seção 4 — Entradas de hoje
-- **Header:** Título "Entradas de Hoje" + total de horas hoje.
-- **Lista de tarefas registradas hoje:**
-  - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.
-  - **Botões por card:** Play (inicia nova execução com os mesmos dados, se não houver tarefa em andamento) | Edit (modal completo) | Delete (sem confirmação).
-- **Agrupamento:** Tarefas com mesmo Nome + Projeto + Categoria são agrupadas visualmente.
-  - Grupo exibe duração total.
-  - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação.
-  - Edit no grupo → altera todas as tarefas do grupo.
-  - Expandir grupo → editar/excluir tarefa individual.
-
----
-
-### 5.3 Tela de Planejamento
-
-> **Decisão de produto:** A visão "Hoje" foi removida. A visão Semana já permite selecionar qualquer data (incluindo hoje) e é suficiente para todos os fluxos de planejamento.
-
-- **Header:** Intervalo da semana (ex: "06/04 — 12/04/2026") + navegação ← →.
-- **Botões rápidos de dia:** Todos | Dom | Seg | Ter | Qua | Qui | Sex | Sáb. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
-- **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campo Data.
-- **Atalho "Hoje":** No campo Data única, botão de atalho seleciona a data atual.
-- **Tipos de agendamento:**
-  - `specific_date`: Dia único. Campo data com botão atalho "Hoje".
-  - `recurring`: Seleção de dias da semana. Sem data de término. Aparece até ser excluída.
-  - `period`: Data início + Data fim. Aparece durante todo o período.
-- **Ações por tarefa:** Array de `{ type: "open_url" | "open_file", value: string }`. URL auto-completa `https://` se ausente. N ações por tarefa. As ações não são disparadas automaticamente ao iniciar — ficam acessíveis como chips no Popup Flyout durante a execução (ver §6.5).
-- **Tecla Enter:** Se autocomplete fechado → cria a tarefa. Se autocomplete aberto → seleciona item.
-- **Edição:** abre modal completo.
-- **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação).
-- **Importar Google Agenda:** Botão visível quando Google conectado. Modal com eventos agrupados por dia (accordion), seleção por dia, editor inline por evento (projeto, categoria, recorrência). Filtra `workingLocation` e `outOfOffice`. `focusTime` **não** é filtrado — blocos de foco viram tarefas, pois costumam representar trabalho real.
-
-#### Lógica de Concluir/Pendente
-- **Concluir:** Adiciona a data atual ao array `completed_dates`. Tarefa deixa de aparecer na lista de planejadas na Tela de Tarefas para aquele dia, mas permanece no planejamento.
-- **Pendente:** Remove a data do array `completed_dates`. Tarefa volta a aparecer como planejada.
-
----
-
-### 5.4 Tela de Histórico
-
-#### Filtros
-- **Rápidos:** Hoje | 7 dias | 30 dias | Este mês.
-- **Avançados:** Período início/fim, Nome, Projeto, Categoria, Billable.
-- **Botões:** Buscar | Exportar resultados.
-
-#### Resultados
-- **Totalizadores:** Total horas | Total billable | Total non-billable | Qtd registros.
-- **Agrupamento por dia:** Header do grupo = "Ter. 7 de abr de 2026 — 8:00" (dia da semana abreviado + data + total de horas do dia).
-- **Por grupo-dia:** Botão exportar individual.
-- **Por tarefa:** Botões Edit (modal) | Delete (sem confirmação).
-
----
-
-### 5.5 Exportação de Tarefas
-
-#### Perfis de exportação
-- CRUD completo com um perfil padrão pré-existente (editável).
-- Interface simples: lista de perfis + criar novo / editar / excluir.
-
-#### Configuração do perfil
-- **Período:** Hoje | Personalizado (início + fim).
-- **Formato:** CSV | JSON.
-- **Separador (CSV):** Vírgula | Ponto-e-vírgula.
-- **Formato de duração:** HH:MM:SS | Decimal | Minutos.
-- **Formato de data:** ISO (AAAA-MM-DD) | DD/MM/AAAA.
-- **Colunas:** Reordenáveis via drag-and-drop. Toggle de visibilidade por coluna. Nome editável por coluna.
-
-#### Seleção de tarefas
-- Todas selecionadas por padrão. Selecionar todas / Desmarcar todas / Individual.
-- Tarefas agrupadas geram registro único com duração totalizada.
-
-#### Destino
-- Salvar arquivo | Copiar para área de transferência | Enviar para integração externa.
-
----
-
-### 5.6 Tela de Dados
-
-#### Projetos
-- **Importação em massa:** Textarea, um projeto por linha.
-- **Lista:** Filtro por nome + adicionar individualmente + excluir sem confirmação.
-
-#### Categorias
-- **Importação em massa:** Textarea, uma categoria por linha. Prefixo `!` = non-billable (ex: `!Reuniões`). Sem prefixo = billable.
-- **Lista:** Filtro por nome + adicionar individualmente (com toggle billable) + excluir sem confirmação.
-
----
-
-### 5.7 Tela de Configurações
-
-#### Geral
-| Configuração | Tipo | Descrição |
-|---|---|---|
-| Iniciar na inicialização do computador | toggle | Registra o app no startup do SO |
-| Timer ao vivo no ícone da bandeja | toggle | Mostra timer no system tray icon |
-| Abrir acesso rápido ao iniciar | toggle | Exibe o Command Palette ao abrir o app (padrão: ativo). Sem atalho global padrão — configure um em Configurações → Atalhos, se desejar. |
-| Fechar ao perder foco | toggle | Janela principal fecha ao perder o foco (padrão: desativado); Pin/Unpin na title bar suspende temporariamente |
-| Descartar tarefas com menos de 1 minuto | toggle | Cancela automaticamente tarefas paradas em menos de 60 s (padrão: desativado) |
-
-#### Overlay
-| Configuração | Tipo | Descrição |
-|---|---|---|
-| Mostrar ao iniciar tarefa | toggle | Execution Overlay aparece ao iniciar tarefa |
-| Opacidade em repouso | slider (%) | Opacidade do overlay quando não está em interação |
-| Snap to grid | toggle | Encaixa overlay em grade ao soltar arraste |
-
-#### Acessibilidade
-| Configuração | Tipo | Status | Descrição |
-|---|---|---|---|
-| Tamanho da fonte | select: P, M, G, GG | ✅ implementado | Escala texto via `--app-font-size` CSS custom property |
-| Tema | select: Azul, Verde, Escuro, Claro | ✅ implementado | Paleta de cores via CSS custom properties |
-
-#### Atalhos globais
-| Ação | Tipo | Descrição |
-|---|---|---|
-| Iniciar / Pausar / Retomar | hotkey input | Toggle de execução da tarefa |
-| Parar | hotkey input | Para a tarefa atual |
-| Mostrar / Ocultar overlay | hotkey input | Alterna visibilidade do overlay |
-| Mostrar / Ocultar janela | hotkey input | Alterna visibilidade da janela principal |
-
-#### Integrações externas
-
-**Google Sheets:**
-| Campo | Tipo |
+| Citação | Onde está agora |
 |---|---|
-| ID da Planilha | text input |
-| Sincronização automática | toggle (envia tarefa ao concluir) |
-| Envio manual | botão na tela de Integrações para enviar tarefas selecionadas sob demanda |
-| Autorização | botão OAuth |
+| §1, §2, §3 | este arquivo, §1–§3 |
+| §4, §4.x | `docs-internal/modelo-de-dados.md` |
+| §5.1 | `docs-internal/telas/overlays.md` |
+| §5.2 · §5.3 · §5.4 | `docs-internal/telas/tarefas.md` · `planejamento.md` · `historico.md` |
+| §5.5 · §5.6 | `docs-internal/telas/exportacao.md` · `dados.md` |
+| §5.7 | `docs-internal/telas/configuracoes.md` e, na parte de integração, `docs-internal/integracoes/` |
+| §5.8 · §5.9 | `docs-internal/telas/lancamento-retroativo.md` · `primeira-execucao.md` |
+| §6, §6.x | `docs-internal/regras-de-negocio.md` |
+| §7.1–§7.5 | este arquivo, §4 |
+| §7.6 | `docs-internal/testes.md` |
+| §8.1–§8.3 | este arquivo, §7 |
+| §8.4 e "Fonte da verdade visual" | **skill `design-system`** |
+| §9, §9.x | `docs-internal/guardrails.md` (§9.2 e os limites de tamanho também resumidos na §3 daqui) |
 
-**Google Agenda:**
-| Campo | Tipo |
+## 6. O que o teste garante — não repita em prosa
+
+Regra que uma trava executa não precisa de parágrafo: o teste falha com arquivo, linha e número; a
+prosa depende de alguém ter lido. **Antes de escrever uma regra nova aqui, veja se ela não cabe
+numa destas.**
+
+| Trava | O que reprova |
 |---|---|
-| Autorização | botão OAuth |
-| Rastrear reuniões automaticamente | toggle (`calendarAutoTrackingEnabled`, padrão desativado; requer Google conectado) |
-
-> **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 30 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
-
-**Clockify:**
-| Campo | Tipo |
-|---|---|
-| API Key | input password + instrução inline |
-| Workspace ativo | dropdown (buscado via API) |
-| Importar projetos | botão → cria Projects no DeskClock + mapeamento automático |
-| Importar tags | botão → cria Categories no DeskClock + mapeamento automático |
-| Mapeamento de projetos | tabela DeskClock Project ↔ Clockify Project (por workspace) |
-| Mapeamento de categorias | tabela DeskClock Category ↔ Clockify Tags (multi-select, por workspace) |
-| Tags padrão | multi-select de tags sempre incluídas em todo envio |
-| Sincronização automática | toggle + modo (por tarefa / diário) + gatilho (ao abrir / horário fixo) |
-| Gerenciar apontamentos | botão abre modal com CRUD direto sobre as time entries do workspace ativo (filtro por período + filtro por tags padrão; entries em andamento são ocultadas) |
-
-#### Feedback
-- Botão na **sidebar** (não dentro das configurações) que abre URL externa no navegador padrão para envio de feedbacks, bugs, sugestões.
-- Implementado via `tauri-plugin-opener` (`openUrl`).
-- Posição: rodapé da sidebar, ícone `MessageSquare` (Lucide).
-
----
-
-### 5.8 Tela de Lançamento Retroativo
-
-> **Decisão de produto:** O lançamento retroativo era originalmente especificado como um modal na Tela de Tarefas. Foi convertido em tela dedicada acessível pela sidebar para permitir entrada rápida em sequência de múltiplas tarefas sem fechar e reabrir o fluxo.
-
-- **Acesso:** Ícone `FileClock` na sidebar.
-- **Navegação de data:** Setas ← → e DatePickerInput. Não é possível avançar além de hoje.
-- **Formulário de criação inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, Hora início, Hora fim OU Duração. Criação sem modal; edição de registros existentes abre `EditTaskModal`.
-- **Modo de duração:** Toggle "Hora fim" / "Duração". Na duração, aceita `HH:MM:SS`, `MM:SS` ou inteiro (minutos).
-- **Overnight:** Se hora fim < hora início, considera-se que a tarefa cruzou meia-noite — end é atribuído ao dia seguinte.
-- **Cadeia de horários:** Após adicionar uma tarefa, o campo "Início" da próxima é automaticamente preenchido com o fim da tarefa recém-criada.
-- **Tecla Enter:** Cria a tarefa (exceto quando autocomplete está aberto — nesse caso, seleciona o item).
-- **Lista de tarefas do dia:** Tarefas completadas do dia selecionado, ordenadas da mais recente para a mais antiga.
-  - Botões por linha: Editar (abre `EditTaskModal`) | Excluir (sem confirmação).
-- **Total do dia:** Exibido no header quando há tarefas.
-
----
-
-## 6. REGRAS DE NEGÓCIO
-
-### 6.1 Tarefa em execução
-- Apenas uma tarefa pode estar em execução por vez.
-- Não é possível iniciar nova tarefa enquanto houver uma em execução — é necessário parar a atual primeiro.
-- Timer começa imediatamente ao clicar "Iniciar", sem exigir dados.
-- Pausar preserva a duração acumulada. Retomar continua de onde parou.
-
-### 6.2 Billable
-- Ao selecionar uma Categoria, o campo billable é preenchido com `category.default_billable`.
-- O usuário pode sobrescrever manualmente a qualquer momento.
-- Na lista de entradas, um clique no indicador billable alterna o valor.
-
-### 6.3 Agrupamento de tarefas
-- Critério: Nome + Projeto + Categoria idênticos.
-- Agrupamento é apenas visual — os registros permanecem independentes no banco.
-- Unificar: cria um registro com duração somada e exclui os originais.
-
-### 6.4 Autocomplete
-- Filtra conforme digitação.
-- Enter com dropdown aberto: seleciona o primeiro item filtrado.
-- Enter com dropdown fechado (ou sem resultados): dispara `onEnter` (geralmente cria/salva o item do formulário pai).
-- Dropdown fecha ao perder foco (`onBlur`).
-- Permite texto livre se nenhum resultado — não cria projeto/categoria automaticamente.
-
-### 6.5 Ações de tarefa planejada
-- Ao iniciar uma tarefa planejada via Play, as ações configuradas **não são executadas automaticamente**. Elas aparecem como chips clicáveis na seção "Ações" do Popup Flyout enquanto a tarefa estiver em execução, permitindo que o usuário dispare cada uma sob demanda (e mais de uma vez, se quiser).
-- Cada chip mostra um ícone (globo para URL, pasta para arquivo) e um rótulo curto (hostname para URLs, nome do arquivo para caminhos).
-- `open_url`: Abre URL no navegador padrão. Auto-prepend `https://` se não contiver `http://` ou `https://`.
-- `open_file`: Abre arquivo/pasta no explorador de arquivos do SO.
-
-### 6.6 Data de referência da tarefa
-- A data de uma tarefa é sempre a **data local do `startTime`** (menor horário).
-- Tarefas que cruzam meia-noite (início em um dia, fim no seguinte) pertencem ao dia de início.
-- Toda lógica de agrupamento por dia (histórico, lançamento retroativo) extrai a data no fuso local do usuário — nunca faz `.slice(0, 10)` direto no ISO UTC.
-- As funções `startOfDayISO(dateISO)` e `endOfDayISO(dateISO)` constroem limites UTC a partir do horário local: `new Date(dateISO + "T00:00:00").toISOString()`.
-
-### 6.7 Tarefas recorrentes
-- Sem data de término — aparecem indefinidamente nos dias configurados.
-- Excluir remove a tarefa completamente de todos os dias futuros.
-- Concluir afeta apenas o dia atual (adiciona data ao `completed_dates`).
-
----
-
-## 7. FLUXO DE TRABALHO DE DESENVOLVIMENTO
-
-### 7.1 Ciclo por feature
-
-```
-1. PLANEJAR    → Detalhar tela/feature com base nesta spec. Documentar decisões.
-2. APROVAR     → Submeter plano para revisão antes de implementar.
-3. TESTAR      → Escrever testes primeiro (TDD): unit tests para domain/usecases, integration para infra, e2e para fluxos críticos.
-4. IMPLEMENTAR → Código de produção que faz os testes passarem.
-5. VALIDAR     → App deve compilar e executar sem erros após cada implementação.
-6. FORMATAR    → Antes de commitar tudo o que foi produzido, rode o lint para garantir padrão de estilo do código.
-7. COMMITAR    → Commits semânticos (feat:, fix:, refactor:, test:, docs:, chore:).
-8. MERGEAR     → Branch por feature → merge em main.
-9. LIMPAR      → Após o merge, verificar branches já mergeadas e sugerir exclusão ao usuário:
-                 git branch --merged main | grep -v '^\* \|  main$'
-```
-
-### 7.2 Regras de branch
-- `main` → sempre estável e buildável.
-- `feat/<nome>` → desenvolvimento de nova funcionalidade.
-- `fix/<nome>` → correção de bug.
-- `refactor/<nome>` → refatoração sem mudança de comportamento.
-
-> **Ao criar uma nova branch:** verificar primeiro se há branches já mergeadas pendentes de exclusão (`git branch --merged main`) e sugerir limpeza ao usuário antes de prosseguir.
-
-### 7.3 Commits semânticos
-- `feat: add task timer overlay`
-- `fix: correct duration calculation on pause/resume`
-- `test: add unit tests for ExportProfile use case`
-- `docs: update CLAUDE.md with export profile schema`
-- `chore: configure eslint rules`
-
-### 7.4 Build
-- Gerar builds para: Windows (.msi/.exe), Ubuntu (.deb/.AppImage), Arch Linux (.pkg.tar.zst/AppImage).
-- Configurar `tauri.conf.json` para targets multiplataforma.
-
-### 7.5 Documentação contínua
-- **CLAUDE.md** (este arquivo): Atualizar sempre que padrões, decisões ou modelos mudarem.
-- **README.md**: Manter atualizado com funcionalidades, setup local, como contribuir, e como buildar para cada plataforma.
-
-### 7.6 Estratégia de testes
-
-O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis sem dependências de runtime externo (Tauri, DOM, rede).
-
-**O que testamos:**
-- `domain/usecases/` — lógica de negócio pura com repositório mockado (`vi.fn()`)
-- `infra/database/` — repositórios SQLite com `getDb()` mockado via `vi.mock`
-- `infra/integrations/google/` — funções utilitárias puras (ex: `parseRRuleDays`)
-- `shared/utils/` — funções utilitárias sem side-effects
-
-**O que não testamos (e por quê):**
-- Componentes React — requereria `@testing-library/react`, não configurado
-- `GoogleCalendarImporter` / `GoogleSheetsTaskSender` — dependem de `fetch` externo
-- Contexts React (`RunningTaskContext`) — acoplados ao runtime Tauri e DOM
-
-**Convenções:**
-- Arquivos espelham o source: `src/tests/domain/usecases/plannedTasks/CreatePlannedTask.test.ts`
-- Factory `makeRepo()` reutilizada por arquivo de teste para minimizar boilerplate
-- Casos de teste nomeados em português, descrevendo o comportamento esperado
-
----
-
-## 8. CONVENÇÕES DE CÓDIGO
-
-### 8.1 Nomenclatura
-- Componentes React: PascalCase (`TaskCard.tsx`).
-- Hooks: camelCase com prefixo `use` (`useTaskTimer.ts`).
-- Entidades/types: PascalCase (`Task`, `PlannedTask`).
-- Variáveis e funções: camelCase.
-- Constantes globais: UPPER_SNAKE_CASE.
-- Arquivos de teste: `*.test.ts` ou `*.test.tsx`, espelhando o arquivo de origem.
-
-### 8.2 Componentes
-- Componentes funcionais com hooks. Sem class components.
-- Props tipadas com interface dedicada (`interface TaskCardProps`).
-- Modais como componentes isolados em `presentation/modals/`.
-- Overlays como componentes isolados em `presentation/overlays/`.
-
-### 8.3 Estado
-- Estado local com `useState`/`useReducer` para UI.
-- Estado global (tarefa em execução, configurações) via Context API ou estado gerenciado (avaliar Zustand se complexidade crescer).
-- Dados persistentes via repositórios (Clean Architecture).
-
-### 8.4 Estilização
-- Tailwind CSS como padrão. Sem CSS modules ou styled-components.
-- Temas implementados via CSS custom properties controladas pela configuração de tema.
-- Tamanhos de fonte escalados via variável CSS controlada pela configuração de acessibilidade.
-
-## Fonte da verdade visual
-
-- **Design system:** `.claude/design-system/`
-- **Tokens CSS:** `.claude/design-system/colors_and_type.css` — tokens importados em `src/index.css`
-- **UI de referência:** `.claude/design-system/ui_kits/deskclock/index.html` — abrir no navegador para comparação visual
-- **Mapa de componentes:** `.claude/migration/component-map.md`
-- **Mapa de tokens:** `.claude/migration/token-map.md`
-- **Critérios de aceitação:** `.claude/migration/acceptance.md`
-
-## Regras obrigatórias
-
-1. **Zero hardcode visual.** Nunca crie cores, tamanhos, raios, sombras ou tipografias com valores literais. Use sempre variáveis CSS de `tokens.css`. Se precisar de um valor que não existe, pare e pergunte — não invente um novo.
-
-2. **Mapa antes de código.** Ao tocar qualquer componente, consulte `component-map.md` primeiro para confirmar qual arquivo corresponde a qual bloco do design. Se não estiver no mapa, pare e peça para adicionar.
-
-3. **Um componente por conversa.** Não refatore múltiplas telas/componentes na mesma mudança. Escopo pequeno é verificável.
-
-4. **Screenshot diff é obrigatório.** Nenhuma mudança visual é "pronta" sem comparação screenshot do resultado vs. referência do design system.
-
-5. **Ambiguidade pausa o trabalho.** Se encontrar conflito entre design e código existente (ex: props diferentes, dados diferentes, lógica conflitante), PARE e pergunte. Não adivinhe.
-
-6. **Mudanças fora do escopo são rejeitadas.** Não "melhore" partes do código que não foram pedidas, mesmo que pareçam problemas óbvios. Documente em `.claude/migration/findings.md` e continue.
-
-7. **Ordem de migração é fixa.** Siga a ordem de Fase 0 → 7 do `MIGRATION_GUIDE.md`. Não pule fases.
-
-## Workflow padrão por tarefa
-
-Antes de qualquer mudança:
-- [ ] Ler o README do design system
-- [ ] Ler `component-map.md` para o componente em questão
-- [ ] Confirmar props preservadas e escopo
-- [ ] Rodar a tela atual e tirar screenshot "antes"
-
-Ao terminar:
-- [ ] Tirar screenshot "depois"
-- [ ] Comparar com referência do design system
-- [ ] Preencher checklist de `acceptance.md` para o componente
-- [ ] Listar no resumo do PR: (a) arquivos tocados, (b) checklist preenchido, (c) screenshot diff
-
-## Critérios de "pronto" (universal)
-
-Todo PR visual deve passar em:
-
-- [ ] Zero valores hex/rgb fora de `tokens.css`
-- [ ] Zero valores de espaçamento literal (px) fora de tokens
-- [ ] Testes existentes passam
-- [ ] Sem console warnings novos
-- [ ] Screenshot diff anexado com < 2% de pixels divergentes (ou justificativa)
-- [ ] Checklist de aceitação preenchido
-
-## Tom e linguagem
-
-- UI em **português (Brasil)**, sentence case, sem emoji, sem gírias
-- Números: tempos em `HH:MM:SS`, durações compactas `1h30` ou `45m`
-- Botões: verbo no infinitivo ("Iniciar", "Parar & salvar")
-- Mensagens: curtas e informativas, nunca paternalistas
-
-## Quando pedir ajuda humana
-
-Pare e pergunte se:
-- Correspondência de componente não está no mapa
-- Token novo parece necessário
-- Props antigas conflitam com estrutura nova
-- Comportamento interativo ambíguo (ex: hover em mobile?)
-- Mais de 3 divergências remanescentes após tentativa de fidelidade
-
----
-
-## 9. GUARDRAILS ARQUITETURAIS (obrigatório para qualquer agente de IA)
-
-> Este projeto passou por análise SOLID/DRY completa em 2026-05-05. As regras abaixo existem para impedir que novas contribuições reintroduzam os antipatterns mapeados. **Violar uma regra exige justificativa explícita ao usuário antes do código rodar.**
-
-### 9.1 Antes de tocar código
-
-- [ ] **Rodou `gitnexus_impact` no símbolo a ser modificado.** Reportar blast radius ao usuário antes de editar.
-- [ ] **Identificou em qual camada está mexendo** (`domain/`, `infra/`, `presentation/`, `shared/`) e revisou as regras da camada (§3).
-- [ ] **Procurou primeiro abstração existente** em `domain/repositories/` ou `domain/integrations/` antes de instanciar classe concreta.
-
-### 9.2 Regras invioláveis por camada
-
-#### `domain/`
-- ❌ **Nunca** importar de `infra/` ou `presentation/`.
-- ❌ **Nunca** importar `@tauri-apps/*`, `react`, ou qualquer SDK externo.
-- ✅ Apenas tipos puros, interfaces (`I*Repository`, `I*Sender`, `I*Importer`, `ISyncStrategy`), entidades e use cases.
-
-#### `infra/`
-- ❌ **Nunca** importar de `presentation/`.
-- ❌ **Nunca** depender de `ConfigContextValue` diretamente. Se precisa ler config, declare uma porta estreita (ex.: `ISheetsConfigPort`, `IClockifyConfigPort`) em `domain/integrations/` listando só as chaves usadas. A UI implementa a porta via adaptador. Esta regra existe porque hoje 10 arquivos de `infra/` dependem de uma interface com 65 chaves heterogêneas.
-- ✅ Toda classe pública implementa uma interface declarada em `domain/`.
-
-#### `presentation/`
-- ❌ **Nunca** instanciar classes concretas de `infra/` em componentes/hooks/modais. Se aparecer `new GoogleSheetsTaskSender(...)`, `new ClockifyClient(...)`, `new GoogleCalendarImporter(...)`, `new AutoSyncRunner([new XSyncStrategy(...)])` em código novo de `presentation/`, **pare e injete via Provider/context**.
-- ❌ **Nunca** adicionar `new XxxRepository()` ou `new XxxAdapter()` no nível de módulo. Composition root vai num Provider com prop `value?` injetável.
-- ❌ **Nunca** usar `await import("@infra/...")` dinâmico para "esconder" dependência. Se está fazendo isso, é sinal de que falta abstração.
-- ❌ **Nunca** suprimir `react-hooks/exhaustive-deps` sem comentário explicando por quê. Hoje há 30+ supressões — não adicione mais.
-
-#### `shared/`
-- ✅ Apenas utils puros, tipos, constantes. Sem side-effects, sem I/O, sem estado.
-- ❌ Não use como "lugar onde colocar quando não sei onde vai" — se é regra de negócio, é `domain/`.
-
-### 9.3 Limites de tamanho (orientações, não regras absolutas)
-
-| Tipo | Verde | Amarelo (revisar) | Vermelho (split obrigatório) |
-|---|---|---|---|
-| Componente React | < 200 linhas | 200–350 | > 350 |
-| Hook customizado | < 80 linhas | 80–150 | > 150 |
-| Use case | < 50 linhas | 50–100 | > 100 |
-| `useEffect` por componente | ≤ 4 | 5–8 | > 8 (hooks focados) |
-| `useState` por componente | ≤ 8 | 9–15 | > 15 (extrair `useReducer` ou hook próprio) |
-
-Quando atingir vermelho: **não adicionar mais features ao símbolo. Refatorar primeiro, feature depois.**
-
-### 9.4 Antes de duplicar lógica — checagem obrigatória
-
-Se você está prestes a:
-
-- **Copiar lógica de uma SyncStrategy** → use `BaseSyncStrategy`/template existente (a ser introduzido pelo item 2 do refactor).
-- **Copiar UI de seleção de tarefas (toggleGroup, toggleDay, selKey, hasSentSelected)** → use `<TaskSendModal>`/`useTaskSendSelection` (item 1 do refactor).
-- **Copiar UI de auto-sync (Modo / Gatilho / Horário / Último envio)** → use `<AutoSyncControls integrationKey="...">`.
-- **Copiar lógica de import de catálogo (fetch → find/create → mapping → persist)** → use helper `runIntegrationImport(...)`.
-
-Se a abstração ainda não existe (porque o item de refactor está pending), **pare e pergunte** se vale criá-la agora vs esperar o refactor agendado.
-
-### 9.5 Adicionando uma nova integração externa (Toggl, Jira, Linear…)
-
-Roteiro obrigatório:
-1. Criar interface em `domain/integrations/` (ex.: `ITogglApi`, `ITogglConfigPort`).
-2. Implementar adaptador em `infra/integrations/toggl/` que `implements` a interface.
-3. Se sincroniza tarefas: criar `TogglSyncStrategy implements ISyncStrategy`.
-4. Registrar a strategy no Provider central de auto-sync (não em `App.tsx` nem em `usePostStopLogic` — esses dois lugares hoje têm cópias hardcoded; novo trabalho deve usar o ponto único).
-5. UI consome via hook injetado, **nunca** `new TogglClient()` direto em componente.
-6. Adicionar testes em `tests/infra/integrations/toggl/` espelhando a estrutura dos existentes.
-
-### 9.6 Adicionando configuração ao usuário
-
-- ✅ Ao adicionar uma chave em `AppConfig`, considere se cabe numa porta estreita já existente. Se a chave só interessa a uma integração, **declare a porta** em `domain/integrations/` e atualize só os consumidores reais.
-- ❌ Não acoplar `ConfigContextValue` ao infra. Se precisa de uma chave dela em `infra/`, passe-a como argumento ou via porta — não receba `ConfigContextValue` inteiro.
-
-### 9.7 Quando o refactor SOLID está em curso
-
-Há um tracker de 10 itens em memória (`project_solid_analysis_2026_05.md`). Antes de tocar um símbolo listado lá, **verificar se o item está em andamento** — pode haver branch ativa. Se sim, coordenar com o usuário em vez de criar conflito.
-
----
-
-*Última atualização: 2026-05-09 (comportamentos removidos/alterados: modo de envio, edição inline de planejadas, tarefa em branco ao clicar overlay, configs "sempre visível" e "indicador de grade")*
+| `designTokens.test.ts` | token semântico derrubado; raiz de 16px ou `--spacing` reancorados; valor dos degraus reancorados; cor de projeto fora do sRGB, abaixo de 3:1 em qualquer um dos dois modos, ou a menos de 0,09 de outra |
+| `fontSizes.test.ts` | `text-[13px]` — tamanho fora da escala de 10 degraus |
+| `fontWeights.test.ts` | peso fora de 400/500/600 |
+| `meaningColors.test.ts` | cor crua do Tailwind em cromo (`bg-gray-800`, `text-emerald-500`) |
+| `componentPrimitives.test.ts` | `<button>` com caixa própria em vez de `Button`/`IconButton`; campo cru fora de `components/ui/` |
+| `inputAutocomplete.test.ts` | `<input>` sem `autoComplete="off"` |
+| `screenGeometry.test.tsx` | geometria do componente divergente do spec extraído do design (`docs-internal/design-spec/`) |
+
+Os dois últimos travam por **baseline que só encolhe** e falham nos dois sentidos: descer o número
+sem atualizar a lista deixa folga onde a próxima regressão se esconde.
+
+## 7. Convenções de código
+
+**Nomes:** componente `PascalCase.tsx` · hook `useAlgo.ts` · entidade/type `PascalCase` · função e
+variável `camelCase` · constante global `UPPER_SNAKE_CASE` · teste `*.test.ts(x)` espelhando a origem.
+
+**Componentes:** funcionais, props em `interface` dedicada. Modal em `presentation/modals/`,
+overlay em `presentation/overlays/`. Sem class component.
+
+**Estado:** `useState`/`useReducer` para UI; global (tarefa em execução, config) via Context;
+persistente sempre por repositório.
+
+**Estilização:** Tailwind, sem CSS modules nem styled-components. Token semântico, nunca valor
+literal — o detalhe está na skill `design-system`.
+
+### Os três contratos de teclado
+
+São de acerto fácil e de erro invisível: quebrados, funcionam em algumas telas e não em outras, e
+só se descobre qual tentando.
+
+1. **ESC fecha todo modal.** Quem usa a casca `Modal` ganha de graça. Fora dela é
+   `useEscapeToClose(onClose)` **mais** `data-modal-open` no elemento de topo — um hook, nunca um
+   `addEventListener` copiado, senão o mesmo ESC esconde a janela do app. Exceção: `SetupModal`,
+   que não tem para onde fechar.
+2. **Enter em qualquer campo submete**, via `useSubmitOnEnter(onSubmit)` **no container** — nunca
+   um `onKeyDown` por campo (`keydown` borbulha, então um handler cobre até o campo que ainda não
+   existe). Os containers **não** viram `<form>`: `<button>` sem `type="button"` dentro de form
+   vira submit, e são ~15 telas cheias de toggle onde isso passaria batido.
+3. **Quem consome a tecla avisa com `preventDefault`, e o container ignora o que já foi
+   consumido.** É o mesmo contrato para ESC e Enter, e é o que faz a lista aberta selecionar a
+   opção sem submeter junto.
+
+Escapes do Enter, nesta ordem: `onEnter` no campo · `data-no-submit` no bloco · opção `disabled`
+do hook. Em `<textarea>`, Enter quebra linha e **Ctrl/Cmd+Enter** submete. Onde ele
+deliberadamente **não** submete: modal que opera sobre **seleção** em lote (importar da Agenda,
+importar do Monday, enviar tarefas) e painel com duas ações igualmente primárias.
+
+## 8. Como trabalhar aqui
+
+1. **Um componente por conversa.** Escopo pequeno é verificável.
+2. **Ambiguidade pausa o trabalho.** Conflito entre design e código existente: pare e pergunte,
+   não adivinhe.
+3. **Mudança fora do escopo é rejeitada.** Não "melhore" o que não foi pedido — registre a
+   observação na entrega e siga.
+4. **Documento que aponta para arquivo inexistente é defeito.** Já aconteceu duas vezes aqui (seis
+   artefatos de design system que nunca existiram; uma seção afirmando que o `@testing-library/react`
+   não estava configurado quando estava) e as duas travaram trabalho. Encontrou: pare e avise.
+5. **Comentário só onde o código é difícil** — o comentário diz *por que*, nunca *o que*.
+
+**Tom da UI:** português do Brasil, sentence case, sem emoji. Tempo em `HH:MM:SS`, duração
+compacta `1h30`/`45m`. Botão com verbo no infinitivo. Mensagem curta, nunca paternalista.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **deskclock-tauri** (3716 symbols, 8030 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **deskclock-tauri** (7772 symbols, 18272 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

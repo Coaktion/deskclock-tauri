@@ -4,6 +4,7 @@ import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { getPlannedTasksForWeek } from "@domain/usecases/plannedTasks/GetPlannedTasksForWeek";
 import { createPlannedTask } from "@domain/usecases/plannedTasks/CreatePlannedTask";
@@ -13,8 +14,8 @@ import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlann
 import { uncompletePlannedTask } from "@domain/usecases/plannedTasks/UncompletePlannedTask";
 import { duplicatePlannedTask } from "@domain/usecases/plannedTasks/DuplicatePlannedTask";
 import type { ScheduleType, PlannedTaskAction } from "@domain/entities/PlannedTask";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { UUID } from "@shared/types";
-
 
 interface CreateInput {
   name: string;
@@ -27,6 +28,7 @@ interface CreateInput {
   periodStart?: string | null;
   periodEnd?: string | null;
   actions?: PlannedTaskAction[];
+  customValues?: CustomValues;
 }
 
 interface UpdateInput {
@@ -40,6 +42,7 @@ interface UpdateInput {
   periodStart?: string | null;
   periodEnd?: string | null;
   actions?: PlannedTaskAction[];
+  customValues?: CustomValues;
 }
 
 function usePlannedTasksBase(
@@ -47,6 +50,7 @@ function usePlannedTasksBase(
   onMutate?: () => void
 ) {
   const { plannedTaskRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const [tasks, setTasks] = useState<PlannedTask[]>([]);
 
   const load = useCallback(async () => {
@@ -59,11 +63,11 @@ function usePlannedTasksBase(
 
   const create = useCallback(
     async (input: CreateInput) => {
-      await createPlannedTask(plannedTaskRepo, input, new Date().toISOString());
+      await createPlannedTask(plannedTaskRepo, { ...input, workspaceId }, new Date().toISOString());
       await load();
       onMutate?.();
     },
-    [plannedTaskRepo, load, onMutate]
+    [plannedTaskRepo, load, onMutate, workspaceId]
   );
 
   const update = useCallback(
@@ -115,9 +119,10 @@ function usePlannedTasksBase(
 }
 
 export function usePlannedTasksForDate(dateISO: string) {
+  const workspaceId = useActiveWorkspaceId();
   const loadFn = useCallback(
-    (repo: IPlannedTaskRepository) => getPlannedTasksForDate(repo, dateISO),
-    [dateISO]
+    (repo: IPlannedTaskRepository) => getPlannedTasksForDate(repo, dateISO, workspaceId),
+    [dateISO, workspaceId]
   );
   const onMutate = useCallback(() => {
     emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
@@ -137,9 +142,10 @@ export function usePlannedTasksForDate(dateISO: string) {
 }
 
 export function usePlannedTasksForWeek(startISO: string, endISO: string) {
+  const workspaceId = useActiveWorkspaceId();
   const loadFn = useCallback(
-    (repo: IPlannedTaskRepository) => getPlannedTasksForWeek(repo, startISO, endISO),
-    [startISO, endISO]
+    (repo: IPlannedTaskRepository) => getPlannedTasksForWeek(repo, startISO, endISO, workspaceId),
+    [startISO, endISO, workspaceId]
   );
   const onMutate = useCallback(() => {
     emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});

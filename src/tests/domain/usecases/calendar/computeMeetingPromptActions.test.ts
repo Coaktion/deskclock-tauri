@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { computeMeetingPromptActions } from "@domain/usecases/calendar/computeMeetingPromptActions";
+import {
+  computeMeetingPromptActions,
+  type RunningTaskSnapshot,
+} from "@domain/usecases/calendar/computeMeetingPromptActions";
 import type { TrackedMeeting } from "@domain/integrations/TrackedMeeting";
 
 function makeMeeting(overrides: Partial<TrackedMeeting> = {}): TrackedMeeting {
@@ -10,6 +13,7 @@ function makeMeeting(overrides: Partial<TrackedMeeting> = {}): TrackedMeeting {
     startISO: "2026-07-01T10:00:00.000Z",
     endISO: "2026-07-01T10:30:00.000Z",
     startedTaskId: null,
+    plannedTaskId: null,
     startPromptedAt: null,
     startDismissed: false,
     endPromptCount: 0,
@@ -185,6 +189,164 @@ describe("computeMeetingPromptActions", () => {
         { ...started(), ended: true },
       ]);
       expect(actions).toEqual([]);
+    });
+  });
+
+  describe("reunião iniciada à mão (attach)", () => {
+    // Tarefa iniciada às 10:00, dentro da reunião de 10:00–10:30 do makeMeeting.
+    function makeRunning(overrides: Partial<RunningTaskSnapshot> = {}): RunningTaskSnapshot {
+      return {
+        id: "task-manual",
+        name: "Daily",
+        plannedTaskId: "pt-daily",
+        startTimeISO: "2026-07-01T10:00:00.000Z",
+        ...overrides,
+      };
+    }
+    const running = makeRunning();
+
+    it("anexa a tarefa em execução que veio da planejada da reunião, em vez de pedir início", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:00:00.000Z",
+        [makeMeeting({ title: "Outro nome", plannedTaskId: "pt-daily" })],
+        { runningTask: running }
+      );
+      expect(actions).toEqual([
+        {
+          kind: "attach",
+          meeting: expect.objectContaining({ plannedTaskId: "pt-daily" }),
+          taskId: "task-manual",
+        },
+      ]);
+    });
+
+    it("anexa por nome exato quando não há vínculo com planejada", () => {
+      const actions = computeMeetingPromptActions("2026-07-01T10:00:00.000Z", [makeMeeting()], {
+        runningTask: makeRunning({ name: " daily ", plannedTaskId: null }),
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("attach");
+    });
+
+    it("não anexa tarefa de outro nome — o prompt de início continua valendo", () => {
+      const actions = computeMeetingPromptActions("2026-07-01T10:00:00.000Z", [makeMeeting()], {
+        runningTask: makeRunning({
+          id: "task-outra",
+          name: "Refatoração",
+          plannedTaskId: "pt-outra",
+        }),
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("start");
+    });
+
+    it("não anexa fora da janela do evento — tarefa de mesmo nome antes da hora não é a reunião", () => {
+      const actions = computeMeetingPromptActions("2026-07-01T08:00:00.000Z", [makeMeeting()], {
+        runningTask: running,
+      });
+      expect(actions).toEqual([]);
+    });
+
+    it("cala o re-prompt de início: anexa mesmo com a cadência de Adiar vencida", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:05:00.000Z",
+        [makeMeeting({ startPromptedAt: "2026-07-01T10:00:00.000Z" })],
+        { startRepromptMs: 5 * 60 * 1000, runningTask: running }
+      );
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("attach");
+    });
+
+    it("anexa dentro da janela mesmo antes da cadência vencer, para não deixar o prompt escapar depois", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:02:00.000Z",
+        [makeMeeting({ startPromptedAt: "2026-07-01T10:00:00.000Z" })],
+        { startRepromptMs: 5 * 60 * 1000, runningTask: running }
+      );
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("attach");
+    });
+
+    it("reunião dispensada não é anexada — 'Dispensar' é decisão explícita do usuário", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:00:00.000Z",
+        [makeMeeting({ startDismissed: true })],
+        { runningTask: running }
+      );
+      expect(actions).toEqual([]);
+    });
+
+    it("reunião já iniciada segue no fluxo de fim, sem anexar de novo", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:30:00.000Z",
+        [makeMeeting({ startedTaskId: "task-manual" })],
+        { runningTask: running }
+      );
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("end");
+    });
+
+    it("sem tarefa em execução, o comportamento é o de sempre", () => {
+      const actions = computeMeetingPromptActions("2026-07-01T10:00:00.000Z", [makeMeeting()], {
+        runningTask: null,
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("start");
+    });
+
+    it("não anexa por nome tarefa iniciada antes da janela, mesmo ainda rodando", () => {
+      // "Daily" das 8h ainda em execução às 10h não é a Daily das 10h: anexá-la
+      // calaria o prompt e, ao parar essa tarefa, encerraria a reunião nunca vivida.
+      const actions = computeMeetingPromptActions("2026-07-01T10:00:00.000Z", [makeMeeting()], {
+        runningTask: makeRunning({
+          plannedTaskId: null,
+          startTimeISO: "2026-07-01T08:00:00.000Z",
+        }),
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("start");
+    });
+
+    it("anexa pelo vínculo da planejada mesmo iniciada adiantado — é a planejada daquela reunião", () => {
+      const actions = computeMeetingPromptActions(
+        "2026-07-01T10:00:00.000Z",
+        [makeMeeting({ plannedTaskId: "pt-daily" })],
+        { runningTask: makeRunning({ startTimeISO: "2026-07-01T09:30:00.000Z" }) }
+      );
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("attach");
+    });
+
+    it("duas reuniões na mesma planejada: só a da janela corrente é anexada", () => {
+      // syncTodayMeetings faz duas reuniões de mesmo nome compartilharem uma
+      // planejada. Anexar a da tarde junto encerraria as duas ao parar a tarefa.
+      const meetings = [
+        makeMeeting({ calendarEventId: "manha", plannedTaskId: "pt-daily" }),
+        makeMeeting({
+          calendarEventId: "tarde",
+          plannedTaskId: "pt-daily",
+          startISO: "2026-07-01T17:00:00.000Z",
+          endISO: "2026-07-01T17:30:00.000Z",
+        }),
+      ];
+      const actions = computeMeetingPromptActions("2026-07-01T10:00:00.000Z", meetings, {
+        runningTask: running,
+      });
+      expect(actions).toEqual([
+        {
+          kind: "attach",
+          meeting: expect.objectContaining({ calendarEventId: "manha" }),
+          taskId: "task-manual",
+        },
+      ]);
+    });
+
+    it("tarefa sem nome e sem vínculo não anexa nada", () => {
+      const actions = computeMeetingPromptActions("2026-07-01T10:00:00.000Z", [makeMeeting()], {
+        runningTask: makeRunning({ id: "task-anon", name: null, plannedTaskId: null }),
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0].kind).toBe("start");
     });
   });
 

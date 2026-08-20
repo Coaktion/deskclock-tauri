@@ -1,4 +1,5 @@
 import type { Task } from "@domain/entities/Task";
+import type { Appearance } from "@shared/utils/theme";
 
 export const OVERLAY_EVENTS = {
   RUNNING_TASK_CHANGED: "running-task-changed",
@@ -11,9 +12,11 @@ export const OVERLAY_EVENTS = {
   NAVIGATE_SETTINGS: "navigate-settings",
   PLANNED_TASKS_CHANGED: "planned-tasks-changed",
   TASKS_CHANGED: "tasks-changed",
-  COMMAND_PALETTE_NAVIGATE: "command-palette:navigate",
+  PROJECTS_CHANGED: "projects-changed",
+  CATEGORIES_CHANGED: "categories-changed",
+  CUSTOM_FIELDS_CHANGED: "custom-fields-changed",
+  PROJECT_CATEGORIES_CHANGED: "project-categories-changed",
   OVERLAY_OPEN_APP: "overlay-open-app",
-  COMMAND_PALETTE_START_TASK: "command-palette:start-task",
   DEEPLINK_NAVIGATE: "deeplink:navigate",
   DEEPLINK_START_TASK: "deeplink:start-task",
   DEEPLINK_RETROACTIVE_PREFILL: "deeplink:retroactive-prefill",
@@ -21,19 +24,11 @@ export const OVERLAY_EVENTS = {
   MEETING_PROMPT: "meeting-prompt",
   MEETING_PROMPT_RESPONSE: "meeting-prompt:response",
   MEETING_TRACKER_SYNC_NOW: "meeting-tracker:sync-now",
+  MEETING_TRACKER_SYNC_RESULT: "meeting-tracker:sync-result",
+  MONDAY_IMPORT_SYNC_NOW: "monday-import:sync-now",
+  MONDAY_IMPORT_SYNC_RESULT: "monday-import:sync-result",
+  WORKSPACE_CHANGED: "workspace-changed",
 } as const;
-
-export interface CommandPaletteNavigatePayload {
-  page: string;
-}
-
-export interface CommandPaletteStartTaskPayload {
-  name?: string | null;
-  projectId?: string | null;
-  categoryId?: string | null;
-  billable: boolean;
-  plannedTaskId?: string | null;
-}
 
 export interface RunningTaskChangedPayload {
   task: Task | null;
@@ -77,6 +72,52 @@ export interface MeetingPromptResponsePayload {
   action: "start" | "snooze" | "dismiss" | "stop" | "still-going";
 }
 
+/**
+ * Trocar de workspace ou mexer no cadastro em qualquer janela. Cada janela tem
+ * seu próprio `WorkspaceProvider`, então sem este evento o overlay continuaria
+ * mostrando o workspace antigo — e, pior, criando tarefas nele.
+ */
+export interface WorkspaceChangedPayload {
+  activeWorkspaceId: string;
+}
+
+/**
+ * Resposta do rastreador ao "Buscar itens agora" das Configurações. O botão vive
+ * numa tela, a busca vive no `useMondayItemTracker`: sem este evento a tela não
+ * teria como saber quando a busca terminou, e o botão só poderia adivinhar por
+ * tempo. É emitido **sempre** — inclusive quando o rastreador nem roda por falta
+ * de conexão —, ou o botão ficaria carregando para sempre.
+ */
+export interface MondayImportSyncResultPayload {
+  ok: boolean;
+  created: number;
+  updated: number;
+  removed: number;
+  /** Preenchido quando `ok` é falso. */
+  error?: string;
+  /**
+   * Causa técnica do erro, para o tooltip do ícone. Separada do `error` porque
+   * a linha da tela precisa continuar legível — ver `errorDetail`.
+   */
+  errorDetail?: string;
+  /** O ciclo automático já estava rodando: o clique não iniciou busca nenhuma. */
+  busy?: boolean;
+}
+
+/**
+ * Fim de um ciclo do rastreador de reuniões — automático ou pelo botão. A tela de
+ * Integrações depende dele para mostrar e **limpar** a linha de erro: ler a config
+ * depois de um tempo fixo mostra o estado anterior quando o ciclo demora, e um
+ * ciclo de fundo bem-sucedido nunca apagaria da tela um erro que deixou de valer.
+ */
+export interface MeetingTrackerSyncResultPayload {
+  tracked: number;
+  plannedCreated: number;
+  plannedLinked: number;
+  /** Vazio quando o ciclo correu inteiro sem falha. */
+  error: string;
+}
+
 export type ToastVariant = "success" | "error" | "info" | "update" | "warning";
 
 export interface ToastMessagePayload {
@@ -85,4 +126,9 @@ export interface ToastMessagePayload {
   duration?: number;
   actionLabel?: string;
   actionEvent?: string;
+  /**
+   * A janela do toast não lê config nem banco — a aparência vem de quem levantou
+   * o toast, que já a tem aplicada no próprio documento.
+   */
+  appearance?: Appearance;
 }

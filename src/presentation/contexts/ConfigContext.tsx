@@ -1,35 +1,44 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { ConfigRepository } from "@infra/database/ConfigRepository";
 import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
-import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
+import { ConfigRepository } from "@infra/database/ConfigRepository";
+import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
 import type {
   AppConfig,
   ConfigContextValue,
   ConfigKey,
   OverlayPosition,
 } from "@shared/types/appConfig";
+import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
+import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 export type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition };
 
 const DEFAULTS: AppConfig = {
   setupCompleted: false,
   userName: "",
-  showWelcomeMessage: true,
   startOnBoot: false,
   liveTrayTimer: false,
   closeOnFocusLoss: false,
   discardTasksUnderOneMinute: false,
   showIntegrationsRail: true,
-  fontSize: "M" as const,
+  planningFormCollapsed: false,
+  retroactiveFormCollapsed: false,
+  // O número mora em `FORM_COLUMN_WIDTH`, e não aqui: é **este** default que a
+  // tela usa (`useResizablePanel` só cai no `defaultSize` dele se o gravado for
+  // 0, e a config nunca devolve 0), então escrevê-lo à mão nos dois lugares
+  // deixava o padrão da coluna divergir do que a trava afirma.
+  planningFormWidth: FORM_COLUMN_WIDTH.default,
+  retroactiveFormWidth: FORM_COLUMN_WIDTH.default,
+  retroactivePlannedHeight: 144,
+  mode: "" as const,
+  accent: "" as const,
   theme: "azul" as const,
   shortcutToggleTask: "",
   shortcutStopTask: "",
   shortcutToggleOverlay: "",
   shortcutToggleWindow: "",
-  shortcutCommandPalette: "",
   overlayAlwaysVisible: true,
   overlayShowOnStart: true,
-  overlaySize: "big" as const,
   overlayOpacity: 100,
   overlaySnapToGrid: false,
   overlayPosition_execution: { x: -1, y: -1 },
@@ -47,6 +56,13 @@ const DEFAULTS: AppConfig = {
   sheetsAutoSyncLastFiredDate: "",
   sheetsDailySyncLastTimestamp: "",
   calendarAutoTrackingEnabled: false,
+  calendarLastSyncError: "",
+  driveBackupEnabled: false,
+  driveBackupFrequency: "weekly" as const,
+  driveBackupFolderId: "",
+  driveBackupLastRunAt: 0,
+  driveBackupLastError: "",
+  driveBackupKeepCount: 10,
   googleAccessToken: "",
   googleRefreshToken: "",
   googleTokenExpiry: 0,
@@ -62,7 +78,6 @@ const DEFAULTS: AppConfig = {
   localApiPort: 27420,
   dailyGoalHours: 8,
   weeklyGoalHours: 40,
-  showWeekend: true,
   roundingEnabled: false,
   roundingSlots: [15, 30, 45, 60],
   roundingTolerance: 0,
@@ -81,6 +96,45 @@ const DEFAULTS: AppConfig = {
   clockifyAutoSyncLastFiredDate: "",
   clockifyDailySyncLastTimestamp: "",
   clockifyWorkspaceCache: [],
+  mondayApiKey: "",
+  mondayUserId: "",
+  mondayUserName: "",
+  mondayUserEmail: "",
+  // Os dois boards da conta em que a integração foi desenhada. São padrões
+  // trocáveis pelos campos da seção, não constantes: outra conta troca os dois
+  // ids e o resto da integração segue igual.
+  //
+  // Vêm do `.env` (prefixo `MONDAY_`, liberado no `vite.config.ts`) pelo mesmo
+  // motivo que as credenciais do Google: id de board descreve a **conta**, não
+  // o produto, e cravado aqui ele viajava no bundle de todo instalador
+  // publicado num repositório público. Ausente resolve para vazio — a
+  // integração pede os dois ids na tela, e é isso que o `isMondayReady` já
+  // checa.
+  mondayPortfolioBoardId: (import.meta.env.MONDAY_PORTFOLIO_BOARD_ID as string) ?? "",
+  mondayReportBoardId: (import.meta.env.MONDAY_REPORT_BOARD_ID as string) ?? "",
+  mondayProjectStageFieldId: "",
+  mondayReportTypeFieldId: "",
+  mondayNonBillableReasonFieldId: "",
+  mondayProjectMapping: [],
+  mondayFieldCatalogs: EMPTY_FIELD_CATALOGS,
+  mondayAutoSync: false,
+  mondayAutoSyncMode: "per-task" as const,
+  mondayAutoSyncTrigger: "on-open" as const,
+  mondayAutoSyncTime: "18:00",
+  mondayAutoSyncLastFiredDate: "",
+  mondayDailySyncLastTimestamp: "",
+  mondayAutoImportEnabled: false,
+  mondayProjectsSyncLastDate: "",
+  mondayProjectsLastSyncError: "",
+  activeWorkspaceId: "",
+  // Workspace do DeskClock de cada integração. Vazio resolve para o "Padrão" na
+  // leitura (`resolveIntegrationWorkspaceId`): é o que torna a migração
+  // invisível para quem tem um workspace só.
+  mondayDeskclockWorkspaceId: "",
+  clockifyDeskclockWorkspaceId: "",
+  sheetsDeskclockWorkspaceId: "",
+  calendarDeskclockWorkspaceId: "",
+  zendeskDeskclockWorkspaceId: "",
   toursSeen: [],
 };
 

@@ -8,13 +8,18 @@ import {
   EditPlannedTaskModal,
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
+import { selectionBoxClass } from "@presentation/components/selectionStyles";
+import { IconButton, TaskRow } from "@presentation/components/ui";
+import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
+import { getProjectColor } from "@shared/utils/projectColor";
 
 interface PlannedTaskItemProps {
   task: PlannedTask;
   dateISO: string;
   projects: Project[];
   categories: Category[];
-  playDisabled?: boolean;
+  /** Se a execução em curso impede este ▶ — e, quando ela é esta mesma tarefa, quem o diz. */
+  playBlock?: PlayBlock;
   /** true quando o rastreamento automático está acompanhando esta reunião para notificar. */
   tracked?: boolean;
   onPlay: (task: PlannedTask) => void;
@@ -47,7 +52,7 @@ export function PlannedTaskItem({
   dateISO,
   projects,
   categories,
-  playDisabled = false,
+  playBlock = "none",
   tracked = false,
   onPlay,
   onUpdate,
@@ -68,125 +73,110 @@ export function PlannedTaskItem({
     await onUpdate(id, input);
   }
 
+  const subtitle = (project || category || task.actions.length > 0) && (
+    <span className="inline-flex items-center gap-1.5">
+      {[project?.name, category?.name].filter(Boolean).join(" · ")}
+      {task.scheduleType === "period" && task.periodEnd && <span>até {task.periodEnd}</span>}
+      {task.actions.length > 0 && (
+        <span className="inline-flex items-center gap-0.5 text-amber-500/80">
+          <Zap size={14} />
+          {task.actions.length}
+        </span>
+      )}
+    </span>
+  );
+
   return (
     <>
-      <div
-        className={`relative flex items-center gap-3 pl-5 pr-3 py-3 border-b border-gray-800 transition-colors group ${
-          isCompleted && !selectMode ? "opacity-50" : ""
-        } ${
-          selectMode
-            ? `cursor-pointer ${selected ? "bg-blue-500/10 hover:bg-blue-500/15" : "hover:bg-gray-800/40"}`
-            : "hover:bg-gray-800/40"
-        }`}
-        onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-      >
-        {/* Billable left accent */}
-        {task.billable && !isCompleted && !selectMode && (
-          <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-500 rounded-r-full" />
-        )}
-
-        {/* Checkbox (select mode) or dot indicator */}
-        {selectMode ? (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => onToggleSelect?.(task.id)}
-            onClick={(e) => e.stopPropagation()}
-            className="shrink-0 accent-blue-500 w-3.5 h-3.5 cursor-pointer"
-          />
-        ) : (
-          <span
-            className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-              task.billable ? "bg-emerald-400" : "bg-gray-600"
-            }`}
-          />
-        )}
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <p
-              className={`text-sm text-gray-100 truncate leading-snug ${isCompleted ? "line-through text-gray-500" : ""}`}
-            >
-              {task.name}
-            </p>
-            {task.scheduleType === "recurring" && (
-              <span className="shrink-0 flex items-center gap-0.5 text-[10px] text-blue-400/70 leading-none">
-                <RefreshCw size={9} />
-              </span>
-            )}
-            {tracked && (
-              <span
-                className="shrink-0 flex items-center text-blue-400/80 leading-none"
-                title="Rastreada — o app vai lembrar de iniciar esta reunião"
-              >
-                <Bell size={10} />
-              </span>
-            )}
-          </div>
-          {(project || category || task.actions.length > 0) && (
-            <p className="text-[11px] text-gray-500 truncate mt-0.5 flex items-center gap-1.5 leading-snug">
-              {[project?.name, category?.name].filter(Boolean).join(" · ")}
-              {task.scheduleType === "period" && task.periodEnd && (
-                <span className="text-gray-600">até {task.periodEnd}</span>
-              )}
-              {task.actions.length > 0 && (
-                <span className="inline-flex items-center gap-0.5 text-yellow-600/80">
-                  <Zap size={9} />
-                  {task.actions.length}
+      <TaskRow
+        title={task.name}
+        completed={isCompleted}
+        titleMarks={
+          (task.scheduleType === "recurring" || tracked) && (
+            <>
+              {task.scheduleType === "recurring" && (
+                <span className="shrink-0 flex items-center text-accent-text/70">
+                  <RefreshCw size={14} />
                 </span>
               )}
-            </p>
-          )}
-        </div>
-
-        {!selectMode && (
-          <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            {!isCompleted && !playDisabled && (
-              <button
-                onClick={() => onPlay(task)}
-                title="Iniciar"
-                className="p-1.5 text-gray-500 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors"
-              >
-                <Play size={13} />
-              </button>
-            )}
-
-            <button
-              onClick={() => setShowModal(true)}
-              title="Editar"
-              className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-            >
-              <Pencil size={13} />
-            </button>
-
-            <button
-              onClick={() =>
-                isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
-              }
-              title={isCompleted ? "Marcar como pendente" : "Concluir"}
-              className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors"
-            >
-              {isCompleted ? <RotateCcw size={13} /> : <Check size={13} />}
-            </button>
-
-            <button
-              onClick={() => onDuplicate(task.id)}
-              title="Duplicar"
-              className="p-1.5 text-gray-500 hover:text-gray-200 hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <Copy size={13} />
-            </button>
-
-            <button
-              onClick={() => onDelete(task.id)}
-              title="Excluir"
-              className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
-        )}
-      </div>
+              {tracked && (
+                <span
+                  className="shrink-0 flex items-center text-accent-text/80"
+                  title="Rastreada — o app vai lembrar de iniciar esta reunião"
+                >
+                  <Bell size={14} />
+                </span>
+              )}
+            </>
+          )
+        }
+        subtitle={subtitle || undefined}
+        dotColor={getProjectColor(project)}
+        billable={task.billable}
+        /* `onUpdate` é o `update` do usePlannedTasks: recarrega e emite
+           PLANNED_TASKS_CHANGED, então o popup acompanha sem nada a mais. */
+        onToggleBillable={() => void onUpdate(task.id, { billable: !task.billable })}
+        leading={
+          selectMode ? (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect?.(task.id)}
+              onClick={(e) => e.stopPropagation()}
+              className={selectionBoxClass}
+            />
+          ) : undefined
+        }
+        selected={selected}
+        onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
+        /* Sem hover os botões não ocupam largura nenhuma: reservados, o espaço
+           de cinco botões sai do nome da tarefa, que trunca numa linha vazia à
+           direita (§5.3). */
+        collapseActions
+        actions={
+          !selectMode && (
+            <>
+              {!isCompleted && (
+                <IconButton
+                  icon={<Play size={14} />}
+                  title={playTitle(playBlock)}
+                  size="sm"
+                  disabled={isPlayBlocked(playBlock)}
+                  onClick={() => onPlay(task)}
+                />
+              )}
+              <IconButton
+                icon={<Pencil size={14} />}
+                title="Editar"
+                size="sm"
+                onClick={() => setShowModal(true)}
+              />
+              <IconButton
+                icon={isCompleted ? <RotateCcw size={14} /> : <Check size={14} />}
+                title={isCompleted ? "Marcar como pendente" : "Concluir"}
+                size="sm"
+                onClick={() =>
+                  isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
+                }
+              />
+              <IconButton
+                icon={<Copy size={14} />}
+                title="Duplicar"
+                size="sm"
+                variant="neutral"
+                onClick={() => onDuplicate(task.id)}
+              />
+              <IconButton
+                icon={<Trash2 size={14} />}
+                title="Excluir"
+                size="sm"
+                variant="danger"
+                onClick={() => onDelete(task.id)}
+              />
+            </>
+          )
+        }
+      />
 
       {showModal && !selectMode && (
         <EditPlannedTaskModal

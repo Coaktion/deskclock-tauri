@@ -10,6 +10,7 @@ const { ExportProfileRepository } = await import("@infra/database/ExportProfileR
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "ep1",
+    workspaceId: "ws-1",
     name: "Padrão",
     is_default: 1,
     format: "csv",
@@ -24,6 +25,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
 function makeProfile(overrides: Partial<ExportProfile> = {}): ExportProfile {
   return {
     id: "ep1",
+    workspaceId: "ws-1",
     name: "Padrão",
     isDefault: true,
     format: "csv",
@@ -70,7 +72,7 @@ describe("ExportProfileRepository", () => {
     it("retorna perfil padrão", async () => {
       mockDb.select.mockResolvedValue([makeRow()]);
       const repo = new ExportProfileRepository();
-      const result = await repo.findDefault();
+      const result = await repo.findDefault("ws-1");
       expect(result?.isDefault).toBe(true);
     });
   });

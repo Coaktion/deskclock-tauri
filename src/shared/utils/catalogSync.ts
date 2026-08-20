@@ -1,0 +1,51 @@
+import { emit } from "@tauri-apps/api/event";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+
+/**
+ * Notifica todas as janelas de que o catálogo de projetos mudou — criação,
+ * renomeação, exclusão ou importação a partir de uma integração.
+ *
+ * Sem isso, `useProjects` numa janela que não fez a mudança fica com a lista do
+ * momento em que montou. O `overlay-popup` nasce junto com o app e nunca
+ * remonta: um projeto importado depois disso não existiria para ele, e toda
+ * tarefa que apontasse para esse projeto apareceria sem nome de projeto até um
+ * reload manual da janela.
+ *
+ * Espelha o padrão de `notifyTasksChanged` (§ tasks) e de
+ * `OVERLAY_EVENTS.PLANNED_TASKS_CHANGED`.
+ */
+export function notifyProjectsChanged(): Promise<void> {
+  return emit(OVERLAY_EVENTS.PROJECTS_CHANGED, {});
+}
+
+/** O mesmo de `notifyProjectsChanged`, para o catálogo de categorias. */
+export function notifyCategoriesChanged(): Promise<void> {
+  return emit(OVERLAY_EVENTS.CATEGORIES_CHANGED, {});
+}
+
+/**
+ * O mesmo, para os campos personalizados — que são criados na tela de Dados, na
+ * janela principal, e passaram a ser editáveis durante a execução no overlay e
+ * no omnibox.
+ *
+ * Sem o aviso, o `overlay-popup` — que nasce com o app e nunca remonta — ficaria
+ * com o catálogo do momento da abertura: criar o campo "Project Stage" e iniciar
+ * uma tarefa mostraria o overlay sem campo nenhum, e o chip "Campos" nem
+ * apareceria, até reabrir o app.
+ */
+export function notifyCustomFieldsChanged(): Promise<void> {
+  return emit(OVERLAY_EVENTS.CUSTOM_FIELDS_CHANGED, {});
+}
+
+/**
+ * O mesmo, para as associações projeto ↔ categoria — que decidem quais
+ * categorias cada autocomplete oferece.
+ *
+ * Sem o aviso, associar uma categoria na tela de Dados não chegaria ao
+ * `overlay-popup`: ele continuaria oferecendo o catálogo inteiro (ou o recorte
+ * antigo) durante a execução, discordando da janela principal sobre o que é
+ * escolha válida para o mesmo projeto.
+ */
+export function notifyProjectCategoriesChanged(): Promise<void> {
+  return emit(OVERLAY_EVENTS.PROJECT_CATEGORIES_CHANGED, {});
+}

@@ -3,6 +3,7 @@ import { parseStartTimeInput } from "@shared/utils/time";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 
 interface UseOmniboxRunningEditParams {
@@ -41,6 +42,7 @@ export function useOmniboxRunningEdit({
   const [fillCategoryId, setFillCategoryId] = useState<string | null>(null);
   const [editingStartTime, setEditingStartTime] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState("");
+  const [editingCustomFields, setEditingCustomFields] = useState(false);
 
   useEffect(() => {
     if (!focusTaskEdit || !runningTask) return;
@@ -53,6 +55,13 @@ export function useOmniboxRunningEdit({
     }
     onFocusTaskEditHandled?.();
   }, [focusTaskEdit, runningTask, onFocusTaskEditHandled]);
+
+  // Painel aberto pertence à tarefa que estava em execução: sem este reset, parar
+  // uma tarefa com ele aberto faria a próxima nascer com os campos de outra
+  // expostos, e o `Salvar` gravaria valores que o usuário digitou para a antiga.
+  useEffect(() => {
+    setEditingCustomFields(false);
+  }, [runningTask?.id]);
 
   const isRunning = runningTask?.status === "running";
 
@@ -73,6 +82,12 @@ export function useOmniboxRunningEdit({
     } else {
       setConfirmingStop(true);
     }
+  }
+
+  /** Trocar o projeto no preenchimento obrigatório zera a categoria já digitada. */
+  function clearFillCategory() {
+    setFillCategoryName("");
+    setFillCategoryId(null);
   }
 
   async function handleFillSubmit() {
@@ -124,7 +139,15 @@ export function useOmniboxRunningEdit({
     await updateActiveTask({ billable: !currentBillable });
   }
 
-  // useState setters are stable — [] is correct here
+  async function handleCustomValuesSave(customValues: CustomValues) {
+    await updateActiveTask({ customValues });
+  }
+
+  // useState setters are stable — [] is correct here.
+  //
+  // O painel de campos personalizados **não** fecha aqui de propósito: os chips
+  // guardam uma escolha atômica que se refaz num clique, e o painel guarda texto
+  // digitado. Fechá-lo no clique fora jogaria fora o que ninguém salvou.
   const resetEditing = useCallback(() => {
     setEditingRunningChip(null);
   }, []);
@@ -150,9 +173,12 @@ export function useOmniboxRunningEdit({
     fillCategoryName,
     setFillCategoryName,
     fillCategoryId,
+    clearFillCategory,
     editingStartTime,
     startTimeInput,
     setStartTimeInput,
+    editingCustomFields,
+    setEditingCustomFields,
     isRunning,
     handlePlayPause,
     handleStopClick,
@@ -164,6 +190,7 @@ export function useOmniboxRunningEdit({
     handleProjectSelect,
     handleCategorySelect,
     handleBillableToggle,
+    handleCustomValuesSave,
     resetEditing,
   };
 }

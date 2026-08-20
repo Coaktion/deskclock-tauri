@@ -1,9 +1,11 @@
 import { getDb } from "./db";
+import { loadCustomValues, saveCustomValues } from "./customValues";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task, TaskStatus } from "@domain/entities/Task";
 
 interface TaskRow {
   id: string;
+  workspace_id: string;
   name: string | null;
   project_id: string | null;
   category_id: string | null;
@@ -14,11 +16,13 @@ interface TaskRow {
   status: string;
   created_at: string;
   updated_at: string;
+  planned_task_id: string | null;
 }
 
 function rowToTask(r: TaskRow): Task {
   return {
     id: r.id,
+    workspaceId: r.workspace_id,
     name: r.name,
     projectId: r.project_id,
     categoryId: r.category_id,
@@ -29,7 +33,25 @@ function rowToTask(r: TaskRow): Task {
     status: r.status as TaskStatus,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    plannedTaskId: r.planned_task_id,
+    customValues: {},
   };
+}
+
+/** Uma query de valores para a leva inteira — ver `loadCustomValues`. */
+async function hydrate(db: Awaited<ReturnType<typeof getDb>>, rows: TaskRow[]): Promise<Task[]> {
+  const tasks = rows.map(rowToTask);
+  if (tasks.length === 0) return tasks;
+  const values = await loadCustomValues(
+    db,
+    "task_custom_values",
+    "task_id",
+    tasks.map((t) => t.id)
+  );
+  for (const task of tasks) {
+    task.customValues = values.get(task.id) ?? {};
+  }
+  return tasks;
 }
 
 export class TaskRepository implements ITaskRepository {
@@ -37,11 +59,12 @@ export class TaskRepository implements ITaskRepository {
     const db = await getDb();
     await db.execute(
       `INSERT INTO tasks
-        (id, name, project_id, category_id, billable, start_time, end_time,
-         duration_seconds, status, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        (id, workspace_id, name, project_id, category_id, billable, start_time, end_time,
+         duration_seconds, status, created_at, updated_at, planned_task_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         task.id,
+        task.workspaceId,
         task.name,
         task.projectId,
         task.categoryId,
@@ -52,13 +75,18 @@ export class TaskRepository implements ITaskRepository {
         task.status,
         task.createdAt,
         task.updatedAt,
+        task.plannedTaskId ?? null,
       ]
     );
+    await saveCustomValues(db, "task_custom_values", "task_id", task.id, task.customValues);
   }
 
   async update(task: Task): Promise<void> {
     const db = await getDb();
     await db.execute(
+      // planned_task_id fica fora do UPDATE: é a origem da execução, imutável
+      // depois do início. Incluí-lo faria todo caller que monta uma Task sem o
+      // campo (edição, merge, regras pós-parada) apagar o vínculo sem querer.
       `UPDATE tasks SET
         name = $1, project_id = $2, category_id = $3, billable = $4,
         start_time = $5, end_time = $6, duration_seconds = $7,
@@ -77,12 +105,13 @@ export class TaskRepository implements ITaskRepository {
         task.id,
       ]
     );
+    await saveCustomValues(db, "task_custom_values", "task_id", task.id, task.customValues);
   }
 
   async findById(id: string): Promise<Task | null> {
     const db = await getDb();
     const rows = await db.select<TaskRow[]>("SELECT * FROM tasks WHERE id = $1", [id]);
-    return rows[0] ? rowToTask(rows[0]) : null;
+    return rows[0] ? (await hydrate(db, rows))[0] : null;
   }
 
   async findByStatus(status: "running" | "paused"): Promise<Task[]> {
@@ -91,16 +120,23 @@ export class TaskRepository implements ITaskRepository {
       "SELECT * FROM tasks WHERE status = $1 ORDER BY start_time ASC",
       [status]
     );
-    return rows.map(rowToTask);
+    return hydrate(db, rows);
   }
 
-  async findByDateRange(startISO: string, endISO: string): Promise<Task[]> {
+  async findByDateRange(startISO: string, endISO: string, workspaceId?: string): Promise<Task[]> {
     const db = await getDb();
-    const rows = await db.select<TaskRow[]>(
-      "SELECT * FROM tasks WHERE start_time >= $1 AND start_time <= $2 ORDER BY start_time ASC",
-      [startISO, endISO]
-    );
-    return rows.map(rowToTask);
+    const rows = workspaceId
+      ? await db.select<TaskRow[]>(
+          `SELECT * FROM tasks
+           WHERE start_time >= $1 AND start_time <= $2 AND workspace_id = $3
+           ORDER BY start_time ASC`,
+          [startISO, endISO, workspaceId]
+        )
+      : await db.select<TaskRow[]>(
+          "SELECT * FROM tasks WHERE start_time >= $1 AND start_time <= $2 ORDER BY start_time ASC",
+          [startISO, endISO]
+        );
+    return hydrate(db, rows);
   }
 
   async delete(id: string): Promise<void> {

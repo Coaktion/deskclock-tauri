@@ -1,15 +1,25 @@
 import { useState, useRef } from "react";
-import { Pencil, Trash2, Check, X, DollarSign } from "lucide-react";
+import { Pencil, Trash2, Check, X } from "lucide-react";
 import type { Category } from "@domain/entities/Category";
 import type { UUID } from "@shared/types";
+import { BillableChip, IconButton, Input } from "@presentation/components/ui";
+import { selectionBoxClass } from "./selectionStyles";
 
 interface CategoryCardProps {
   category: Category;
+  selected: boolean;
+  onToggleSelect: (id: UUID) => void;
   onUpdate: (id: UUID, name: string, defaultBillable: boolean) => Promise<void>;
   onDelete: (id: UUID) => void;
 }
 
-export function CategoryCard({ category, onUpdate, onDelete }: CategoryCardProps) {
+export function CategoryCard({
+  category,
+  selected,
+  onToggleSelect,
+  onUpdate,
+  onDelete,
+}: CategoryCardProps) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(category.name);
   const [editBillable, setEditBillable] = useState(category.defaultBillable);
@@ -43,65 +53,73 @@ export function CategoryCard({ category, onUpdate, onDelete }: CategoryCardProps
   }
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-gray-800/50 group transition-colors">
+    <div
+      onClick={editing ? undefined : () => onToggleSelect(category.id)}
+      className={`flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface group transition-colors ${
+        editing ? "" : "cursor-pointer"
+      }`}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={() => onToggleSelect(category.id)}
+        onClick={(e) => e.stopPropagation()}
+        title="Selecionar categoria"
+        className={selectionBoxClass}
+      />
+
       {editing ? (
         <>
-          <input
+          <Input
             ref={inputRef}
+            variant="plain"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 text-sm bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 focus:outline-none"
+            className="flex-1 bg-raised border border-accent rounded-control px-2 py-0.5"
           />
-          <button
-            onClick={() => setEditBillable((b) => !b)}
-            title={editBillable ? "Billable" : "Non-billable"}
-            className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-lg border transition-colors shrink-0 ${
-              editBillable
-                ? "bg-emerald-900/40 border-emerald-700 text-emerald-400"
-                : "bg-gray-800 border-gray-700 text-gray-400"
-            }`}
-          >
-            <DollarSign size={11} />
-            {editBillable ? "Bill." : "Non."}
-          </button>
-          <button
-            onClick={confirmEdit}
-            className="p-1 text-green-400 hover:text-green-300 shrink-0"
-          >
-            <Check size={13} />
-          </button>
-          <button onClick={cancelEdit} className="p-1 text-gray-500 hover:text-gray-300 shrink-0">
-            <X size={13} />
-          </button>
+          <BillableChip billable={editBillable} onToggle={() => setEditBillable((b) => !b)} />
+          <IconButton
+            onClick={() => void confirmEdit()}
+            title="Salvar"
+            icon={<Check size={14} />}
+            size="sm"
+          />
+          <IconButton
+            onClick={cancelEdit}
+            title="Cancelar"
+            icon={<X size={14} />}
+            variant="neutral"
+            size="sm"
+          />
         </>
       ) : (
         <>
-          <span className="flex-1 text-sm text-gray-100 truncate">{category.name}</span>
-          <span
-            className={`shrink-0 text-xs px-1.5 py-0.5 rounded-lg ${
-              category.defaultBillable
-                ? "bg-emerald-900/40 text-emerald-400"
-                : "bg-gray-800 text-gray-500"
-            }`}
+          <span className="flex-1 text-sm text-fg truncate">{category.name}</span>
+          {/* Grava na hora, sem passar pelo modo de edição: o chip é o controle
+              do faturamento em toda parte, e aqui o que ele governa é o padrão
+              das tarefas futuras (§6.2), não as já lançadas. */}
+          <BillableChip
+            billable={category.defaultBillable}
+            onToggle={() => void onUpdate(category.id, category.name, !category.defaultBillable)}
+          />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
           >
-            {category.defaultBillable ? "Bill." : "Non."}
-          </span>
-          <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            <button
+            <IconButton
               onClick={startEdit}
               title="Editar categoria"
-              className="p-1 text-gray-500 hover:text-blue-400 rounded-lg"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
+              icon={<Pencil size={14} />}
+              size="sm"
+            />
+            <IconButton
               onClick={() => onDelete(category.id)}
               title="Excluir categoria"
-              className="p-1 text-gray-500 hover:text-red-400 rounded-lg"
-            >
-              <Trash2 size={13} />
-            </button>
+              icon={<Trash2 size={14} />}
+              variant="danger"
+              size="sm"
+            />
           </div>
         </>
       )}

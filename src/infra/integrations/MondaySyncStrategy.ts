@@ -1,0 +1,201 @@
+import type { Task } from "@domain/entities/Task";
+import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
+import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
+import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
+import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
+import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
+import type { IMondayConfigPort } from "@domain/integrations/IMondayConfigPort";
+import { validateTaskForMonday, formatMissingFields } from "@domain/integrations/taskValidation";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
+import { localDateISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
+import { runMondayDailySync, MONDAY_LOG_KEY } from "./runMondayDailySync";
+import { taskSendFeedback } from "./runDailyTemplate";
+import { MondayTaskSender } from "./MondayTaskSender";
+
+export const MONDAY_INTEGRATION_NAME = "Monday";
+
+export class MondaySyncStrategy implements ISyncStrategy {
+  readonly integrationName = MONDAY_INTEGRATION_NAME;
+
+  constructor(
+    private config: IMondayConfigPort,
+    private taskRepo: ITaskRepository,
+    private logRepo: ITaskIntegrationLogRepository,
+    private itemRepo: IMondayActivityItemRepository,
+    private customFieldRepo: ICustomFieldRepository,
+    private categoryRepo: ICategoryRepository
+  ) {}
+
+  private isEnabled(mode: "per-task" | "daily"): boolean {
+    return (
+      this.config.get("mondayAutoSync") &&
+      this.config.get("mondayAutoSyncMode") === mode &&
+      !!this.config.get("mondayApiKey") &&
+      !!this.config.get("mondayPortfolioBoardId")
+    );
+  }
+
+  isPerTaskEnabled(): boolean {
+    return this.isEnabled("per-task");
+  }
+
+  isDailyEnabled(): boolean {
+    return this.isEnabled("daily");
+  }
+
+  /**
+   * Workspace do DeskClock em que esta integração trabalha.
+   *
+   * Lido a cada uso, não guardado na construção: a strategy nasce com o app e
+   * viveria com a escolha do momento em que ele abriu.
+   */
+  private workspaceId(): string {
+    return resolveIntegrationWorkspaceId(this.config.get("mondayDeskclockWorkspaceId"));
+  }
+
+  /** Ponto único de composição: cada repositório novo no sender para aqui. */
+  private createSender(): MondayTaskSender {
+    return new MondayTaskSender(
+      this.config,
+      this.itemRepo,
+      this.customFieldRepo,
+      this.categoryRepo
+    );
+  }
+
+  /**
+   * Projetos com board de destino — sem board não há onde criar a atividade.
+   *
+   * O item de Portfólio sem a coluna "ID Quadro Projeto" preenchida vira um
+   * projeto normal, mas as horas dele não têm para onde ir: incluí-lo aqui
+   * mandaria o envio tentar criar atividade num board vazio a cada ciclo.
+   */
+  private mappedProjectIds(): Set<string> {
+    return new Set(
+      this.config
+        .get("mondayProjectMapping")
+        .filter((m) => !!m.mondayBoardId)
+        .map((m) => m.deskclockProjectId)
+    );
+  }
+
+  /**
+   * Reúne as tarefas concluídas do dia no mesmo projeto. O envio ao Monday é um
+   * upsert por grupo, então mandar só a tarefa recém-parada sobrescreveria o item
+   * com a duração parcial.
+   *
+   * O escopo é o **projeto no dia**, e não apenas o grupo da tarefa, para casar
+   * com a janela de reconciliação do sender (board + dia): se a tarefa mudou de
+   * grupo, o item que a continha precisa estar no envio para ser corrigido — do
+   * contrário as horas das tarefas restantes daquele item ficariam sem item.
+   * Grupos inalterados não custam chamada de API: caem no skip por payload igual.
+   */
+  private async collectSameDayScope(task: Task): Promise<Task[]> {
+    const day = localDateISO(task.startTime);
+    const sameDay = await this.taskRepo.findByDateRange(
+      startOfDayISO(day),
+      endOfDayISO(day),
+      this.workspaceId()
+    );
+    const others = sameDay.filter(
+      (t) => t.id !== task.id && t.status === "completed" && t.projectId === task.projectId
+    );
+    return [task, ...others];
+  }
+
+  async runPerTask(task: Task): Promise<AutoSyncResult> {
+    // Tarefa de outro workspace não é assunto desta integração — e sai **sem
+    // aviso**. O aviso existe para dizer "isto deveria ter subido e não subiu";
+    // aqui nada deveria, e reclamar a cada parada num workspace pessoal era
+    // justamente o incômodo que o workspace por integração veio resolver.
+    if (task.workspaceId !== this.workspaceId()) {
+      return { integration: this.integrationName, count: 0 };
+    }
+    const validation = validateTaskForMonday(task);
+    if (!validation.ok) {
+      return {
+        integration: this.integrationName,
+        count: 0,
+        warning: `Tarefa não enviada ao Monday: faltam ${formatMissingFields(validation.missing)}.`,
+      };
+    }
+    if (!this.mappedProjectIds().has(task.projectId!)) {
+      return {
+        integration: this.integrationName,
+        count: 0,
+        warning: `Tarefa não enviada ao Monday: o projeto não está mapeado para um board.`,
+      };
+    }
+    try {
+      const group = await this.collectSameDayScope(task);
+      const sender = this.createSender();
+      const outcome = await sender.send(group);
+
+      // A recusa do sender deixou de ser exceção (§ `TaskSendOutcome`), então
+      // "não lançou" já não significa "subiu". Marcar sem conferir daria o badge
+      // "enviado" à hora não faturável sem motivo — a que o board recusa — e
+      // ainda avançaria o timestamp do último envio por cima dela.
+      if (!outcome.sentTaskIds.includes(task.id)) {
+        return {
+          integration: this.integrationName,
+          count: 0,
+          ...taskSendFeedback("Monday", outcome),
+        };
+      }
+
+      await this.logRepo.markSent([task.id], MONDAY_LOG_KEY);
+
+      // O escopo enviado é o dia inteiro do projeto (`collectSameDayScope`), não
+      // só esta tarefa: outro grupo pode ficar pendente enquanto esta sobe.
+      // Descartar isso calava o aviso — antes ele aparecia porque a recusa era
+      // exceção. O timestamp fica parado no mesmo caso, pela razão de
+      // `runMondayDailySync`: a janela do ciclo seguinte começa nele.
+      if (outcome.refused.length + outcome.failed.length > 0) {
+        const feedback = taskSendFeedback("Monday", outcome);
+        return {
+          integration: this.integrationName,
+          count: 1,
+          // A tarefa subiu — a mensagem precisa dizer isso, porque um `error`
+          // no resultado suprime o toast de sucesso (`usePostStopLogic`).
+          ...(feedback.error
+            ? { error: new Error(`Tarefa enviada ao Monday, mas: ${feedback.error.message}`) }
+            : {}),
+          ...(feedback.warning
+            ? { warning: `Enviado ao Monday com pendências: ${feedback.warning}` }
+            : {}),
+        };
+      }
+
+      await this.config.set("mondayDailySyncLastTimestamp", new Date().toISOString());
+      return { integration: this.integrationName, count: 1 };
+    } catch (err) {
+      return {
+        integration: this.integrationName,
+        count: 0,
+        error: err instanceof Error ? err : new Error(String(err)),
+      };
+    }
+  }
+
+  async runDaily(endDateISO: string): Promise<AutoSyncResult> {
+    // Resolvido uma vez por execução: o sender pula tarefas sem board, e marcá-las
+    // como enviadas daria à UI um badge de "enviado" que nunca chegou ao Monday.
+    const mapped = this.mappedProjectIds();
+    return runMondayDailySync(
+      {
+        integrationName: this.integrationName,
+        taskRepo: this.taskRepo,
+        logRepo: this.logRepo,
+        workspaceId: this.workspaceId(),
+        timestampPort: {
+          get: () => this.config.get("mondayDailySyncLastTimestamp"),
+          set: (iso) => this.config.set("mondayDailySyncLastTimestamp", iso),
+        },
+        validate: (t: Task) => validateTaskForMonday(t).ok && mapped.has(t.projectId!),
+        createSender: () => this.createSender(),
+      },
+      endDateISO
+    );
+  }
+}

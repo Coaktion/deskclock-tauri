@@ -1,0 +1,239 @@
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useAutoSync } from "@presentation/contexts/AutoSyncContext";
+import { formatLastSync, todayISO } from "@shared/utils/time";
+import { showToast } from "@shared/utils/toast";
+import { RefreshCw } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Button, Input, SegmentedControl, Toggle } from "@presentation/components/ui";
+import { Row, SubSection } from "./shared";
+import type { AutoSyncConfigKeys } from "./autoSyncIntegrations";
+
+/**
+ * Habilita o "Enviar agora" da integração. Opcional porque nem toda
+ * integração registra uma estratégia no `AutoSyncRunner` — sem ela o botão
+ * dispararia no vazio.
+ */
+export interface AutoSyncNow {
+  /** Nome no runner; é por ele que o botão dispara **só** esta integração. */
+  integrationName: string;
+  /** O que o `count` conta muda por destino (tarefas no Sheets, atividades no
+   *  Monday), então a frase de sucesso vem de quem chama. */
+  successMessage: (count: number) => string;
+  /**
+   * Confere, antes de disparar, o que a integração precisa ter configurado —
+   * devolve a mensagem de erro, ou `null` para seguir.
+   *
+   * O clique não passa por `isDailyEnabled` (é a intenção do usuário, não o
+   * gatilho automático), então a planilha sem id chegaria ao sender e voltaria
+   * como falha técnica de API, sem dizer o que preencher.
+   */
+  guard?: () => string | null;
+}
+
+/**
+ * Onde os controles moram na tela.
+ *
+ * `section` é o accordion próprio, no nível do card (Clockify, Monday).
+ * `inline` são linhas soltas dentro de uma seção que já existe — é o Google
+ * Sheets, cujos controles vivem dentro do accordion "Google Sheets"; ali a
+ * casca própria aninharia accordion dentro de accordion.
+ */
+type AutoSyncShell = "section" | "inline";
+
+const MODES = [
+  { value: "per-task", label: "Por tarefa" },
+  { value: "daily", label: "Diário" },
+] as const;
+const TRIGGERS = [
+  { value: "on-open", label: "Ao abrir o app" },
+  { value: "fixed-time", label: "Horário fixo" },
+] as const;
+
+export function AutoSyncControls({
+  keys,
+  syncNow,
+  shell = "section",
+  tourId,
+}: {
+  keys: AutoSyncConfigKeys;
+  syncNow?: AutoSyncNow;
+  shell?: AutoSyncShell;
+  /** Âncora do tour, no elemento de topo — o passo aponta para o bloco inteiro. */
+  tourId?: string;
+}) {
+  const config = useAppConfig();
+  const { runDailyFor, isSyncing } = useAutoSync();
+  const [autoSync, setAutoSync] = useState(false);
+  const [syncMode, setSyncMode] = useState<"per-task" | "daily">("per-task");
+  const [syncTrigger, setSyncTrigger] = useState<"on-open" | "fixed-time">("on-open");
+  const [syncTime, setSyncTime] = useState("18:00");
+  const [lastSyncTs, setLastSyncTs] = useState("");
+  const [syncing, setSyncing] = useState(false);
+  const autoSyncing = syncNow ? isSyncing(syncNow.integrationName) : false;
+
+  useEffect(() => {
+    if (!config.isLoaded) return;
+    setAutoSync(config.get(keys.enabled));
+    setSyncMode(config.get(keys.mode));
+    setSyncTrigger(config.get(keys.trigger));
+    setSyncTime(config.get(keys.time));
+    setLastSyncTs(config.get(keys.lastSync));
+    // Hidratação única: `config` é estável e `keys` é constante por integração;
+    // relistar os setters só reexecutaria o efeito sem mudar o resultado.
+  }, [config.isLoaded, keys]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleSyncNow() {
+    if (!syncNow) return;
+    const missing = syncNow.guard?.();
+    if (missing) {
+      await showToast("error", missing);
+      return;
+    }
+    setSyncing(true);
+    try {
+      const result = await runDailyFor(syncNow.integrationName, todayISO());
+      // Só acontece se a integração não estiver registrada no runner — o botão
+      // não teria o que disparar, e um toast de sucesso mentiria.
+      if (!result) {
+        await showToast("error", `Integração ${syncNow.integrationName} indisponível.`);
+        return;
+      }
+      if (result.error) {
+        await showToast("error", result.error.message);
+        return;
+      }
+      // A estratégia grava o timestamp; reler a config mantém o "Último envio"
+      // em dia sem esperar uma remontagem da tela.
+      setLastSyncTs(config.get(keys.lastSync));
+      if (result.count === 0) {
+        if (result.warning) await showToast("warning", result.warning, 6000);
+        else await showToast("success", "Tudo enviado — nenhuma tarefa nova encontrada.");
+        return;
+      }
+      const success = syncNow.successMessage(result.count);
+      if (result.warning) await showToast("warning", `${success} ${result.warning}`, 6000);
+      else await showToast("success", success);
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  const toggle = (
+    <Toggle
+      ariaLabel="Ativar envio automático"
+      checked={autoSync}
+      onChange={async (v) => {
+        setAutoSync(v);
+        await config.set(keys.enabled, v);
+      }}
+    />
+  );
+
+  const details = autoSync && (
+    <div className="pl-4 border-l border-border-subtle ml-1 mb-1">
+      <div className="py-2.5 border-b border-border-subtle">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-fg-secondary">Modo</span>
+          <SegmentedControl
+            value={syncMode}
+            options={MODES}
+            ariaLabel="Modo de envio"
+            onChange={async (m) => {
+              setSyncMode(m);
+              await config.set(keys.mode, m);
+            }}
+          />
+        </div>
+        <p className="text-xs text-fg-muted mt-1.5">
+          {syncMode === "per-task"
+            ? "Envia cada tarefa automaticamente ao ser concluída, em tempo real."
+            : "Agrupa e envia de uma vez, cobrindo fins de semana e dias perdidos."}
+        </p>
+      </div>
+
+      {syncMode === "daily" && (
+        <>
+          <div className="py-2.5 border-b border-border-subtle">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-fg-secondary">Gatilho</span>
+              <SegmentedControl
+                value={syncTrigger}
+                options={TRIGGERS}
+                ariaLabel="Gatilho do envio"
+                onChange={async (t) => {
+                  setSyncTrigger(t);
+                  await config.set(keys.trigger, t);
+                }}
+              />
+            </div>
+            <p className="text-xs text-fg-muted mt-1.5">
+              {syncTrigger === "on-open"
+                ? "Envia ao abrir o app as tarefas de ontem para trás, desde o último envio automático."
+                : "Envia no horário definido as tarefas do dia corrente e dias anteriores não enviados."}
+            </p>
+          </div>
+
+          {syncTrigger === "fixed-time" && (
+            <Row label="Horário">
+              <Input
+                type="time"
+                size="sm"
+                value={syncTime}
+                onChange={(e) => setSyncTime(e.target.value)}
+                onBlur={() => config.set(keys.time, syncTime)}
+                className="w-auto!"
+              />
+            </Row>
+          )}
+
+          <div className="py-2.5 flex items-center justify-between gap-3">
+            <span className="text-xs text-fg-muted shrink-0">
+              Último envio: <span className="text-fg-secondary">{formatLastSync(lastSyncTs)}</span>
+            </span>
+            {syncNow && (
+              <Button
+                onClick={handleSyncNow}
+                loading={syncing || autoSyncing}
+                // O clique tem precedência sobre o ciclo automático nos dois: o
+                // envio manual passa pelo runner, então marca o mesmo
+                // `isSyncing`, e sem isso o botão respondia ao próprio clique
+                // dizendo "Envio automático…".
+                title={!syncing && autoSyncing ? "Envio automático em andamento…" : undefined}
+                icon={<RefreshCw size={14} />}
+                className="shrink-0"
+              >
+                {syncing ? "Enviando…" : autoSyncing ? "Envio automático…" : "Enviar agora"}
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  // O rótulo do toggle é o que muda entre as duas cascas: no accordion o título
+  // já diz "Envio automático" e a linha só precisa dizer "Ativar"; inline, ela é
+  // o único lugar onde o nome aparece.
+  const body: ReactNode =
+    shell === "section" ? (
+      <SubSection
+        icon={<RefreshCw size={14} />}
+        title="Envio automático"
+        badge={
+          autoSync ? (
+            <span className="ml-1 text-xs text-accent-text font-medium">Ativa</span>
+          ) : undefined
+        }
+      >
+        <Row label="Ativar">{toggle}</Row>
+        {details}
+      </SubSection>
+    ) : (
+      <>
+        <Row label="Envio automático">{toggle}</Row>
+        {details}
+      </>
+    );
+
+  return tourId ? <div data-tour={tourId}>{body}</div> : body;
+}

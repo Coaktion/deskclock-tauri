@@ -6,8 +6,7 @@
     "main",
     "overlay-compact",
     "overlay-popup",
-    "toast",
-    "command-palette"
+    "toast"
   ],
   "permissions": [
     "core:default",

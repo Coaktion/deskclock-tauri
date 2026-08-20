@@ -1,65 +1,165 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-mode="escuro" data-accent="azul">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DeskClock — Manual de Uso</title>
+<meta name="description" content="Manual de uso do DeskClock — app desktop de registro de horas.">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.png" type="image/png" sizes="32x32">
+<link rel="preload" href="fonts/source-sans-3-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<script>
+  /* Aplica a aparência salva antes do primeiro quadro — depois do <style> a
+     página já pintaria no escuro e saltaria para o claro. Espelha o
+     `applyAppearance` do app: dois atributos, dois eixos. */
+  (function () {
+    try {
+      var m = localStorage.getItem("deskclock-doc-mode");
+      var a = localStorage.getItem("deskclock-doc-accent");
+      if (!m && window.matchMedia("(prefers-color-scheme: light)").matches) m = "claro";
+      if (m) document.documentElement.dataset.mode = m;
+      if (a) document.documentElement.dataset.accent = a;
+    } catch (e) {}
+  })();
+</script>
 <style>
+  /* ══════════════════════════════════════════════════════════════════════════
+     Este manual usa os mesmos tokens do app (src/index.css): dois eixos
+     independentes — modo (escuro/claro) e acento (azul/verde/roxo/âmbar) —,
+     a mesma escala tipográfica de dez degraus, os mesmos três raios e a mesma
+     superfamília Source. Os valores são cópia literal do @theme do app; ao
+     mexer neles lá, espelhe aqui.
+
+     Os blocos [data-mode] e [data-accent] vêm depois de :root de propósito —
+     é a ordem que os faz vencer no cascade.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  @font-face {
+    font-family: "Source Sans 3";
+    font-style: normal;
+    font-weight: 400 600;
+    font-display: swap;
+    src: url("fonts/source-sans-3-latin-wght-normal.woff2") format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+      U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+      U+FEFF, U+FFFD;
+  }
+  @font-face {
+    font-family: "Source Sans 3";
+    font-style: normal;
+    font-weight: 400 600;
+    font-display: swap;
+    src: url("fonts/source-sans-3-latin-ext-wght-normal.woff2") format("woff2-variations");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+      U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+      U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  @font-face {
+    font-family: "Source Code Pro";
+    font-style: normal;
+    font-weight: 400 500;
+    font-display: swap;
+    src: url("fonts/source-code-pro-latin-wght-normal.woff2") format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+      U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+      U+FEFF, U+FFFD;
+  }
+
   /* ── Reset ── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* ── Variáveis ── */
+  /* ── Tokens ── */
   :root {
-    --bg-base:      #0f172a;
-    --bg-surface:   #1e293b;
-    --bg-card:      #263347;
-    --bg-hover:     #2d3f55;
-    --border:       #334155;
-    --border-light: #3f5068;
-    --accent:       #3b82f6;
-    --accent-light: #60a5fa;
-    --accent-bg:    rgba(59,130,246,.12);
-    --text-base:    #e2e8f0;
-    --text-muted:   #94a3b8;
-    --text-dim:     #64748b;
-    --green:        #10b981;
-    --green-bg:     rgba(16,185,129,.12);
-    --amber:        #f59e0b;
-    --amber-bg:     rgba(245,158,11,.12);
-    --red:          #ef4444;
-    --red-bg:       rgba(239,68,68,.12);
-    --radius:       8px;
-    --radius-lg:    12px;
-    --sidebar-w:    260px;
-    --font:         'Inter', system-ui, -apple-system, sans-serif;
+    --accent-hue: 258;
+
+    --canvas:        oklch(0.13 0.028 262);
+    --surface:       oklch(0.185 0.031 264);
+    --raised:        oklch(0.21 0.034 265);
+    --border-subtle: oklch(0.26 0.033 257);
+    --border:        oklch(0.3 0.033 257);
+
+    --fg:            oklch(0.97 0.003 264);
+    --fg-secondary:  oklch(0.75 0.02 261);
+    --fg-muted:      oklch(0.6 0.02 264);
+
+    --accent:        oklch(0.62 0.19 var(--accent-hue));
+    --accent-text:   oklch(0.72 0.15 var(--accent-hue));
+
+    --billable:      oklch(0.72 0.15 162);
+    --paused:        oklch(0.75 0.15 70);
+    --danger:        oklch(0.65 0.19 22);
+    --success:       oklch(0.72 0.15 162);
+    --warning:       oklch(0.78 0.15 85);
+
+    --radius-chip:    0.375rem;
+    --radius-control: 0.5rem;
+    --radius-card:    0.75rem;
+
+    --font-sans: "Source Sans 3", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    /* Escala de dez degraus, na raiz de 16px do app. */
+    --text-page:     1.25rem;      /* 20 — title/page */
+    --text-metric:   1.0625rem;    /* 17 — mono/tempo */
+    --text-section:  1rem;         /* 16 — title/section */
+    --text-lead:     0.9375rem;    /* 15 */
+    --text-body:     0.875rem;     /* 14 — prosa */
+    --text-ui:       0.765625rem;  /* 12,25 — body/ui */
+    --text-micro:    0.6875rem;    /* 11 */
+    --text-caption:  0.65625rem;   /* 10,5 */
+    --text-overline: 0.625rem;     /* 10 */
+    --text-nav:      0.5625rem;    /* 9 */
+
+    --sidebar-w: 248px;
+  }
+
+  [data-accent="verde"] { --accent-hue: 155; }
+  [data-accent="roxo"]  { --accent-hue: 300; }
+  [data-accent="ambar"] { --accent-hue: 45; }
+
+  [data-mode="claro"] {
+    --canvas:        oklch(0.985 0.002 248);
+    --surface:       #ffffff;
+    --raised:        oklch(0.967 0.003 265);
+    --border-subtle: oklch(0.93 0.005 264);
+    --border:        oklch(0.9 0.006 264);
+    --fg:            oklch(0.21 0.034 265);
+    --fg-secondary:  oklch(0.446 0.03 257);
+    --fg-muted:      oklch(0.551 0.018 264);
+    --accent:        oklch(0.55 0.2 var(--accent-hue));
+    --accent-text:   oklch(0.5 0.19 var(--accent-hue));
+    --billable:      oklch(0.62 0.15 162);
+    --paused:        oklch(0.68 0.15 70);
+    --danger:        oklch(0.58 0.19 22);
+    --success:       oklch(0.62 0.15 162);
+    --warning:       oklch(0.62 0.14 75);
   }
 
   html { scroll-behavior: smooth; }
   body {
-    font-family: var(--font);
-    background: var(--bg-base);
-    color: var(--text-base);
-    line-height: 1.6;
-    font-size: 14px;
+    font-family: var(--font-sans);
+    background: var(--canvas);
+    color: var(--fg);
+    font-size: var(--text-body);
+    line-height: 1.55;
     display: flex;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* ── Sidebar ── */
   .sidebar {
     width: var(--sidebar-w);
     min-width: var(--sidebar-w);
-    background: var(--bg-surface);
-    border-right: 1px solid var(--border);
+    background: var(--surface);
+    border-right: 1px solid var(--border-subtle);
     height: 100vh;
     position: sticky;
     top: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    padding: 24px 0 16px;
+    padding: 20px 0 12px;
     z-index: 100;
   }
 
@@ -67,306 +167,372 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 0 20px 20px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 16px;
+    padding: 0 16px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    margin-bottom: 12px;
   }
   .sidebar-logo svg { flex-shrink: 0; }
   .sidebar-logo-text { line-height: 1.2; }
-  .sidebar-logo-name { font-size: 15px; font-weight: 700; color: var(--text-base); }
-  .sidebar-logo-sub  { font-size: 11px; color: var(--text-muted); }
+  .sidebar-logo-name { font-size: var(--text-section); font-weight: 600; color: var(--fg); }
+  .sidebar-logo-sub  { font-size: var(--text-caption); color: var(--fg-muted); }
 
   .sidebar-section-label {
-    font-size: 10px;
+    font-size: var(--text-overline);
     font-weight: 600;
-    letter-spacing: .08em;
+    letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--text-dim);
-    padding: 4px 20px 6px;
-    margin-top: 8px;
+    color: var(--fg-muted);
+    padding: 10px 16px 4px;
   }
 
   .sidebar-link {
     display: flex;
     align-items: center;
     gap: 9px;
-    padding: 7px 20px;
-    color: var(--text-muted);
+    margin: 0 8px;
+    padding: 6px 8px;
+    color: var(--fg-secondary);
     text-decoration: none;
-    font-size: 13px;
-    border-radius: 0;
+    font-size: var(--text-ui);
+    font-weight: 500;
+    border-radius: var(--radius-control);
     transition: background .12s, color .12s;
     cursor: pointer;
-    position: relative;
   }
-  .sidebar-link:hover { background: var(--bg-hover); color: var(--text-base); }
+  .sidebar-link:hover { background: var(--raised); color: var(--fg); }
   .sidebar-link.active {
-    background: var(--accent-bg);
-    color: var(--accent-light);
-    border-right: 2px solid var(--accent);
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    color: var(--accent-text);
   }
-  .sidebar-link svg { width: 15px; height: 15px; flex-shrink: 0; opacity: .7; }
-  .sidebar-link.active svg { opacity: 1; }
+  .sidebar-link svg { width: 14px; height: 14px; flex-shrink: 0; }
 
   .sidebar-footer {
     margin-top: auto;
-    padding: 12px 20px 0;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-dim);
+    padding: 12px 16px 0;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .sidebar-version {
+    font-size: var(--text-caption);
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
 
-  /* ── Main content ── */
-  .main {
+  /* ── Seletor de aparência (espelha Configurações → Aparência) ── */
+  .appearance { display: flex; flex-direction: column; gap: 6px; }
+  .appearance-label {
+    font-size: var(--text-overline);
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .segmented {
+    display: flex;
+    background: var(--raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-control);
+    padding: 2px;
+    gap: 2px;
+  }
+  .segmented button {
     flex: 1;
-    overflow-y: auto;
-    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--fg-secondary);
+    font-family: inherit;
+    font-size: var(--text-caption);
+    font-weight: 500;
+    padding: 4px 0;
+    border-radius: var(--radius-chip);
+    cursor: pointer;
+    transition: background .12s, color .12s;
   }
+  .segmented button:hover { color: var(--fg); }
+  .segmented button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 
-  /* ── Section ── */
+  .accents { display: flex; gap: 6px; }
+  .accents button {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    padding: 2px;
+    transition: border-color .12s;
+  }
+  .accents button span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+  }
+  .accents button[aria-pressed="true"] { border-color: var(--fg-secondary); }
+  .accents button[data-a="azul"]  span { background: oklch(0.62 0.19 258); }
+  .accents button[data-a="verde"] span { background: oklch(0.62 0.19 155); }
+  .accents button[data-a="roxo"]  span { background: oklch(0.62 0.19 300); }
+  .accents button[data-a="ambar"] span { background: oklch(0.62 0.19 45); }
+
+  /* ── Conteúdo ── */
+  .main { flex: 1; overflow-y: auto; }
+
   .section {
     display: none;
     max-width: 820px;
     margin: 0 auto;
-    padding: 48px 48px 80px;
+    padding: 32px 40px 80px;
   }
   .section.active { display: block; }
 
-  /* ── Page header ── */
+  /* ── Cabeçalho de página ── */
   .page-header {
-    margin-bottom: 36px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-subtle);
   }
   .page-header-eyebrow {
-    font-size: 11px;
+    font-size: var(--text-overline);
     font-weight: 600;
-    letter-spacing: .07em;
+    letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--accent-text);
     margin-bottom: 8px;
   }
   .page-header h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: #f1f5f9;
-    line-height: 1.25;
-    margin-bottom: 10px;
+    font-size: var(--text-page);
+    font-weight: 600;
+    color: var(--fg);
+    line-height: 1.3;
+    margin-bottom: 8px;
   }
   .page-header p {
-    font-size: 15px;
-    color: var(--text-muted);
-    max-width: 600px;
-    line-height: 1.65;
+    color: var(--fg-secondary);
+    max-width: 620px;
   }
 
-  /* ── Typography ── */
+  /* ── Tipografia ── */
   h2 {
-    font-size: 18px;
+    font-size: var(--text-section);
     font-weight: 600;
-    color: #f1f5f9;
-    margin: 36px 0 12px;
+    color: var(--fg);
+    margin: 32px 0 12px;
     padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
   }
-  h2 svg { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; }
-  h3 { font-size: 14px; font-weight: 600; color: var(--text-base); margin: 20px 0 8px; }
-  p { color: var(--text-muted); margin-bottom: 12px; line-height: 1.7; }
-  strong { color: var(--text-base); font-weight: 600; }
-  ul, ol { padding-left: 20px; color: var(--text-muted); margin-bottom: 12px; }
-  li { margin-bottom: 5px; line-height: 1.65; }
-  li strong { color: var(--text-base); }
-  a { color: var(--accent-light); text-decoration: none; }
+  h2 svg { width: 16px; height: 16px; color: var(--accent-text); flex-shrink: 0; }
+  h2[id] { scroll-margin-top: 24px; }
+  h3 {
+    font-size: var(--text-body);
+    font-weight: 600;
+    color: var(--fg);
+    margin: 22px 0 8px;
+  }
+  p { color: var(--fg-secondary); margin-bottom: 12px; }
+  strong { color: var(--fg); font-weight: 600; }
+  em { color: var(--fg-secondary); }
+  ul, ol { padding-left: 20px; color: var(--fg-secondary); margin-bottom: 12px; }
+  li { margin-bottom: 5px; }
+  li strong { color: var(--fg); }
+  a { color: var(--accent-text); text-decoration: none; cursor: pointer; }
   a:hover { text-decoration: underline; }
+  code {
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    background: var(--raised);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-chip);
+    padding: 1px 5px;
+    color: var(--fg);
+  }
 
-  /* ── Cards de funcionalidade ── */
+  /* ── Cards ── */
   .feature-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 10px;
     margin: 16px 0;
   }
   .feature-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    padding: 14px;
   }
   .feature-card-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--accent-bg);
-    border-radius: 8px;
+    width: 30px;
+    height: 30px;
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    border-radius: var(--radius-control);
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 10px;
-    color: var(--accent);
+    color: var(--accent-text);
   }
   .feature-card-icon svg { width: 16px; height: 16px; }
-  .feature-card h4 { font-size: 13px; font-weight: 600; color: var(--text-base); margin-bottom: 4px; }
-  .feature-card p  { font-size: 12px; margin: 0; line-height: 1.5; }
+  .feature-card h4 { font-size: var(--text-ui); font-weight: 600; color: var(--fg); margin-bottom: 4px; }
+  .feature-card p  { font-size: var(--text-ui); margin: 0; line-height: 1.45; }
 
-  /* ── Tour tip ── */
+  /* ── Dica de tour ── */
   .tour-tip {
-    background: var(--accent-bg);
-    border: 1px solid rgba(59,130,246,.25);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    margin: 16px 0;
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 26%, transparent);
+    border-radius: var(--radius-card);
+    padding: 11px 14px;
+    margin: 14px 0;
     display: flex;
     gap: 10px;
     align-items: flex-start;
   }
-  .tour-tip svg { width: 15px; height: 15px; color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+  .tour-tip svg { width: 14px; height: 14px; color: var(--accent-text); flex-shrink: 0; margin-top: 2px; }
   .tour-tip-content { flex: 1; }
-  .tour-tip-label { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); margin-bottom: 3px; }
-  .tour-tip p { font-size: 12.5px; margin: 0; color: var(--text-muted); line-height: 1.55; }
+  .tour-tip-label {
+    font-size: var(--text-overline);
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent-text);
+    margin-bottom: 3px;
+  }
+  .tour-tip p { font-size: var(--text-ui); margin: 0; color: var(--fg-secondary); line-height: 1.5; }
 
-  /* ── Info / Warning callouts ── */
+  /* ── Callouts ── */
   .callout {
-    border-radius: var(--radius);
-    padding: 12px 16px;
+    border-radius: var(--radius-card);
+    padding: 11px 14px;
     margin: 14px 0;
     display: flex;
     gap: 10px;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: var(--text-ui);
+    line-height: 1.5;
+    border: 1px solid var(--border-subtle);
+    background: var(--surface);
   }
-  .callout svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 2px; }
-  .callout-body { flex: 1; color: var(--text-muted); }
-  .callout-body strong { display: block; margin-bottom: 2px; }
-  .callout.info    { background: var(--accent-bg); border: 1px solid rgba(59,130,246,.2); }
-  .callout.info svg { color: var(--accent); }
-  .callout.success { background: var(--green-bg);  border: 1px solid rgba(16,185,129,.2); }
-  .callout.success svg { color: var(--green); }
-  .callout.warning { background: var(--amber-bg);  border: 1px solid rgba(245,158,11,.2); }
-  .callout.warning svg { color: var(--amber); }
+  .callout svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+  .callout-body { flex: 1; color: var(--fg-secondary); }
+  /* Só o `strong` de abertura é título do callout e vira bloco. Em `strong`
+     qualquer, a ênfase no meio da frase quebrava a linha em três. */
+  .callout-body > strong:first-child { display: block; margin-bottom: 2px; }
+  .callout.info    { border-color: color-mix(in oklab, var(--accent) 30%, transparent); }
+  .callout.info svg { color: var(--accent-text); }
+  .callout.success { border-color: color-mix(in oklab, var(--success) 30%, transparent); }
+  .callout.success svg { color: var(--success); }
+  .callout.warning { border-color: color-mix(in oklab, var(--warning) 34%, transparent); }
+  .callout.warning svg { color: var(--warning); }
 
-  /* ── Steps list ── */
-  .steps { margin: 16px 0; counter-reset: step; }
+  /* ── Passos ── */
+  .steps { margin: 16px 0; }
   .step {
     display: flex;
-    gap: 14px;
-    padding: 14px 0;
-    border-bottom: 1px solid var(--border);
-    counter-increment: step;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-subtle);
   }
   .step:last-child { border-bottom: none; }
   .step-num {
-    width: 26px;
-    height: 26px;
-    min-width: 26px;
-    background: var(--accent-bg);
-    border: 1px solid rgba(59,130,246,.3);
-    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+    border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--accent-light);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-micro);
+    font-weight: 500;
+    color: var(--accent-text);
     margin-top: 1px;
   }
-  .step-content h4 { font-size: 13px; font-weight: 600; color: var(--text-base); margin-bottom: 3px; }
-  .step-content p  { font-size: 12.5px; color: var(--text-muted); margin: 0; line-height: 1.55; }
+  .step-content h4 { font-size: var(--text-ui); font-weight: 600; color: var(--fg); margin-bottom: 3px; }
+  .step-content p  { font-size: var(--text-ui); color: var(--fg-secondary); margin: 0; line-height: 1.5; }
 
-  /* ── Keyboard shortcut ── */
+  /* ── Tecla ── */
   kbd {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-bottom: 2px solid var(--border-light);
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    color: var(--text-base);
+    background: var(--raised);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: var(--radius-chip);
+    padding: 1px 5px;
+    font-size: var(--text-micro);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
     white-space: nowrap;
   }
 
-  /* ── Table ── */
+  /* ── Tabela ── */
   .data-table {
     width: 100%;
     border-collapse: collapse;
     margin: 14px 0;
-    font-size: 13px;
+    font-size: var(--text-ui);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    overflow: hidden;
   }
   .data-table th {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-subtle);
     padding: 8px 12px;
     text-align: left;
-    font-size: 11px;
+    font-size: var(--text-overline);
     font-weight: 600;
-    color: var(--text-muted);
+    letter-spacing: .1em;
+    color: var(--fg-muted);
     text-transform: uppercase;
-    letter-spacing: .05em;
   }
   .data-table td {
-    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-subtle);
     padding: 9px 12px;
-    color: var(--text-muted);
+    color: var(--fg-secondary);
     vertical-align: top;
+    line-height: 1.5;
   }
-  .data-table td strong { color: var(--text-base); font-size: 12.5px; }
-  .data-table tr:hover td { background: rgba(255,255,255,.015); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table td strong { color: var(--fg); }
+  .data-table tr:hover td { background: var(--surface); }
+  .table-scroll { overflow-x: auto; }
 
   /* ── Badge ── */
   .badge {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    padding: 2px 6px;
     border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: var(--text-overline);
+    font-weight: 500;
+    letter-spacing: normal;
+    line-height: 1.4;
+    border: 1px solid;
+    white-space: nowrap;
   }
-  .badge.blue   { background: var(--accent-bg); color: var(--accent-light); }
-  .badge.green  { background: var(--green-bg);  color: #34d399; }
-  .badge.amber  { background: var(--amber-bg);  color: #fcd34d; }
+  .badge.blue  { background: color-mix(in oklab, var(--accent) 14%, transparent);  border-color: color-mix(in oklab, var(--accent) 34%, transparent);  color: var(--accent-text); }
+  .badge.green { background: color-mix(in oklab, var(--success) 14%, transparent); border-color: color-mix(in oklab, var(--success) 34%, transparent); color: var(--success); }
+  .badge.amber { background: color-mix(in oklab, var(--warning) 14%, transparent); border-color: color-mix(in oklab, var(--warning) 34%, transparent); color: var(--warning); }
+  .badge.red   { background: color-mix(in oklab, var(--danger) 14%, transparent);  border-color: color-mix(in oklab, var(--danger) 34%, transparent);  color: var(--danger); }
 
-  /* ── Integration block ── */
-  .integration-block {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
-    margin: 16px 0;
-  }
-  .integration-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  .integration-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    flex-shrink: 0;
-  }
-  .integration-header h3 { margin: 0 0 3px; font-size: 14px; }
-  .integration-header p  { margin: 0; font-size: 12px; }
-
-  /* ── Overlay visualization ── */
+  /* ── Demonstração de overlay ── */
   .overlay-demo {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    padding: 18px;
     margin: 16px 0;
     display: flex;
     align-items: flex-start;
-    gap: 20px;
+    gap: 18px;
+    flex-wrap: wrap;
   }
   .overlay-visual {
     flex-shrink: 0;
@@ -378,81 +544,73 @@
   .overlay-compact {
     width: 52px;
     height: 52px;
-    background: var(--bg-surface);
+    background: var(--canvas);
     border: 1.5px solid var(--accent);
-    border-radius: var(--radius);
+    border-radius: var(--radius-card);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    box-shadow: 0 0 12px rgba(59,130,246,.2);
-    font-size: 9px;
-    font-weight: 600;
-    color: var(--accent-light);
-    font-family: monospace;
+    box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 26%, transparent);
+    font-size: var(--text-ui);
+    font-weight: 500;
+    color: var(--accent-text);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
   }
-  .overlay-compact svg { width: 20px; height: 20px; color: var(--accent); }
-  .overlay-caption {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-align: center;
-  }
-  .overlay-desc { flex: 1; }
-  .overlay-desc h4 { font-size: 13px; font-weight: 600; color: var(--text-base); margin-bottom: 6px; }
-  .overlay-desc p  { font-size: 12.5px; margin-bottom: 6px; }
-  .overlay-desc ul { font-size: 12.5px; margin: 0; }
+  .overlay-compact svg { width: 20px; height: 20px; color: var(--accent-text); }
+  .overlay-caption { font-size: var(--text-caption); color: var(--fg-muted); text-align: center; }
+  .overlay-desc { flex: 1; min-width: 240px; }
+  .overlay-desc h4 { font-size: var(--text-ui); font-weight: 600; color: var(--fg); margin-bottom: 6px; }
+  .overlay-desc p  { font-size: var(--text-ui); margin-bottom: 6px; }
+  .overlay-desc ul { font-size: var(--text-ui); margin: 0; }
 
-  /* ── Welcome banner ── */
+  /* ── Faixa de boas-vindas ── */
   .welcome-banner {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1e293b 60%);
-    border: 1px solid rgba(59,130,246,.25);
-    border-radius: var(--radius-lg);
-    padding: 28px 32px;
-    margin-bottom: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    padding: 24px 28px;
+    margin-bottom: 28px;
     position: relative;
     overflow: hidden;
   }
   .welcome-banner::after {
     content: '';
     position: absolute;
-    right: -30px;
-    top: -30px;
-    width: 160px;
-    height: 160px;
-    background: radial-gradient(circle, rgba(59,130,246,.12) 0%, transparent 70%);
+    inset: 0;
+    background: radial-gradient(120% 160% at 100% 0%, color-mix(in oklab, var(--accent) 16%, transparent) 0%, transparent 62%);
     pointer-events: none;
   }
   .welcome-banner h2 {
     border: none;
     padding: 0;
     margin: 0 0 6px;
-    font-size: 20px;
-    color: #f8fafc;
+    font-size: var(--text-page);
   }
-  .welcome-banner p { font-size: 14px; margin: 0; color: #94a3b8; }
+  .welcome-banner p { margin: 0; color: var(--fg-secondary); }
   .welcome-banner svg.bg-icon {
     position: absolute;
-    right: 20px;
+    right: 24px;
     top: 50%;
     transform: translateY(-50%);
-    width: 72px;
-    height: 72px;
-    opacity: .08;
+    width: 64px;
+    height: 64px;
+    opacity: .07;
+    color: var(--fg);
   }
 
-  /* ── Quick nav cards ── */
+  /* ── Navegação rápida ── */
   .quick-nav {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin: 20px 0;
+    gap: 8px;
+    margin: 16px 0;
   }
   .quick-nav-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    padding: 12px;
     cursor: pointer;
     transition: border-color .15s, background .15s;
     text-align: left;
@@ -460,72 +618,69 @@
     align-items: center;
     gap: 10px;
   }
-  .quick-nav-card:hover {
-    border-color: var(--accent);
-    background: var(--bg-hover);
-  }
-  .quick-nav-card svg { width: 16px; height: 16px; color: var(--accent); flex-shrink: 0; }
+  .quick-nav-card:hover { border-color: var(--accent); background: var(--raised); }
+  .quick-nav-card svg { width: 16px; height: 16px; color: var(--accent-text); flex-shrink: 0; }
   .quick-nav-card-text { flex: 1; }
-  .quick-nav-card h4 { font-size: 12.5px; font-weight: 600; color: var(--text-base); margin: 0 0 2px; }
-  .quick-nav-card p  { font-size: 11.5px; color: var(--text-muted); margin: 0; line-height: 1.4; }
+  .quick-nav-card h4 { font-size: var(--text-ui); font-weight: 600; color: var(--fg); margin: 0 0 2px; }
+  .quick-nav-card p  { font-size: var(--text-caption); color: var(--fg-muted); margin: 0; line-height: 1.4; }
 
-  /* ── Divider ── */
-  .divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
-
-  /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
-
-  /* ── Open in app button ── */
+  /* ── Botão "abrir no app" ── */
   .open-in-app {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 11px;
+    font-size: var(--text-ui);
     font-weight: 500;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: var(--accent-bg);
-    border: 1px solid rgba(59,130,246,.25);
-    color: var(--accent-light);
+    padding: 5px 10px;
+    border-radius: var(--radius-control);
+    background: var(--raised);
+    border: 1px solid var(--border-subtle);
+    color: var(--fg-secondary);
     text-decoration: none;
-    transition: background .12s;
-    margin-top: 10px;
+    transition: border-color .12s, color .12s;
+    margin-top: 12px;
   }
-  .open-in-app:hover { background: rgba(59,130,246,.2); text-decoration: none; }
+  .open-in-app:hover { border-color: var(--accent); color: var(--accent-text); text-decoration: none; }
   .open-in-app svg { width: 12px; height: 12px; }
 
-  /* ── Anchor link on h2 ── */
-  h2 { position: relative; }
-  h2[id] { scroll-margin-top: 24px; }
+  /* ── Âncora do h2 ── */
   .anchor-link {
     opacity: 0;
-    margin-left: 6px;
-    color: var(--text-dim);
-    font-size: 14px;
+    margin-left: 4px;
+    color: var(--fg-muted);
     font-weight: 400;
     text-decoration: none;
     transition: opacity .12s;
-    vertical-align: middle;
   }
   h2:hover .anchor-link { opacity: 1; }
-  .anchor-link:hover { color: var(--accent-light); text-decoration: none; }
+  .anchor-link:hover { color: var(--accent-text); text-decoration: none; }
 
-  /* ── Deeplink example ── */
+  /* ── Exemplo de deep link ── */
   a.deeplink-example {
     display: block;
-    color: var(--accent-light);
-    font-size: 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: var(--accent-text);
+    font-size: var(--text-micro);
+    font-family: var(--font-mono);
     word-break: break-all;
   }
-  a.deeplink-example:hover { text-decoration: underline; }
 
-  /* ── Responsive ── */
-  @media (max-width: 700px) {
-    .sidebar { display: none; }
+  /* ── Barra de rolagem ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border); }
+
+  /* ── Responsivo ── */
+  @media (max-width: 760px) {
+    body { display: block; }
+    .sidebar {
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      position: static;
+      border-right: none;
+      border-bottom: 1px solid var(--border-subtle);
+    }
     .section { padding: 24px 20px 60px; }
     .feature-grid { grid-template-columns: 1fr; }
     .quick-nav { grid-template-columns: 1fr 1fr; }
@@ -538,10 +693,10 @@
 <nav class="sidebar">
   <div class="sidebar-logo">
     <svg width="28" height="28" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M140 100V440C140 451.046 148.954 460 160 460H280C384.934 460 470 374.934 470 270C470 165.066 384.934 80 280 80H160C148.954 80 140 88.9543 140 100Z" fill="#1e293b" stroke="white" stroke-width="14" stroke-opacity=".4"/>
-      <path d="M280 80C384.934 80 470 165.066 470 270" stroke="#3b82f6" stroke-width="36" stroke-linecap="round"/>
-      <circle cx="280" cy="270" r="13" fill="white"/>
-      <path d="M280 270L326 183" stroke="white" stroke-width="18" stroke-linecap="round"/>
+      <path d="M140 100V440C140 451.046 148.954 460 160 460H280C384.934 460 470 374.934 470 270C470 165.066 384.934 80 280 80H160C148.954 80 140 88.9543 140 100Z" fill="var(--raised)" stroke="var(--border)" stroke-width="14"/>
+      <path d="M280 80C384.934 80 470 165.066 470 270" stroke="var(--accent)" stroke-width="36" stroke-linecap="round"/>
+      <circle cx="280" cy="270" r="13" fill="var(--fg)"/>
+      <path d="M280 270L326 183" stroke="var(--fg)" stroke-width="18" stroke-linecap="round"/>
     </svg>
     <div class="sidebar-logo-text">
       <div class="sidebar-logo-name">DeskClock</div>
@@ -577,6 +732,16 @@
     Dados
   </a>
 
+  <div class="sidebar-section-label">Organização</div>
+  <a class="sidebar-link" onclick="show('workspaces')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+    Workspaces
+  </a>
+  <a class="sidebar-link" onclick="show('customfields')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg>
+    Campos personalizados
+  </a>
+
   <div class="sidebar-section-label">Integrações</div>
   <a class="sidebar-link" onclick="show('integrations')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -584,11 +749,15 @@
   </a>
   <a class="sidebar-link" onclick="show('google')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-    Google (Sheets + Calendar)
+    Google
   </a>
   <a class="sidebar-link" onclick="show('clockify')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
     Clockify
+  </a>
+  <a class="sidebar-link" onclick="show('monday')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="6" cy="12" r="3"/><circle cx="12" cy="12" r="3"/><circle cx="18" cy="12" r="3"/></svg>
+    Monday
   </a>
   <a class="sidebar-link" onclick="show('zendesk')">
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -612,9 +781,29 @@
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
     Deep links
   </a>
+  <a class="sidebar-link" onclick="show('api')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>
+    API local
+  </a>
 
   <div class="sidebar-footer">
-    v1.10.0 · DeskClock
+    <div class="appearance">
+      <div class="appearance-label" id="lbl-modo">Modo</div>
+      <div class="segmented" role="group" aria-labelledby="lbl-modo">
+        <button type="button" data-m="escuro" aria-pressed="true">Escuro</button>
+        <button type="button" data-m="claro" aria-pressed="false">Claro</button>
+      </div>
+    </div>
+    <div class="appearance">
+      <div class="appearance-label" id="lbl-acento">Cor de destaque</div>
+      <div class="accents" role="group" aria-labelledby="lbl-acento">
+        <button type="button" data-a="azul"  aria-pressed="true"  title="Azul"><span></span></button>
+        <button type="button" data-a="verde" aria-pressed="false" title="Verde"><span></span></button>
+        <button type="button" data-a="roxo"  aria-pressed="false" title="Roxo"><span></span></button>
+        <button type="button" data-a="ambar" aria-pressed="false" title="Âmbar"><span></span></button>
+      </div>
+    </div>
+    <div class="sidebar-version">v2.0.0 · DeskClock</div>
   </div>
 </nav>
 
@@ -625,8 +814,8 @@
   <section id="intro" class="section active">
     <div class="welcome-banner">
       <svg class="bg-icon" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M140 100V440C140 451 149 460 160 460H280C385 460 470 375 470 270C470 165 385 80 280 80H160C149 80 140 89 140 100Z" fill="white"/>
-        <path d="M280 80C385 80 470 165 470 270" stroke="#3b82f6" stroke-width="40" stroke-linecap="round"/>
+        <path d="M140 100V440C140 451 149 460 160 460H280C385 460 470 375 470 270C470 165 385 80 280 80H160C149 80 140 89 140 100Z" fill="currentColor"/>
+        <path d="M280 80C385 80 470 165 470 270" stroke="var(--accent)" stroke-width="40" stroke-linecap="round"/>
       </svg>
       <h2>Bem-vindo ao DeskClock</h2>
       <p>Um guia completo para registrar suas horas com rapidez e flexibilidade.</p>
@@ -658,7 +847,7 @@
       </div>
       <div class="quick-nav-card" onclick="show('integrations')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        <div class="quick-nav-card-text"><h4>Integrações</h4><p>Google, Clockify, Zendesk</p></div>
+        <div class="quick-nav-card-text"><h4>Integrações</h4><p>Google, Clockify, Monday, Zendesk</p></div>
       </div>
       <div class="quick-nav-card" onclick="show('overlays')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
@@ -691,7 +880,7 @@
           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2M5 21H3m7-10h4m-4 4h4M9 7h6"/></svg>
         </div>
         <h4>Projeto</h4>
-        <p>Agrupador livre — pode ser um cliente, produto ou área. Serve para filtrar, agrupar e exportar tarefas por contexto.</p>
+        <p>Agrupador livre — pode ser um cliente, produto ou área. Tem uma cor, que aparece como ponto ao lado do nome nas listas. Serve para filtrar, agrupar e exportar tarefas por contexto.</p>
       </div>
       <div class="feature-card">
         <div class="feature-card-icon">
@@ -700,11 +889,37 @@
         <h4>Categoria</h4>
         <p>Classificação da natureza do trabalho. Cada categoria define se é <strong>billable</strong> ou non-billable por padrão, podendo ser sobrescrito por tarefa.</p>
       </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        </div>
+        <h4>Workspace</h4>
+        <p>Contexto de trabalho isolado — cada um tem seus próprios projetos, categorias, tarefas e planejadas. <a onclick="show('workspaces')">Ver detalhes</a>.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-card-icon">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg>
+        </div>
+        <h4>Campo personalizado</h4>
+        <p>Coluna extra que você define (texto, lista, caixa de seleção) e que aparece em toda tarefa e planejada. <a onclick="show('customfields')">Ver detalhes</a>.</p>
+      </div>
     </div>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div class="callout-body"><strong>Uma tarefa de cada vez</strong>Apenas uma tarefa pode estar em execução simultaneamente. Para iniciar uma nova, é necessário parar a atual primeiro.</div>
+      <div class="callout-body"><strong>Uma tarefa de cada vez</strong>Apenas uma tarefa pode estar em execução simultaneamente. Enquanto uma roda, o botão de play das demais fica desabilitado e diz o motivo ao passar o cursor — se é esta mesma que está em execução, ou se é outra.</div>
+    </div>
+
+    <h2 id="onde-comecar">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Primeira execução
+    </h2>
+
+    <p>Na primeira abertura, o DeskClock pede seu nome e sugere conectar uma integração. Não é obrigatório: "Agora não" leva direto à tela de Tarefas, e você pode cadastrar projetos e categorias à mão em <a onclick="show('data')">Dados</a> a qualquer momento.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Por que a sugestão vem antes do cadastro:</strong> se você usa Monday, Clockify ou Google, o catálogo de projetos e categorias já existe lá e vem pronto pela importação. Digitá-lo à mão antes cria uma lista paralela, com os mesmos nomes escritos de outro jeito e sem vínculo com o board de origem.</div>
     </div>
   </section>
 
@@ -774,16 +989,36 @@
 
     <p>Enquanto uma tarefa estiver em andamento, ela aparece na primeira seção com o timer ativo e todos os controles disponíveis.</p>
 
-    <table class="data-table">
-      <thead><tr><th>Ação</th><th>O que faz</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Play / Pausa</strong></td><td>Alterna entre execução e pausa. A duração acumulada é preservada ao pausar.</td></tr>
-        <tr><td><strong>Parar</strong></td><td>Encerra a tarefa e salva o registro. Após parar, a tarefa vai para a lista de entradas do dia.</td></tr>
-        <tr><td><strong>Editar</strong></td><td>Abre campos inline para editar nome, projeto, categoria e billable sem abrir modal.</td></tr>
-        <tr><td><strong>Cancelar</strong></td><td>Descarta a tarefa imediatamente, sem confirmação. O registro não é salvo.</td></tr>
-        <tr><td><strong>Hora de início</strong></td><td>Campo editável. Ao alterar, o timer é recalculado a partir do novo horário.</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Ação</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Play / Pausa</strong></td><td>Alterna entre execução e pausa. A duração acumulada é preservada ao pausar.</td></tr>
+          <tr><td><strong>Parar</strong></td><td>Encerra a tarefa. Antes de salvar, o app pergunta se ela ficou <strong>Concluída</strong> ou <strong>Pendente</strong> e oferece a hora de término num campo editável — ver abaixo.</td></tr>
+          <tr><td><strong>Editar</strong></td><td>Abre campos inline para nome, projeto, categoria e billable sem abrir modal.</td></tr>
+          <tr><td><strong>Campos personalizados</strong></td><td>Painel próprio na barra da tarefa em execução, para preencher os campos que você definiu em Dados.</td></tr>
+          <tr><td><strong>Cancelar</strong></td><td>Descarta a tarefa imediatamente, sem confirmação. O registro não é salvo.</td></tr>
+          <tr><td><strong>Hora de início</strong></td><td>Campo editável. Ao alterar, o timer é recalculado a partir do novo horário.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <h3>Ao parar: Concluída ou Pendente</h3>
+    <p>Parar não é um clique só. O card troca a linha do cronômetro por um campo <code>HH:MM</code> com a hora atual e dois botões:</p>
+    <ul>
+      <li><strong>Concluída:</strong> a tarefa foi até o fim. Se ela veio de uma tarefa planejada, a planejada é marcada como concluída no dia.</li>
+      <li><strong>Pendente:</strong> o registro é salvo, mas a planejada continua aparecendo — você ainda vai voltar a ela.</li>
+    </ul>
+    <p>Se você não tocar no campo de hora, o término é agora. Se digitar um horário anterior, ele vira o fim real e a duração é recalculada — é a saída para o timer que ficou esquecido rodando. Horários anteriores ao início são rejeitados na hora, com aviso no próprio campo. <kbd>Enter</kbd> no campo encerra como <strong>Concluída</strong>, que é a ação primária.</p>
+
+    <div class="callout success">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="callout-body"><strong>Arredondamento opcional</strong>Se "Arredondar duração ao parar" estiver ligado em <a onclick="show('settings')">Configurações</a>, a duração encaixa no slot mais próximo (15, 30, 60 min — você escolhe quais) no momento da parada.</div>
+    </div>
 
     <h2 id="tarefas-planejadas">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/></svg>
@@ -798,7 +1033,12 @@
       </div>
     </div>
 
-    <p>Ao clicar em Play em uma tarefa planejada, o timer inicia já com nome, projeto e categoria preenchidos. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução — você dispara cada uma sob demanda, quando precisar.</p>
+    <p>Ao clicar em Play em uma tarefa planejada, o timer inicia já com nome, projeto, categoria e campos personalizados preenchidos. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis no <a onclick="show('overlays')">Popup Flyout</a> durante a execução — você dispara cada uma sob demanda, quando precisar.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>O vínculo com a planejada não se perde:</strong> editar projeto, categoria ou campos personalizados da tarefa em execução <strong>também configura a tarefa planejada de origem</strong>. É assim que a reunião importada da Agenda ganha projeto e categoria de uma vez por todas, em vez de a cada dia.</div>
+    </div>
 
     <h2 id="totalizadores">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -813,6 +1053,8 @@
       </div>
     </div>
 
+    <p>As metas diária e semanal são definidas em <a onclick="show('settings')">Configurações → Geral → Jornada</a>. O total da semana conta apenas os dias com registro, e é sempre calculado no seu fuso local.</p>
+
     <h2 id="entradas-hoje">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h8"/></svg>
       Entradas de hoje
@@ -826,15 +1068,24 @@
       </div>
     </div>
 
-    <p>Cada card exibe nome, projeto, categoria, indicador billable e duração. O indicador billable é clicável — um clique alterna o valor sem precisar abrir o modal de edição.</p>
+    <p>Cada linha exibe o ponto colorido do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o chip de faturamento e a duração. Os botões de ação aparecem no hover — em repouso a linha mostra apenas os seus dados.</p>
 
     <h3>Agrupamento de tarefas</h3>
-    <p>Tarefas com mesmo <strong>nome + projeto + categoria</strong> são agrupadas visualmente. O grupo exibe a duração total. Dentro do grupo você pode:</p>
+    <p>Tarefas com mesmo <strong>nome + projeto + categoria</strong> são agrupadas visualmente. O grupo exibe a duração total e a contagem de registros ao lado do nome. Dentro do grupo você pode:</p>
     <ul>
       <li><strong>Mesclar:</strong> une todos os registros em um único, somando as durações.</li>
-      <li><strong>Editar grupo:</strong> altera nome, projeto ou categoria de todas as tarefas do grupo de uma vez.</li>
+      <li><strong>Editar grupo:</strong> altera nome, projeto, categoria e campos personalizados de todas as tarefas do grupo de uma vez.</li>
       <li><strong>Expandir:</strong> vê e edita cada registro individualmente.</li>
+      <li><strong>Repetir:</strong> inicia uma nova execução com os mesmos dados.</li>
     </ul>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>O faturamento é do grupo, não da linha.</strong> Clicar no chip de billable de qualquer linha — ou no do cabeçalho — alterna <strong>todas</strong> as tarefas do grupo. O motivo é evitar mentira na tela: o cabeçalho mostra um valor só, e se as irmãs pudessem divergir ele estaria errado sobre parte delas sem nada avisar.</div>
+    </div>
+
+    <h3>Seleção múltipla</h3>
+    <p>A barra "Selecionar tarefas" liga as caixas de seleção da lista. Com tarefas marcadas você pode excluí-las em massa ou, havendo mais de um workspace, <strong>movê-las para outro workspace</strong>.</p>
   </section>
 
   <!-- ──────────────────── RETROACTIVE ──────────────────── -->
@@ -862,6 +1113,24 @@
       </div>
     </div>
 
+    <h2 id="layout-manual">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="18" rx="1"/></svg>
+      Duas colunas, do seu tamanho
+    </h2>
+
+    <p>O formulário fica numa coluna à esquerda e os apontamentos do dia à direita. A coluna do formulário é <strong>ajustável</strong>:</p>
+
+    <ul>
+      <li><strong>Arraste o divisor</strong> entre as duas colunas para dar mais espaço a uma ou a outra. Duplo clique volta à largura padrão; <kbd>Home</kbd> também, com o divisor focado pelo teclado.</li>
+      <li><strong>Recolha a coluna</strong> pelo botão dela — sobra uma faixa estreita com o rótulo de pé, e a lista fica com a tela inteira.</li>
+      <li>As duas preferências são <strong>salvas por tela</strong>. O Planejamento tem as suas, independentes.</li>
+    </ul>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body">A coluna recolhida <strong>reabre sozinha</strong> quando algo pré-preenche o formulário — um deep link de lançamento, ou o play de uma tarefa planejada sem horário. Preencher um campo escondido não mostraria nada.</div>
+    </div>
+
     <h2 id="adicionar-entrada">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
       Adicionar uma entrada
@@ -887,7 +1156,7 @@
         <div class="step-num">2</div>
         <div class="step-content">
           <h4>Preencha os dados da tarefa</h4>
-          <p>Nome, projeto e categoria são opcionais. Os campos de projeto e categoria têm autocomplete.</p>
+          <p>Nome, projeto, categoria e os campos personalizados ativos — todos opcionais. Projeto e categoria têm autocomplete.</p>
         </div>
       </div>
       <div class="step">
@@ -919,15 +1188,21 @@
       </div>
     </div>
 
-    <table class="data-table">
-      <thead><tr><th>Formato</th><th>Exemplo</th><th>Resultado</th></tr></thead>
-      <tbody>
-        <tr><td><strong>HH:MM:SS</strong></td><td><code>1:30:00</code></td><td>1 hora e 30 minutos</td></tr>
-        <tr><td><strong>MM:SS</strong></td><td><code>90:00</code></td><td>90 minutos</td></tr>
-        <tr><td><strong>Minutos inteiros</strong></td><td><code>90</code></td><td>90 minutos</td></tr>
-        <tr><td><strong>Linguagem natural</strong></td><td><code>1h 30</code> ou <code>1h30m</code></td><td>1 hora e 30 minutos</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Formato</th><th>Exemplo</th><th>Resultado</th></tr></thead>
+        <tbody>
+          <tr><td><strong>HH:MM:SS</strong></td><td><code>1:30:00</code></td><td>1 hora e 30 minutos</td></tr>
+          <tr><td><strong>MM:SS</strong></td><td><code>90:00</code></td><td>90 minutos</td></tr>
+          <tr><td><strong>Minutos inteiros</strong></td><td><code>90</code></td><td>90 minutos</td></tr>
+          <tr><td><strong>Linguagem natural</strong></td><td><code>1h 30</code> ou <code>1h30m</code></td><td>1 hora e 30 minutos</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h2 id="cadeia-horarios">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
@@ -956,24 +1231,45 @@
 
     <p>Quando há tarefas planejadas para o dia selecionado, elas aparecem em um painel acima do formulário como sugestões de lançamento. O comportamento varia conforme a tarefa tenha ou não horário definido:</p>
 
-    <table class="data-table">
-      <thead><tr><th>Situação</th><th>Botão Play faz</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><strong>Tarefa com horário</strong><br><span style="font-size:11px;color:var(--text-dim)">Importada do Google Agenda com início e fim</span></td>
-          <td>Cria o registro diretamente (sem preencher o formulário) e marca a tarefa como concluída no dia.</td>
-        </tr>
-        <tr>
-          <td><strong>Tarefa sem horário</strong><br><span style="font-size:11px;color:var(--text-dim)">Criada manualmente sem horário fixo</span></td>
-          <td>Pré-preenche o formulário com nome, projeto e categoria. Você informa os horários e clica em Adicionar.</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Situação</th><th>Botão Play faz</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Tarefa com horário</strong><br><span style="font-size:11px;color:var(--text-dim)">Importada do Google Agenda com início e fim</span></td>
+            <td>Cria o registro diretamente (sem preencher o formulário) e marca a tarefa como concluída no dia.</td>
+          </tr>
+          <tr>
+            <td><strong>Tarefa sem horário</strong><br><span style="font-size:11px;color:var(--text-dim)">Criada manualmente sem horário fixo</span></td>
+            <td>Pré-preenche o formulário com nome, projeto e categoria. Você informa os horários e clica em Adicionar.</td>
+          </tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="callout-body"><strong>Cadeia automática:</strong> ao lançar uma sugestão com horário diretamente, o campo Início do formulário avança para o fim dessa tarefa, mantendo a sequência.</div>
     </div>
+
+    <p>O painel de sugestões é <strong>redimensionável na vertical</strong>: arraste o divisor abaixo dele para ver mais planejadas de uma vez em um dia cheio de reuniões. A altura escolhida é um teto — com duas planejadas o painel continua encolhendo até o conteúdo, em vez de deixar espaço vazio.</p>
+
+    <h2 id="lista-do-dia">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h8"/></svg>
+      Apontamentos do dia
+    </h2>
+
+    <p>A coluna da direita lista o que já foi registrado no dia selecionado, do mais recente para o mais antigo. Por linha: <strong>Editar</strong> (modal completo) e <strong>Excluir</strong> (sem confirmação).</p>
+
+    <p>A barra <strong>"Selecionar tarefas"</strong>, acima da lista, liga as caixas de seleção e habilita duas ações em massa:</p>
+    <ul>
+      <li><strong>Excluir selecionadas</strong> — sem confirmação.</li>
+      <li><strong>Mover para workspace</strong> — só aparece havendo mais de um workspace. Projeto e categoria de mesmo nome são reaproveitados no destino.</li>
+    </ul>
   </section>
 
   <!-- ──────────────────── PLANNING ──────────────────── -->
@@ -996,6 +1292,15 @@
       </div>
     </div>
 
+    <p>A semana é apresentada como <strong>um cartão por dia</strong>, e o dia de hoje ganha um tom próprio. A pílula <strong>"Semana atual"</strong> no cabeçalho é indicador e atalho ao mesmo tempo: acesa, você está na semana de hoje; apagada, um clique traz você de volta — e devolve o filtro de dia para "Todos".</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Só dias úteis.</strong> Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta. A regra vale também na entrada: eventos de fim de semana são descartados na importação do Google Agenda, e a recorrência oferece apenas de segunda a sexta.</div>
+    </div>
+
+    <p>A coluna do formulário, à esquerda, <strong>recolhe e é arrastável</strong> exatamente como a do <a onclick="show('retroactive')">Lançamento manual</a> — as duas telas compartilham o mesmo arranjo, com preferências salvas independentes.</p>
+
     <h2 id="tipos-agendamento">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
       Tipos de agendamento
@@ -1005,30 +1310,36 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Criar tarefa planejada</div>
-        <p>Adicione tarefas com nome, projeto e categoria. Escolha entre data única, recorrente (dias da semana) ou período com início e fim.</p>
+        <p>Adicione tarefas com nome, projeto, categoria, campos personalizados e ações. Escolha entre data única, recorrente (dias da semana) ou período com início e fim.</p>
       </div>
     </div>
 
-    <table class="data-table">
-      <thead><tr><th>Tipo</th><th>Quando usar</th><th>Comportamento</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><strong>Data única</strong></td>
-          <td>Reunião ou entrega em dia específico</td>
-          <td>Aparece apenas no dia selecionado. Botão "Hoje" preenche a data atual rapidamente.</td>
-        </tr>
-        <tr>
-          <td><strong>Recorrente</strong></td>
-          <td>Standup diário, rotinas semanais</td>
-          <td>Aparece indefinidamente nos dias da semana selecionados. Excluir remove de todos os dias.</td>
-        </tr>
-        <tr>
-          <td><strong>Período</strong></td>
-          <td>Sprint, campanha, projeto temporário</td>
-          <td>Aparece todos os dias entre a data de início e fim informadas.</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Quando usar</th><th>Comportamento</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Data única</strong></td>
+            <td>Reunião ou entrega em dia específico</td>
+            <td>Aparece apenas no dia selecionado. O campo já abre com a data preenchida — o dia navegado, ou hoje.</td>
+          </tr>
+          <tr>
+            <td><strong>Recorrente</strong></td>
+            <td>Standup diário, rotinas semanais</td>
+            <td>Aparece indefinidamente nos dias da semana selecionados. Excluir remove de todos os dias.</td>
+          </tr>
+          <tr>
+            <td><strong>Período</strong></td>
+            <td>Sprint, campanha, projeto temporário</td>
+            <td>Aparece todos os dias entre a data de início e fim informadas.</td>
+          </tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h2 id="filtro-dia">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"/></svg>
@@ -1048,17 +1359,56 @@
       Ações por tarefa
     </h2>
 
-    <p>Cada tarefa planejada pode ter ações associadas a ela, configuradas no formulário de criação ou no modal de edição. Após iniciar a tarefa pelo Play, as ações aparecem como chips clicáveis na seção "Ações" do Popup Flyout — você dispara cada uma quando quiser, quantas vezes quiser. Elas não são executadas automaticamente ao iniciar.</p>
+    <p>Cada tarefa planejada pode ter ações associadas a ela, configuradas no formulário de criação, no modal de edição ou no painel de edição do próprio overlay. Após iniciar a tarefa pelo Play, as ações aparecem como chips clicáveis no <a onclick="show('overlays')">Popup Flyout</a> — você dispara cada uma quando quiser, quantas vezes quiser. Elas <strong>não</strong> são executadas automaticamente ao iniciar.</p>
 
-    <table class="data-table">
-      <thead><tr><th>Tipo de ação</th><th>O que faz</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Abrir URL</strong></td><td>Ao clicar no chip, abre o endereço no navegador padrão. O prefixo <code>https://</code> é adicionado automaticamente se ausente. O rótulo do chip é o hostname (sem <code>www.</code>).</td></tr>
-        <tr><td><strong>Abrir arquivo</strong></td><td>Ao clicar no chip, abre o arquivo ou pasta no explorador do sistema operacional. O rótulo do chip é o nome do arquivo.</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
 
-    <p>Uma tarefa pode ter múltiplas ações. Cada uma vira um chip independente no Popup Flyout, na ordem em que foi configurada.</p>
+    
+      <table class="data-table">
+        <thead><tr><th>Tipo de ação</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Abrir URL</strong></td><td>Ao clicar no chip, abre o endereço no navegador padrão. O prefixo <code>https://</code> é adicionado automaticamente se ausente.</td></tr>
+          <tr><td><strong>Abrir arquivo</strong></td><td>Ao clicar no chip, abre o arquivo ou pasta no explorador do sistema operacional.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <h3>O nome do chip</h3>
+    <p>A ação tem um campo <strong>Nome</strong>, opcional. O chip escreve o primeiro destes que existir:</p>
+    <ol>
+      <li>O <strong>nome</strong> que você deu à ação.</li>
+      <li>O <strong>destino reconhecido</strong>, quando o endereço é de um serviço conhecido — <em>Meet</em>, <em>Zoom</em>, <em>Teams</em>, <em>Google Agenda</em>, <em>Monday</em>, <em>Zendesk</em>.</li>
+      <li>O valor cru: o hostname da URL, ou o nome do arquivo.</li>
+    </ol>
+    <p>As ações criadas pelas integrações já nascem nomeadas pelo destino — "Meet" diz o que o nome da reunião, uma linha acima, não diz. O endereço completo fica sempre no tooltip do chip.</p>
+
+    <p>Uma tarefa pode ter múltiplas ações. Cada uma vira um chip independente, na ordem em que foi configurada.</p>
+
+    <h2 id="lista-planejadas">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h8"/></svg>
+      A linha da tarefa planejada
+    </h2>
+
+    <p>Em repouso, a linha mostra o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em> e o chip de faturamento — que é controle, não rótulo: clicar nele alterna. Os botões aparecem no hover (ou ao navegar pelo teclado) e não ocupam largura enquanto estão escondidos:</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Botão</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Play</strong></td><td>Inicia o timer com os dados da planejada. Desabilitado, com o motivo no tooltip, enquanto houver outra tarefa em execução.</td></tr>
+          <tr><td><strong>Concluir / Pendente</strong></td><td>Marca ou desmarca a conclusão no dia.</td></tr>
+          <tr><td><strong>Duplicar</strong></td><td>Cria uma cópia da tarefa planejada.</td></tr>
+          <tr><td><strong>Ações</strong></td><td>Expande e edita as ações associadas.</td></tr>
+          <tr><td><strong>Excluir</strong></td><td>Remove a tarefa, sem confirmação.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h2 id="concluir-pendente">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1080,14 +1430,29 @@
 
     <h2 id="importar-agenda">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01"/></svg>
-      Importar Google Agenda
+      De onde vêm as tarefas planejadas
     </h2>
 
-    <p>Se a conta Google estiver conectada, o botão "Importar do Google Agenda" fica disponível. Ele busca os eventos da semana atual e permite selecioná-los para criar tarefas planejadas.</p>
+    <p>Além do formulário desta tela, tarefas planejadas chegam por três importações:</p>
 
-    <div class="callout info">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div class="callout-body"><strong>Filtro automático:</strong> eventos do tipo "Horário de trabalho focado", "Home office" e "Ausência" são ignorados automaticamente — apenas compromissos reais são importados.</div>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Origem</th><th>O que traz</th></tr></thead>
+        <tbody>
+          <tr><td><strong><a onclick="show('google')">Google Agenda</a></strong></td><td>Eventos do período escolhido, com os horários preservados. Pode rodar sozinha, pelo rastreamento automático de reuniões.</td></tr>
+          <tr><td><strong><a onclick="show('monday')">Monday</a></strong></td><td>Itens de trabalho do board, com a data vinda da coluna Timeline. Pode rodar sozinha, a cada 4 horas.</td></tr>
+          <tr><td><strong><a onclick="show('zendesk')">Zendesk</a></strong></td><td>Tickets abertos, com filtro por organização.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Os modais de importação não abrem por esta tela.</strong> Eles abrem pelo <strong>rail de integrações</strong> — a faixa à direita, sempre visível — e pela tela de <a onclick="show('integrations')">Integrações</a>. É lá que fica o seletor de workspace que decide o destino da importação; com dois caminhos, o import acabava nascendo num workspace diferente do que o Planejamento mostra.</div>
     </div>
   </section>
 
@@ -1118,40 +1483,74 @@
     </ul>
 
     <h3>Filtros avançados</h3>
-    <table class="data-table">
-      <thead><tr><th>Filtro</th><th>Tipo</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Período</strong></td><td>Data início + data fim</td></tr>
-        <tr><td><strong>Nome</strong></td><td>Texto livre (busca parcial)</td></tr>
-        <tr><td><strong>Projeto</strong></td><td>Seleção com autocomplete</td></tr>
-        <tr><td><strong>Categoria</strong></td><td>Seleção com autocomplete</td></tr>
-        <tr><td><strong>Billable</strong></td><td>Sim / Não / Todos</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Filtro</th><th>Tipo</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Período</strong></td><td>Data início + data fim</td></tr>
+          <tr><td><strong>Nome</strong></td><td>Texto livre (busca parcial)</td></tr>
+          <tr><td><strong>Projeto</strong></td><td>Seleção com autocomplete</td></tr>
+          <tr><td><strong>Categoria</strong></td><td>Seleção com autocomplete</td></tr>
+          <tr><td><strong>Billable</strong></td><td>Sim / Não / Todos</td></tr>
+        </tbody>
+      </table>
+        </div>
 
     <h2 id="resultados">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
       Resultados
     </h2>
 
-    <p>Os resultados são agrupados por dia. O cabeçalho de cada grupo exibe o dia da semana, a data e o total de horas do dia. Cada grupo pode ser exportado individualmente.</p>
+    <p>Os resultados são agrupados por dia, cada dia num cartão. O cabeçalho de cada grupo exibe o dia da semana, a data e o total de horas do dia. Cada grupo pode ser exportado individualmente.</p>
 
-    <p>Por tarefa, os botões disponíveis são <strong>Editar</strong> (abre modal completo) e <strong>Excluir</strong> (sem confirmação).</p>
+    <p>Acima da lista, os totalizadores do conjunto filtrado: total de horas, billable, non-billable e quantidade de registros.</p>
+
+    <p>Por tarefa, os botões disponíveis são <strong>Editar</strong> (abre modal completo) e <strong>Excluir</strong> (sem confirmação). A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa e, havendo mais de um workspace, <strong>Mover para workspace</strong>.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body">O Histórico mostra apenas o <strong>workspace ativo</strong>. O agrupamento por dia usa sempre o seu fuso local — uma tarefa que cruza a meia-noite pertence ao dia em que começou.</div>
+    </div>
 
     <h2 id="exportar">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
       Exportar
     </h2>
 
-    <p>O botão <strong>Exportar resultados</strong> aplica o perfil de exportação padrão sobre o conjunto filtrado. Para configurar perfis de exportação, acesse <a onclick="show('data')">Dados</a>.</p>
+    <p>O botão <strong>Exportar resultados</strong> abre o modal de exportação sobre o conjunto filtrado. O modal tem duas abas: a de <strong>seleção</strong>, onde você marca o que exportar (tudo vem marcado), e a de <strong>perfil</strong>, onde a configuração fica salva para reusar.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Opção do perfil</th><th>Valores</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Formato</strong></td><td>CSV · XLSX · JSON</td></tr>
+          <tr><td><strong>Separador (CSV)</strong></td><td>Vírgula · Ponto-e-vírgula</td></tr>
+          <tr><td><strong>Formato de duração</strong></td><td>HH:MM:SS · Decimal · Minutos</td></tr>
+          <tr><td><strong>Formato de data</strong></td><td>ISO (AAAA-MM-DD) · DD/MM/AAAA</td></tr>
+          <tr><td><strong>Colunas</strong></td><td>Reordenáveis por arraste, com toggle de visibilidade e rótulo editável. Os <a onclick="show('customfields')">campos personalizados</a> entram aqui como colunas.</td></tr>
+          <tr><td><strong>Destino</strong></td><td>Salvar arquivo · Copiar para a área de transferência</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <p>Tarefas agrupadas viram um registro único, com a duração somada. Os perfis são por workspace, e há um perfil padrão editável desde o início.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Um campo personalizado criado depois do perfil não entra sozinho.</strong> Ele fica invisível na exportação até você adicioná-lo às colunas — o que já era exportado não muda de forma sem você pedir.</div>
+    </div>
   </section>
 
   <!-- ──────────────────── DATA ──────────────────── -->
   <section id="data" class="section">
     <div class="page-header">
       <div class="page-header-eyebrow">Dados</div>
-      <h1>Projetos e categorias</h1>
-      <p>Gerencie os cadastros base usados em todas as tarefas: projetos e categorias.</p>
+      <h1>Projetos, categorias e cadastros</h1>
+      <p>Quatro abas com tudo o que as tarefas usam como base: <strong>Projetos</strong>, <strong>Categorias</strong>, <strong>Workspaces</strong> e <strong>Campos</strong>.</p>
       <a href="deskclock://navigate/data" class="open-in-app">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         Abrir no DeskClock
@@ -1163,17 +1562,50 @@
       Projetos
     </h2>
 
-    <p>Projetos são agrupadores livres — cliente, produto, área de negócio. Não têm campo de cor ou configuração adicional.</p>
+    <p>Projetos são agrupadores livres — cliente, produto, área de negócio. Cada um tem uma <strong>cor</strong>, atribuída automaticamente a partir de uma paleta de 24 tons e editável a qualquer momento. É essa cor que vira o ponto ao lado do nome nas listas de tarefas.</p>
 
     <h3>Importação em massa</h3>
-    <p>Cole uma lista de projetos na textarea (um por linha) e clique em Importar. Projetos já existentes são ignorados.</p>
+    <p>O botão <strong>Importar</strong>, ao lado das abas, abre a textarea: um projeto por linha. Projetos já existentes são ignorados.</p>
 
     <h3>Gerenciar individualmente</h3>
     <ul>
-      <li>Use o campo de busca para filtrar a lista.</li>
-      <li>Clique em <strong>+ Adicionar</strong> para criar um por vez.</li>
+      <li>Use o campo de busca, acima do cartão, para filtrar a lista.</li>
+      <li>A <strong>última linha do cartão é a de cadastro</strong> — a lista rola por dentro, então adicionar não custa rolar o catálogo inteiro.</li>
       <li>Excluir projeto remove apenas o cadastro — as tarefas que o referenciavam ficam sem projeto associado.</li>
     </ul>
+
+    <h3>Seleção múltipla</h3>
+    <ul>
+      <li>Clicar em qualquer ponto da linha alterna a seleção. Renomear e excluir continuam fazendo só o que prometem.</li>
+      <li><strong>"Selecionar todos"</strong> no cabeçalho do cartão, com estado indeterminado quando a seleção é parcial.</li>
+      <li><strong>Excluir selecionados</strong>, sem confirmação.</li>
+    </ul>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>A seleção é sempre o que está visível.</strong> Filtrar a lista não deixa nada selecionado fora da tela — o número na barra é exatamente o que será apagado. Como não existe desfazer, essa é a garantia que importa.</div>
+    </div>
+
+    <h2 id="categorias-por-projeto">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/><path d="M18 14v6M15 17h6"/></svg>
+      Categorias por projeto
+    </h2>
+
+    <p>Na linha de cada projeto há uma pílula com a contagem de categorias associadas (ou "todas"). Clicar nela abre o bloco de associação — marque as categorias que fazem sentido naquele projeto e, dali em diante, o autocomplete de categoria oferece <strong>só</strong> essas em todos os formulários do app.</p>
+
+    <ul>
+      <li><strong>Cada clique grava.</strong> Não há botão de salvar.</li>
+      <li><strong>Sem nenhuma marcada, o projeto oferece o catálogo inteiro.</strong> É o estado de todo projeto até alguém marcar algo — o filtro nunca deixa você sem opção.</li>
+      <li><strong>"Desmarcar todas"</strong> aparece com mais de uma marcada, e é o caminho de volta ao "oferece todas".</li>
+      <li>Trocar o projeto de uma tarefa <strong>limpa a categoria</strong>, já que o conjunto oferecido mudou.</li>
+    </ul>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>O Histórico fica de fora do filtro.</strong> Lá o campo de categoria é filtro de busca, e restringi-lo esconderia tarefas já gravadas. O recorte governa o que se pode <em>escolher</em>, nunca o que o app pode <em>mostrar</em>.</div>
+    </div>
+
+    <p>Se você usa o <a onclick="show('monday')">Monday</a>, as associações são semeadas automaticamente a partir dos Activity Types de cada quadro. Elas aparecem marcadas e podem ser removidas, mas a remoção vale até a próxima varredura — para tirar de vez, remova o Activity Type no quadro.</p>
 
     <h2 id="categorias">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a2 2 0 012-2z"/></svg>
@@ -1198,9 +1630,176 @@
 
     <h3>Gerenciar individualmente</h3>
     <ul>
-      <li>Adicione manualmente com toggle de billable ao lado do nome.</li>
+      <li>Adicione na última linha do cartão, com toggle de billable ao lado do nome.</li>
       <li>Excluir categoria não afeta as tarefas já registradas com ela.</li>
+      <li>Seleção múltipla e exclusão em massa funcionam como em Projetos.</li>
     </ul>
+
+    <h2 id="aba-workspaces">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      Aba Workspaces
+    </h2>
+
+    <p>Criar, renomear, recolorir, tornar ativo e excluir workspaces. O funcionamento completo está em <a onclick="show('workspaces')">Workspaces</a>.</p>
+
+    <h2 id="aba-campos">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="18" cy="18" r="3"/></svg>
+      Aba Campos
+    </h2>
+
+    <p>Criar e ordenar os <a onclick="show('customfields')">campos personalizados</a> que aparecem em toda tarefa e planejada.</p>
+  </section>
+
+  <!-- ──────────────────── WORKSPACES ──────────────────── -->
+  <section id="workspaces" class="section">
+    <div class="page-header">
+      <div class="page-header-eyebrow">Organização</div>
+      <h1>Workspaces</h1>
+      <p>Contextos de trabalho isolados. Cada workspace tem os seus próprios projetos, categorias, tarefas, tarefas planejadas e perfis de exportação — nada vaza de um para o outro.</p>
+      <a href="deskclock://navigate/data" class="open-in-app">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        Abrir em Dados
+      </a>
+    </div>
+
+    <div class="callout success">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="callout-body"><strong>Quem não usa, não vê.</strong> Enquanto existir só um workspace, o seletor <strong>some da tela</strong> — da sidebar, dos overlays e das integrações. Todo o resto do app funciona exatamente como funcionava.</div>
+    </div>
+
+    <h2 id="para-que-servem">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      Para que servem
+    </h2>
+
+    <p>O caso típico é separar trabalho de uso pessoal, ou um cliente de outro. Sem workspaces, o catálogo de projetos de um contexto polui o autocomplete do outro, e os totalizadores somam horas que não deveriam se somar.</p>
+
+    <h2 id="gerenciar-workspaces">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      Criar e gerenciar
+    </h2>
+
+    <p>Tudo acontece em <a onclick="show('data')">Dados → Workspaces</a>.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Ação</th><th>Como funciona</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Criar</strong></td><td>Nome + cor. A cor sugerida é o primeiro tom ainda não usado da paleta, e só muda se você mexer no seletor.</td></tr>
+          <tr><td><strong>Editar</strong></td><td>Nome e cor, inline na linha.</td></tr>
+          <tr><td><strong>Tornar ativo</strong></td><td>Ação em cada linha inativa. Também pelo seletor da sidebar e pelo chip dos overlays.</td></tr>
+          <tr><td><strong>Excluir</strong></td><td>Abre um modal que <strong>exige um destino</strong> para os dados: mover para outro workspace ou apagar junto. Excluir o último é bloqueado.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Uma das duas exclusões que perguntam.</strong> O DeskClock apaga sem confirmação em todo lugar — mas um workspace pode guardar meses de horas e não há desfazer. A outra exceção é apagar uma atividade no Monday, que sai de um sistema que não é o DeskClock.</div>
+    </div>
+
+    <p>O modal de exclusão também <strong>avisa quais integrações param junto</strong>: uma integração apontada para o workspace excluído deixa de rodar em silêncio, porque a busca simplesmente não devolve nada e não há erro a exibir. O aviso não impede a exclusão — depois basta escolher outro workspace em Integrações.</p>
+
+    <h2 id="trocar-workspace">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Trocar de workspace
+    </h2>
+
+    <p>O seletor está em três lugares: no rodapé da sidebar, no chip do cabeçalho do Popup Flyout e — como duas faixas coloridas nas bordas — no Compact Overlay. Todas as janelas se sincronizam na troca.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Com uma tarefa em execução, trocar pergunta antes.</strong> É a mesma pergunta de sempre — Concluída ou Pendente — e só então a troca acontece. Uma tarefa não pode ficar rodando num workspace enquanto você trabalha em outro.</div>
+    </div>
+
+    <h2 id="mover-tarefas">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 5l7 7-7 7M3 12h18"/></svg>
+      Mover tarefas entre workspaces
+    </h2>
+
+    <p>Nas três listas de tarefas — Entradas de hoje, Lançamento manual e Histórico — a barra "Selecionar tarefas" oferece <strong>Mover para workspace</strong>. Projeto e categoria de mesmo nome são reaproveitados no destino; não havendo, a tarefa chega sem eles.</p>
+
+    <h2 id="workspace-integracoes">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Integrações têm workspace próprio
+    </h2>
+
+    <p><strong>Cada integração escolhe em qual workspace do DeskClock ela trabalha</strong>, no primeiro controle do card dela em Integrações. É esse workspace que define o destino das importações e o recorte do envio — e ele vale <em>independentemente</em> de qual workspace está aberto na tela naquele momento.</p>
+
+    <p>Sem isso, dois defeitos silenciosos apareciam: uma importação nascia onde a pessoa estivesse no instante do ciclo automático, e o envio mandava ao board do cliente a hora do trabalho pessoal. No envio por tarefa, a tarefa de outro workspace é simplesmente pulada, sem aviso — não há nada de errado nela.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Uma exceção deliberada:</strong> o <em>rastreamento automático de reuniões</em> do Google Agenda cria no workspace <strong>ativo</strong>, não no da integração. O seletor do card da Agenda governa apenas a importação manual de eventos.</div>
+    </div>
+  </section>
+
+  <!-- ──────────────────── CUSTOM FIELDS ──────────────────── -->
+  <section id="customfields" class="section">
+    <div class="page-header">
+      <div class="page-header-eyebrow">Organização</div>
+      <h1>Campos personalizados</h1>
+      <p>Colunas extras que você define e que passam a existir em toda tarefa e tarefa planejada — para o dado que o seu processo exige e que projeto e categoria não cobrem.</p>
+      <a href="deskclock://navigate/data" class="open-in-app">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        Abrir em Dados
+      </a>
+    </div>
+
+    <h2 id="tipos-campo">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      Tipos disponíveis
+    </h2>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Tipo</th><th>Para quê</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Texto</strong></td><td>Uma linha. Número de chamado, código interno, referência.</td></tr>
+          <tr><td><strong>Texto longo</strong></td><td>Várias linhas. Observação, resumo do que foi feito.</td></tr>
+          <tr><td><strong>Lista</strong></td><td>Opções fixas que você cadastra. É o tipo que o Monday usa para trazer o <em>Project Stage</em>.</td></tr>
+          <tr><td><strong>Caixa de seleção</strong></td><td>Sim ou não.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <h2 id="onde-aparecem">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      Onde eles aparecem
+    </h2>
+
+    <ul>
+      <li>No formulário do <a onclick="show('retroactive')">Lançamento manual</a>, com rótulo flutuante — ele começa dentro do campo e sobe para a borda ao receber foco, para continuar legível depois de preenchido.</li>
+      <li>No formulário e no modal de edição do <a onclick="show('planning')">Planejamento</a>.</li>
+      <li>Na tarefa em execução — tanto na barra da tela de Tarefas quanto no painel de edição do <a onclick="show('overlays')">Popup Flyout</a>.</li>
+      <li>No modal de edição de tarefa e no de edição de grupo.</li>
+      <li>Como colunas na <a onclick="show('history')">exportação</a>.</li>
+    </ul>
+
+    <h2 id="gerenciar-campos">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M4 6h4M16 6h4M4 18h10M18 18h2"/></svg>
+      Criar e ordenar
+    </h2>
+
+    <p>Em <a onclick="show('data')">Dados → Campos</a>. A ordem definida ali é a ordem em que eles aparecem em todos os formulários.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Arquivar em vez de excluir.</strong> Um campo arquivado some dos formulários, mas os valores já gravados continuam valendo e continuam aparecendo nas tarefas antigas.</div>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Campos são globais, não por workspace.</strong> É o que permite mover uma tarefa entre workspaces sem perder o que estava preenchido nela.</div>
+    </div>
   </section>
 
   <!-- ──────────────────── INTEGRATIONS ──────────────────── -->
@@ -1208,7 +1807,7 @@
     <div class="page-header">
       <div class="page-header-eyebrow">Integrações</div>
       <h1>Integrações externas</h1>
-      <p>Conecte o DeskClock a ferramentas que você já usa para sincronizar ou importar dados automaticamente.</p>
+      <p>Conecte o DeskClock a ferramentas que você já usa para enviar ou importar dados automaticamente.</p>
       <a href="deskclock://navigate/integrations" class="open-in-app">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         Abrir no DeskClock
@@ -1238,6 +1837,13 @@
         <h4>Clockify</h4>
         <p>Registre entradas de tempo no Clockify via API Key. Mapeie projetos e categorias.</p>
       </div>
+      <div class="feature-card" style="cursor:pointer" onclick="show('monday')">
+        <div class="feature-card-icon" style="background:rgba(255,58,87,.12)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#FF3A57" stroke-width="2"><circle cx="6" cy="12" r="3"/><circle cx="12" cy="12" r="3"/><circle cx="18" cy="12" r="3"/></svg>
+        </div>
+        <h4>Monday.com</h4>
+        <p>Envie horas como atividades no board do projeto e importe itens de trabalho como planejadas.</p>
+      </div>
       <div class="feature-card" style="cursor:pointer" onclick="show('zendesk')">
         <div class="feature-card-icon" style="background:rgba(3,54,61,.4)">
           <svg viewBox="0 0 24 24" fill="none" stroke="#03C9D7" stroke-width="2"><path d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1250,38 +1856,82 @@
     <div class="tour-tip">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
-        <div class="tour-tip-label">Sincronização automática</div>
+        <div class="tour-tip-label">Envio automático</div>
         <p>Após conectar uma integração, configure o envio automático nas configurações dela: por tarefa (envia em tempo real ao concluir) ou diário (agrupa e envia de uma vez no horário definido).</p>
       </div>
     </div>
 
-    <h2 id="sincronizacao-automatica">
+    <h2 id="envio-automatico">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-      Modos de sincronização automática
+      Modos de envio automático
     </h2>
 
-    <table class="data-table">
-      <thead><tr><th>Modo</th><th>Quando envia</th><th>Ideal para</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Por tarefa</strong></td><td>Imediatamente ao concluir cada tarefa</td><td>Quem precisa de dados em tempo real no destino</td></tr>
-        <tr><td><strong>Diário</strong></td><td>Ao abrir o app ou em horário fixo configurado</td><td>Quem prefere envio em lote e cobre fins de semana/dias offline</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Modo</th><th>Quando envia</th><th>Ideal para</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Por tarefa</strong></td><td>Imediatamente ao concluir cada tarefa</td><td>Quem precisa de dados em tempo real no destino</td></tr>
+          <tr><td><strong>Diário</strong></td><td>Ao abrir o app ou em horário fixo configurado. Há um botão <strong>"Enviar agora"</strong> para não esperar o horário</td><td>Quem prefere envio em lote e cobre fins de semana e dias offline</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <h2 id="rail-integracoes">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="16" y="3" width="5" height="18" rx="1"/><path d="M3 7h9M3 12h9M3 17h9"/></svg>
+      O rail de integrações
+    </h2>
+
+    <p>A faixa estreita à direita, presente em <strong>todas</strong> as telas, mostra um ícone por integração conectada. Passar o cursor abre um flyout com as ações daquela integração — importar eventos, enviar tarefas manualmente, gerenciar apontamentos, importar itens — sem precisar navegar até a tela de Integrações.</p>
+
+    <p>O ícone também carrega o <strong>estado</strong>: quando algo falha, ele muda de cor e o tooltip traz a causa técnica do erro. O rail pode ser desligado em <a onclick="show('settings')">Configurações → Geral</a>.</p>
+
+    <h2 id="workspace-por-integracao">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      Workspace por integração
+    </h2>
+
+    <p>Havendo mais de um <a onclick="show('workspaces')">workspace</a>, o primeiro controle de cada card é <strong>Workspace DeskClock</strong>. Ele decide onde as importações caem e quais tarefas entram no envio, independentemente do workspace aberto na tela.</p>
+
+    <h2 id="envio-parcial">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      Quando parte do envio não passa
+    </h2>
+
+    <p>Um envio leva vários grupos de tarefas, e a recusa é <strong>por grupo</strong>. O DeskClock marca como "Enviado" apenas o que o destino confirmou — o que ficou para trás continua na fila do próximo envio, sem duplicar o que já subiu.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Tom da mensagem</th><th>O que significa</th><th>O que fazer</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge green">Sucesso</span></td><td>Tudo subiu.</td><td>Nada.</td></tr>
+          <tr><td><span class="badge amber">Aviso</span></td><td>O destino <strong>recusou o dado</strong> — falta o motivo de uma hora não faturável, o rótulo não existe na coluna, o board não tem o grupo esperado.</td><td>Corrigir a tarefa e reenviar. Tentar de novo sem mudar nada dá no mesmo.</td></tr>
+          <tr><td><span class="badge red">Erro</span></td><td>Falha <strong>técnica</strong> — rede, indisponibilidade, a API recusando a escrita.</td><td>Tentar de novo.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
   </section>
 
   <!-- ──────────────────── GOOGLE ──────────────────── -->
   <section id="google" class="section">
     <div class="page-header">
       <div class="page-header-eyebrow">Integração</div>
-      <h1>Google (Sheets + Calendar)</h1>
-      <p>Uma única autenticação Google conecta dois recursos: exportar tarefas para uma planilha e importar eventos do calendário como planejadas.</p>
+      <h1>Google</h1>
+      <p>Uma única autenticação Google conecta três recursos: exportar tarefas para uma planilha, importar eventos do calendário como planejadas e fazer backup do banco de dados no Drive.</p>
     </div>
 
     <div class="tour-tip">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Autenticação Google</div>
-        <p>Uma única conta Google autoriza tanto o Sheets quanto o Calendar. Clique em "Conectar com Google" para iniciar o OAuth — o app solicita apenas as permissões de Sheets, Calendar e email.</p>
+        <p>Uma única conta Google autoriza Sheets, Agenda e Drive. Clique em "Conectar com Google" para iniciar o OAuth — o app solicita apenas as permissões de Sheets, Calendar, Drive (restrita aos arquivos que ele próprio cria) e email.</p>
       </div>
     </div>
 
@@ -1310,7 +1960,7 @@
         <div class="step-num">2</div>
         <div class="step-content">
           <h4>Cole o ID e informe o nome da aba</h4>
-          <p>Se a aba ainda não existir, o DeskClock a cria automaticamente na primeira sincronização.</p>
+          <p>Se a aba ainda não existir, o DeskClock a cria automaticamente no primeiro envio.</p>
         </div>
       </div>
       <div class="step">
@@ -1323,7 +1973,7 @@
       <div class="step">
         <div class="step-num">4</div>
         <div class="step-content">
-          <h4>Ative sincronização automática ou envie manualmente</h4>
+          <h4>Ative o envio automático ou envie manualmente</h4>
           <p>Modo "Por tarefa" envia ao concluir. Modo "Diário" envia em lote no horário configurado.</p>
         </div>
       </div>
@@ -1346,11 +1996,16 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Importar eventos</div>
-        <p>Importe eventos da semana atual como tarefas planejadas. Home office e ausências são filtrados; blocos de foco (focus time) <strong>são</strong> importados, pois costumam representar tarefas reais que você vai executar.</p>
+        <p>Importe eventos da agenda como tarefas planejadas. Home office e ausências são filtrados; blocos de foco (focus time) <strong>são</strong> importados, pois costumam representar tarefas reais que você vai executar.</p>
       </div>
     </div>
 
-    <p>Após conectar o Google, o botão "Importar do Google Agenda" aparece na tela de Planejamento. Você escolhe o período desejado (não necessariamente a semana atual) e os eventos são exibidos em um accordion de dois níveis — semana e dia — permitindo selecionar quais importar e configurar projeto, categoria e recorrência para cada um.</p>
+    <p>Após conectar o Google, o modal <strong>"Importar eventos"</strong> fica disponível no rail de integrações e no card do Google, na tela de Integrações. Você escolhe o período desejado e os eventos são exibidos em um accordion de dois níveis — semana e dia — permitindo selecionar quais importar e configurar projeto, categoria e recorrência para cada um.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Sábado e domingo não entram.</strong> O planejamento é só de dias úteis, então eventos de fim de semana são descartados já na busca — e a recorrência sugerida pelo Google é aparada pela mesma régua. Cada reunião vira <strong>uma</strong> tarefa planejada, mesmo quando o Google a devolve como parte de uma série.</div>
+    </div>
 
     <h3>Pré-mapeamento automático</h3>
     <p>Se a descrição do evento no Google Agenda contiver as linhas <code>Projeto: Nome do Projeto</code> ou <code>Categoria: Nome da Categoria</code> (sem distinção de maiúsculas), o DeskClock preenche os campos automaticamente ao importar. Isso elimina o mapeamento manual para eventos recorrentes.</p>
@@ -1361,15 +2016,103 @@
     </div>
 
     <h3>Rastreamento automático de reuniões</h3>
-    <p>Ative <strong>"Rastrear reuniões automaticamente"</strong> no card do Google (requer conta conectada) para que o DeskClock acompanhe sua agenda sem intervenção. Ao abrir o app e a cada 30 minutos, ele busca os eventos com horário do dia, importa como tarefas planejadas (sem duplicar as já existentes) e, no horário de cada reunião, exibe um aviso junto ao overlay perguntando se deseja iniciar a tarefa.</p>
+    <p>Ative <strong>"Rastrear reuniões automaticamente"</strong> no card do Google (requer conta conectada) para que o DeskClock acompanhe sua agenda sem intervenção. Ao abrir o app e a cada 2 minutos, ele busca os eventos com horário do dia, importa como tarefas planejadas (sem duplicar as já existentes) e, no horário de cada reunião, exibe um aviso junto ao overlay perguntando se deseja iniciar a tarefa.</p>
     <ul>
       <li><strong>Início:</strong> o aviso aparece até 1 minuto antes do horário do evento. Ao confirmar, a tarefa começa — se já houver uma tarefa em execução, ela é finalizada e a da reunião assume.</li>
-      <li><strong>Fim:</strong> ao chegar o horário de término, o app não para sozinho — pergunta se a reunião ainda está em andamento. Se estiver, ele volta a perguntar a cada 15 minutos até você encerrar.</li>
-      <li><strong>Projeto e categoria:</strong> preenchidos automaticamente a partir da descrição do evento (mesma convenção <code>Projeto:</code> / <code>Categoria:</code> do pré-mapeamento acima).</li>
+      <li><strong>Fim:</strong> ao chegar o horário de término, o app <strong>não para sozinho</strong> — pergunta se a reunião ainda está em andamento. Se estiver, ele volta a perguntar a cada 15 minutos até você encerrar.</li>
+      <li><strong>Projeto, categoria e campos personalizados:</strong> vêm da tarefa planejada da reunião. Não havendo, o projeto e a categoria são lidos da descrição do evento (mesma convenção <code>Projeto:</code> / <code>Categoria:</code> do pré-mapeamento acima).</li>
+      <li><strong>Dispensar:</strong> o aviso tem sempre a saída de não iniciar. Reunião dispensada não volta a perguntar.</li>
     </ul>
+
+    <div class="callout success">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="callout-body"><strong>Reunião que você já iniciou não é re-perguntada.</strong> Se você deu play na planejada por conta própria — pelo popup, pelo planejamento ou pela caixa de tarefa —, o rastreamento reconhece que é aquela reunião e apenas se conecta a ela: nada de convite repetido, e o aviso de término continua funcionando normalmente.</div>
+    </div>
+
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div class="callout-body">O aviso surge em até ~1 minuto do horário-alvo (o app verifica a agenda periodicamente). Novos eventos criados durante o dia são captados na próxima busca (até 30 min) ou ao reabrir o app.</div>
+      <div class="callout-body">O aviso não rouba o foco de quem está digitando. Eventos criados durante o dia são captados na busca seguinte, em até 2 minutos.</div>
+    </div>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>O rastreamento usa o workspace ativo</strong>, não o seletor do card da Agenda — que governa apenas a importação manual de eventos. É a única exceção à regra de <a onclick="show('workspaces')">workspace por integração</a>, e é deliberada.</div>
+    </div>
+
+    <h2 id="backup-drive">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M3 15v3a2 2 0 002 2h14a2 2 0 002-2v-3"/></svg>
+      Backup do banco no Drive
+    </h2>
+
+    <p>Terceira subseção do card do Google. O DeskClock gera um snapshot do banco de dados e o envia para uma pasta <strong>visível</strong> no seu Drive, chamada <code>DeskClock Backups</code>.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Controle</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Backup automático</strong></td><td>Liga o agendamento. Padrão: desativado.</td></tr>
+          <tr><td><strong>Frequência</strong></td><td>Diário · Semanal · Mensal. Padrão: Semanal. Só aparece com o automático ligado.</td></tr>
+          <tr><td><strong>Fazer backup agora</strong></td><td>Roda na hora, sem esperar o vencimento.</td></tr>
+          <tr><td><strong>Último backup</strong></td><td>Data e hora do último envio bem-sucedido, ou "Nunca".</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <p>O agendamento é <strong>por vencimento, não por horário marcado</strong>: passados 24 h, 7 ou 30 dias desde o último sucesso, o backup roda na primeira vez em que você abrir o app. Um backup mensal às 3h da manhã do dia 1 nunca aconteceria; assim, ele acontece.</p>
+
+    <p>Os arquivos são nomeados com a data e a hora locais da geração — <code>deskclock-2026-08-12-1430.db</code> — e os mais antigos são podados automaticamente, mantendo os últimos.</p>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Quem já usava o Google precisa reconectar.</strong> A permissão do Drive só passa a valer numa nova autorização. Se o backup falhar com um aviso pedindo isso, desconecte e conecte a conta de novo.</div>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Os tokens das integrações são removidos do arquivo antes de ele subir.</strong> Um arquivo no Drive é bem mais exposto que a pasta local do app. O preço da troca: ao restaurar um backup, você reconecta Google, Clockify, Monday e Zendesk.</div>
+    </div>
+
+    <h3>Como restaurar</h3>
+    <p>Restaurar é um procedimento manual, de propósito — não há botão para isso.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Feche o DeskClock por inteiro</h4>
+          <p>Todas as janelas, inclusive os overlays. Substituir o arquivo com o app aberto troca o banco por baixo de conexões vivas.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Baixe o <code>.db</code> desejado</h4>
+          <p>Da pasta <code>DeskClock Backups</code> no Drive. Se existir uma <code>DeskClock Backups (dev)</code>, ela é do banco de desenvolvimento — não restaure de lá.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Substitua o arquivo do banco</h4>
+          <p>Mantendo o nome que ele já tem (<code>deskclock.db</code>). Windows: <code>%APPDATA%\com.deskclock.app\</code> · Linux: <code>~/.config/com.deskclock.app/</code>. Apague também os arquivos <code>-wal</code> e <code>-shm</code> ao lado, se existirem — eles pertencem ao banco antigo.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Abra o app e reconecte as integrações</h4>
+          <p>Google, Clockify, Monday e Zendesk.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>O backup não volta versões do app.</strong> Um arquivo gerado por uma versão anterior é migrado para a frente ao abrir, como qualquer banco. O caminho inverso não existe — não restaure um backup antigo numa tentativa de desfazer uma atualização.</div>
     </div>
   </section>
 
@@ -1441,12 +2184,105 @@
     <div class="tour-tip">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
-        <div class="tour-tip-label">Sincronização e envios</div>
-        <p>Ative a sincronização automática ("Por tarefa" ou "Diária") ou use "Enviar tarefas manualmente" para selecionar o que enviar. "Gerenciar apontamentos" permite editar entradas existentes no Clockify sem sair do app.</p>
+        <div class="tour-tip-label">Envios</div>
+        <p>Ative o envio automático ("Por tarefa" ou "Diário") ou use "Enviar tarefas manualmente" para selecionar o que enviar. "Gerenciar apontamentos" permite editar entradas existentes no Clockify sem sair do app.</p>
       </div>
     </div>
 
     <p>O modal de <strong>Gerenciar apontamentos</strong> exibe as time entries do workspace ativo com filtro por período e por tags padrão. Entradas em andamento são ocultadas. Você pode editar ou excluir registros diretamente do Clockify sem abrir o navegador.</p>
+  </section>
+
+  <!-- ──────────────────── MONDAY ──────────────────── -->
+  <section id="monday" class="section">
+    <div class="page-header">
+      <div class="page-header-eyebrow">Integração</div>
+      <h1>Monday.com</h1>
+      <p>Envie horas como atividades no board do projeto e traga os itens de trabalho do board para o seu planejamento.</p>
+    </div>
+
+    <div class="tour-tip">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="tour-tip-content">
+        <div class="tour-tip-label">Conexão via API Key</div>
+        <p>Cole o seu Personal API Token do Monday. O token é pessoal e nunca sai da sua máquina — não há servidor intermediário.</p>
+      </div>
+    </div>
+
+    <h2 id="monday-conectar">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      Conectar
+    </h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Obtenha o seu token</h4>
+          <p>No Monday: menu do seu avatar → <strong>Administrator</strong> → <strong>API</strong>. Copie o <em>Personal API Token v2</em>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Cole no DeskClock</h4>
+          <p>Em Integrações → Monday → Conectar.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Informe os dois boards</h4>
+          <p>O <strong>Portfólio</strong>, que lista os projetos, e o <strong>Report de Horas</strong>, que guarda o catálogo de rótulos. São dois ids de board, editáveis nos campos da seção.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Importe projetos e categorias</h4>
+          <p>Cada item do Portfólio vira um Projeto no DeskClock; cada Activity Type do board vira uma Categoria, casada pelo nome. O Project Stage vira um <a onclick="show('customfields')">campo personalizado</a>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>A lista de projetos se atualiza sozinha</strong>, uma vez por dia. Projeto novo no Portfólio aparece no DeskClock sem você fazer nada; um projeto sem board de destino continua existindo e recebendo tarefas — só as horas não sobem.</div>
+    </div>
+
+    <h2 id="monday-envio">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+      Envio de horas
+    </h2>
+
+    <p>O envio cria um item no grupo <strong>Activities</strong> do board do projeto. <strong>Reenviar atualiza o item</strong> em vez de duplicar — o DeskClock rastreia o que já enviou. Se o item foi apagado no Monday, o envio manual o recria.</p>
+
+    <p>Funciona nos modos automático (por tarefa ou diário, com botão "Enviar agora") e manual, pelo modal "Enviar tarefas manualmente".</p>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Hora de cliente marcada como não faturável exige um motivo.</strong> Sem ele, o Monday recusa aquele grupo — e só aquele. O restante do envio sobe normalmente, e a mensagem em amarelo diz o que ficou para trás. Preencha o motivo na tarefa e reenvie.</div>
+    </div>
+
+    <h2 id="monday-importar">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Importar itens como planejadas
+    </h2>
+
+    <p>O modal <strong>"Importar itens como planejadas"</strong> traz os itens de trabalho do board — tudo o que está fora do grupo Activities — para o seu planejamento. A data vem da coluna <strong>Timeline</strong> do item: um dia vira data única, vários viram um período.</p>
+
+    <p>Pode rodar sozinho: com a importação automática ligada, o DeskClock relê os boards a cada 4 horas. Item já planejado não é reimportado.</p>
+
+    <h2 id="monday-gerenciar">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Gerenciar atividades
+    </h2>
+
+    <p>O modal <strong>"Gerenciar atividades"</strong> lista, por período, as atividades <strong>que você enviou</strong> e permite corrigir nome, horas, tipo de cobrança, Activity Type e Project Stage — ou excluir, direto no Monday, sem abrir o navegador.</p>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Excluir uma atividade pede confirmação.</strong> É uma das duas exclusões que perguntam em todo o app — a outra é apagar um workspace. O que se apaga aqui não é do DeskClock, e não há como refazer.</div>
+    </div>
   </section>
 
   <!-- ──────────────────── ZENDESK ──────────────────── -->
@@ -1518,7 +2354,7 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Importação de tickets</div>
-        <p>Após conectar, o botão "Importar tickets" aparece. Você escolhe quais tickets abertos importar como tarefas planejadas, com filtros de organização e tipo de ticket.</p>
+        <p>Após conectar, o modal "Importar tickets" fica disponível no rail de integrações e no card do Zendesk. Você escolhe quais tickets abertos importar como tarefas planejadas, com filtros de organização e tipo de ticket.</p>
       </div>
     </div>
 
@@ -1529,6 +2365,8 @@
         <p>Tickets importados aparecem na tela de Planejamento. Reimportar não duplica — tickets já adicionados são reconhecidos e ignorados.</p>
       </div>
     </div>
+
+    <p>Cada ticket importado já vem com uma <a onclick="show('planning')">ação</a> apontando para ele no Zendesk, rotulada como "Zendesk". Ao iniciar a tarefa, o chip fica a um clique no overlay.</p>
   </section>
 
   <!-- ──────────────────── OVERLAYS ──────────────────── -->
@@ -1546,37 +2384,40 @@
 
     <div class="overlay-demo">
       <div class="overlay-visual">
-        <div class="overlay-compact">
-          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+        <div class="overlay-compact" style="border-color: var(--border); box-shadow: none; color: var(--fg-secondary);">
+          3
         </div>
-        <div class="overlay-caption">Idle</div>
+        <div class="overlay-caption">Parado</div>
       </div>
       <div class="overlay-visual">
-        <div class="overlay-compact" style="border-color: #10b981; box-shadow: 0 0 14px rgba(16,185,129,.3); color: #6ee7b7;">
+        <div class="overlay-compact">
           12:34
         </div>
-        <div class="overlay-caption">Running</div>
+        <div class="overlay-caption">Em execução</div>
       </div>
       <div class="overlay-visual">
-        <div class="overlay-compact" style="border-color: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,.2);">
-          <svg fill="none" stroke="#f59e0b" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        <div class="overlay-compact" style="border-color: var(--paused); box-shadow: 0 0 10px color-mix(in oklab, var(--paused) 22%, transparent); color: var(--paused);">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
         </div>
-        <div class="overlay-caption">Paused</div>
+        <div class="overlay-caption">Pausada</div>
       </div>
       <div class="overlay-desc">
         <h4>Widget sempre visível</h4>
         <p>Fica fixo sobre outras janelas. Três estados visuais:</p>
         <ul>
-          <li><strong>Idle:</strong> ícone do app + badge com tarefas planejadas pendentes.</li>
-          <li><strong>Running:</strong> timer MM:SS pulsante com anel animado.</li>
-          <li><strong>Paused:</strong> indicador de pausa com cor âmbar.</li>
+          <li><strong>Parado:</strong> contador de tarefas planejadas pendentes, no centro.</li>
+          <li><strong>Em execução:</strong> cronômetro <code>MM:SS</code> com anel pulsante na cor de destaque.</li>
+          <li><strong>Pausada:</strong> indicador de pausa em âmbar.</li>
         </ul>
+        <p>A cor do anel acompanha a <strong>cor de destaque</strong> que você escolheu — o verde ficou reservado para o que é faturável.</p>
       </div>
     </div>
 
     <ul>
-      <li>Arrastável — posição é salva entre sessões.</li>
+      <li>Arrastável — a posição é salva entre sessões.</li>
       <li>Um clique abre o Popup Flyout.</li>
+      <li>Com mais de um <a onclick="show('workspaces')">workspace</a>, a cor do ativo aparece como duas faixas nas bordas do botão. Com um só, não aparece nada.</li>
+      <li>O tamanho é fixo. A configuração que existia foi removida.</li>
     </ul>
 
     <h2 id="popup-flyout">
@@ -1584,30 +2425,83 @@
       Popup Flyout
     </h2>
 
-    <p>Aparece ao clicar no Compact Overlay — é um painel acoplado, não uma janela separada.</p>
+    <p>Aparece ao clicar no Compact Overlay — é um painel acoplado, não uma janela separada. Ele fecha com <kbd>Esc</kbd> ou ao perder o foco, e por isso não tem botão de fechar.</p>
 
-    <h3>Estado idle (sem tarefa em execução)</h3>
+    <div class="callout success">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="callout-body"><strong>A janela tem uma altura só, em todo estado.</strong> Iniciar ou parar uma tarefa não muda o tamanho do popup — era isso que tirava o overlay do canto onde você o deixou.</div>
+    </div>
+
+    <h3>A anatomia</h3>
+    <p>De cima para baixo, sempre na mesma ordem:</p>
     <ul>
-      <li>Lista de tarefas planejadas para hoje.</li>
-      <li>Botão "Nova tarefa" para iniciar algo novo.</li>
-      <li>Botões: Ir para planejamento | Fechar.</li>
+      <li><strong>Cabeçalho:</strong> chip do workspace e "Ir para planejamento" à esquerda; "Abrir app" à direita.</li>
+      <li><strong>Abas Planejadas / Executadas:</strong> existem em <em>todo</em> estado, no mesmo lugar. Iniciar uma tarefa não empurra a lista para baixo.</li>
+      <li><strong>Conteúdo da aba:</strong> é ele que cede altura quando o rodapé cresce.</li>
+      <li><strong>Rodapé:</strong> um espaço só, disputado por dois estados — parado, é o botão "Nova tarefa"; em execução, é o card do cronômetro. Nunca os dois.</li>
     </ul>
 
-    <h3>Estado running / paused</h3>
-    <ul>
-      <li>Nome da tarefa, timer ao vivo e borda lateral colorida (billable em azul, non-billable em cinza).</li>
-      <li>Controles: Play/Pausa, Parar (com escolha Concluída/Pendente), Cancelar, Fechar.</li>
-      <li>Edição inline por campo: clique em nome, projeto ou categoria para editar sem abrir modal.</li>
-      <li>Hora de início editável — o timer é recalculado ao alterar.</li>
-      <li>Seção "Ações" (quando a tarefa em execução tiver ações configuradas): chips clicáveis para abrir cada URL ou arquivo associado, disparados sob demanda.</li>
-    </ul>
+    <h3>Aba Planejadas</h3>
+    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. Por linha, no hover: <strong>Editar</strong>, <strong>Concluir</strong> e <strong>Iniciar</strong>.</p>
+    <p>Concluir direto daqui é útil para a tarefa que você parou como "Pendente" mas que estava de fato terminada — não precisa abrir o planejamento para isso.</p>
 
-    <h2 id="command-palette">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-      Command Palette
+    <h3>Aba Executadas</h3>
+    <p>O que já foi registrado hoje, com <strong>Editar</strong> e <strong>Repetir</strong> por linha. A edição vale para o grupo inteiro: com duas ou mais tarefas iguais, o painel avisa quantas serão atualizadas.</p>
+
+    <h3>O card da tarefa em execução</h3>
+    <p>Duas linhas, divididas por objeto — em cima a <strong>tarefa</strong>, embaixo o <strong>tempo</strong>:</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Linha</th><th>O que tem</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tarefa</strong></td><td>Ponto de estado (pulsando enquanto roda, âmbar quando pausada), nome, <strong>editar</strong> e <strong>cancelar</strong> — este na ponta oposta ao nome.</td></tr>
+          <tr><td><strong>Tempo</strong></td><td>Cronômetro, <strong>pausar/retomar</strong> e <strong>parar</strong>.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <p>Clicar no nome já abre a edição. Cancelar ficou longe de Parar de propósito: colado nele, o descarte ficava a um pixel da ação que salva.</p>
+
+    <h3>As ações da tarefa</h3>
+    <p>Quando a tarefa veio de uma planejada com ações configuradas, um <strong>raio</strong> aparece cavalgando a borda de cima do card. Passe o cursor sobre o card e uma faixa se abre com os chips — um clique em cada abre a URL ou o arquivo.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body">A faixa abre <strong>acima</strong> do nome, nunca para baixo — assim o cronômetro e os botões ficam parados no mesmo lugar enquanto ela aparece. Os chips também entram na ordem do <kbd>Tab</kbd>, para quem navega pelo teclado.</div>
+    </div>
+
+    <h3>Editar sem sair do overlay</h3>
+    <p>Três painéis, todos no mesmo desenho: cobrem o popup no tamanho que ele já tem, rolam por dentro e seguram o fechamento no <kbd>Esc</kbd> e no blur — <kbd>Esc</kbd> fecha o painel, não o popup.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Painel</th><th>Abre por</th><th>Edita</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tarefa em execução</strong></td><td>O ✎ do card</td><td>Nome, projeto, categoria com billable, hora de início, campos personalizados e os chips das ações. Editar aqui <strong>também configura a planejada de origem</strong>.</td></tr>
+          <tr><td><strong>Tarefa planejada</strong></td><td>O ✎ da linha na aba Planejadas</td><td>Nome, projeto, categoria com billable, campos personalizados, agendamento e ações — os mesmos campos do modal completo.</td></tr>
+          <tr><td><strong>Tarefa executada</strong></td><td>O ✎ da linha na aba Executadas</td><td>Nome, projeto, categoria com billable e campos personalizados, para o grupo inteiro. Data, duração, início e fim aparecem só quando o grupo tem uma tarefa.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <h3>Ao parar</h3>
+    <p>O card troca a linha do cronômetro pelo campo de hora de término e os botões <strong>Concluída</strong> / <strong>Pendente</strong> — o mesmo fluxo da tela de <a onclick="show('tasks')">Tarefas</a>.</p>
+
+    <h2 id="aviso-reuniao">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      Aviso de reunião
     </h2>
 
-    <p>Abre com <kbd>Ctrl</kbd> + <kbd>K</kbd> a qualquer momento. Permite iniciar tarefas, navegar para telas e acessar ações sem usar o mouse. Pode ser configurado para abrir automaticamente ao iniciar o app.</p>
+    <p>Com o <a onclick="show('google')">rastreamento de reuniões</a> ligado, o aviso de início e de término aparece nesta mesma janela. Ele surge <strong>sem tirar o foco</strong> de onde você está digitando, e enquanto ele está aberto o popup não fecha sozinho.</p>
   </section>
 
   <!-- ──────────────────── SETTINGS ──────────────────── -->
@@ -1615,7 +2509,7 @@
     <div class="page-header">
       <div class="page-header-eyebrow">Configurações</div>
       <h1>Configurações</h1>
-      <p>Personalize o comportamento do app, overlays, acessibilidade e atalhos globais.</p>
+      <p>Seis abas: Geral, Aparência, Overlay, Atalhos, API e Atualizações.</p>
       <a href="deskclock://navigate/settings" class="open-in-app">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
         Abrir no DeskClock
@@ -1627,44 +2521,99 @@
       Geral
     </h2>
 
-    <table class="data-table">
-      <thead><tr><th>Configuração</th><th>Padrão</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Iniciar com o computador</strong></td><td>Desativado</td><td>Registra o app no startup do SO.</td></tr>
-        <tr><td><strong>Timer ao vivo no ícone da bandeja</strong></td><td>Desativado</td><td>Exibe o timer no ícone da área de notificação enquanto uma tarefa está em execução.</td></tr>
-        <tr><td><strong>Abrir acesso rápido ao iniciar</strong></td><td>Ativado</td><td>Exibe o Command Palette automaticamente ao abrir o app.</td></tr>
-        <tr><td><strong>Fechar ao perder foco</strong></td><td>Desativado</td><td>A janela principal fecha ao perder o foco. Use o Pin na barra de título para suspender temporariamente.</td></tr>
-        <tr><td><strong>Descartar tarefas com menos de 1 min</strong></td><td>Desativado</td><td>Cancela automaticamente tarefas paradas em menos de 60 segundos.</td></tr>
-      </tbody>
-    </table>
+    <h3>Conta</h3>
+    <p><strong>Seu nome</strong> — usado na saudação da tela de Tarefas.</p>
+
+    <h3>Comportamento</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Configuração</th><th>Padrão</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Iniciar na inicialização do computador</strong></td><td>Desativado</td><td>Registra o app no startup do SO.</td></tr>
+          <tr><td><strong>Timer ao vivo no ícone da bandeja</strong></td><td>Desativado</td><td>Exibe o timer no ícone da área de notificação enquanto uma tarefa está em execução.</td></tr>
+          <tr><td><strong>Fechar ao perder foco</strong></td><td>Desativado</td><td>A janela principal fecha ao perder o foco. Use o Pin na barra de título para suspender temporariamente.</td></tr>
+          <tr><td><strong>Mostrar rail de integrações</strong></td><td>Ativado</td><td>A faixa à direita, com os atalhos das integrações conectadas. Aparece em todas as telas.</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Duração</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Configuração</th><th>Padrão</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Descartar tarefas com menos de 1 min</strong></td><td>Desativado</td><td>Cancela automaticamente tarefas paradas em menos de 60 segundos.</td></tr>
+          <tr><td><strong>Arredondar duração ao parar</strong></td><td>Desativado</td><td>Encaixa a duração num slot ao parar. Você escolhe quais slots valem (múltiplos de 5 até 60 minutos) e uma <strong>tolerância</strong>: dentro dela, a duração fica no slot de baixo; acima, sobe para o próximo.</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>O arredondamento mexe só na duração.</strong> A hora de término gravada continua sendo o instante real da parada. É a duração — arredondada — que aparece nas listas, nos totalizadores e nas exportações.</div>
+    </div>
+
+    <h3>Jornada</h3>
+    <p><strong>Meta diária</strong> e <strong>meta semanal</strong>, em horas. É contra elas que os totalizadores da tela de Tarefas mostram o progresso.</p>
+
+    <h3>Janelas</h3>
+    <p><strong>Redefinir posições salvas das janelas</strong> — devolve a janela principal e os overlays às posições padrão. Útil quando um overlay ficou fora da área visível depois de mudar de monitor.</p>
 
     <h2 id="overlay-config">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
       Overlay
     </h2>
 
-    <table class="data-table">
-      <thead><tr><th>Configuração</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Mostrar ao iniciar tarefa</strong></td><td>O Execution Overlay aparece automaticamente ao iniciar uma nova tarefa.</td></tr>
-        <tr><td><strong>Tamanho do overlay</strong></td><td>Alterna entre Grande (78×52 px) e Pequeno (68×44 px). O redimensionamento ocorre em tempo real sem reiniciar o app.</td></tr>
-        <tr><td><strong>Opacidade em repouso</strong></td><td>Slider de 0–100%. Controla a opacidade do overlay quando não há interação sobre ele.</td></tr>
-        <tr><td><strong>Snap to grid</strong></td><td>Encaixa o overlay em uma grade ao soltar o arraste, facilitando o posicionamento.</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
 
-    <h2 id="acessibilidade">
+    
+      <table class="data-table">
+        <thead><tr><th>Configuração</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Mostrar ao iniciar tarefa</strong></td><td>O Popup Flyout aparece automaticamente ao iniciar uma nova tarefa.</td></tr>
+          <tr><td><strong>Opacidade em repouso</strong></td><td>Slider de 0–100%. Controla a opacidade do overlay quando não há interação sobre ele.</td></tr>
+          <tr><td><strong>Snap to grid</strong></td><td>Encaixa o overlay em uma grade ao soltar o arraste, facilitando o posicionamento.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>A escolha de tamanho do overlay saiu.</strong> O overlay tem um tamanho só, e o popup tem uma altura só em todo estado — o que garante que ele não se mexa do canto onde você o deixou.</div>
+    </div>
+
+    <h2 id="aparencia">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-      Acessibilidade
+      Aparência
     </h2>
 
-    <table class="data-table">
-      <thead><tr><th>Configuração</th><th>Opções</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Tamanho da fonte</strong></td><td>P · M · G · GG</td></tr>
-        <tr><td><strong>Tema de cores</strong></td><td>Azul · Verde · Escuro · Claro</td></tr>
-      </tbody>
-    </table>
+    <p>A aparência tem <strong>dois eixos independentes</strong>: a claridade das superfícies e a cor de destaque. As combinações são 2 × 4.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Configuração</th><th>Opções</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Modo</strong></td><td>Escuro · Claro</td></tr>
+          <tr><td><strong>Cor de destaque</strong></td><td>Azul · Verde · Roxo · Âmbar</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>O seletor de tamanho da fonte saiu.</strong> A escala tipográfica, os raios e o ritmo de espaçamento do app são medidos a partir de uma raiz fixa — era ela que o controle variava, e variá-la desalinhava tudo o que dela depende.</div>
+    </div>
+
+    <div class="callout success">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <div class="callout-body"><strong>Experimente aqui mesmo.</strong> Este manual usa a mesma paleta do app. Os controles no rodapé da barra lateral trocam modo e cor de destaque desta página — é uma prévia fiel de como o DeskClock vai ficar.</div>
+    </div>
 
     <h2 id="atalhos-globais">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h12"/></svg>
@@ -1673,15 +2622,35 @@
 
     <p>Configure atalhos que funcionam mesmo com o app em segundo plano:</p>
 
-    <table class="data-table">
-      <thead><tr><th>Ação</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Iniciar / Pausar / Retomar</strong></td><td>Toggle de execução da tarefa atual.</td></tr>
-        <tr><td><strong>Parar</strong></td><td>Para e salva a tarefa em andamento.</td></tr>
-        <tr><td><strong>Mostrar / Ocultar overlay</strong></td><td>Alterna a visibilidade do widget flutuante.</td></tr>
-        <tr><td><strong>Mostrar / Ocultar janela</strong></td><td>Alterna a visibilidade da janela principal do app.</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Ação</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Iniciar / Pausar / Retomar</strong></td><td>Toggle de execução da tarefa atual.</td></tr>
+          <tr><td><strong>Parar</strong></td><td>Para e salva a tarefa em andamento.</td></tr>
+          <tr><td><strong>Mostrar / Ocultar overlay</strong></td><td>Alterna a visibilidade do widget flutuante.</td></tr>
+          <tr><td><strong>Mostrar / Ocultar janela</strong></td><td>Alterna a visibilidade da janela principal do app.</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <h2 id="aba-api">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>
+      API
+    </h2>
+
+    <p>Liga o servidor HTTP local e define a porta. Ver <a onclick="show('api')">API local</a>.</p>
+
+    <h2 id="aba-atualizacoes">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Atualizações
+    </h2>
+
+    <p>Mostra a versão instalada e permite procurar uma nova. Havendo atualização, o download e a instalação acontecem pelo próprio app — sem baixar instalador à mão.</p>
   </section>
 
   <!-- ──────────────────── SHORTCUTS ──────────────────── -->
@@ -1697,74 +2666,94 @@
       Navegação
     </h2>
 
-    <table class="data-table">
-      <thead><tr><th>Atalho</th><th>Ação</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>K</kbd></td>
-          <td>Abrir / fechar Command Palette</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>1</kbd></td>
-          <td>Ir para Tarefas</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>2</kbd></td>
-          <td>Ir para Lançamento manual</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>3</kbd></td>
-          <td>Ir para Planejamento</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>4</kbd></td>
-          <td>Ir para Histórico</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>5</kbd></td>
-          <td>Ir para Dados</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>6</kbd></td>
-          <td>Ir para Integrações</td>
-        </tr>
-        <tr>
-          <td><kbd>Ctrl</kbd> + <kbd>7</kbd></td>
-          <td>Ir para Configurações</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Atalho</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>1</kbd></td>
+            <td>Ir para Tarefas</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>2</kbd></td>
+            <td>Ir para Lançamento manual</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>3</kbd></td>
+            <td>Ir para Planejamento</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>4</kbd></td>
+            <td>Ir para Histórico</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>5</kbd></td>
+            <td>Ir para Dados</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>6</kbd></td>
+            <td>Ir para Integrações</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>7</kbd></td>
+            <td>Ir para Configurações</td>
+          </tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h2 id="formularios-listas">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
       Formulários e listas
     </h2>
 
-    <table class="data-table">
-      <thead><tr><th>Atalho</th><th>Contexto</th><th>Ação</th></tr></thead>
-      <tbody>
-        <tr>
-          <td><kbd>Enter</kbd></td>
-          <td>Campo de tarefa / lançamento manual</td>
-          <td>Criar / iniciar tarefa (se autocomplete fechado)</td>
-        </tr>
-        <tr>
-          <td><kbd>Enter</kbd></td>
-          <td>Autocomplete aberto</td>
-          <td>Selecionar o primeiro item da lista filtrada</td>
-        </tr>
-        <tr>
-          <td><kbd>Esc</kbd></td>
-          <td>Modal ou autocomplete aberto</td>
-          <td>Fechar / cancelar</td>
-        </tr>
-        <tr>
-          <td><kbd>Tab</kbd></td>
-          <td>Formulários</td>
-          <td>Próximo campo</td>
-        </tr>
-      </tbody>
-    </table>
+    <p>São três contratos, e eles valem em <strong>todas</strong> as telas — não em algumas.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Atalho</th><th>Contexto</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><kbd>Enter</kbd></td>
+            <td>Qualquer campo de um formulário</td>
+            <td>Submete o formulário — não importa em qual campo o cursor esteja</td>
+          </tr>
+          <tr>
+            <td><kbd>Enter</kbd></td>
+            <td>Autocomplete aberto</td>
+            <td>Seleciona o primeiro item da lista filtrada, sem submeter junto</td>
+          </tr>
+          <tr>
+            <td><kbd>Enter</kbd></td>
+            <td>Campo de texto longo</td>
+            <td>Quebra linha. Para submeter, <kbd>Ctrl</kbd>/<kbd>Cmd</kbd> + <kbd>Enter</kbd></td>
+          </tr>
+          <tr>
+            <td><kbd>Esc</kbd></td>
+            <td>Qualquer modal, painel do overlay ou autocomplete aberto</td>
+            <td>Fecha o de dentro primeiro: com o autocomplete aberto, fecha só ele</td>
+          </tr>
+          <tr>
+            <td><kbd>Tab</kbd></td>
+            <td>Formulários</td>
+            <td>Próximo campo</td>
+          </tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body">Há telas em que o <kbd>Enter</kbd> <strong>deliberadamente não submete</strong>: os modais que operam sobre uma seleção em lote (importar da Agenda, importar do Monday, enviar tarefas) e os painéis com duas ações igualmente primárias. Ali submeter por engano custaria caro.</div>
+    </div>
 
     <h2 id="atalhos-globais-config">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -1799,18 +2788,24 @@
 
     <p>Abre o DeskClock e navega diretamente para a tela indicada.</p>
 
-    <table class="data-table">
-      <thead><tr><th>URL</th><th>Destino</th></tr></thead>
-      <tbody>
-        <tr><td><a href="deskclock://navigate/tasks" class="deeplink-example">deskclock://navigate/tasks</a></td><td>Tarefas</td></tr>
-        <tr><td><a href="deskclock://navigate/retroactive" class="deeplink-example">deskclock://navigate/retroactive</a></td><td>Lançamento manual</td></tr>
-        <tr><td><a href="deskclock://navigate/planning" class="deeplink-example">deskclock://navigate/planning</a></td><td>Planejamento</td></tr>
-        <tr><td><a href="deskclock://navigate/history" class="deeplink-example">deskclock://navigate/history</a></td><td>Histórico</td></tr>
-        <tr><td><a href="deskclock://navigate/data" class="deeplink-example">deskclock://navigate/data</a></td><td>Dados</td></tr>
-        <tr><td><a href="deskclock://navigate/integrations" class="deeplink-example">deskclock://navigate/integrations</a></td><td>Integrações</td></tr>
-        <tr><td><a href="deskclock://navigate/settings" class="deeplink-example">deskclock://navigate/settings</a></td><td>Configurações</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>URL</th><th>Destino</th></tr></thead>
+        <tbody>
+          <tr><td><a href="deskclock://navigate/tasks" class="deeplink-example">deskclock://navigate/tasks</a></td><td>Tarefas</td></tr>
+          <tr><td><a href="deskclock://navigate/retroactive" class="deeplink-example">deskclock://navigate/retroactive</a></td><td>Lançamento manual</td></tr>
+          <tr><td><a href="deskclock://navigate/planning" class="deeplink-example">deskclock://navigate/planning</a></td><td>Planejamento</td></tr>
+          <tr><td><a href="deskclock://navigate/history" class="deeplink-example">deskclock://navigate/history</a></td><td>Histórico</td></tr>
+          <tr><td><a href="deskclock://navigate/data" class="deeplink-example">deskclock://navigate/data</a></td><td>Dados</td></tr>
+          <tr><td><a href="deskclock://navigate/integrations" class="deeplink-example">deskclock://navigate/integrations</a></td><td>Integrações</td></tr>
+          <tr><td><a href="deskclock://navigate/settings" class="deeplink-example">deskclock://navigate/settings</a></td><td>Configurações</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h2 id="iniciar-tarefa-deeplink">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -1819,15 +2814,21 @@
 
     <p>Inicia o timer imediatamente com os parâmetros fornecidos na URL. Todos os campos são opcionais — omitir um parâmetro inicia a tarefa sem aquele dado.</p>
 
-    <table class="data-table">
-      <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
-        <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
-        <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
-        <tr><td><code>billable</code></td><td><code>true</code> / <code>false</code></td><td>Indica se é billable. Padrão: <code>true</code></td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
+          <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
+          <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
+          <tr><td><code>billable</code></td><td><code>true</code> / <code>false</code></td><td>Indica se é billable. Padrão: <code>true</code></td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h3>Exemplos</h3>
     <div class="callout info" style="flex-direction:column;gap:6px;">
@@ -1846,17 +2847,23 @@
 
     <p>Abre a tela de Lançamento manual e preenche o formulário com os dados da URL. Todos os campos são opcionais.</p>
 
-    <table class="data-table">
-      <thead><tr><th>Parâmetro</th><th>Formato</th><th>Descrição</th></tr></thead>
-      <tbody>
-        <tr><td><code>date</code></td><td><code>AAAA-MM-DD</code></td><td>Data do lançamento. Padrão: data atual</td></tr>
-        <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
-        <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
-        <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
-        <tr><td><code>start</code></td><td><code>HH:MM</code></td><td>Horário de início</td></tr>
-        <tr><td><code>end</code></td><td><code>HH:MM</code></td><td>Horário de fim</td></tr>
-      </tbody>
-    </table>
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Parâmetro</th><th>Formato</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><code>date</code></td><td><code>AAAA-MM-DD</code></td><td>Data do lançamento. Padrão: data atual</td></tr>
+          <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
+          <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
+          <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
+          <tr><td><code>start</code></td><td><code>HH:MM</code></td><td>Horário de início</td></tr>
+          <tr><td><code>end</code></td><td><code>HH:MM</code></td><td>Horário de fim</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
 
     <h3>Exemplo</h3>
     <div class="callout info" style="flex-direction:column;gap:6px;">
@@ -1867,6 +2874,98 @@
     <div class="callout warning" style="margin-top:16px;">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
       <div class="callout-body"><strong>Nomes exatos:</strong> os campos <code>project</code> e <code>category</code> precisam corresponder exatamente ao nome cadastrado no DeskClock (incluindo acentos e capitalização). Se não houver correspondência, o campo é ignorado.</div>
+    </div>
+  </section>
+
+  <!-- ──────────────────── API ──────────────────── -->
+  <section id="api" class="section">
+    <div class="page-header">
+      <div class="page-header-eyebrow">Automação</div>
+      <h1>API local</h1>
+      <p>Um servidor HTTP embutido no app, para controlar o timer e ler seus dados a partir de scripts, atalhos do sistema ou outros programas.</p>
+      <a href="deskclock://navigate/settings" class="open-in-app">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        Abrir Configurações
+      </a>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Desligada por padrão.</strong> Ative em <a onclick="show('settings')">Configurações → API</a>. A porta é configurável; o padrão é <code>27420</code>. O servidor escuta apenas em <code>localhost</code>.</div>
+    </div>
+
+    <h2 id="api-docs">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Documentação interativa
+    </h2>
+
+    <p>Com a API ligada, abra <code>http://localhost:27420/docs</code> no navegador. É um Swagger UI completo: a lista de endpoints, os formatos de entrada e saída, e um botão para experimentar cada chamada direto na página. A especificação em JSON fica em <code>/openapi.json</code>.</p>
+
+    <h2 id="api-endpoints">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>
+      Endpoints
+    </h2>
+
+    <h3>Controle do timer</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/status</code></td><td>Estado atual: se há tarefa em execução, qual, e há quanto tempo</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/start</code></td><td>Inicia uma tarefa</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/pause</code></td><td>Pausa a tarefa em execução</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/resume</code></td><td>Retoma a tarefa pausada</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/toggle</code></td><td>Alterna entre pausar e retomar</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/stop</code></td><td>Para e salva</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/cancel</code></td><td>Descarta sem salvar</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Tarefas planejadas</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/planned-tasks</code></td><td>Lista as planejadas. Aceita uma data, e aplica as regras de recorrência</td></tr>
+          <tr><td><code>POST</code></td><td><code>/planned-tasks</code></td><td>Cria uma tarefa planejada</td></tr>
+          <tr><td><code>GET</code></td><td><code>/planned-tasks/{id}</code></td><td>Lê uma tarefa planejada</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/planned-tasks/{id}</code></td><td>Atualiza</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/planned-tasks/{id}</code></td><td>Exclui</td></tr>
+          <tr><td><code>POST</code></td><td><code>/planned-tasks/{id}/complete</code></td><td>Marca como concluída no dia</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/planned-tasks/{id}/complete/{data}</code></td><td>Desfaz a conclusão daquele dia</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Catálogos</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/projects</code></td><td>Lista os projetos cadastrados</td></tr>
+          <tr><td><code>GET</code></td><td><code>/categories</code></td><td>Lista as categorias cadastradas</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h2 id="api-vs-deeplinks">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7h12M8 12h12M8 17h12"/><path d="M4 7h.01M4 12h.01M4 17h.01"/></svg>
+      API ou deep link?
+    </h2>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Use</th><th>Quando</th></tr></thead>
+        <tbody>
+          <tr><td><strong><a onclick="show('deeplinks')">Deep link</a></strong></td><td>Você quer que o app <strong>apareça</strong> — abrir uma tela, pré-preencher um formulário. Um link basta, nada a configurar.</td></tr>
+          <tr><td><strong>API local</strong></td><td>Você quer <strong>ler</strong> o estado ou agir sem trazer a janela à frente. É o caminho para barras de status, scripts e integrações caseiras.</td></tr>
+        </tbody>
+      </table>
+
+    
     </div>
   </section>
 
@@ -1903,9 +3002,41 @@
     show(e.state?.section || 'intro', false);
   });
 
+  /* Hash colado na barra de endereço de uma página já aberta não recarrega o
+     documento — só dispara `hashchange`. Sem este ouvinte, o link direto para
+     uma seção só funcionava em aba nova. */
+  window.addEventListener('hashchange', () => {
+    const alvo = location.hash.slice(1);
+    if (alvo) show(alvo, false);
+  });
+
+  /* Aparência: dois eixos independentes, como em Configurações → Aparência.
+     O atributo já foi aplicado no <head>; aqui só ficam o clique e a marcação
+     do botão escolhido. */
+  function applyAppearance(axis, value) {
+    const attr = axis === 'mode' ? 'mode' : 'accent';
+    document.documentElement.dataset[attr] = value;
+    try { localStorage.setItem('deskclock-doc-' + attr, value); } catch (e) {}
+    const sel = axis === 'mode' ? '.segmented button' : '.accents button';
+    const key = axis === 'mode' ? 'm' : 'a';
+    document.querySelectorAll(sel).forEach(b => {
+      b.setAttribute('aria-pressed', String(b.dataset[key] === value));
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     const hash = location.hash.slice(1);
     show(hash || 'intro', false);
+
+    document.querySelectorAll('.segmented button').forEach(b => {
+      b.addEventListener('click', () => applyAppearance('mode', b.dataset.m));
+    });
+    document.querySelectorAll('.accents button').forEach(b => {
+      b.addEventListener('click', () => applyAppearance('accent', b.dataset.a));
+    });
+    // Sincroniza os botões com o que o <head> já aplicou.
+    applyAppearance('mode', document.documentElement.dataset.mode || 'escuro');
+    applyAppearance('accent', document.documentElement.dataset.accent || 'azul');
 
     // Gera links âncora em todos os h2 com id dentro de seções
     document.querySelectorAll('.section').forEach(section => {

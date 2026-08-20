@@ -17,7 +17,20 @@ describe("getTasksForDate", () => {
     await getTasksForDate(repo, "2026-04-08");
     expect(repo.findByDateRange).toHaveBeenCalledWith(
       startOfDayISO("2026-04-08"),
-      endOfDayISO("2026-04-08")
+      endOfDayISO("2026-04-08"),
+      undefined
+    );
+  });
+
+  it("encaminha o workspace ao repositório quando informado", async () => {
+    const repo = {
+      findByDateRange: vi.fn(async () => []),
+    } as unknown as ITaskRepository;
+    await getTasksForDate(repo, "2026-04-08", "ws-1");
+    expect(repo.findByDateRange).toHaveBeenCalledWith(
+      startOfDayISO("2026-04-08"),
+      endOfDayISO("2026-04-08"),
+      "ws-1"
     );
   });
 
@@ -25,6 +38,7 @@ describe("getTasksForDate", () => {
     const tasks = [
       {
         id: "t1",
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,
@@ -35,6 +49,7 @@ describe("getTasksForDate", () => {
         status: "completed" as const,
         createdAt: "2026-04-08T09:00:00.000Z",
         updatedAt: "2026-04-08T10:00:00.000Z",
+        customValues: {},
       },
     ];
     const repo: ITaskRepository = {

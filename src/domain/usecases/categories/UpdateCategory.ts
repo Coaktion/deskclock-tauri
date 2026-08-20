@@ -6,12 +6,13 @@ export async function updateCategory(
   repository: ICategoryRepository,
   id: UUID,
   name: string,
-  defaultBillable: boolean
+  defaultBillable: boolean,
+  workspaceId: UUID
 ): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) throw new DomainError("O nome da categoria não pode ser vazio.");
 
-  const existing = await repository.findByName(trimmed);
+  const existing = await repository.findByName(trimmed, workspaceId);
   if (existing && existing.id !== id)
     throw new DuplicateNameError(`Categoria "${trimmed}" já existe.`);
 

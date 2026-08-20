@@ -1,24 +1,88 @@
 import { useState, useRef, useEffect } from "react";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
+import { Input } from "@presentation/components/ui";
+import type { ControlSize, ControlVariant } from "@presentation/components/ui";
 
 interface Option {
   id: string;
   name: string;
 }
 
+/**
+ * Teto de largura da lista — o `max-w-96` da escala do Tailwind (24rem). A lista
+ * se dimensiona pelo nome mais longo, e sem teto um único item comprido abriria
+ * um painel da largura da janela por causa de uma opção só.
+ */
+const MAX_LIST_WIDTH = 384;
+/** Folga até a borda da janela — o `2` da escala de espaçamento (0.5rem). */
+const VIEWPORT_MARGIN = 8;
+/**
+ * Largura abaixo da qual crescer para a direita não resolve o que o crescimento
+ * existe para resolver — o `w-56` da escala (14rem). Só então a lista passa a
+ * crescer para a esquerda: alinhar à direita é a exceção, não o padrão, ou o
+ * campo que fica um pouco depois do meio da tela abriria a lista para o lado
+ * "errado" sem que faltasse espaço nenhum.
+ */
+const MIN_COMFORTABLE_WIDTH = 224;
+
+interface ListBox {
+  maxWidth: number;
+  alignRight: boolean;
+}
+
+/**
+ * Espaço disponível a partir do campo, medido na abertura. A lista é
+ * `absolute`, então nada em CSS sabe a que distância ela está da borda da
+ * janela — e é isso que impede um simples `min-width` de resolver o caso: no
+ * campo encostado à direita (ou dentro do popup, de 264 px úteis) ele a jogaria
+ * para fora da tela.
+ */
+export function measureListBox(
+  rect: Pick<DOMRect, "left" | "right" | "width">,
+  viewportWidth: number
+): ListBox {
+  const spaceRight = viewportWidth - rect.left - VIEWPORT_MARGIN;
+  const spaceLeft = rect.right - VIEWPORT_MARGIN;
+  const alignRight = spaceRight < MIN_COMFORTABLE_WIDTH && spaceLeft > spaceRight;
+  const space = alignRight ? spaceLeft : spaceRight;
+  // O piso é a largura do próprio campo: espremer a lista para menos que ele
+  // deixaria as duas bordas desalinhadas sem ganhar nada.
+  return { maxWidth: Math.min(Math.max(space, rect.width), MAX_LIST_WIDTH), alignRight };
+}
+
 interface AutocompleteProps {
+  /** Id do input interno, para associar um `<label htmlFor>` externo. */
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   onSelect?: (option: Option) => void;
+  /**
+   * Destino do Enter com a lista fechada, para o campo que **não** vive dentro
+   * de um formulário com submit único — os editores por linha dos modais de
+   * lista. Presente, o campo consome a tecla; ausente, deixa o Enter subir para
+   * o `useSubmitOnEnter` do formulário. A presença da prop é o que escolhe entre
+   * os dois, então nunca há dois disparos para a mesma tecla.
+   */
   onEnter?: () => void;
   options: Option[];
   placeholder?: string;
   className?: string;
+  /**
+   * `bare` para quem embute o autocomplete numa caixa que já desenha fundo,
+   * borda e raio — o input fica transparente e os dois leem como um campo só.
+   *
+   * Isto era um `inputClassName` que **substituía** o visual inteiro do campo:
+   * cinco call sites passavam a mesma constante e um sexto reescreveu a classe
+   * à mão, que foi como o campo do popup perdeu o tamanho de fonte dos demais.
+   */
+  variant?: ControlVariant;
+  size?: ControlSize;
   autoFocus?: boolean;
   dropUp?: boolean;
 }
 
 export function Autocomplete({
+  id,
   value,
   onChange,
   onSelect,
@@ -26,11 +90,14 @@ export function Autocomplete({
   options,
   placeholder = "",
   className = "",
+  variant = "boxed",
+  size = "md",
   autoFocus = false,
   dropUp = false,
 }: AutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [listBox, setListBox] = useState<ListBox | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
@@ -51,6 +118,14 @@ export function Autocomplete({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Mede na abertura, e só nela: a lista não muda de lugar enquanto está aberta
+  // — o clique fora a fecha, e o campo só se move com a janela sendo
+  // redimensionada, que não é caminho de uso com a lista aberta.
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    setListBox(measureListBox(containerRef.current.getBoundingClientRect(), window.innerWidth));
+  }, [open]);
+
   // Mantém o item ativo visível ao navegar com teclado
   useEffect(() => {
     if (!listRef.current) return;
@@ -70,15 +145,22 @@ export function Autocomplete({
       e.preventDefault();
       setActiveIdx((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
-      e.preventDefault();
       if (open && filtered.length > 0) {
+        // Consumido: `preventDefault` é o que impede o formulário em volta de
+        // submeter na mesma tecla que escolheu a opção (§6.4).
+        e.preventDefault();
         const chosen = filtered[activeIdx] ?? filtered[0];
         onChange(chosen.name);
         onSelect?.(chosen);
         setOpen(false);
       } else {
         setOpen(false);
-        onEnter?.();
+        // Sem `onEnter`, a tecla sobe para o `useSubmitOnEnter` do formulário —
+        // e não pode ser marcada como consumida, ou ele a ignoraria.
+        if (onEnter) {
+          e.preventDefault();
+          onEnter();
+        }
       }
     } else if (e.key === "Escape") {
       if (open) {
@@ -97,8 +179,8 @@ export function Autocomplete({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      <input
-        type="text"
+      <Input
+        id={id}
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
@@ -109,12 +191,18 @@ export function Autocomplete({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         autoFocus={autoFocus}
-        className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+        variant={variant}
+        size={size}
       />
       {open && filtered.length > 0 && (
         <ul
           ref={listRef}
-          className={`absolute z-50 w-full bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-40 overflow-y-auto ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
+          // `w-max` dimensiona pelo nome mais longo e `min-w-full` impede que ela
+          // fique mais estreita que o campo; o teto medido é o que a mantém
+          // dentro da janela. O nome que ainda assim não couber quebra em duas
+          // linhas — truncar devolveria o problema que isto veio resolver.
+          style={{ maxWidth: listBox?.maxWidth }}
+          className={`absolute z-50 w-max min-w-full bg-raised border border-border rounded-control shadow-lg max-h-40 overflow-y-auto ${listBox?.alignRight ? "right-0" : "left-0"} ${dropUp ? "bottom-full mb-1" : "top-full mt-1"}`}
         >
           {filtered.map((o, idx) => (
             <li
@@ -122,9 +210,7 @@ export function Autocomplete({
               onMouseDown={() => handleSelect(o)}
               onMouseEnter={() => setActiveIdx(idx)}
               className={`px-2.5 py-1.5 text-sm cursor-pointer transition-colors ${
-                idx === activeIdx
-                  ? "bg-blue-600/40 text-gray-100"
-                  : "text-gray-200 hover:bg-gray-700"
+                idx === activeIdx ? "bg-accent/25 text-fg" : "text-fg-secondary hover:bg-surface"
               }`}
             >
               {o.name}

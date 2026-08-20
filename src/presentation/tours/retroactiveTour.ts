@@ -17,7 +17,7 @@ export const retroactiveTourSteps: DriveStep[] = [
       title: "Formulário de lançamento",
       description:
         "Informe nome, projeto e categoria. Depois defina os horários de início e fim — ou a duração diretamente. Pressione Enter ou clique em Adicionar para salvar.",
-      side: "bottom",
+      side: "right",
       align: "start",
     },
   },
@@ -27,7 +27,7 @@ export const retroactiveTourSteps: DriveStep[] = [
       title: "Campo de duração",
       description:
         "Aceita linguagem natural: '1h 30', '1h30m', '90' (minutos) ou 'HH:MM'. Ao confirmar, o campo Fim é calculado automaticamente. Você pode preencher só a duração e deixar o início em branco — o app usa a hora atual.",
-      side: "bottom",
+      side: "right",
       align: "start",
     },
   },
@@ -37,7 +37,7 @@ export const retroactiveTourSteps: DriveStep[] = [
       title: "Início em sequência",
       description:
         "Após adicionar uma tarefa, o campo Início da próxima é preenchido automaticamente com o fim da anterior — ideal para lançar o dia inteiro em sequência.",
-      side: "top",
+      side: "right",
       align: "start",
     },
   },
@@ -47,8 +47,15 @@ export const retroactiveTourSteps: DriveStep[] = [
       title: "Tarefas do dia",
       description:
         "Os registros do dia selecionado aparecem ordenados do mais recente para o mais antigo. Você pode editar ou excluir qualquer um.",
-      side: "top",
+      side: "left",
       align: "start",
+    },
+  },
+  {
+    popover: {
+      title: "As planejadas que já têm horário",
+      description:
+        "Se o dia tem tarefas planejadas com início e fim — vindas da sua Agenda, por exemplo —, elas aparecem como sugestão e podem ser lançadas de uma vez, sem redigitar nada.",
     },
   },
 ];

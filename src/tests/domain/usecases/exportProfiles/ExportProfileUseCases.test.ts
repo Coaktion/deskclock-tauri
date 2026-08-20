@@ -24,6 +24,7 @@ function makeRepo(overrides: Partial<IExportProfileRepository> = {}): IExportPro
 function makeProfile(overrides: Partial<ExportProfile> = {}): ExportProfile {
   return {
     id: "ep1",
+    workspaceId: "ws-1",
     name: "Padrão",
     isDefault: false,
     format: "csv",
@@ -39,6 +40,7 @@ describe("createExportProfile", () => {
   it("cria perfil com id gerado e chama save", async () => {
     const repo = makeRepo();
     const profile = await createExportProfile(repo, {
+      workspaceId: "ws-1",
       name: "Meu Perfil",
       format: "csv",
       separator: "semicolon",
@@ -55,6 +57,7 @@ describe("createExportProfile", () => {
   it("marca como default quando isDefault=true", async () => {
     const repo = makeRepo();
     const profile = await createExportProfile(repo, {
+      workspaceId: "ws-1",
       name: "P",
       format: "json",
       separator: "comma",

@@ -42,18 +42,19 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ISheetsConfigPort & IGo
 }
 
 const projects: Project[] = [
-  { id: "proj-1", name: "Projeto Alpha" },
-  { id: "proj-2", name: "Projeto Beta" },
+  { id: "proj-1", workspaceId: "ws-1", name: "Projeto Alpha", colorIndex: 0 },
+  { id: "proj-2", workspaceId: "ws-1", name: "Projeto Beta", colorIndex: 1 },
 ];
 
 const categories: Category[] = [
-  { id: "cat-1", name: "Desenvolvimento", defaultBillable: true },
-  { id: "cat-2", name: "Reuniões", defaultBillable: false },
+  { id: "cat-1", workspaceId: "ws-1", name: "Desenvolvimento", defaultBillable: true },
+  { id: "cat-2", workspaceId: "ws-1", name: "Reuniões", defaultBillable: false },
 ];
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
+    workspaceId: "ws-1",
     name: "Tarefa teste",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -64,6 +65,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-04-15T09:00:00.000Z",
     updatedAt: "2026-04-15T10:30:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -261,7 +263,7 @@ describe("GoogleSheetsTaskSender — send (formato de duração)", () => {
   it("duas falhas de formato → send resolve mesmo assim e loga warning", async () => {
     const { formatCalls } = stubFetch({ formatResults: [{ ok: false }, { ok: false }] });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(makeSender().send([makeTask()])).resolves.toBeUndefined();
+    await expect(makeSender().send([makeTask()])).resolves.toMatchObject({ refused: [] });
     expect(formatCalls).toHaveLength(2);
     expect(warn).toHaveBeenCalled();
   });
@@ -269,14 +271,14 @@ describe("GoogleSheetsTaskSender — send (formato de duração)", () => {
   it("falha de rede no formato não derruba o envio e loga warning", async () => {
     stubFetch({ formatResults: ["reject", "reject"] });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(makeSender().send([makeTask()])).resolves.toBeUndefined();
+    await expect(makeSender().send([makeTask()])).resolves.toMatchObject({ refused: [] });
     expect(warn).toHaveBeenCalled();
   });
 
   it("metadados indisponíveis → escrita acontece, formato é pulado e warning é logado", async () => {
     const { fetchMock, formatCalls } = stubFetch({ metaOk: false });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    await expect(makeSender().send([makeTask()])).resolves.toBeUndefined();
+    await expect(makeSender().send([makeTask()])).resolves.toMatchObject({ refused: [] });
     const putCalls = fetchMock.mock.calls.filter((c) => c[1]?.method === "PUT");
     expect(putCalls.length).toBeGreaterThan(0);
     expect(formatCalls).toHaveLength(0);

@@ -6,7 +6,8 @@ export interface ITaskRepository {
   update(task: Task): Promise<void>;
   findById(id: UUID): Promise<Task | null>;
   findByStatus(status: "running" | "paused"): Promise<Task[]>;
-  findByDateRange(startISO: string, endISO: string): Promise<Task[]>;
+  /** `workspaceId` omitido devolve as tarefas de TODOS os workspaces — é o caminho das integrações. */
+  findByDateRange(startISO: string, endISO: string, workspaceId?: UUID): Promise<Task[]>;
   delete(id: UUID): Promise<void>;
   deleteMany(ids: UUID[]): Promise<void>;
 }

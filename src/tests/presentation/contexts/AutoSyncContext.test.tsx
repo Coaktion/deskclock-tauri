@@ -53,6 +53,8 @@ describe("AutoSyncContext", () => {
     const mockApi: AutoSyncApi = {
       runPerTask: vi.fn().mockResolvedValue([]),
       runDaily: vi.fn().mockResolvedValue([]),
+      runDailyFor: vi.fn().mockResolvedValue(null),
+      isDailyEnabled: vi.fn().mockReturnValue(false),
       isSyncing: vi.fn().mockReturnValue(false),
     };
     const customWrapper = ({ children }: { children: ReactNode }) => (

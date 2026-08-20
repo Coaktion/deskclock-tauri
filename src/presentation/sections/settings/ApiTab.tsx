@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { AlertCircle, ExternalLink } from "lucide-react";
-import { ToggleRow, NumberInputWithCommit, SettingsCard, CardRow } from "./SettingsShared";
+import { SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
+import { NumberInputWithCommit } from "./SettingsShared";
 
 interface ApiStatus {
   running: boolean;
@@ -70,53 +71,50 @@ export function ApiTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <SettingsCard>
-        <CardRow>
-          <ToggleRow
+    <div className="space-y-5">
+      <SectionCard title="API local" divided>
+        <SectionRow>
+          <Toggle
             label="Ativar API REST local"
             description="Permite controlar o DeskClock via requisições HTTP de ferramentas externas (scripts, Alfred, Raycast, n8n…)"
-            value={localApiEnabled}
+            checked={localApiEnabled}
             onChange={handleLocalApiToggle}
             disabled={localApiLoading !== null}
           />
-        </CardRow>
+        </SectionRow>
 
         {localApiEnabled && !localApiLoading && (
-          <CardRow>
-            <div className="space-y-1.5">
-              <div>
-                <p className="text-sm text-gray-200">Porta</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Entre 1024 e 65535. Alterações reiniciam o servidor.
-                </p>
-              </div>
-              <NumberInputWithCommit
-                label=""
-                min={1024}
-                max={65535}
-                committed={localApiPort}
-                onCommit={handlePortCommit}
-                inputClassName="w-32 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-blue-500 tabular-nums"
-              />
-            </div>
-          </CardRow>
+          <SectionRow className="flex items-center justify-between gap-4">
+            <SettingLabel
+              label="Porta"
+              description="Entre 1024 e 65535. Alterações reiniciam o servidor."
+              htmlFor="settings-api-port"
+            />
+            <NumberInputWithCommit
+              id="settings-api-port"
+              min={1024}
+              max={65535}
+              committed={localApiPort}
+              onCommit={handlePortCommit}
+              inputClassName="w-32 shrink-0 font-mono tabular-nums"
+            />
+          </SectionRow>
         )}
 
-        <CardRow>
+        <SectionRow>
           <div className="flex items-center gap-2.5">
             <span
               className={`w-2 h-2 rounded-full shrink-0 ${
                 localApiLoading
-                  ? "bg-yellow-400 animate-pulse"
+                  ? "bg-paused animate-pulse"
                   : localApiStatus?.running
-                    ? "bg-green-400"
+                    ? "bg-billable"
                     : localApiStatus?.error
-                      ? "bg-red-500"
-                      : "bg-gray-600"
+                      ? "bg-danger"
+                      : "bg-fg-muted"
               }`}
             />
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-fg-secondary">
               {localApiLoading === "starting"
                 ? "Iniciando…"
                 : localApiLoading === "stopping"
@@ -132,20 +130,20 @@ export function ApiTab() {
                 href={`http://localhost:${localApiStatus.port}/docs`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors ml-auto"
+                className="flex items-center gap-1 text-sm text-accent-text hover:opacity-80 transition-opacity ml-auto"
               >
-                <ExternalLink size={11} />
+                <ExternalLink size={14} />
                 Swagger
               </a>
             )}
           </div>
-        </CardRow>
-      </SettingsCard>
+        </SectionRow>
+      </SectionCard>
 
       {localApiStatus?.error && !localApiLoading && (
-        <div className="flex items-start gap-2 rounded-lg bg-red-950/40 border border-red-800/50 px-3 py-2.5">
-          <AlertCircle size={14} className="text-red-400 mt-0.5 shrink-0" />
-          <p className="text-xs text-red-300">{localApiStatus.error}</p>
+        <div className="flex items-start gap-2 rounded-control bg-danger/10 border border-danger/30 px-3 py-2.5">
+          <AlertCircle size={14} className="text-danger mt-0.5 shrink-0" />
+          <p className="text-xs text-danger">{localApiStatus.error}</p>
         </div>
       )}
     </div>

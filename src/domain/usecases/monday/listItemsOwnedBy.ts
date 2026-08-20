@@ -1,0 +1,101 @@
+import type { IMondayApi } from "@domain/integrations/IMondayApi";
+import type { MondayItem } from "@shared/types/monday";
+import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+
+/** Recorte de grupo pedido pela tela, aplicado por board. */
+export type MondayItemScope =
+  /** Só os grupos de apontamento — as horas que o DeskClock já enviou. */
+  | "activities"
+  /** Tudo menos eles — os itens de trabalho, que viram planejadas. */
+  | "outsideActivities"
+  | "all";
+
+/**
+ * Grupos em que o DeskClock grava horas: o Activities e os demais destinos de
+ * Report Type (Meetings, Expenses, Risks, Lessons Learned).
+ *
+ * São todos apontamento, e é por isso que o recorte não pode ser só o
+ * Activities: a atividade cujo Report Type é `Meeting` some do gerenciador —
+ * que então não a edita nem a apaga — e reaparece no import como se fosse item
+ * de trabalho a virar tarefa planejada.
+ *
+ * Ordenados para que a chave do lote não dependa da ordem em que os rótulos
+ * foram resolvidos.
+ */
+function entryGroupIds(mapping: MondayProjectMapping): string[] {
+  const ids = new Set(Object.values(mapping.reportTypeGroupIds ?? {}).filter(Boolean));
+  if (mapping.activitiesGroupId) ids.add(mapping.activitiesGroupId);
+  return [...ids].sort();
+}
+
+export interface ListItemsOwnedByOptions {
+  scope?: MondayItemScope;
+  /** Reduz o payload às colunas de interesse. Omitido = todas. */
+  columnIds?: string[];
+  /**
+   * Teto de idade da busca: descarta no servidor a atividade cuja End Date seja
+   * anterior a este dia. Board sem a coluna vem inteiro, como antes.
+   */
+  endsOnOrAfterDay?: string;
+}
+
+/**
+ * Itens dos boards mapeados em que o usuário conectado é o responsável.
+ *
+ * Os boards são do time inteiro e ninguém trabalha em todos os clientes: sem o
+ * filtro de responsável, tanto o import quanto o gerenciador baixariam o board
+ * de gente que nunca abriram. O filtro é do servidor.
+ *
+ * **As consultas são separadas por par (coluna de pessoa, grupo Activities), e
+ * isso não é detalhe de performance — é correção.** A regra de responsável é
+ * única por consulta, e o id de grupo **se repete entre boards com significados
+ * diferentes**: `group_mm19wbff` é o grupo "Timeline" num board de cliente e o
+ * grupo "Activities" no board interno. Mandar a união dos ids numa consulta só
+ * apagaria o Timeline de todo cliente (com `not_any_of`) ou traria o Timeline
+ * como se fosse atividade (com `any_of`). Cada lote leva o **seu** id.
+ *
+ * Como os boards nascem do mesmo template, na prática sai uma consulta por
+ * variação real de template — hoje, duas.
+ */
+export async function listItemsOwnedBy(
+  api: IMondayApi,
+  mappings: MondayProjectMapping[],
+  personId: string,
+  { scope = "all", columnIds, endsOnOrAfterDay }: ListItemsOwnedByOptions = {}
+): Promise<MondayItem[]> {
+  if (mappings.length === 0 || !personId) return [];
+
+  const batches = new Map<string, MondayProjectMapping[]>();
+  for (const mapping of mappings) {
+    // A coluna de End Date entra na chave pela mesma razão que o id do grupo:
+    // ela vira regra da consulta, e uma regra apontando para coluna que um dos
+    // boards do lote não tem faz o Monday recusar o lote inteiro. Board sem a
+    // coluna cai em lote próprio, que sai sem o teto.
+    const key = [
+      mapping.columnIds.person,
+      entryGroupIds(mapping).join(","),
+      mapping.columnIds.endDate ?? "",
+    ].join("\u0000");
+    batches.set(key, [...(batches.get(key) ?? []), mapping]);
+  }
+
+  const perBatch = await Promise.all(
+    [...batches.values()].map(([first, ...rest]) => {
+      const groups = entryGroupIds(first);
+      const endDateColumn = first.columnIds.endDate;
+      return api.listItems(
+        [first, ...rest].map((m) => m.mondayBoardId),
+        {
+          owner: { columnId: first.columnIds.person, personId },
+          ...(scope === "activities" ? { groupIds: groups } : {}),
+          ...(scope === "outsideActivities" ? { excludeGroupIds: groups } : {}),
+          ...(columnIds ? { columnIds } : {}),
+          ...(endsOnOrAfterDay && endDateColumn
+            ? { endsOnOrAfter: { columnId: endDateColumn, dayISO: endsOnOrAfterDay } }
+            : {}),
+        }
+      );
+    })
+  );
+  return perBatch.flat();
+}

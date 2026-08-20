@@ -1,0 +1,15 @@
+-- Vínculo explícito entre a reunião rastreada e a PlannedTask que a representa.
+--
+-- Antes, "esta reunião já virou planejada?" era respondido comparando NOMES do
+-- dia. Isso quebrava de duas formas: renomear a planejada refazia a tarefa, e um
+-- erro ao criar deixava a reunião rastreada para sempre sem planejada — o
+-- rastreamento marcava o evento como visto antes de a criação acontecer, e o
+-- ciclo seguinte pulava o evento por já conhecê-lo.
+--
+-- Com a coluna, o significado é direto: NULL = ainda não tratada (o sync tenta de
+-- novo no próximo ciclo); preenchida = tratada (e não se recria, nem que a
+-- planejada tenha sido apagada à mão depois).
+--
+-- Backfill NULL é intencional: `pruneBefore` mantém só o dia corrente, então as
+-- únicas linhas afetadas são as de hoje — exatamente as que ficaram sem planejada.
+ALTER TABLE calendar_tracked_meetings ADD COLUMN planned_task_id TEXT;

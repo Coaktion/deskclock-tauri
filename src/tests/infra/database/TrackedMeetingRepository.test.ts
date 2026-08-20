@@ -20,6 +20,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     start_iso: "2026-07-01T10:00:00.000Z",
     end_iso: "2026-07-01T10:30:00.000Z",
     started_task_id: null,
+    planned_task_id: null,
     start_prompted_at: null,
     start_dismissed: 0,
     end_prompt_count: 0,
@@ -37,6 +38,7 @@ function makeMeeting(overrides: Partial<TrackedMeeting> = {}): TrackedMeeting {
     startISO: "2026-07-01T10:00:00.000Z",
     endISO: "2026-07-01T10:30:00.000Z",
     startedTaskId: null,
+    plannedTaskId: null,
     startPromptedAt: null,
     startDismissed: false,
     endPromptCount: 0,
@@ -74,7 +76,13 @@ describe("TrackedMeetingRepository", () => {
   it("upsert serializa booleanos como 0/1 e usa ON CONFLICT", async () => {
     const repo = new TrackedMeetingRepository();
     await repo.upsert(
-      makeMeeting({ startedTaskId: "task1", startDismissed: true, ended: true, endPromptCount: 3 })
+      makeMeeting({
+        startedTaskId: "task1",
+        plannedTaskId: "pt1",
+        startDismissed: true,
+        ended: true,
+        endPromptCount: 3,
+      })
     );
 
     const [sql, params] = mockDb.execute.mock.calls[0];
@@ -86,6 +94,7 @@ describe("TrackedMeetingRepository", () => {
       "2026-07-01T10:00:00.000Z",
       "2026-07-01T10:30:00.000Z",
       "task1",
+      "pt1",
       null,
       1,
       3,
@@ -94,11 +103,45 @@ describe("TrackedMeetingRepository", () => {
     ]);
   });
 
+  it("upsert grava o vínculo da planejada e o preserva no ON CONFLICT", async () => {
+    const repo = new TrackedMeetingRepository();
+    await repo.upsert(makeMeeting({ plannedTaskId: "pt1" }));
+
+    const [sql, params] = mockDb.execute.mock.calls[0];
+    expect(sql).toContain("planned_task_id");
+    expect(sql).toContain("planned_task_id=$7");
+    expect(params[6]).toBe("pt1");
+  });
+
   it("upsert grava endISO null", async () => {
     const repo = new TrackedMeetingRepository();
     await repo.upsert(makeMeeting({ endISO: null }));
     const [, params] = mockDb.execute.mock.calls[0];
     expect(params[4]).toBeNull();
+  });
+
+  it("setPlannedTaskId grava só a coluna do vínculo", async () => {
+    const repo = new TrackedMeetingRepository();
+    await repo.setPlannedTaskId("evt1", "pt1");
+
+    const [sql, params] = mockDb.execute.mock.calls[0];
+    // UPDATE de uma coluna, não upsert de linha inteira: o prompt de reunião grava
+    // startedTaskId fora do ciclo de sync, e reescrever a linha o perderia.
+    expect(sql).toContain("UPDATE calendar_tracked_meetings SET planned_task_id");
+    expect(sql).not.toContain("INSERT");
+    expect(params).toEqual(["evt1", "pt1"]);
+  });
+
+  it("setStartedTaskId grava só a coluna da tarefa iniciada", async () => {
+    const repo = new TrackedMeetingRepository();
+    await repo.setStartedTaskId("evt1", "task1");
+
+    const [sql, params] = mockDb.execute.mock.calls[0];
+    // Espelho de setPlannedTaskId, no sentido inverso: o vínculo com a planejada
+    // é gravado pelo ciclo de sync, e um upsert de linha inteira aqui o desfaria.
+    expect(sql).toContain("UPDATE calendar_tracked_meetings SET started_task_id");
+    expect(sql).not.toContain("INSERT");
+    expect(params).toEqual(["evt1", "task1"]);
   });
 
   it("remove exclui a reunião pelo calendarEventId", async () => {

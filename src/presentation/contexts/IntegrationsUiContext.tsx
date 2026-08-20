@@ -4,7 +4,10 @@ export type IntegrationModal =
   | "sheets-send"
   | "calendar-import"
   | "clockify-send"
-  | "clockify-entries";
+  | "clockify-entries"
+  | "monday-send"
+  | "monday-import"
+  | "monday-entries";
 
 interface IntegrationsUiContextValue {
   modal: IntegrationModal | null;

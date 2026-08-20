@@ -1,14 +1,20 @@
 import { useMemo } from "react";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
-import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
+import {
+  useIntegrationsUi,
+  type IntegrationModal,
+} from "@presentation/contexts/IntegrationsUiContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { useProjects } from "@presentation/hooks/useProjects";
+import { useIntegrationCatalogs } from "@presentation/hooks/useIntegrationCatalogs";
 import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
+import { MondayEntriesModal } from "@presentation/modals/MondayEntriesModal";
+import { MondayImportModal } from "@presentation/modals/MondayImportModal";
+import { MondaySendModal } from "@presentation/modals/MondaySendModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
+import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
 import { showToast } from "@shared/utils/toast";
 
 function defaultCalendarRangeISO() {
@@ -27,13 +33,33 @@ function defaultCalendarRangeISO() {
   };
 }
 
+/**
+ * Qual workspace do DeskClock cada modal enxerga.
+ *
+ * Todos eles são de integração, e nenhum trabalha no workspace aberto na tela:
+ * o import cria no workspace da integração e o envio manda o dele. Os catálogos
+ * têm de vir do mesmo lugar, ou a planejada nasce apontando para projeto de fora
+ * e a lista de envio mostra o nome errado.
+ */
+const MODAL_WORKSPACE_KEY: Record<IntegrationModal, IntegrationWorkspaceKey | null> = {
+  "sheets-send": "sheetsDeskclockWorkspaceId",
+  "clockify-send": "clockifyDeskclockWorkspaceId",
+  "monday-send": "mondayDeskclockWorkspaceId",
+  "monday-import": "mondayDeskclockWorkspaceId",
+  "calendar-import": "calendarDeskclockWorkspaceId",
+  // Operam direto sobre o destino remoto e não montam nada com o catálogo local.
+  "clockify-entries": null,
+  "monday-entries": null,
+};
+
 export function IntegrationsModalsHost() {
   const { modal, closeModal } = useIntegrationsUi();
   const config = useAppConfig();
   const factories = useIntegrations();
-  const { plannedTaskRepo } = useRepositories();
-  const { projects } = useProjects();
-  const { categories } = useCategories();
+  const { plannedTaskRepo, trackedMeetingRepo } = useRepositories();
+  const { projects, categories } = useIntegrationCatalogs(
+    modal ? MODAL_WORKSPACE_KEY[modal] : null
+  );
 
   const calendarImporter = useMemo(
     () => (config.isLoaded ? factories.createCalendarImporter() : null),
@@ -52,8 +78,34 @@ export function IntegrationsModalsHost() {
     return <ClockifySendModal projects={projects} categories={categories} onClose={closeModal} />;
   }
 
+  if (modal === "monday-send") {
+    return <MondaySendModal projects={projects} categories={categories} onClose={closeModal} />;
+  }
+
   if (modal === "clockify-entries") {
     return <ClockifyEntriesModal onClose={closeModal} />;
+  }
+
+  if (modal === "monday-entries") {
+    return <MondayEntriesModal onClose={closeModal} />;
+  }
+
+  if (modal === "monday-import") {
+    return (
+      <MondayImportModal
+        repo={plannedTaskRepo}
+        projects={projects}
+        categories={categories}
+        onImported={(count) => {
+          closeModal();
+          showToast(
+            "success",
+            `${count} item${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.`
+          );
+        }}
+        onClose={closeModal}
+      />
+    );
   }
 
   if (modal === "calendar-import" && calendarImporter) {
@@ -61,15 +113,20 @@ export function IntegrationsModalsHost() {
       <ImportCalendarModal
         importer={calendarImporter}
         repo={plannedTaskRepo}
+        trackedRepo={trackedMeetingRepo}
         defaultFromISO={defaultFromISO}
         defaultToISO={defaultToISO}
         projects={projects}
         categories={categories}
-        onImported={(count) => {
+        onImported={(count, tracked) => {
           closeModal();
+          const rastreadas =
+            tracked > 0
+              ? ` ${tracked} ${tracked === 1 ? "reunião rastreada" : "reuniões rastreadas"}.`
+              : "";
           showToast(
             "success",
-            `${count} evento${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.`
+            `${count} evento${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.${rastreadas}`
           );
         }}
         onClose={closeModal}

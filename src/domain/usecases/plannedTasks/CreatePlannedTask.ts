@@ -1,9 +1,11 @@
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { CustomValues } from "@domain/entities/CustomField";
 import { generateUUID } from "@shared/utils/uuid";
 import type { UUID } from "@shared/types";
 
 interface CreatePlannedTaskInput {
+  workspaceId: UUID;
   name: string;
   projectId?: UUID | null;
   categoryId?: UUID | null;
@@ -17,6 +19,7 @@ interface CreatePlannedTaskInput {
   sortOrder?: number;
   startTime?: string;
   endTime?: string;
+  customValues?: CustomValues;
 }
 
 export async function createPlannedTask(
@@ -26,6 +29,7 @@ export async function createPlannedTask(
 ): Promise<PlannedTask> {
   const task: PlannedTask = {
     id: generateUUID(),
+    workspaceId: input.workspaceId,
     name: input.name,
     projectId: input.projectId ?? null,
     categoryId: input.categoryId ?? null,
@@ -39,6 +43,7 @@ export async function createPlannedTask(
     actions: input.actions ?? [],
     sortOrder: input.sortOrder ?? 0,
     createdAt: nowISO,
+    customValues: input.customValues ?? {},
     startTime: input.startTime,
     endTime: input.endTime,
   };

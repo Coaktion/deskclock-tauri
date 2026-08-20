@@ -3,6 +3,8 @@ import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import type { ICalendarImporter } from "@domain/integrations/ICalendarImporter";
 import { IntegrationsProvider, useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext";
+import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
 
 vi.mock("@infra/integrations/GoogleCalendarImporter", () => ({
   GoogleCalendarImporter: vi.fn(() => ({})),
@@ -19,6 +21,12 @@ vi.mock("@infra/integrations/ZendeskTicketImporter", () => ({
 vi.mock("@infra/integrations/clockify/ClockifyClient", () => ({
   ClockifyClient: vi.fn(() => ({})),
 }));
+vi.mock("@infra/integrations/MondayTaskSender", () => ({
+  MondayTaskSender: vi.fn(() => ({})),
+}));
+vi.mock("@infra/integrations/monday/MondayClient", () => ({
+  MondayClient: vi.fn(() => ({})),
+}));
 vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({
     isLoaded: true,
@@ -27,8 +35,19 @@ vi.mock("@presentation/contexts/ConfigContext", () => ({
   }),
 }));
 
+/** O IntegrationsProvider compõe repositórios — injetamos um duplo para não tocar o SQLite. */
+const mondayActivityItemRepo: IMondayActivityItemRepository = {
+  findCandidates: vi.fn(async () => []),
+  save: vi.fn(async () => {}),
+  deleteItem: vi.fn(async () => {}),
+};
+
+function withRepositories(children: ReactNode) {
+  return <RepositoriesProvider value={{ mondayActivityItemRepo }}>{children}</RepositoriesProvider>;
+}
+
 function wrapper({ children }: { children: ReactNode }) {
-  return <IntegrationsProvider>{children}</IntegrationsProvider>;
+  return withRepositories(<IntegrationsProvider>{children}</IntegrationsProvider>);
 }
 
 describe("IntegrationsContext", () => {
@@ -40,11 +59,12 @@ describe("IntegrationsContext", () => {
 
   it("retorna factory injetada quando value parcial é fornecido", () => {
     const mockCalendarImporter = { importEvents: vi.fn() } as unknown as ICalendarImporter;
-    const customWrapper = ({ children }: { children: ReactNode }) => (
-      <IntegrationsProvider value={{ createCalendarImporter: () => mockCalendarImporter }}>
-        {children}
-      </IntegrationsProvider>
-    );
+    const customWrapper = ({ children }: { children: ReactNode }) =>
+      withRepositories(
+        <IntegrationsProvider value={{ createCalendarImporter: () => mockCalendarImporter }}>
+          {children}
+        </IntegrationsProvider>
+      );
     const { result } = renderHook(() => useIntegrations(), { wrapper: customWrapper });
 
     expect(result.current.createCalendarImporter()).toBe(mockCalendarImporter);
@@ -52,12 +72,12 @@ describe("IntegrationsContext", () => {
     expect(result.current.createClockifyTaskSender).toBeDefined();
     expect(result.current.createSheetsTaskSender).toBeDefined();
     expect(result.current.createClockifyApi).toBeDefined();
+    expect(result.current.createMondayTaskSender).toBeDefined();
+    expect(result.current.createMondayApi).toBeDefined();
   });
 
   it("factories padrão instanciam classes de infra", async () => {
-    const { GoogleCalendarImporter } = await import(
-      "@infra/integrations/GoogleCalendarImporter"
-    );
+    const { GoogleCalendarImporter } = await import("@infra/integrations/GoogleCalendarImporter");
     const { result } = renderHook(() => useIntegrations(), { wrapper });
 
     result.current.createCalendarImporter();

@@ -1,0 +1,260 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { buildActivityColumnValues } from "@domain/usecases/monday/buildActivityColumnValues";
+import { listItemsOwnedBy } from "@domain/usecases/monday/listItemsOwnedBy";
+import {
+  findColumnValue,
+  parseDatePairPeriod,
+  periodOverlaps,
+  searchFloorDayISO,
+  type MondayItemPeriod,
+} from "@domain/usecases/monday/mondayItemPeriod";
+import type { MondayItem } from "@shared/types/monday";
+import type { MondayProjectMapping } from "@shared/types/mondayConfig";
+import { todayISO } from "@shared/utils/time";
+import { showToast } from "@shared/utils/toast";
+
+export interface MondayEntry {
+  boardId: string;
+  boardName: string;
+  itemId: string;
+  name: string;
+  url: string;
+  hoursDecimal: number;
+  billable: boolean;
+  activityTypeLabel: string;
+  projectStageLabel: string;
+  statusLabel: string;
+  period: MondayItemPeriod | null;
+  /** Rótulos aceitos pelas colunas deste board, para os selects da edição. */
+  mapping: MondayProjectMapping;
+}
+
+export interface MondayEntryPatch {
+  name: string;
+  hoursDecimal: number;
+  billable: boolean;
+  activityTypeLabel: string;
+  projectStageLabel: string;
+}
+
+interface UseMondayEntriesOptions {
+  mappings: MondayProjectMapping[];
+  userId: string;
+  /** Janela exibida. Recorta o que já veio — **não** dispara nova busca. */
+  range: { start: string; end: string };
+}
+
+function columnText(item: MondayItem, columnId: string | undefined): string {
+  return findColumnValue(item, columnId)?.text?.trim() ?? "";
+}
+
+function columnNumber(item: MondayItem, columnId: string | undefined): number {
+  const raw = columnText(item, columnId);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values.filter(Boolean))];
+}
+
+/** Colunas que a listagem e a edição leem — o resto do board não vem no payload. */
+function wantedColumns(mapping: MondayProjectMapping): string[] {
+  const { columnIds } = mapping;
+  return [
+    columnIds.reportedHours,
+    columnIds.activityType,
+    columnIds.person,
+    ...(columnIds.billingType ? [columnIds.billingType] : []),
+    ...(columnIds.status ? [columnIds.status] : []),
+    ...(columnIds.projectStage ? [columnIds.projectStage] : []),
+    ...(columnIds.startDate ? [columnIds.startDate] : []),
+    ...(columnIds.endDate ? [columnIds.endDate] : []),
+  ];
+}
+
+function toEntry(item: MondayItem, mapping: MondayProjectMapping): MondayEntry {
+  const { columnIds } = mapping;
+  return {
+    boardId: mapping.mondayBoardId,
+    boardName: mapping.mondayBoardName,
+    itemId: item.id,
+    name: item.name,
+    url: item.url,
+    hoursDecimal: columnNumber(item, columnIds.reportedHours),
+    billable: columnText(item, columnIds.billingType) === "Billable",
+    activityTypeLabel: columnText(item, columnIds.activityType),
+    projectStageLabel: columnText(item, columnIds.projectStage),
+    statusLabel: columnText(item, columnIds.status),
+    period: parseDatePairPeriod(
+      findColumnValue(item, columnIds.startDate),
+      findColumnValue(item, columnIds.endDate)
+    ),
+    mapping,
+  };
+}
+
+/**
+ * Atividades já enviadas ao Monday, para conferir, corrigir e apagar sem sair
+ * do DeskClock.
+ *
+ * Lista **apenas as do usuário conectado**: o board é compartilhado com o time
+ * inteiro — um botão de excluir ao lado das horas de um colega é armadilha, não
+ * funcionalidade. O filtro vale também como economia: quem trabalha em três
+ * clientes não deve pagar o download das atividades de todos os boards mapeados.
+ *
+ * **Excluir aqui pede confirmação**, contra o §1, pela mesma razão do workspace
+ * (§6.7): a linha não é do DeskClock, é um item no board do cliente, e apagá-la
+ * não tem desfazer nem daqui nem de lá — o que volta pela lixeira do Monday é um
+ * id que este app já esqueceu. Um clique errado a 13 px do lápis some com horas
+ * que o time inteiro enxerga.
+ *
+ * **A lista some o item na hora, sem rebuscar.** O toast dizia "excluída" com a
+ * linha ainda na tela: a rebusca é que mandava, e ela vinha depois. Rebuscar
+ * também reabria a porta para o item voltar — a exclusão do Monday é assíncrona
+ * o bastante para uma consulta logo em seguida ainda devolvê-lo. O que se sabe
+ * está decidido no `await`; a rebusca fica no botão de recarregar.
+ *
+ * **Uma busca serve todas as janelas.** As regras do Monday não expressam
+ * "intervalo que cruza o período" e o intervalo mora em duas colunas separadas,
+ * então a consulta nunca teve filtro de data: trocar de janela refazia a mesma
+ * busca para receber exatamente os mesmos itens. O período recorta o que já veio
+ * (`periodOverlaps`), e trocar de filtro passa a ser instantâneo — 30 dias já
+ * contém 7 dias e hoje, e o mês idem.
+ *
+ * **Mas a busca tem um piso** (`searchFloorDay`). Sem ele, a consulta baixava
+ * *todas* as atividades já enviadas em todos os boards mapeados, desde sempre —
+ * e a paginação é serial, uma página de 100 por requisição. O custo não era
+ * grande hoje e crescia sozinho: mais um ano de uso, mais páginas em série a
+ * cada abertura do modal. O piso é a mais antiga das quatro janelas, com folga,
+ * então nenhuma delas perde item.
+ */
+export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOptions) {
+  const { createMondayApi } = useIntegrations();
+  const { mondayActivityItemRepo } = useRepositories();
+  const [allEntries, setAllEntries] = useState<MondayEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshSignal, setRefreshSignal] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Serializado para que a identidade do array não redispare a busca a cada
+  // render da tela de integrações, que recria o mapeamento na leitura.
+  const mappingsKey = mappings.map((m) => m.mondayBoardId).join(",");
+
+  useEffect(() => {
+    if (mappings.length === 0 || !userId) {
+      setAllEntries([]);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    const api = createMondayApi();
+
+    const byBoard = new Map(mappings.map((m) => [m.mondayBoardId, m]));
+
+    listItemsOwnedBy(api, mappings, userId, {
+      scope: "activities",
+      columnIds: unique(mappings.flatMap(wantedColumns)),
+      endsOnOrAfterDay: searchFloorDayISO(todayISO()),
+    })
+      .then((items) => {
+        if (cancelled) return;
+        setAllEntries(
+          items.flatMap((item) => {
+            const mapping = byBoard.get(item.boardId);
+            return mapping ? [toEntry(item, mapping)] : [];
+          })
+        );
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        void showToast(
+          "error",
+          err instanceof Error ? err.message : "Erro ao carregar atividades do Monday."
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // `mappings` é recriado a cada leitura da config; a chave estável evita o
+    // laço de busca. `createMondayApi` idem, e vem do provider. O `range` está
+    // fora de propósito: ele não muda o que a API devolve (ver doc acima).
+  }, [mappingsKey, userId, refreshSignal]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const entries = useMemo(
+    () => allEntries.filter((e) => periodOverlaps(e.period, range.start, range.end)),
+    [allEntries, range.start, range.end]
+  );
+
+  const handleSaveEdit = useCallback(
+    async (entry: MondayEntry, patch: MondayEntryPatch) => {
+      const api = createMondayApi();
+      try {
+        // Mesmo serializador do envio (§9.4): rótulo que não existe na coluna
+        // faz o Monday recusar a escrita inteira, e a guarda mora aqui.
+        const values = buildActivityColumnValues({
+          columnIds: entry.mapping.columnIds,
+          hoursDecimal: patch.hoursDecimal,
+          billable: patch.billable,
+          userId,
+          statusLabel: entry.statusLabel || undefined,
+          ...(entry.mapping.activityTypeLabels.includes(patch.activityTypeLabel)
+            ? { activityTypeLabel: patch.activityTypeLabel }
+            : {}),
+          ...(entry.mapping.projectStageLabels.includes(patch.projectStageLabel)
+            ? { projectStageLabel: patch.projectStageLabel }
+            : {}),
+        });
+        await api.changeColumnValues(entry.boardId, entry.itemId, {
+          name: patch.name.trim(),
+          ...values,
+        });
+        await showToast("success", "Atividade atualizada no Monday.");
+        setEditingId(null);
+        setRefreshSignal((n) => n + 1);
+      } catch (err) {
+        await showToast("error", err instanceof Error ? err.message : "Erro ao salvar no Monday.");
+      }
+    },
+    [createMondayApi, userId]
+  );
+
+  const handleDelete = useCallback(
+    async (entry: MondayEntry) => {
+      const api = createMondayApi();
+      setDeletingId(entry.itemId);
+      try {
+        await api.deleteItem(entry.itemId);
+        // Sem limpar o rastreamento, o próximo envio reencontra o item apagado,
+        // erra com `MondayNotFoundError` e repete o erro a cada execução.
+        await mondayActivityItemRepo.deleteItem(entry.boardId, entry.itemId);
+        setAllEntries((prev) => prev.filter((e) => e.itemId !== entry.itemId));
+        setEditingId((cur) => (cur === entry.itemId ? null : cur));
+        await showToast("success", "Atividade excluída do Monday.");
+      } catch (err) {
+        await showToast("error", err instanceof Error ? err.message : "Erro ao excluir no Monday.");
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [createMondayApi, mondayActivityItemRepo]
+  );
+
+  return {
+    entries,
+    loading,
+    deletingId,
+    editingId,
+    setEditingId,
+    refresh: () => setRefreshSignal((n) => n + 1),
+    handleSaveEdit,
+    handleDelete,
+  };
+}

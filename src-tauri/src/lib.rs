@@ -1,6 +1,6 @@
 mod api;
 mod commands;
-mod migrations;
+mod database;
 mod tray;
 
 use std::collections::HashMap;
@@ -55,10 +55,10 @@ fn get_pending_retroactive_prefill(
     state.0.lock().unwrap().take()
 }
 use commands::{
-    check_for_update, download_and_install_update, get_bearer_json, get_display_server,
-    get_local_api_status, get_platform, log_frontend, open_in_browser, open_in_file_manager,
-    post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
-    update_shortcuts, update_tray_icon, update_tray_tooltip,
+    backup_db_to_drive, check_for_update, download_and_install_update, get_bearer_json,
+    get_display_server, get_local_api_status, get_platform, log_frontend, open_in_browser,
+    open_in_file_manager, post_form_json, relaunch_app, save_file, start_local_api,
+    start_oauth_server, stop_local_api, update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -90,12 +90,7 @@ unsafe extern "system" fn timer_topmost_proc(
     let Some(handle) = APP_HANDLE.get() else {
         return;
     };
-    for label in [
-        "overlay-compact",
-        "overlay-popup",
-        "toast",
-        "command-palette",
-    ] {
+    for label in ["overlay-compact", "overlay-popup", "toast"] {
         let Some(w) = handle.get_webview_window(label) else {
             continue;
         };
@@ -136,12 +131,7 @@ unsafe extern "system" fn win_event_proc(
     let Some(handle) = APP_HANDLE.get() else {
         return;
     };
-    for label in [
-        "overlay-compact",
-        "overlay-popup",
-        "toast",
-        "command-palette",
-    ] {
+    for label in ["overlay-compact", "overlay-popup", "toast"] {
         let Some(w) = handle.get_webview_window(label) else {
             continue;
         };
@@ -216,12 +206,7 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
     }
     #[cfg(not(target_os = "windows"))]
     std::thread::spawn(move || loop {
-        for label in [
-            "overlay-compact",
-            "overlay-popup",
-            "toast",
-            "command-palette",
-        ] {
+        for label in ["overlay-compact", "overlay-popup", "toast"] {
             if let Some(w) = handle.get_webview_window(label) {
                 if w.is_visible().unwrap_or(false) {
                     w.set_always_on_top(true).ok();
@@ -365,6 +350,10 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Registrado aqui, e não no setup(): as janelas do tauri.conf.json são
+        // criadas antes do hook, e no Windows uma delas já chama get_db_bootstrap
+        // nesse intervalo. Ver o comentário de topo de database.rs.
+        .manage(database::DbBootstrapState::default())
         .setup(|app| {
             // Log habilitado também em release. Targets explícitos (Stdout + LogDir)
             // para não depender do default do plugin — garante que sempre há arquivo.
@@ -411,6 +400,16 @@ pub fn run() {
             // versão do tauri.conf.json (package_info), não a do Cargo.toml (0.1.0).
             log::info!("DeskClock {} iniciando", app.package_info().version);
 
+            // Migrar aqui, e não pelo plugin sql, é o que impede a corrida entre as 4
+            // janelas do boot de deixar o app em schema velho. Ver database.rs.
+            let bootstrap = database::migrate(app.handle());
+            match &bootstrap {
+                Ok(b) => log::info!("Banco migrado até a versão {}", b.expected_version),
+                Err(e) => log::error!("Migração do banco falhou: {e}"),
+            }
+            let db_ready = bootstrap.is_ok();
+            app.state::<database::DbBootstrapState>().fulfill(bootstrap);
+
             tray::setup_tray(app)?;
             keep_overlays_topmost(app.handle().clone());
 
@@ -418,7 +417,11 @@ pub fn run() {
             app.manage(PendingDeepLinkPage(Mutex::new(None)));
             app.manage(PendingStartTask(Mutex::new(None)));
             app.manage(PendingRetroactivePrefill(Mutex::new(None)));
-            api::server::start_on_boot(app.handle().clone());
+            // A API local lê o mesmo banco: sem migração aplicada, ela serviria dados
+            // de um schema que o resto do app já rejeitou.
+            if db_ready {
+                api::server::start_on_boot(app.handle().clone());
+            }
 
             if let Err(e) = app.deep_link().register("deskclock") {
                 log::warn!("Falha ao registrar esquema deep link: {e}");
@@ -448,19 +451,11 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(
-            tauri_plugin_sql::Builder::default()
-                .add_migrations(
-                    if cfg!(debug_assertions) {
-                        "sqlite:deskclock-dev.db"
-                    } else {
-                        "sqlite:deskclock.db"
-                    },
-                    migrations::get_migrations(),
-                )
-                .build(),
-        )
+        // Sem `.add_migrations`: o plugin só conecta. Quem migra é o setup() acima,
+        // e há um dono só — ver database.rs.
+        .plugin(tauri_plugin_sql::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
+            database::get_db_bootstrap,
             save_file,
             update_tray_tooltip,
             update_tray_icon,
@@ -482,6 +477,7 @@ pub fn run() {
             get_pending_start_task,
             get_pending_retroactive_prefill,
             log_frontend,
+            backup_db_to_drive,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

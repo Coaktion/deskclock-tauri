@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from "react";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
-import type { Task } from "@domain/entities/Task";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
@@ -12,22 +11,27 @@ import { OmniboxRunning } from "./OmniboxRunning";
 
 interface OmniboxProps {
   plannedTasks: PlannedTask[];
-  recentTasks: Task[];
+  /** O dia de que a lista de sugestões é recortada. */
+  today: string;
   projects: Project[];
   categories: Category[];
   onStarted?: () => void;
   focusTaskEdit?: boolean;
   onFocusTaskEditHandled?: () => void;
+  onTogglePlannedBillable: (task: PlannedTask) => void;
+  onNavigatePlanning?: () => void;
 }
 
 export function Omnibox({
   plannedTasks,
-  recentTasks,
+  today,
   projects,
   categories,
   onStarted,
   focusTaskEdit,
   onFocusTaskEditHandled,
+  onTogglePlannedBillable,
+  onNavigatePlanning,
 }: OmniboxProps) {
   const {
     runningTask,
@@ -42,14 +46,7 @@ export function Omnibox({
   const seconds = useTaskTimer(runningTask);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const draft = useOmniboxDraft({
-    plannedTasks,
-    recentTasks,
-    projects,
-    categories,
-    startTask,
-    onStarted,
-  });
+  const draft = useOmniboxDraft({ plannedTasks, today, startTask, onStarted });
 
   const edit = useOmniboxRunningEdit({
     runningTask,
@@ -83,8 +80,7 @@ export function Omnibox({
   }, [handleOutsideClick]);
 
   if (runningTask) {
-    const runningActions =
-      plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
+    const runningActions = plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
     return (
       <OmniboxRunning
         {...edit}
@@ -105,6 +101,8 @@ export function Omnibox({
       projects={projects}
       categories={categories}
       containerRef={containerRef}
+      onToggleBillable={onTogglePlannedBillable}
+      onNavigatePlanning={onNavigatePlanning}
     />
   );
 }

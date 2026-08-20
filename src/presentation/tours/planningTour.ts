@@ -6,7 +6,7 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Visão semanal",
       description:
-        "Navegue entre semanas com as setas. O contador à direita mostra quantas tarefas já foram concluídas na semana. Use o botão 'Selecionar tarefas' para selecionar múltiplas e excluí-las em massa.",
+        "Navegue entre semanas com as setas. A pílula 'Semana atual' fica acesa quando você está na semana de hoje e traz você de volta a ela de qualquer outra. O contador à direita mostra quantas tarefas já foram concluídas na semana.",
       side: "bottom",
       align: "start",
     },
@@ -26,8 +26,8 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Criar tarefa planejada",
       description:
-        "Adicione tarefas com nome, projeto e categoria. Escolha entre data única, recorrente (dias da semana) ou período com início e fim.",
-      side: "bottom",
+        "Adicione tarefas com nome, projeto, categoria e campos personalizados. Escolha entre data única, recorrente (dias da semana) ou período com início e fim. A coluna se recolhe quando você precisa de espaço para a lista.",
+      side: "right",
       align: "start",
     },
   },
@@ -36,9 +36,16 @@ export const planningTourSteps: DriveStep[] = [
     popover: {
       title: "Lista de tarefas",
       description:
-        "Cada tarefa pode ser iniciada, concluída, duplicada ou excluída. Tarefas recorrentes aparecem em todos os dias configurados.",
-      side: "top",
+        "Cada tarefa pode ser iniciada, concluída, duplicada ou excluída. Tarefas recorrentes aparecem em todos os dias configurados. Use 'Selecionar tarefas', acima da lista, para excluir várias de uma vez.",
+      side: "left",
       align: "start",
+    },
+  },
+  {
+    popover: {
+      title: "A semana não precisa ser digitada",
+      description:
+        "Pelo rail de integrações, na lateral, você importa os eventos da sua Agenda do Google e os itens atribuídos a você no Monday — todos viram tarefas planejadas, com horário quando o evento tem. Reimportar não duplica.",
     },
   },
 ];

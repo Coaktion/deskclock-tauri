@@ -2,14 +2,20 @@ import { useEffect, useState } from "react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { TaskGroup } from "@domain/utils/groupTasks";
+import type { CustomValues } from "@domain/entities/CustomField";
+import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
+import { resolvePlayBlock } from "@presentation/components/playAction";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { EditGroupModal } from "@presentation/modals/EditGroupModal";
+import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
+import { SectionCard } from "@presentation/components/ui";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
-import { updateTask } from "@domain/usecases/tasks/UpdateTask";
+import { updateTaskGroup } from "@domain/usecases/tasks/UpdateTaskGroup";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
+import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
@@ -33,7 +39,14 @@ export function TodayEntriesSection({
   const { startTask, runningTask } = useRunningTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editingGroup, setEditingGroup] = useState<TaskGroup | null>(null);
+  const [movingTasks, setMovingTasks] = useState<Task[] | null>(null);
+  const { workspaces } = useWorkspaces();
   const [sentIds, setSentIds] = useState<Set<string>>(new Set());
+
+  // Aqui a execução em curso é **outro registro**, sem id que a ligue à linha:
+  // quem as identifica é a chave de agrupamento (§6.3), a mesma que o ▶ desta
+  // tela usa para decidir o que repetir.
+  const runningGroupKey = runningTask ? taskGroupKey(runningTask) : null;
 
   useEffect(() => {
     const today = todayISO();
@@ -49,6 +62,10 @@ export function TodayEntriesSection({
       projectId: task.projectId,
       categoryId: task.categoryId,
       billable: task.billable,
+      // A origem viaja com a cópia: sem ela, parar a nova execução deixaria a
+      // planejada pendente no planejamento, porque não haveria qual concluir (§4.1).
+      plannedTaskId: task.plannedTaskId ?? null,
+      customValues: task.customValues,
     });
   }
 
@@ -59,7 +76,9 @@ export function TodayEntriesSection({
   }
 
   async function handleToggleBillable(task: Task) {
-    await updateTask(taskRepo, task.id, { billable: !task.billable }, new Date().toISOString());
+    // O clique chega de uma linha, mas o faturamento é do grupo: alternar só a
+    // filha deixava as irmãs para trás e o cabeçalho mentindo sobre elas.
+    await setGroupBillable(taskRepo, task, !task.billable, new Date().toISOString());
     void notifyTasksChanged();
     reload();
   }
@@ -77,27 +96,29 @@ export function TodayEntriesSection({
       projectId: string | null;
       categoryId: string | null;
       billable: boolean;
+      customValues: CustomValues;
     }
   ) {
-    const nowISO = new Date().toISOString();
-    await Promise.all(group.tasks.map((t) => updateTask(taskRepo, t.id, updates, nowISO)));
+    await updateTaskGroup(taskRepo, group.tasks, updates, new Date().toISOString());
     void notifyTasksChanged();
     reload();
   }
 
   return (
-    <section>
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-gray-300">Entradas de hoje</h2>
-        <span className="text-xs font-mono tabular-nums text-gray-500">
+    <SectionCard
+      // A seção tem a altura do que ela lista: sem lista longa não sobra caixa
+      // vazia, e com lista longa quem rola é o corpo da página, não ela.
+      title="Entradas de hoje"
+      action={
+        <span className="font-mono tabular-nums text-fg-secondary">
           {formatHHMMSS(totalSeconds)}
         </span>
-      </div>
-
+      }
+    >
       {groups.length === 0 ? (
-        <p className="text-sm text-gray-600 text-center py-6">Nenhuma entrada hoje.</p>
+        <p className="text-sm text-fg-muted text-center py-6">Nenhuma entrada hoje.</p>
       ) : (
-        <div className="space-y-2">
+        <div>
           {groups.map((g) => (
             <TaskGroupCard
               key={g.key}
@@ -105,16 +126,27 @@ export function TodayEntriesSection({
               projects={projects}
               categories={categories}
               sentIds={sentIds}
-              playDisabled={!!runningTask}
+              playBlock={resolvePlayBlock(runningGroupKey, g.key)}
               onPlay={handlePlay}
               onEdit={setEditingTask}
               onDelete={handleDelete}
               onMerge={handleMerge}
               onEditGroup={setEditingGroup}
+              onMoveToWorkspace={workspaces.length > 1 ? setMovingTasks : undefined}
               onToggleBillable={handleToggleBillable}
             />
           ))}
         </div>
+      )}
+
+      {movingTasks && (
+        <MoveToWorkspaceModal
+          tasks={movingTasks}
+          projects={projects}
+          categories={categories}
+          onMoved={reload}
+          onClose={() => setMovingTasks(null)}
+        />
       )}
 
       {editingTask && (
@@ -136,6 +168,6 @@ export function TodayEntriesSection({
           onClose={() => setEditingGroup(null)}
         />
       )}
-    </section>
+    </SectionCard>
   );
 }

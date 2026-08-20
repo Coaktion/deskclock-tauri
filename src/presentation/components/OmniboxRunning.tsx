@@ -1,10 +1,21 @@
-import { ArrowRight, CheckCircle2, Clock, Pause, Pen, Play, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, ListChecks, Pause, Pen, Play, X } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
+import { countFilledCustomValues } from "@domain/usecases/customFields/countFilledCustomValues";
 import { ActionChip } from "./ActionChip";
 import { Autocomplete } from "./Autocomplete";
+import {
+  chipBillableClass,
+  chipEmptyClass,
+  chipFilledClass,
+  chipNonBillableClass,
+} from "./chipStyles";
+import { Input } from "@presentation/components/ui";
+import { OmniboxCustomFieldsPanel } from "./OmniboxCustomFieldsPanel";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { formatHHMMSS, formatTimeOfDay } from "@shared/utils/time";
 import type { OmniboxRunningEditState } from "@presentation/hooks/useOmniboxRunningEdit";
 
@@ -44,9 +55,12 @@ export function OmniboxRunning({
   setFillProjectName,
   fillCategoryName,
   setFillCategoryName,
+  clearFillCategory,
   editingStartTime,
   startTimeInput,
   setStartTimeInput,
+  editingCustomFields,
+  setEditingCustomFields,
   isRunning,
   handlePlayPause,
   handleStopClick,
@@ -58,35 +72,51 @@ export function OmniboxRunning({
   handleProjectSelect,
   handleCategorySelect,
   handleBillableToggle,
+  handleCustomValuesSave,
 }: OmniboxRunningProps) {
   const runProject = projects.find((p) => p.id === runningTask.projectId);
   const runCategory = categories.find((c) => c.id === runningTask.categoryId);
+  const { activeFields } = useCustomFields();
+  const filledCustomValues = countFilledCustomValues(activeFields, runningTask.customValues);
+
+  // Dois recortes diferentes: o chip edita a categoria da tarefa em execução, e o
+  // preenchimento obrigatório trabalha sobre o projeto que está sendo digitado
+  // ali — que ainda não é o da tarefa. `runCategory` continua saindo do catálogo
+  // cheio, ou desassociar a categoria apagaria o nome dela do chip.
+  const { categoriesFor } = useProjectCategoryMap();
+  const runningCategoryOptions = categoriesFor(categories, runningTask.projectId);
+  const fillCategoryOptions = categoriesFor(
+    categories,
+    projects.find((p) => p.name === fillProjectName)?.id ?? runningTask.projectId
+  );
 
   return (
     <div
       ref={containerRef}
-      className="border border-emerald-500/40 bg-emerald-500/5 rounded-xl overflow-visible"
+      className={`border rounded-card overflow-visible ${
+        isRunning ? "border-accent/40 bg-accent/5" : "border-paused/40 bg-paused/5"
+      }`}
     >
-      {/* Main row */}
-      <div className="flex items-center gap-3 px-4 py-3">
+      {/* Linha 1 — o mesmo esqueleto do repouso (botão de 40px + nome no degrau
+          `lead`), com o timer ocupando a ponta que lá fica vazia. Dar play troca
+          o ícone e acende o timer; não remonta a caixa. */}
+      <div className="flex items-center gap-3 px-3 py-3">
         {/* Play/Pause button */}
         <button
           onClick={handlePlayPause}
           title={isRunning ? "Pausar" : "Retomar"}
-          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-            isRunning
-              ? "bg-emerald-600 hover:bg-emerald-500 text-white animate-pulse"
-              : "bg-gray-700 hover:bg-gray-600 text-gray-200"
+          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-opacity text-white hover:opacity-90 ${
+            isRunning ? "bg-accent animate-pulse" : "bg-paused"
           }`}
         >
-          {isRunning ? <Pause size={16} /> : <Play size={16} />}
+          {isRunning ? <Pause size={18} /> : <Play size={18} />}
         </button>
 
-        {/* Task info */}
+        {/* Task name */}
         <div className="flex-1 min-w-0">
           {editingRunningName ? (
-            <input
-              type="text"
+            <Input
+              variant="plain"
               value={runningNameValue}
               onChange={(e) => setRunningNameValue(e.target.value)}
               onBlur={() => void handleNameCommit()}
@@ -102,7 +132,7 @@ export function OmniboxRunning({
               }}
               autoFocus
               placeholder="Nome da tarefa"
-              className="w-full text-sm font-medium bg-transparent border-b border-blue-500 text-gray-100 placeholder-gray-500 focus:outline-none pb-0.5"
+              className="text-lead! font-medium border-b border-accent"
             />
           ) : (
             <button
@@ -115,112 +145,155 @@ export function OmniboxRunning({
               className="flex items-center gap-1 w-full text-left group"
             >
               <span
-                className={`text-sm font-medium truncate ${runningTask.name ? "text-gray-100" : "text-gray-500 italic"}`}
+                className={`text-lead font-medium truncate ${runningTask.name ? "text-fg" : "text-fg-muted italic"}`}
               >
                 {runningTask.name ?? "(sem nome)"}
               </span>
               <Pen
-                size={10}
-                className="flex-shrink-0 opacity-0 group-hover:opacity-40 transition-opacity"
+                size={14}
+                className="shrink-0 opacity-0 group-hover:opacity-40 transition-opacity"
               />
             </button>
           )}
+        </div>
 
-          <div className="flex gap-2 mt-1 flex-wrap items-center">
-            {/* Project chip */}
-            {editingRunningChip === "project" ? (
-              <div
-                className="w-40"
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setEditingRunningChip(null);
-                  }
-                }}
-              >
-                <Autocomplete
-                  value={runningChipValue}
-                  onChange={setRunningChipValue}
-                  onSelect={(o) => void handleProjectSelect(o.id)}
-                  onEnter={() => setEditingRunningChip(null)}
-                  options={projects}
-                  placeholder="Projeto"
-                  autoFocus
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setRunningChipValue(runProject?.name ?? "");
-                  setEditingRunningChip("project");
-                }}
-                className={
-                  runProject
-                    ? "bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
-                    : "border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors"
+        {/* Timer */}
+        <span
+          className={`shrink-0 font-mono tabular-nums text-2xl tracking-tight leading-none ${
+            isRunning ? "text-accent-text" : "text-paused"
+          }`}
+        >
+          {formatHHMMSS(seconds)}
+        </span>
+
+        {/* Cancelar mora aqui, na ponta superior direita, pelo mesmo motivo do
+            overlay popup: encostado no Parar, o descarte ficava a um pixel da
+            ação que salva. */}
+        <button
+          onClick={() => void cancelTask()}
+          title="Cancelar tarefa"
+          className="shrink-0 p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Linha 2 — a faixa de chips do repouso, no mesmo eixo do botão. À direita,
+          debaixo do timer, o início e os controles de parada. */}
+      <div className="flex items-center gap-2 px-3 pb-3">
+        <div className="flex-1 min-w-0 flex gap-2 flex-wrap items-center">
+          {/* Project chip */}
+          {editingRunningChip === "project" ? (
+            <div
+              className="w-40"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setEditingRunningChip(null);
                 }
-              >
-                {runProject?.name ?? "Projeto"}
-              </button>
-            )}
-
-            {/* Category chip */}
-            {editingRunningChip === "category" ? (
-              <div
-                className="w-40"
-                onBlur={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                    setEditingRunningChip(null);
-                  }
-                }}
-              >
-                <Autocomplete
-                  value={runningChipValue}
-                  onChange={setRunningChipValue}
-                  onSelect={(o) => {
-                    const cat = categories.find((c) => c.id === o.id);
-                    void handleCategorySelect(o.id, cat?.defaultBillable ?? runningTask.billable);
-                  }}
-                  onEnter={() => setEditingRunningChip(null)}
-                  options={categories}
-                  placeholder="Categoria"
-                  autoFocus
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setRunningChipValue(runCategory?.name ?? "");
-                  setEditingRunningChip("category");
-                }}
-                className={
-                  runCategory
-                    ? "bg-gray-800 border border-gray-700 rounded px-2 py-0.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors"
-                    : "border border-dashed border-gray-600 rounded px-2 py-0.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-400 transition-colors"
-                }
-              >
-                {runCategory?.name ?? "Categoria"}
-              </button>
-            )}
-
-            {/* Billable chip */}
+              }}
+            >
+              <Autocomplete
+                value={runningChipValue}
+                onChange={setRunningChipValue}
+                onSelect={(o) => void handleProjectSelect(o.id)}
+                onEnter={() => setEditingRunningChip(null)}
+                options={projects}
+                placeholder="Projeto"
+                autoFocus
+              />
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={() => void handleBillableToggle(runningTask.billable)}
-              className={`px-2 py-0.5 rounded text-xs border transition-colors ${
-                runningTask.billable
-                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20"
-                  : "bg-gray-800/60 border-gray-700/50 text-gray-500 hover:border-gray-600"
+              onClick={() => {
+                setRunningChipValue(runProject?.name ?? "");
+                setEditingRunningChip("project");
+              }}
+              className={runProject ? chipFilledClass : chipEmptyClass}
+            >
+              {runProject?.name ?? "Projeto"}
+            </button>
+          )}
+
+          {/* Category chip */}
+          {editingRunningChip === "category" ? (
+            <div
+              className="w-40"
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                  setEditingRunningChip(null);
+                }
+              }}
+            >
+              <Autocomplete
+                value={runningChipValue}
+                onChange={setRunningChipValue}
+                onSelect={(o) => {
+                  const cat = categories.find((c) => c.id === o.id);
+                  void handleCategorySelect(o.id, cat?.defaultBillable ?? runningTask.billable);
+                }}
+                onEnter={() => setEditingRunningChip(null)}
+                options={runningCategoryOptions}
+                placeholder="Categoria"
+                autoFocus
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setRunningChipValue(runCategory?.name ?? "");
+                setEditingRunningChip("category");
+              }}
+              className={runCategory ? chipFilledClass : chipEmptyClass}
+            >
+              {runCategory?.name ?? "Categoria"}
+            </button>
+          )}
+
+          {/* Billable chip */}
+          <button
+            type="button"
+            onClick={() => void handleBillableToggle(runningTask.billable)}
+            className={runningTask.billable ? chipBillableClass : chipNonBillableClass}
+          >
+            {runningTask.billable ? "Billable" : "Non-billable"}
+          </button>
+
+          {/* Campos personalizados: o chip diz quantos já têm valor, e o painel
+                abre abaixo. Sem ele, quem trabalha pelo omnibox só descobria o
+                Project Stage em branco quando o envio ao Monday recusava a
+                atividade (§5.7). */}
+          {activeFields.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setEditingCustomFields(!editingCustomFields)}
+              title="Campos personalizados"
+              className={`inline-flex items-center gap-1 ${
+                filledCustomValues > 0 ? chipFilledClass : chipEmptyClass
               }`}
             >
-              {runningTask.billable ? "Billable" : "Non-billable"}
+              <ListChecks size={14} />
+              Campos · {filledCustomValues}/{activeFields.length}
             </button>
+          )}
+        </div>
 
-            {/* Start time */}
+        <div className="shrink-0 flex items-center gap-1">
+          {/* Início. O slot é uma caixa fixa de 128×24 que as duas versões
+              preenchem, então entrar em edição troca o conteúdo sem mover nada —
+              antes o campo era mais largo que o botão e o `flex-wrap` dos chips
+              o jogava para a linha de baixo no meio da digitação.
+
+              A altura vem de `h-6`, não do padding: o `input[type=time]` do
+              Chromium mede 26,86 com o mesmo `py-0.75` que fecha o chip em
+              24,53 — o interior dele é o `-webkit-datetime-edit`, que traz a
+              própria caixa e ignora entrelinha. Medido na bancada. */}
+          <div className="w-32 flex">
             {editingStartTime ? (
-              <input
+              <Input
                 type="time"
+                variant="plain"
                 value={startTimeInput}
                 onChange={(e) => setStartTimeInput(e.target.value)}
                 onBlur={() => void handleStartTimeCommit()}
@@ -232,77 +305,70 @@ export function OmniboxRunning({
                   }
                 }}
                 autoFocus
-                className="w-24 bg-gray-800 border border-blue-500 rounded-lg px-2 py-0.5 text-gray-100 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="h-6 bg-raised border border-accent rounded-chip px-2"
               />
             ) : (
               <button
                 onClick={handleStartTimeClick}
                 title="Editar hora de início"
-                className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg border border-transparent hover:border-gray-600 hover:bg-gray-800 hover:text-gray-200 text-gray-500 text-xs transition-colors group"
+                className="w-full h-6 flex items-center justify-center gap-1 px-2 rounded-chip border border-transparent hover:border-border hover:bg-raised hover:text-fg-secondary text-fg-muted text-sm whitespace-nowrap transition-colors group"
               >
                 início {formatTimeOfDay(runningTask.startTime)}
-                <Pen size={9} className="opacity-0 group-hover:opacity-60 transition-opacity" />
+                <Pen size={14} className="opacity-0 group-hover:opacity-60 transition-opacity" />
               </button>
             )}
           </div>
-        </div>
 
-        {/* Timer + controls */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <span className="font-mono tabular-nums text-2xl text-emerald-400 tracking-tight leading-none">
-            {formatHHMMSS(seconds)}
-          </span>
           {confirmingStop ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-gray-500">Concluída?</span>
+              <span className="text-sm text-fg-muted">Concluída?</span>
               <button
                 onClick={() => handleStopConfirm(true)}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-green-700 hover:bg-green-600 text-white rounded-lg transition-colors"
+                className="flex items-center gap-1 px-2 py-0.75 text-sm font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
               >
-                <CheckCircle2 size={12} />
+                <CheckCircle2 size={14} />
                 Sim
               </button>
               <button
                 onClick={() => handleStopConfirm(false)}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 rounded-lg transition-colors"
+                className="flex items-center gap-1 px-2 py-0.75 text-sm font-medium bg-raised border border-border text-fg-secondary hover:text-fg rounded-control transition-colors"
               >
-                <Clock size={12} />
+                <Clock size={14} />
                 Não
               </button>
               <button
                 onClick={() => setConfirmingStop(false)}
-                className="p-1 text-gray-600 hover:text-gray-400 rounded-lg"
+                className="p-1 text-fg-muted hover:text-fg-secondary rounded-control transition-colors"
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleStopClick}
-                title="Parar tarefa"
-                className="px-3 py-1 text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
-              >
-                Parar
-              </button>
-              <button
-                onClick={() => void cancelTask()}
-                title="Cancelar tarefa"
-                className="p-1.5 text-gray-600 hover:text-red-400 rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                <X size={13} />
-              </button>
-            </div>
+            <button
+              onClick={handleStopClick}
+              title="Parar tarefa"
+              className="px-3 py-0.75 text-sm font-medium bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 rounded-control transition-colors"
+            >
+              Parar
+            </button>
           )}
         </div>
       </div>
 
+      {/* Campos personalizados (painel embutido) */}
+      {editingCustomFields && activeFields.length > 0 && (
+        <OmniboxCustomFieldsPanel
+          task={runningTask}
+          fields={activeFields}
+          onSave={handleCustomValuesSave}
+          onClose={() => setEditingCustomFields(false)}
+        />
+      )}
+
       {/* Actions section */}
       {actions.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap px-4 pb-3 pt-2 border-t border-emerald-500/20">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-gray-600 shrink-0">
-            Ações
-          </span>
+        <div className="flex items-center gap-2 flex-wrap px-3 pb-3 pt-2 border-t border-border-subtle">
+          <span className="text-overline uppercase text-fg-muted shrink-0">Ações</span>
           {actions.map((action, i) => (
             <ActionChip key={i} action={action} />
           ))}
@@ -311,20 +377,21 @@ export function OmniboxRunning({
 
       {/* Fill required form */}
       {fillingRequired && (
-        <div className="mx-4 mb-3 pt-3 border-t border-emerald-500/20 space-y-2">
-          <p className="text-xs text-yellow-400">Preencha antes de concluir:</p>
-          <input
-            type="text"
+        <div className="mx-3 mb-3 pt-3 border-t border-border-subtle space-y-2">
+          <p className="text-xs text-amber-400">Preencha antes de concluir:</p>
+          <Input
             value={fillName}
             onChange={(e) => setFillName(e.target.value)}
             placeholder="Nome da tarefa"
             autoFocus
-            className="w-full px-2.5 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
           />
           <Autocomplete
             value={fillProjectName}
             onChange={setFillProjectName}
-            onSelect={(o) => setFillProjectName(o.name)}
+            onSelect={(o) => {
+              setFillProjectName(o.name);
+              clearFillCategory();
+            }}
             options={projects}
             placeholder="Projeto"
           />
@@ -333,21 +400,21 @@ export function OmniboxRunning({
             onChange={setFillCategoryName}
             onSelect={(o) => setFillCategoryName(o.name)}
             onEnter={handleFillSubmit}
-            options={categories}
+            options={fillCategoryOptions}
             placeholder="Categoria"
           />
           <div className="flex gap-2 justify-end">
             <button
               onClick={() => setFillingRequired(false)}
-              className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors"
+              className="px-3 py-1.5 text-sm text-fg-muted hover:text-fg transition-colors"
             >
               Cancelar
             </button>
             <button
               onClick={handleFillSubmit}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-accent/10 border border-accent/30 text-accent-text hover:bg-accent/20 rounded-control transition-colors"
             >
-              <ArrowRight size={12} />
+              <ArrowRight size={14} />
               Continuar
             </button>
           </div>

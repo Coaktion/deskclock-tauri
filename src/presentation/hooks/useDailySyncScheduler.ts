@@ -2,11 +2,22 @@ import { useEffect, useRef } from "react";
 import { showToast } from "@shared/utils/toast";
 import { todayISO } from "@shared/utils/time";
 import type { ConfigContextValue } from "@shared/types/appConfig";
+import type { AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { useAutoSync } from "@presentation/contexts/AutoSyncContext";
+import {
+  AUTO_SYNC_INTEGRATIONS,
+  type AutoSyncConfigKeys,
+} from "@presentation/sections/integrations/autoSyncIntegrations";
 
-type RunDaily = ReturnType<typeof useAutoSync>["runDaily"];
+type AutoSync = ReturnType<typeof useAutoSync>;
 
 const POLL_INTERVAL_MS = 30_000;
+
+interface DueIntegration {
+  integrationName: string;
+  /** Ausente no gatilho `on-open`, que se controla pela sessão e não pela config. */
+  lastFired?: { key: AutoSyncConfigKeys["lastFired"]; value: string };
+}
 
 function parseTimeToMinutes(timeStr: string): number {
   const [hh, mm] = timeStr.split(":").map(Number);
@@ -18,14 +29,23 @@ function nowMinutesLocal(): number {
   return now.getHours() * 60 + now.getMinutes();
 }
 
-export function useDailySyncScheduler(config: ConfigContextValue, runDaily: RunDaily) {
-  const onOpenFiredRef = useRef(false);
+/**
+ * Dispara o envio diário de cada integração no **gatilho dela**.
+ *
+ * O disparo é por integração (`runDailyFor`), não o `runDaily` que roda todas as
+ * habilitadas: com o disparo global, o gatilho que vencia arrastava junto as
+ * outras integrações — o Clockify marcado para as 18h subia às 9h porque o
+ * Sheets estava em "ao abrir o app" —, e a integração cujo gatilho nunca era
+ * consultado só subia de carona. Era o caso do Monday, que o agendador não
+ * conhecia.
+ */
+export function useDailySyncScheduler(config: ConfigContextValue, autoSync: AutoSync) {
+  const onOpenFiredRef = useRef(new Set<string>());
 
   useEffect(() => {
     if (!config.isLoaded) return;
 
-    async function triggerSync(endDateISO: string) {
-      const results = await runDaily(endDateISO);
+    async function reportResults(results: AutoSyncResult[]) {
       const totalCount = results.reduce((s, r) => s + r.count, 0);
       const errors = results.filter((r) => r.error);
       const warnings = results.flatMap((r) => (r.warning ? [r.warning] : []));
@@ -38,62 +58,64 @@ export function useDailySyncScheduler(config: ConfigContextValue, runDaily: RunD
       if (totalCount > 0 && warnings.length === 0) {
         await showToast("success", `${totalCount} tarefa(s) enviada(s) automaticamente`);
       } else if (totalCount > 0 && warnings.length > 0) {
-        await showToast("warning", `${totalCount} tarefa(s) enviada(s). ${warnings.join(" ")}`, 6000);
+        await showToast(
+          "warning",
+          `${totalCount} tarefa(s) enviada(s). ${warnings.join(" ")}`,
+          6000
+        );
       } else if (warnings.length > 0) {
         for (const w of warnings) await showToast("warning", w, 6000);
       }
     }
 
-    async function checkAndFire() {
-      const sheetsDaily =
-        config.get("integrationGoogleSheetsAutoSync") &&
-        config.get("sheetsAutoSyncMode") === "daily";
-      const clockifyDaily =
-        config.get("clockifyAutoSync") && config.get("clockifyAutoSyncMode") === "daily";
-      if (!sheetsDaily && !clockifyDaily) return;
+    /**
+     * `on-open` dispara uma vez por sessão do app, **por integração**.
+     *
+     * `fixed-time` dispara apenas quando o minuto atual coincide com o
+     * configurado: se o app estava fechado nesse minuto, não dispara depois —
+     * evita comportamento "oculto" em que o usuário não vê quando o envio
+     * rodou. A marca de "já disparou" inclui o horário configurado, para que
+     * trocar o horário no mesmo dia permita um novo disparo.
+     */
+    function collectDue(today: string, nowMins: number): DueIntegration[] {
+      const due: DueIntegration[] = [];
 
-      const sheetsTrigger = config.get("sheetsAutoSyncTrigger");
-      const clockifyTrigger = config.get("clockifyAutoSyncTrigger");
+      for (const { integrationName, keys } of AUTO_SYNC_INTEGRATIONS) {
+        if (!autoSync.isDailyEnabled(integrationName)) continue;
 
-      const sheetsOnOpen = sheetsDaily && sheetsTrigger === "on-open";
-      const clockifyOnOpen = clockifyDaily && clockifyTrigger === "on-open";
-      const sheetsFixed = sheetsDaily && sheetsTrigger === "fixed-time";
-      const clockifyFixed = clockifyDaily && clockifyTrigger === "fixed-time";
+        if (config.get(keys.trigger) === "on-open") {
+          if (onOpenFiredRef.current.has(integrationName)) continue;
+          onOpenFiredRef.current.add(integrationName);
+          due.push({ integrationName });
+          continue;
+        }
 
-      const today = todayISO();
-      const nowMins = nowMinutesLocal();
-
-      // on-open: dispara uma vez por sessão do app
-      const onOpenDue = !onOpenFiredRef.current && (sheetsOnOpen || clockifyOnOpen);
-      if (onOpenDue) {
-        onOpenFiredRef.current = true;
+        const time = config.get(keys.time);
+        const firedValue = `${today}@${time}`;
+        if (config.get(keys.lastFired) === firedValue) continue;
+        if (nowMins !== parseTimeToMinutes(time)) continue;
+        due.push({ integrationName, lastFired: { key: keys.lastFired, value: firedValue } });
       }
 
-      // fixed-time: dispara apenas quando o minuto atual coincide com o configurado.
-      // Se o app estava fechado nesse minuto, não dispara depois — evita comportamento
-      // "oculto" em que o usuário não vê quando a sync rodou.
-      // A chave de "já disparou" inclui o horário configurado para que, se o usuário
-      // alterar o horário no mesmo dia, a sync possa disparar novamente.
-      const sheetsTime = config.get("sheetsAutoSyncTime");
-      const clockifyTime = config.get("clockifyAutoSyncTime");
-      const sheetsKey = `${today}@${sheetsTime}`;
-      const clockifyKey = `${today}@${clockifyTime}`;
-      const sheetsFixedDue =
-        sheetsFixed &&
-        config.get("sheetsAutoSyncLastFiredDate") !== sheetsKey &&
-        nowMins === parseTimeToMinutes(sheetsTime);
-      const clockifyFixedDue =
-        clockifyFixed &&
-        config.get("clockifyAutoSyncLastFiredDate") !== clockifyKey &&
-        nowMins === parseTimeToMinutes(clockifyTime);
+      return due;
+    }
 
-      if (!onOpenDue && !sheetsFixedDue && !clockifyFixedDue) return;
+    async function checkAndFire() {
+      const today = todayISO();
+      const due = collectDue(today, nowMinutesLocal());
 
-      // Marca as flags ANTES de disparar para evitar dupla execução em polls concorrentes
-      if (sheetsFixedDue) await config.set("sheetsAutoSyncLastFiredDate", sheetsKey);
-      if (clockifyFixedDue) await config.set("clockifyAutoSyncLastFiredDate", clockifyKey);
+      if (due.length === 0) return;
 
-      await triggerSync(today);
+      // Marca as flags ANTES de disparar para evitar dupla execução em polls
+      // concorrentes — o envio ao destino é lento e o poll não espera.
+      for (const { lastFired } of due) {
+        if (lastFired) await config.set(lastFired.key, lastFired.value);
+      }
+
+      const results = await Promise.all(
+        due.map((d) => autoSync.runDailyFor(d.integrationName, today))
+      );
+      await reportResults(results.filter((r): r is AutoSyncResult => r !== null));
     }
 
     void checkAndFire();

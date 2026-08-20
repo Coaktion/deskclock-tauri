@@ -11,9 +11,7 @@ import {
 import { useCallback, useEffect, useRef } from "react";
 
 type PositionKey =
-  | "overlayPosition_compact"
-  | "overlayPosition_execution"
-  | "overlayPosition_planning";
+  "overlayPosition_compact" | "overlayPosition_execution" | "overlayPosition_planning";
 
 const appWindow = getCurrentWindow();
 
@@ -154,7 +152,7 @@ export function useOverlayDrag(
       unlisten.then((fn) => fn());
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [config, configKey, snapToGrid, onPositionChange, overlaySize]);
+  }, [config, configKey, snapToGrid, onPositionChange]);
 
   return restore;
 }

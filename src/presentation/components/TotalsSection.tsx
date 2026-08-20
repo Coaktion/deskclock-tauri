@@ -1,48 +1,12 @@
 import { formatHHMMSS, formatWeekTotal } from "@shared/utils/time";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { KpiCard } from "@presentation/components/ui";
 
 interface TotalsSectionProps {
   billableSeconds: number;
   nonBillableSeconds: number;
   weekSeconds: number;
   weekDays: number;
-}
-
-interface KpiCardProps {
-  label: string;
-  value: string;
-  barColor: string;
-  barPct: number;
-  hint?: string;
-  valueColor?: string;
-}
-
-function KpiCard({
-  label,
-  value,
-  barColor,
-  barPct,
-  hint,
-  valueColor = "text-gray-100",
-}: KpiCardProps) {
-  const pct = Math.min(100, Math.max(0, barPct));
-  return (
-    <div className="flex-1 bg-gray-900 border border-gray-800 rounded-lg p-3 flex flex-col gap-1 min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">
-        {label}
-      </div>
-      <div className={`font-mono text-[17px] font-medium tracking-tight ${valueColor}`}>
-        {value}
-      </div>
-      <div className="h-[3px] bg-gray-800 rounded-full overflow-hidden mt-1">
-        <div
-          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {hint && <div className="text-[10.5px] text-gray-500 mt-0.5">{hint}</div>}
-    </div>
-  );
 }
 
 export function TotalsSection({
@@ -71,37 +35,39 @@ export function TotalsSection({
   const weekPct = (weekSeconds / weeklyGoalSec) * 100;
 
   const dailyLabel = `meta ${config.isLoaded ? config.get("dailyGoalHours") : 8}h`;
-  const weeklyLabel = `meta ${config.isLoaded ? config.get("weeklyGoalHours") : 40}h`;
+  // Os dias moram na dica, e não colados ao valor — é onde o design os escreve.
+  const weeklyLabel = `meta ${config.isLoaded ? config.get("weeklyGoalHours") : 40}h · ${weekDays} ${
+    weekDays === 1 ? "dia" : "dias"
+  }`;
 
   return (
     <section className="flex gap-3">
       <KpiCard
         label="Billable hoje"
         value={formatHHMMSS(billableSeconds)}
-        barColor="bg-emerald-500"
+        tone="billable"
         barPct={billablePct}
-        valueColor="text-emerald-400"
         hint={totalToday > 0 ? `${Math.round(billablePct)}% do total` : undefined}
       />
       <KpiCard
         label="Non-billable"
         value={formatHHMMSS(nonBillableSeconds)}
-        barColor="bg-gray-500"
+        barTone="muted"
         barPct={nonBillablePct}
         hint={totalToday > 0 ? `${Math.round(nonBillablePct)}% do total` : undefined}
       />
       <KpiCard
         label="Total hoje"
         value={formatHHMMSS(totalToday)}
-        barColor="bg-blue-500"
         barPct={todayPct}
+        barTone="accent"
         hint={dailyLabel}
       />
       <KpiCard
         label="Semana"
-        value={formatWeekTotal(weekSeconds, weekDays)}
-        barColor="bg-blue-500"
+        value={formatWeekTotal(weekSeconds)}
         barPct={weekPct}
+        barTone="accent"
         hint={weeklyLabel}
       />
     </section>

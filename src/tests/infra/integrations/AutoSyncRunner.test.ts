@@ -6,6 +6,7 @@ import type { Task } from "@domain/entities/Task";
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
+    workspaceId: "ws-1",
     name: "Teste",
     projectId: "proj-1",
     categoryId: "cat-1",
@@ -16,6 +17,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    customValues: {},
     ...overrides,
   };
 }
@@ -96,6 +98,54 @@ describe("AutoSyncRunner", () => {
     expect(disabled.runDaily).not.toHaveBeenCalled();
     expect(results).toHaveLength(1);
     expect(results[0].count).toBe(5);
+  });
+
+  it("runDailyFor chama só a integração pedida, mesmo com outra habilitada", async () => {
+    const monday = makeStrategy(
+      "Monday",
+      false,
+      false,
+      { integration: "Monday", count: 0 },
+      { integration: "Monday", count: 3 }
+    );
+    const sheets = makeStrategy(
+      "Google Sheets",
+      false,
+      true,
+      { integration: "Google Sheets", count: 0 },
+      { integration: "Google Sheets", count: 9 }
+    );
+    const runner = new AutoSyncRunner([monday, sheets]);
+    const result = await runner.runDailyFor("Monday", "2026-05-04");
+
+    expect(monday.runDaily).toHaveBeenCalledWith("2026-05-04");
+    expect(sheets.runDaily).not.toHaveBeenCalled();
+    expect(result?.count).toBe(3);
+  });
+
+  it("runDailyFor devolve null quando a integração não está registrada", async () => {
+    const runner = new AutoSyncRunner([]);
+    expect(await runner.runDailyFor("Monday", "2026-05-04")).toBeNull();
+  });
+
+  it("runDailyFor marca isSyncing durante a execução", async () => {
+    let resolveRun: (v: AutoSyncResult) => void = () => {};
+    const pending = new Promise<AutoSyncResult>((r) => (resolveRun = r));
+    const strat: ISyncStrategy = {
+      integrationName: "Monday",
+      isPerTaskEnabled: () => false,
+      isDailyEnabled: () => false,
+      runPerTask: vi.fn(),
+      runDaily: vi.fn().mockReturnValue(pending),
+    };
+    const runner = new AutoSyncRunner([strat]);
+
+    const promise = runner.runDailyFor("Monday", "2026-05-04");
+    expect(runner.isSyncing("Monday")).toBe(true);
+
+    resolveRun({ integration: "Monday", count: 0 });
+    await promise;
+    expect(runner.isSyncing("Monday")).toBe(false);
   });
 
   it("isSyncing fica true durante runDaily e volta a false depois", async () => {

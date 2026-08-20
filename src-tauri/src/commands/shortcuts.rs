@@ -62,17 +62,6 @@ pub fn update_shortcuts(
                                 }
                             }
                         }
-                        "toggle-command-palette" => {
-                            if let Some(w) = app_handle.get_webview_window("command-palette") {
-                                if w.is_visible().unwrap_or(false) {
-                                    let _ = w.hide();
-                                } else {
-                                    // Posicionamento delegado ao main window via evento —
-                                    // centerOnWorkArea respeita o config manual do usuário.
-                                    let _ = app_handle.emit("shortcut:show-command-palette", ());
-                                }
-                            }
-                        }
                         _ => {}
                     }
                 })

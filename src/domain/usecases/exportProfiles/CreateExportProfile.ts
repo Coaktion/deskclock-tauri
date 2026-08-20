@@ -8,8 +8,10 @@ import type {
 } from "@domain/entities/ExportProfile";
 import { DEFAULT_COLUMNS } from "@domain/entities/ExportProfile";
 import { generateUUID } from "@shared/utils/uuid";
+import type { UUID } from "@shared/types";
 
 interface CreateInput {
+  workspaceId: UUID;
   name: string;
   format: ExportFormat;
   separator: CsvSeparator;
@@ -25,6 +27,7 @@ export async function createExportProfile(
 ): Promise<ExportProfile> {
   const profile: ExportProfile = {
     id: generateUUID(),
+    workspaceId: input.workspaceId,
     name: input.name,
     isDefault: input.isDefault ?? false,
     format: input.format,

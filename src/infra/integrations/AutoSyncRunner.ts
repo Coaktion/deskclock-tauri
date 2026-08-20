@@ -26,6 +26,36 @@ export class AutoSyncRunner {
     return this.withTracking(active, (s) => s.runDaily(endDateISO));
   }
 
+  /**
+   * Envio diário de **uma** integração, para o botão "Enviar agora".
+   *
+   * `runDaily` dispararia todas as habilitadas — o clique num card mandaria
+   * tarefas para as outras integrações sem o usuário ter pedido. O gatilho aqui
+   * é o clique, então `isDailyEnabled` não é consultado; devolve `null` quando o
+   * nome não corresponde a nenhuma estratégia registrada.
+   */
+  async runDailyFor(integrationName: string, endDateISO: string): Promise<AutoSyncResult | null> {
+    const strategy = this.strategies.find((s) => s.integrationName === integrationName);
+    if (!strategy) return null;
+    const [result] = await this.withTracking([strategy], (s) => s.runDaily(endDateISO));
+    return result;
+  }
+
+  /**
+   * A integração está com o envio diário habilitado?
+   *
+   * Existe para o agendador: o gatilho (horário fixo, ao abrir) mora na config
+   * da tela, mas "habilitada" é mais do que o toggle — o Monday também exige
+   * API key e board de Portfólio. Reimplementar isso no hook era duplicar a
+   * regra num lugar que não conhece as integrações. Devolve `false` para nome
+   * não registrado, que é o mesmo que não ter o que disparar.
+   */
+  isDailyEnabled(integrationName: string): boolean {
+    return (
+      this.strategies.find((s) => s.integrationName === integrationName)?.isDailyEnabled() ?? false
+    );
+  }
+
   isSyncing(integrationName?: string): boolean {
     if (integrationName) return (this.inFlight.get(integrationName) ?? 0) > 0;
     return this.inFlight.size > 0;

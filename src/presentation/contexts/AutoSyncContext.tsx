@@ -13,19 +13,30 @@ import {
   SheetsSyncStrategy,
   SHEETS_INTEGRATION_NAME,
 } from "@infra/integrations/SheetsSyncStrategy";
-import { ClockifySyncStrategy } from "@infra/integrations/ClockifySyncStrategy";
+import {
+  ClockifySyncStrategy,
+  CLOCKIFY_INTEGRATION_NAME,
+} from "@infra/integrations/ClockifySyncStrategy";
+import {
+  MondaySyncStrategy,
+  MONDAY_INTEGRATION_NAME,
+} from "@infra/integrations/MondaySyncStrategy";
 import type { ISyncStrategy, AutoSyncResult } from "@domain/integrations/ISyncStrategy";
 import type { Task } from "@domain/entities/Task";
 
 export interface AutoSyncApi {
   runPerTask(task: Task): Promise<AutoSyncResult[]>;
   runDaily(endDateISO: string): Promise<AutoSyncResult[]>;
+  /** Envio diário de uma integração só — o "Enviar agora" de cada card. */
+  runDailyFor(integrationName: string, endDateISO: string): Promise<AutoSyncResult | null>;
+  /** A integração está com o envio diário habilitado? Ver `AutoSyncRunner`. */
+  isDailyEnabled(integrationName: string): boolean;
   isSyncing(integrationName?: string): boolean;
 }
 
 const AutoSyncContext = createContext<AutoSyncApi | null>(null);
 
-export { SHEETS_INTEGRATION_NAME };
+export { SHEETS_INTEGRATION_NAME, CLOCKIFY_INTEGRATION_NAME, MONDAY_INTEGRATION_NAME };
 
 export function AutoSyncProvider({
   children,
@@ -35,15 +46,38 @@ export function AutoSyncProvider({
   value?: AutoSyncApi;
 }) {
   const config = useAppConfig();
-  const { taskRepo, projectRepo, categoryRepo, taskLogRepo } = useRepositories();
+  const {
+    taskRepo,
+    projectRepo,
+    categoryRepo,
+    taskLogRepo,
+    mondayActivityItemRepo,
+    customFieldRepo,
+  } = useRepositories();
 
   const runner = useMemo(() => {
     const strategies: ISyncStrategy[] = [
       new SheetsSyncStrategy(config, taskRepo, projectRepo, categoryRepo, taskLogRepo),
       new ClockifySyncStrategy(config, taskRepo, taskLogRepo),
+      new MondaySyncStrategy(
+        config,
+        taskRepo,
+        taskLogRepo,
+        mondayActivityItemRepo,
+        customFieldRepo,
+        categoryRepo
+      ),
     ];
     return new AutoSyncRunner(strategies);
-  }, [config, taskRepo, projectRepo, categoryRepo, taskLogRepo]);
+  }, [
+    config,
+    taskRepo,
+    projectRepo,
+    categoryRepo,
+    taskLogRepo,
+    mondayActivityItemRepo,
+    customFieldRepo,
+  ]);
 
   const subscribe = useCallback((cb: () => void) => runner.subscribe(cb), [runner]);
   const getSnapshot = useCallback(() => runner.getVersion(), [runner]);
@@ -53,6 +87,8 @@ export function AutoSyncProvider({
     () => ({
       runPerTask: (t) => runner.runPerTask(t),
       runDaily: (d) => runner.runDaily(d),
+      runDailyFor: (name, d) => runner.runDailyFor(name, d),
+      isDailyEnabled: (name) => runner.isDailyEnabled(name),
       isSyncing: (name?: string) => {
         void version;
         return runner.isSyncing(name);

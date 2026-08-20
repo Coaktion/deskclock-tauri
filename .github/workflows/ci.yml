@@ -26,3 +26,9 @@ jobs:
       - run: pnpm tsc --noEmit
       - run: pnpm test
       - run: pnpm lint
+
+      # Por último de propósito: os passos param no primeiro que falha, e um
+      # arquivo desalinhado escondendo um teste quebrado inverteria a ordem de
+      # importância do que a execução tem a dizer. Falhando aqui, `pnpm format`
+      # resolve.
+      - run: pnpm format:check

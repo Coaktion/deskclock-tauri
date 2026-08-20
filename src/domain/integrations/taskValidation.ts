@@ -29,6 +29,17 @@ export function validateTaskForClockify(task: Task): TaskValidationResult {
   return { ok: missing.length === 0, missing };
 }
 
+/**
+ * Para enviar ao Monday, a tarefa precisa de nome e projeto — o projeto é o que
+ * resolve o board de destino. Categoria é opcional (vira Activity Type quando mapeada).
+ */
+export function validateTaskForMonday(task: Task): TaskValidationResult {
+  const missing: string[] = [];
+  if (!task.name?.trim()) missing.push("nome");
+  if (!task.projectId) missing.push("projeto");
+  return { ok: missing.length === 0, missing };
+}
+
 export function formatMissingFields(missing: string[]): string {
   if (missing.length === 0) return "";
   if (missing.length === 1) return missing[0];

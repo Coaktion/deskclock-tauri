@@ -1,31 +1,33 @@
-import { useState } from "react";
-import { Plus, Upload } from "lucide-react";
-import { useCategories } from "@presentation/hooks/useCategories";
-import { SearchInput } from "./SearchInput";
-import { ToggleBillable } from "./ToggleBillable";
+import { useMemo, useState } from "react";
+import type { UseCategoriesResult } from "@presentation/hooks/useCategories";
+import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { AddRow, BillableChip, Input, SectionCard, SearchInput } from "@presentation/components/ui";
 import { CategoryCard } from "./CategoryCard";
-import { BulkImportModal } from "@presentation/modals/BulkImportModal";
+import { SelectAllBox, SelectionActions } from "./SelectionHeader";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
 
+/** A caixa e o rótulo ficam em pontas opostas da faixa; é o `id` que os liga. */
+const SELECT_ALL_ID = "selecionar-todas-categorias";
+
 interface CategoriesPanelProps {
-  showTitle?: boolean;
+  /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
+  data: UseCategoriesResult;
 }
 
-export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
-  const {
-    categories,
-    loading,
-    createCategory,
-    bulkImportCategories,
-    updateCategory,
-    deleteCategory,
-  } = useCategories();
+export function CategoriesPanel({ data }: CategoriesPanelProps) {
+  const { categories, loading, createCategory, updateCategory, deleteCategory, deleteCategories } =
+    data;
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
   const [newBillable, setNewBillable] = useState(true);
-  const [bulkOpen, setBulkOpen] = useState(false);
 
-  const filtered = categories.filter((c) => fuzzyMatch(search, c.name));
+  const filtered = useMemo(
+    () => categories.filter((c) => fuzzyMatch(search, c.name)),
+    [categories, search]
+  );
+  const visibleIds = useMemo(() => filtered.map((c) => c.id), [filtered]);
+  const selection = useMultiSelect(visibleIds);
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -37,70 +39,83 @@ export function CategoriesPanel({ showTitle = true }: CategoriesPanelProps) {
     }
   }
 
+  async function handleDeleteSelected() {
+    const ids = [...selection.selected];
+    try {
+      await deleteCategories(ids);
+      selection.unselect(ids);
+    } catch {
+      // Falha na exclusão: a seleção fica de pé para o usuário tentar de novo.
+    }
+  }
+
+  const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
+
   return (
-    <div className="flex flex-col gap-3">
-      {showTitle && <h2 className="text-base font-semibold text-gray-100">Categorias</h2>}
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Filtrar categorias..."
+        className="shrink-0"
+      />
 
-      <div className="flex gap-2">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Filtrar categorias..."
-          className="flex-1"
-        />
-        <button
-          type="button"
-          onClick={() => setBulkOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-gray-100 rounded-lg transition-colors shrink-0"
-        >
-          <Upload size={14} />
-          Importar em massa
-        </button>
-      </div>
+      <SectionCard
+        className="min-h-0 flex flex-col"
+        bodyClassName="min-h-0 flex flex-col"
+        title="Categorias"
+        count={filtered.length}
+        leading={
+          <SelectAllBox
+            id={SELECT_ALL_ID}
+            allSelected={selection.allSelected}
+            partial={selection.count > 0 && !selection.allSelected}
+            onToggle={selection.toggleAll}
+            title="Selecionar todas as categorias"
+          />
+        }
+        action={
+          <SelectionActions
+            boxId={SELECT_ALL_ID}
+            count={selection.count}
+            onDelete={() => void handleDeleteSelected()}
+          />
+        }
+      >
+        <div className="min-h-0 overflow-y-auto divide-y divide-border-subtle">
+          {loading ? (
+            <p className="text-sm text-fg-muted py-4 text-center">Carregando...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-fg-muted py-4 text-center">
+              {search ? "Nenhuma categoria encontrada." : "Nenhuma categoria cadastrada."}
+            </p>
+          ) : (
+            filtered.map((c) => (
+              <CategoryCard
+                key={c.id}
+                category={c}
+                selected={selection.isSelected(c.id)}
+                onToggleSelect={selection.toggle}
+                onUpdate={updateCategory}
+                onDelete={deleteCategory}
+              />
+            ))
+          )}
+        </div>
 
-      {/* Add input */}
-      <div className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors">
-        <Plus size={14} className="text-gray-500 shrink-0" />
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="Adicionar nova categoria (Enter para salvar)"
-          className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
-        />
-        <ToggleBillable value={newBillable} onChange={setNewBillable} />
-      </div>
-
-      <div className="flex flex-col">
-        {loading ? (
-          <p className="text-sm text-gray-500 py-4 text-center">Carregando...</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-500 py-4 text-center">
-            {search ? "Nenhuma categoria encontrada." : "Nenhuma categoria cadastrada."}
-          </p>
-        ) : (
-          filtered.map((c) => (
-            <CategoryCard
-              key={c.id}
-              category={c}
-              onUpdate={updateCategory}
-              onDelete={deleteCategory}
-            />
-          ))
-        )}
-      </div>
-
-      {bulkOpen && (
-        <BulkImportModal
-          title="Importar categorias em massa"
-          placeholder={
-            "Uma categoria por linha.\nPrefixo ! = non-billable.\nEx: Desenvolvimento\n!Reuniões"
-          }
-          onImport={bulkImportCategories}
-          onClose={() => setBulkOpen(false)}
-        />
-      )}
-    </div>
+        {/* O formulário é esta linha, não o painel: o campo de filtro acima é
+            busca ao vivo e um Enter ali não deve cadastrar nada. */}
+        <AddRow onKeyDown={handleAddKeyDown} className="shrink-0 border-t border-border-subtle">
+          <Input
+            variant="plain"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Adicionar nova categoria — Enter para salvar"
+            className="flex-1"
+          />
+          <BillableChip billable={newBillable} onToggle={() => setNewBillable((b) => !b)} />
+        </AddRow>
+      </SectionCard>
+    </>
   );
 }

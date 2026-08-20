@@ -22,13 +22,50 @@ export function formatDurationCompact(totalSeconds: number): string {
   return `${m}m`;
 }
 
-export function formatWeekTotal(totalSeconds: number, days: number): string {
-  return `${formatHHMMSS(totalSeconds)} ${days}d`;
+/**
+ * O total da semana no cartão de KPI — `27h12`. Ele não é `HH:MM:SS`: o segundo
+ * não diz nada sobre uma semana, e o `2d` que vinha colado ao valor era um
+ * segundo dado disputando o degrau de 17px. **Os dias passaram para a dica**
+ * (`meta 40h · 4 dias`), que é onde o design os escreve.
+ */
+export function formatWeekTotal(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return `${h}h${String(m).padStart(2, "0")}`;
 }
 
 export function formatTimeOfDay(isoString: string): string {
   const d = new Date(isoString);
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+/**
+ * A faixa de horário da coluna de 88px da linha de tarefa — `09:12–11:00`, com
+ * meia-quadratim e sem espaço, como o design a escreve. Sem fim registrado ela
+ * é só o começo: a tarefa em aberto não tem faixa, e escrever `09:12–—` põe um
+ * travessão onde o leitor espera uma hora.
+ *
+ * O fim é sempre `início + duração gravada` (`resolveRegisteredEndHHMM`), o mesmo
+ * que o modal de edição exibe. Mostrar aqui o instante da parada punha na tela um
+ * fim que não fechava a conta com a duração ao lado, e que virava outro número
+ * assim que a tarefa era aberta para editar. O `endTime` só entra como reserva,
+ * para o registro sem duração gravada.
+ */
+export function formatRegisteredTimeRange(
+  startISO: string,
+  durationSeconds: number | null | undefined,
+  endISO: string | null
+): string {
+  const start = formatTimeOfDay(startISO);
+  const hasDuration = durationSeconds != null && durationSeconds > 0;
+  if (!hasDuration && !endISO) return start;
+  return `${start}–${resolveRegisteredEndHHMM(start, durationSeconds, endISO ? formatTimeOfDay(endISO) : null)}`;
+}
+
+/** Desloca um instante ISO em N segundos, preservando o fuso do original. */
+export function addSecondsISO(isoString: string, seconds: number): string {
+  return new Date(new Date(isoString).getTime() + seconds * 1000).toISOString();
 }
 
 export function todayISO(): string {
@@ -106,6 +143,56 @@ export function endOfDayISO(dateISO: string): string {
   return new Date(dateISO + "T23:59:59.999").toISOString();
 }
 
+/**
+ * Instante ISO de um "HH:MM" **local** num dia "AAAA-MM-DD".
+ *
+ * Existia copiado no `RetroactivePage` e no `useRetroactiveForm`, e o lançamento
+ * de planejada com horário precisa da terceira cópia — a hora do evento é local
+ * (§6.6), então montar o instante pelo UTC jogaria a tarefa para o dia vizinho
+ * em boa parte dos fusos.
+ */
+export function buildLocalISO(dateISO: string, hhmm: string): string {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date(dateISO + "T00:00:00");
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+}
+
+/**
+ * Intervalo gravável de uma tarefa a partir do dia e das duas horas locais que a
+ * tela edita: os dois instantes e a duração que os fecha.
+ *
+ * **Fim menor que início é virada de meia-noite, não erro** — a tarefa que
+ * começou às 23:00 e terminou à 01:00 pertence ao dia em que começou, e é assim
+ * que ela é lançada e editada. Sem essa leitura, a conta daria duração negativa,
+ * e o `Math.max` a gravaria como zero.
+ *
+ * A conta estava escrita à mão no `EditTaskModal` e no `ClockifyEntriesModal`,
+ * cada um com sua cópia do `buildLocalISO` daqui de cima. Este é o call site que
+ * pediria a terceira — o painel de edição do popup.
+ */
+export function buildTaskInterval(
+  dateISO: string,
+  startHHMM: string,
+  endHHMM: string
+): { startTime: string; endTime: string; durationSeconds: number } {
+  const startTime = buildLocalISO(dateISO, startHHMM);
+  const sameDayEnd = buildLocalISO(dateISO, endHHMM);
+  const endTime =
+    new Date(sameDayEnd) < new Date(startTime)
+      ? buildLocalISO(addDaysISO(dateISO, 1), endHHMM)
+      : sameDayEnd;
+
+  return {
+    startTime,
+    endTime,
+    durationSeconds: Math.max(
+      0,
+      Math.round((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000)
+    ),
+  };
+}
+
 export function addDaysISO(dateISO: string, days: number): string {
   const d = new Date(dateISO + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + days);
@@ -155,6 +242,30 @@ export function computeEndHHMM(start: string, durationSeconds: number): string {
   const totalMins = sh * 60 + sm + Math.round(durationSeconds / 60);
   const endMins = ((totalMins % 1440) + 1440) % 1440;
   return `${String(Math.floor(endMins / 60)).padStart(2, "0")}:${String(endMins % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Hora de fim HH:MM a exibir na edição de uma tarefa já registrada: **a duração
+ * gravada manda sobre o instante da parada**. Os dois divergem sempre que a
+ * regra de arredondamento agiu (ela reescreve só `durationSeconds`, deixando o
+ * `endTime` real) e também quando a tarefa passou por pausas (o `stopTask` soma
+ * os trechos rodados, não o intervalo). É a duração gravada que as listas, os
+ * totalizadores e as exportações exibem — derivar o fim do intervalo mostrava no
+ * modal um valor que o resto do app não mostra em lugar nenhum, e salvar sem
+ * tocar em nada regravava esse valor por cima, desfazendo o arredondamento em
+ * silêncio.
+ *
+ * O `endTime` só entra como reserva, para o registro sem duração gravada.
+ */
+export function resolveRegisteredEndHHMM(
+  startHHMM: string,
+  durationSeconds: number | null | undefined,
+  endHHMM: string | null
+): string {
+  if (durationSeconds != null && durationSeconds > 0) {
+    return computeEndHHMM(startHHMM, durationSeconds);
+  }
+  return endHHMM ?? startHHMM;
 }
 
 /** Formata timestamp ISO de último envio para exibição "DD/MM às HH:MM" */

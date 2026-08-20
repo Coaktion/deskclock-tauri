@@ -7,7 +7,7 @@ export async function stopTask(
   repo: ITaskRepository,
   id: string,
   endTimeISO: string,
-  nowISO: string = endTimeISO,
+  nowISO: string = endTimeISO
 ): Promise<Task> {
   const task = await repo.findById(id);
   if (!task) throw new DomainError(`Task ${id} not found`);

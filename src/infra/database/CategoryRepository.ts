@@ -5,44 +5,49 @@ import type { UUID } from "@shared/types";
 
 interface CategoryRow {
   id: string;
+  workspace_id: string;
   name: string;
   default_billable: number;
 }
 
+function rowToCategory(r: CategoryRow): Category {
+  return {
+    id: r.id,
+    workspaceId: r.workspace_id,
+    name: r.name,
+    defaultBillable: r.default_billable === 1,
+  };
+}
+
 export class CategoryRepository implements ICategoryRepository {
-  async findAll(): Promise<Category[]> {
+  async findAll(workspaceId?: UUID): Promise<Category[]> {
     const db = await getDb();
-    const rows = await db.select<CategoryRow[]>(
-      "SELECT id, name, default_billable FROM categories ORDER BY name ASC"
-    );
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      defaultBillable: r.default_billable === 1,
-    }));
+    const rows = workspaceId
+      ? await db.select<CategoryRow[]>(
+          "SELECT id, workspace_id, name, default_billable FROM categories WHERE workspace_id = $1 ORDER BY name ASC",
+          [workspaceId]
+        )
+      : await db.select<CategoryRow[]>(
+          "SELECT id, workspace_id, name, default_billable FROM categories ORDER BY name ASC"
+        );
+    return rows.map(rowToCategory);
   }
 
-  async findByName(name: string): Promise<Category | null> {
+  async findByName(name: string, workspaceId: UUID): Promise<Category | null> {
     const db = await getDb();
     const rows = await db.select<CategoryRow[]>(
-      "SELECT id, name, default_billable FROM categories WHERE name = $1",
-      [name]
+      "SELECT id, workspace_id, name, default_billable FROM categories WHERE name = $1 AND workspace_id = $2",
+      [name, workspaceId]
     );
-    if (!rows[0]) return null;
-    return {
-      id: rows[0].id,
-      name: rows[0].name,
-      defaultBillable: rows[0].default_billable === 1,
-    };
+    return rows[0] ? rowToCategory(rows[0]) : null;
   }
 
   async save(category: Category): Promise<void> {
     const db = await getDb();
-    await db.execute("INSERT INTO categories (id, name, default_billable) VALUES ($1, $2, $3)", [
-      category.id,
-      category.name,
-      category.defaultBillable ? 1 : 0,
-    ]);
+    await db.execute(
+      "INSERT INTO categories (id, workspace_id, name, default_billable) VALUES ($1, $2, $3, $4)",
+      [category.id, category.workspaceId, category.name, category.defaultBillable ? 1 : 0]
+    );
   }
 
   async update(id: UUID, name: string, defaultBillable: boolean): Promise<void> {
@@ -57,5 +62,12 @@ export class CategoryRepository implements ICategoryRepository {
   async delete(id: UUID): Promise<void> {
     const db = await getDb();
     await db.execute("DELETE FROM categories WHERE id = $1", [id]);
+  }
+
+  async deleteMany(ids: UUID[]): Promise<void> {
+    if (ids.length === 0) return;
+    const db = await getDb();
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(", ");
+    await db.execute(`DELETE FROM categories WHERE id IN (${placeholders})`, ids);
   }
 }

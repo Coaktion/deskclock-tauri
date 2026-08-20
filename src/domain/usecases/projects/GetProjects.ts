@@ -1,6 +1,12 @@
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
 import type { Project } from "@domain/entities/Project";
 
-export async function getProjects(repository: IProjectRepository): Promise<Project[]> {
-  return repository.findAll();
+import type { UUID } from "@shared/types";
+
+/** `workspaceId` omitido devolve os projetos de todos os workspaces. */
+export async function getProjects(
+  repository: IProjectRepository,
+  workspaceId?: UUID
+): Promise<Project[]> {
+  return repository.findAll(workspaceId);
 }

@@ -1,67 +1,314 @@
 @import "tailwindcss";
 @import "driver.js/dist/driver.css";
 
+/* ── Famílias empacotadas ─────────────────────────────────────────────────────
+ *
+ * Sem `font-family` declarada, a app herda a stack de sistema do Preflight — é
+ * por isso que Windows e Linux desenham telas diferentes. Os woff2 vêm dos
+ * pacotes Fontsource, mas o `@font-face` é escrito aqui de propósito: o CSS
+ * deles usa `font-display: swap` e nomeia a família "… Variable", e traz sete
+ * subsets, dos quais cinco esta app nunca usa.
+ *
+ * `block` em vez de `swap` porque o arquivo está no binário e carrega em
+ * milissegundos: o texto some por um quadro em vez de aparecer na fonte errada
+ * e saltar de lugar — e aqui esse salto aconteceria nas cinco janelas.
+ *
+ * O intervalo de peso é o teto da escala (§ tokens abaixo), não o da fonte, que
+ * vai de 200 a 900. Peso pedido fora do intervalo é limitado ao mais próximo,
+ * então um `font-bold` esquecido renderiza como 600 em vez de reintroduzir a
+ * hierarquia que a escala tirou.
+ */
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: block;
+  src: url("@fontsource-variable/source-sans-3/files/source-sans-3-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Sans 3";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: block;
+  src: url("@fontsource-variable/source-sans-3/files/source-sans-3-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: block;
+  src: url("@fontsource-variable/source-code-pro/files/source-code-pro-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Source Code Pro";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: block;
+  src: url("@fontsource-variable/source-code-pro/files/source-code-pro-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+/* ── Tokens semânticos — direção 2a (frio, definido por borda) ────────────────
+ *
+ * `static` não é enfeite: sem ele o Tailwind descarta o token que nenhum
+ * utilitário referencia, e um token sumiria do CSS gerado no dia em que a última
+ * tela deixasse de usá-lo. Verificado no Tailwind 4.3.2: com `static`, até o
+ * `--radius-control` sem consumidor sai no CSS gerado.
+ *
+ * Os blocos [data-accent] e [data-mode] ficam **fora de layer** de propósito.
+ * O @theme emite dentro de `@layer theme`, e regra sem layer vence regra em
+ * layer no cascade, qualquer que seja a especificidade.
+ */
+@theme static {
+  /* Superfícies — o modo escuro é o padrão */
+  --color-canvas: oklch(0.13 0.028 262);
+  --color-surface: oklch(0.185 0.031 264);
+  --color-raised: oklch(0.21 0.034 265);
+  --color-border-subtle: oklch(0.26 0.033 257);
+  --color-border: oklch(0.3 0.033 257);
+
+  /* Texto */
+  --color-fg: oklch(0.97 0.003 264);
+  --color-fg-secondary: oklch(0.75 0.02 261);
+  --color-fg-muted: oklch(0.6 0.02 264);
+
+  /* Acento — o hue é a única variável que o seletor de acento troca */
+  --color-accent: oklch(0.62 0.19 var(--accent-hue));
+  --color-accent-text: oklch(0.72 0.15 var(--accent-hue));
+
+  /* Status — um token por significado, não uma família do Tailwind por tela */
+  --color-billable: oklch(0.72 0.15 162);
+  --color-paused: oklch(0.75 0.15 70);
+  --color-danger: oklch(0.65 0.19 22);
+  /* Sucesso repete o verde de billable e mesmo assim é token próprio: hora
+     faturável e "enviado" coincidem na cor, não no significado, e enquanto
+     dividiam o mesmo nome trocar um mexia no outro. Aviso é vizinho da pausa e
+     não é ela — mais amarelo, para não ler como tarefa pausada na mesma tela. */
+  --color-success: oklch(0.72 0.15 162);
+  --color-warning: oklch(0.78 0.15 85);
+
+  /* Sombra do painel que **sobrepõe** a página — hoje, a lista de planejadas do
+     omnibox. É token porque a sombra do Tailwind é preto translúcido e, sobre um
+     canvas de L 0.13, não pinta nada: medido na bancada, o painel e a faixa de
+     KPI atrás dele ficavam a 0,025 de lightness um do outro. A escala de
+     superfície não resolve — `raised` já é o degrau mais alto —, então a
+     profundidade vem daqui. No claro o valor é outro: o mesmo preto vira mancha
+     sobre branco. */
+  --shadow-overlay: 0 18px 44px -12px oklch(0 0 0 / 0.85);
+
+  /* Cores de projeto — 24 slots, gerados por `scripts/generate-project-palette.mjs`.
+     Não edite os valores à mão: eles saem de um empacotamento que maximiza a menor
+     distância OKLab entre qualquer par, sob dois pisos de contraste.
+
+     **A regra antiga era "mesma lightness e chroma, só o hue muda", e ela foi
+     revertida de propósito.** Com 6 slots, um catálogo de 60 projetos repetia cada
+     cor 10 vezes, e duas linhas na tela tinham 98% de chance de coincidir — a cor
+     não informava nada. Em 24 slots, manter L e C fixos custaria 26% da separação
+     (0,076 contra 0,095, medido), o que a deixaria **pior** que a paleta de 6. Então
+     o chroma varia de 0,07 a 0,17 e o L de 0,472 a 0,672: ponto vivo e ponto lavado
+     convivem na mesma lista, e o vivo puxa mais o olho. É o preço declarado de 24
+     cores distinguíveis, não descuido.
+
+     Três propriedades que o `designTokens.test.ts` afirma, e que o gerador garante:
+     - **Dentro do sRGB.** Os 6 tokens anteriores pediam C 0,16 em hues que não
+       alcançam isso (o ciano 200 pedia 44% acima do possível), e o navegador os
+       dessaturava em silêncio — o verde, o âmbar e o ciano renderizavam lavados
+       sem que nada denunciasse.
+     - **≥3:1 contra os dois canvas.** É o que dispensa uma segunda tabela no
+       `[data-mode="claro"]`, e é por isso que o L varia por hue: no mesmo L, verde
+       e âmbar carregam muito mais luminância que azul, e sumiriam no modo claro.
+     - **Ordem = mais distante primeiro.** Os slots são atribuídos por ordem de
+       criação do projeto (`nextProjectColorIndex`), então quem tem 4 projetos usa
+       os 4 primeiros: separação 0,229 em vez dos 0,095 do conjunto completo. */
+  --color-project-1: oklch(0.62 0.158 253.9); /* azul */
+  --color-project-2: oklch(0.5 0.169 36.3); /* laranja escuro */
+  --color-project-3: oklch(0.636 0.17 133.1); /* verde */
+  --color-project-4: oklch(0.672 0.17 340.7); /* rosa */
+  --color-project-5: oklch(0.472 0.074 181.5); /* ciano lavado escuro */
+  --color-project-6: oklch(0.5 0.167 306.7); /* violeta escuro */
+  --color-project-7: oklch(0.66 0.142 66); /* âmbar */
+  --color-project-8: oklch(0.616 0.106 190.9); /* ciano */
+  --color-project-9: oklch(0.572 0.07 353.5); /* rosa lavado */
+  --color-project-10: oklch(0.536 0.106 94.3); /* oliva */
+  --color-project-11: oklch(0.484 0.138 256.6); /* azul escuro */
+  --color-project-12: oklch(0.664 0.17 296.6); /* índigo */
+  --color-project-13: oklch(0.512 0.167 143.3); /* verde escuro */
+  --color-project-14: oklch(0.628 0.165 20.6); /* vermelho */
+  --color-project-15: oklch(0.504 0.168 351.1); /* rosa escuro */
+  --color-project-16: oklch(0.564 0.071 253.6); /* azul lavado */
+  --color-project-17: oklch(0.636 0.073 105.9); /* oliva lavado */
+  --color-project-18: oklch(0.656 0.071 287.9); /* índigo lavado */
+  --color-project-19: oklch(0.592 0.166 321.3); /* violeta */
+  --color-project-20: oklch(0.488 0.07 34.6); /* laranja lavado escuro */
+  --color-project-21: oklch(0.488 0.072 309.4); /* violeta lavado escuro */
+  --color-project-22: oklch(0.568 0.169 283.7); /* índigo escuro */
+  --color-project-23: oklch(0.66 0.075 21.8); /* vermelho lavado */
+  --color-project-24: oklch(0.576 0.116 49.2); /* laranja */
+  --color-project-none: oklch(0.55 0.02 264);
+
+  --radius-chip: 0.375rem;
+  --radius-control: 0.5rem;
+  --radius-card: 0.75rem;
+
+  /* Tipografia. `--font-sans` não gera só o utilitário `font-sans`: o Preflight
+     do Tailwind deriva dele o `--default-font-family` que aplica no `html`, e é
+     isso que troca a fonte do app inteiro sem tocar em componente nenhum.
+     A stack de sistema fica como segundo item — rede para o quadro anterior ao
+     carregamento, não mais a fonte de fato. */
+  --font-sans:
+    "Source Sans 3", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Três pesos, e 600 é o teto: em 12px sobre fundo escuro o 700 engorda o
+     texto sem criar hierarquia nenhuma. */
+  --font-weight-normal: 400; /* texto lido */
+  --font-weight-medium: 500; /* clicável ou numérico */
+  --font-weight-semibold: 600; /* título, seção, overline */
+
+  /* O degrau de 10px não existe na escala do Tailwind e é o único que carrega
+     peso e tracking junto. Sem token ele volta como `text-[10px] font-semibold
+     tracking-wider` copiado de outra tela — que é como as três variantes
+     anteriores nasceram. */
+  --text-overline: 0.625rem;
+  --text-overline--font-weight: 600;
+  --text-overline--letter-spacing: 0.1em;
+
+  /* O design especifica a escala em px sobre uma raiz de 14, e a raiz daqui é
+     16 — decisão tomada por causa dos raios, do cabeçalho e dos ícones, que só
+     caem nos valores certos em 16. Reancorar os dois degraus de texto nos px do
+     design é o que separa as duas coisas: o layout continua na raiz 16 e a
+     proporção interna dos componentes volta a ser a desenhada. Por isso estes
+     valores não batem com os do Tailwind, e é de propósito.
+
+     `--text-base` (16, título de seção), `text-xl` (20, título de tela) e
+     `--text-overline` ficam onde estão: são os degraus que o design já
+     especifica em px, e coincidem. */
+  --text-sm: 0.765625rem; /* 12,25px — body/ui: nome, pílula, botão, campo */
+  --text-sm--line-height: 1.35;
+  --text-xs: 0.65625rem; /* 10,5px — caption: metadado de linha, dica */
+  --text-xs--line-height: 1.4;
+
+  /* Dois degraus novos, ambos fora do que o Tailwind nomeia. `body` é a prosa
+     que se lê em parágrafo — descrição de configuração, texto de ajuda —, que
+     em 12,25px cansa; `metric` é o número grande, valor de KPI e cronômetro,
+     onde o design pede um degrau só acima do título de seção. */
+  --text-body: 0.875rem; /* 14px */
+  --text-body--line-height: 1.55;
+  --text-metric: 1.0625rem; /* 17px */
+  --text-metric--line-height: 1.2;
+
+  /* Três degraus a mais, todos medidos no spec extraído dos wireframes
+     (`docs/design-spec/`), não estimados. O censo de `font-size` nas 7 telas
+     mostrou que 9px aparece 56 vezes e 11px outras 40 — juntos, mais que o
+     `caption` — e nenhum dos dois existia aqui. Cada um desses 96 lugares
+     renderizava um degrau errado, e o `fontSizes.test.ts` proibia escrever o
+     valor à mão: a escala fechada era o que impedia a fidelidade.
+
+     `nav` é o rótulo sob o ícone da sidebar, o único texto do app que precisa
+     caber em 68px sem truncar — é por isso que "Integrações" cabia no design e
+     não aqui. `micro` é o mono curto e o rótulo de apoio: faixa de horário,
+     contagem de registros, total do dia, link de seção, glifo do `?`. `lead` é
+     o campo do omnibox, o único campo maior que os outros, de propósito. */
+  --text-nav: 0.5625rem; /* 9px */
+  --text-nav--line-height: 1;
+  --text-micro: 0.6875rem; /* 11px */
+  --text-micro--line-height: 1.3;
+  --text-lead: 0.9375rem; /* 15px */
+  --text-lead--line-height: 1.4;
+}
+
+/* Fora do @theme de propósito: `hue` não é namespace do Tailwind — não geraria
+   utilitário nenhum — e precisa ser sobrescrito por [data-accent] no cascade. */
 :root {
-  font-size: var(--app-font-size, 14px);
+  --accent-hue: 258;
 
-  /* Cópias fixas dos grays do Tailwind — usadas pelo tema Claro sem criar referências circulares */
-  --tw-gray-50: oklch(0.985 0.002 247.858);
-  --tw-gray-100: oklch(0.967 0.003 264.542);
-  --tw-gray-200: oklch(0.928 0.006 264.531);
-  --tw-gray-300: oklch(0.872 0.01 258.338);
-  --tw-gray-400: oklch(0.707 0.022 261.325);
-  --tw-gray-500: oklch(0.551 0.018 264.364);
-  --tw-gray-600: oklch(0.446 0.03 256.802);
-  --tw-gray-700: oklch(0.373 0.034 259.733);
-  --tw-gray-800: oklch(0.278 0.033 256.848);
-  --tw-gray-900: oklch(0.21 0.034 264.665);
-  --tw-gray-950: oklch(0.13 0.028 261.692);
+  /* Constante, e é dela que dependem os três raios, o ritmo de espaçamento e a
+     escala tipográfica caírem nos valores que o design especifica. */
+  font-size: 16px;
 }
 
-/* ── Tema Verde: troca accent azul por verde ── */
-[data-theme="verde"] {
-  --color-blue-50: var(--color-green-50);
-  --color-blue-100: var(--color-green-100);
-  --color-blue-200: var(--color-green-200);
-  --color-blue-300: var(--color-green-300);
-  --color-blue-400: var(--color-green-400);
-  --color-blue-500: var(--color-green-500);
-  --color-blue-600: var(--color-green-600);
-  --color-blue-700: var(--color-green-700);
-  --color-blue-800: var(--color-green-800);
-  --color-blue-900: var(--color-green-900);
-  --color-blue-950: var(--color-green-950);
+/* ── Acento: independente do modo. É isto que faz Verde deixar de ser tema. ── */
+[data-accent="verde"] {
+  --accent-hue: 155;
+}
+[data-accent="roxo"] {
+  --accent-hue: 300;
+}
+[data-accent="ambar"] {
+  --accent-hue: 45;
 }
 
-/* ── Tema Escuro: fundos gray → zinc (neutro mais profundo) ── */
-[data-theme="escuro"] {
-  --color-gray-50: var(--color-zinc-50);
-  --color-gray-100: var(--color-zinc-100);
-  --color-gray-200: var(--color-zinc-200);
-  --color-gray-300: var(--color-zinc-300);
-  --color-gray-400: var(--color-zinc-400);
-  --color-gray-500: var(--color-zinc-500);
-  --color-gray-600: var(--color-zinc-600);
-  --color-gray-700: var(--color-zinc-700);
-  --color-gray-800: var(--color-zinc-800);
-  --color-gray-900: var(--color-zinc-900);
-  --color-gray-950: var(--color-zinc-950);
-}
-
-/* ── Tema Claro: inverte o mapa de gray usando cópias fixas (sem referências circulares) ── */
-[data-theme="claro"] {
+/* ── Modo claro: paleta própria, não inversão da rampa ── */
+[data-mode="claro"] {
   color-scheme: light;
-  --color-gray-950: var(--tw-gray-50);
-  --color-gray-900: var(--tw-gray-50);
-  --color-gray-800: var(--tw-gray-100);
-  --color-gray-700: var(--tw-gray-200);
-  --color-gray-600: var(--tw-gray-300);
-  --color-gray-500: var(--tw-gray-500);
-  --color-gray-400: var(--tw-gray-600);
-  --color-gray-300: var(--tw-gray-700);
-  --color-gray-200: var(--tw-gray-800);
-  --color-gray-100: var(--tw-gray-900);
-  --color-gray-50: var(--tw-gray-950);
+  --color-canvas: oklch(0.985 0.002 248);
+  --color-surface: #ffffff;
+  --color-raised: oklch(0.967 0.003 265);
+  --color-border-subtle: oklch(0.93 0.005 264);
+  --color-border: oklch(0.9 0.006 264);
+  --color-fg: oklch(0.21 0.034 265);
+  --color-fg-secondary: oklch(0.446 0.03 257);
+  --color-fg-muted: oklch(0.551 0.018 264);
+  --color-accent: oklch(0.55 0.2 var(--accent-hue));
+  --color-accent-text: oklch(0.5 0.19 var(--accent-hue));
+  --color-billable: oklch(0.62 0.15 162);
+  /* Mais escuro que no modo escuro: o âmbar de pausa sobre branco, no mesmo
+     valor, fica ilegível. Valor do swatch claro de 2a. */
+  --color-paused: oklch(0.68 0.15 70);
+  --color-danger: oklch(0.58 0.19 22);
+  --color-success: oklch(0.62 0.15 162);
+  /* Pelo mesmo motivo do âmbar de pausa: em L 0.78 o aviso sobre branco some. */
+  --color-warning: oklch(0.62 0.14 75);
+  /* Cinza da própria rampa, não preto: sobre branco o preto a 0.85 lê como
+     borrão, e o que separa aqui é o desfoque, não a densidade. */
+  --shadow-overlay: 0 18px 44px -12px oklch(0.446 0.03 257 / 0.28);
+}
+
+/* ── Cursor de mão no que se clica ─────────────────────────────────────────────
+ *
+ * O Tailwind v4 **tirou do Preflight** o `button, [role="button"] { cursor:
+ * pointer }` que o v3 emitia — o preflight instalado não tem nenhuma ocorrência
+ * de `cursor: pointer`. Sem esta regra, os 154 `<button>` do app mostram a seta,
+ * e só 14 deles escrevem o cursor à mão. Um `cursor-pointer` no `Button` e no
+ * `IconButton` cobriria 130, e deixaria de fora os `<button>` literais que
+ * sobraram, os três primitivos locais das integrações e toda caixa de seleção.
+ *
+ * **Não se descobre isto desenvolvendo no WSLg**: o WSLg não troca a forma do
+ * ponteiro, então a seta e a mão são o mesmo desenho na tela. Foi assim que a
+ * regressão atravessou a migração inteira do design system sem ser vista.
+ *
+ * Mora em `@layer base` de propósito: utilitário vence base, então os
+ * `disabled:cursor-not-allowed` dos primitivos e o `cursor-help` das integrações
+ * continuam valendo por cima. E o `[data-tauri-drag-region]` abaixo está fora de
+ * layer, que é o que faz o `grab` da região de arraste vencer esta regra.
+ *
+ * `:not(:disabled)` porque mão em botão desabilitado promete o que ele não faz.
+ * O `label:has(…)` cobre o texto ao lado da caixa: sem ele, o rótulo mostra a
+ * seta enquanto a caixa que ele aciona mostra a mão. */
+@layer base {
+  button:not(:disabled),
+  select:not(:disabled),
+  input:where([type="checkbox"], [type="radio"]):not(:disabled),
+  label:has(input:where([type="checkbox"], [type="radio"]):not(:disabled)) {
+    cursor: pointer;
+  }
 }
 
 /* ── Cursor de arraste em regiões drag ── */
@@ -85,16 +332,17 @@
   }
 }
 .overlay-ring-pulse {
-  --overlay-ring-clr: #3b82f6;
+  --overlay-ring-clr: var(--color-accent);
   animation: overlay-ring-pulse 2s ease-in-out infinite;
-}
-[data-theme="verde"] .overlay-ring-pulse {
-  --overlay-ring-clr: #10b981;
 }
 
 /* ── Zendesk logo: teal legível nos temas escuros; cor da marca no tema claro ── */
-.zendesk-logo { color: oklch(0.72 0.08 190); }
-[data-theme="claro"] .zendesk-logo { color: #03363D; }
+.zendesk-logo {
+  color: oklch(0.72 0.08 190);
+}
+[data-mode="claro"] .zendesk-logo {
+  color: #03363d;
+}
 
 /* ── Scrollbars uniformes ── */
 ::-webkit-scrollbar {
@@ -104,34 +352,38 @@
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+/* Pelo token, e não por um cinza fixo: era o único cromo que ficava escuro
+   dentro do modo claro. */
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.373 0.034 259.733 / 0.6);
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.446 0.03 256.802 / 0.8);
+  background: color-mix(in srgb, var(--color-fg-muted) 80%, transparent);
 }
 
+/* Só o `color-scheme`, que governa a pintura do popup **nativo** — comportamento
+   de plataforma, e a única parte disto que não tem como morar num componente.
+
+   A seta saiu daqui e virou ícone Lucide dentro do `Select` (`components/ui/`):
+   ela era um data-URI com o traço em `#6b7280` cravado dentro, cinza fixo que
+   nenhum token alcança — variável CSS não atravessa a fronteira de um data-URI.
+   O `appearance: none` foi junto, porque sem a nossa seta ele deixaria o campo
+   sem seta nenhuma. */
 select {
   color-scheme: dark;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  padding-right: 2rem !important;
 }
 
-[data-theme="claro"] select {
+[data-mode="claro"] select {
   color-scheme: light;
 }
 
-/* ── Driver.js tour — tema DeskClock dark ── */
+/* ── Driver.js tour: pelos tokens, para acompanhar modo e acento ── */
 .deskclock-tour.driver-popover {
-  background-color: var(--tw-gray-900);
-  border: 1px solid var(--tw-gray-700);
-  border-radius: 12px;
-  color: var(--tw-gray-100);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  color: var(--color-fg);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.8);
   min-width: 280px;
   max-width: 320px;
@@ -141,19 +393,19 @@ select {
 .deskclock-tour .driver-popover-title {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--tw-gray-100);
+  color: var(--color-fg);
   margin-bottom: 4px;
 }
 
 .deskclock-tour .driver-popover-description {
   font-size: 0.75rem;
-  color: var(--tw-gray-400);
+  color: var(--color-fg-secondary);
   line-height: 1.5;
 }
 
 .deskclock-tour .driver-popover-progress-text {
   font-size: 0.6875rem;
-  color: var(--tw-gray-500);
+  color: var(--color-fg-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -164,11 +416,11 @@ select {
 
 .deskclock-tour .driver-popover-navigation-btns button {
   font-size: 0.75rem;
-  border-radius: 6px;
+  border-radius: var(--radius-chip);
   padding: 4px 10px;
-  border: 1px solid var(--tw-gray-700);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--tw-gray-400);
+  color: var(--color-fg-secondary);
   cursor: pointer;
   transition: all 0.15s;
   text-shadow: none;
@@ -176,7 +428,7 @@ select {
 
 .deskclock-tour .driver-tour-skip-btn {
   font-size: 0.6875rem;
-  color: var(--tw-gray-600);
+  color: var(--color-fg-muted);
   background: transparent;
   border: none;
   padding: 4px 6px;
@@ -187,32 +439,40 @@ select {
 }
 
 .deskclock-tour .driver-tour-skip-btn:hover {
-  color: var(--tw-gray-400);
+  color: var(--color-fg-secondary);
 }
 
 .deskclock-tour .driver-popover-next-btn,
 .deskclock-tour .driver-popover-done-btn {
-  background-color: var(--color-blue-600) !important;
-  border-color: var(--color-blue-600) !important;
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
   color: #fff !important;
 }
 
 .deskclock-tour .driver-popover-next-btn:hover,
 .deskclock-tour .driver-popover-done-btn:hover {
-  background-color: var(--color-blue-500) !important;
-  border-color: var(--color-blue-500) !important;
+  background-color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
 }
 
 .deskclock-tour .driver-popover-close-btn {
-  color: var(--tw-gray-600);
+  color: var(--color-fg-muted);
   font-size: 1rem;
 }
 
 .deskclock-tour .driver-popover-close-btn:hover {
-  color: var(--tw-gray-300);
+  color: var(--color-fg-secondary);
 }
 
-.deskclock-tour .driver-popover-arrow-side-bottom .driver-popover-arrow { border-bottom-color: var(--tw-gray-700); }
-.deskclock-tour .driver-popover-arrow-side-top .driver-popover-arrow    { border-top-color: var(--tw-gray-700); }
-.deskclock-tour .driver-popover-arrow-side-left .driver-popover-arrow   { border-left-color: var(--tw-gray-700); }
-.deskclock-tour .driver-popover-arrow-side-right .driver-popover-arrow  { border-right-color: var(--tw-gray-700); }
+.deskclock-tour .driver-popover-arrow-side-bottom .driver-popover-arrow {
+  border-bottom-color: var(--color-border);
+}
+.deskclock-tour .driver-popover-arrow-side-top .driver-popover-arrow {
+  border-top-color: var(--color-border);
+}
+.deskclock-tour .driver-popover-arrow-side-left .driver-popover-arrow {
+  border-left-color: var(--color-border);
+}
+.deskclock-tour .driver-popover-arrow-side-right .driver-popover-arrow {
+  border-right-color: var(--color-border);
+}

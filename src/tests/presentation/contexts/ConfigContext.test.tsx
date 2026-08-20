@@ -22,19 +22,21 @@ describe("ConfigContext", () => {
   });
 
   it("retorna defaults antes do load completar", () => {
-    const repo = makeRepo({ get: vi.fn(() => new Promise(() => {})) as unknown as IConfigRepository["get"] });
+    const repo = makeRepo({
+      get: vi.fn(() => new Promise(() => {})) as unknown as IConfigRepository["get"],
+    });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ConfigProvider repository={repo}>{children}</ConfigProvider>
     );
     const { result } = renderHook(() => useAppConfig(), { wrapper });
 
     expect(result.current.isLoaded).toBe(false);
-    expect(result.current.get("fontSize")).toBe("M");
+    expect(result.current.get("theme")).toBe("azul");
   });
 
   it("marca isLoaded após carregar e retorna valor do repo", async () => {
     const repo = makeRepo({
-      loadAll: vi.fn(() => Promise.resolve({ fontSize: "G" })),
+      loadAll: vi.fn(() => Promise.resolve({ accent: "verde" })),
     });
     const wrapper = ({ children }: { children: ReactNode }) => (
       <ConfigProvider repository={repo}>{children}</ConfigProvider>
@@ -42,7 +44,7 @@ describe("ConfigContext", () => {
     const { result } = renderHook(() => useAppConfig(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
-    expect(result.current.get("fontSize")).toBe("G");
+    expect(result.current.get("accent")).toBe("verde");
   });
 
   it("set() atualiza cache e propaga ao repo", async () => {
@@ -55,11 +57,11 @@ describe("ConfigContext", () => {
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
     await act(async () => {
-      await result.current.set("fontSize", "GG");
+      await result.current.set("accent", "roxo");
     });
 
-    expect(result.current.get("fontSize")).toBe("GG");
-    expect(repo.set).toHaveBeenCalledWith("fontSize", "GG");
+    expect(result.current.get("accent")).toBe("roxo");
+    expect(repo.set).toHaveBeenCalledWith("accent", "roxo");
   });
 
   it("popula loadError se o repo rejeitar", async () => {

@@ -3,19 +3,23 @@ import { Sidebar, type Page } from "@presentation/components/Sidebar";
 import { TitleBar } from "@presentation/components/TitleBar";
 import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
-import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
+import { IntegrationsProvider, useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { IntegrationsUiProvider } from "@presentation/contexts/IntegrationsUiContext";
 import { IntegrationsRail } from "@presentation/components/IntegrationsRail";
 import { IntegrationsModalsHost } from "@presentation/components/IntegrationsModalsHost";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { TourProvider } from "@presentation/contexts/TourContext";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
-import { useCommandPaletteRouter } from "@presentation/hooks/useCommandPaletteRouter";
+import { useAppRouter } from "@presentation/hooks/useAppRouter";
 import { useDailySyncScheduler } from "@presentation/hooks/useDailySyncScheduler";
 import { useDeepLink } from "@presentation/hooks/useDeepLink";
+import { useDriveBackupScheduler } from "@presentation/hooks/useDriveBackupScheduler";
 import { useGlobalShortcuts } from "@presentation/hooks/useGlobalShortcuts";
 import { useMeetingTracker } from "@presentation/hooks/useMeetingTracker";
+import { useMondayItemTracker } from "@presentation/hooks/useMondayItemTracker";
+import { useMondayProjectsTracker } from "@presentation/hooks/useMondayProjectsTracker";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
@@ -27,7 +31,7 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { TasksPage } from "@presentation/pages/TasksPage";
-import { OVERLAY_EVENTS, type CommandPaletteStartTaskPayload } from "@shared/types/overlayEvents";
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -35,17 +39,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 function PageContent({
   page,
+  setPage,
   focusTaskEdit,
   onFocusTaskEditHandled,
 }: {
   page: Page;
+  setPage: (p: Page) => void;
   focusTaskEdit: boolean;
   onFocusTaskEditHandled: () => void;
 }) {
   switch (page) {
     case "tasks":
       return (
-        <TasksPage focusTaskEdit={focusTaskEdit} onFocusTaskEditHandled={onFocusTaskEditHandled} />
+        <TasksPage
+          focusTaskEdit={focusTaskEdit}
+          onFocusTaskEditHandled={onFocusTaskEditHandled}
+          onNavigatePlanning={() => setPage("planning")}
+        />
       );
     case "planning":
       return <PlanningPage />;
@@ -84,6 +94,11 @@ function MainContent({
 
   // Rastreamento automático de reuniões do Google Agenda (gated por config).
   useMeetingTracker();
+  // Importação automática dos itens do Monday como planejadas (gated por config).
+  useMondayItemTracker();
+  // Releitura diária dos boards do Monday como projetos (gated por já haver
+  // board mapeado no workspace ativo).
+  useMondayProjectsTracker();
 
   // Ctrl+1–7 navigates directly
   useEffect(() => {
@@ -108,19 +123,6 @@ function MainContent({
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [setPage]);
-
-  // Command palette: start task from standalone window
-  useEffect(() => {
-    const unlisten = listen<CommandPaletteStartTaskPayload>(
-      OVERLAY_EVENTS.COMMAND_PALETTE_START_TASK,
-      async ({ payload }) => {
-        await startTask(payload);
-      }
-    );
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [startTask]);
 
   // Deep link: task/start — resolve nomes para IDs e inicia a tarefa
   const handleDeepLinkStart = useCallback(
@@ -233,13 +235,14 @@ function MainContent({
   const showPin = config.isLoaded && config.get("closeOnFocusLoss");
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950 text-gray-100 overflow-hidden">
+    <div className="flex flex-col h-screen bg-canvas text-fg overflow-hidden">
       <TitleBar page={page} showPin={showPin} isPinned={isPinned} onTogglePin={onTogglePin} />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
         <main className="flex-1 overflow-hidden">
           <PageContent
             page={page}
+            setPage={setPage}
             focusTaskEdit={focusTaskEdit}
             onFocusTaskEditHandled={onFocusTaskEditHandled}
           />
@@ -253,7 +256,8 @@ function MainContent({
 
 function AppInner() {
   const config = useAppConfig();
-  const { runDaily } = useAutoSync();
+  const autoSync = useAutoSync();
+  const { createDriveBackupRunner } = useIntegrations();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
   const [focusTaskEdit, setFocusTaskEdit] = useState(false);
@@ -271,42 +275,46 @@ function AppInner() {
 
   useAppearanceSync(config);
   useGlobalShortcuts(config);
-  const { showMainWindow, showCommandPalette } = useStartupWindow(
-    config,
-    ignoreBlurRef,
-    isPinnedRef
-  );
-  useDailySyncScheduler(config, runDaily);
+  const { showMainWindow } = useStartupWindow(config, ignoreBlurRef, isPinnedRef);
+  useDailySyncScheduler(config, autoSync);
+  useDriveBackupScheduler(config, createDriveBackupRunner);
   useUpdateNotifier();
-  useCommandPaletteRouter({
+  useAppRouter({
     config,
     setPage,
     setFocusTaskEdit,
     ignoreBlurRef,
     showMainWindow,
-    showCommandPalette,
   });
   useDeepLink(setPage);
 
   if (config.isLoaded && !config.loadError && !setupDone) {
-    return <SetupModal config={config} onComplete={() => setSetupDone(true)} />;
+    return (
+      <SetupModal
+        config={config}
+        onComplete={(landing) => {
+          if (landing) setPage(landing);
+          setSetupDone(true);
+        }}
+      />
+    );
   }
 
   if (config.isLoaded && config.loadError) {
     return (
-      <div className="flex flex-col h-screen bg-gray-950 text-gray-100 items-center justify-center gap-6 p-8">
+      <div className="flex flex-col h-screen bg-canvas text-fg items-center justify-center gap-6 p-8">
         <div className="flex flex-col items-center gap-2 text-center">
-          <span className="text-red-400 text-3xl">⚠</span>
+          <span className="text-danger text-3xl">⚠</span>
           <h1 className="text-base font-semibold">Falha ao carregar configurações</h1>
-          <p className="text-sm text-gray-400 max-w-xs">
+          <p className="text-sm text-fg-muted max-w-xs">
             Não foi possível inicializar o DeskClock. Reinicie o app para tentar novamente.
           </p>
         </div>
-        <pre className="bg-gray-900 rounded p-3 w-full max-w-sm text-xs text-red-300 whitespace-pre-wrap break-all">
+        <pre className="bg-surface rounded-control p-3 w-full max-w-sm text-xs text-danger whitespace-pre-wrap break-all">
           {config.loadError}
         </pre>
         <button
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium transition-colors"
+          className="px-4 py-2 bg-accent hover:opacity-90 text-white rounded-control text-sm font-medium transition-opacity"
           onClick={() => invoke("relaunch_app").catch(() => {})}
         >
           Reiniciar DeskClock
@@ -335,13 +343,15 @@ function App() {
   return (
     <ConfigProvider>
       <RepositoriesProvider>
-        <IntegrationsProvider>
-          <IntegrationsUiProvider>
-            <AutoSyncProvider>
-              <AppInner />
-            </AutoSyncProvider>
-          </IntegrationsUiProvider>
-        </IntegrationsProvider>
+        <WorkspaceProvider>
+          <IntegrationsProvider>
+            <IntegrationsUiProvider>
+              <AutoSyncProvider>
+                <AppInner />
+              </AutoSyncProvider>
+            </IntegrationsUiProvider>
+          </IntegrationsProvider>
+        </WorkspaceProvider>
       </RepositoriesProvider>
     </ConfigProvider>
   );

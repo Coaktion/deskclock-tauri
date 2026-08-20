@@ -9,15 +9,10 @@ import {
   Plug,
 } from "lucide-react";
 import { openInBrowser, getPlatform } from "@shared/utils/shell";
+import { WorkspaceSwitcher } from "@presentation/components/WorkspaceSwitcher";
 
 export type Page =
-  | "tasks"
-  | "data"
-  | "planning"
-  | "history"
-  | "retroactive"
-  | "integrations"
-  | "settings";
+  "tasks" | "data" | "planning" | "history" | "retroactive" | "integrations" | "settings";
 
 interface SidebarProps {
   current: Page;
@@ -48,24 +43,26 @@ async function openFeedback() {
 
 export function Sidebar({ current, onChange }: SidebarProps) {
   return (
-    <nav className="w-[68px] shrink-0 h-full bg-gray-950 border-r border-gray-800 flex flex-col items-center py-3 z-30">
+    <nav className="w-[68px] shrink-0 h-full bg-canvas border-r border-border-subtle flex flex-col items-center py-3 z-30">
+      <WorkspaceSwitcher />
+
       <div className="flex flex-col items-center gap-0.5 flex-1 w-full px-1">
         {ITEMS.map(({ page, icon, label, short }) => (
           <button
             key={page}
             onClick={() => onChange(page)}
             title={label}
-            className={`relative w-full flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg transition-colors ${
+            className={`relative w-full flex flex-col items-center gap-1 py-2 px-1 rounded-control transition-colors ${
               current === page
-                ? "bg-blue-500/10 text-blue-400"
-                : "text-gray-500 hover:text-gray-200 hover:bg-gray-800/60"
+                ? "bg-accent/10 text-accent-text"
+                : "text-fg-muted hover:text-fg hover:bg-raised"
             }`}
           >
             {current === page && (
-              <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-blue-500 rounded-r-full" />
+              <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-accent rounded-r-full" />
             )}
             {icon}
-            <span className="text-[9px] font-medium leading-none truncate max-w-full">{short}</span>
+            <span className="text-nav font-medium truncate max-w-full">{short}</span>
           </button>
         ))}
       </div>
@@ -73,10 +70,10 @@ export function Sidebar({ current, onChange }: SidebarProps) {
       <button
         onClick={() => openFeedback().catch(() => {})}
         title="Enviar feedback"
-        className="w-12 flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+        className="w-12 flex flex-col items-center gap-1 py-1.5 rounded-control text-fg-muted hover:text-fg-secondary hover:bg-raised transition-colors"
       >
         <MessageSquare size={16} />
-        <span className="text-[9px] font-medium leading-none">Feedback</span>
+        <span className="text-nav font-medium">Feedback</span>
       </button>
     </nav>
   );

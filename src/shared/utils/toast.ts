@@ -5,6 +5,7 @@ import {
   type ToastVariant,
   type ToastMessagePayload,
 } from "@shared/types/overlayEvents";
+import { readAppliedAppearance } from "@shared/utils/theme";
 
 export async function showToast(
   variant: ToastVariant,
@@ -26,5 +27,6 @@ export async function showToast(
     duration,
     actionLabel,
     actionEvent,
+    appearance: readAppliedAppearance(),
   } satisfies ToastMessagePayload);
 }

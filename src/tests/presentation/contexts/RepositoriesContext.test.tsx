@@ -6,11 +6,17 @@ import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRe
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
 
 vi.mock("@infra/database/TaskRepository", () => ({ TaskRepository: vi.fn(() => ({})) }));
-vi.mock("@infra/database/PlannedTaskRepository", () => ({ PlannedTaskRepository: vi.fn(() => ({})) }));
+vi.mock("@infra/database/PlannedTaskRepository", () => ({
+  PlannedTaskRepository: vi.fn(() => ({})),
+}));
 vi.mock("@infra/database/CategoryRepository", () => ({ CategoryRepository: vi.fn(() => ({})) }));
 vi.mock("@infra/database/ProjectRepository", () => ({ ProjectRepository: vi.fn(() => ({})) }));
-vi.mock("@infra/database/ExportProfileRepository", () => ({ ExportProfileRepository: vi.fn(() => ({})) }));
-vi.mock("@infra/database/TaskIntegrationLogRepository", () => ({ TaskIntegrationLogRepository: vi.fn(() => ({})) }));
+vi.mock("@infra/database/ExportProfileRepository", () => ({
+  ExportProfileRepository: vi.fn(() => ({})),
+}));
+vi.mock("@infra/database/TaskIntegrationLogRepository", () => ({
+  TaskIntegrationLogRepository: vi.fn(() => ({})),
+}));
 
 describe("RepositoriesContext", () => {
   it("lança erro quando usado fora do provider", () => {
@@ -23,7 +29,9 @@ describe("RepositoriesContext", () => {
     const customTaskRepo = { findById: vi.fn() } as unknown as ITaskRepository;
     const customPlannedTaskRepo = { findAll: vi.fn() } as unknown as IPlannedTaskRepository;
     const wrapper = ({ children }: { children: ReactNode }) => (
-      <RepositoriesProvider value={{ taskRepo: customTaskRepo, plannedTaskRepo: customPlannedTaskRepo }}>
+      <RepositoriesProvider
+        value={{ taskRepo: customTaskRepo, plannedTaskRepo: customPlannedTaskRepo }}
+      >
         {children}
       </RepositoriesProvider>
     );

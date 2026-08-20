@@ -6,7 +6,7 @@ export const googleDetailTourSteps: DriveStep[] = [
     popover: {
       title: "Autenticação Google",
       description:
-        "Uma única conta Google autoriza tanto o Sheets quanto o Calendar. Clique em 'Conectar com Google' para iniciar o OAuth — o app solicita apenas as permissões de Sheets, Calendar e email.",
+        "Uma única conta Google autoriza o Sheets, o Calendar e o backup no Drive. Clique em 'Conectar com Google' para iniciar o OAuth — o app pede as permissões de Sheets, Calendar, Drive e email. Se você já usava o DeskClock antes desta versão, reconecte: o acesso ao Drive só entra num consentimento novo.",
       side: "bottom",
       align: "start",
     },
@@ -34,9 +34,9 @@ export const googleDetailTourSteps: DriveStep[] = [
   {
     element: '[data-tour="google-sheets-autosync"]',
     popover: {
-      title: "Sincronização automática",
+      title: "Envio automático",
       description:
-        "'Por tarefa' envia ao concluir, em tempo real. 'Diário' agrupa e envia de uma vez — ao abrir o app ou em horário fixo — cobrindo fins de semana e dias não sincronizados.",
+        "'Por tarefa' envia ao concluir, em tempo real. 'Diário' agrupa e envia de uma vez — ao abrir o app ou em horário fixo — cobrindo fins de semana e dias não enviados.",
       side: "top",
       align: "start",
     },
@@ -49,6 +49,23 @@ export const googleDetailTourSteps: DriveStep[] = [
         "Importe eventos da semana atual como tarefas planejadas. Reuniões de foco, home office e ausências são filtradas — apenas eventos de trabalho real são importados.",
       side: "top",
       align: "start",
+    },
+  },
+  {
+    element: '[data-tour="google-drive-backup"]',
+    popover: {
+      title: "Backup do banco",
+      description:
+        "Uma cópia do seu banco vai para uma pasta do seu Drive, na frequência que você escolher — e o backup vencido roda sozinho ao abrir o app. As cópias antigas são podadas. Use 'Fazer backup agora' para enviar na hora.",
+      side: "top",
+      align: "start",
+    },
+  },
+  {
+    popover: {
+      title: "Um workspace por integração",
+      description:
+        "Se você usa mais de um workspace, o Sheets e o Calendar escolhem cada um o seu — é onde as planejadas são criadas e de onde saem as tarefas exportadas. A escolha não depende do workspace aberto na tela.",
     },
   },
 ];

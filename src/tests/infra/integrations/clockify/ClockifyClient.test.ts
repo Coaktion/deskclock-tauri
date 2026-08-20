@@ -29,7 +29,13 @@ beforeEach(() => {
 describe("ClockifyClient", () => {
   describe("getUser", () => {
     it("envia X-Api-Key e retorna usuário", async () => {
-      const user = { id: "u1", name: "Eduardo", email: "e@test.com", defaultWorkspace: "ws1" };
+      const user = {
+        id: "u1",
+        workspaceId: "ws-1",
+        name: "Eduardo",
+        email: "e@test.com",
+        defaultWorkspace: "ws1",
+      };
       mockFetch.mockResolvedValue(makeResponse(user));
 
       const client = new ClockifyClient(API_KEY);
@@ -71,7 +77,7 @@ describe("ClockifyClient", () => {
 
   describe("listWorkspaces", () => {
     it("retorna lista de workspaces", async () => {
-      const workspaces = [{ id: "ws1", name: "Workspace 1" }];
+      const workspaces = [{ id: "ws1", workspaceId: "ws-1", name: "Workspace 1" }];
       mockFetch.mockResolvedValue(makeResponse(workspaces));
 
       const client = new ClockifyClient(API_KEY);
@@ -87,7 +93,7 @@ describe("ClockifyClient", () => {
 
   describe("listProjects", () => {
     it("retorna projetos da primeira página se menos que PAGE_SIZE", async () => {
-      const projects = [{ id: "p1", name: "Projeto A", archived: false }];
+      const projects = [{ id: "p1", workspaceId: "ws-1", name: "Projeto A", archived: false }];
       mockFetch.mockResolvedValue(makeResponse(projects));
 
       const client = new ClockifyClient(API_KEY);
@@ -107,7 +113,7 @@ describe("ClockifyClient", () => {
         name: `Projeto ${i}`,
         archived: false,
       }));
-      const page2 = [{ id: "p200", name: "Projeto 200", archived: false }];
+      const page2 = [{ id: "p200", workspaceId: "ws-1", name: "Projeto 200", archived: false }];
 
       mockFetch
         .mockResolvedValueOnce(makeResponse(page1))
@@ -127,7 +133,7 @@ describe("ClockifyClient", () => {
 
   describe("listTags", () => {
     it("retorna tags do workspace", async () => {
-      const tags = [{ id: "t1", name: "faturável", archived: false }];
+      const tags = [{ id: "t1", workspaceId: "ws-1", name: "faturável", archived: false }];
       mockFetch.mockResolvedValue(makeResponse(tags));
 
       const client = new ClockifyClient(API_KEY);
@@ -215,8 +221,14 @@ describe("ClockifyClient", () => {
           tagIds: ["t1"],
           billable: true,
           timeInterval: { start: START, end: END, duration: "PT1H" },
-          project: { id: "p1", name: "Proj", clientName: "Cliente", color: "#fff" },
-          tags: [{ id: "t1", name: "tag1" }],
+          project: {
+            id: "p1",
+            workspaceId: "ws-1",
+            name: "Proj",
+            clientName: "Cliente",
+            color: "#fff",
+          },
+          tags: [{ id: "t1", workspaceId: "ws-1", name: "tag1" }],
         },
       ];
       mockFetch.mockResolvedValue(makeResponse(entries));
@@ -280,7 +292,11 @@ describe("ClockifyClient", () => {
         projectId: "p1",
         tagIds: ["t1"],
         billable: false,
-        timeInterval: { start: "2026-04-30T09:00:00Z", end: "2026-04-30T10:00:00Z", duration: "PT1H" },
+        timeInterval: {
+          start: "2026-04-30T09:00:00Z",
+          end: "2026-04-30T10:00:00Z",
+          duration: "PT1H",
+        },
       };
       mockFetch.mockResolvedValue(makeResponse(updated));
 
@@ -338,17 +354,17 @@ describe("ClockifyClient", () => {
     it("lança ClockifyAuthError em 401", async () => {
       mockFetch.mockResolvedValue(makeResponse({}, 401));
       const client = new ClockifyClient(API_KEY);
-      await expect(
-        client.deleteTimeEntry(WORKSPACE_ID, "e1")
-      ).rejects.toBeInstanceOf(ClockifyAuthError);
+      await expect(client.deleteTimeEntry(WORKSPACE_ID, "e1")).rejects.toBeInstanceOf(
+        ClockifyAuthError
+      );
     });
 
     it("lança ClockifyNetworkError em falha de rede", async () => {
       mockFetch.mockRejectedValue(new TypeError("Failed to fetch"));
       const client = new ClockifyClient(API_KEY);
-      await expect(
-        client.deleteTimeEntry(WORKSPACE_ID, "e1")
-      ).rejects.toBeInstanceOf(ClockifyNetworkError);
+      await expect(client.deleteTimeEntry(WORKSPACE_ID, "e1")).rejects.toBeInstanceOf(
+        ClockifyNetworkError
+      );
     });
   });
 });

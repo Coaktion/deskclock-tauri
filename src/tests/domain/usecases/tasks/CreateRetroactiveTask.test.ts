@@ -26,6 +26,7 @@ describe("createRetroactiveTask", () => {
     const task = await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,
@@ -44,6 +45,7 @@ describe("createRetroactiveTask", () => {
     const task = await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,
@@ -62,6 +64,7 @@ describe("createRetroactiveTask", () => {
     const task = await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,
@@ -82,6 +85,7 @@ describe("createRetroactiveTask", () => {
     const task = await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: "Reunião",
         projectId: "proj-1",
         categoryId: "cat-1",
@@ -103,6 +107,7 @@ describe("createRetroactiveTask", () => {
     const task = await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,
@@ -126,6 +131,7 @@ describe("createRetroactiveTask", () => {
       startTime: START,
       endTime: END,
       durationSeconds: DURATION,
+      workspaceId: "ws-1",
     };
     const [t1, t2] = await Promise.all([
       createRetroactiveTask(repo, input, NOW),
@@ -139,6 +145,7 @@ describe("createRetroactiveTask", () => {
     const task = await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,
@@ -158,6 +165,7 @@ describe("createRetroactiveTask", () => {
     await createRetroactiveTask(
       repo,
       {
+        workspaceId: "ws-1",
         name: null,
         projectId: null,
         categoryId: null,

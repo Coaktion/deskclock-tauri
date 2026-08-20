@@ -15,6 +15,7 @@ const { TaskRepository } = await import("@infra/database/TaskRepository");
 function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     project_id: null,
     category_id: null,
@@ -25,6 +26,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
     status: "completed",
     created_at: "2026-04-08T09:00:00.000Z",
     updated_at: "2026-04-08T10:00:00.000Z",
+    planned_task_id: null,
     ...overrides,
   };
 }
@@ -32,6 +34,7 @@ function makeRow(overrides: Partial<Record<string, unknown>> = {}) {
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "t1",
+    workspaceId: "ws-1",
     name: null,
     projectId: null,
     categoryId: null,
@@ -42,6 +45,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     status: "completed",
     createdAt: "2026-04-08T09:00:00.000Z",
     updatedAt: "2026-04-08T10:00:00.000Z",
+    customValues: {},
     ...overrides,
   };
 }
@@ -68,6 +72,14 @@ describe("TaskRepository", () => {
       const repo = new TaskRepository();
       const result = await repo.findById("t1");
       expect(result?.billable).toBe(false);
+    });
+
+    it("mapeia o vínculo com a planejada de origem", async () => {
+      mockDb.select.mockResolvedValueOnce([makeRow({ planned_task_id: "pt-1" })]);
+      mockDb.select.mockResolvedValueOnce([]);
+      const repo = new TaskRepository();
+      const task = await repo.findById("t1");
+      expect(task?.plannedTaskId).toBe("pt-1");
     });
 
     it("retorna null quando não encontrada", async () => {
@@ -119,6 +131,20 @@ describe("TaskRepository", () => {
       expect(mockDb.select).toHaveBeenCalledWith(expect.any(String), [start, end]);
       expect(result).toHaveLength(1);
     });
+
+    it("costura os valores personalizados numa segunda query, não uma por tarefa", async () => {
+      mockDb.select
+        .mockResolvedValueOnce([makeRow({ id: "t1" }), makeRow({ id: "t2" })])
+        .mockResolvedValueOnce([{ owner_id: "t2", field_id: "f-stage", value: "o1" }]);
+      const repo = new TaskRepository();
+      const result = await repo.findByDateRange(
+        "2026-04-08T00:00:00.000Z",
+        "2026-04-08T23:59:59.999Z"
+      );
+      expect(mockDb.select).toHaveBeenCalledTimes(2);
+      expect(result[0].customValues).toEqual({});
+      expect(result[1].customValues).toEqual({ "f-stage": "o1" });
+    });
   });
 
   describe("save", () => {
@@ -145,6 +171,31 @@ describe("TaskRepository", () => {
       const args = mockDb.execute.mock.calls[0][1] as unknown[];
       expect(args).toContain(0);
     });
+
+    it("grava o vínculo com a planejada de origem", async () => {
+      const repo = new TaskRepository();
+      await repo.save(makeTask({ plannedTaskId: "pt-1" }));
+      const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("planned_task_id");
+      expect(args).toContain("pt-1");
+    });
+
+    it("grava null quando a tarefa não veio de planejada", async () => {
+      const repo = new TaskRepository();
+      await repo.save(makeTask());
+      const args = mockDb.execute.mock.calls[0][1] as unknown[];
+      // Última posição do INSERT: ausente na entidade significa "solta", não undefined.
+      expect(args[args.length - 1]).toBeNull();
+    });
+
+    it("grava os valores personalizados junto com a tarefa", async () => {
+      const repo = new TaskRepository();
+      await repo.save(makeTask({ customValues: { "f-stage": "o1" } }));
+      expect(mockDb.execute).toHaveBeenCalledWith(
+        expect.stringContaining("INSERT INTO task_custom_values"),
+        ["t1", "f-stage", "o1"]
+      );
+    });
   });
 
   describe("update", () => {
@@ -155,6 +206,14 @@ describe("TaskRepository", () => {
         expect.stringContaining("UPDATE"),
         expect.arrayContaining(["t1"])
       );
+    });
+
+    it("NÃO toca planned_task_id — origem é imutável e o caller pode não conhecê-la", async () => {
+      const repo = new TaskRepository();
+      await repo.update(makeTask({ plannedTaskId: "pt-1" }));
+      const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+      expect(sql).not.toContain("planned_task_id");
+      expect(args).not.toContain("pt-1");
     });
   });
 

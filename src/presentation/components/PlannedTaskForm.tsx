@@ -1,12 +1,18 @@
-import { useState, useRef } from "react";
-import { Plus, ExternalLink, FolderOpen, Trash2 } from "lucide-react";
-import { todayISO } from "@shared/utils/time";
-import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { ToggleBillable } from "@presentation/components/ToggleBillable";
-import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
+import type { Project } from "@domain/entities/Project";
+import { Autocomplete } from "@presentation/components/Autocomplete";
+import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
+import { DatePickerInput } from "@presentation/components/DatePickerInput";
+import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
+import { BillableChip, Field, Input } from "@presentation/components/ui";
+import { formColumnClass } from "@presentation/components/fieldStyles";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { todayISO } from "@shared/utils/time";
+import { useRef, useState } from "react";
 
 interface FormState {
   name: string;
@@ -21,6 +27,7 @@ interface FormState {
   periodStart: string;
   periodEnd: string;
   actions: PlannedTaskAction[];
+  customValues: CustomValues;
 }
 
 const INITIAL: FormState = {
@@ -36,15 +43,31 @@ const INITIAL: FormState = {
   periodStart: "",
   periodEnd: "",
   actions: [],
+  customValues: {},
 };
 
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+/**
+ * Só dias úteis — o fim de semana saiu do planejamento. O número é o dia da
+ * semana como o `Date` o entende (0=Dom … 6=Sáb) e **não** o índice do array:
+ * `recurringDays` já tem valores gravados nessa escala.
+ */
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+];
 
 const SCHEDULE_LABELS: Record<ScheduleType, string> = {
-  specific_date: "Data única",
+  specific_date: "Data",
   recurring: "Recorrente",
   period: "Período",
 };
+
+/** Título das seções que quebram a coluna em blocos (Ações, Agendamento). */
+const sectionLabelClass =
+  "text-overline uppercase text-fg-muted pt-1 border-t border-border-subtle";
 
 interface PlannedTaskFormProps {
   projects: Project[];
@@ -62,9 +85,19 @@ interface PlannedTaskFormProps {
     periodStart: string | null;
     periodEnd: string | null;
     actions: PlannedTaskAction[];
+    customValues: CustomValues;
   }) => Promise<void>;
 }
 
+/**
+ * Coluna de criação da tela de Planejamento. Espelha a do Lançamento Manual —
+ * mesma largura, mesmo vocabulário de campo — porque as duas telas fazem a
+ * mesma coisa com dados quase iguais, e vê-las diferentes fazia parecer que
+ * funcionavam diferente.
+ *
+ * As seções de ações e de agendamento não têm equivalente no Manual e são o que
+ * espreme a coluna — os dias da recorrência são a linha mais apertada.
+ */
 export function PlannedTaskForm({
   projects,
   categories,
@@ -72,14 +105,31 @@ export function PlannedTaskForm({
   defaultDate = "",
   onSubmit,
 }: PlannedTaskFormProps) {
-  const [form, setForm] = useState<FormState>({ ...INITIAL, scheduleDate: defaultDate });
+  // Sem `defaultDate` (a tela que não navega por dia), o campo abre em hoje —
+  // é o que substituiu a pílula "Hoje" que ficava ao lado dele.
+  const [form, setForm] = useState<FormState>({
+    ...INITIAL,
+    scheduleDate: defaultDate || todayISO(),
+  });
+  const { activeFields } = useCustomFields();
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, form.projectId);
   const [submitting, setSubmitting] = useState(false);
-  const [newActionType, setNewActionType] = useState<PlannedTaskAction["type"]>("open_url");
-  const [newActionValue, setNewActionValue] = useState("");
   const nameRef = useRef<HTMLInputElement>(null);
+  const handleKeyDown = useSubmitOnEnter(() => void handleSubmit());
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  /**
+   * Trocar ou limpar o projeto zera a categoria — o recorte de categorias mudou
+   * debaixo dela, e manter a anterior deixaria escolhida uma opção que o campo
+   * já não oferece. Chamado só nos dois caminhos em que o projeto de fato muda
+   * de id, nunca a cada tecla digitada.
+   */
+  function clearCategory() {
+    setForm((prev) => ({ ...prev, categoryId: null, categoryName: "" }));
   }
 
   function toggleDay(day: number) {
@@ -91,12 +141,14 @@ export function PlannedTaskForm({
     });
   }
 
-  function handleAddAction() {
-    const value = newActionValue.trim();
-    if (!value) return;
-    set("actions", [...form.actions, { type: newActionType, value }]);
-    setNewActionValue("");
-  }
+  // Só é "invertido" com as duas datas preenchidas: enquanto falta uma, o
+  // período está incompleto, não errado — e pintar de vermelho quem ainda está
+  // digitando acusa um erro que a pessoa não cometeu.
+  const isPeriodInverted =
+    form.scheduleType === "period" &&
+    !!form.periodStart &&
+    !!form.periodEnd &&
+    form.periodEnd < form.periodStart;
 
   function isScheduleValid() {
     if (form.scheduleType === "period")
@@ -122,6 +174,7 @@ export function PlannedTaskForm({
         periodStart: form.scheduleType === "period" ? form.periodStart || null : null,
         periodEnd: form.scheduleType === "period" ? form.periodEnd || null : null,
         actions: form.actions,
+        customValues: form.customValues,
       });
       setForm((prev) => ({
         ...INITIAL,
@@ -138,220 +191,166 @@ export function PlannedTaskForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 border-b border-gray-800">
-      <div className="bg-gray-900/60 border border-gray-800 rounded-xl overflow-hidden">
-        {/* Name input: full width */}
-        <div className="px-3 py-2.5">
-          <input
-            ref={nameRef}
-            type="text"
-            value={form.name}
-            onChange={(e) => set("name", e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void handleSubmit();
-              }
-            }}
-            placeholder="Nova tarefa planejada"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
-          />
-        </div>
+    // O `onKeyDown` não é redundante com o `onSubmit`: o submit implícito do
+    // navegador cobriria só parte dos campos, e é ele que o hook cancela para o
+    // Enter ter uma regra só em todo o app (`useSubmitOnEnter`).
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className={formColumnClass}>
+      <Field label="Nome" htmlFor="planned-name">
+        <Input
+          id="planned-name"
+          ref={nameRef}
+          variant="bare"
+          value={form.name}
+          onChange={(e) => set("name", e.target.value)}
+          placeholder="Nome da tarefa"
+        />
+      </Field>
 
-        {/* Field row: Projeto + Categoria + Adicionar */}
-        <div className="flex items-center gap-2 px-3 pb-2.5 border-t border-gray-800/60 pt-2">
-          <div className="flex-1">
-            <Autocomplete
-              value={form.projectName}
-              onChange={(v) => {
-                set("projectName", v);
-                if (!v) set("projectId", null);
-              }}
-              onSelect={(o) => {
-                set("projectId", o.id);
-                set("projectName", o.name);
-              }}
-              onEnter={() => void handleSubmit()}
-              options={projects}
-              placeholder="Projeto"
-              className=""
-            />
+      <Field label="Projeto" htmlFor="planned-project">
+        <Autocomplete
+          id="planned-project"
+          value={form.projectName}
+          onChange={(v) => {
+            set("projectName", v);
+            if (!v) {
+              set("projectId", null);
+              clearCategory();
+            }
+          }}
+          onSelect={(o) => {
+            set("projectId", o.id);
+            set("projectName", o.name);
+            clearCategory();
+          }}
+          options={projects}
+          placeholder="Buscar projeto…"
+          variant="bare"
+        />
+      </Field>
+
+      <Field label="Categoria" htmlFor="planned-category" boxClassName="flex items-center pr-2">
+        <Autocomplete
+          id="planned-category"
+          value={form.categoryName}
+          onChange={(v) => {
+            set("categoryName", v);
+            if (!v) set("categoryId", null);
+          }}
+          onSelect={(o) => {
+            const cat = categories.find((c) => c.id === o.id);
+            setForm((prev) => ({
+              ...prev,
+              categoryId: o.id,
+              categoryName: o.name,
+              ...(cat ? { billable: cat.defaultBillable } : {}),
+            }));
+          }}
+          options={categoryOptions}
+          placeholder="Buscar categoria…"
+          className="flex-1"
+          variant="bare"
+        />
+        <BillableChip billable={form.billable} onToggle={() => set("billable", !form.billable)} />
+      </Field>
+
+      <CustomFieldInputs
+        fields={activeFields}
+        values={form.customValues}
+        onChange={(values) => set("customValues", values)}
+        compact
+        className="space-y-3"
+      />
+
+      {/* ── Agendamento ─────────────────────────────────────────────────────── */}
+      {showDateFields && (
+        <>
+          <p className={sectionLabelClass}>Agendamento</p>
+
+          <div className="flex bg-raised p-1 rounded-control gap-1">
+            {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => set("scheduleType", type)}
+                className={`flex-1 py-1 text-sm font-medium rounded-chip transition-colors ${
+                  form.scheduleType === type
+                    ? "bg-accent text-white"
+                    : "bg-transparent text-fg-muted hover:text-fg"
+                }`}
+              >
+                {SCHEDULE_LABELS[type]}
+              </button>
+            ))}
           </div>
-          <div className="flex-1">
-            <Autocomplete
-              value={form.categoryName}
-              onChange={(v) => {
-                set("categoryName", v);
-                if (!v) set("categoryId", null);
-              }}
-              onSelect={(o) => {
-                const cat = categories.find((c) => c.id === o.id);
-                setForm((prev) => ({
-                  ...prev,
-                  categoryId: o.id,
-                  categoryName: o.name,
-                  ...(cat ? { billable: cat.defaultBillable } : {}),
-                }));
-              }}
-              onEnter={() => void handleSubmit()}
-              options={categories}
-              placeholder="Categoria"
-              className=""
+
+          {/* Sem pílula "Hoje": o campo já nasce preenchido — com o dia
+              navegado, ou com hoje quando não há um. O atalho dizia duas coisas
+              ao mesmo tempo ("a data é hoje" e "leve a data para hoje"), e
+              aceso lia como filtro. */}
+          {form.scheduleType === "specific_date" && (
+            <DatePickerInput
+              value={form.scheduleDate}
+              onChange={(v) => set("scheduleDate", v)}
+              className="w-full"
             />
-          </div>
-          <ToggleBillable value={form.billable} onChange={(v) => set("billable", v)} />
-          <button
-            type="submit"
-            disabled={!form.name.trim() || !isScheduleValid() || submitting}
-            className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded-lg text-xs font-medium transition-colors whitespace-nowrap"
-          >
-            <Plus size={12} />
-            Adicionar
-          </button>
-        </div>
-
-        {/* Actions section */}
-        <div className="border-t border-gray-800/60 px-3 py-2.5 flex flex-col gap-2">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Ações ao iniciar</p>
-
-          {form.actions.length > 0 && (
-            <ul className="flex flex-col gap-1">
-              {form.actions.map((action, i) => (
-                <li key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-800 rounded-lg">
-                  <span className={`shrink-0 ${action.type === "open_url" ? "text-blue-400" : "text-purple-400"}`}>
-                    {action.type === "open_url" ? <ExternalLink size={13} /> : <FolderOpen size={13} />}
-                  </span>
-                  <span className="flex-1 text-xs text-gray-300 truncate" title={action.value}>
-                    {action.value}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => set("actions", form.actions.filter((_, j) => j !== i))}
-                    className="shrink-0 text-gray-600 hover:text-red-400 transition-colors"
-                    title="Remover"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </li>
-              ))}
-            </ul>
           )}
 
-          <div className="flex gap-2">
-            <select
-              value={newActionType}
-              onChange={(e) => setNewActionType(e.target.value as PlannedTaskAction["type"])}
-              className="px-2 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-300 focus:outline-none focus:border-blue-500"
-            >
-              <option value="open_url">URL</option>
-              <option value="open_file">Arquivo</option>
-            </select>
-            <input
-              type="text"
-              value={newActionValue}
-              onChange={(e) => setNewActionValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddAction();
-                }
-              }}
-              placeholder={newActionType === "open_url" ? "https://..." : "/caminho/arquivo"}
-              className="flex-1 px-2.5 py-1.5 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-            <button
-              type="button"
-              onClick={handleAddAction}
-              disabled={!newActionValue.trim()}
-              className="px-2.5 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 text-white rounded-lg transition-colors"
-            >
-              <Plus size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Schedule type section */}
-        {showDateFields && (
-          <div className="border-t border-gray-800/60 px-3 py-2.5 flex flex-col gap-2">
-            {/* Type selector: solid bg wrapper, solid active */}
-            <div className="flex bg-gray-800 p-1 rounded-lg gap-1">
-              {(["specific_date", "recurring", "period"] as ScheduleType[]).map((type) => (
+          {form.scheduleType === "recurring" && (
+            <div className="flex gap-1">
+              {WEEKDAYS.map(({ value, label }) => (
                 <button
-                  key={type}
+                  key={value}
                   type="button"
-                  onClick={() => set("scheduleType", type)}
-                  className={`flex-1 py-1 text-[11px] rounded-md transition-colors ${
-                    form.scheduleType === type
-                      ? "bg-blue-500 text-white"
-                      : "bg-transparent text-gray-400 hover:text-gray-200"
+                  onClick={() => toggleDay(value)}
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-full border transition-colors ${
+                    form.recurringDays.includes(value)
+                      ? "bg-accent/10 border-accent/40 text-accent-text"
+                      : "bg-transparent border-border text-fg-muted hover:border-fg-muted hover:text-fg"
                   }`}
                 >
-                  {SCHEDULE_LABELS[type]}
+                  {label}
                 </button>
               ))}
             </div>
+          )}
 
-            {/* specific_date */}
-            {form.scheduleType === "specific_date" && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => set("scheduleDate", todayISO())}
-                  className={`px-2.5 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
-                    form.scheduleDate === todayISO()
-                      ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                      : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-                  }`}
-                >
-                  Hoje
-                </button>
-                <DatePickerInput
-                  value={form.scheduleDate}
-                  onChange={(v) => set("scheduleDate", v)}
-                  className="flex-1"
-                />
-              </div>
-            )}
+          {form.scheduleType === "period" && (
+            <div className="space-y-2">
+              <DatePickerInput
+                value={form.periodStart}
+                onChange={(v) => set("periodStart", v)}
+                className="w-full"
+              />
+              <DatePickerInput
+                value={form.periodEnd}
+                onChange={(v) => set("periodEnd", v)}
+                className="w-full"
+                invalid={isPeriodInverted}
+              />
+              {isPeriodInverted && (
+                <p className="text-xs text-danger">O fim não pode ser antes do início.</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
-            {/* recurring */}
-            {form.scheduleType === "recurring" && (
-              <div className="flex gap-1">
-                {DAY_LABELS.map((label, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => toggleDay(idx)}
-                    className={`flex-1 py-1.5 text-[11px] rounded-full border transition-colors ${
-                      form.recurringDays.includes(idx)
-                        ? "bg-blue-500/10 border-blue-500/40 text-blue-400"
-                        : "bg-transparent border-gray-700 text-gray-500 hover:border-gray-600 hover:text-gray-300"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* ── Ações ao iniciar ────────────────────────────────────────────────── */}
+      <p className={sectionLabelClass}>Ações ao iniciar</p>
 
-            {/* period */}
-            {form.scheduleType === "period" && (
-              <div className="flex items-center gap-2">
-                <DatePickerInput
-                  value={form.periodStart}
-                  onChange={(v) => set("periodStart", v)}
-                  className="flex-1"
-                />
-                <span className="text-gray-600 text-sm shrink-0">→</span>
-                <DatePickerInput
-                  value={form.periodEnd}
-                  onChange={(v) => set("periodEnd", v)}
-                  className="flex-1"
-                />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      <PlannedActionsField
+        actions={form.actions}
+        onChange={(actions) => set("actions", actions)}
+        compact
+      />
+
+      <button
+        type="submit"
+        disabled={!form.name.trim() || !isScheduleValid() || submitting}
+        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 disabled:opacity-40 text-white rounded-control transition-opacity"
+      >
+        Adicionar
+      </button>
     </form>
   );
 }

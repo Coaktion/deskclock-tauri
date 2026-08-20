@@ -5,6 +5,7 @@ import { validateTaskForClockify } from "@domain/integrations/taskValidation";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TaskSendModal, type TaskSendAdapter } from "./TaskSendModal";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 
 interface ClockifySendModalProps {
   projects: Project[];
@@ -18,11 +19,15 @@ export function ClockifySendModal({ projects, categories, onClose }: ClockifySen
 
   const adapter = useMemo<TaskSendAdapter>(() => {
     const apiKey = config.isLoaded ? config.get("clockifyApiKey") : null;
-    const workspaceId = config.isLoaded ? config.get("clockifyActiveWorkspaceId") : null;
-    const sender = apiKey && workspaceId ? factories.createClockifyTaskSender() : null;
+    // Do Clockify, não do DeskClock — os dois convivem aqui.
+    const clockifyWorkspaceId = config.isLoaded ? config.get("clockifyActiveWorkspaceId") : null;
+    const sender = apiKey && clockifyWorkspaceId ? factories.createClockifyTaskSender() : null;
 
     return {
       integrationId: "clockify",
+      workspaceId: resolveIntegrationWorkspaceId(
+        config.isLoaded ? config.get("clockifyDeskclockWorkspaceId") : ""
+      ),
       title: "Enviar para Clockify",
       sender,
       validateTask: validateTaskForClockify,

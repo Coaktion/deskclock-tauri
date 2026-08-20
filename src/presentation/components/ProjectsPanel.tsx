@@ -1,23 +1,64 @@
-import { useState } from "react";
-import { Plus, Upload } from "lucide-react";
-import { useProjects } from "@presentation/hooks/useProjects";
-import { SearchInput } from "./SearchInput";
+import { useMemo, useState } from "react";
+import type { Category } from "@domain/entities/Category";
+import type { ProjectCategorySource } from "@domain/entities/ProjectCategory";
+import type { UseProjectsResult } from "@presentation/hooks/useProjects";
+import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
+import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { AddRow, Input, SectionCard, SearchInput } from "@presentation/components/ui";
 import { ProjectCard } from "./ProjectCard";
-import { BulkImportModal } from "@presentation/modals/BulkImportModal";
+import { SelectAllBox, SelectionActions } from "./SelectionHeader";
 import { fuzzyMatch } from "@shared/utils/fuzzySearch";
 
+/** Referência estável: um `new Map()` no JSX remontaria o bloco a cada render. */
+const EMPTY_SOURCES: Map<string, ProjectCategorySource> = new Map();
+
+/** A caixa e o rótulo ficam em pontas opostas da faixa; é o `id` que os liga. */
+const SELECT_ALL_ID = "selecionar-todos-projetos";
+
 interface ProjectsPanelProps {
-  showTitle?: boolean;
+  /** Injetado pela página: o contador da aba lê a mesma instância do hook que a lista. */
+  data: UseProjectsResult;
+  /** Catálogo do workspace, para associar categorias na linha do projeto. */
+  categories: Category[];
 }
 
-export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
-  const { projects, loading, createProject, bulkImportProjects, updateProject, deleteProject } =
-    useProjects();
+export function ProjectsPanel({ data, categories }: ProjectsPanelProps) {
+  const { projects, loading, createProject, updateProject, deleteProject, deleteProjects } = data;
   const [search, setSearch] = useState("");
   const [newName, setNewName] = useState("");
-  const [bulkOpen, setBulkOpen] = useState(false);
+  const { rows: associations, setForProject } = useProjectCategoryMap();
 
-  const filtered = projects.filter((p) => fuzzyMatch(search, p.name));
+  /** Associações por projeto, guardando a origem — é ela que marca as do Monday. */
+  const sourceByProject = useMemo(() => {
+    const byProject = new Map<string, Map<string, ProjectCategorySource>>();
+    for (const a of associations) {
+      const map = byProject.get(a.projectId) ?? new Map<string, ProjectCategorySource>();
+      map.set(a.categoryId, a.source);
+      byProject.set(a.projectId, map);
+    }
+    return byProject;
+  }, [associations]);
+
+  /**
+   * Um clique grava a seleção inteira. O toggle é calculado aqui, e não no
+   * componente da caixa, porque a fonte é `associations` — o estado local
+   * divergiria a cada recarga vinda de outra janela.
+   */
+  async function handleToggleCategory(projectId: string, categoryId: string) {
+    const current = sourceByProject.get(projectId) ?? new Map<string, ProjectCategorySource>();
+    const next = new Set(current.keys());
+    if (next.has(categoryId)) next.delete(categoryId);
+    else next.add(categoryId);
+    await setForProject(projectId, [...next]);
+  }
+
+  const filtered = useMemo(
+    () => projects.filter((p) => fuzzyMatch(search, p.name)),
+    [projects, search]
+  );
+  const visibleIds = useMemo(() => filtered.map((p) => p.id), [filtered]);
+  const selection = useMultiSelect(visibleIds);
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -29,62 +70,86 @@ export function ProjectsPanel({ showTitle = true }: ProjectsPanelProps) {
     }
   }
 
+  async function handleDeleteSelected() {
+    const ids = [...selection.selected];
+    try {
+      await deleteProjects(ids);
+      selection.unselect(ids);
+    } catch {
+      // Falha na exclusão: a seleção fica de pé para o usuário tentar de novo.
+    }
+  }
+
+  const handleAddKeyDown = useSubmitOnEnter(() => void handleAdd());
+
   return (
-    <div className="flex flex-col gap-3">
-      {showTitle && <h2 className="text-base font-semibold text-gray-100">Projetos</h2>}
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Filtrar projetos..."
+        className="shrink-0"
+      />
 
-      <div className="flex gap-2">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Filtrar projetos..."
-          className="flex-1"
-        />
-        <button
-          type="button"
-          onClick={() => setBulkOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 hover:border-gray-600 text-gray-300 hover:text-gray-100 rounded-lg transition-colors shrink-0"
-        >
-          <Upload size={14} />
-          Importar em massa
-        </button>
-      </div>
+      <SectionCard
+        className="min-h-0 flex flex-col"
+        bodyClassName="min-h-0 flex flex-col"
+        title="Projetos"
+        count={filtered.length}
+        leading={
+          <SelectAllBox
+            id={SELECT_ALL_ID}
+            allSelected={selection.allSelected}
+            partial={selection.count > 0 && !selection.allSelected}
+            onToggle={selection.toggleAll}
+            title="Selecionar todos os projetos"
+          />
+        }
+        action={
+          <SelectionActions
+            boxId={SELECT_ALL_ID}
+            count={selection.count}
+            onDelete={() => void handleDeleteSelected()}
+          />
+        }
+      >
+        <div className="min-h-0 overflow-y-auto divide-y divide-border-subtle">
+          {loading ? (
+            <p className="text-sm text-fg-muted py-4 text-center">Carregando...</p>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-fg-muted py-4 text-center">
+              {search ? "Nenhum projeto encontrado." : "Nenhum projeto cadastrado."}
+            </p>
+          ) : (
+            filtered.map((p) => (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                selected={selection.isSelected(p.id)}
+                onToggleSelect={selection.toggle}
+                onUpdate={updateProject}
+                onDelete={deleteProject}
+                categories={categories}
+                sourceById={sourceByProject.get(p.id) ?? EMPTY_SOURCES}
+                onToggleCategory={(categoryId) => void handleToggleCategory(p.id, categoryId)}
+                onClearCategories={() => void setForProject(p.id, [])}
+              />
+            ))
+          )}
+        </div>
 
-      {/* Add input */}
-      <div className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-700 rounded-lg hover:border-gray-600 transition-colors">
-        <Plus size={14} className="text-gray-500 shrink-0" />
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          placeholder="Adicionar novo projeto (Enter para salvar)"
-          className="flex-1 text-sm bg-transparent text-gray-300 placeholder-gray-600 focus:outline-none"
-        />
-      </div>
-
-      <div className="flex flex-col">
-        {loading ? (
-          <p className="text-sm text-gray-500 py-4 text-center">Carregando...</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-gray-500 py-4 text-center">
-            {search ? "Nenhum projeto encontrado." : "Nenhum projeto cadastrado."}
-          </p>
-        ) : (
-          filtered.map((p) => (
-            <ProjectCard key={p.id} project={p} onUpdate={updateProject} onDelete={deleteProject} />
-          ))
-        )}
-      </div>
-
-      {bulkOpen && (
-        <BulkImportModal
-          title="Importar projetos em massa"
-          placeholder={"Um projeto por linha.\nEx: Cliente A\nCliente B"}
-          onImport={bulkImportProjects}
-          onClose={() => setBulkOpen(false)}
-        />
-      )}
-    </div>
+        {/* O formulário é esta linha, não o painel: o campo de filtro acima é
+            busca ao vivo e um Enter ali não deve cadastrar nada. */}
+        <AddRow onKeyDown={handleAddKeyDown} className="shrink-0 border-t border-border-subtle">
+          <Input
+            variant="plain"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Adicionar novo projeto — Enter para salvar"
+            className="flex-1"
+          />
+        </AddRow>
+      </SectionCard>
+    </>
   );
 }

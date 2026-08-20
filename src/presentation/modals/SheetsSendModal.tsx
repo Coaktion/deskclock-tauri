@@ -8,6 +8,7 @@ import { validateTaskForSheets } from "@domain/integrations/taskValidation";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { TaskSendModal, type TaskSendAdapter } from "./TaskSendModal";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 
 interface SheetsSendModalProps {
   projects: Project[];
@@ -31,6 +32,9 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
 
     return {
       integrationId: "google_sheets",
+      workspaceId: resolveIntegrationWorkspaceId(
+        config.isLoaded ? config.get("sheetsDeskclockWorkspaceId") : ""
+      ),
       title: "Enviar para Google Sheets",
       sender,
       validateTask: validateTaskForSheets,
@@ -55,9 +59,12 @@ export function SheetsSendModal({ projects, categories, onClose }: SheetsSendMod
         const incomplete: string[] = [];
         for (const task of tasks) {
           const missing: string[] = [];
-          if (requiredNullable.includes("name") && !task.name?.trim()) missing.push(fieldLabel.name);
-          if (requiredNullable.includes("project") && !task.projectId) missing.push(fieldLabel.project);
-          if (requiredNullable.includes("category") && !task.categoryId) missing.push(fieldLabel.category);
+          if (requiredNullable.includes("name") && !task.name?.trim())
+            missing.push(fieldLabel.name);
+          if (requiredNullable.includes("project") && !task.projectId)
+            missing.push(fieldLabel.project);
+          if (requiredNullable.includes("category") && !task.categoryId)
+            missing.push(fieldLabel.category);
           if (missing.length > 0) {
             incomplete.push(`"${task.name ?? "(sem nome)"}" — faltam: ${missing.join(", ")}`);
           }
