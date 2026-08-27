@@ -3,6 +3,13 @@ use tauri::Manager;
 #[tauri::command]
 pub fn update_tray_tooltip(app: tauri::AppHandle, text: Option<String>) -> Result<(), String> {
     if let Some(tray) = app.tray_by_id("main") {
+        // No Linux (AppIndicator/libayatana), `set_tooltip` é um no-op da crate
+        // tray-icon — nenhum DE renderiza hover ali. Quem aparece de fato é o
+        // rótulo do indicador (`set_title` -> app_indicator_set_label), fixo ao
+        // lado do ícone, sem precisar de hover.
+        #[cfg(target_os = "linux")]
+        tray.set_title(text.as_deref()).map_err(|e| e.to_string())?;
+        #[cfg(not(target_os = "linux"))]
         tray.set_tooltip(text.as_deref())
             .map_err(|e| e.to_string())?;
     }

@@ -37,6 +37,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** Teto do nome no rótulo da bandeja — painel do SO, não a lista de tarefas. */
+const TRAY_NAME_MAX_CHARS = 30;
+
+function truncateTrayName(name: string): string {
+  if (name.length <= TRAY_NAME_MAX_CHARS) return name;
+  return `${name.slice(0, TRAY_NAME_MAX_CHARS)}…`;
+}
+
 function PageContent({
   page,
   setPage,
@@ -187,24 +195,20 @@ function MainContent({
     }
 
     if (runningTask.status === "paused") {
-      const name = runningTask.name || "(sem nome)";
+      const name = truncateTrayName(runningTask.name || "(sem nome)");
       invoke("update_tray_tooltip", { text: `DeskClock — ${name} (pausada)` }).catch(() => {});
       return;
     }
 
     const interval = setInterval(() => {
-      const name = runningTask.name || "(sem nome)";
-      if (!config.get("liveTrayTimer")) {
-        invoke("update_tray_tooltip", { text: `DeskClock — ${name} (executando)` }).catch(() => {});
-        return;
-      }
+      const name = truncateTrayName(runningTask.name || "(sem nome)");
       const elapsed = effectiveDuration(runningTask, new Date().toISOString());
       invoke("update_tray_tooltip", {
         text: `${formatHHMMSS(elapsed)} — ${name}`,
       }).catch(() => {});
     }, 1000);
     return () => clearInterval(interval);
-  }, [runningTask, config]);
+  }, [runningTask]);
 
   // Atalhos globais: toggle-task
   useEffect(() => {

@@ -46,7 +46,6 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   setupCompleted: boolean;
   userName: string;
   startOnBoot: boolean;
-  liveTrayTimer: boolean;
   closeOnFocusLoss: boolean;
   discardTasksUnderOneMinute: boolean;
   showIntegrationsRail: boolean;
