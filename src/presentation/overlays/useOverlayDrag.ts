@@ -57,18 +57,18 @@ async function restorePosition(
   configKey: PositionKey,
   config: ConfigContextValue,
   fallbackSize: { width: number; height: number }
-) {
+): Promise<{ x: number; y: number } | null> {
   const saved = config.get(configKey) as { x: number; y: number };
   // Sentinela padrão {x:-1, y:-1} = nunca posicionado → canto padrão perto da bandeja.
   const hasSaved = saved && !(saved.x === -1 && saved.y === -1);
   if (!hasSaved) {
-    void positionNearTaskbar(appWindow, fallbackSize);
-    return;
+    return positionNearTaskbar(appWindow, fallbackSize);
   }
   const target = await resolveVisiblePosition(saved, fallbackSize);
   const pos = new PhysicalPosition(target.x, target.y);
   await appWindow.setPosition(pos).catch(() => {});
   setTimeout(() => appWindow.setPosition(pos).catch(() => {}), 150);
+  return target;
 }
 
 /** Handles drag-to-move with snap-to-grid and position persistence. Returns a
@@ -83,6 +83,14 @@ export function useOverlayDrag(
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastRawPosRef = useRef({ x: 0, y: 0 });
   const isProgrammaticMoveRef = useRef(false);
+  // Última posição física conhecida e real da janela — não a intenção de mover, o
+  // resultado. No GNOME/Wayland, o laço de `keep_overlays_topmost` (200ms, `lib.rs`)
+  // reafirma always-on-top e o compositor às vezes responde com um `tauri://move`
+  // sintético nas MESMAS coordenadas (restacking, não arrasto). Sem esta baseline,
+  // esse evento passava pelo guard de `isProgrammaticMoveRef` — que só cobre moves
+  // que o próprio app iniciou — e disparava `onPositionChange` como se o usuário
+  // tivesse arrastado a janela, fechando o popup ~200-400ms depois de abrir.
+  const lastKnownPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Restore is programmatic, not a user drag — guard the move listener below so it
   // doesn't persist the restored (or off-screen fallback) position back into config,
@@ -91,7 +99,8 @@ export function useOverlayDrag(
     async (fallbackSize: { width: number; height: number }) => {
       isProgrammaticMoveRef.current = true;
       try {
-        await restorePosition(configKey, config, fallbackSize);
+        const applied = await restorePosition(configKey, config, fallbackSize);
+        if (applied) lastKnownPosRef.current = applied;
       } finally {
         setTimeout(() => {
           isProgrammaticMoveRef.current = false;
@@ -104,6 +113,8 @@ export function useOverlayDrag(
   useEffect(() => {
     const unlisten = appWindow.listen<{ x: number; y: number }>("tauri://move", ({ payload }) => {
       if (isProgrammaticMoveRef.current) return;
+      const last = lastKnownPosRef.current;
+      if (last && last.x === payload.x && last.y === payload.y) return;
       lastRawPosRef.current = { x: payload.x, y: payload.y };
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(async () => {
@@ -144,6 +155,7 @@ export function useOverlayDrag(
             isProgrammaticMoveRef.current = false;
           }, 100);
         }
+        lastKnownPosRef.current = snapped;
         await config.set(configKey, snapped as never);
         onPositionChange?.();
       }, 200);

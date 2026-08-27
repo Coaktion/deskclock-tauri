@@ -99,12 +99,12 @@ export function clampIntoMonitor(
 export async function positionNearTaskbar(
   win: Window | WebviewWindow,
   fallback?: { width: number; height: number }
-): Promise<void> {
+): Promise<{ x: number; y: number } | null> {
   const [monitorResult, outerSize] = await Promise.all([
     currentMonitor().then((m) => m ?? primaryMonitor()),
     win.outerSize(),
   ]);
-  if (!monitorResult) return;
+  if (!monitorResult) return null;
 
   const { scaleFactor, workArea } = monitorResult;
   const winW =
@@ -116,4 +116,5 @@ export async function positionNearTaskbar(
   const y = workArea.position.y + Math.max(0, workArea.size.height - winH);
   await win.setPosition(new PhysicalPosition(x, y));
   setTimeout(() => win.setPosition(new PhysicalPosition(x, y)).catch(() => {}), 150);
+  return { x, y };
 }
