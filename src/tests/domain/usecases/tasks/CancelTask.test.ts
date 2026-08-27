@@ -9,6 +9,7 @@ function makeRepo(): ITaskRepository {
     findById: vi.fn(async () => null),
     findByStatus: vi.fn(async () => []),
     findByDateRange: vi.fn(async () => []),
+    findLastDayWithCompletedTasks: vi.fn(async () => null),
     delete: vi.fn(async () => undefined),
     deleteMany: vi.fn(),
   };

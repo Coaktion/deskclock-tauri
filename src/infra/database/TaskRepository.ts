@@ -2,6 +2,7 @@ import { getDb } from "./db";
 import { loadCustomValues, saveCustomValues } from "./customValues";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task, TaskStatus } from "@domain/entities/Task";
+import { localDateISO } from "@shared/utils/time";
 
 interface TaskRow {
   id: string;
@@ -17,6 +18,10 @@ interface TaskRow {
   created_at: string;
   updated_at: string;
   planned_task_id: string | null;
+}
+
+interface LastCompletedRow {
+  last_start: string | null;
 }
 
 function rowToTask(r: TaskRow): Task {
@@ -137,6 +142,28 @@ export class TaskRepository implements ITaskRepository {
           [startISO, endISO]
         );
     return hydrate(db, rows);
+  }
+
+  /**
+   * `MAX(start_time)` resolve o dia numa query só porque os instantes são gravados
+   * pelo `toISOString()`: em UTC, largura fixa, então a ordem lexicográfica do texto
+   * é a ordem cronológica. E como o dia local cresce junto com o instante, o dia do
+   * maior `start_time` é o último dia local com registro — sem precisar varrer as
+   * linhas para converter cada uma.
+   */
+  async findLastDayWithCompletedTasks(workspaceId?: string): Promise<string | null> {
+    const db = await getDb();
+    const rows = workspaceId
+      ? await db.select<LastCompletedRow[]>(
+          `SELECT MAX(start_time) AS last_start FROM tasks
+           WHERE status = 'completed' AND workspace_id = $1`,
+          [workspaceId]
+        )
+      : await db.select<LastCompletedRow[]>(
+          "SELECT MAX(start_time) AS last_start FROM tasks WHERE status = 'completed'"
+        );
+    const lastStart = rows[0]?.last_start;
+    return lastStart ? localDateISO(lastStart) : null;
   }
 
   async delete(id: string): Promise<void> {

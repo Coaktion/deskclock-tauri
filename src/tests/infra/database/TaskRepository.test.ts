@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@domain/entities/Task";
+import { localISO } from "../../helpers/localTime";
 
 const mockDb = {
   select: vi.fn(),
@@ -144,6 +145,51 @@ describe("TaskRepository", () => {
       expect(mockDb.select).toHaveBeenCalledTimes(2);
       expect(result[0].customValues).toEqual({});
       expect(result[1].customValues).toEqual({ "f-stage": "o1" });
+    });
+  });
+
+  describe("findLastDayWithCompletedTasks", () => {
+    it("devolve o dia local do último start_time concluído", async () => {
+      // 23h locais do dia 21 pode ser o dia 22 em UTC: quem responde é o dia do
+      // usuário, não o do instante gravado (§6.6).
+      const lastStart = localISO(2026, 8, 21, 23, 30);
+      mockDb.select.mockResolvedValue([{ last_start: lastStart }]);
+      const repo = new TaskRepository();
+
+      const result = await repo.findLastDayWithCompletedTasks();
+
+      expect(result).toBe("2026-08-21");
+    });
+
+    it("filtra por status concluído numa query só", async () => {
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 9) }]);
+      const repo = new TaskRepository();
+
+      await repo.findLastDayWithCompletedTasks();
+
+      expect(mockDb.select).toHaveBeenCalledTimes(1);
+      const [sql] = mockDb.select.mock.calls[0] as [string];
+      expect(sql).toContain("MAX(start_time)");
+      expect(sql).toContain("status = 'completed'");
+    });
+
+    it("restringe ao workspace quando informado", async () => {
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 9) }]);
+      const repo = new TaskRepository();
+
+      await repo.findLastDayWithCompletedTasks("ws-2");
+
+      const [sql, args] = mockDb.select.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("workspace_id = $1");
+      expect(args).toEqual(["ws-2"]);
+    });
+
+    it("devolve null quando o banco não tem tarefa concluída", async () => {
+      // MAX() sobre conjunto vazio devolve uma linha com NULL, não zero linhas.
+      mockDb.select.mockResolvedValue([{ last_start: null }]);
+      const repo = new TaskRepository();
+
+      expect(await repo.findLastDayWithCompletedTasks()).toBeNull();
     });
   });
 

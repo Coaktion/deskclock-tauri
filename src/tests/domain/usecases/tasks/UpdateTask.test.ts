@@ -34,6 +34,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -50,6 +51,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -65,6 +67,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -79,6 +82,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -93,6 +97,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -108,6 +113,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -124,6 +130,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -141,6 +148,7 @@ describe("updateTask", () => {
       findById: vi.fn(async () => task),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
