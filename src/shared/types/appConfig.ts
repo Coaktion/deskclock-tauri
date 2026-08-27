@@ -244,6 +244,30 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   mondayProjectsSyncLastDate: string;
   /** Falha do último ciclo da releitura, exibida no card de Projetos. */
   mondayProjectsLastSyncError: string;
+  // Provedor de LLM
+  /**
+   * Preset escolhido no catálogo (`src/infra/integrations/llm/providers.ts`), ou
+   * `"custom"`. Serve para a tela saber qual linha destacar; quem manda na
+   * chamada são as três chaves abaixo.
+   */
+  llmProviderId: string;
+  /**
+   * `baseUrl` e `model` são texto livre, e não uniões, porque **quem escolhe o
+   * provedor é o usuário**: o catálogo é sugestão semeada na tela, não a lista
+   * do que pode existir. Provedor compatível com OpenAI que ninguém previu —
+   * um Ollama noutra porta, um gateway interno — só precisa de uma URL, e
+   * modelo novo aparece no fim de semana sem release do DeskClock.
+   */
+  llmBaseUrl: string;
+  llmApiKey: string;
+  llmModel: string;
+  //
+  // Não há `llmDeskclockWorkspaceId`, e a ausência é deliberada: o §9.5 item 7
+  // (cada integração escolhe o seu workspace) não se aplica aqui. As outras
+  // integrações escrevem em sistemas externos e precisam saber de onde tirar as
+  // tarefas; o resumo descreve **as tarefas que o usuário está vendo na tela**,
+  // então segue o workspace ativo, como a própria tela de Tarefas. Dar-lhe um
+  // workspace próprio produziria resumo de tarefas que não estão à vista.
   // Workspaces
   /** Workspace ativo na UI. Vazio = cai no workspace "Padrão" da migration 011. */
   activeWorkspaceId: string;
