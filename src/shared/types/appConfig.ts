@@ -261,6 +261,21 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   llmBaseUrl: string;
   llmApiKey: string;
   llmModel: string;
+  /**
+   * O resumo do último dia trabalhado, guardado para não gastar uma requisição
+   * a cada visita à tela de Tarefas — o free tier do Groq dá 30 por minuto e
+   * 1000 por dia, e a tela é a que mais se abre no app.
+   *
+   * `llmSummaryDate` é o dia **resumido**, não o dia em que se gerou: é ele que
+   * a seção escreve no título, e é comparando-o com o último dia com tarefas
+   * que se sabe se o texto ainda vale.
+   *
+   * O workspace entra na chave porque o resumo descreve as tarefas daquele
+   * escopo: sem ele, trocar de workspace mostraria o texto do outro.
+   */
+  llmSummaryDate: string;
+  llmSummaryText: string;
+  llmSummaryWorkspaceId: string;
   //
   // Não há `llmDeskclockWorkspaceId`, e a ausência é deliberada: o §9.5 item 7
   // (cada integração escolhe o seu workspace) não se aplica aqui. As outras
