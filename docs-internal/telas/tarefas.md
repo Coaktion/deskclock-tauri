@@ -54,3 +54,26 @@
   - Expandir grupo → editar/excluir tarefa individual.
 
 ---
+
+#### Seção 5 — Resumo do último dia trabalhado
+
+Renderiza **entre os totalizadores e as entradas** — é leitura, não ação, então fica abaixo dos
+KPIs e acima da lista. (Sai depois da Seção 4 aqui no documento só para não renumerar o que já
+estava escrito.)
+
+- **Some por inteiro quando não há provedor de IA configurado.** Nada de faixa convidando a
+  conectar: quem apresenta a integração é o card da tela de Integrações. Some também quando não há
+  nenhum dia com tarefa concluída, ou quando o dia encontrado só tem tarefas sem nome.
+- **O título diz de que dia é o resumo**, porque em geral não é hoje: o recurso olha o último dia
+  com registro, e depois de fim de semana ou feriado esse dia não é ontem. "Hoje" e "ontem" viram
+  palavra; mais para trás, a data por extenso.
+- **Corpo:** um parágrafo de 2 a 4 frases gerado pelo provedor configurado, a partir dos nomes das
+  tarefas do dia (agrupadas), com projeto e duração. Enquanto gera, "Gerando resumo…".
+- **Botão de recarregar** no header do card, que ignora o cache. É o único caminho de nova
+  tentativa: erro não repete sozinho.
+- **Cache por dia resumido e por workspace**, nas chaves `llmSummaryDate`, `llmSummaryText` e
+  `llmSummaryWorkspaceId`. Numa segunda-feira o último dia trabalhado ainda é a sexta, o cache
+  continua valendo e nenhuma requisição sai.
+
+O contrato do provedor, os presets e o tratamento de erro estão em
+`docs-internal/integracoes/llm.md`.

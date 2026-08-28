@@ -108,3 +108,6 @@
 - Google Sheets e Google Agenda — `docs-internal/integracoes/google.md`
 - Clockify — `docs-internal/integracoes/clockify.md`
 - Monday.com — `docs-internal/integracoes/monday.md`
+- Provedor de IA (LLM) — `docs-internal/integracoes/llm.md`. **Não segue o contrato acima**: é
+  leitura, sem escrita externa, e o resumo acompanha o **workspace ativo** em vez de ter workspace
+  próprio — a exceção está explicada lá.
