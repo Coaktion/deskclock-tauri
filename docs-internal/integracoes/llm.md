@@ -2,7 +2,8 @@
 
 > Escrito em 2026-08-27, com a feature (`b2d0923`..`8212c19`).
 > **Revisado em 2026-08-28**, quando o resumo saiu da tela de Tarefas, passou a resumir vários
-> dias, trocou o cache de config por tabela e passou a ser disparado pela busca do Histórico.
+> dias, trocou o cache de config por tabela e passou a ser disparado pelo Histórico — hoje, pela
+> abertura da aba **Resumo**.
 > Contrato comum a todas as integrações: `docs-internal/integracoes/README.md`.
 > A tela que consome o resultado está em `docs-internal/telas/historico.md`.
 
@@ -11,9 +12,14 @@
 Ela produz **um parágrafo por dia de trabalho**, exibido na tela de **Histórico**, sobre os dias
 que a busca ali trouxe. É a única coisa que faz.
 
-**A busca do Histórico dispara a geração**, e é a tabela `day_summaries` que sustenta isso: o lote
-consulta o cache antes do provedor, então o dia já resumido volta do banco sem custo e só o dia
-novo vira requisição. Foi decisão do usuário em 2026-08-28, com o custo na mão.
+**Abrir a aba "Resumo" do Histórico dispara a geração**, sobre os dias que a busca trouxe, e é a
+tabela `day_summaries` que sustenta isso: o lote consulta o cache antes do provedor, então o dia já
+resumido volta do banco sem custo e só o dia novo vira requisição. Foi decisão do usuário em
+2026-08-28, com o custo na mão.
+
+> **O gatilho já foi a busca, sem aba** (mesmo dia). Passou para a aba porque a busca acontece o
+> tempo todo — inclusive de quem só quer conferir uma tarefa — e cada busca com dia novo virava
+> requisição. A aba é o pedido explícito que faltava, sem voltar a exigir um clique em "gerar".
 
 > **Ela revoga o "nada é gerado sozinho"** que esta seção afirmava desde 2026-08-27. O que aquela
 > regra protegia continua valendo em duas travas, e são elas que impedem o disparo automático de
@@ -268,12 +274,11 @@ de sobra. Nem todo provedor manda estes cabeçalhos, e ausente é ausente — a 
 `llmLastLimitsAt` (o instante). Elas existem porque **a cota só se conhece fazendo uma chamada** —
 nenhum dos onze provedores tem endpoint gratuito que a informe, e o teste de conexão não serve
 (§ acima). Sem persistir, o card ficaria vazio até a próxima geração, que só acontece com uma
-busca no Histórico sobre dia ainda não resumido. Quem grava é o `useDaySummaries`, e só quando
-`limits` veio. Não
-são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
+abertura da aba Resumo do Histórico sobre dia ainda não resumido. Quem grava é o
+`useDaySummaries`, e só quando `limits` veio. Não são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
 `SECRET_CONFIG_KEYS`.
 
-Como a medição só acontece quando uma busca gera dia novo, **ela quase sempre é uma foto do
+Como a medição só acontece quando a aba Resumo gera dia novo, **ela quase sempre é uma foto do
 passado, e o card diz isso**:
 `buildLlmQuotaView` (`src/presentation/sections/integrations/llm/llmQuota.ts`, no molde do
 `llmConnection.ts` ao lado) devolve as linhas montadas, o "há 3 dias" e um `stale` que acende

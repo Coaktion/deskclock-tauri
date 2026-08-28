@@ -11,6 +11,7 @@ import {
 } from "@presentation/components/ui";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useDaySummaries } from "@presentation/hooks/useDaySummaries";
 import { useHistory, type QuickFilter } from "@presentation/hooks/useHistory";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -37,10 +38,10 @@ const QUICK_LABELS: Record<QuickFilter, string> = {
   custom: "Personalizado",
 };
 
-type ResultTab = "tarefas" | "kpis";
+type ResultTab = "tarefas" | "kpis" | "resumo";
 
 /**
- * Duas opções, sempre à vista, uma sempre escolhida: é o contrato do
+ * Poucas opções, sempre à vista, uma sempre escolhida: é o contrato do
  * `SegmentedControl`, e não o da pílula — que expressa o "nenhum filtro
  * aplicado" que aqui não existe. É também o que separa, à vista, a troca de
  * recorte do resultado das pílulas de período logo acima.
@@ -49,6 +50,13 @@ const RESULT_TABS = [
   { value: "tarefas", label: "Tarefas" },
   { value: "kpis", label: "KPIs" },
 ] as const satisfies readonly { value: ResultTab; label: string }[];
+
+/**
+ * A aba do resumo por IA só existe com provedor configurado — a mesma regra que
+ * antes escondia a seção inteira. Quem apresenta a integração é o card da tela
+ * de Integrações; aqui uma aba vazia seria só um convite no meio do resultado.
+ */
+const SUMMARY_TAB = { value: "resumo", label: "Resumo" } as const;
 
 export function HistoryPage() {
   const {
@@ -106,6 +114,17 @@ export function HistoryPage() {
     () => (searched ? groups.map((g) => g.dateISO) : []),
     [searched, groups]
   );
+
+  // O resumo mora na página, e não na aba: a aba desmonta ao sair dela, e
+  // remontar refaria a rodada — o dia de hoje, que não vem do cache, seria pago
+  // de novo a cada ida e volta. `enabled` é o que segura a geração até o usuário
+  // abrir a aba.
+  const daySummaries = useDaySummaries(summaryDays, { enabled: tab === "resumo" });
+
+  const tabs = daySummaries.connected ? [...RESULT_TABS, SUMMARY_TAB] : RESULT_TABS;
+  // Perder o provedor com a aba aberta não pode deixar a tela num recorte que
+  // não existe mais.
+  const activeTab = tab === "resumo" && !daySummaries.connected ? "tarefas" : tab;
 
   function toggleSelectTask(id: string) {
     setSelectedIds((prev) => {
@@ -257,11 +276,6 @@ export function HistoryPage() {
           </div>
         )}
 
-        {/* O resumo por IA dos dias que a busca trouxe. Fica acima da barra de
-            abas porque descreve o resultado inteiro, e não um dos dois
-            recortes; sem provedor configurado ele não desenha nada. */}
-        <HistorySummarySection dateISOs={summaryDays} />
-
         {!searched ? (
           <p className="text-center text-fg-muted text-sm py-12">
             Use os filtros acima para buscar registros
@@ -274,16 +288,22 @@ export function HistoryPage() {
                 (z-50), que abrem dos filtros logo acima. */}
             <div className="sticky top-0 z-10 bg-canvas px-5 py-2.5 border-b border-border-subtle">
               <SegmentedControl
-                value={tab}
+                value={activeTab}
                 onChange={setTab}
-                options={RESULT_TABS}
+                options={tabs}
                 ariaLabel="Recorte do resultado"
                 className="w-max"
               />
             </div>
 
             <div className="p-5 flex flex-col gap-3">
-              {tab === "tarefas" ? (
+              {activeTab === "resumo" ? (
+                <HistorySummarySection
+                  {...daySummaries}
+                  dateISOs={summaryDays}
+                  onRetry={daySummaries.retry}
+                />
+              ) : activeTab === "tarefas" ? (
                 <HistoryTasksTab
                   groups={groups}
                   allTasks={allTasks}

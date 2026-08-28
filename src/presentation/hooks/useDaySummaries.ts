@@ -44,8 +44,15 @@ const EMPTY: DaySummariesState = { summaries: [], errors: [], skipped: [], progr
  * **Hoje é o único dia que não vem do cache.** O dia ainda está acontecendo, e o
  * filtro padrão da tela é "Hoje": guardar o resumo das 9h deixaria a seção
  * afirmando a manhã pelo resto do dia.
+ *
+ * **`enabled` é quem segura a rodada até o usuário abrir a aba Resumo.** Ele
+ * existe porque o hook mora na página, e não na seção: desmontar a seção ao
+ * trocar de aba perderia o estado, e voltar para ela pagaria de novo pelo dia de
+ * hoje — o único que não vem do cache. Desligado, o hook não marca a chave da
+ * rodada, então ligar depois gera o conjunto que estiver na tela.
  */
-export function useDaySummaries(dateISOs: string[]) {
+export function useDaySummaries(dateISOs: string[], options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const { taskRepo, daySummaryRepo } = useRepositories();
   const { createLlmApi } = useIntegrations();
   const config = useAppConfig();
@@ -113,9 +120,10 @@ export function useDaySummaries(dateISOs: string[]) {
   const lastRunKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Sem provedor a chave **não** é marcada: a config carrega depois da
-    // primeira renderização, e marcá-la aqui perderia a rodada da busca inicial.
-    if (!connected) return;
+    // Sem provedor, ou com a aba Resumo fechada, a chave **não** é marcada: a
+    // config carrega depois da primeira renderização, e a aba abre depois da
+    // busca — marcá-la aqui perderia a rodada do conjunto que está na tela.
+    if (!connected || !enabled) return;
     if (lastRunKeyRef.current === runKey) return;
     lastRunKeyRef.current = runKey;
     if (dateISOs.length === 0) {
@@ -127,7 +135,7 @@ export function useDaySummaries(dateISOs: string[]) {
       return;
     }
     void generate();
-  }, [connected, runKey, dateISOs.length, generate]);
+  }, [connected, enabled, runKey, dateISOs.length, generate]);
 
   return {
     ...state,

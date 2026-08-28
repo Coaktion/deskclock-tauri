@@ -36,23 +36,32 @@
   rolador único, e as pílulas de período, a busca e o painel avançado são os primeiros filhos
   dele. Antes eram irmãos `shrink-0` da área de resultado, presos ao topo.
 
-#### Seção — Resumo por IA
+#### Aba — Resumo por IA
 
-Fica **acima da barra de abas**, dentro do rolador único: ela descreve o resultado inteiro, e não
-um dos dois recortes. `sections/history/HistorySummarySection.tsx`, com toda a lógica em
-`presentation/hooks/useDaySummaries.ts`.
+É a **terceira aba do resultado**, ao lado de Tarefas e KPIs.
+`sections/history/HistorySummarySection.tsx` desenha o corpo; toda a lógica está em
+`presentation/hooks/useDaySummaries.ts`, chamado **pela página**, não pela aba.
 
-- **Some por inteiro quando não há provedor de IA configurado** (`isLlmConnected`). Nada de faixa
-  convidando a conectar: quem apresenta a integração é o card da tela de Integrações.
+> **Já foi seção fixa acima da barra de abas, disparada pela busca** (2026-08-28). Virou aba
+> porque a geração é paga: acima das abas ela rodava em toda busca, inclusive para quem só queria
+> conferir uma tarefa. Como aba, quem paga é quem pede.
+
+- **A aba não existe quando não há provedor de IA configurado** (`isLlmConnected`). Nada de faixa
+  convidando a conectar: quem apresenta a integração é o card da tela de Integrações. Perder o
+  provedor com a aba aberta devolve a tela para Tarefas.
 - **O `LlmLogo` fica à esquerda do título**, no slot `leading` do `SectionCard`, em 14 px — o
   degrau da escala de ícones, e não os 20 da placa de Integrações, que é caixa de ladrilho. É a
   mesma marca dali, e é ela que atribui o parágrafo à integração que o produziu. Alarga o `leading`
   do primitivo, que até aqui só hospedava **controle** (a caixa que seleciona o dia): a marca cabe
   ali pela mesma razão que o controle — colada ao título ela atribui; no canto direito, junto das
   ações, seria enfeite.
-- **A busca dispara a geração**, sem clique. Terminada a busca, o lote roda sobre os dias do
-  resultado: quem já está em `day_summaries` volta do banco e aparece na hora, quem falta é gerado.
-  É o cache que torna isso viável — rebuscar a mesma semana não gasta requisição nenhuma.
+- **Abrir a aba dispara a geração**, sem clique. O lote roda sobre os dias do resultado da busca:
+  quem já está em `day_summaries` volta do banco e aparece na hora, quem falta é gerado. É o cache
+  que torna isso viável — reabrir a aba sobre a mesma semana não gasta requisição nenhuma.
+- **O estado do resumo mora na página, não na aba** (`useDaySummaries` é chamado no `HistoryPage`,
+  com `enabled: tab === "resumo"`). A aba desmonta ao sair dela; se o hook morasse lá, voltar a
+  ela refaria a rodada — e **hoje**, o único dia que não vem do cache, seria pago a cada ida e
+  volta entre as abas.
 - **Cada conjunto de dias roda uma vez** (chave `workspace|dias`, em `useDaySummaries`). Sem isso o
   recarregamento por `TASKS_CHANGED` — que refaz a busca a cada tarefa salva em qualquer janela —
   viraria uma segunda rodada paga sobre os mesmos dias.
@@ -81,7 +90,7 @@ um dos dois recortes. `sections/history/HistorySummarySection.tsx`, com toda a l
   clique.
 
 #### Abas do resultado
-O resultado se divide em duas abas, num `SegmentedControl` **grudado no topo do rolador**
+O resultado se divide em abas, num `SegmentedControl` **grudado no topo do rolador**
 (`sticky top-0`, fundo `bg-canvas`, `z-10`) — sem fundo opaco ele deixaria o conteúdo passar por
 baixo do texto. É `SegmentedControl` e não pílula porque são duas opções, sempre à vista, com uma
 sempre escolhida; e porque, logo abaixo das pílulas de período, um segundo grupo de pílulas
@@ -91,6 +100,8 @@ confundiria filtrar com trocar de recorte.
   `sections/history/HistoryTasksTab.tsx`.
 - **KPIs** — a linha do tempo, a distribuição por projeto e os quatro totalizadores.
   `sections/history/HistoryKpisTab.tsx`.
+- **Resumo** — o resumo por IA dos dias da busca (§ acima). Só aparece com provedor configurado, e
+  é a única aba que dispara trabalho ao ser aberta.
 
 A aba é `useState` da página, e o estado da seleção em lote também: **trocar de aba não refaz a
 busca nem desmarca o que estava marcado.**
