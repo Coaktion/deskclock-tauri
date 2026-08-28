@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Task } from "@domain/entities/Task";
+import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
@@ -18,7 +19,7 @@ import {
 } from "@shared/utils/time";
 import type { UUID } from "@shared/types";
 
-export type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
+export type QuickFilter = "today" | "lastDay" | "7days" | "30days" | "month" | "custom";
 
 export interface HistoryFilters {
   quick: QuickFilter;
@@ -36,14 +37,37 @@ export interface DayGroup {
   totalSeconds: number;
 }
 
-function quickToRange(
-  quick: QuickFilter,
-  startDate: string,
-  endDate: string
-): { start: string; end: string } {
+type DayRange = { start: string; end: string };
+
+/**
+ * O intervalo de um filtro rápido — `null` quando ele não tem dia nenhum a
+ * mostrar, que é o caso de "Dia anterior" num banco sem registro passado.
+ *
+ * **"Dia anterior" não é "ontem".** Ele resolve para o último dia com tarefa
+ * concluída **antes de hoje**, e é isso que o faz atravessar fim de semana,
+ * feriado e férias: na segunda de manhã ele continua sendo a sexta, e continua
+ * sendo a sexta mesmo depois de hoje ganhar registros.
+ */
+async function resolveRange(
+  repo: ITaskRepository,
+  filters: HistoryFilters,
+  workspaceId: string
+): Promise<DayRange | null> {
+  if (filters.quick !== "lastDay") {
+    return quickToRange(filters.quick, filters.startDate, filters.endDate);
+  }
+  const day = await repo.findLastDayWithCompletedTasks(workspaceId, { before: todayISO() });
+  return day ? { start: day, end: day } : null;
+}
+
+function quickToRange(quick: QuickFilter, startDate: string, endDate: string): DayRange {
   const today = todayISO();
   switch (quick) {
     case "today":
+      return { start: today, end: today };
+    case "lastDay":
+      // Resolvido por `resolveRange`, que alcança o repositório. O caso está
+      // aqui porque o `switch` é exaustivo e o compilador o cobra.
       return { start: today, end: today };
     case "7days":
       return { start: addDaysISO(today, -6), end: today };
@@ -99,13 +123,24 @@ export function useHistory() {
     count: 0,
   });
   const [searched, setSearched] = useState(false);
+  // O filtro da busca que **rodou**, não o que está na tela: o painel avançado
+  // muda `filters.quick` sem buscar, e a mensagem de vazio descreve o resultado
+  // que está à vista.
+  const [searchedQuick, setSearchedQuick] = useState<QuickFilter>(INITIAL_FILTERS.quick);
 
   const search = useCallback(
     async (f: HistoryFilters) => {
-      const { start, end } = quickToRange(f.quick, f.startDate, f.endDate);
+      const range = await resolveRange(taskRepo, f, workspaceId);
+      setSearchedQuick(f.quick);
+      if (!range) {
+        setGroups([]);
+        setTotals({ totalSeconds: 0, billableSeconds: 0, nonBillableSeconds: 0, count: 0 });
+        setSearched(true);
+        return;
+      }
       const tasks = await searchTasks(taskRepo, {
-        startISO: startOfDayISO(start),
-        endISO: endOfDayISO(end),
+        startISO: startOfDayISO(range.start),
+        endISO: endOfDayISO(range.end),
         name: f.name || undefined,
         projectId: f.projectId ?? undefined,
         categoryId: f.categoryId ?? undefined,
@@ -211,6 +246,7 @@ export function useHistory() {
     groups,
     totals,
     searched,
+    searchedQuick,
     search,
     updateFilter,
     setQuick,

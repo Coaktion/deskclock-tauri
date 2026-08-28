@@ -1,5 +1,4 @@
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import { DailySummarySection } from "@presentation/components/DailySummarySection";
 import { Omnibox } from "@presentation/components/Omnibox";
 import { TodayEntriesSection } from "@presentation/components/TodayEntriesSection";
 import { TotalsSection } from "@presentation/components/TotalsSection";
@@ -98,10 +97,6 @@ export function TasksPage({
             weekDays={totals.weekDays}
           />
         </div>
-
-        {/* O resumo é leitura: fica abaixo dos KPIs e acima da lista. Sem
-            provedor configurado ele não desenha nada — nem o invólucro. */}
-        <DailySummarySection />
 
         {/* A seção cresce só até caber o que lista. O `shrink-0` é o que a
             impede de ser espremida quando o corpo passa a rolar. */}

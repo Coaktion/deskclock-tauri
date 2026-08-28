@@ -18,12 +18,19 @@ import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { ExportModal } from "@presentation/modals/ExportModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { HistoryKpisTab } from "@presentation/sections/history/HistoryKpisTab";
+import { HistorySummarySection } from "@presentation/sections/history/HistorySummarySection";
 import { HistoryTasksTab } from "@presentation/sections/history/HistoryTasksTab";
+import { emptyResultMessage } from "@presentation/sections/history/emptyResultMessage";
 import { FileDown, Filter, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const QUICK_LABELS: Record<QuickFilter, string> = {
   today: "Hoje",
+  // "Último trabalhado", e não "Dia anterior": o rótulo antigo prometia ontem,
+  // e o salto para a sexta — ou o resultado vazio — parecia defeito. O filtro
+  // resolve para o último dia com registro **antes de hoje**, e é isso que o faz
+  // atravessar fim de semana, feriado e férias.
+  lastDay: "Último trabalhado",
   "7days": "7 dias",
   "30days": "30 dias",
   month: "Este mês",
@@ -49,6 +56,7 @@ export function HistoryPage() {
     groups,
     totals,
     searched,
+    searchedQuick,
     search,
     updateFilter,
     setQuick,
@@ -92,6 +100,12 @@ export function HistoryPage() {
   }
 
   const allTasks = groups.flatMap((g) => g.tasks);
+  // Sem busca feita não há dia a resumir, e a seção some. O memo estabiliza a
+  // identidade do array: ele é dependência do callback de geração.
+  const summaryDays = useMemo(
+    () => (searched ? groups.map((g) => g.dateISO) : []),
+    [searched, groups]
+  );
 
   function toggleSelectTask(id: string) {
     setSelectedIds((prev) => {
@@ -155,11 +169,13 @@ export function HistoryPage() {
           onKeyDown={handleKeyDown}
           className="flex items-center gap-1.5 px-4 py-2.5 border-b border-border-subtle flex-wrap"
         >
-          {(["today", "7days", "30days", "month", "custom"] as QuickFilter[]).map((q) => (
-            <FilterPill key={q} active={filters.quick === q} onClick={() => handleQuick(q)}>
-              {QUICK_LABELS[q]}
-            </FilterPill>
-          ))}
+          {(["today", "lastDay", "7days", "30days", "month", "custom"] as QuickFilter[]).map(
+            (q) => (
+              <FilterPill key={q} active={filters.quick === q} onClick={() => handleQuick(q)}>
+                {QUICK_LABELS[q]}
+              </FilterPill>
+            )
+          )}
           <SearchInput
             value={filters.name}
             onChange={(v) => updateFilter("name", v)}
@@ -241,7 +257,10 @@ export function HistoryPage() {
           </div>
         )}
 
-        {/* Aqui entra o resumo do período — etapa própria. */}
+        {/* O resumo por IA dos dias que a busca trouxe. Fica acima da barra de
+            abas porque descreve o resultado inteiro, e não um dos dois
+            recortes; sem provedor configurado ele não desenha nada. */}
+        <HistorySummarySection dateISOs={summaryDays} />
 
         {!searched ? (
           <p className="text-center text-fg-muted text-sm py-12">
@@ -273,6 +292,7 @@ export function HistoryPage() {
                   selectMode={selectMode}
                   selectedIds={selectedIds}
                   canMoveToWorkspace={workspaces.length > 1}
+                  emptyMessage={emptyResultMessage(searchedQuick)}
                   onEnterSelectMode={() => setSelectMode(true)}
                   onExitSelectMode={exitSelectMode}
                   onToggleSelectTask={toggleSelectTask}

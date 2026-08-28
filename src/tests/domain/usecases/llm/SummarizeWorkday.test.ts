@@ -154,6 +154,32 @@ describe("summarizeWorkday", () => {
     expect(result?.limits).toBeUndefined();
   });
 
+  it("com `dateISO`, resume o dia pedido sem procurar o último com registro", async () => {
+    const repo = makeRepo(DAY, [makeTask()]);
+    const llm = makeLlm();
+
+    const result = await summarizeWorkday(
+      { taskRepo: repo, llm },
+      { dateISO: "2026-08-20", projectNameById }
+    );
+
+    expect(result?.dateISO).toBe("2026-08-20");
+    expect(repo.findLastDayWithCompletedTasks).not.toHaveBeenCalled();
+  });
+
+  it("com `dateISO`, ignora a tarefa que não está concluída", async () => {
+    const repo = makeRepo(DAY, [makeTask({ status: "running", endTime: null })]);
+    const llm = makeLlm();
+
+    const result = await summarizeWorkday(
+      { taskRepo: repo, llm },
+      { dateISO: "2026-08-20", projectNameById }
+    );
+
+    expect(result).toBeNull();
+    expect(llm.complete).not.toHaveBeenCalled();
+  });
+
   it("propaga o erro do LLM — quem distingue chave inválida de rate limit é a tela", async () => {
     const llm: ILlmApi = {
       complete: vi.fn(async () => {

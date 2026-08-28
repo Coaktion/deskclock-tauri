@@ -262,21 +262,11 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   llmBaseUrl: string;
   llmApiKey: string;
   llmModel: string;
-  /**
-   * O resumo do último dia trabalhado, guardado para não gastar uma requisição
-   * a cada visita à tela de Tarefas — o free tier do Groq dá 30 por minuto e
-   * 1000 por dia, e a tela é a que mais se abre no app.
-   *
-   * `llmSummaryDate` é o dia **resumido**, não o dia em que se gerou: é ele que
-   * a seção escreve no título, e é comparando-o com o último dia com tarefas
-   * que se sabe se o texto ainda vale.
-   *
-   * O workspace entra na chave porque o resumo descreve as tarefas daquele
-   * escopo: sem ele, trocar de workspace mostraria o texto do outro.
-   */
-  llmSummaryDate: string;
-  llmSummaryText: string;
-  llmSummaryWorkspaceId: string;
+  //
+  // O resumo gerado não mora mais aqui: ele é um por dia e por workspace, e a
+  // config guarda **um** de cada chave — o Histórico resume vários dias de uma
+  // busca, e cada dia novo sobrescreveria o anterior. Hoje ele vive na tabela
+  // `day_summaries` (migration 018).
   /**
    * A última cota lida dos cabeçalhos do provedor, e o instante em que se leu.
    *

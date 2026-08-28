@@ -4,6 +4,7 @@ import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { getLastDayWithTasks } from "@domain/usecases/tasks/GetLastDayWithTasks";
+import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { buildWorkdayPrompt, type WorkdayTaskLine } from "./buildWorkdayPrompt";
 
 export interface SummarizeWorkdayDeps {
@@ -14,6 +15,14 @@ export interface SummarizeWorkdayDeps {
 export interface SummarizeWorkdayOptions {
   /** Omitido resume todos os workspaces, como em `getLastDayWithTasks`. */
   workspaceId?: string;
+  /**
+   * O dia a resumir. Omitido, resume o **último** dia com registro.
+   *
+   * Existe porque a geração em lote resume dias que ela mesma escolheu — os da
+   * busca do Histórico —, e sem isto ela teria de refazer a busca de tarefas e
+   * o agrupamento por conta própria para chegar ao mesmo prompt.
+   */
+  dateISO?: string;
   /**
    * Nome do projeto por id, injetado. O use case não pode alcançar o
    * repositório de projeto sem que `domain/` passe a depender de quem o
@@ -31,6 +40,15 @@ export interface WorkdaySummary {
    * seria pior do que não mostrar nada.
    */
   limits?: LlmRateLimits;
+}
+
+async function resolveDay(
+  repo: ITaskRepository,
+  options: SummarizeWorkdayOptions
+): Promise<{ dateISO: string; tasks: Task[] } | null> {
+  if (options.dateISO === undefined) return getLastDayWithTasks(repo, options.workspaceId);
+  const tasks = await getTasksForDate(repo, options.dateISO, options.workspaceId);
+  return { dateISO: options.dateISO, tasks: tasks.filter((task) => task.status === "completed") };
 }
 
 function namedTasks(tasks: Task[]): Task[] {
@@ -63,7 +81,7 @@ export async function summarizeWorkday(
   deps: SummarizeWorkdayDeps,
   options: SummarizeWorkdayOptions
 ): Promise<WorkdaySummary | null> {
-  const day = await getLastDayWithTasks(deps.taskRepo, options.workspaceId);
+  const day = await resolveDay(deps.taskRepo, options);
   if (!day) return null;
 
   const lines = groupTasks(namedTasks(day.tasks)).map((group) =>

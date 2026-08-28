@@ -24,6 +24,12 @@ interface HistoryTasksTabProps {
   selectedIds: Set<string>;
   /** Workspace de destino existe: com um só, mover não é escolha. */
   canMoveToWorkspace: boolean;
+  /**
+   * O que dizer quando o resultado é vazio. Vem de fora porque o motivo do
+   * vazio é do filtro, e a aba foi extraída justamente para não guardar estado
+   * de filtro.
+   */
+  emptyMessage: string;
   onEnterSelectMode: () => void;
   onExitSelectMode: () => void;
   onToggleSelectTask: (id: string) => void;
@@ -48,6 +54,7 @@ export function HistoryTasksTab({
   selectMode,
   selectedIds,
   canMoveToWorkspace,
+  emptyMessage,
   onEnterSelectMode,
   onExitSelectMode,
   onToggleSelectTask,
@@ -59,7 +66,7 @@ export function HistoryTasksTab({
   onToggleBillable,
 }: HistoryTasksTabProps) {
   if (groups.length === 0) {
-    return <p className="text-center text-fg-muted text-sm py-12">Nenhum registro encontrado</p>;
+    return <p className="text-center text-fg-muted text-sm py-12">{emptyMessage}</p>;
   }
 
   const allSelected = allTasks.length > 0 && selectedIds.size >= allTasks.length;

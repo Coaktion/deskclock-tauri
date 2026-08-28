@@ -1,19 +1,27 @@
 # Provedor de IA (LLM)
 
 > Escrito em 2026-08-27, com a feature (`b2d0923`..`8212c19`).
+> **Revisado em 2026-08-28**, quando o resumo saiu da tela de Tarefas, passou a resumir vários
+> dias e trocou o cache de config por tabela.
 > Contrato comum a todas as integrações: `docs-internal/integracoes/README.md`.
-> A tela que consome o resultado está em `docs-internal/telas/tarefas.md`.
+> A tela que consome o resultado está em `docs-internal/telas/historico.md`.
 
 ## O que a integração faz — e o que ela não faz
 
-Ela produz **um parágrafo** descrevendo o último dia com trabalho registrado, exibido na tela de
-Tarefas. É a única coisa que faz.
+Ela produz **um parágrafo por dia de trabalho**, exibido na tela de **Histórico**, sobre os dias
+que a busca ali trouxe. É a única coisa que faz.
+
+**A geração é sempre explícita.** Não há resumo automático, em nenhuma circunstância: o único
+caminho é o botão "Gerar" da seção. Existiu um resumo automático do último dia trabalhado na tela
+de Tarefas, e ele foi removido em 2026-08-28 — cada dia é uma requisição paga, e uma tela que
+resume ao abrir gasta a cota de quem só queria conferir as horas. Quem for "completar" isto com
+uma geração na montagem está desfazendo a decisão.
 
 **É leitura, sem escrita externa.** Não há envio de horas, não há import, não há nada gravado no
 provedor. O que sai do app é o que `buildWorkdayPrompt` monta: **nome da tarefa, nome do projeto e
 duração**, das tarefas concluídas daquele dia, já agrupadas. Não vão categoria, faturamento,
-cliente, horário, id, nem o nome do usuário. O que volta é texto, guardado em `AppConfig` e
-mostrado na tela — nenhuma tarefa é criada ou alterada a partir dele.
+cliente, horário, id, nem o nome do usuário. O que volta é texto, guardado na tabela
+`day_summaries` e mostrado na tela — nenhuma tarefa é criada ou alterada a partir dele.
 
 **Não é uma integração de sincronização**, e por isso ela não segue metade do roteiro do §9.5 do
 `docs-internal/guardrails.md`: não há `ISyncStrategy`, não há entrada em `AUTO_SYNC_INTEGRATIONS`,
@@ -164,25 +172,45 @@ O mapeamento final (`toLlmError`) produz cinco erros tipados, em `errors.ts`:
 
 ---
 
-## Rate limits: por que o cache existe
+## Rate limits: por que existem o teto de dias e a tabela
 
 O free tier do Groq, para `openai/gpt-oss-20b`, dá **30 requisições por minuto, 1000 por dia, 8 mil
-tokens por minuto e 200 mil por dia**. O teto que aperta é o de **1000 por dia**, e ele é generoso
-para *uma* geração diária e apertado para uma geração *por abertura de tela* — Tarefas é a tela que
-mais se abre no app.
+tokens por minuto e 200 mil por dia**.
 
 > **Os modelos Llama saíram do free tier do Groq.** Tutorial ou exemplo mais antigo vai sugerir
 > `llama-3.x-…` como o modelo grátis do Groq; hoje eles são pagos, e a chave do free tier responde
 > erro. É por isso que o preset sugere `openai/gpt-oss-20b` e não um Llama. Quem for "corrigir" o
 > sugerido a partir de um tutorial está desfazendo isto.
 
-**O cache resolve os dois tetos ao mesmo tempo**: uma geração por dia resumido e por workspace usa
-uma requisição por dia, contra as 1000, e alguns milhares de tokens contra os 200 mil. E é a
-**cadência**, não só o volume, que ele protege — 30 RPM cai fácil com a tela reabrindo em sequência.
+**Hoje o teto que aperta é outro: o de 8 mil tokens por minuto.** Foi o que mudou quando o resumo
+passou a ser de vários dias — cinco chamadas em sequência num clique só disputam a mesma janela de
+minuto, enquanto uma geração por dia nunca chegava perto dela.
 
-**Erro não repete sozinho** (`useDailySummary`): a mensagem fica e o ciclo para. Insistir contra um
+**Duas travas seguram isso, e as duas moram no use case de lote**
+(`domain/usecases/llm/SummarizeWorkdays.ts`):
+
+- **`MAX_SUMMARY_DAYS = 5`, o teto de dias por geração.** Cada dia custa ~1k tokens entre prompt,
+  lista e resposta; cinco chamadas em sequência ficam confortavelmente abaixo dos 8k por minuto, e
+  o dobro disso encostaria no limite — fazendo o lote falhar no meio, que é o pior lugar para
+  falhar. E cinco dias são uma semana de trabalho: o recorte que alguém de fato quer ler de uma
+  vez. Vindo mais dias, entram os **mais recentes**, e o botão avisa isso antes do clique.
+- **Sequencial, nunca em paralelo.** Cinco chamadas disparadas juntas gastam a janela do minuto de
+  uma vez só e o provedor recusa todas menos as primeiras; em série, elas se espalham pelo tempo
+  que cada resposta leva.
+
+**A tabela é o que impede pagar duas vezes pelo mesmo dia.** Antes de chamar o provedor, o lote
+consulta `day_summaries` e pula o dia que já tem texto. Um resumo de um dia é fato que não muda — o
+dia acabou, e as tarefas dele também —, e é essa economia que torna o teto de 5 suportável: a
+segunda busca sobre a mesma semana não gasta requisição nenhuma.
+
+**Erro não repete sozinho** (`useDaySummaries`): a mensagem fica e o ciclo para. Insistir contra um
 429 é o pior que um cliente de rate limit pode fazer; quem decide tentar de novo é o usuário, pelo
-botão de recarregar.
+mesmo botão.
+
+**E o lote para no primeiro 429.** Os dias que sobraram voltam em `skipped` — "não gerados" —, e
+não como o mesmo erro repetido em cada um. Falha de **um** dia, essa sim, não derruba os outros: o
+lote devolve, por dia, o que deu certo (`summaries`) e o que falhou (`failed`), no mesmo espírito
+do `TaskSendOutcome` (`docs-internal/integracoes/README.md`).
 
 O **teste de conexão** da tela é o `GET /models`, e não uma completação: é a requisição mais barata
 que existe — **não consome tokens** — e ainda preenche o seletor de modelos.
@@ -201,7 +229,8 @@ x-ratelimit-limit-tokens     x-ratelimit-remaining-tokens     x-ratelimit-reset-
 
 `parseRateLimits` (em `OpenAiCompatClient.ts`) os transforma no `LlmRateLimits` de
 `src/shared/types/llm.ts` — seis campos, **todos opcionais** —, que sobe pelo `complete()` (hoje
-`{ text, limits? }`) e pelo `summarizeWorkday`. Cabeçalho ausente, vazio ou não numérico vira
+`{ text, limits? }`), pelo `summarizeWorkday` e pelo lote, que guarda a **última** leitura da
+rodada. Cabeçalho ausente, vazio ou não numérico vira
 **campo ausente**, nunca `NaN` nem `0`: um zero inventado escreveria "restam 0" para quem tem cota
 de sobra. Nem todo provedor manda estes cabeçalhos, e ausente é ausente — a área some do card, sem
 "—" nem convite.
@@ -222,12 +251,13 @@ de sobra. Nem todo provedor manda estes cabeçalhos, e ausente é ausente — a 
 **A medição é persistida**, em duas chaves de `AppConfig`: `llmLastLimits` (o objeto) e
 `llmLastLimitsAt` (o instante). Elas existem porque **a cota só se conhece fazendo uma chamada** —
 nenhum dos onze provedores tem endpoint gratuito que a informe, e o teste de conexão não serve
-(§ acima). Sem persistir, o card ficaria vazio até o próximo resumo, que é **um por dia**. Quem
-grava é o `useDailySummary`, junto das chaves de cache do resumo, e só quando `limits` veio. Não
+(§ acima). Sem persistir, o card ficaria vazio até a próxima geração, que é sempre um clique do
+usuário. Quem grava é o `useDaySummaries`, e só quando `limits` veio. Não
 são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
 `SECRET_CONFIG_KEYS`.
 
-Como a medição é de uma vez por dia, **ela quase sempre é uma foto do passado, e o card diz isso**:
+Como a medição só acontece quando alguém manda gerar, **ela quase sempre é uma foto do passado, e
+o card diz isso**:
 `buildLlmQuotaView` (`src/presentation/sections/integrations/llm/llmQuota.ts`, no molde do
 `llmConnection.ts` ao lado) devolve as linhas montadas, o "há 3 dias" e um `stale` que acende
 acima de **uma hora** — o balde mais curto que os provedores reportam renova em minutos, então
@@ -276,9 +306,9 @@ aplica.**
 > board do cliente recebia as horas do trabalho pessoal, e o import nascia em qualquer workspace que
 > estivesse aberto na hora do ciclo — defeitos silenciosos, num job de fundo.
 >
-> O resumo não escreve em lugar nenhum e não roda em ciclo. Ele **descreve as tarefas que o usuário
-> está vendo na tela**, na mesma tela em que elas estão, e por isso segue o **workspace ativo** —
-> como a própria lista de Entradas logo abaixo dele. Dar-lhe workspace próprio produziria o
+> O resumo não escreve em sistema externo e não roda em ciclo. Ele **descreve as tarefas que o
+> usuário está vendo na tela**, na mesma tela em que elas estão, e por isso segue o **workspace
+> ativo** — como a própria lista de entradas logo abaixo dele. Dar-lhe workspace próprio produziria o
 > parágrafo de um escopo ao lado da lista de outro: o texto falaria de tarefas que não estão à
 > vista, e ninguém teria como perceber que são de outro lugar.
 >
@@ -286,9 +316,9 @@ aplica.**
 > completude. A Agenda tem uma exceção parecida, pelo mesmo tipo de motivo (§ em
 > `docs-internal/integracoes/google.md`).
 
-O workspace ativo entra em **três** lugares, e nos três é o mesmo: na busca do último dia
-(`getLastDayWithTasks`), na busca das tarefas daquele dia, e na **chave do cache**. Sem ele na
-chave, trocar de workspace mostraria o texto do outro.
+O workspace ativo entra em **três** lugares, e nos três é o mesmo: na busca das tarefas de cada
+dia, na gravação do resumo e na consulta da tabela. Ele é parte da **chave natural** de
+`day_summaries` — sem ele ali, trocar de workspace mostraria o texto do outro.
 
 ---
 
@@ -302,21 +332,16 @@ chave, trocar de workspace mostraria o texto do outro.
 | `llmBaseUrl` | destino. Texto livre; vazio cai no `baseUrl` do preset |
 | `llmApiKey` | a chave. Está em `SECRET_CONFIG_KEYS` (`src/shared/constants/secretConfigKeys.ts`), então **é expurgada do backup no Drive** |
 | `llmModel` | id do modelo. Texto livre — o seletor sugere, o campo decide |
-| `llmSummaryDate` | **o dia resumido, não o dia em que se gerou** |
-| `llmSummaryText` | o parágrafo |
-| `llmSummaryWorkspaceId` | o workspace a que o parágrafo se refere |
 | `llmLastLimits` | a última cota lida dos cabeçalhos (`LlmRateLimits`); **não é segredo** |
 | `llmLastLimitsAt` | o instante daquela leitura — é o que deixa o card dizer que ela envelheceu |
 
-> **`llmSummaryDate` é o dia resumido, e a distinção é a feature inteira do cache.** Numa
-> segunda-feira, o último dia com trabalho continua sendo a sexta: o resumo dela **não envelheceu**, e
-> regenerá-lo gastaria uma das 1000 requisições diárias para produzir o mesmo parágrafo. Fosse a data
-> de geração, o cache expiraria à meia-noite e o app pediria de novo, todo dia, o resumo do mesmo dia.
-> É também `llmSummaryDate` que o título da seção escreve.
->
-> A validação está em `isDailySummaryCacheValid`
-> (`src/presentation/hooks/dailySummary.ts`): dia igual, workspace igual e **texto não vazio** — o
-> vazio nunca vale, ou uma falha antiga passaria por cache.
+> **O texto do resumo não mora mais aqui.** As chaves `llmSummaryDate`, `llmSummaryText` e
+> `llmSummaryWorkspaceId` foram removidas em 2026-08-28, junto com `isDailySummaryCacheValid`: a
+> config guarda **um** de cada chave, e o Histórico resume vários dias de uma busca — cada dia novo
+> sobrescreveria o anterior, e o mesmo dia seria regerado toda vez que aparecesse noutra busca.
+> Hoje o lugar é a tabela `day_summaries` (migration 018, § `docs-internal/modelo-de-dados.md`),
+> cuja chave natural é o par dia+workspace. **As duas chaves de cota ficam** — elas são de cota,
+> não de resumo.
 
 **Desconectar limpa a chave e o modelo, os dois.** Só a chave deixaria o card afirmando conexão,
 porque a chave não entra na conta do que é "conectado" (§ acima).

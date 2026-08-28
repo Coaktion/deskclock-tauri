@@ -2,7 +2,7 @@ import { getDb } from "./db";
 import { loadCustomValues, saveCustomValues } from "./customValues";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task, TaskStatus } from "@domain/entities/Task";
-import { localDateISO } from "@shared/utils/time";
+import { localDateISO, startOfDayISO } from "@shared/utils/time";
 
 interface TaskRow {
   id: string;
@@ -150,18 +150,31 @@ export class TaskRepository implements ITaskRepository {
    * é a ordem cronológica. E como o dia local cresce junto com o instante, o dia do
    * maior `start_time` é o último dia local com registro — sem precisar varrer as
    * linhas para converter cada uma.
+   *
+   * O corte de `options.before` é por **dia local**, e por isso ele vira instante com
+   * `startOfDayISO` antes de entrar na query — como o `findByDateRange` já faz.
+   * Comparar `start_time` cru contra um `AAAA-MM-DD` compararia um texto de 24
+   * caracteres com um de 10 e recortaria o dia errado em todo fuso diferente de UTC.
    */
-  async findLastDayWithCompletedTasks(workspaceId?: string): Promise<string | null> {
+  async findLastDayWithCompletedTasks(
+    workspaceId?: string,
+    options?: { before?: string }
+  ): Promise<string | null> {
     const db = await getDb();
-    const rows = workspaceId
-      ? await db.select<LastCompletedRow[]>(
-          `SELECT MAX(start_time) AS last_start FROM tasks
-           WHERE status = 'completed' AND workspace_id = $1`,
-          [workspaceId]
-        )
-      : await db.select<LastCompletedRow[]>(
-          "SELECT MAX(start_time) AS last_start FROM tasks WHERE status = 'completed'"
-        );
+    const conditions = ["status = 'completed'"];
+    const params: string[] = [];
+    if (workspaceId) {
+      params.push(workspaceId);
+      conditions.push(`workspace_id = $${params.length}`);
+    }
+    if (options?.before) {
+      params.push(startOfDayISO(options.before));
+      conditions.push(`start_time < $${params.length}`);
+    }
+    const rows = await db.select<LastCompletedRow[]>(
+      `SELECT MAX(start_time) AS last_start FROM tasks WHERE ${conditions.join(" AND ")}`,
+      params
+    );
     const lastStart = rows[0]?.last_start;
     return lastStart ? localDateISO(lastStart) : null;
   }

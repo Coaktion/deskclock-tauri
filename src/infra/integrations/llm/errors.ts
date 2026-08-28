@@ -1,3 +1,5 @@
+import { LLM_RATE_LIMIT_ERROR_NAME } from "@domain/integrations/ILlmApi";
+
 export class LlmAuthError extends Error {
   constructor(message = "Chave de API inválida ou revogada. Revise a configuração.") {
     super(message);
@@ -15,7 +17,7 @@ export class LlmRateLimitError extends Error {
         ? "Limite de requisições atingido. Tente novamente em alguns minutos."
         : `Limite de requisições atingido. Tente novamente em ${retryAfterSeconds}s.`
     );
-    this.name = "LlmRateLimitError";
+    this.name = LLM_RATE_LIMIT_ERROR_NAME;
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }

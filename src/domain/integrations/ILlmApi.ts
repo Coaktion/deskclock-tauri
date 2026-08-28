@@ -23,3 +23,19 @@ export interface ILlmApi {
   /** Ids de modelo disponíveis. Usado para validar a chave e preencher o seletor. */
   listModels(): Promise<string[]>;
 }
+
+/**
+ * O `name` com que o adapter marca o erro de limite de cota.
+ *
+ * Ele vive aqui, no lado da porta, porque quem precisa **reagir** ao limite é
+ * `domain/` — a geração em lote para no primeiro 429 — e `domain/` não pode
+ * importar a classe de erro, que é de `infra/`. A constante é o contrato entre
+ * os dois, e o adapter a consome ao nomear o erro, para os dois lados não
+ * divergirem em silêncio.
+ */
+export const LLM_RATE_LIMIT_ERROR_NAME = "LlmRateLimitError";
+
+/** Este erro é o provedor recusando por cota, e não uma falha do dia em si. */
+export function isLlmRateLimitError(error: unknown): boolean {
+  return error instanceof Error && error.name === LLM_RATE_LIMIT_ERROR_NAME;
+}
