@@ -244,6 +244,27 @@ entradas**. Emite `PLANNED_TASKS_CHANGED` quem chama, como os outros imports.
 - `docs-internal/telas/planejamento.md`: o botão no header e o modal.
 - `docs-internal/historico-de-decisoes.md`: as decisões da §2.
 
+## 7.1 Fase 5 · Revisar: a IA preenche as lacunas
+
+**Escopo novo, decidido em 2026-08-28, depois das fases 0–4.** Não estava no plano original; entra
+como aba do mesmo modal, e não como tela nova, porque opera sobre a mesma semana.
+
+| Decisão | Escolha | Por quê |
+|---|---|---|
+| Quais tarefas entram | Só as da **semana na tela**, e só as **com lacuna** | A lista chega curta e acionável. Tarefa completa não tem o que revisar, e varrer o workspace inteiro quebraria a premissa do modal, que fala de uma semana. |
+| Pode sobrescrever? | **Não.** Só campo vazio | O que o usuário escolheu à mão não se toca. A regra é escrita no prompt **e conferida no use case** — prompt é pedido, não trava. |
+| Quais campos | Projeto, categoria e campo personalizado do tipo **`select`** | São escolhas de catálogo fechado: "alucinação" ali é um nome que não casa, e o parser descarta. Em `text`, `multiline` e `checkbox` o modelo escreveria conteúdo inventado no campo de alguém, sem lista contra a qual conferir. **O recorte também filtra a lista**: tarefa cuja única lacuna é um campo livre não aparece, ou a aba mostraria linha sem nada a propor. |
+| A revisão edita? | **Não — aceita ou recusa** | Certo, marca-se; errado, desmarca-se e a tarefa segue como estava. Editar planejada já tem casa (§1: edição sempre em modal), e um editor aqui seria a terceira grafia do mesmo formulário. |
+| Id no prompt | Curto (`t1`), não o UUID | O modelo copia `t1` de volta com mais acerto que 36 caracteres de hexadecimal, e id copiado errado é escrita na tarefa errada. O parser **confere o id contra a lista enviada**. |
+
+**O leitor de JSON virou compartilhado** (`domain/usecases/llm/jsonAnswer.ts`) quando ganhou o
+segundo dono. Os dois parsers recebem resposta do mesmo tipo de modelo, sujeita aos mesmos desvios,
+e uma segunda grafia divergiria da primeira no primeiro desvio novo — que é o que ninguém veria.
+
+**A gravação mescla `customValues`, nunca os substitui** (`applyPlanGapFills`). Um objeto inteiro
+no lugar do antigo apagaria em silêncio o campo que o usuário preencheu e que não estava em lacuna
+nenhuma.
+
 ## 8. Testes
 
 Vitest, unit (§`docs-internal/testes.md`). Espelhando a origem, em `src/tests/`.
@@ -277,4 +298,5 @@ Vitest, unit (§`docs-internal/testes.md`). Espelhando a origem, em `src/tests/`
 | 1 · prompt, parser, use case | **concluída** (2026-08-28) — `buildWeekPlanPrompt`, `parseWeekPlanDraft` e `planWeek`, 45 testes; nada os chama ainda |
 | 2 · criação | **concluída** (2026-08-28) — `importWeekPlan`, espelho do `importCalendarEvents`; quem emite `PLANNED_TASKS_CHANGED` é a tela |
 | 3 · tela | **concluída** (2026-08-28) — `PlanWeekModal`, `WeekPlanRow`, `useWeekPlan`, `weekPlanContext`; botão no cabeçalho do Planejamento. **Falta a verificação visual** nos 2 modos × 4 acentos, que só roda em máquina com `pnpm tauri dev` |
+| 5 · revisar lacunas | **concluída** (2026-08-28) — `buildGapFillPrompt`, `parseGapFillDraft`, `fillPlanGaps`, `applyPlanGapFills`, `usePlanGaps`, `PlanGapRow`, aba no modal. **Falta a verificação visual**, como a fase 3 |
 | 4 · documentação | **concluída** (2026-08-28) — `llm.md` (as duas frases revistas + § do plano) e `telas/planejamento.md` |

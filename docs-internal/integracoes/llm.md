@@ -13,7 +13,9 @@ Ela faz **duas** coisas, e a segunda chegou em 2026-08-28:
 1. **O resumo do dia** — um parágrafo por dia de trabalho, exibido na tela de **Histórico**, sobre
    os dias que a busca ali trouxe.
 2. **O plano da semana** — um pedido em texto livre vira **propostas** de tarefa planejada, na tela
-   de Planejamento. § "O plano da semana", abaixo.
+   de Planejamento. § "O plano da semana", abaixo. A mesma tela tem a aba **"Revisar"**, que propõe
+   preencher projeto, categoria e campo de escolha **em branco** das planejadas da semana — e
+   **só** os em branco: a trava está em `fillPlanGaps`, não no prompt.
 
 **A busca do Histórico dispara a geração**, e é a tabela `day_summaries` que sustenta isso: o lote
 consulta o cache antes do provedor, então o dia já resumido volta do banco sem custo e só o dia

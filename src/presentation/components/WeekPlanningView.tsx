@@ -112,6 +112,14 @@ export function WeekPlanningView() {
     return dow !== 0 && dow !== 6;
   });
 
+  // As que de fato aparecem na semana: a recorrente que só cai no fim de
+  // semana está no banco, mas não tem dia onde aparecer — e revisar o cadastro
+  // de algo que a tela não mostra é revisar no escuro.
+  const visibleTasks = useMemo(
+    () => tasks.filter((task) => visibleDays.some((day) => isTaskOnDate(task, day))),
+    [tasks, visibleDays]
+  );
+
   // Stats: total task-day pairs + completed ones for the visible week
   const { totalCount, completedCount } = useMemo(() => {
     let total = 0;
@@ -464,12 +472,19 @@ export function WeekPlanningView() {
           weekDays={weekPlanDays(visibleDays)}
           weekLabel={label}
           existing={existingPlanLines(tasks)}
+          weekTasks={visibleTasks}
           onCreated={async (created) => {
             setPlanningWeek(false);
             if (created.length === 0) return;
             await reload();
             // Quem grava é o `importWeekPlan`, que não conhece o barramento de
             // eventos: sem este aviso o overlay seguiria com a semana antiga.
+            await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+          }}
+          onFilled={async (updated) => {
+            setPlanningWeek(false);
+            if (updated.length === 0) return;
+            await reload();
             await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
           }}
           onClose={() => setPlanningWeek(false)}

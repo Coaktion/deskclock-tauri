@@ -1,3 +1,5 @@
+import { isRecord, jsonItemList, textValue } from "./jsonAnswer";
+
 /**
  * Quantas tarefas um plano pode trazer.
  *
@@ -55,7 +57,7 @@ const TIME = /^(\d{1,2}):([0-5]\d)$/;
  * importado do mesmo jeito.
  */
 export function parseWeekPlanDraft(raw: string, weekDays: string[]): WeekPlanDraftParse {
-  const items = listOf(raw);
+  const items = jsonItemList(raw, "tarefas");
   const allowedDays = new Set(weekDays);
 
   const tasks: WeekPlanDraftTask[] = [];
@@ -70,64 +72,11 @@ export function parseWeekPlanDraft(raw: string, weekDays: string[]): WeekPlanDra
   return { tasks, discarded };
 }
 
-/** Os itens da resposta, ou lista vazia se não houver JSON legível nela. */
-function listOf(raw: string): unknown[] {
-  const json = extractJson(raw);
-  if (json === null) return [];
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json);
-  } catch {
-    return [];
-  }
-
-  if (Array.isArray(parsed)) return parsed;
-  if (!isRecord(parsed)) return [];
-  if (Array.isArray(parsed.tarefas)) return parsed.tarefas;
-  // O modelo às vezes embrulha a lista sob outro nome ("plano", "items"). A
-  // lista é uma só: procurá-la pelo tipo custa menos que adivinhar o nome.
-  return Object.values(parsed).find(Array.isArray) ?? [];
-}
-
-/**
- * O primeiro valor JSON balanceado do texto.
- *
- * Resolve de uma vez a cerca de markdown, o "Claro! Aqui está:" antes e o
- * "Espero ter ajudado" depois — as três formas em que a resposta chega suja. As
- * aspas são respeitadas, ou uma tarefa chamada "Revisar [PRs] do {backend}"
- * fecharia o objeto no lugar errado.
- */
-function extractJson(raw: string): string | null {
-  const start = raw.search(/[{[]/);
-  if (start === -1) return null;
-
-  const open = raw[start];
-  const close = open === "{" ? "}" : "]";
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (let i = start; i < raw.length; i++) {
-    const char = raw[i];
-    if (inString) {
-      if (escaped) escaped = false;
-      else if (char === "\\") escaped = true;
-      else if (char === '"') inString = false;
-      continue;
-    }
-    if (char === '"') inString = true;
-    else if (char === open) depth++;
-    else if (char === close && --depth === 0) return raw.slice(start, i + 1);
-  }
-  return null;
-}
-
 /** Um item da resposta como tarefa, ou `null` quando ele não cabe na semana. */
 function toTask(item: unknown, allowedDays: Set<string>): WeekPlanDraftTask | null {
   if (!isRecord(item)) return null;
 
-  const name = text(item.nome);
+  const name = textValue(item.nome);
   if (!name) return null;
 
   const schedule = scheduleOf(item, allowedDays);
@@ -141,8 +90,8 @@ function toTask(item: unknown, allowedDays: Set<string>): WeekPlanDraftTask | nu
   return {
     name,
     ...schedule,
-    ...(text(item.projeto) ? { projectName: text(item.projeto) } : {}),
-    ...(text(item.categoria) ? { categoryName: text(item.categoria) } : {}),
+    ...(textValue(item.projeto) ? { projectName: textValue(item.projeto) } : {}),
+    ...(textValue(item.categoria) ? { categoryName: textValue(item.categoria) } : {}),
     ...(typeof item.faturavel === "boolean" ? { billable: item.faturavel } : {}),
     ...(startTime ? { startTime } : {}),
     ...(endTime ? { endTime } : {}),
@@ -160,7 +109,7 @@ function scheduleOf(
   item: Record<string, unknown>,
   allowedDays: Set<string>
 ): Pick<WeekPlanDraftTask, "scheduleType" | "scheduleDate" | "recurringDays"> | null {
-  const day = text(item.dia);
+  const day = textValue(item.dia);
   if (day) {
     return allowedDays.has(day)
       ? { scheduleType: "specific_date", scheduleDate: day }
@@ -179,18 +128,10 @@ function isWeekday(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5;
 }
 
-function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() !== "" ? value.trim() : undefined;
-}
-
 /** "HH:MM", tolerando a hora de um dígito que o modelo escreve o tempo todo. */
 function time(value: unknown): string | undefined {
-  const match = TIME.exec(text(value) ?? "");
+  const match = TIME.exec(textValue(value) ?? "");
   if (!match) return undefined;
   const hour = Number(match[1]);
   return hour <= 23 ? `${String(hour).padStart(2, "0")}:${match[2]}` : undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

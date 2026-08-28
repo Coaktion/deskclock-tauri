@@ -2,15 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckSquare, Loader2, Sparkles, Square } from "lucide-react";
 
 import type { PlannedTask } from "@domain/entities/PlannedTask";
+import type { PlanGapFill } from "@domain/usecases/llm/FillPlanGaps";
 import type { ExistingPlannedLine, WeekPlanDay } from "@domain/usecases/llm/buildWeekPlanPrompt";
-import { Button, Modal, Textarea } from "@presentation/components/ui";
+import { Button, Modal, SegmentedControl, Textarea } from "@presentation/components/ui";
 import { useMultiSelect } from "@presentation/hooks/useMultiSelect";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { usePlanGaps } from "@presentation/hooks/usePlanGaps";
 import { useWeekPlan } from "@presentation/hooks/useWeekPlan";
+import { PlanGapRow } from "@presentation/sections/planning/PlanGapRow";
 import { WeekPlanRow } from "@presentation/sections/planning/WeekPlanRow";
 
 const EXAMPLE =
   "segunda e quarta, alinhamento do time às 9h; terça e quinta, relatório do cliente; sexta, revisar PRs";
+
+type PlanTab = "plan" | "gaps";
 
 interface PlanWeekModalProps {
   /** Os dias úteis da semana que está na tela — é o recorte que o plano ocupa. */
@@ -18,7 +23,11 @@ interface PlanWeekModalProps {
   /** O rótulo da semana no cabeçalho, para o modal dizer sobre qual ele fala. */
   weekLabel: string;
   existing: ExistingPlannedLine[];
+  /** As planejadas da semana — a aba "Revisar" trabalha sobre elas. */
+  weekTasks: PlannedTask[];
   onCreated: (created: PlannedTask[]) => void;
+  /** Chamado quando a revisão gravou preenchimentos nas planejadas existentes. */
+  onFilled: (updated: PlannedTask[]) => void;
   onClose: () => void;
 }
 
@@ -37,9 +46,12 @@ export function PlanWeekModal({
   weekDays,
   weekLabel,
   existing,
+  weekTasks,
   onCreated,
+  onFilled,
   onClose,
 }: PlanWeekModalProps) {
+  const [tab, setTab] = useState<PlanTab>("plan");
   const {
     request,
     setRequest,
@@ -78,13 +90,46 @@ export function PlanWeekModal({
     [categories, categoriesFor]
   );
 
+  const gapsState = usePlanGaps(weekTasks);
+  const gapIds = useMemo(
+    () => (gapsState.fills ?? []).map((fill) => fill.taskId),
+    [gapsState.fills]
+  );
+  const gapSelection = useMultiSelect(gapIds);
+  const { toggleAll: toggleAllGaps } = gapSelection;
+
+  // Mesma regra da outra aba: o que a IA propôs chega marcado, e recusar é
+  // desmarcar.
+  useEffect(() => {
+    if (gapIds.length > 0) toggleAllGaps();
+  }, [gapIds, toggleAllGaps]);
+
+  const fillByTaskId = useMemo(
+    () => new Map((gapsState.fills ?? []).map((fill: PlanGapFill) => [fill.taskId, fill])),
+    [gapsState.fills]
+  );
+
   async function handleCreate() {
     const chosen = (drafts ?? []).filter((draft) => selection.isSelected(draft.id));
     onCreated(await create(chosen));
   }
 
+  async function handleApplyFills() {
+    const chosen = (gapsState.fills ?? []).filter((fill) => gapSelection.isSelected(fill.taskId));
+    gapsState.setApplying(true);
+    try {
+      onFilled(await gapsState.apply(chosen));
+    } finally {
+      gapsState.setApplying(false);
+    }
+  }
+
   const reviewing = drafts !== null;
   const empty = reviewing && drafts.length === 0;
+  const onGaps = tab === "gaps";
+  // O corpo é lista de borda a borda nas duas abas quando há linhas; fora
+  // disso é bloco com padding.
+  const listMode = onGaps ? gapsState.gaps.length > 0 : reviewing && !empty;
 
   return (
     <Modal
@@ -96,12 +141,37 @@ export function PlanWeekModal({
       }
       description={weekLabel}
       size="lg"
-      tall={reviewing && !empty}
+      tall={onGaps ? gapsState.gaps.length > 0 : reviewing && !empty}
       onClose={onClose}
-      // Sem padding no corpo: em revisão cada linha desenha o próprio `px-4`.
-      bodyClassName={reviewing && !empty ? "" : "p-5 flex flex-col gap-3"}
+      // Sem padding no corpo: nas duas listas cada linha desenha o próprio
+      // `px-4`.
+      bodyClassName={listMode ? "" : "p-5 flex flex-col gap-3"}
+      // As abas ficam na `toolbar`, e não no corpo: ali elas não rolam junto
+      // com a lista que trocam.
+      toolbar={
+        <SegmentedControl
+          ariaLabel="O que fazer com a semana"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "plan" as const, label: "Planejar" },
+            {
+              value: "gaps" as const,
+              label: gapsState.gaps.length > 0 ? `Revisar · ${gapsState.gaps.length}` : "Revisar",
+            },
+          ]}
+        />
+      }
       footerStart={
-        reviewing && !empty ? (
+        onGaps ? (
+          gapIds.length > 0 ? (
+            <Button variant="ghost" onClick={gapSelection.toggleAll}>
+              {gapSelection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
+              {gapSelection.allSelected ? "Desmarcar todas" : "Selecionar todas"}
+              <span className="text-fg-muted">({gapIds.length})</span>
+            </Button>
+          ) : undefined
+        ) : reviewing && !empty ? (
           <Button variant="ghost" onClick={selection.toggleAll}>
             {selection.allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
             {selection.allSelected ? "Desmarcar todas" : "Selecionar todas"}
@@ -110,7 +180,32 @@ export function PlanWeekModal({
         ) : undefined
       }
       footer={
-        reviewing ? (
+        onGaps ? (
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Fechar
+            </Button>
+            {gapsState.fills === null ? (
+              <Button
+                variant="primary"
+                onClick={() => void gapsState.generate()}
+                disabled={gapsState.gaps.length === 0}
+                loading={gapsState.generating}
+              >
+                {gapsState.generating ? "Analisando…" : "Preencher com IA"}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={() => void handleApplyFills()}
+                disabled={gapSelection.count === 0}
+                loading={gapsState.applying}
+              >
+                {gapsState.applying ? "Aplicando…" : `Aplicar em ${gapSelection.count} tarefa(s)`}
+              </Button>
+            )}
+          </>
+        ) : reviewing ? (
           <>
             <Button variant="ghost" onClick={backToRequest}>
               Voltar ao pedido
@@ -141,7 +236,7 @@ export function PlanWeekModal({
         )
       }
     >
-      {!reviewing && (
+      {!onGaps && !reviewing && (
         <>
           <Textarea
             value={request}
@@ -166,27 +261,28 @@ export function PlanWeekModal({
         </>
       )}
 
-      {error && (
+      {(onGaps ? gapsState.error : error) && (
         <div className="flex items-start gap-2 m-4 p-3 bg-danger/10 border border-danger rounded-control">
           <AlertCircle size={14} className="text-danger shrink-0 mt-0.5" />
-          <p className="text-xs text-danger">{error}</p>
+          <p className="text-xs text-danger">{onGaps ? gapsState.error : error}</p>
         </div>
       )}
 
-      {generating && reviewing && (
+      {!onGaps && generating && reviewing && (
         <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
           <Loader2 size={16} className="animate-spin" />
           <span className="text-sm">Montando o plano…</span>
         </div>
       )}
 
-      {empty && !error && (
+      {!onGaps && empty && !error && (
         <p className="text-sm text-fg-muted text-center py-12">
           O modelo não devolveu um plano legível. Tente descrever a semana com mais detalhe.
         </p>
       )}
 
-      {reviewing &&
+      {!onGaps &&
+        reviewing &&
         drafts.map((draft) => (
           <WeekPlanRow
             key={draft.id}
@@ -200,6 +296,34 @@ export function PlanWeekModal({
             onToggleSelect={() => selection.toggle(draft.id)}
             onToggleExpand={() => setExpandedId((prev) => (prev === draft.id ? null : draft.id))}
             onChange={(next) => updateDraft(draft.id, next)}
+          />
+        ))}
+
+      {onGaps && gapsState.gaps.length === 0 && (
+        <p className="text-sm text-fg-muted text-center py-12">
+          Nenhuma planejada desta semana tem projeto, categoria ou campo de escolha em branco.
+        </p>
+      )}
+
+      {onGaps && gapsState.generating && (
+        <div className="flex items-center justify-center gap-2 py-12 text-fg-muted">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="text-sm">Analisando as lacunas…</span>
+        </div>
+      )}
+
+      {onGaps &&
+        !gapsState.generating &&
+        gapsState.gaps.map((gap) => (
+          <PlanGapRow
+            key={gap.task.id}
+            gap={gap}
+            fill={fillByTaskId.get(gap.task.id)}
+            selected={gapSelection.isSelected(gap.task.id)}
+            projects={gapsState.projects}
+            categories={gapsState.categories}
+            selectFields={gapsState.selectFields}
+            onToggleSelect={() => gapSelection.toggle(gap.task.id)}
           />
         ))}
     </Modal>

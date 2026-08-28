@@ -79,6 +79,20 @@
 > valor voltaria a ser o nome do id ainda gravado. É o mesmo par que os três modais de importação
 > mantêm, pelo mesmo motivo.
 >
+> **O modal tem duas abas, na `toolbar`.** "Planejar" é o que está acima; **"Revisar"** lista as
+> planejadas **desta semana** que têm projeto, categoria ou campo de escolha em branco, e oferece
+> preenchê-las com a IA. A contagem vai no rótulo da aba — sem lacuna, não há o que revisar, e o
+> botão desabilita. As abas ficam na `toolbar` e não no corpo: ali elas não rolam junto com a lista
+> que trocam.
+>
+> **A revisão aceita ou recusa, não edita.** Certo, marca-se; errado, desmarca-se e a tarefa segue
+> como estava. Editar planejada já tem casa — o modal de edição —, e um segundo editor aqui seria a
+> terceira grafia do mesmo formulário.
+>
+> **Nada que já está preenchido é tocado**, e a trava não é o prompt: `fillPlanGaps` descarta
+> proposta para campo que já tem valor, e `applyPlanGapFills` **mescla** os campos personalizados em
+> vez de substituí-los.
+
 > **"Voltar ao pedido" preserva o texto.** Reescrever a semana inteira para ajustar uma frase é o
 > pior caminho de volta que o modal poderia ter.
 
