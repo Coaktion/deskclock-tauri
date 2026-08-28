@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ILlmApi, LlmMessage } from "@domain/integrations/ILlmApi";
+import type { ILlmApi, LlmCompletion, LlmMessage } from "@domain/integrations/ILlmApi";
+import type { LlmRateLimits } from "@shared/types/llm";
 import {
   LlmAuthError,
   LlmEmptyResponseError,
@@ -41,7 +42,7 @@ export class OpenAiCompatClient implements ILlmApi {
     this.extras = config.extras ?? {};
   }
 
-  async complete(messages: LlmMessage[]): Promise<string> {
+  async complete(messages: LlmMessage[]): Promise<LlmCompletion> {
     // Subconjunto seguro: `model`, `messages` e `stream` são o que **todos**
     // aceitam. `max_tokens` devolve 400 na família gpt-5 da OpenAI, que só
     // conhece `max_completion_tokens`, e `temperature` diferente de 1 devolve
@@ -63,12 +64,17 @@ export class OpenAiCompatClient implements ILlmApi {
     }
     if (!content.trim()) throw new LlmEmptyResponseError();
 
-    return content;
+    const limits = parseRateLimits(res.headers);
+    return limits ? { text: content, limits } : { text: content };
   }
 
   /**
    * A requisição mais barata que existe — não consome tokens —, o que a torna o
    * "testar conexão" da tela além de fonte do seletor de modelos.
+   *
+   * **Não captura cota.** O `GET /models` não é específico de modelo, e os
+   * cabeçalhos `x-ratelimit-*` que ele devolve podem descrever outro balde —
+   * mostrá-los como a cota do modelo escolhido seria mentira barata.
    */
   async listModels(): Promise<string[]> {
     const res = await this.request("get_bearer_json", { url: `${this.baseUrl}/models` });
@@ -155,6 +161,52 @@ function isCredentialFailure(status: number, message: string): boolean {
   if (status === 401) return true;
   const lower = message.toLowerCase();
   return status === 400 && (lower.includes("api key") || lower.includes("valid key"));
+}
+
+function headerNumber(
+  headers: Record<string, string> | undefined,
+  name: string
+): number | undefined {
+  const raw = headers?.[name]?.trim();
+  if (!raw) return undefined;
+  const value = Number(raw);
+  // Ausente, vazio ou não numérico é **campo ausente**, nunca `NaN` nem `0`:
+  // um zero inventado escreveria "restam 0" na tela de quem tem cota de sobra.
+  return Number.isFinite(value) ? value : undefined;
+}
+
+function headerText(headers: Record<string, string> | undefined, name: string): string | undefined {
+  const raw = headers?.[name]?.trim();
+  return raw ? raw : undefined;
+}
+
+/**
+ * A cota que o provedor informou nos cabeçalhos desta resposta.
+ *
+ * Os nomes chegam em minúsculas do `collect_headers` do Rust, então não há
+ * normalização a fazer aqui. Devolve `undefined` quando nenhum dos seis campos
+ * veio — **ausente é ausente**, e a tela não desenha área nenhuma.
+ */
+export function parseRateLimits(
+  headers: Record<string, string> | undefined
+): LlmRateLimits | undefined {
+  const limits: LlmRateLimits = {};
+
+  const requestsLimit = headerNumber(headers, "x-ratelimit-limit-requests");
+  const requestsRemaining = headerNumber(headers, "x-ratelimit-remaining-requests");
+  const requestsReset = headerText(headers, "x-ratelimit-reset-requests");
+  const tokensLimit = headerNumber(headers, "x-ratelimit-limit-tokens");
+  const tokensRemaining = headerNumber(headers, "x-ratelimit-remaining-tokens");
+  const tokensReset = headerText(headers, "x-ratelimit-reset-tokens");
+
+  if (requestsLimit !== undefined) limits.requestsLimit = requestsLimit;
+  if (requestsRemaining !== undefined) limits.requestsRemaining = requestsRemaining;
+  if (requestsReset !== undefined) limits.requestsReset = requestsReset;
+  if (tokensLimit !== undefined) limits.tokensLimit = tokensLimit;
+  if (tokensRemaining !== undefined) limits.tokensRemaining = tokensRemaining;
+  if (tokensReset !== undefined) limits.tokensReset = tokensReset;
+
+  return Object.keys(limits).length > 0 ? limits : undefined;
 }
 
 function parseRetryAfter(headers: Record<string, string> | undefined): number | undefined {

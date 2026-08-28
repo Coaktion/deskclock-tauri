@@ -1,4 +1,5 @@
 import type { ILlmApi } from "@domain/integrations/ILlmApi";
+import type { LlmRateLimits } from "@shared/types/llm";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
 import { groupTasks } from "@domain/utils/groupTasks";
@@ -24,6 +25,12 @@ export interface SummarizeWorkdayOptions {
 export interface WorkdaySummary {
   dateISO: string;
   summary: string;
+  /**
+   * A cota que o provedor informou **nesta** chamada. Ausente quando ele não
+   * manda os cabeçalhos: não há de onde estimá-la, e inventar um número aqui
+   * seria pior do que não mostrar nada.
+   */
+  limits?: LlmRateLimits;
 }
 
 function namedTasks(tasks: Task[]): Task[] {
@@ -64,6 +71,9 @@ export async function summarizeWorkday(
   );
   if (lines.length === 0) return null;
 
-  const summary = await deps.llm.complete(buildWorkdayPrompt(lines));
-  return { dateISO: day.dateISO, summary: summary.trim() };
+  const completion = await deps.llm.complete(buildWorkdayPrompt(lines));
+  const summary = completion.text.trim();
+  return completion.limits
+    ? { dateISO: day.dateISO, summary, limits: completion.limits }
+    : { dateISO: day.dateISO, summary };
 }

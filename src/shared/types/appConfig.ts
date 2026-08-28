@@ -4,6 +4,7 @@ import type {
   ClockifyWorkspaceRef,
 } from "@shared/types/clockifyConfig";
 import type { MondayFieldCatalogs, MondayProjectMapping } from "@shared/types/mondayConfig";
+import type { LlmRateLimits } from "@shared/types/llm";
 import type { SheetColumnMapping } from "@shared/types/sheetsConfig";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
 
@@ -276,6 +277,22 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   llmSummaryDate: string;
   llmSummaryText: string;
   llmSummaryWorkspaceId: string;
+  /**
+   * A última cota lida dos cabeçalhos do provedor, e o instante em que se leu.
+   *
+   * **Existem porque a cota só se conhece fazendo uma chamada**: nenhum dos onze
+   * provedores tem endpoint gratuito que a informe, e o `GET /models` do teste
+   * de conexão não serve (§ `docs-internal/integracoes/llm.md`). Sem persistir,
+   * o card ficaria vazio até o próximo resumo — que é uma vez por dia.
+   *
+   * Não são segredo, e por isso ficam fora de `SECRET_CONFIG_KEYS`: dizem
+   * quanto resta de uma cota, não como usá-la.
+   *
+   * `llmLastLimitsAt` é o que permite à tela dizer que a medição envelheceu —
+   * "restam 312" de três dias atrás não é informação, é engano.
+   */
+  llmLastLimits: LlmRateLimits;
+  llmLastLimitsAt: string;
   //
   // Não há `llmDeskclockWorkspaceId`, e a ausência é deliberada: o §9.5 item 7
   // (cada integração escolhe o seu workspace) não se aplica aqui. As outras

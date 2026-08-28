@@ -7,6 +7,7 @@ import { Button } from "@presentation/components/ui";
 import { Row, StatusBadge } from "../shared";
 import { LlmLogo } from "./LlmLogo";
 import { isLlmConnected } from "./llmConnection";
+import { buildLlmQuotaView, type LlmQuotaView } from "./llmQuota";
 
 export function LlmIntegrationCard() {
   const config = useAppConfig();
@@ -15,6 +16,7 @@ export function LlmIntegrationCard() {
   const [model, setModel] = useState("");
   const [loading, setLoading] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [quota, setQuota] = useState<LlmQuotaView | null>(null);
 
   // O cache do ConfigContext é um `useRef` e o `set` não dispara render — lendo
   // direto, a conexão recém-feita só apareceria ao sair e voltar da tela.
@@ -22,6 +24,7 @@ export function LlmIntegrationCard() {
     setProviderId(config.get("llmProviderId"));
     setBaseUrl(config.get("llmBaseUrl"));
     setModel(config.get("llmModel"));
+    setQuota(buildLlmQuotaView(config.get("llmLastLimits"), config.get("llmLastLimitsAt")));
   }
 
   useEffect(() => {
@@ -86,6 +89,8 @@ export function LlmIntegrationCard() {
           </div>
         </div>
 
+        {connected && quota && <QuotaBlock quota={quota} />}
+
         {connected && (
           <div className="border-t border-border-subtle px-4 py-1">
             <Row label="Provedor">
@@ -110,5 +115,39 @@ export function LlmIntegrationCard() {
         <LlmConnectModal onConnected={handleConnected} onClose={() => setShowConnectModal(false)} />
       )}
     </>
+  );
+}
+
+/**
+ * Quanto resta da cota, como o provedor a informou na última chamada.
+ *
+ * **A janela de cada balde não é escrita**: os mesmos cabeçalhos medem o dia num
+ * provedor e o minuto noutro (§ `docs-internal/integracoes/llm.md`). O que a
+ * tela escreve são os números que vieram e o texto de renovação do próprio
+ * provedor — e de quando é a medição, porque ela é sempre uma foto: a cota só se
+ * conhece fazendo uma chamada, e a última foi a do último resumo gerado.
+ */
+function QuotaBlock({ quota }: { quota: LlmQuotaView }) {
+  return (
+    <div className="px-4 py-3">
+      <p className="text-overline uppercase text-fg-muted">Cota do provedor</p>
+      <ul className="mt-2 space-y-1">
+        {quota.lines.map((line) => (
+          <li key={line.id} className="text-sm text-fg-secondary">
+            <span className="font-mono tabular-nums text-fg">{line.amount}</span> {line.noun}
+            {line.renewsIn && (
+              <>
+                {" · renova em "}
+                <span className="font-mono tabular-nums">{line.renewsIn}</span>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className={`text-xs mt-2 ${quota.stale ? "text-warning" : "text-fg-muted"}`}>
+        Medido {quota.measuredAgo}
+        {quota.stale && " · pode já ter renovado"}
+      </p>
+    </div>
   );
 }

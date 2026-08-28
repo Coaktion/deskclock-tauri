@@ -4,6 +4,7 @@ import { localISO } from "../../../helpers/localTime";
 import type { ILlmApi } from "@domain/integrations/ILlmApi";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
+import type { LlmRateLimits } from "@shared/types/llm";
 
 const DAY = "2026-08-25";
 
@@ -40,8 +41,11 @@ function makeRepo(day: string | null, tasks: Task[]): ITaskRepository {
   };
 }
 
-function makeLlm(answer = "Resumo do dia."): ILlmApi {
-  return { complete: vi.fn(async () => answer), listModels: vi.fn(async () => []) };
+function makeLlm(answer = "Resumo do dia.", limits?: LlmRateLimits): ILlmApi {
+  return {
+    complete: vi.fn(async () => (limits ? { text: answer, limits } : { text: answer })),
+    listModels: vi.fn(async () => []),
+  };
 }
 
 const PROJECT_NAMES: Record<string, string> = { p1: "DeskClock", p2: "Aktie" };
@@ -130,6 +134,24 @@ describe("summarizeWorkday", () => {
       expect.any(String),
       "ws-1"
     );
+  });
+
+  it("devolve a cota que o provedor informou na resposta", async () => {
+    const limits: LlmRateLimits = { requestsLimit: 1000, requestsRemaining: 312 };
+    const llm = makeLlm("Trabalhou no overlay.", limits);
+    const result = await summarizeWorkday(
+      { taskRepo: makeRepo(DAY, [makeTask()]), llm },
+      { projectNameById }
+    );
+    expect(result?.limits).toEqual(limits);
+  });
+
+  it("omite a cota quando o provedor não a informa", async () => {
+    const result = await summarizeWorkday(
+      { taskRepo: makeRepo(DAY, [makeTask()]), llm: makeLlm() },
+      { projectNameById }
+    );
+    expect(result?.limits).toBeUndefined();
   });
 
   it("propaga o erro do LLM — quem distingue chave inválida de rate limit é a tela", async () => {

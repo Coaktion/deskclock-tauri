@@ -71,7 +71,7 @@ describe("OpenAiCompatClient", () => {
 
       const result = await makeClient().complete(MESSAGES);
 
-      expect(result).toBe("Você trabalhou em três tarefas.");
+      expect(result.text).toBe("Você trabalhou em três tarefas.");
     });
 
     it("monta o request no subconjunto seguro, sem max_tokens nem temperature", async () => {
@@ -252,6 +252,82 @@ describe("OpenAiCompatClient", () => {
       mockInvoke.mockResolvedValue(failure(503, { error: { message: "overloaded" } }));
 
       await expect(makeClient().complete(MESSAGES)).rejects.toBeInstanceOf(LlmNetworkError);
+    });
+  });
+
+  describe("cota do provedor", () => {
+    const FULL_QUOTA = {
+      "x-ratelimit-limit-requests": "1000",
+      "x-ratelimit-remaining-requests": "312",
+      "x-ratelimit-reset-requests": "2m59.56s",
+      "x-ratelimit-limit-tokens": "8000",
+      "x-ratelimit-remaining-tokens": "7452",
+      "x-ratelimit-reset-tokens": "7.66s",
+    };
+
+    function replyWith(headers: Record<string, string>): RustResponse {
+      return { ...reply("ok"), headers };
+    }
+
+    it("lê os seis cabeçalhos, guardando o reset como o provedor o escreveu", async () => {
+      mockInvoke.mockResolvedValue(replyWith(FULL_QUOTA));
+
+      const { limits } = await makeClient().complete(MESSAGES);
+
+      expect(limits).toEqual({
+        requestsLimit: 1000,
+        requestsRemaining: 312,
+        requestsReset: "2m59.56s",
+        tokensLimit: 8000,
+        tokensRemaining: 7452,
+        tokensReset: "7.66s",
+      });
+    });
+
+    it("aceita o provedor que manda só parte dos cabeçalhos", async () => {
+      mockInvoke.mockResolvedValue(
+        replyWith({
+          "x-ratelimit-limit-requests": "60",
+          "x-ratelimit-remaining-requests": "59",
+        })
+      );
+
+      const { limits } = await makeClient().complete(MESSAGES);
+
+      expect(limits).toEqual({ requestsLimit: 60, requestsRemaining: 59 });
+    });
+
+    it("deixa a cota ausente quando o provedor não manda cabeçalho nenhum", async () => {
+      mockInvoke.mockResolvedValue(reply("ok"));
+
+      const { limits } = await makeClient().complete(MESSAGES);
+
+      expect(limits).toBeUndefined();
+    });
+
+    it("descarta o campo não numérico em vez de gravar NaN ou zero", async () => {
+      mockInvoke.mockResolvedValue(
+        replyWith({
+          "x-ratelimit-limit-requests": "ilimitado",
+          "x-ratelimit-remaining-requests": "",
+          "x-ratelimit-limit-tokens": "8000",
+          "x-ratelimit-remaining-tokens": "7452",
+        })
+      );
+
+      const { limits } = await makeClient().complete(MESSAGES);
+
+      expect(limits).toEqual({ tokensLimit: 8000, tokensRemaining: 7452 });
+    });
+
+    it("não captura cota no GET /models — os cabeçalhos dele podem ser de outro balde", async () => {
+      mockInvoke.mockResolvedValue({
+        status: 200,
+        body: { data: [{ id: "gpt-5-nano" }] },
+        headers: FULL_QUOTA,
+      });
+
+      await expect(makeClient().listModels()).resolves.toEqual(["gpt-5-nano"]);
     });
   });
 

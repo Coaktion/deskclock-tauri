@@ -189,6 +189,53 @@ que existe — **não consome tokens** — e ainda preenche o seletor de modelos
 
 ---
 
+## A visão de cota no card, e o período que ela não afirma
+
+O card "Provedor de IA" mostra quanto resta da cota, lido dos cabeçalhos que vêm **na resposta da
+completação**:
+
+```
+x-ratelimit-limit-requests   x-ratelimit-remaining-requests   x-ratelimit-reset-requests
+x-ratelimit-limit-tokens     x-ratelimit-remaining-tokens     x-ratelimit-reset-tokens
+```
+
+`parseRateLimits` (em `OpenAiCompatClient.ts`) os transforma no `LlmRateLimits` de
+`src/shared/types/llm.ts` — seis campos, **todos opcionais** —, que sobe pelo `complete()` (hoje
+`{ text, limits? }`) e pelo `summarizeWorkday`. Cabeçalho ausente, vazio ou não numérico vira
+**campo ausente**, nunca `NaN` nem `0`: um zero inventado escreveria "restam 0" para quem tem cota
+de sobra. Nem todo provedor manda estes cabeçalhos, e ausente é ausente — a área some do card, sem
+"—" nem convite.
+
+> **O `listModels()` não captura cota, e é deliberado.** O `GET /models` não é específico de
+> modelo, e os cabeçalhos dele podem descrever outro balde — exibi-los como a cota do modelo
+> escolhido seria mentira barata.
+
+> **O período que os cabeçalhos medem muda por provedor, e por isso a tela não o afirma.** No Groq
+> `limit-requests` é por **dia** e `limit-tokens` é por **minuto**; na OpenAI `limit-requests` é
+> por **minuto**. Os nomes são os mesmos, então escrever "restam 312 de 1000 requisições **hoje**"
+> seria falso para metade dos onze presets. O card escreve os números que vieram e o **texto de
+> renovação do próprio provedor** (`reset-requests` chega como `2m59.56s`, `7.66s`) — "312 de 1000
+> requisições · renova em 2m59s". É correto em todo provedor e não depende de uma tabela nossa de
+> janelas, que envelheceria calada. Só os decimais do reset caem na exibição; o valor guardado é o
+> texto cru. **Quem for "melhorar" isto acrescentando a janela está reintroduzindo o defeito.**
+
+**A medição é persistida**, em duas chaves de `AppConfig`: `llmLastLimits` (o objeto) e
+`llmLastLimitsAt` (o instante). Elas existem porque **a cota só se conhece fazendo uma chamada** —
+nenhum dos onze provedores tem endpoint gratuito que a informe, e o teste de conexão não serve
+(§ acima). Sem persistir, o card ficaria vazio até o próximo resumo, que é **um por dia**. Quem
+grava é o `useDailySummary`, junto das chaves de cache do resumo, e só quando `limits` veio. Não
+são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
+`SECRET_CONFIG_KEYS`.
+
+Como a medição é de uma vez por dia, **ela quase sempre é uma foto do passado, e o card diz isso**:
+`buildLlmQuotaView` (`src/presentation/sections/integrations/llm/llmQuota.ts`, no molde do
+`llmConnection.ts` ao lado) devolve as linhas montadas, o "há 3 dias" e um `stale` que acende
+acima de **uma hora** — o balde mais curto que os provedores reportam renova em minutos, então
+passada uma hora qualquer número guardado pode estar defasado. "Restam 312" de três dias atrás não
+é informação, é engano.
+
+---
+
 ## O prompt
 
 `src/domain/usecases/llm/buildWorkdayPrompt.ts`. Função pura: recebe linhas já decididas (nome,
@@ -258,6 +305,8 @@ chave, trocar de workspace mostraria o texto do outro.
 | `llmSummaryDate` | **o dia resumido, não o dia em que se gerou** |
 | `llmSummaryText` | o parágrafo |
 | `llmSummaryWorkspaceId` | o workspace a que o parágrafo se refere |
+| `llmLastLimits` | a última cota lida dos cabeçalhos (`LlmRateLimits`); **não é segredo** |
+| `llmLastLimitsAt` | o instante daquela leitura — é o que deixa o card dizer que ela envelheceu |
 
 > **`llmSummaryDate` é o dia resumido, e a distinção é a feature inteira do cache.** Numa
 > segunda-feira, o último dia com trabalho continua sendo a sexta: o resumo dela **não envelheceu**, e

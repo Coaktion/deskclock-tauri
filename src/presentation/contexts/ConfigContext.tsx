@@ -134,6 +134,8 @@ const DEFAULTS: AppConfig = {
   llmSummaryDate: "",
   llmSummaryText: "",
   llmSummaryWorkspaceId: "",
+  llmLastLimits: {},
+  llmLastLimitsAt: "",
   activeWorkspaceId: "",
   // Workspace do DeskClock de cada integração. Vazio resolve para o "Padrão" na
   // leitura (`resolveIntegrationWorkspaceId`): é o que torna a migração

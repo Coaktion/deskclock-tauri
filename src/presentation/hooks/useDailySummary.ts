@@ -89,6 +89,14 @@ export function useDailySummary() {
         await config.set("llmSummaryDate", result.dateISO);
         await config.set("llmSummaryText", result.summary);
         await config.set("llmSummaryWorkspaceId", workspaceId);
+        // A cota só se conhece **fazendo** a chamada — nenhum provedor a informa
+        // de graça, e o `GET /models` do teste de conexão descreve outro balde.
+        // Sem guardar o que esta resposta disse, o card de Integrações ficaria
+        // vazio até o próximo resumo, que é uma vez por dia.
+        if (result.limits) {
+          await config.set("llmLastLimits", result.limits);
+          await config.set("llmLastLimitsAt", new Date().toISOString());
+        }
         if (!isCurrent()) return;
         setState({
           status: "ready",
