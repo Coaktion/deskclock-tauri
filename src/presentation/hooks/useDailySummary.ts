@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { summarizeWorkday } from "@domain/usecases/llm/SummarizeWorkday";
-import { getLastDayWithTasks } from "@domain/usecases/tasks/GetLastDayWithTasks";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -55,9 +54,13 @@ export function useDailySummary() {
       const runId = ++runIdRef.current;
       const isCurrent = () => runId === runIdRef.current;
 
-      const day = await getLastDayWithTasks(taskRepo, workspaceId);
+      // Só a data interessa para decidir o cache. Buscar as tarefas do dia — e
+      // hidratar os campos personalizados de cada uma — para então descartá-las
+      // pagava duas vezes a mesma consulta, porque `summarizeWorkday` refaz a
+      // busca por conta própria.
+      const dayISO = await taskRepo.findLastDayWithCompletedTasks(workspaceId);
       if (!isCurrent()) return;
-      if (!day) {
+      if (!dayISO) {
         setState(IDLE);
         return;
       }
@@ -67,12 +70,12 @@ export function useDailySummary() {
         text: config.get("llmSummaryText"),
         workspaceId: config.get("llmSummaryWorkspaceId"),
       };
-      if (!force && isDailySummaryCacheValid(cache, day.dateISO, workspaceId)) {
+      if (!force && isDailySummaryCacheValid(cache, dayISO, workspaceId)) {
         setState({ status: "ready", dateISO: cache.dateISO, summary: cache.text, error: null });
         return;
       }
 
-      setState({ status: "loading", dateISO: day.dateISO, summary: "", error: null });
+      setState({ status: "loading", dateISO: dayISO, summary: "", error: null });
       try {
         const result = await summarizeWorkday(
           { taskRepo, llm: createLlmApi() },
@@ -97,7 +100,7 @@ export function useDailySummary() {
         if (!isCurrent()) return;
         setState({
           status: "error",
-          dateISO: day.dateISO,
+          dateISO: dayISO,
           summary: "",
           error: describeLlmError(error),
         });
