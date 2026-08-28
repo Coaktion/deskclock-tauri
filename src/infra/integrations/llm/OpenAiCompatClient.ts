@@ -1,5 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ILlmApi, LlmCompletion, LlmMessage } from "@domain/integrations/ILlmApi";
+import type {
+  ILlmApi,
+  LlmCompleteOptions,
+  LlmCompletion,
+  LlmMessage,
+} from "@domain/integrations/ILlmApi";
 import type { LlmRateLimits } from "@shared/types/llm";
 import {
   LlmAuthError,
@@ -20,6 +25,8 @@ export interface OpenAiCompatConfig {
   apiKey: string;
   model: string;
   extras?: Record<string, unknown>;
+  /** O nome com que este provedor aceita o teto de saída — ver `providers.ts`. */
+  outputTokensParam?: string;
 }
 
 /**
@@ -34,15 +41,17 @@ export class OpenAiCompatClient implements ILlmApi {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly extras: Record<string, unknown>;
+  private readonly outputTokensParam?: string;
 
   constructor(config: OpenAiCompatConfig) {
     this.baseUrl = normalizeBaseUrl(config.baseUrl);
     this.apiKey = config.apiKey;
     this.model = config.model;
     this.extras = config.extras ?? {};
+    this.outputTokensParam = config.outputTokensParam;
   }
 
-  async complete(messages: LlmMessage[]): Promise<LlmCompletion> {
+  async complete(messages: LlmMessage[], options?: LlmCompleteOptions): Promise<LlmCompletion> {
     // Subconjunto seguro: `model`, `messages` e `stream` são o que **todos**
     // aceitam. `max_tokens` devolve 400 na família gpt-5 da OpenAI, que só
     // conhece `max_completion_tokens`, e `temperature` diferente de 1 devolve
@@ -53,6 +62,10 @@ export class OpenAiCompatClient implements ILlmApi {
       messages,
       stream: false,
       ...this.extras,
+      // Depois dos `extras`, e de propósito: o teto que a chamada pediu é mais
+      // específico que qualquer valor que o preset tenha deixado com o mesmo
+      // nome.
+      ...this.outputTokensField(options?.maxOutputTokens),
     };
 
     const res = await this.post(`${this.baseUrl}/chat/completions`, body);
@@ -83,6 +96,19 @@ export class OpenAiCompatClient implements ILlmApi {
     return data
       .map((item) => asRecord(item)?.id)
       .filter((id): id is string => typeof id === "string" && id.length > 0);
+  }
+
+  /**
+   * O teto de saída no nome que **este** provedor aceita — e nada, quando ele
+   * não declarou nome nenhum ou a chamada não pediu teto.
+   *
+   * É o que mantém verdadeiro o subconjunto seguro: dos onze presets só o Groq
+   * declara um nome, e os outros dez seguem recebendo exatamente o corpo de
+   * antes.
+   */
+  private outputTokensField(maxOutputTokens?: number): Record<string, number> {
+    if (!this.outputTokensParam || maxOutputTokens === undefined) return {};
+    return { [this.outputTokensParam]: maxOutputTokens };
   }
 
   private post(url: string, body: unknown): Promise<RustHttpResponse> {

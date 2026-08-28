@@ -117,8 +117,31 @@ Hoje só o Groq tem `extras`, e cada chave tem motivo:
 | Extra | Por quê |
 |---|---|
 | `reasoning_effort: "low"` e `include_reasoning: false` | `gpt-oss` é modelo de *reasoning*: sem desligar, ele consome o orçamento de saída raciocinando antes de escrever, e ainda vaza o rascunho para dentro do texto |
-| `max_completion_tokens: 220` | o teto que o parágrafo cabe, no nome que a família gpt-5 aceita |
 | `temperature: 0.2` | o Groq aceita, e resumo de registro de trabalho não quer criatividade |
+
+### O teto de saída é da chamada, e só o nome dele é do provedor
+
+**`max_completion_tokens: 220` saiu dos `extras` do Groq em 2026-08-28**, e a distinção que o tirou
+de lá é a que não pode se perder: **quanto** cabe é do pedido, **como se chama** é do provedor.
+
+- O número vem da chamada — `complete(messages, { maxOutputTokens })`, em `ILlmApi`. Quem o passa é
+  quem sabe o que espera: `WORKDAY_MAX_OUTPUT_TOKENS = 220` mora em `buildWorkdayPrompt.ts`, ao
+  lado da regra "um parágrafo, de 2 a 4 frases" que o explica.
+- O nome vem do preset — `outputTokensParam`, hoje só no Groq, com `"max_completion_tokens"`.
+  **Preset que não declara nome não recebe campo nenhum**, que é o corpo que os outros dez sempre
+  tiveram. `max_tokens` continua proibido: a família gpt-5 devolve 400 para ele.
+
+> **Por que isso não é gosto de arquitetura.** No preset, o teto valia para toda chamada que o app
+> fizesse. A primeira que precisasse de mais espaço — um JSON, uma lista — voltaria **truncada**, e
+> truncada o provedor devolve `finish_reason: "length"`, que o adapter mapeia para
+> `LlmEmptyResponseError`: a tela diria "tente novamente" para um erro que não passa nunca. O
+> defeito não apareceria no resumo, que continua cabendo em 220 — apareceria na feature seguinte,
+> como se fosse dela.
+>
+> Três testes seguram a volta: o corpo **sem** o campo quando o preset não declara nome, **com** ele
+> quando declara e a chamada pede, e o valor da chamada ganhando de um resquício nos `extras`
+> (`OpenAiCompatClient.test.ts`). E `providers.test.ts` reprova qualquer preset que volte a
+> carregar teto nos `extras` ou que declare `max_tokens`.
 
 ---
 

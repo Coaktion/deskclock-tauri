@@ -103,6 +103,50 @@ describe("OpenAiCompatClient", () => {
       });
     });
 
+    it("não escreve teto de saída quando o preset não declara nome para ele", async () => {
+      mockInvoke.mockResolvedValue(reply("ok"));
+
+      // Dez dos onze presets estão nesta situação, e é o corpo que eles sempre
+      // tiveram: pedir teto sem nome declarado não pode inventar um.
+      await makeClient().complete(MESSAGES, { maxOutputTokens: 1200 });
+
+      expect(lastCall().args.body).toEqual({ model: MODEL, messages: MESSAGES, stream: false });
+    });
+
+    it("escreve o teto no nome que o preset declara", async () => {
+      mockInvoke.mockResolvedValue(reply("ok"));
+
+      await makeClient({ outputTokensParam: "max_completion_tokens" }).complete(MESSAGES, {
+        maxOutputTokens: 1200,
+      });
+
+      expect(lastCall().args.body).toEqual({
+        model: MODEL,
+        messages: MESSAGES,
+        stream: false,
+        max_completion_tokens: 1200,
+      });
+    });
+
+    it("não escreve teto quando a chamada não pede, mesmo com nome declarado", async () => {
+      mockInvoke.mockResolvedValue(reply("ok"));
+
+      await makeClient({ outputTokensParam: "max_completion_tokens" }).complete(MESSAGES);
+
+      expect(lastCall().args.body).toEqual({ model: MODEL, messages: MESSAGES, stream: false });
+    });
+
+    it("o teto da chamada ganha do valor que o preset deixou nos extras", async () => {
+      mockInvoke.mockResolvedValue(reply("ok"));
+
+      await makeClient({
+        extras: { max_completion_tokens: 220 },
+        outputTokensParam: "max_completion_tokens",
+      }).complete(MESSAGES, { maxOutputTokens: 1200 });
+
+      expect(lastCall().args.body).toMatchObject({ max_completion_tokens: 1200 });
+    });
+
     it("lança LlmEmptyResponseError quando o conteúdo vem vazio", async () => {
       mockInvoke.mockResolvedValue(reply("   "));
 

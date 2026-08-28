@@ -97,6 +97,9 @@ export function IntegrationsProvider({
           apiKey: overrides?.apiKey ?? config.get("llmApiKey"),
           model: overrides?.model ?? config.get("llmModel"),
           extras: preset?.extras,
+          // O **nome** do parâmetro de teto é do provedor; o número quem passa é
+          // cada chamada, que sabe se espera um parágrafo ou um JSON.
+          outputTokensParam: preset?.outputTokensParam,
         });
       },
     }),

@@ -18,6 +18,19 @@ export interface LlmProviderPreset {
    * usuário — ver `OpenAiCompatClient`.
    */
   extras?: Record<string, unknown>;
+  /**
+   * O nome com que **este** provedor aceita um teto de tokens de saída.
+   *
+   * Só o nome mora aqui; o número vem da chamada (`LlmCompleteOptions`), porque
+   * é o pedido que sabe se espera um parágrafo ou um JSON. Preset que não
+   * declara nome não recebe campo nenhum — que é o corpo que os outros dez
+   * sempre tiveram.
+   *
+   * **Não escreva `max_tokens` aqui.** A família gpt-5 da OpenAI devolve 400
+   * para ele e só conhece `max_completion_tokens`; é essa divergência de nome
+   * que impede o teto de ser um campo fixo do subconjunto seguro.
+   */
+  outputTokensParam?: string;
 }
 
 export const DEFAULT_LLM_PROVIDER_ID = "groq";
@@ -34,10 +47,10 @@ export const LLM_PROVIDERS: readonly LlmProviderPreset[] = [
     // rascunho para dentro do texto.
     extras: {
       temperature: 0.2,
-      max_completion_tokens: 220,
       reasoning_effort: "low",
       include_reasoning: false,
     },
+    outputTokensParam: "max_completion_tokens",
   },
   {
     id: "openai",

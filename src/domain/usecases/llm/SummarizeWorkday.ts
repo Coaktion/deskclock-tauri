@@ -5,7 +5,11 @@ import type { Task } from "@domain/entities/Task";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { getLastDayWithTasks } from "@domain/usecases/tasks/GetLastDayWithTasks";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
-import { buildWorkdayPrompt, type WorkdayTaskLine } from "./buildWorkdayPrompt";
+import {
+  buildWorkdayPrompt,
+  WORKDAY_MAX_OUTPUT_TOKENS,
+  type WorkdayTaskLine,
+} from "./buildWorkdayPrompt";
 
 export interface SummarizeWorkdayDeps {
   taskRepo: ITaskRepository;
@@ -89,7 +93,9 @@ export async function summarizeWorkday(
   );
   if (lines.length === 0) return null;
 
-  const completion = await deps.llm.complete(buildWorkdayPrompt(lines));
+  const completion = await deps.llm.complete(buildWorkdayPrompt(lines), {
+    maxOutputTokens: WORKDAY_MAX_OUTPUT_TOKENS,
+  });
   const summary = completion.text.trim();
   return completion.limits
     ? { dateISO: day.dateISO, summary, limits: completion.limits }

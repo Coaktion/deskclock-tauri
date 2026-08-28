@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { summarizeWorkday } from "@domain/usecases/llm/SummarizeWorkday";
+import { WORKDAY_MAX_OUTPUT_TOKENS } from "@domain/usecases/llm/buildWorkdayPrompt";
 import { localISO } from "../../../helpers/localTime";
 import type { ILlmApi } from "@domain/integrations/ILlmApi";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
@@ -82,6 +83,16 @@ describe("summarizeWorkday", () => {
       { projectNameById }
     );
     expect(result).toEqual({ dateISO: DAY, summary: "Trabalhou no overlay." });
+  });
+
+  it("pede o teto de saída do parágrafo na própria chamada", async () => {
+    const llm = makeLlm();
+    await summarizeWorkday({ taskRepo: makeRepo(DAY, [makeTask()]), llm }, { projectNameById });
+    // O teto é da chamada, não do preset: um valor fixo no provedor serviria a
+    // este parágrafo e truncaria a próxima chamada que precisasse de espaço.
+    expect(vi.mocked(llm.complete).mock.calls[0][1]).toEqual({
+      maxOutputTokens: WORKDAY_MAX_OUTPUT_TOKENS,
+    });
   });
 
   it("monta o prompt com nome, projeto e duração da tarefa", async () => {

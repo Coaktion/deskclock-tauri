@@ -8,6 +8,16 @@ export interface WorkdayTaskLine {
   durationSeconds: number;
 }
 
+/**
+ * O teto de saída do resumo do dia.
+ *
+ * Mora aqui, e não no preset do Groq de onde veio, porque quem o explica é a
+ * regra logo abaixo — "UM parágrafo, de 2 a 4 frases" —, não o provedor. No
+ * preset ele valia para toda chamada feita pelo app, e truncaria a primeira que
+ * precisasse de mais espaço.
+ */
+export const WORKDAY_MAX_OUTPUT_TOKENS = 220;
+
 const SYSTEM_PROMPT = `Você resume registros de trabalho de um app de controle de horas.
 
 Receberá uma lista de tarefas com nome e duração. Escreva UM parágrafo em

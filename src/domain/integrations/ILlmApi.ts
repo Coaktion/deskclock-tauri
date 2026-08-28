@@ -17,9 +17,29 @@ export interface LlmCompletion {
   limits?: LlmRateLimits;
 }
 
+/**
+ * O que muda de uma chamada para a outra. Hoje só o teto de saída.
+ *
+ * **Ele é da chamada, não do provedor.** O parágrafo do resumo cabe em 220
+ * tokens; um plano de semana em JSON não cabe. Os dois falam com o mesmo
+ * adapter, então um teto fixo no preset serviria a um e truncaria o outro — e
+ * truncado o provedor devolve `finish_reason: "length"`, que o adapter mapeia
+ * para resposta vazia: a tela pediria "tente novamente" para algo que nunca
+ * passaria.
+ *
+ * O **nome** do parâmetro continua sendo do provedor (`outputTokensParam`, no
+ * catálogo de presets) — `max_tokens` devolve 400 na família gpt-5, que só
+ * conhece `max_completion_tokens`. Aqui só existe a intenção, que é o que
+ * `domain/` pode ter.
+ */
+export interface LlmCompleteOptions {
+  /** Teto de tokens da resposta. Ausente = o provedor decide, como sempre decidiu. */
+  maxOutputTokens?: number;
+}
+
 export interface ILlmApi {
   /** Uma completação de chat; devolve o texto da resposta e a cota medida nela. */
-  complete(messages: LlmMessage[]): Promise<LlmCompletion>;
+  complete(messages: LlmMessage[], options?: LlmCompleteOptions): Promise<LlmCompletion>;
   /** Ids de modelo disponíveis. Usado para validar a chave e preencher o seletor. */
   listModels(): Promise<string[]>;
 }
