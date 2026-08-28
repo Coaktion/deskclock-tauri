@@ -274,7 +274,7 @@ Vitest, unit (§`docs-internal/testes.md`). Espelhando a origem, em `src/tests/`
 | Fase | Estado |
 |---|---|
 | 0 · teto de saída | **concluída** (2026-08-28) — `ILlmApi.complete(messages, options)`, `outputTokensParam` no preset, `WORKDAY_MAX_OUTPUT_TOKENS` em `buildWorkdayPrompt.ts`; o detalhe está em `docs-internal/integracoes/llm.md` |
-| 1 · prompt, parser, use case | não iniciada |
+| 1 · prompt, parser, use case | **concluída** (2026-08-28) — `buildWeekPlanPrompt`, `parseWeekPlanDraft` e `planWeek`, 45 testes; nada os chama ainda |
 | 2 · criação | não iniciada |
 | 3 · tela | não iniciada |
 | 4 · documentação | não iniciada |
