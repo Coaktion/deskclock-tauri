@@ -90,6 +90,7 @@ aberta. Doc novo de arquitetura, tela, integração ou spec: `docs-internal/`.
 | vai criar **abstração ou integração nova** | `docs-internal/guardrails.md` |
 | a rodada de **fidelidade do design** está em curso | `docs-internal/specs/design-system-fidelity.md` — conferir se a mudança visual não é uma etapa de lá |
 | vai mexer no **backup do banco no Drive** | `docs-internal/specs/backup-google-drive.md` — execução em fases, uma por sessão |
+| vai mexer no **planejamento da semana por prompt** | `docs-internal/specs/planejamento-por-prompt.md` — execução em fases, a 0 antes de todas |
 | quer saber **por que** algo é assim | `docs-internal/historico-de-decisoes.md` e `git log` |
 
 ### 5.1 De-para das seções antigas
