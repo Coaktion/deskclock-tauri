@@ -737,8 +737,12 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
       expectPadding(dia.children[0], SPEC_3B.diaHeader);
 
       // Medir o primitivo só vale enquanto for ele que a tela usa: escrito à mão
-      // de novo, o cartão voltaria aos 8/12 com esta trava verde.
-      expect(sourceOf("src/presentation/pages/HistoryPage.tsx")).toContain("<SectionCard");
+      // de novo, o cartão voltaria aos 8/12 com esta trava verde. O caminho
+      // acompanhou a lista de entradas quando ela virou a aba `Tarefas` — a
+      // afirmação é a mesma, sobre o arquivo em que a lista passou a morar.
+      expect(sourceOf("src/presentation/sections/history/HistoryTasksTab.tsx")).toContain(
+        "<SectionCard"
+      );
     });
   });
 
