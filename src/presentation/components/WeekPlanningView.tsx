@@ -4,7 +4,11 @@ import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormC
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
+import { Badge, Button, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
+import { PlanWeekModal } from "@presentation/modals/PlanWeekModal";
+import { existingPlanLines, weekPlanDays } from "@presentation/sections/planning/weekPlanContext";
+import { isLlmConnected } from "@presentation/sections/integrations/llm/llmConnection";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
@@ -18,7 +22,7 @@ import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeeti
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { todayISO } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -92,6 +96,13 @@ export function WeekPlanningView() {
   const runningPlannedId = runningPlannedTaskId(activePlannedTaskId, runningTask);
 
   const formColumn = usePersistedFlag("planningFormCollapsed");
+
+  const config = useAppConfig();
+  const [planningWeek, setPlanningWeek] = useState(false);
+  // Sem provedor o botão não aparece, como a seção de resumo do Histórico: um
+  // caminho que só leva a "configure primeiro" não é caminho.
+  const canPlanByPrompt =
+    config.isLoaded && isLlmConnected(config.get("llmBaseUrl"), config.get("llmModel"));
 
   // A semana é sempre útil: sábado e domingo saíram de vez, junto com a
   // configuração que os ligava. Tarefas recorrentes gravadas no fim de semana
@@ -237,9 +248,22 @@ export function WeekPlanningView() {
           </div>
         }
         actions={
-          <span className="text-xs text-fg-secondary whitespace-nowrap">
-            {completedCount} de {totalCount} concluídas
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            {canPlanByPrompt && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPlanningWeek(true)}
+                title="Descrever a semana e deixar a IA propor as tarefas"
+              >
+                <Sparkles size={14} />
+                Planejar com IA
+              </Button>
+            )}
+            <span className="text-xs text-fg-secondary whitespace-nowrap">
+              {completedCount} de {totalCount} concluídas
+            </span>
+          </div>
         }
       />
 
@@ -434,6 +458,23 @@ export function WeekPlanningView() {
           </div>
         </div>
       </div>
+
+      {planningWeek && (
+        <PlanWeekModal
+          weekDays={weekPlanDays(visibleDays)}
+          weekLabel={label}
+          existing={existingPlanLines(tasks)}
+          onCreated={async (created) => {
+            setPlanningWeek(false);
+            if (created.length === 0) return;
+            await reload();
+            // Quem grava é o `importWeekPlan`, que não conhece o barramento de
+            // eventos: sem este aviso o overlay seguiria com a semana antiga.
+            await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+          }}
+          onClose={() => setPlanningWeek(false)}
+        />
+      )}
     </div>
   );
 }

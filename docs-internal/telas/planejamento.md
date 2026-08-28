@@ -58,6 +58,30 @@
 - **Edição:** abre modal completo.
 - **Botões por tarefa:** Play | Concluir/Pendente | Duplicar | Ações (expandir/editar ações) | Excluir (sem confirmação). **Só aparecem no hover da linha, e sem hover não ocupam largura** (`w-0` + `overflow-hidden`, não apenas `opacity-0`): reservados, o espaço de cinco botões saía do nome da tarefa, que truncava numa linha vazia à direita. `focus-within` abre o bloco para quem navega pelo teclado.
 - **E o chip de faturamento vem depois deles, ancorado à direita.** A largura que os botões abrem sai do `1fr` do nome e puxa para a esquerda tudo o que estiver à direita dele: com o chip antes, ele andava ~118px no instante em que o cursor entrava na linha, e o `Excluir` — que não pergunta — herdava o lugar onde o dedo já estava indo. Desde que o chip virou controle (`bbb4a1b`), posição estável é requisito, não acabamento. Em repouso o desenho não muda: a célula fechada cancela o `gap` que não ocupa (`-mr-2.5`), e o chip fica exatamente onde sempre esteve. Só vale onde a célula fecha em largura — nas Entradas, que têm duração e portanto célula já reservada, o chip continua antes.
+- **Planejar com IA:** botão no canto direito do cabeçalho, ao lado do contador de concluídas, que
+  abre o `PlanWeekModal` — o usuário descreve a semana em texto livre e o provedor de LLM propõe as
+  planejadas. **Ele só aparece com provedor conectado** (`isLlmConnected`), como a seção de resumo
+  do Histórico: um caminho que só leva a "configure primeiro" não é caminho. A integração está em
+  `docs-internal/integracoes/llm.md`, § "O plano da semana".
+
+> **O modal tem dois passos e nada é criado sem o segundo.** No pedido, um `Textarea` onde
+> **Ctrl/Cmd+Enter** gera — Enter sozinho quebra linha, como em todo campo de várias linhas. Na
+> revisão, uma linha por proposta, **todas marcadas**: o usuário pediu este plano, e desmarcar a
+> proposta errada é menos trabalho que marcar as nove certas. Enter **não** submete, como nos
+> outros três modais que operam sobre seleção (§7 do CLAUDE.md).
+>
+> **O dia é um seletor dos dias da semana, não um calendário.** A proposta só pode ocupar a semana
+> que está na tela — a mesma regra que o parser aplica na origem —, e um campo de data livre deixaria
+> a revisão criar o que a geração não podia propor.
+>
+> **A revisão edita nomes, não ids.** Os dois autocompletes guardam `projectName`/`categoryName` ao
+> lado do id, e não derivados dele: derivando, a primeira tecla digitada não apareceria, porque o
+> valor voltaria a ser o nome do id ainda gravado. É o mesmo par que os três modais de importação
+> mantêm, pelo mesmo motivo.
+>
+> **"Voltar ao pedido" preserva o texto.** Reescrever a semana inteira para ajustar uma frase é o
+> pior caminho de volta que o modal poderia ter.
+
 - **Importar Google Agenda:** **não se entra por aqui.** O botão que ficava ao lado da navegação de semana foi removido — o modal abre pelo rail de integrações e pela tela de Integrações, que é onde está o seletor de workspace que governa o destino do import (§5.7). Ter dois caminhos para o mesmo modal era justamente o que fazia o import nascer num workspace diferente do que o Planejamento mostra na tela.
 
 #### Lógica de Concluir/Pendente

@@ -276,5 +276,5 @@ Vitest, unit (§`docs-internal/testes.md`). Espelhando a origem, em `src/tests/`
 | 0 · teto de saída | **concluída** (2026-08-28) — `ILlmApi.complete(messages, options)`, `outputTokensParam` no preset, `WORKDAY_MAX_OUTPUT_TOKENS` em `buildWorkdayPrompt.ts`; o detalhe está em `docs-internal/integracoes/llm.md` |
 | 1 · prompt, parser, use case | **concluída** (2026-08-28) — `buildWeekPlanPrompt`, `parseWeekPlanDraft` e `planWeek`, 45 testes; nada os chama ainda |
 | 2 · criação | **concluída** (2026-08-28) — `importWeekPlan`, espelho do `importCalendarEvents`; quem emite `PLANNED_TASKS_CHANGED` é a tela |
-| 3 · tela | não iniciada |
-| 4 · documentação | não iniciada |
+| 3 · tela | **concluída** (2026-08-28) — `PlanWeekModal`, `WeekPlanRow`, `useWeekPlan`, `weekPlanContext`; botão no cabeçalho do Planejamento. **Falta a verificação visual** nos 2 modos × 4 acentos, que só roda em máquina com `pnpm tauri dev` |
+| 4 · documentação | **concluída** (2026-08-28) — `llm.md` (as duas frases revistas + § do plano) e `telas/planejamento.md` |

@@ -8,8 +8,12 @@
 
 ## O que a integração faz — e o que ela não faz
 
-Ela produz **um parágrafo por dia de trabalho**, exibido na tela de **Histórico**, sobre os dias
-que a busca ali trouxe. É a única coisa que faz.
+Ela faz **duas** coisas, e a segunda chegou em 2026-08-28:
+
+1. **O resumo do dia** — um parágrafo por dia de trabalho, exibido na tela de **Histórico**, sobre
+   os dias que a busca ali trouxe.
+2. **O plano da semana** — um pedido em texto livre vira **propostas** de tarefa planejada, na tela
+   de Planejamento. § "O plano da semana", abaixo.
 
 **A busca do Histórico dispara a geração**, e é a tabela `day_summaries` que sustenta isso: o lote
 consulta o cache antes do provedor, então o dia já resumido volta do banco sem custo e só o dia
@@ -27,10 +31,17 @@ novo vira requisição. Foi decisão do usuário em 2026-08-28, com o custo na m
 > pedindo por ele. Aqui o gatilho é um resultado que o usuário mandou buscar.
 
 **É leitura, sem escrita externa.** Não há envio de horas, não há import, não há nada gravado no
-provedor. O que sai do app é o que `buildWorkdayPrompt` monta: **nome da tarefa, nome do projeto e
-duração**, das tarefas concluídas daquele dia, já agrupadas. Não vão categoria, faturamento,
-cliente, horário, id, nem o nome do usuário. O que volta é texto, guardado na tabela
-`day_summaries` e mostrado na tela — nenhuma tarefa é criada ou alterada a partir dele.
+provedor. O que sai do app no resumo é o que `buildWorkdayPrompt` monta: **nome da tarefa, nome do
+projeto e duração**, das tarefas concluídas daquele dia, já agrupadas. Não vão categoria,
+faturamento, cliente, horário, id, nem o nome do usuário. O que volta é texto, guardado na tabela
+`day_summaries` e mostrado na tela.
+
+> **"Nenhuma tarefa é criada ou alterada a partir dele" deixou de ser verdade em 2026-08-28**, e o
+> que a substitui é mais estreito: **nenhuma tarefa é criada sem que uma pessoa a tenha visto e
+> confirmado**. O plano da semana produz escrita **local** — linhas em `planned_tasks` — e só
+> depois da revisão linha a linha. Continua não havendo escrita em sistema externo, e continua não
+> havendo nada que o modelo grave sozinho. Quem for acrescentar um "criar tudo" que pule a lista
+> está desfazendo a única trava que existe entre uma alucinação e o banco do usuário.
 
 **Não é uma integração de sincronização**, e por isso ela não segue metade do roteiro do §9.5 do
 `docs-internal/guardrails.md`: não há `ISyncStrategy`, não há entrada em `AUTO_SYNC_INTEGRATIONS`,
@@ -335,6 +346,54 @@ case, sem emoji.
 
 ---
 
+## O plano da semana
+
+`domain/usecases/llm/`: `buildWeekPlanPrompt.ts`, `parseWeekPlanDraft.ts` e `PlanWeek.ts`. A tela é
+o `PlanWeekModal`, aberto pelo botão "Planejar com IA" no cabeçalho do Planejamento — e o botão
+**só aparece com provedor conectado**, como a seção de resumo do Histórico, que simplesmente não
+renderiza sem ele.
+
+**Uma requisição, não um lote.** Sem teto de dias, sem `skipped`, sem parada no 429: o plano
+inteiro sai de uma resposta só, com `WEEK_PLAN_MAX_OUTPUT_TOKENS = 1200` de teto (§ acima).
+
+**Só o usuário dispara, e não há cache.** É o oposto do resumo, e a razão é a mesma que justifica o
+disparo automático de lá: `day_summaries` faz a segunda rodada custar zero, e resumo de dia
+encerrado é fato que não muda. Um plano é rascunho — muda a cada frase reescrita —, e guardá-lo
+seria guardar lixo com data. Por isso cada geração é uma requisição paga, e por isso ela nasce de
+um clique.
+
+**O que sai do app**: os dias úteis da semana navegada, os **nomes** de projeto e de categoria do
+workspace ativo, os nomes das planejadas que a semana já tem, e o pedido do usuário. Seis blocos
+delimitados, e os cinco primeiros são dados escritos pelo usuário — vale aqui, sem atenuação, o que
+a § "O prompt" diz do resumo. **O `<pedido>` também é delimitado**, por outro motivo: ele é
+instrução legítima, mas o modelo precisa de onde ver que ela acabou.
+
+**O parser não confia na resposta**, e a razão é estrutural: não há `response_format` no request —
+ele quebraria num dos onze provedores, pelo mesmo motivo de `max_tokens` —, então o formato é
+combinado **só no prompt**, e prompt é pedido. `parseWeekPlanDraft` apara cerca de markdown, ignora
+prosa em volta, acha o primeiro JSON balanceado respeitando aspas (ou uma tarefa chamada
+`Revisar [PRs] do {backend}` fecharia o objeto no lugar errado) e **descarta por item**: dia fora
+da semana, sábado ou domingo na recorrência, item sem nome, hora fora de `HH:MM`, e teto de
+`MAX_PLAN_TASKS = 20`. Uma linha torta entre dez boas não custa as nove.
+
+O descarte é **na origem** e **silencioso** — é a lição do import da Agenda (§ `telas/planejamento.md`),
+e o usuário nunca soube que aquele item existia.
+
+**Duas regras do app valem aqui sem exceção.** Nome de projeto ou de categoria que não casa com o
+catálogo vira `null`, nunca entidade nova (§6.4 — o casamento é o `findByNameCaseInsensitive` que o
+import da Agenda já usa); e a **categoria resolvida decide o faturamento** (§6.2), não o
+`faturavel` que o modelo devolveu — esse só vale onde nenhuma categoria casou.
+
+> **`drafts` vazio é a resposta ilegível**, e não há classe de erro para ele. Erro de provedor mora
+> em `infra/` e `domain/` não pode importá-lo; e "respondeu, mas não com um plano" não é falha de
+> transporte. A tela escreve a frase, como escreve todas as outras.
+
+> **As chaves do JSON são em português**, como o resto do prompt: pedir a um modelo pequeno prosa
+> numa língua e chaves noutra é uma tradução a mais para ele errar. Trocar é uma linha no prompt e
+> uma no parser — mas com medição, não com palpite.
+
+---
+
 ## Escopo de workspace: a exceção declarada
 
 **Não existe `llmDeskclockWorkspaceId`, e a ausência é deliberada.** O contrato comum
@@ -348,7 +407,9 @@ aplica.**
 >
 > O resumo não escreve em sistema externo e não roda em ciclo. Ele **descreve as tarefas que o
 > usuário está vendo na tela**, na mesma tela em que elas estão, e por isso segue o **workspace
-> ativo** — como a própria lista de entradas logo abaixo dele. Dar-lhe workspace próprio produziria o
+> ativo** — como a própria lista de entradas logo abaixo dele. **O plano da semana segue a mesma
+> regra, e nele ela é ainda mais direta**: as planejadas nascem na semana que está na tela, e um
+> workspace próprio as criaria num escopo que essa semana não mostra. Dar-lhe workspace próprio produziria o
 > parágrafo de um escopo ao lado da lista de outro: o texto falaria de tarefas que não estão à
 > vista, e ninguém teria como perceber que são de outro lugar.
 >
