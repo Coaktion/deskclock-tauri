@@ -1,16 +1,16 @@
 import { MAX_SUMMARY_DAYS } from "@domain/usecases/llm/SummarizeWorkdays";
 
 /**
- * O que o botão diz **antes** do clique.
+ * O aviso de que a busca trouxe mais dias do que uma geração resume.
  *
- * O número vai no rótulo porque cada dia é uma requisição paga contra a cota do
- * provedor, e um "Gerar" sem quantidade esconde justamente o que custa. Quando a
- * busca traz mais dias que o teto, o rótulo diz que só os mais recentes entram —
- * descobrir isso depois, pelos parágrafos que faltam, pareceria falha.
+ * Existe porque o corte é silencioso: o lote pega os `MAX_SUMMARY_DAYS` mais
+ * recentes e os demais simplesmente não aparecem. Descobrir isso depois, pelos
+ * parágrafos que faltam, pareceria falha. Dentro do teto não há o que avisar, e
+ * o retorno é `null`.
  */
-export function summaryButtonLabel(dayCount: number): string {
-  if (dayCount > MAX_SUMMARY_DAYS) return `Gerar resumo dos ${MAX_SUMMARY_DAYS} dias mais recentes`;
-  return dayCount === 1 ? "Gerar resumo de 1 dia" : `Gerar resumo de ${dayCount} dias`;
+export function summaryScopeNote(dayCount: number): string | null {
+  if (dayCount <= MAX_SUMMARY_DAYS) return null;
+  return `A busca trouxe ${dayCount} dias; o resumo cobre os ${MAX_SUMMARY_DAYS} mais recentes.`;
 }
 
 /** O andamento do lote, escrito enquanto ele roda. */

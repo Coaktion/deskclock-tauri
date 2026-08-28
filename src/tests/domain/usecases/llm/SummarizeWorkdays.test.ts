@@ -84,7 +84,8 @@ function run(
     llm?: ILlmApi;
   },
   dateISOs: string[],
-  onProgress?: (progress: { done: number; total: number }) => void
+  onProgress?: (progress: { done: number; total: number }) => void,
+  unfinishedDayISO?: string
 ) {
   return summarizeWorkdays(
     {
@@ -92,7 +93,7 @@ function run(
       daySummaryRepo: deps.daySummaryRepo ?? makeSummaryRepo(),
       llm: deps.llm ?? makeLlm(),
     },
-    { workspaceId: WS, dateISOs, projectNameById, onProgress }
+    { workspaceId: WS, dateISOs, projectNameById, onProgress, unfinishedDayISO }
   );
 }
 
@@ -131,6 +132,33 @@ describe("summarizeWorkdays", () => {
       { dateISO: "2026-08-24", summary: "Resumo do dia.", source: "generated" },
     ]);
     expect(daySummaryRepo.save).toHaveBeenCalledTimes(1);
+  });
+
+  it("o dia que ainda não acabou ignora o cache e é gerado de novo", async () => {
+    const llm = makeLlm();
+    const daySummaryRepo = makeSummaryRepo([makeCached("2026-08-25"), makeCached("2026-08-24")]);
+
+    const outcome = await run(
+      { llm, daySummaryRepo },
+      ["2026-08-25", "2026-08-24"],
+      undefined,
+      "2026-08-25"
+    );
+
+    expect(llm.complete).toHaveBeenCalledTimes(1);
+    expect(outcome.summaries).toEqual([
+      { dateISO: "2026-08-25", summary: "Resumo do dia.", source: "generated" },
+      { dateISO: "2026-08-24", summary: "Texto guardado.", source: "cache" },
+    ]);
+  });
+
+  it("sem `unfinishedDayISO`, todo dia guardado vale — inclusive o mais recente", async () => {
+    const llm = makeLlm();
+    const daySummaryRepo = makeSummaryRepo([makeCached("2026-08-25")]);
+
+    await run({ llm, daySummaryRepo }, ["2026-08-25"]);
+
+    expect(llm.complete).not.toHaveBeenCalled();
   });
 
   it("grava na tabela o dia que acabou de gerar", async () => {

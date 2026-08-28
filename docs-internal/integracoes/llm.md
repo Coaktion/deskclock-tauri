@@ -2,7 +2,7 @@
 
 > Escrito em 2026-08-27, com a feature (`b2d0923`..`8212c19`).
 > **Revisado em 2026-08-28**, quando o resumo saiu da tela de Tarefas, passou a resumir vários
-> dias e trocou o cache de config por tabela.
+> dias, trocou o cache de config por tabela e passou a ser disparado pela busca do Histórico.
 > Contrato comum a todas as integrações: `docs-internal/integracoes/README.md`.
 > A tela que consome o resultado está em `docs-internal/telas/historico.md`.
 
@@ -11,11 +11,20 @@
 Ela produz **um parágrafo por dia de trabalho**, exibido na tela de **Histórico**, sobre os dias
 que a busca ali trouxe. É a única coisa que faz.
 
-**A geração é sempre explícita.** Não há resumo automático, em nenhuma circunstância: o único
-caminho é o botão "Gerar" da seção. Existiu um resumo automático do último dia trabalhado na tela
-de Tarefas, e ele foi removido em 2026-08-28 — cada dia é uma requisição paga, e uma tela que
-resume ao abrir gasta a cota de quem só queria conferir as horas. Quem for "completar" isto com
-uma geração na montagem está desfazendo a decisão.
+**A busca do Histórico dispara a geração**, e é a tabela `day_summaries` que sustenta isso: o lote
+consulta o cache antes do provedor, então o dia já resumido volta do banco sem custo e só o dia
+novo vira requisição. Foi decisão do usuário em 2026-08-28, com o custo na mão.
+
+> **Ela revoga o "nada é gerado sozinho"** que esta seção afirmava desde 2026-08-27. O que aquela
+> regra protegia continua valendo em duas travas, e são elas que impedem o disparo automático de
+> virar sangria de cota: o **teto de 5 dias** por rodada (§ abaixo) e a chave `workspace|dias` do
+> `useDaySummaries`, que faz **cada conjunto de dias rodar uma só vez** — sem ela, o recarregamento
+> por `TASKS_CHANGED` (que refaz a busca a cada tarefa salva em qualquer janela) pagaria de novo
+> pelos mesmos dias a cada salvamento. Quem for mexer no disparo mexe nas duas.
+>
+> O resumo automático do **último dia trabalhado na tela de Tarefas** continua removido, e por
+> outro motivo: ele rodava na montagem de uma tela que se abre o tempo todo, sem busca nenhuma
+> pedindo por ele. Aqui o gatilho é um resultado que o usuário mandou buscar.
 
 **É leitura, sem escrita externa.** Não há envio de horas, não há import, não há nada gravado no
 provedor. O que sai do app é o que `buildWorkdayPrompt` monta: **nome da tarefa, nome do projeto e
@@ -200,12 +209,19 @@ minuto, enquanto uma geração por dia nunca chegava perto dela.
 
 **A tabela é o que impede pagar duas vezes pelo mesmo dia.** Antes de chamar o provedor, o lote
 consulta `day_summaries` e pula o dia que já tem texto. Um resumo de um dia é fato que não muda — o
-dia acabou, e as tarefas dele também —, e é essa economia que torna o teto de 5 suportável: a
-segunda busca sobre a mesma semana não gasta requisição nenhuma.
+dia acabou, e as tarefas dele também —, e é essa economia que torna o teto de 5 suportável **e o
+disparo automático viável**: a segunda busca sobre a mesma semana não gasta requisição nenhuma.
+
+**Hoje é a exceção** (`unfinishedDayISO`), e é a trava que impede o cache de mentir. O dia corrente
+não é fato encerrado, e o filtro padrão do Histórico é justamente "Hoje": guardá-lo às 9h deixaria
+a seção afirmando a manhã pelo resto do dia. Ele se regera a cada rodada — o custo é uma requisição
+por visita à tela —, e o texto continua sendo gravado, valendo a partir de amanhã.
 
 **Erro não repete sozinho** (`useDaySummaries`): a mensagem fica e o ciclo para. Insistir contra um
-429 é o pior que um cliente de rate limit pode fazer; quem decide tentar de novo é o usuário, pelo
-mesmo botão.
+429 é o pior que um cliente de rate limit pode fazer, e é exatamente o risco que o disparo
+automático traria se a rodada se repetisse — a chave `workspace|dias` é o que o fecha. Quem decide
+tentar de novo é o usuário, pelo botão "Tentar novamente", que só aparece quando há erro ou dia
+não gerado.
 
 **E o lote para no primeiro 429.** Os dias que sobraram voltam em `skipped` — "não gerados" —, e
 não como o mesmo erro repetido em cada um. Falha de **um** dia, essa sim, não derruba os outros: o
@@ -251,13 +267,14 @@ de sobra. Nem todo provedor manda estes cabeçalhos, e ausente é ausente — a 
 **A medição é persistida**, em duas chaves de `AppConfig`: `llmLastLimits` (o objeto) e
 `llmLastLimitsAt` (o instante). Elas existem porque **a cota só se conhece fazendo uma chamada** —
 nenhum dos onze provedores tem endpoint gratuito que a informe, e o teste de conexão não serve
-(§ acima). Sem persistir, o card ficaria vazio até a próxima geração, que é sempre um clique do
-usuário. Quem grava é o `useDaySummaries`, e só quando `limits` veio. Não
+(§ acima). Sem persistir, o card ficaria vazio até a próxima geração, que só acontece com uma
+busca no Histórico sobre dia ainda não resumido. Quem grava é o `useDaySummaries`, e só quando
+`limits` veio. Não
 são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
 `SECRET_CONFIG_KEYS`.
 
-Como a medição só acontece quando alguém manda gerar, **ela quase sempre é uma foto do passado, e
-o card diz isso**:
+Como a medição só acontece quando uma busca gera dia novo, **ela quase sempre é uma foto do
+passado, e o card diz isso**:
 `buildLlmQuotaView` (`src/presentation/sections/integrations/llm/llmQuota.ts`, no molde do
 `llmConnection.ts` ao lado) devolve as linhas montadas, o "há 3 dias" e um `stale` que acende
 acima de **uma hora** — o balde mais curto que os provedores reportam renova em minutos, então

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { summarizeWorkdays, type DaySummaryResult } from "@domain/usecases/llm/SummarizeWorkdays";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
@@ -9,6 +9,7 @@ import {
   describeLlmError,
   isLlmConnected,
 } from "@presentation/sections/integrations/llm/llmConnection";
+import { todayISO } from "@shared/utils/time";
 
 export interface DaySummaryError {
   dateISO: string;
@@ -29,12 +30,20 @@ const EMPTY: DaySummariesState = { summaries: [], errors: [], skipped: [], progr
 /**
  * Os resumos por dia do resultado da busca do Histórico.
  *
- * **Nada é gerado sozinho.** A geração é sempre um clique: cada dia é uma
- * requisição paga, e uma tela que resume ao abrir gastaria a cota de quem só
- * queria conferir as horas de ontem.
+ * **A busca dispara a geração.** O lote consulta `day_summaries` antes do
+ * provedor: dia já resumido volta do banco sem gastar requisição, e só o dia
+ * novo é chamado. É esse cache que torna o disparo automático viável — rebuscar
+ * a mesma semana não custa nada.
  *
- * **Erro não repete sozinho.** A mensagem fica e o ciclo para; quem decide
- * tentar de novo é o usuário, pelo mesmo botão.
+ * **Cada conjunto de dias roda uma vez.** A chave é workspace + dias, e é o que
+ * impede o recarregamento por `TASKS_CHANGED` — que refaz a busca a cada tarefa
+ * salva em qualquer janela — de virar uma segunda rodada paga sobre os mesmos
+ * dias. É também o que faz valer o **erro não repete sozinho**: a mensagem fica,
+ * e quem decide tentar de novo é o usuário, pelo botão.
+ *
+ * **Hoje é o único dia que não vem do cache.** O dia ainda está acontecendo, e o
+ * filtro padrão da tela é "Hoje": guardar o resumo das 9h deixaria a seção
+ * afirmando a manhã pelo resto do dia.
  */
 export function useDaySummaries(dateISOs: string[]) {
   const { taskRepo, daySummaryRepo } = useRepositories();
@@ -65,6 +74,9 @@ export function useDaySummaries(dateISOs: string[]) {
         workspaceId,
         dateISOs,
         projectNameById,
+        // Hoje não vale do cache: o dia ainda está acontecendo, e o filtro
+        // padrão do Histórico é justamente "Hoje".
+        unfinishedDayISO: todayISO(),
         onProgress: (progress) => {
           if (isCurrent()) setState((prev) => ({ ...prev, progress }));
         },
@@ -94,10 +106,34 @@ export function useDaySummaries(dateISOs: string[]) {
   const connected =
     config.isLoaded && isLlmConnected(config.get("llmBaseUrl"), config.get("llmModel"));
 
+  // O que identifica uma rodada: os dias, e o workspace em que eles são lidos.
+  // Sem o workspace, trocar de recorte sobre o mesmo intervalo deixaria na tela
+  // os resumos do workspace anterior.
+  const runKey = `${workspaceId}|${dateISOs.join(",")}`;
+  const lastRunKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Sem provedor a chave **não** é marcada: a config carrega depois da
+    // primeira renderização, e marcá-la aqui perderia a rodada da busca inicial.
+    if (!connected) return;
+    if (lastRunKeyRef.current === runKey) return;
+    lastRunKeyRef.current = runKey;
+    if (dateISOs.length === 0) {
+      // Busca sem dia nenhum: cancela a rodada em voo e limpa o que a busca
+      // anterior deixou escrito, que senão descreveria um resultado que saiu da
+      // tela.
+      runIdRef.current++;
+      setState(EMPTY);
+      return;
+    }
+    void generate();
+  }, [connected, runKey, dateISOs.length, generate]);
+
   return {
     ...state,
     connected,
     running: state.progress !== null,
-    generate: () => void generate(),
+    /** O caminho de retentar: o automático já rodou para este conjunto de dias. */
+    retry: () => void generate(),
   };
 }

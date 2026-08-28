@@ -1,24 +1,21 @@
 import { describe, it, expect } from "vitest";
 import { MAX_SUMMARY_DAYS } from "@domain/usecases/llm/SummarizeWorkdays";
-import { summaryButtonLabel, summaryProgressLabel } from "@presentation/hooks/daySummaries";
+import { summaryProgressLabel, summaryScopeNote } from "@presentation/hooks/daySummaries";
 
-describe("summaryButtonLabel", () => {
-  it("diz o número de dias no singular", () => {
-    expect(summaryButtonLabel(1)).toBe("Gerar resumo de 1 dia");
+describe("summaryScopeNote", () => {
+  it("cala quando a busca cabe no teto", () => {
+    expect(summaryScopeNote(1)).toBeNull();
+    expect(summaryScopeNote(MAX_SUMMARY_DAYS)).toBeNull();
   });
 
-  it("diz o número de dias no plural", () => {
-    expect(summaryButtonLabel(3)).toBe("Gerar resumo de 3 dias");
-  });
-
-  it("no teto, ainda diz o número exato", () => {
-    expect(summaryButtonLabel(MAX_SUMMARY_DAYS)).toBe(`Gerar resumo de ${MAX_SUMMARY_DAYS} dias`);
-  });
-
-  it("acima do teto, avisa que só os mais recentes entram", () => {
-    expect(summaryButtonLabel(MAX_SUMMARY_DAYS + 1)).toBe(
-      `Gerar resumo dos ${MAX_SUMMARY_DAYS} dias mais recentes`
+  it("avisa o corte quando a busca passa do teto", () => {
+    expect(summaryScopeNote(MAX_SUMMARY_DAYS + 1)).toBe(
+      `A busca trouxe ${MAX_SUMMARY_DAYS + 1} dias; o resumo cobre os ${MAX_SUMMARY_DAYS} mais recentes.`
     );
+  });
+
+  it("não avisa nada numa busca sem dia", () => {
+    expect(summaryScopeNote(0)).toBeNull();
   });
 });
 

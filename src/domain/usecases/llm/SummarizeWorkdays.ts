@@ -69,6 +69,16 @@ export interface SummarizeWorkdaysOptions {
   dateISOs: string[];
   projectNameById: (id: string | null) => string | undefined;
   /**
+   * O dia que **ainda não acabou** — na prática, hoje.
+   *
+   * O cache vale porque dia terminado é fato que não muda: o dia acabou, e as
+   * tarefas dele também. O dia corrente não é esse caso — resumi-lo às 9h e
+   * guardar o texto deixaria a tela afirmando a manhã pelo resto do dia, e o
+   * filtro padrão do Histórico é justamente "Hoje". Ele é o único dia que se
+   * regera; o texto continua sendo gravado, e vale a partir de amanhã.
+   */
+  unfinishedDayISO?: string;
+  /**
    * Avisado antes de cada dia, com quantos já ficaram para trás e quantos são
    * ao todo. É o que deixa a tela escrever "gerando 2 de 5" — o lote é
    * sequencial e pode levar dezenas de segundos, e sem sinal de avanço ele é
@@ -91,7 +101,8 @@ function mostRecent(dateISOs: string[]): string[] {
  *
  * **Consulta a tabela antes do provedor.** Dia já resumido é fato que não muda,
  * e regerá-lo pagaria de novo pela mesma cota — é essa economia que torna o teto
- * de dias suportável.
+ * de dias suportável, e o disparo automático da busca do Histórico junto com
+ * ele. A exceção é o `unfinishedDayISO`, que ainda está acontecendo.
  *
  * **Para no primeiro limite de cota.** Insistir contra um 429 é o pior que um
  * cliente pode fazer, e os dias que sobram voltam em `skipped`, não como erro de
@@ -109,7 +120,7 @@ export async function summarizeWorkdays(
 
   for (const [index, dateISO] of days.entries()) {
     options.onProgress?.({ done: index, total: days.length });
-    const hit = cachedByDay.get(dateISO);
+    const hit = dateISO === options.unfinishedDayISO ? undefined : cachedByDay.get(dateISO);
     if (hit !== undefined && hit.trim() !== "") {
       outcome.summaries.push({ dateISO, summary: hit, source: "cache" });
       continue;

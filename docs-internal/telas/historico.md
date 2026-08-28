@@ -44,25 +44,41 @@ um dos dois recortes. `sections/history/HistorySummarySection.tsx`, com toda a l
 
 - **Some por inteiro quando não há provedor de IA configurado** (`isLlmConnected`). Nada de faixa
   convidando a conectar: quem apresenta a integração é o card da tela de Integrações.
-- **Nada é gerado sozinho, em nenhuma circunstância.** O único caminho é o botão. Cada dia é uma
-  requisição paga, e uma tela que resume ao abrir gastaria a cota de quem só queria conferir as
-  horas de ontem.
-- **O botão diz quantos dias vai gerar antes do clique** (`summaryButtonLabel`) — "Gerar resumo de
-  3 dias". Ele **some** quando não há busca feita ou quando o resultado não tem dia nenhum.
-- **Teto de 5 dias por geração** (`MAX_SUMMARY_DAYS`). Passando disso, o rótulo avisa: "Gerar
-  resumo dos 5 dias mais recentes" — e são os **mais recentes** que entram. Descobrir o corte
-  depois, pelos parágrafos que faltam, pareceria falha. O porquê do número está no use case e em
-  `docs-internal/integracoes/llm.md`.
+- **O `LlmLogo` fica à esquerda do título**, no slot `leading` do `SectionCard`, em 14 px — o
+  degrau da escala de ícones, e não os 20 da placa de Integrações, que é caixa de ladrilho. É a
+  mesma marca dali, e é ela que atribui o parágrafo à integração que o produziu. Alarga o `leading`
+  do primitivo, que até aqui só hospedava **controle** (a caixa que seleciona o dia): a marca cabe
+  ali pela mesma razão que o controle — colada ao título ela atribui; no canto direito, junto das
+  ações, seria enfeite.
+- **A busca dispara a geração**, sem clique. Terminada a busca, o lote roda sobre os dias do
+  resultado: quem já está em `day_summaries` volta do banco e aparece na hora, quem falta é gerado.
+  É o cache que torna isso viável — rebuscar a mesma semana não gasta requisição nenhuma.
+- **Cada conjunto de dias roda uma vez** (chave `workspace|dias`, em `useDaySummaries`). Sem isso o
+  recarregamento por `TASKS_CHANGED` — que refaz a busca a cada tarefa salva em qualquer janela —
+  viraria uma segunda rodada paga sobre os mesmos dias.
+- **O botão só existe para retentar.** Ele aparece quando houve erro ou dia não gerado, escrito
+  "Tentar novamente"; sem nada a retentar, o cabeçalho fica sem ação — um "gerar" ao lado de
+  parágrafos já gerados não teria o que fazer, porque o lote lê a tabela antes do provedor.
+- **Teto de 5 dias por geração** (`MAX_SUMMARY_DAYS`). Passando disso, uma linha no topo do corpo
+  avisa (`summaryScopeNote`): "A busca trouxe 12 dias; o resumo cobre os 5 mais recentes" — e são
+  os **mais recentes** que entram. Descobrir o corte depois, pelos parágrafos que faltam, pareceria
+  falha. O porquê do número está no use case e em `docs-internal/integracoes/llm.md`.
 - **Um parágrafo por dia, cada um com a sua data**, no mesmo formato do cabeçalho dos cartões de
   dia logo abaixo (`formatHistoryDayHeader`).
 - **Dia já resumido não é regerado**: o use case consulta a tabela `day_summaries` antes de chamar
   o provedor, e grava o que gera. Nunca se paga duas vezes pelo mesmo dia.
+- **Hoje é a exceção, e é o que faz o disparo automático valer** (`unfinishedDayISO`). O dia ainda
+  está acontecendo, e o filtro padrão da tela é "Hoje": guardar o resumo das 9h deixaria a seção
+  afirmando a manhã pelo resto do dia. Ele se regera a cada rodada; o texto continua sendo gravado,
+  e passa a valer amanhã.
 - **Erro é por dia e discreto**, com a mensagem já traduzida por `describeLlmError` — a mesma
-  tradução do card de Integrações, não uma segunda redação. **Erro não repete sozinho**: quem
-  decide tentar de novo é o usuário, pelo mesmo botão.
+  tradução do card de Integrações, não uma segunda redação. **Erro não repete sozinho**: a rodada
+  automática já aconteceu para aquele conjunto de dias e não volta por conta própria; quem decide
+  tentar de novo é o usuário, pelo botão.
 - **Ao bater no limite de cota, o lote para.** Os dias que sobraram aparecem como "não gerados",
   numa linha só — e não como o mesmo 429 repetido em cada um.
-- **Enquanto roda, o botão mostra o andamento** ("Gerando 2 de 5…") e não aceita novo clique.
+- **Enquanto roda, o cabeçalho mostra o andamento** ("Gerando 2 de 5…") num botão que não aceita
+  clique.
 
 #### Abas do resultado
 O resultado se divide em duas abas, num `SegmentedControl` **grudado no topo do rolador**
