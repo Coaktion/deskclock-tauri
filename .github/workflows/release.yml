@@ -46,6 +46,16 @@ jobs:
             libxdo-dev \
             libayatana-appindicator3-dev
 
+      # ── Corrigir o AppImage no Arch/Fedora/Ubuntu 24.04+ (glib >= 2.80) ──
+      # O plugin GTK do linuxdeploy embute glib/gtk do Ubuntu 22.04 no bundle,
+      # o que conflita com a libayatana-appindicator do sistema em qualquer
+      # distro com glib mais nova — panic no tray antes de abrir a janela — e
+      # com o Mesa/EGL do sistema via libwayland-* também embutida. Ver
+      # scripts/appimage/linuxdeploy-plugin-gtk-patched.sh para o detalhe.
+      - name: Pré-carregar plugin GTK do linuxdeploy corrigido (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: ./scripts/appimage/seed-linuxdeploy-cache.sh
+
       # ── Node + pnpm ────────────────────────────────────────────────────
       - uses: pnpm/action-setup@v4
         with:
