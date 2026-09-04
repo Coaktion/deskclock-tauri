@@ -133,7 +133,7 @@ pub fn migrate<R: Runtime>(app: &AppHandle<R>) -> Result<DbBootstrap, String> {
             .await
             .map_err(|e| format!("Falha ao abrir {}: {e}", path.display()))?;
 
-        let result = MIGRATOR
+        let result = migrator()
             .run(&pool)
             .await
             .map_err(|e| format!("Falha ao aplicar as migrations: {e}"));
@@ -154,6 +154,39 @@ pub fn migrate<R: Runtime>(app: &AppHandle<R>) -> Result<DbBootstrap, String> {
 /// Maior versão entre as migrations embutidas — o schema que este binário espera.
 fn expected_version() -> i64 {
     MIGRATOR.iter().map(|m| m.version).max().unwrap_or(0)
+}
+
+/// O migrator desta execução: o embutido, mais a tolerância que só vale em dev.
+///
+/// **Em dev, migration aplicada que o binário não conhece deixa de abortar o
+/// boot.** Sem isto, `sqlx` recusa subir com
+/// `migration N was previously applied but is missing in the resolved migrations`,
+/// e a causa não é banco corrompido: é migration com **escopo de branch** dividindo
+/// um arquivo de banco só. Rodar o app numa branch que traz a migration nova grava
+/// a versão no `_sqlx_migrations`; voltar para `develop`, que não a tem, trava o
+/// app inteiro por causa de uma tabela que nenhuma tela daquela linhagem consulta.
+/// Quem trabalha em duas features ao mesmo tempo pagava isso a cada troca de branch.
+///
+/// **Em produção a checagem continua estrita, e é lá que ela protege.** Um banco à
+/// frente do binário significa versão antiga do app aberta sobre dado novo — a
+/// checagem existe para impedir a tela de gravar contra schema que ela não entende.
+/// Em dev, o banco à frente é a branch de ontem, e o custo de errar é um
+/// `pnpm tauri dev` que não sobe.
+///
+/// O que isto **não** afrouxa: migration ausente no banco continua sendo aplicada,
+/// e checksum divergente continua sendo erro nos dois modos — arquivo `.sql`
+/// editado depois de aplicado segue reprovando.
+///
+/// O `Migrator` não deriva `Clone` e o `MIGRATOR` é `static`, então o de cada
+/// execução é montado a partir dele. `Cow::Borrowed` copia o empréstimo, não a
+/// lista.
+fn migrator() -> Migrator {
+    let mut migrator = Migrator {
+        migrations: MIGRATOR.migrations.clone(),
+        ..Migrator::DEFAULT
+    };
+    migrator.set_ignore_missing(is_dev_database());
+    migrator
 }
 
 /// URL do banco e versão esperada do schema. Devolve erro quando a migração do boot
