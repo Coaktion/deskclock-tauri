@@ -4,7 +4,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import {
   Button,
-  DatePickerInput,
+  DateRangeInput,
   FilterPill,
   IconButton,
   KpiCard,
@@ -306,27 +306,20 @@ export function HistoryPage() {
           onKeyDown={handleKeyDown}
           className="shrink-0 flex flex-col gap-2 px-4 py-3 border-b border-border-subtle"
         >
-          <div className="flex gap-2">
-            <DatePickerInput
-              value={filters.startDate}
-              onChange={(v) => {
-                updateFilter("startDate", v);
-                updateFilter("quick", "custom");
-              }}
-              placeholder="Início"
-              className="flex-1"
-            />
-            <span className="self-center text-fg-muted text-sm">→</span>
-            <DatePickerInput
-              value={filters.endDate}
-              onChange={(v) => {
-                updateFilter("endDate", v);
-                updateFilter("quick", "custom");
-              }}
-              placeholder="Fim"
-              className="flex-1"
-            />
-          </div>
+          {/* Sem trilho de atalhos: as cinco pílulas logo acima já são ele, e
+              `custom` é justamente o "eu escolho as datas". O que o campo de
+              período traz aqui é a escolha das duas pontas num calendário só. */}
+          <DateRangeInput
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            onChange={(inicio, fim) => {
+              updateFilter("startDate", inicio);
+              updateFilter("endDate", fim);
+              updateFilter("quick", "custom");
+            }}
+            presets={[]}
+            placeholder="Escolher período"
+          />
           <div className="flex gap-2">
             <Autocomplete
               value={projectName}

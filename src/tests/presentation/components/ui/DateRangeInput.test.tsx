@@ -40,6 +40,22 @@ describe("DateRangeInput", () => {
     expect(campo().value).toBe("07/09/2026 → …");
   });
 
+  it("lista de atalhos vazia não desenha o trilho — nem a coluna, nem a régua", () => {
+    // É disso que o Histórico depende: lá os atalhos já são as cinco pílulas
+    // acima do campo, e um trilho dentro do painel seria a segunda grafia da
+    // mesma tabela. Meia-medida — esconder os botões e deixar a coluna — abriria
+    // um vão à esquerda do calendário.
+    const { container } = render(
+      <DateRangeInput startDate="" endDate="" onChange={() => {}} presets={[]} />
+    );
+    fireEvent.click(campo());
+
+    expect(screen.queryByText("Períodos")).toBeNull();
+    const painel = document.querySelector("[data-datepicker-portal]")!;
+    expect(painel.querySelector(".border-r")).toBeNull();
+    expect(container).toBeTruthy();
+  });
+
   it("o trilho aplica o período do atalho de uma vez", () => {
     const onChange = vi.fn();
     render(<DateRangeInput startDate="" endDate="" onChange={onChange} presets={["thisWeek"]} />);

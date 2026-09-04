@@ -57,7 +57,14 @@ const PRESETS_PADRAO: DateRangeId[] = [
 ];
 
 const PANEL_HEIGHT = 340;
-const PANEL_WIDTH = 400;
+/**
+ * A largura do painel, que **muda com o trilho**: a grade sozinha mede ~248px e
+ * a coluna de atalhos soma outros ~144. É medida de posicionamento — decide se o
+ * painel cabe à direita do campo ou precisa recuar —, e fixá-la no caso largo
+ * empurrava para a esquerda o painel sem trilho que já cabia onde estava.
+ */
+const PANEL_WIDTH_COM_TRILHO = 400;
+const PANEL_WIDTH_SEM_TRILHO = 256;
 
 export function DateRangeInput({
   startDate,
@@ -106,12 +113,13 @@ export function DateRangeInput({
     const campo = inputRef.current;
     if (!campo) return;
     const rect = campo.getBoundingClientRect();
+    const largura = presets.length > 0 ? PANEL_WIDTH_COM_TRILHO : PANEL_WIDTH_SEM_TRILHO;
     const abaixo = rect.bottom + 4;
     const cabeAbaixo = abaixo + PANEL_HEIGHT <= window.innerHeight - 8;
     const preferido = cabeAbaixo ? abaixo : rect.top - PANEL_HEIGHT - 4;
     setPos({
       top: Math.max(8, Math.min(preferido, window.innerHeight - PANEL_HEIGHT - 8)),
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - PANEL_WIDTH - 8)),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - largura - 8)),
     });
     setAguardandoFim(false);
     setOpen(true);
