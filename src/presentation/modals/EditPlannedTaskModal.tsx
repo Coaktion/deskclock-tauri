@@ -192,7 +192,12 @@ export function EditPlannedTaskModal({
           <div className="flex items-center gap-3">
             <DatePickerInput value={periodStart} onChange={setPeriodStart} className="flex-1" />
             <span className="text-fg-muted text-sm shrink-0">→</span>
-            <DatePickerInput value={periodEnd} onChange={setPeriodEnd} className="flex-1" />
+            <DatePickerInput
+              value={periodEnd}
+              onChange={setPeriodEnd}
+              className="flex-1"
+              clearable
+            />
           </div>
         )}
       </div>

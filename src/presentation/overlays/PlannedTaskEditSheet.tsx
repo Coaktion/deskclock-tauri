@@ -204,6 +204,7 @@ export function PlannedTaskEditSheet({
               onChange={editor.setPeriodEnd}
               className="w-full"
               label="Fim"
+              clearable
             />
           </div>
         )}

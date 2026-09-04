@@ -6,6 +6,7 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
 import { BillableChip, DatePickerInput, Field, Input } from "@presentation/components/ui";
+import { isPeriodInverted, isPeriodScheduleValid } from "@domain/utils/plannedPeriod";
 import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
@@ -140,18 +141,12 @@ export function PlannedTaskForm({
     });
   }
 
-  // Só é "invertido" com as duas datas preenchidas: enquanto falta uma, o
-  // período está incompleto, não errado — e pintar de vermelho quem ainda está
-  // digitando acusa um erro que a pessoa não cometeu.
-  const isPeriodInverted =
-    form.scheduleType === "period" &&
-    !!form.periodStart &&
-    !!form.periodEnd &&
-    form.periodEnd < form.periodStart;
+  const periodInverted =
+    form.scheduleType === "period" && isPeriodInverted(form.periodStart, form.periodEnd);
 
   function isScheduleValid() {
     if (form.scheduleType === "period")
-      return !!form.periodStart && !!form.periodEnd && form.periodEnd >= form.periodStart;
+      return isPeriodScheduleValid(form.periodStart, form.periodEnd);
     if (form.scheduleType === "recurring") return form.recurringDays.length > 0;
     return true;
   }
@@ -324,9 +319,10 @@ export function PlannedTaskForm({
                 value={form.periodEnd}
                 onChange={(v) => set("periodEnd", v)}
                 className="w-full"
-                invalid={isPeriodInverted}
+                invalid={periodInverted}
+                clearable
               />
-              {isPeriodInverted && (
+              {periodInverted && (
                 <p className="text-xs text-danger">O fim não pode ser antes do início.</p>
               )}
             </div>
