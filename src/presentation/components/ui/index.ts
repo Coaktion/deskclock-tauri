@@ -10,6 +10,8 @@ export { Badge, type BadgeTone } from "./Badge";
 export { BillableChip } from "./BillableChip";
 export { SearchInput } from "./SearchInput";
 export { Field } from "./Field";
+export { Calendar } from "./Calendar";
+export { DatePickerInput } from "./DatePickerInput";
 export { Input, type InputProps } from "./Input";
 export { Select, type SelectProps } from "./Select";
 export { Textarea, type TextareaProps } from "./Textarea";

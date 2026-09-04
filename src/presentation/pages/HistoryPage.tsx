@@ -1,10 +1,10 @@
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import {
   Button,
+  DatePickerInput,
   FilterPill,
   IconButton,
   KpiCard,

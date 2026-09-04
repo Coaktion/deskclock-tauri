@@ -5,13 +5,12 @@ import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
 import { boxClass } from "@presentation/components/fieldStyles";
-import { BillableChip, Button, Input, Modal } from "@presentation/components/ui";
+import { BillableChip, Button, DatePickerInput, Input, Modal } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import {
   usePlannedTaskEditor,
   type EditPlannedTaskInput,
 } from "@presentation/hooks/usePlannedTaskEditor";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 
 export type { EditPlannedTaskInput };

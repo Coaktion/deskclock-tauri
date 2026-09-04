@@ -11,8 +11,7 @@ import {
   type ImportEventInput,
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { Badge, Button, Modal, Toggle } from "@presentation/components/ui";
+import { Badge, Button, DatePickerInput, Modal, Toggle } from "@presentation/components/ui";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { todayISO } from "@shared/utils/time";

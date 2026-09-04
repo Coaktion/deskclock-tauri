@@ -8,13 +8,13 @@ import type {
 } from "@shared/types/clockify";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useClockifyEntries";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import {
   Badge,
   BillableChip,
   Button,
+  DatePickerInput,
   FilterPill,
   IconButton,
   Modal,

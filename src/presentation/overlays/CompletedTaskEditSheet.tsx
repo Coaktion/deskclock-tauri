@@ -7,8 +7,14 @@ import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
-import { BillableChip, Button, Field, IconButton, Input } from "@presentation/components/ui";
+import {
+  BillableChip,
+  Button,
+  DatePickerInput,
+  Field,
+  IconButton,
+  Input,
+} from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";

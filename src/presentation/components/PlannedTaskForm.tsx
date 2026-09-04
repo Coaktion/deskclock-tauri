@@ -4,9 +4,8 @@ import type { PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTa
 import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { PlannedActionsField } from "@presentation/components/PlannedActionsField";
-import { BillableChip, Field, Input } from "@presentation/components/ui";
+import { BillableChip, DatePickerInput, Field, Input } from "@presentation/components/ui";
 import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
