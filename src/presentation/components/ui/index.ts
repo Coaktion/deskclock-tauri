@@ -12,6 +12,7 @@ export { SearchInput } from "./SearchInput";
 export { Field } from "./Field";
 export { Calendar } from "./Calendar";
 export { DatePickerInput } from "./DatePickerInput";
+export { DateRangeInput } from "./DateRangeInput";
 export { Input, type InputProps } from "./Input";
 export { Select, type SelectProps } from "./Select";
 export { Textarea, type TextareaProps } from "./Textarea";

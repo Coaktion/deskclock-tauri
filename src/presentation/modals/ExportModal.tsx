@@ -21,7 +21,7 @@ import { useExportProfiles } from "@presentation/hooks/useExportProfiles";
 import { fieldLabelClass } from "@presentation/components/fieldStyles";
 import {
   Button,
-  DatePickerInput,
+  DateRangeInput,
   Field,
   IconButton,
   Input,
@@ -470,12 +470,26 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
                   </Button>
                 ))}
               </div>
+              {/* Sem "Hoje" no trilho: o botão de modo logo acima já é ele, e
+                  dois controles com o mesmo rótulo lado a lado seriam duas
+                  grafias da mesma escolha. */}
               {periodMode === "custom" && (
-                <div className="flex items-center gap-2">
-                  <DatePickerInput value={startDate} onChange={setStartDate} className="flex-1" />
-                  <span className="text-fg-muted text-sm shrink-0">→</span>
-                  <DatePickerInput value={endDate} onChange={setEndDate} className="flex-1" />
-                </div>
+                <DateRangeInput
+                  startDate={startDate}
+                  endDate={endDate}
+                  onChange={(inicio, fim) => {
+                    setStartDate(inicio);
+                    setEndDate(fim);
+                  }}
+                  presets={[
+                    "yesterday",
+                    "thisWeek",
+                    "lastWeek",
+                    "thisMonth",
+                    "lastMonth",
+                    "last30",
+                  ]}
+                />
               )}
             </div>
 

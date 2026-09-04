@@ -11,7 +11,7 @@ import {
   type ImportEventInput,
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { Badge, Button, DatePickerInput, Modal, Toggle } from "@presentation/components/ui";
+import { Badge, Button, DateRangeInput, Modal, Toggle } from "@presentation/components/ui";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { todayISO } from "@shared/utils/time";
@@ -685,23 +685,19 @@ export function ImportCalendarModal({
       // ele nunca transborda porque a altura dos filhos é a dele.
       bodyClassName="flex"
       toolbar={
+        // O clamp mútuo que morava nos dois `onChange` saiu daqui: o campo de
+        // período resolve a ordem das pontas por dentro, trocando-as quando o
+        // fim é escolhido antes do início.
         <div className="flex items-center gap-2 text-sm text-fg-secondary">
-          <span className="shrink-0">De</span>
-          <DatePickerInput
-            value={fromDate}
-            onChange={(d) => {
-              setFromDate(d);
-              if (d > toDate) setToDate(d);
+          <span className="shrink-0">Período</span>
+          <DateRangeInput
+            startDate={fromDate}
+            endDate={toDate}
+            onChange={(inicio, fim) => {
+              setFromDate(inicio);
+              setToDate(fim);
             }}
-            className="flex-1"
-          />
-          <span className="shrink-0">até</span>
-          <DatePickerInput
-            value={toDate}
-            onChange={(d) => {
-              setToDate(d);
-              if (d < fromDate) setFromDate(d);
-            }}
+            presets={["thisWeek", "nextWeek", "lastWeek", "thisMonth"]}
             className="flex-1"
           />
         </div>
