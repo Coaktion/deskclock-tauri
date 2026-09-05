@@ -40,6 +40,12 @@ interface DateRangeInputProps {
    * Agenda tem a semana que vem à frente.
    */
   presets?: DateRangeId[];
+  /**
+   * Último dia escolhível, ISO. É o `max` que os `<input type="date">` do
+   * `TaskSendModal` traziam: quem envia horas já trabalhadas não tem o que
+   * mandar de amanhã, e um período no futuro só devolve lista vazia.
+   */
+  maxISO?: string;
   label?: string;
   className?: string;
   placeholder?: string;
@@ -71,6 +77,7 @@ export function DateRangeInput({
   endDate,
   onChange,
   presets = PRESETS_PADRAO,
+  maxISO,
   label,
   className = "",
   placeholder = "Escolher período",
@@ -266,6 +273,7 @@ export function DateRangeInput({
             <Calendar
               value={startDate}
               onSelect={escolherDia}
+              maxISO={maxISO}
               cellClassName={classeDaCelula}
               footer={
                 <span className="text-micro text-fg-muted font-mono tabular-nums">

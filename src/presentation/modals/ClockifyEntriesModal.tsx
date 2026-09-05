@@ -15,6 +15,7 @@ import {
   BillableChip,
   Button,
   DatePickerInput,
+  DateRangeInput,
   FilterPill,
   IconButton,
   Modal,
@@ -238,11 +239,17 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
           </div>
 
           {quick === "custom" && (
-            <div className="flex items-center gap-2">
-              <DatePickerInput value={customStart} onChange={setCustomStart} />
-              <span className="text-sm text-fg-muted">até</span>
-              <DatePickerInput value={customEnd} onChange={setCustomEnd} />
-            </div>
+            // Sem trilho: os atalhos daqui são as pílulas ao lado, e `custom` é
+            // justamente o "eu escolho as datas".
+            <DateRangeInput
+              startDate={customStart}
+              endDate={customEnd}
+              onChange={(inicio, fim) => {
+                setCustomStart(inicio);
+                setCustomEnd(fim);
+              }}
+              presets={[]}
+            />
           )}
 
           <div className="ml-auto flex items-center gap-3">

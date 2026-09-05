@@ -201,6 +201,31 @@ describe("DateRangeInput", () => {
     expect(screen.getByRole("button", { name: "Anterior" })).toBeTruthy();
   });
 
+  it("maxISO barra o dia depois do teto, e é o `max` que os envios traziam", () => {
+    // Os três modais de envio limitavam o fim a hoje com o `max` do
+    // `<input type="date">` nativo: quem manda horas já trabalhadas não tem o
+    // que mandar de amanhã. Trocar o campo sem isto abriria o futuro em silêncio.
+    const onChange = vi.fn();
+    render(
+      <DateRangeInput
+        startDate=""
+        endDate=""
+        onChange={onChange}
+        presets={[]}
+        maxISO="2026-09-09"
+      />
+    );
+    fireEvent.click(campo());
+
+    const depois = screen.getByRole("button", { name: dia(10) }) as HTMLButtonElement;
+    expect(depois.disabled).toBe(true);
+    fireEvent.click(depois);
+    expect(onChange).not.toHaveBeenCalled();
+
+    const dentro = screen.getByRole("button", { name: dia(9) }) as HTMLButtonElement;
+    expect(dentro.disabled).toBe(false);
+  });
+
   it("com rótulo, o campo abre mão da casca própria para o Field em volta", () => {
     render(
       <DateRangeInput startDate="" endDate="" onChange={() => {}} label="Período" presets={[]} />
