@@ -18,7 +18,6 @@ const DEFAULTS: AppConfig = {
   setupCompleted: false,
   userName: "",
   startOnBoot: false,
-  liveTrayTimer: false,
   closeOnFocusLoss: false,
   discardTasksUnderOneMinute: false,
   showIntegrationsRail: true,

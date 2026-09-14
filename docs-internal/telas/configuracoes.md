@@ -8,11 +8,17 @@
 | Configuração | Tipo | Descrição |
 |---|---|---|
 | Iniciar na inicialização do computador | toggle | Registra o app no startup do SO |
-| Timer ao vivo no ícone da bandeja | toggle | Mostra timer no system tray icon |
 | Fechar ao perder foco | toggle | Janela principal fecha ao perder o foco (padrão: desativado); Pin/Unpin na title bar suspende temporariamente |
 | Descartar tarefas com menos de 1 minuto | toggle | Cancela automaticamente tarefas paradas em menos de 60 s (padrão: desativado) |
 | Arredondar duração ao parar | toggle + slots + tolerância | `roundingEnabled` (padrão: desativado), `roundingSlots` (múltiplos de 5 até 60) e `roundingTolerance` em minutos. Ao parar, `computeRoundedDuration` encaixa a duração no slot; dentro da tolerância acima do slot inferior ela **fica** nele, acima disso sobe para o próximo. Os slots repetem a cada 60 min |
 | Mostrar rail de integrações | toggle | Faixa à direita com atalhos das integrações conectadas (padrão: ativo). Aparece em **todas** as telas, inclusive na de Integrações — a redundância com os tiles dali não incomodou na prática, e o rail sumindo numa tela só fazia a faixa parecer instável |
+
+> **O timer ao vivo do ícone da bandeja não é mais um toggle** (2026-08-27): saiu
+> de Configurações e passou a estar sempre ativo — `App.tsx` atualiza o rótulo
+> do ícone a cada segundo enquanto uma tarefa roda, sem gate de config. No
+> Windows/macOS isso é tooltip de hover (`set_tooltip`); no Linux, a crate
+> `tray-icon` não implementa hover ali — o backend AppIndicator/libayatana
+> renderiza `set_title` como **rótulo fixo** ao lado do ícone, sempre visível.
 
 > **A duração gravada manda sobre o intervalo início→fim, e é ela que a edição
 > exibe.** O arredondamento reescreve **só** o `durationSeconds` e deixa o
