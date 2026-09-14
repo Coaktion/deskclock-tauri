@@ -35,6 +35,7 @@ describe("getWeekTotal", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => tasks),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -49,6 +50,7 @@ describe("getWeekTotal", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => []),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -66,6 +68,7 @@ describe("getWeekTotal", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange,
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -83,6 +86,7 @@ describe("getWeekTotal", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange,
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -107,6 +111,7 @@ describe("getWeekTotal", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => tasks),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };
@@ -125,6 +130,7 @@ describe("getWeekTotal", () => {
       findById: vi.fn(async () => null),
       findByStatus: vi.fn(async () => []),
       findByDateRange: vi.fn(async () => tasks),
+      findLastDayWithCompletedTasks: vi.fn(async () => null),
       delete: vi.fn(),
       deleteMany: vi.fn(),
     };

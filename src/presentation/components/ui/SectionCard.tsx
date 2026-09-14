@@ -30,11 +30,18 @@ interface SectionCardProps {
   /** Nome do grupo, em overline. Ausente: cartão sem cabeçalho. */
   title?: string;
   /**
-   * Encostado à esquerda do título — o controle que age sobre o conteúdo do
-   * cartão, e não sobre o cartão. Fica na mesma coluna do que a lista de dentro
-   * abre à esquerda, porque a faixa e a linha compartilham o `px-3`: é o
-   * alinhamento que o torna o comando *daquelas* linhas em vez de um botão
-   * solto no cabeçalho. Hoje é a caixa que seleciona o dia, no Histórico.
+   * Encostado à esquerda do título. Dois papéis, e os dois dependem de estar
+   * *ali*:
+   *
+   * O **controle que age sobre o conteúdo** do cartão, e não sobre o cartão —
+   * a caixa que seleciona o dia, no Histórico e no Planejamento. Ele cai na
+   * mesma coluna do que a lista de dentro abre à esquerda, porque a faixa e a
+   * linha compartilham o `px-3`: é o alinhamento que o torna o comando
+   * *daquelas* linhas em vez de um botão solto no cabeçalho.
+   *
+   * A **marca de quem produziu o conteúdo**, quando ele não vem do app — o
+   * logo do provedor de IA, no resumo do Histórico. Colada ao título, ela
+   * atribui; solta no canto direito, junto das ações, seria enfeite.
    */
   leading?: ReactNode;
   /** `accent` marca o cartão do dia corrente. */

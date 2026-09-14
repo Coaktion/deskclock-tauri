@@ -23,4 +23,5 @@ export const SECRET_CONFIG_KEYS: readonly ConfigKey[] = [
   "zendeskRefreshToken",
   "clockifyApiKey",
   "mondayApiKey",
+  "llmApiKey",
 ];

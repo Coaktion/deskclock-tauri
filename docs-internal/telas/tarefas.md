@@ -54,3 +54,8 @@
   - Expandir grupo → editar/excluir tarefa individual.
 
 ---
+
+> **A Seção 5 saiu daqui em 2026-08-28.** O resumo por IA deixou a tela de Tarefas e passou ao
+> Histórico, onde resume os dias do resultado da busca — ver `docs-internal/telas/historico.md`.
+> Não procure por `DailySummarySection` nem pelas chaves `llmSummary*` de `AppConfig`: as duas
+> coisas foram apagadas.

@@ -83,7 +83,7 @@ aberta. Doc novo de arquitetura, tela, integração ou spec: `docs-internal/`.
 |---|---|
 | a tarefa toca **aparência** (componente, classe, cor, tamanho, raio, modal, chip) | **skill `design-system`** — invoque, não leia à mão |
 | vai mexer numa **tela** específica | `docs-internal/telas/<tela>.md` — `tarefas`, `planejamento`, `historico`, `dados`, `configuracoes`, `lancamento-retroativo`, `exportacao`, `overlays`, `primeira-execucao` |
-| vai mexer em **integração** | `docs-internal/integracoes/README.md` (contrato comum) + `google.md`, `clockify.md`, `monday.md` |
+| vai mexer em **integração** | `docs-internal/integracoes/README.md` (contrato comum) + `google.md`, `clockify.md`, `monday.md`, `llm.md` |
 | vai mexer em **entidade, repositório ou migration** | `docs-internal/modelo-de-dados.md` |
 | a dúvida é de **comportamento** (billable, agrupamento, autocomplete, data de referência, workspace, recorrência) | `docs-internal/regras-de-negocio.md` |
 | vai **escrever teste** | `docs-internal/testes.md` |

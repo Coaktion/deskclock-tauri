@@ -4,6 +4,7 @@ import type {
   ClockifyWorkspaceRef,
 } from "@shared/types/clockifyConfig";
 import type { MondayFieldCatalogs, MondayProjectMapping } from "@shared/types/mondayConfig";
+import type { LlmRateLimits } from "@shared/types/llm";
 import type { SheetColumnMapping } from "@shared/types/sheetsConfig";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
 
@@ -244,6 +245,51 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   mondayProjectsSyncLastDate: string;
   /** Falha do último ciclo da releitura, exibida no card de Projetos. */
   mondayProjectsLastSyncError: string;
+  // Provedor de LLM
+  /**
+   * Preset escolhido no catálogo (`src/infra/integrations/llm/providers.ts`), ou
+   * `"custom"`. Serve para a tela saber qual linha destacar; quem manda na
+   * chamada são as três chaves abaixo.
+   */
+  llmProviderId: string;
+  /**
+   * `baseUrl` e `model` são texto livre, e não uniões, porque **quem escolhe o
+   * provedor é o usuário**: o catálogo é sugestão semeada na tela, não a lista
+   * do que pode existir. Provedor compatível com OpenAI que ninguém previu —
+   * um Ollama noutra porta, um gateway interno — só precisa de uma URL, e
+   * modelo novo aparece no fim de semana sem release do DeskClock.
+   */
+  llmBaseUrl: string;
+  llmApiKey: string;
+  llmModel: string;
+  //
+  // O resumo gerado não mora mais aqui: ele é um por dia e por workspace, e a
+  // config guarda **um** de cada chave — o Histórico resume vários dias de uma
+  // busca, e cada dia novo sobrescreveria o anterior. Hoje ele vive na tabela
+  // `day_summaries` (migration 018).
+  /**
+   * A última cota lida dos cabeçalhos do provedor, e o instante em que se leu.
+   *
+   * **Existem porque a cota só se conhece fazendo uma chamada**: nenhum dos onze
+   * provedores tem endpoint gratuito que a informe, e o `GET /models` do teste
+   * de conexão não serve (§ `docs-internal/integracoes/llm.md`). Sem persistir,
+   * o card ficaria vazio até o próximo resumo — que é uma vez por dia.
+   *
+   * Não são segredo, e por isso ficam fora de `SECRET_CONFIG_KEYS`: dizem
+   * quanto resta de uma cota, não como usá-la.
+   *
+   * `llmLastLimitsAt` é o que permite à tela dizer que a medição envelheceu —
+   * "restam 312" de três dias atrás não é informação, é engano.
+   */
+  llmLastLimits: LlmRateLimits;
+  llmLastLimitsAt: string;
+  //
+  // Não há `llmDeskclockWorkspaceId`, e a ausência é deliberada: o §9.5 item 7
+  // (cada integração escolhe o seu workspace) não se aplica aqui. As outras
+  // integrações escrevem em sistemas externos e precisam saber de onde tirar as
+  // tarefas; o resumo descreve **as tarefas que o usuário está vendo na tela**,
+  // então segue o workspace ativo, como a própria tela de Tarefas. Dar-lhe um
+  // workspace próprio produziria resumo de tarefas que não estão à vista.
   // Workspaces
   /** Workspace ativo na UI. Vazio = cai no workspace "Padrão" da migration 011. */
   activeWorkspaceId: string;
