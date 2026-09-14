@@ -205,11 +205,18 @@ fn keep_overlays_topmost(handle: tauri::AppHandle) {
             }
         });
     }
+    // No GNOME/Wayland (e outros compositores wlroots), reafirmar "keep above"
+    // numa janela que já está em foco faz o compositor reempilhá-la — o que
+    // dispara um blur nela. No popup isso é fatal: ele fecha no blur (§5.1), e o
+    // usuário via o próprio popup sumir ~1s depois de abrir. A janela em foco já
+    // está acima de tudo por definição, então pular a reafirmação enquanto ela
+    // está focada preserva a garantia (nada pode ficar por cima do que tem foco)
+    // sem competir com o compositor pela própria janela do usuário.
     #[cfg(not(target_os = "windows"))]
     std::thread::spawn(move || loop {
         for label in ["overlay-compact", "overlay-popup", "toast"] {
             if let Some(w) = handle.get_webview_window(label) {
-                if w.is_visible().unwrap_or(false) {
+                if w.is_visible().unwrap_or(false) && !w.is_focused().unwrap_or(false) {
                     w.set_always_on_top(true).ok();
                 }
             }
