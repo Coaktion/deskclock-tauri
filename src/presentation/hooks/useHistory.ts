@@ -9,13 +9,8 @@ import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { listen } from "@tauri-apps/api/event";
-import {
-  todayISO,
-  addDaysISO,
-  startOfMonthISO,
-  startOfDayISO,
-  endOfDayISO,
-} from "@shared/utils/time";
+import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
+import { dateRangeFor, type DateRangeId } from "@shared/utils/datePresets";
 import type { UUID } from "@shared/types";
 
 export type QuickFilter = "today" | "7days" | "30days" | "month" | "custom";
@@ -36,24 +31,28 @@ export interface DayGroup {
   totalSeconds: number;
 }
 
+/**
+ * O vocabulário desta tela traduzido para a tabela única (`datePresets`).
+ *
+ * Os nomes ficam onde estão: são o que o `QUICK_LABELS` do `HistoryPage` desenha
+ * nas pílulas, e renomeá-los mexeria em tela para não mudar comportamento
+ * nenhum. O que saiu daqui foi a aritmética, que estava escrita igual em outros
+ * dois lugares.
+ */
+const QUICK_RANGE: Record<Exclude<QuickFilter, "custom">, DateRangeId> = {
+  today: "today",
+  "7days": "last7",
+  "30days": "last30",
+  month: "thisMonth",
+};
+
 function quickToRange(
   quick: QuickFilter,
   startDate: string,
   endDate: string
 ): { start: string; end: string } {
-  const today = todayISO();
-  switch (quick) {
-    case "today":
-      return { start: today, end: today };
-    case "7days":
-      return { start: addDaysISO(today, -6), end: today };
-    case "30days":
-      return { start: addDaysISO(today, -29), end: today };
-    case "month":
-      return { start: startOfMonthISO(), end: today };
-    case "custom":
-      return { start: startDate, end: endDate };
-  }
+  if (quick === "custom") return { start: startDate, end: endDate };
+  return dateRangeFor(QUICK_RANGE[quick]);
 }
 
 function localDateISO(iso: string): string {

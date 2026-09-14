@@ -16,13 +16,19 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { importTickets, type ImportTicketInput } from "@domain/usecases/plannedTasks/ImportTickets";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { todayISO } from "@shared/utils/time";
-import { Button, Input, Modal, SegmentedControl, Toggle } from "@presentation/components/ui";
+import {
+  Button,
+  DatePickerInput,
+  Input,
+  Modal,
+  SegmentedControl,
+  Toggle,
+} from "@presentation/components/ui";
 
 const STATUS_LABELS: Record<ZendeskTicket["status"], string> = {
   new: "Novo",

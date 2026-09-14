@@ -4,14 +4,8 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import type { TaskValidationResult } from "@domain/integrations/taskValidation";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import {
-  todayISO,
-  addDaysISO,
-  startOfDayISO,
-  endOfDayISO,
-  startOfMonthISO,
-  localDateISO,
-} from "@shared/utils/time";
+import { todayISO, startOfDayISO, endOfDayISO, localDateISO } from "@shared/utils/time";
+import { dateRangeFor, type DateRangeId } from "@shared/utils/datePresets";
 
 export type QuickPeriod = "today" | "yesterday" | "week" | "month" | "custom";
 
@@ -95,26 +89,27 @@ export function selKey(date: string, groupKey: string): string {
   return `${date}\0${groupKey}`;
 }
 
+/**
+ * O vocabulário desta tela traduzido para a tabela única (`datePresets`).
+ *
+ * **`week` aqui sempre foi janela móvel de sete dias**, não a semana do
+ * calendário — e o rótulo do `TaskSendModal` já dizia "7 dias". O nome é que
+ * discordava da conta; o `last7` da tabela diz o que ele faz.
+ */
+const QUICK_RANGE: Record<Exclude<QuickPeriod, "custom">, DateRangeId> = {
+  today: "today",
+  yesterday: "yesterday",
+  week: "last7",
+  month: "thisMonth",
+};
+
 export function quickToRange(
   quick: QuickPeriod,
   customStart: string,
   customEnd: string
 ): { start: string; end: string } {
-  const today = todayISO();
-  switch (quick) {
-    case "today":
-      return { start: today, end: today };
-    case "yesterday": {
-      const y = addDaysISO(today, -1);
-      return { start: y, end: y };
-    }
-    case "week":
-      return { start: addDaysISO(today, -6), end: today };
-    case "month":
-      return { start: startOfMonthISO(), end: today };
-    case "custom":
-      return { start: customStart, end: customEnd };
-  }
+  if (quick === "custom") return { start: customStart, end: customEnd };
+  return dateRangeFor(QUICK_RANGE[quick]);
 }
 
 export interface UseTaskSendSelectionResult {

@@ -4,10 +4,16 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { boxClass } from "@presentation/components/fieldStyles";
-import { BillableChip, Button, Field, Input, Modal } from "@presentation/components/ui";
+import {
+  BillableChip,
+  Button,
+  DatePickerInput,
+  Field,
+  Input,
+  Modal,
+} from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
