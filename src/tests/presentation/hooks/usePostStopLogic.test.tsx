@@ -77,7 +77,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ConfigContextValue {
   };
 }
 
-function makeWrapper(taskRepo: ITaskRepository) {
+function makeWrapper(taskRepo: ITaskRepository, runPerTask?: () => Promise<never[]>) {
   const plannedTaskRepo = {} as IPlannedTaskRepository;
   const configRepo: IConfigRepository = {
     get: vi.fn((_key, defaultValue) => Promise.resolve(defaultValue)),
@@ -86,10 +86,13 @@ function makeWrapper(taskRepo: ITaskRepository) {
     delete: vi.fn(() => Promise.resolve()),
   };
   const autoSync = {
-    runPerTask: vi.fn(async () => {
-      calls.push("autoSync");
-      return [];
-    }),
+    runPerTask: vi.fn(
+      runPerTask ??
+        (async () => {
+          calls.push("autoSync");
+          return [];
+        })
+    ),
     runDaily: vi.fn(async () => []),
     runDailyFor: vi.fn(async () => null),
     isDailyEnabled: () => false,
@@ -107,9 +110,13 @@ function makeWrapper(taskRepo: ITaskRepository) {
   };
 }
 
-function renderStopRules(taskRepo: ITaskRepository, config: ConfigContextValue) {
+function renderStopRules(
+  taskRepo: ITaskRepository,
+  config: ConfigContextValue,
+  runPerTask?: () => Promise<never[]>
+) {
   return renderHook(() => usePostStopLogic(config, vi.fn()), {
-    wrapper: makeWrapper(taskRepo),
+    wrapper: makeWrapper(taskRepo, runPerTask),
   });
 }
 
@@ -162,6 +169,59 @@ describe("usePostStopLogic", () => {
     });
 
     expect(calls).toEqual(["update", `emit:${OVERLAY_EVENTS.TASKS_CHANGED}`, "autoSync"]);
+  });
+
+  it("com syncInBackground resolve com o registro final sem esperar o envio automático", async () => {
+    // É o que deixa a API local responder dentro do prazo: o envio depende de rede.
+    const stored = task({ durationSeconds: 3660 });
+    const taskRepo = {
+      findById: vi.fn(async () => stored),
+      update: vi.fn(async () => {
+        calls.push("update");
+      }),
+    } as unknown as ITaskRepository;
+    let liberarEnvio!: () => void;
+    const envioPendente = () =>
+      new Promise<never[]>((resolve) => {
+        calls.push("autoSync:inicio");
+        liberarEnvio = () => resolve([]);
+      });
+    const { result } = renderStopRules(
+      taskRepo,
+      makeConfig({ roundingEnabled: true }),
+      envioPendente
+    );
+
+    let final: Task | null | undefined;
+    await act(async () => {
+      final = await result.current.applyStopRules(stored, null, true, { syncInBackground: true });
+    });
+
+    expect(final).not.toBeNull();
+    expect(calls).toEqual(["update", `emit:${OVERLAY_EVENTS.TASKS_CHANGED}`, "autoSync:inicio"]);
+    await act(async () => liberarEnvio());
+  });
+
+  it("sem a opção continua esperando o envio automático", async () => {
+    const taskRepo = {} as ITaskRepository;
+    let liberarEnvio!: () => void;
+    const envioPendente = () =>
+      new Promise<never[]>((resolve) => (liberarEnvio = () => resolve([])));
+    const { result } = renderStopRules(taskRepo, makeConfig(), envioPendente);
+
+    let resolvido = false;
+    let espera!: Promise<unknown>;
+    await act(async () => {
+      espera = result.current.applyStopRules(task(), null, true).then(() => (resolvido = true));
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(resolvido).toBe(false);
+
+    await act(async () => {
+      liberarEnvio();
+      await espera;
+    });
+    expect(resolvido).toBe(true);
   });
 
   it("descartar a tarefa curta também avisa, porque o registro deixou de existir", async () => {

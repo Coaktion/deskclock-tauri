@@ -125,10 +125,20 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 
 | Fase | Estado |
 |---|---|
-| 0 | pendente |
+| 0 | implementada, aguardando revisão e verificação manual |
 | 1 | pendente |
 | 2 | pendente |
 | 3 | pendente |
+
+**Pendências abertas na revisão da Fase 0** (não implementadas):
+- `sortOrder` na criação de planejada: a API usa o máximo +1 do workspace, e o use case
+  `CreatePlannedTask` usa 0. Unificar no domínio na Fase 3.
+- `GET /planned-tasks` sem data usa `findForWeek` com datas-limite. Trocar por
+  `findAll(workspaceId)` no repositório na Fase 3 — hoje a planejada `period` com `period_start`
+  NULL fica de fora.
+- Restringir `local_api_respond` e `local_api_bridge_ready` à janela `main` nas capabilities do
+  Tauri.
+- `Bridge.ready` nunca é resetado: recarregar o webview principal dá 504 em vez de 503.
 
 **Fora do escopo, registrado:** o deep link `task/start` (`App.tsx`, `handleDeepLinkStart`) resolve
 projeto e categoria por nome com `findAll()` sem workspace — o mesmo defeito 2.

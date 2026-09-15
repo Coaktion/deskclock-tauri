@@ -9,7 +9,10 @@ mod updater;
 
 pub use backup::backup_db_to_drive;
 pub use http::{get_bearer_json, post_bearer_json, post_form_json};
-pub use local_api::{get_local_api_status, start_local_api, stop_local_api};
+pub use local_api::{
+    get_local_api_status, local_api_bridge_ready, local_api_respond, start_local_api,
+    stop_local_api,
+};
 pub use oauth::start_oauth_server;
 pub use shortcuts::update_shortcuts;
 pub use system::{

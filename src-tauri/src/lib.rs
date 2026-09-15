@@ -56,10 +56,10 @@ fn get_pending_retroactive_prefill(
 }
 use commands::{
     backup_db_to_drive, check_for_update, download_and_install_update, get_bearer_json,
-    get_display_server, get_local_api_status, get_platform, log_frontend, open_in_browser,
-    open_in_file_manager, post_bearer_json, post_form_json, relaunch_app, save_file,
-    start_local_api, start_oauth_server, stop_local_api, update_shortcuts, update_tray_icon,
-    update_tray_tooltip,
+    get_display_server, get_local_api_status, get_platform, local_api_bridge_ready,
+    local_api_respond, log_frontend, open_in_browser, open_in_file_manager, post_bearer_json,
+    post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
+    update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -422,6 +422,15 @@ pub fn run() {
             keep_overlays_topmost(app.handle().clone());
 
             app.manage(Arc::new(api::ApiServerState::default()));
+            let bridge_handle = app.handle().clone();
+            app.manage(Arc::new(api::bridge::Bridge::new(
+                move |request| {
+                    bridge_handle
+                        .emit_to("main", api::bridge::REQUEST_EVENT, request)
+                        .map_err(|e| e.to_string())
+                },
+                api::bridge::DEFAULT_TIMEOUT,
+            )));
             app.manage(PendingDeepLinkPage(Mutex::new(None)));
             app.manage(PendingStartTask(Mutex::new(None)));
             app.manage(PendingRetroactivePrefill(Mutex::new(None)));
@@ -482,6 +491,8 @@ pub fn run() {
             start_local_api,
             stop_local_api,
             get_local_api_status,
+            local_api_respond,
+            local_api_bridge_ready,
             get_pending_deep_link_page,
             get_pending_start_task,
             get_pending_retroactive_prefill,

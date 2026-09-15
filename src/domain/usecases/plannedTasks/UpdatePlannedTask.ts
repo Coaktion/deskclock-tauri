@@ -16,6 +16,8 @@ type UpdatePlannedTaskInput = Partial<{
   actions: PlannedTaskAction[];
   sortOrder: number;
   customValues: CustomValues;
+  startTime: string | undefined;
+  endTime: string | undefined;
 }>;
 
 export async function updatePlannedTask(

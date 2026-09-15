@@ -31,6 +31,7 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { TasksPage } from "@presentation/pages/TasksPage";
+import { useLocalApiBridge } from "@presentation/localApi/useLocalApiBridge";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
@@ -107,6 +108,8 @@ function MainContent({
   // Releitura diária dos boards do Monday como projetos (gated por já haver
   // board mapeado no workspace ativo).
   useMondayProjectsTracker();
+  // API local: executa aqui as requisições que o servidor Rust repassa.
+  useLocalApiBridge();
 
   // Ctrl+1–7 navigates directly
   useEffect(() => {
