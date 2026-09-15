@@ -11,22 +11,23 @@ import { useProjects } from "@presentation/hooks/useProjects";
 import { useTasks } from "@presentation/hooks/useTasks";
 import { useEffect } from "react";
 import { formatHHMMSS, todayISO } from "@shared/utils/time";
+import type { OmniboxFocus } from "@presentation/hooks/useOmniboxRunningEdit";
 
 interface TasksPageProps {
-  focusTaskEdit?: boolean;
-  onFocusTaskEditHandled?: () => void;
+  omniboxFocus?: OmniboxFocus;
+  onOmniboxFocusHandled?: () => void;
   /** Destino do "Ver semana →" no rodapé da lista de planejadas do omnibox. */
   onNavigatePlanning?: () => void;
 }
 
 export function TasksPage({
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
   onNavigatePlanning,
 }: TasksPageProps = {}) {
   const today = todayISO();
-  const { projects } = useProjects();
-  const { categories } = useCategories();
+  const { projects, loading: projectsLoading } = useProjects();
+  const { categories, loading: categoriesLoading } = useCategories();
   const { groups, totals, reload } = useTasks();
   const {
     tasks: plannedTasks,
@@ -82,8 +83,9 @@ export function TasksPage({
             projects={projects}
             categories={categories}
             onStarted={reloadPlanned}
-            focusTaskEdit={focusTaskEdit}
-            onFocusTaskEditHandled={onFocusTaskEditHandled}
+            omniboxFocus={omniboxFocus}
+            onOmniboxFocusHandled={onOmniboxFocusHandled}
+            catalogsLoading={projectsLoading || categoriesLoading}
             onTogglePlannedBillable={handleTogglePlannedBillable}
             onNavigatePlanning={onNavigatePlanning}
           />

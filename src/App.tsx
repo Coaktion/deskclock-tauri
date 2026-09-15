@@ -31,6 +31,7 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { TasksPage } from "@presentation/pages/TasksPage";
+import type { OmniboxFocus } from "@presentation/hooks/useOmniboxRunningEdit";
 import { useLocalApiBridge } from "@presentation/localApi/useLocalApiBridge";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS } from "@shared/utils/time";
@@ -49,20 +50,20 @@ function truncateTrayName(name: string): string {
 function PageContent({
   page,
   setPage,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
 }: {
   page: Page;
   setPage: (p: Page) => void;
-  focusTaskEdit: boolean;
-  onFocusTaskEditHandled: () => void;
+  omniboxFocus: OmniboxFocus;
+  onOmniboxFocusHandled: () => void;
 }) {
   switch (page) {
     case "tasks":
       return (
         <TasksPage
-          focusTaskEdit={focusTaskEdit}
-          onFocusTaskEditHandled={onFocusTaskEditHandled}
+          omniboxFocus={omniboxFocus}
+          onOmniboxFocusHandled={onOmniboxFocusHandled}
           onNavigatePlanning={() => setPage("planning")}
         />
       );
@@ -87,15 +88,17 @@ function MainContent({
   setPage,
   isPinned,
   onTogglePin,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
+  onStopRequest,
 }: {
   page: Page;
   setPage: (p: Page) => void;
   isPinned: boolean;
   onTogglePin: () => void;
-  focusTaskEdit: boolean;
-  onFocusTaskEditHandled: () => void;
+  omniboxFocus: OmniboxFocus;
+  onOmniboxFocusHandled: () => void;
+  onStopRequest: () => void;
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const { projectRepo, categoryRepo } = useRepositories();
@@ -241,15 +244,21 @@ function MainContent({
 
   return (
     <div className="flex flex-col h-screen bg-canvas text-fg overflow-hidden">
-      <TitleBar page={page} showPin={showPin} isPinned={isPinned} onTogglePin={onTogglePin} />
+      <TitleBar
+        page={page}
+        showPin={showPin}
+        isPinned={isPinned}
+        onTogglePin={onTogglePin}
+        onStopRequest={onStopRequest}
+      />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
         <main className="flex-1 overflow-hidden">
           <PageContent
             page={page}
             setPage={setPage}
-            focusTaskEdit={focusTaskEdit}
-            onFocusTaskEditHandled={onFocusTaskEditHandled}
+            omniboxFocus={omniboxFocus}
+            onOmniboxFocusHandled={onOmniboxFocusHandled}
           />
         </main>
         <IntegrationsRail />
@@ -265,7 +274,7 @@ function AppInner() {
   const { createDriveBackupRunner } = useIntegrations();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
-  const [focusTaskEdit, setFocusTaskEdit] = useState(false);
+  const [omniboxFocus, setOmniboxFocus] = useState<OmniboxFocus>(null);
   const [setupDone, setSetupDone] = useState(false);
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
@@ -287,7 +296,7 @@ function AppInner() {
   useAppRouter({
     config,
     setPage,
-    setFocusTaskEdit,
+    setOmniboxFocus,
     ignoreBlurRef,
     showMainWindow,
   });
@@ -336,8 +345,12 @@ function AppInner() {
           setPage={setPage}
           isPinned={isPinned}
           onTogglePin={() => setIsPinned((v) => !v)}
-          focusTaskEdit={focusTaskEdit}
-          onFocusTaskEditHandled={() => setFocusTaskEdit(false)}
+          omniboxFocus={omniboxFocus}
+          onOmniboxFocusHandled={() => setOmniboxFocus(null)}
+          onStopRequest={() => {
+            setPage("tasks");
+            setOmniboxFocus("stop");
+          }}
         />
       </TourProvider>
     </RunningTaskProvider>

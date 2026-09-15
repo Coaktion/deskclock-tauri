@@ -4,13 +4,14 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { Page } from "@presentation/components/Sidebar";
+import type { OmniboxFocus } from "@presentation/hooks/useOmniboxRunningEdit";
 
 const appWindow = getCurrentWindow();
 
 interface AppRouterDeps {
   config: ConfigContextValue;
   setPage: (page: Page) => void;
-  setFocusTaskEdit: (value: boolean) => void;
+  setOmniboxFocus: (value: OmniboxFocus) => void;
   ignoreBlurRef: RefObject<boolean>;
   showMainWindow: (focusToo?: boolean) => Promise<void>;
 }
@@ -18,7 +19,7 @@ interface AppRouterDeps {
 export function useAppRouter({
   config,
   setPage,
-  setFocusTaskEdit,
+  setOmniboxFocus,
   ignoreBlurRef,
   showMainWindow,
 }: AppRouterDeps) {
@@ -51,7 +52,7 @@ export function useAppRouter({
         ignoreBlurRef.current = false;
       }, 600);
       setPage("tasks");
-      setFocusTaskEdit(true);
+      setOmniboxFocus("edit");
       await showMainWindow(true);
     });
     return () => {

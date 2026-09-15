@@ -6,12 +6,20 @@ import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 
+/**
+ * Pedido de fora do omnibox: `edit` vem do overlay (abrir o chip que falta),
+ * `stop` vem da barra de título (abrir o fluxo de parada aqui).
+ */
+export type OmniboxFocus = "edit" | "stop" | null;
+
 interface UseOmniboxRunningEditParams {
   runningTask: Task | null;
   projects: Project[];
   categories: Category[];
-  focusTaskEdit?: boolean;
-  onFocusTaskEditHandled?: () => void;
+  omniboxFocus?: OmniboxFocus;
+  onOmniboxFocusHandled?: () => void;
+  /** Enquanto os catálogos carregam, o pedido de foco espera. */
+  catalogsLoading?: boolean;
   updateActiveTask: RunningTaskContextValue["updateActiveTask"];
   stopTask: RunningTaskContextValue["stopTask"];
   pauseTask: RunningTaskContextValue["pauseTask"];
@@ -22,8 +30,9 @@ export function useOmniboxRunningEdit({
   runningTask,
   projects,
   categories,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
+  catalogsLoading = false,
   updateActiveTask,
   stopTask,
   pauseTask,
@@ -44,17 +53,42 @@ export function useOmniboxRunningEdit({
   const [startTimeInput, setStartTimeInput] = useState("");
   const [editingCustomFields, setEditingCustomFields] = useState(false);
 
+  const handleStopClick = useCallback(() => {
+    if (!runningTask) return;
+    if (!runningTask.name?.trim() || !runningTask.projectId || !runningTask.categoryId) {
+      setFillName(runningTask.name ?? "");
+      setFillProjectName(projects.find((p) => p.id === runningTask.projectId)?.name ?? "");
+      setFillProjectId(runningTask.projectId);
+      setFillCategoryName(categories.find((c) => c.id === runningTask.categoryId)?.name ?? "");
+      setFillCategoryId(runningTask.categoryId);
+      setFillingRequired(true);
+    } else {
+      setConfirmingStop(true);
+    }
+  }, [runningTask, projects, categories]);
+
+  // Não entra em laço: o `onOmniboxFocusHandled` zera o pedido, e sem pedido o
+  // efeito sai na primeira linha, mesmo que as dependências mudem depois. Sem
+  // tarefa o pedido é consumido mesmo assim — pendurado, o próximo play abriria
+  // a confirmação de parada sozinho.
+  //
+  // O pedido chega junto com a navegação para Tarefas, quando projetos e
+  // categorias ainda estão vazios: atendido ali, o preenchimento obrigatório
+  // abriria com os nomes em branco e nunca seria refeito. Então espera sem
+  // consumir.
   useEffect(() => {
-    if (!focusTaskEdit || !runningTask) return;
-    if (!runningTask.projectId) {
+    if (!omniboxFocus || catalogsLoading) return;
+    if (omniboxFocus === "stop") {
+      handleStopClick();
+    } else if (runningTask && !runningTask.projectId) {
       setRunningChipValue("");
       setEditingRunningChip("project");
-    } else if (!runningTask.categoryId) {
+    } else if (runningTask && !runningTask.categoryId) {
       setRunningChipValue("");
       setEditingRunningChip("category");
     }
-    onFocusTaskEditHandled?.();
-  }, [focusTaskEdit, runningTask, onFocusTaskEditHandled]);
+    onOmniboxFocusHandled?.();
+  }, [omniboxFocus, catalogsLoading, runningTask, handleStopClick, onOmniboxFocusHandled]);
 
   // Painel aberto pertence à tarefa que estava em execução: sem este reset, parar
   // uma tarefa com ele aberto faria a próxima nascer com os campos de outra
@@ -68,20 +102,6 @@ export function useOmniboxRunningEdit({
   async function handlePlayPause() {
     if (isRunning) await pauseTask();
     else await resumeTask();
-  }
-
-  function handleStopClick() {
-    if (!runningTask) return;
-    if (!runningTask.name?.trim() || !runningTask.projectId || !runningTask.categoryId) {
-      setFillName(runningTask.name ?? "");
-      setFillProjectName(projects.find((p) => p.id === runningTask.projectId)?.name ?? "");
-      setFillProjectId(runningTask.projectId);
-      setFillCategoryName(categories.find((c) => c.id === runningTask.categoryId)?.name ?? "");
-      setFillCategoryId(runningTask.categoryId);
-      setFillingRequired(true);
-    } else {
-      setConfirmingStop(true);
-    }
   }
 
   /** Trocar o projeto no preenchimento obrigatório zera a categoria já digitada. */
