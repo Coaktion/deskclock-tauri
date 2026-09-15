@@ -20,7 +20,8 @@
 Decisão do usuário, 2026-09-15: a tarefa ativa fica visível em **todas** as telas da janela
 principal. O `TitleBar` ganha um bloco **centralizado** (`TitleBarRunningTask`) com ponto de status,
 nome ("(sem nome)" quando vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as
-ações Pausar/Retomar, Parar e Cancelar.
+ações Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px tingido pelo mesmo estado — o
+tingimento de borda e fundo do omnibox em execução —, para ser achado de relance.
 - **Some na tela de Tarefas**: ali o omnibox já mostra o mesmo, e repetir o cronômetro a 100px de
   distância só duplicaria.
 - **Parar sempre navega para Tarefas** e abre lá o fluxo de parada do omnibox ("Concluída?" ou o

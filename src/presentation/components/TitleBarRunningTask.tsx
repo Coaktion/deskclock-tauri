@@ -18,41 +18,47 @@ export function TitleBarRunningTask({ onStopRequest }: TitleBarRunningTaskProps)
   const isRunning = runningTask.status === "running";
 
   return (
-    <div className="flex items-center gap-2 h-full min-w-0 px-2">
-      <span
-        className={`shrink-0 w-1.5 h-1.5 rounded-full ${isRunning ? "bg-accent" : "bg-paused"}`}
-      />
-      <span
-        className={`text-sm truncate max-w-56 ${runningTask.name ? "text-fg-secondary" : "text-fg-muted italic"}`}
-      >
-        {runningTask.name ?? "(sem nome)"}
-      </span>
-      <span
-        className={`shrink-0 font-mono tabular-nums text-sm font-medium ${
-          isRunning ? "text-accent-text" : "text-paused"
+    <div className="flex items-center h-full min-w-0 px-2">
+      <div
+        className={`flex items-center gap-2 h-6 min-w-0 pl-2 pr-0.5 border rounded-chip ${
+          isRunning ? "border-accent/40 bg-accent/5" : "border-paused/40 bg-paused/5"
         }`}
       >
-        {formatHHMMSS(seconds)}
-      </span>
-      <IconButton
-        size="sm"
-        icon={isRunning ? <Pause size={14} /> : <Play size={14} />}
-        title={isRunning ? "Pausar" : "Retomar"}
-        onClick={() => void (isRunning ? pauseTask() : resumeTask())}
-      />
-      <Button variant="danger" onClick={onStopRequest} title="Parar tarefa">
-        Parar
-      </Button>
-      {/* O traço separa o descarte da ação que salva, como no omnibox: lado a
+        <span
+          className={`shrink-0 w-1.5 h-1.5 rounded-full ${isRunning ? "bg-accent" : "bg-paused"}`}
+        />
+        <span
+          className={`text-sm truncate max-w-56 ${runningTask.name ? "text-fg-secondary" : "text-fg-muted italic"}`}
+        >
+          {runningTask.name ?? "(sem nome)"}
+        </span>
+        <span
+          className={`shrink-0 font-mono tabular-nums text-sm font-medium ${
+            isRunning ? "text-accent-text" : "text-paused"
+          }`}
+        >
+          {formatHHMMSS(seconds)}
+        </span>
+        <IconButton
+          size="sm"
+          icon={isRunning ? <Pause size={14} /> : <Play size={14} />}
+          title={isRunning ? "Pausar" : "Retomar"}
+          onClick={() => void (isRunning ? pauseTask() : resumeTask())}
+        />
+        <Button variant="danger" onClick={onStopRequest} title="Parar tarefa">
+          Parar
+        </Button>
+        {/* O traço separa o descarte da ação que salva, como no omnibox: lado a
           lado, o Cancelar ficava a um pixel do Parar. */}
-      <span className="shrink-0 w-px h-4 mx-1 bg-border-subtle" />
-      <IconButton
-        size="sm"
-        variant="danger"
-        icon={<X size={14} />}
-        title="Cancelar tarefa"
-        onClick={() => void cancelTask()}
-      />
+        <span className="shrink-0 w-px h-4 mx-1 bg-border-subtle" />
+        <IconButton
+          size="sm"
+          variant="danger"
+          icon={<X size={14} />}
+          title="Cancelar tarefa"
+          onClick={() => void cancelTask()}
+        />
+      </div>
     </div>
   );
 }
