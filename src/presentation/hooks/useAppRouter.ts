@@ -11,7 +11,8 @@ const appWindow = getCurrentWindow();
 interface AppRouterDeps {
   config: ConfigContextValue;
   setPage: (page: Page) => void;
-  setOmniboxFocus: (value: OmniboxFocus) => void;
+  /** Porta única para a tela de Tarefas com pedido de foco — a mesma da barra de título. */
+  openTasksWith: (focus: OmniboxFocus) => void;
   ignoreBlurRef: RefObject<boolean>;
   showMainWindow: (focusToo?: boolean) => Promise<void>;
 }
@@ -19,7 +20,7 @@ interface AppRouterDeps {
 export function useAppRouter({
   config,
   setPage,
-  setOmniboxFocus,
+  openTasksWith,
   ignoreBlurRef,
   showMainWindow,
 }: AppRouterDeps) {
@@ -51,8 +52,7 @@ export function useAppRouter({
       setTimeout(() => {
         ignoreBlurRef.current = false;
       }, 600);
-      setPage("tasks");
-      setOmniboxFocus("edit");
+      openTasksWith("edit");
       await showMainWindow(true);
     });
     return () => {

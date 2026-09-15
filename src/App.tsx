@@ -91,6 +91,7 @@ function MainContent({
   omniboxFocus,
   onOmniboxFocusHandled,
   onStopRequest,
+  onOpenRequest,
 }: {
   page: Page;
   setPage: (p: Page) => void;
@@ -99,6 +100,7 @@ function MainContent({
   omniboxFocus: OmniboxFocus;
   onOmniboxFocusHandled: () => void;
   onStopRequest: () => void;
+  onOpenRequest: () => void;
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const { projectRepo, categoryRepo } = useRepositories();
@@ -250,6 +252,7 @@ function MainContent({
         isPinned={isPinned}
         onTogglePin={onTogglePin}
         onStopRequest={onStopRequest}
+        onOpenRequest={onOpenRequest}
       />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
@@ -279,6 +282,12 @@ function AppInner() {
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
 
+  /** Porta única da tela de Tarefas com um pedido de foco: barra de título e overlay. */
+  function openTasksWith(focus: OmniboxFocus) {
+    setPage("tasks");
+    setOmniboxFocus(focus);
+  }
+
   useEffect(() => {
     if (config.isLoaded && !config.loadError) setSetupDone(config.get("setupCompleted"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -296,7 +305,7 @@ function AppInner() {
   useAppRouter({
     config,
     setPage,
-    setOmniboxFocus,
+    openTasksWith,
     ignoreBlurRef,
     showMainWindow,
   });
@@ -347,10 +356,8 @@ function AppInner() {
           onTogglePin={() => setIsPinned((v) => !v)}
           omniboxFocus={omniboxFocus}
           onOmniboxFocusHandled={() => setOmniboxFocus(null)}
-          onStopRequest={() => {
-            setPage("tasks");
-            setOmniboxFocus("stop");
-          }}
+          onStopRequest={() => openTasksWith("stop")}
+          onOpenRequest={() => openTasksWith("edit")}
         />
       </TourProvider>
     </RunningTaskProvider>

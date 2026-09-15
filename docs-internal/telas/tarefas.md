@@ -9,6 +9,7 @@
 **Layout de cima para baixo:**
 
 #### Seção 1 — Tarefa atual em execução
+
 - Exibe todos os dados preenchidos + timer ativo.
 - Campo de hora de início editável — ao alterar, recalcula o timer.
 - **Botões:** Play/Pause | Stop | Edit | Cancel
@@ -17,13 +18,19 @@
 - **Atalhos globais:** Se configurados, exibir abaixo como texto informativo (ex: "Ctrl+Shift+S para parar").
 
 #### A tarefa em execução na barra de título (fora da tela de Tarefas)
+
 Decisão do usuário, 2026-09-15: a tarefa ativa fica visível em **todas** as telas da janela
 principal. O `TitleBar` ganha um bloco **centralizado** (`TitleBarRunningTask`) com ponto de status,
 nome ("(sem nome)" quando vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as
 ações Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px tingido pelo mesmo estado — o
 tingimento de borda e fundo do omnibox em execução —, para ser achado de relance.
+
 - **Some na tela de Tarefas**: ali o omnibox já mostra o mesmo, e repetir o cronômetro a 100px de
   distância só duplicaria.
+- **Clicar no rótulo — ponto, nome e cronômetro — leva a Tarefas** com o omnibox em foco, pelo mesmo
+  pedido `omniboxFocus: "edit"` do overlay, que abre o chip de projeto ou categoria quando falta um.
+  Quem recebe o clique é o rótulo, e não a casca: `role="button"` no chip tornaria presentacionais os
+  três botões de dentro, e o leitor de tela anunciaria tudo como um controle só.
 - **Parar sempre navega para Tarefas** e abre lá o fluxo de parada do omnibox ("Concluída?" ou o
   preenchimento obrigatório). A barra tem 32px e não cabe esse fluxo; reimplementá-lo seria uma
   segunda lógica de parada para divergir da primeira. O pedido viaja como `omniboxFocus: "stop"`, o
@@ -33,6 +40,7 @@ tingimento de borda e fundo do omnibox em execução —, para ser achado de rel
 - As laterais continuam região de arraste; o bloco do meio não é, para os cliques funcionarem.
 
 #### Seção 2 — Tarefas planejadas para hoje (dentro do omnibox)
+
 - **Não há bloco próprio na tela.** As planejadas pendentes do dia são a lista suspensa do omnibox:
   ela abre ao focar o campo e o texto digitado a filtra (`matchPlannedTasks`, busca fuzzy pelo nome).
 - A lista é **flutuante** — pendurada no card, fora do fluxo. Em fluxo, abri-la a cada foco
@@ -54,11 +62,13 @@ tingimento de borda e fundo do omnibox em execução —, para ser achado de rel
 > **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
 
 #### Seção 3 — Totalizadores
+
 - Horas billable hoje | Horas non-billable hoje | Total semana com dias (ex: "15:00 2d").
 - Os quatro cartões ocupam a **linha inteira**, como o design desenha. O arranjo em 2×2 existia
   para dividir a linha com o bloco de planejadas e saiu com ele.
 
 #### Seção 4 — Entradas de hoje
+
 - **Header:** Título "Entradas de Hoje" + total de horas hoje.
 - **Lista de tarefas registradas hoje:**
   - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.

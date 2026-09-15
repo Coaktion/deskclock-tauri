@@ -23,9 +23,18 @@ interface TitleBarProps {
   onTogglePin: () => void;
   /** Parar da barra: leva à tela de Tarefas e abre lá o fluxo de parada do omnibox. */
   onStopRequest: () => void;
+  /** Clique no rótulo (ponto, nome e cronômetro): leva ao omnibox da tela de Tarefas. */
+  onOpenRequest: () => void;
 }
 
-export function TitleBar({ page, showPin, isPinned, onTogglePin, onStopRequest }: TitleBarProps) {
+export function TitleBar({
+  page,
+  showPin,
+  isPinned,
+  onTogglePin,
+  onStopRequest,
+  onOpenRequest,
+}: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -54,7 +63,9 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin, onStopRequest }
 
       {/* Na tela de Tarefas o omnibox já mostra a tarefa e o cronômetro. */}
       <div className="h-full min-w-0">
-        {page !== "tasks" && <TitleBarRunningTask onStopRequest={onStopRequest} />}
+        {page !== "tasks" && (
+          <TitleBarRunningTask onStopRequest={onStopRequest} onOpenRequest={onOpenRequest} />
+        )}
       </div>
 
       {/* Controles da janela, precedidos de vão arrastável */}
