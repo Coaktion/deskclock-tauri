@@ -1073,7 +1073,7 @@
     <h3>Agrupamento de tarefas</h3>
     <p>Tarefas com mesmo <strong>nome + projeto + categoria</strong> são agrupadas visualmente. O grupo exibe a duração total e a contagem de registros ao lado do nome. Dentro do grupo você pode:</p>
     <ul>
-      <li><strong>Mesclar:</strong> une todos os registros em um único, somando as durações.</li>
+      <li><strong>Mesclar:</strong> une todos os registros em um único, somando as durações. O registro começa no início do primeiro e termina no fim do último.</li>
       <li><strong>Editar grupo:</strong> altera nome, projeto, categoria e campos personalizados de todas as tarefas do grupo de uma vez.</li>
       <li><strong>Expandir:</strong> vê e edita cada registro individualmente.</li>
       <li><strong>Repetir:</strong> inicia uma nova execução com os mesmos dados.</li>
@@ -2821,8 +2821,8 @@
         <thead><tr><th>Parâmetro</th><th>Tipo</th><th>Descrição</th></tr></thead>
         <tbody>
           <tr><td><code>name</code></td><td>texto</td><td>Nome da tarefa</td></tr>
-          <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto já cadastrado</td></tr>
-          <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria já cadastrada</td></tr>
+          <tr><td><code>project</code></td><td>texto</td><td>Nome exato do projeto no workspace ativo</td></tr>
+          <tr><td><code>category</code></td><td>texto</td><td>Nome exato da categoria no workspace ativo</td></tr>
           <tr><td><code>billable</code></td><td><code>true</code> / <code>false</code></td><td>Indica se é billable. Padrão: <code>true</code></td></tr>
         </tbody>
       </table>
