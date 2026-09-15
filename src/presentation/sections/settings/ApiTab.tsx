@@ -90,14 +90,17 @@ export function ApiTab() {
               description="Entre 1024 e 65535. Alterações reiniciam o servidor."
               htmlFor="settings-api-port"
             />
-            <NumberInputWithCommit
-              id="settings-api-port"
-              min={1024}
-              max={65535}
-              committed={localApiPort}
-              onCommit={handlePortCommit}
-              inputClassName="w-32 shrink-0 font-mono tabular-nums"
-            />
+            {/* A caixa é sempre `w-full` (controlStyles): a largura mora no invólucro. */}
+            <div className="w-32 shrink-0">
+              <NumberInputWithCommit
+                id="settings-api-port"
+                min={1024}
+                max={65535}
+                committed={localApiPort}
+                onCommit={handlePortCommit}
+                inputClassName="font-mono tabular-nums"
+              />
+            </div>
           </SectionRow>
         )}
 
