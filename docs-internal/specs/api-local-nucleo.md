@@ -87,7 +87,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Workspaces | `GET/POST /workspaces` · `PUT/DELETE /workspaces/{id}` (DELETE com `{mode: "move"\|"delete", toWorkspaceId?}`) · `GET/PUT /workspaces/active` (409 com tarefa em execução) |
 | Tarefa em execução | `POST /tasks/start\|pause\|resume\|stop\|toggle\|cancel` · `PATCH /tasks/active` · `POST /planned-tasks/{id}/start` |
 | Histórico | `GET /tasks?from&to&name&projectId&categoryId&billable` · `GET/PUT/DELETE /tasks/{id}` · `POST /tasks` (retroativo) · `POST /tasks/delete` · `PUT /tasks/{id}/billable` (grupo, §6.2) · `POST /tasks/merge` · `POST /tasks/move` |
-| Planejadas | as atuais + `workspaceId`, `startTime`/`endTime`, `customValues`, `label` da ação · `GET ?from&to` · `POST /{id}/duplicate` · `POST /planned-tasks/reorder` · `POST /{id}/launch-retroactive` |
+| Planejadas | as atuais + `workspaceId`, `startTime`/`endTime`, `customValues`, `label` da ação · `GET ?from&to` · `POST /{id}/duplicate` · `POST /{id}/launch-retroactive` (reordenar ficou de fora — §6, Fase 3) |
 | Projetos · categorias | `GET/POST` · `PUT/DELETE /{id}` · `POST /import` · `POST /delete` · `GET/PUT /projects/{id}/categories` |
 | Campos personalizados | `GET/POST /custom-fields` · `PUT/DELETE /custom-fields/{id}` |
 
@@ -113,7 +113,7 @@ Listar/buscar, CRUD, retroativo, unificar, billable do grupo, mover/copiar entre
 totais por período e semana. Mutação chama `notifyTasksChanged`.
 
 ### Fase 3 · Planejadas completas e fechamento
-Semana, duplicar, reordenar, lançar retroativo, iniciar planejada. Revisão das descrições do
+Semana, duplicar, lançar retroativo, iniciar planejada. Revisão das descrições do
 Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista só os 13 endpoints.
 
 ### Testes (toda fase)
@@ -127,18 +127,53 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 |---|---|
 | 0 | commitada (2f6683a); verificação manual parcial pelo usuário, ok |
 | 1 | commitada (35cfe76); verificada pelo usuário |
-| 2 | implementada, aguardando revisão e verificação manual |
-| 3 | pendente |
+| 2 | commitada (a8567b8 + 895ab53) |
+| 3 | implementada, aguardando revisão e verificação manual |
 
-**Pendências abertas na revisão da Fase 0** (não implementadas):
-- `sortOrder` na criação de planejada: a API usa o máximo +1 do workspace, e o use case
-  `CreatePlannedTask` usa 0. Unificar no domínio na Fase 3.
-- `GET /planned-tasks` sem data usa `findForWeek` com datas-limite. Trocar por
-  `findAll(workspaceId)` no repositório na Fase 3 — hoje a planejada `period` com `period_start`
-  NULL fica de fora.
-- Restringir `local_api_respond` e `local_api_bridge_ready` à janela `main` nas capabilities do
-  Tauri.
-- `Bridge.ready` nunca é resetado: recarregar o webview principal dá 504 em vez de 503.
+**Pendências da revisão da Fase 0 — resolvidas na Fase 3:**
+- `sortOrder` na criação: a API passou a gravar **0**, como o `CreatePlannedTask` (ver decisões da Fase 3).
+- `GET /planned-tasks` sem data usa o novo `findAll(workspaceId)` do repositório; a planejada `period` com
+  `period_start` NULL volta a aparecer.
+- `Bridge.ready` volta a `false` no `on_page_load` (`Started`) da janela `main` (`lib.rs`): recarregar o webview
+  dá 503 até o ouvinte novo avisar prontidão, em vez de 504.
+
+**Decisões da Fase 3 — do usuário, 2026-09-15.** As regras vivem em `src/presentation/localApi/handlers/plannedTasks.ts`.
+- **Reordenar não é exposto.** A UI não reordena planejadas: `reorder` do repositório não tem chamador em
+  `presentation/` e não há arraste no Planejamento. Todo o app grava `sortOrder` 0, então as listas saem na ordem
+  de criação; a API segue o mesmo (`sortOrder` explícito no corpo continua aceito na criação e no `PUT`). O
+  comentário de `plannedSchedule.ts` que fala em "arraste do Planejamento" está desatualizado — registrado, não
+  editado.
+- `findAll(workspaceId)` em `IPlannedTaskRepository` (impact HIGH, aditivo, **autorizado**). Nenhum método existente mudou.
+- `GET /planned-tasks`: `date` = regra do dia (`findForDate`); `from`/`to` = janela do Planejamento (`findForWeek`),
+  um só lado vale para os dois; nada = `findAll`. `date` junto de `from`/`to` → 400.
+- `POST /planned-tasks/{id}/start` (op `tasks.startPlanned`, espera o render): tarefa ativa (em execução ou
+  pausada) → **409**, como o Play das telas (`startTask` do contexto não faz nada com tarefa ativa) — diferente do
+  `POST /tasks/start`, que troca. Livre: `running.startTask` com `plannedTaskId`, `customValues` e o workspace da
+  planejada. Sem restrição de data, como a semana do Planejamento.
+- `POST /planned-tasks/{id}/launch-retroactive`, corpo opcional `{date?, startTime?, endTime?}`: `date` ausente =
+  hoje; fora do formato ou futura → 400; planejada fora da agenda do dia (`findForDate` no workspace dela) ou já
+  concluída nele → 409. Com horário: `launchPlannedTaskRetroactively` (sem mínimo, vira a meia-noite), e
+  `startTime`/`endTime` no corpo → 400. Sem horário: `startTime`/`endTime` obrigatórios (ISO), início no dia
+  `date` (o formulário monta o início no dia escolhido), ≥ 1 minuto; grava com nome, projeto, categoria, billable e
+  `customValues` da planejada e a conclui na data. Avisa tarefas e planejadas.
+- `POST /planned-tasks/{id}/duplicate`: `duplicatePlannedTask`, 201; 404 checado antes.
+- MINORs da Fase 2: `assertDate`/`periodRange` saíram de `taskInput.ts` para `localApi/period.ts`;
+  `POST /tasks/move` valida `ids` vazio (400) antes do destino inexistente (409).
+
+**Pendências que continuam abertas** (fora da Fase 3):
+- Deep link `task/start` sem workspace (registrado abaixo).
+- Restringir `local_api_respond` e `local_api_bridge_ready` à janela `main`. **Tentado e revertido na Fase 3:**
+  declarar `AppManifest::commands` no `build.rs` põe todos os comandos do app sob a ACL, e o app não abriu
+  (`get_db_bootstrap not allowed`). Fazer exige listar todos os comandos no manifesto e liberá-los numa capability
+  — uma lista a manter a cada comando novo — e só vale depois de o app subir.
+- Mínimo de 1 minuto do retroativo e composição do `EditTaskModal` em presentation — a API repete as duas regras
+  (agora também no `launch-retroactive` sem horário).
+- `POST /planned-tasks/{id}/launch-retroactive` sem horário repete no handler a montagem de
+  `LaunchPlannedTaskRetroactively` (dados e `customValues` da planejada, `createRetroactiveTask` + `completePlannedTask`).
+  Unificar num use case do domínio que aceite o intervalo junto com a rodada do mínimo de 1 minuto.
+- `mergeTaskGroup` grava `endTime` = agora.
+- Cópias do cálculo da segunda-feira em `IntegrationsModalsHost.tsx` e `WeekPlanningView.tsx`.
+- Helper `scoped_params` no Rust para as rotas que só repassam `id` + `workspaceId`.
 
 **Decisões da Fase 2 (implementação, a revisar).** As regras vivem em
 `src/presentation/localApi/handlers/{history,historyBatch,totals}.ts` e em `tasks.ts` (`PATCH /tasks/active`).

@@ -4,7 +4,7 @@ import { getWeekTotal } from "@domain/usecases/tasks/GetWeekTotal";
 import { weekBoundsOf } from "@shared/utils/time";
 import { resolveRequestWorkspace } from "../resolve";
 import type { LocalApiHandler } from "../types";
-import { assertDate, periodRange } from "../taskInput";
+import { assertDate, periodRange } from "../period";
 
 /** Os mesmos totais do Histórico: só tarefas concluídas do período. */
 export const getPeriodTotals: LocalApiHandler = async (deps, params) => {

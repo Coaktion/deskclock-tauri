@@ -203,6 +203,23 @@ describe("lotes com ids vazio", () => {
   });
 });
 
+describe("history.move com ids vazio e destino inexistente", () => {
+  it("devolve 400 pelos ids antes de olhar o destino", async () => {
+    const deps = depsCom([]);
+    const result = await dispatchLocalApiRequest(deps, "history.move", {
+      body: {
+        ids: [],
+        toWorkspaceId: "nao-existe",
+        project: { kind: "unset" },
+        category: { kind: "unset" },
+        mode: "move",
+      },
+    });
+    expect(result.status).toBe(400);
+    expect(deps.workspaceRepo.findById).not.toHaveBeenCalled();
+  });
+});
+
 describe("history.merge de dia passado", () => {
   it("devolve 409 e não unifica", async () => {
     const ontem = { startTime: localISO(2026, 9, 14, 8), endTime: localISO(2026, 9, 14, 9) };

@@ -7,10 +7,14 @@ use crate::api::models;
 #[openapi(
     info(
         title = "DeskClock Local API",
-        description = "API REST local do DeskClock para controlar timers, \
-listar projetos/categorias e integrar com ferramentas externas \
-(Alfred, Raycast, scripts, automações).\n\n\
+        description = "API REST local do DeskClock: controle do timer, Histórico, tarefas planejadas, \
+workspaces, projetos, categorias, campos personalizados e totais, para integrar com ferramentas externas \
+(Alfred, Raycast, scripts, automações). Cada chamada é executada pelo próprio app, com as mesmas regras da tela.\n\n\
 **Base URL:** `http://localhost:{porta}` (padrão: 27420)\n\n\
+**Workspace:** onde houver escopo, `workspaceId` ausente = workspace ativo. Recursos buscados por id no path \
+(tarefa, planejada) valem em qualquer workspace.\n\n\
+**Erros:** 400 = formato ou regra violada; 404 = o recurso do path não existe; 409 = uma referência do corpo \
+ou da query não existe, ou o estado atual impede a ação; 503 = o app ainda está carregando.\n\n\
 Somente `127.0.0.1` — acessível apenas a processos locais.",
         version = "1.0.0"
     ),
@@ -65,6 +69,9 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         handlers::delete_planned_task,
         handlers::post_planned_task_complete,
         handlers::delete_planned_task_complete,
+        handlers::planned_tasks::post_planned_task_duplicate,
+        handlers::planned_tasks::post_planned_task_start,
+        handlers::planned_tasks::post_planned_task_launch_retroactive,
     ),
     components(schemas(
         models::StatusResponse,
@@ -81,6 +88,7 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         models::CreatePlannedTaskRequest,
         models::UpdatePlannedTaskRequest,
         models::PlannedTaskCompleteRequest,
+        models::LaunchPlannedTaskRetroactiveRequest,
         models::CreateProjectRequest,
         models::UpdateProjectRequest,
         models::CreateCategoryRequest,
@@ -113,7 +121,7 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
     )),
     tags(
         (name = "status", description = "Consulta de estado"),
-        (name = "tasks", description = "Controle de timer e edição da tarefa ativa"),
+        (name = "tasks", description = "Controle de timer, edição da tarefa ativa e início de uma planejada"),
         (name = "history", description = "Tarefas concluídas: busca, edição, lançamento retroativo, \
 unificação e mudança de workspace. Tarefa em execução ou pausada = 409."),
         (name = "totals", description = "Totais por período e por semana. `workspaceId` ausente = workspace ativo."),
@@ -121,7 +129,8 @@ unificação e mudança de workspace. Tarefa em execução ou pausada = 409."),
         (name = "catalog", description = "Projetos, categorias e categorias por projeto. \
 `workspaceId` ausente = workspace ativo; id de outro workspace = 404."),
         (name = "custom-fields", description = "Campos personalizados (globais, sem workspace)"),
-        (name = "planned-tasks", description = "Tarefas planejadas")
+        (name = "planned-tasks", description = "Tarefas planejadas: listagem por dia, período ou todas; CRUD; \
+conclusão por dia; duplicar e lançar retroativo. Planejada por id vale em qualquer workspace.")
     )
 )]
 pub struct ApiDoc;

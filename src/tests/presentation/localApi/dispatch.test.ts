@@ -51,6 +51,9 @@ describe("waitsForNextCommit", () => {
     expect(waitsForNextCommit("plannedTasks.create")).toBe(false);
     expect(waitsForNextCommit("status.get")).toBe(false);
     expect(waitsForNextCommit("tasks.updateActive")).toBe(true);
+    expect(waitsForNextCommit("tasks.startPlanned")).toBe(true);
+    expect(waitsForNextCommit("plannedTasks.launchRetroactive")).toBe(false);
+    expect(waitsForNextCommit("plannedTasks.duplicate")).toBe(false);
     expect(waitsForNextCommit("history.update")).toBe(false);
     expect(waitsForNextCommit("totals.week")).toBe(false);
   });

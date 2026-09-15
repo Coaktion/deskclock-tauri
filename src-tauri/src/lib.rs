@@ -362,6 +362,17 @@ pub fn run() {
         // criadas antes do hook, e no Windows uma delas já chama get_db_bootstrap
         // nesse intervalo. Ver o comentário de topo de database.rs.
         .manage(database::DbBootstrapState::default())
+        .on_page_load(|webview, payload| {
+            // Recarregar a janela principal derruba o ouvinte da ponte; até o novo
+            // avisar prontidão, a API responde 503 em vez de pendurar até o 504.
+            if webview.label() == "main"
+                && payload.event() == tauri::webview::PageLoadEvent::Started
+            {
+                if let Some(bridge) = webview.try_state::<Arc<api::bridge::Bridge>>() {
+                    bridge.mark_unready();
+                }
+            }
+        })
         .setup(|app| {
             // Log habilitado também em release. Targets explícitos (Stdout + LogDir)
             // para não depender do default do plugin — garante que sempre há arquivo.

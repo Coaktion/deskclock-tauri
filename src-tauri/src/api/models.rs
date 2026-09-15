@@ -373,6 +373,7 @@ pub struct CreatePlannedTaskRequest {
     pub period_end: Option<String>,
     #[serde(default)]
     pub actions: Vec<PlannedTaskActionDto>,
+    /// Padrão: 0, como no app — as listas ordenam por `sortOrder` e depois pela criação.
     #[serde(default)]
     pub sort_order: Option<i64>,
     #[serde(default)]
@@ -426,6 +427,20 @@ pub struct UpdatePlannedTaskRequest {
 pub struct PlannedTaskCompleteRequest {
     /// Data no formato YYYY-MM-DD. Se omitida, usa a data de hoje.
     pub date: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LaunchPlannedTaskRetroactiveRequest {
+    /// Dia do lançamento, YYYY-MM-DD. Ausente = hoje; não pode ser futuro.
+    #[serde(default)]
+    pub date: Option<String>,
+    /// Só para planejada sem horário (obrigatório nela): instante ISO 8601 no dia `date`.
+    #[serde(default)]
+    pub start_time: Option<String>,
+    /// Só para planejada sem horário (obrigatório nela): instante ISO 8601; duração mínima de 1 minuto.
+    #[serde(default)]
+    pub end_time: Option<String>,
 }
 
 // ================================================================

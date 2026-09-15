@@ -104,6 +104,8 @@ export const moveHistoryTasks: LocalApiHandler = async (deps, params) => {
   if (body.mode !== "move" && body.mode !== "copy") {
     throw new DomainError("mode inválido: use 'move' ou 'copy'");
   }
+  // `ids` vazio é erro de formato (400) e vence o destino inexistente (409).
+  if (!body.ids?.length) throw new DomainError("Informe ao menos uma tarefa em ids");
   if (!(await deps.workspaceRepo.findById(body.toWorkspaceId))) {
     throw new ConflictError(`Workspace de destino '${body.toWorkspaceId}' não encontrado`);
   }

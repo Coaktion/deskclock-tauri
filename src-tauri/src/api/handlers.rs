@@ -94,6 +94,7 @@ pub struct WorkspaceQuery {
 pub mod catalog;
 pub mod custom_fields;
 pub mod history;
+pub mod planned_tasks;
 pub mod totals;
 pub mod workspaces;
 
@@ -326,6 +327,8 @@ pub async fn get_categories(
 #[serde(rename_all = "camelCase")]
 pub struct PlannedTasksQuery {
     date: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
     workspace_id: Option<String>,
 }
 
@@ -334,11 +337,16 @@ pub struct PlannedTasksQuery {
     path = "/planned-tasks",
     tag = "planned-tasks",
     params(
-        ("date" = Option<String>, Query, description = "Filtrar por data YYYY-MM-DD (aplica recorrência e período aberto). Se omitido, retorna todas."),
+        ("date" = Option<String>, Query, description = "Um dia, YYYY-MM-DD: as planejadas daquele dia, com recorrência (dia da semana) e período aberto aplicados. Não combina com `from`/`to`."),
+        ("from" = Option<String>, Query, description = "Primeiro dia do período, YYYY-MM-DD. Ausente com `to` presente = o mesmo de `to`."),
+        ("to" = Option<String>, Query, description = "Último dia do período, YYYY-MM-DD. Ausente com `from` presente = o mesmo de `from`. \
+            O período traz o que pode ocorrer nele, como a semana do Planejamento: data específica no intervalo, toda recorrente e período que o cruza."),
         ("workspaceId" = Option<String>, Query, description = "Ausente = workspace ativo.")
     ),
     responses(
-        (status = 200, description = "Lista de tarefas planejadas", body = Vec<PlannedTaskDto>)
+        (status = 200, description = "Planejadas do workspace, na ordem das listas. Sem `date` nem `from`/`to`, todas.", body = Vec<PlannedTaskDto>),
+        (status = 400, description = "Data fora do formato, `from` depois de `to`, ou `date` junto de `from`/`to`", body = ErrorResponse),
+        (status = 409, description = "Workspace não encontrado", body = ErrorResponse)
     )
 )]
 pub async fn get_planned_tasks(
@@ -348,7 +356,7 @@ pub async fn get_planned_tasks(
     forward(
         &state,
         "plannedTasks.list",
-        json!({ "date": q.date, "workspaceId": q.workspace_id }),
+        json!({ "date": q.date, "from": q.from, "to": q.to, "workspaceId": q.workspace_id }),
     )
     .await
 }
@@ -376,7 +384,9 @@ pub async fn get_planned_task(
     tag = "planned-tasks",
     request_body(
         content = CreatePlannedTaskRequest,
-        description = "Dados da nova tarefa planejada.",
+        description = "Dados da nova tarefa planejada. `scheduleType`: `specific_date` (usa `scheduleDate`), \
+            `recurring` (usa `recurringDays`, 0 = domingo) ou `period` (usa `periodStart`/`periodEnd`). \
+            `billable` padrão: true; `sortOrder` padrão: 0, como no app. `startTime`/`endTime` são horas \"HH:MM\".",
         example = json!({
             "name": "Daily standup",
             "categoryName": "Reuniões",
@@ -387,6 +397,7 @@ pub async fn get_planned_task(
     ),
     responses(
         (status = 201, description = "Tarefa planejada criada", body = PlannedTaskDto),
+        (status = 400, description = "`scheduleType` ou tipo de ação inválido", body = ErrorResponse),
         (status = 409, description = "Workspace, projeto ou categoria não encontrado no workspace", body = ErrorResponse)
     )
 )]
@@ -417,6 +428,7 @@ pub async fn post_planned_task(State(state): State<Arc<ApiState>>, body: Bytes) 
     ),
     responses(
         (status = 200, description = "Tarefa planejada atualizada", body = PlannedTaskDto),
+        (status = 400, description = "`scheduleType` ou tipo de ação inválido", body = ErrorResponse),
         (status = 404, description = "Não encontrada", body = ErrorResponse),
         (status = 409, description = "Projeto/categoria não encontrado no workspace da tarefa", body = ErrorResponse)
     )
@@ -468,6 +480,7 @@ pub async fn delete_planned_task(
     ),
     responses(
         (status = 200, description = "Tarefa marcada como concluída", body = PlannedTaskDto),
+        (status = 400, description = "Data fora do formato", body = ErrorResponse),
         (status = 404, description = "Não encontrada", body = ErrorResponse)
     )
 )]
@@ -499,6 +512,7 @@ pub async fn post_planned_task_complete(
     ),
     responses(
         (status = 200, description = "Conclusão removida", body = PlannedTaskDto),
+        (status = 400, description = "Data fora do formato", body = ErrorResponse),
         (status = 404, description = "Não encontrada", body = ErrorResponse)
     )
 )]

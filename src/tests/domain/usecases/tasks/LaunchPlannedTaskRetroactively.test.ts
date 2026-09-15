@@ -25,6 +25,7 @@ function makePlannedRepo(overrides: Partial<IPlannedTaskRepository> = {}): IPlan
     update: vi.fn(async () => undefined),
     findById: vi.fn(async () => null),
     findForDate: vi.fn(async () => []),
+    findAll: vi.fn(async () => []),
     findForWeek: vi.fn(async () => []),
     complete: vi.fn(async () => undefined),
     uncomplete: vi.fn(async () => undefined),

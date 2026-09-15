@@ -68,6 +68,13 @@ impl Bridge {
         self.ready.store(true, Ordering::SeqCst);
     }
 
+    /// A janela principal começou a (re)carregar: o ouvinte antigo morreu com a
+    /// página e o novo ainda não avisou. Sem isso, a requisição seria emitida
+    /// para ninguém e só expiraria em 504.
+    pub fn mark_unready(&self) {
+        self.ready.store(false, Ordering::SeqCst);
+    }
+
     pub async fn request(&self, op: &str, params: Value) -> Result<BridgeResponse, BridgeError> {
         if !self.ready.load(Ordering::SeqCst) {
             return Err(BridgeError::NotReady);
@@ -145,6 +152,16 @@ mod tests {
     #[tokio::test]
     async fn responde_503_antes_da_prontidao_sem_emitir() {
         let (bridge, sent) = bridge_with_log(DEFAULT_TIMEOUT);
+        let result = bridge.request("status.get", json!({})).await;
+        assert_eq!(result, Err(BridgeError::NotReady));
+        assert!(sent.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn volta_a_responder_503_depois_de_a_janela_recarregar() {
+        let (bridge, sent) = bridge_with_log(DEFAULT_TIMEOUT);
+        bridge.mark_ready();
+        bridge.mark_unready();
         let result = bridge.request("status.get", json!({})).await;
         assert_eq!(result, Err(BridgeError::NotReady));
         assert!(sent.lock().unwrap().is_empty());

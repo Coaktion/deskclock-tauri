@@ -2906,18 +2906,54 @@
       Endpoints
     </h2>
 
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Workspace.</strong> Onde houver escopo, a rota aceita <code>workspaceId</code>; sem ele, vale o workspace ativo. Tarefas e planejadas buscadas pelo id respondem em qualquer workspace. Cada chamada segue as mesmas regras da tela: parar pela API descarta tarefas com menos de 1 minuto, arredonda e conclui a planejada de origem, como o botão de parar.</div>
+    </div>
+
     <h3>Controle do timer</h3>
     <div class="table-scroll">
           <table class="data-table">
         <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
         <tbody>
-          <tr><td><code>GET</code></td><td><code>/status</code></td><td>Estado atual: se há tarefa em execução, qual, e há quanto tempo</td></tr>
-          <tr><td><code>POST</code></td><td><code>/tasks/start</code></td><td>Inicia uma tarefa</td></tr>
+          <tr><td><code>GET</code></td><td><code>/status</code></td><td>Estado atual: se há tarefa em execução, qual, e os totais de hoje</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/start</code></td><td>Inicia uma tarefa; se já houver uma ativa, ela é parada antes</td></tr>
           <tr><td><code>POST</code></td><td><code>/tasks/pause</code></td><td>Pausa a tarefa em execução</td></tr>
           <tr><td><code>POST</code></td><td><code>/tasks/resume</code></td><td>Retoma a tarefa pausada</td></tr>
-          <tr><td><code>POST</code></td><td><code>/tasks/toggle</code></td><td>Alterna entre pausar e retomar</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/toggle</code></td><td>Pausa, retoma ou, sem tarefa ativa, inicia uma nova</td></tr>
           <tr><td><code>POST</code></td><td><code>/tasks/stop</code></td><td>Para e salva</td></tr>
           <tr><td><code>POST</code></td><td><code>/tasks/cancel</code></td><td>Descarta sem salvar</td></tr>
+          <tr><td><code>PATCH</code></td><td><code>/tasks/active</code></td><td>Edita a tarefa em execução ou pausada: nome, projeto, categoria, billable, início e campos personalizados</td></tr>
+          <tr><td><code>POST</code></td><td><code>/planned-tasks/{id}/start</code></td><td>Inicia uma tarefa planejada, como o Play. Com tarefa ativa, é recusado</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Histórico</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/tasks</code></td><td>Lista as tarefas concluídas de um período (<code>from</code>, <code>to</code>), com filtros por nome, projeto, categoria e billable</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks</code></td><td>Lançamento retroativo: grava uma tarefa já concluída, com início e fim</td></tr>
+          <tr><td><code>GET</code></td><td><code>/tasks/{id}</code></td><td>Lê uma tarefa</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/tasks/{id}</code></td><td>Edita uma tarefa concluída, como o modal de edição</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/tasks/{id}</code></td><td>Exclui uma tarefa concluída</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/tasks/{id}/billable</code></td><td>Define o billable da tarefa e do grupo dela no dia</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/delete</code></td><td>Exclui várias tarefas de uma vez</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/merge</code></td><td>Unifica um grupo de tarefas de hoje num registro só</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/move</code></td><td>Move ou copia tarefas para outro workspace</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Totais</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/totals</code></td><td>Totais das tarefas concluídas num período, como no Histórico</td></tr>
+          <tr><td><code>GET</code></td><td><code>/totals/week</code></td><td>Total da semana (segunda a domingo) de uma data</td></tr>
         </tbody>
       </table>
         </div>
@@ -2927,13 +2963,30 @@
           <table class="data-table">
         <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
         <tbody>
-          <tr><td><code>GET</code></td><td><code>/planned-tasks</code></td><td>Lista as planejadas. Aceita uma data, e aplica as regras de recorrência</td></tr>
+          <tr><td><code>GET</code></td><td><code>/planned-tasks</code></td><td>Lista as planejadas: de um dia (<code>date</code>, com as regras de recorrência), de um período (<code>from</code>, <code>to</code>, como a semana do Planejamento) ou todas</td></tr>
           <tr><td><code>POST</code></td><td><code>/planned-tasks</code></td><td>Cria uma tarefa planejada</td></tr>
           <tr><td><code>GET</code></td><td><code>/planned-tasks/{id}</code></td><td>Lê uma tarefa planejada</td></tr>
           <tr><td><code>PUT</code></td><td><code>/planned-tasks/{id}</code></td><td>Atualiza</td></tr>
           <tr><td><code>DELETE</code></td><td><code>/planned-tasks/{id}</code></td><td>Exclui</td></tr>
           <tr><td><code>POST</code></td><td><code>/planned-tasks/{id}/complete</code></td><td>Marca como concluída no dia</td></tr>
           <tr><td><code>DELETE</code></td><td><code>/planned-tasks/{id}/complete/{data}</code></td><td>Desfaz a conclusão daquele dia</td></tr>
+          <tr><td><code>POST</code></td><td><code>/planned-tasks/{id}/duplicate</code></td><td>Cria uma cópia, sem as conclusões</td></tr>
+          <tr><td><code>POST</code></td><td><code>/planned-tasks/{id}/launch-retroactive</code></td><td>Lança a planejada como tarefa concluída do dia e a marca como concluída, como no Lançamento Manual. Sem horário na planejada, informe início e fim</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Workspaces</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/workspaces</code></td><td>Lista os workspaces</td></tr>
+          <tr><td><code>POST</code></td><td><code>/workspaces</code></td><td>Cria um workspace</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/workspaces/{id}</code></td><td>Renomeia ou troca a cor</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/workspaces/{id}</code></td><td>Exclui, movendo os dados para outro workspace ou apagando-os</td></tr>
+          <tr><td><code>GET</code></td><td><code>/workspaces/active</code></td><td>Lê o workspace ativo</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/workspaces/active</code></td><td>Troca o workspace ativo. Com tarefa ativa, é recusado</td></tr>
         </tbody>
       </table>
         </div>
@@ -2943,8 +2996,33 @@
           <table class="data-table">
         <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
         <tbody>
-          <tr><td><code>GET</code></td><td><code>/projects</code></td><td>Lista os projetos cadastrados</td></tr>
-          <tr><td><code>GET</code></td><td><code>/categories</code></td><td>Lista as categorias cadastradas</td></tr>
+          <tr><td><code>GET</code></td><td><code>/projects</code></td><td>Lista os projetos do workspace</td></tr>
+          <tr><td><code>POST</code></td><td><code>/projects</code></td><td>Cria um projeto</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/projects/{id}</code></td><td>Renomeia um projeto</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/projects/{id}</code></td><td>Exclui um projeto</td></tr>
+          <tr><td><code>POST</code></td><td><code>/projects/import</code></td><td>Importa projetos, um por linha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/projects/delete</code></td><td>Exclui vários projetos de uma vez</td></tr>
+          <tr><td><code>GET</code></td><td><code>/projects/{id}/categories</code></td><td>Lista as categorias associadas ao projeto</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/projects/{id}/categories</code></td><td>Define as categorias associadas ao projeto</td></tr>
+          <tr><td><code>GET</code></td><td><code>/categories</code></td><td>Lista as categorias do workspace</td></tr>
+          <tr><td><code>POST</code></td><td><code>/categories</code></td><td>Cria uma categoria</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/categories/{id}</code></td><td>Renomeia uma categoria ou muda o billable padrão</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/categories/{id}</code></td><td>Exclui uma categoria</td></tr>
+          <tr><td><code>POST</code></td><td><code>/categories/import</code></td><td>Importa categorias, uma por linha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/categories/delete</code></td><td>Exclui várias categorias de uma vez</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <h3>Campos personalizados</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/custom-fields</code></td><td>Lista os campos, inclusive os arquivados</td></tr>
+          <tr><td><code>POST</code></td><td><code>/custom-fields</code></td><td>Cria um campo</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/custom-fields/{id}</code></td><td>Atualiza um campo</td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/custom-fields/{id}</code></td><td>Exclui um campo e os valores gravados nas tarefas</td></tr>
         </tbody>
       </table>
         </div>

@@ -12,10 +12,10 @@ import {
   buildTaskEditPatch,
   findTaskOrThrow,
   parseInstant,
-  periodRange,
   secondsBetween,
   type TaskEditBody,
 } from "../taskInput";
+import { periodRange } from "../period";
 import type { LocalApiHandler } from "../types";
 
 interface TaskBody extends TaskEditBody {

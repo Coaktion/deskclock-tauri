@@ -23,8 +23,11 @@ import {
   completePlannedTask,
   createPlannedTaskHandler,
   deletePlannedTask,
+  duplicatePlannedTaskHandler,
   getPlannedTask,
+  launchPlannedTaskRetroactiveHandler,
   listPlannedTasks,
+  startPlannedTaskHandler,
   uncompletePlannedTask,
   updatePlannedTaskHandler,
 } from "./handlers/plannedTasks";
@@ -73,6 +76,8 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "tasks.toggle": toggleTask,
   "tasks.cancel": cancelTask,
   "tasks.updateActive": updateActiveTaskHandler,
+  // `tasks.*` de propósito: inicia a tarefa em execução, então espera o render.
+  "tasks.startPlanned": startPlannedTaskHandler,
   // Registros concluídos: `history.*` e não `tasks.*`, porque não mexem na
   // tarefa em execução e não devem esperar o render (`waitsForNextCommit`).
   "history.list": listHistory,
@@ -117,6 +122,8 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "plannedTasks.delete": deletePlannedTask,
   "plannedTasks.complete": completePlannedTask,
   "plannedTasks.uncomplete": uncompletePlannedTask,
+  "plannedTasks.duplicate": duplicatePlannedTaskHandler,
+  "plannedTasks.launchRetroactive": launchPlannedTaskRetroactiveHandler,
 };
 
 /** Nunca rejeita: todo erro vira status, porque o Rust aguarda uma resposta. */

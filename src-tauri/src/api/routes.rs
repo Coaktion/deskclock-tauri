@@ -1,5 +1,5 @@
 use crate::api::handlers;
-use crate::api::handlers::{catalog, custom_fields, history, totals, workspaces};
+use crate::api::handlers::{catalog, custom_fields, history, planned_tasks, totals, workspaces};
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
 use axum::{
@@ -109,6 +109,18 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             "/planned-tasks/{id}/complete/{date}",
             delete(handlers::delete_planned_task_complete),
         )
+        .route(
+            "/planned-tasks/{id}/duplicate",
+            post(planned_tasks::post_planned_task_duplicate),
+        )
+        .route(
+            "/planned-tasks/{id}/start",
+            post(planned_tasks::post_planned_task_start),
+        )
+        .route(
+            "/planned-tasks/{id}/launch-retroactive",
+            post(planned_tasks::post_planned_task_launch_retroactive),
+        )
         .with_state(state);
 
     Router::new()
@@ -215,6 +227,61 @@ mod tests {
             assert_eq!(got, None, "{method} {uri}");
             assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED, "{method} {uri}");
         }
+    }
+
+    #[tokio::test]
+    async fn acoes_da_planejada_chegam_a_ponte_com_a_op_certa() {
+        let cases = [
+            (
+                "GET",
+                "/planned-tasks?from=2026-09-14&to=2026-09-18",
+                "",
+                "plannedTasks.list",
+            ),
+            (
+                "POST",
+                "/planned-tasks/abc/duplicate",
+                "",
+                "plannedTasks.duplicate",
+            ),
+            ("POST", "/planned-tasks/abc/start", "", "tasks.startPlanned"),
+            (
+                "POST",
+                "/planned-tasks/abc/launch-retroactive",
+                "",
+                "plannedTasks.launchRetroactive",
+            ),
+            (
+                "POST",
+                "/planned-tasks/abc/launch-retroactive",
+                r#"{"date":"2026-09-15","startTime":"a","endTime":"b"}"#,
+                "plannedTasks.launchRetroactive",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn reorder_nao_e_exposto() {
+        let (status, got) = send("POST", "/planned-tasks/reorder", r#"{"ids":[]}"#).await;
+        assert_eq!(got, None);
+        assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED);
+    }
+
+    #[tokio::test]
+    async fn lancamento_retroativo_com_data_nao_textual_e_400_sem_chegar_a_ponte() {
+        let (status, got) = send(
+            "POST",
+            "/planned-tasks/abc/launch-retroactive",
+            r#"{"date":20260915}"#,
+        )
+        .await;
+        assert_eq!(got, None);
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]
