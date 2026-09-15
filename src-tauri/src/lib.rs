@@ -513,3 +513,101 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+/// A ACL recusa em runtime o comando que ficou fora do manifesto ou da
+/// capability, e o app não abre (`get_db_bootstrap not allowed`). Estes testes
+/// trazem essa falha para o `cargo test`.
+#[cfg(test)]
+mod app_commands_acl {
+    include!("../app_commands.rs");
+
+    use serde_json::Value;
+    use std::collections::BTreeSet;
+
+    fn permission(command: &str) -> String {
+        format!("allow-{}", command.replace('_', "-"))
+    }
+
+    fn registered_commands() -> BTreeSet<String> {
+        let source = include_str!("lib.rs");
+        let marker = concat!("generate_handler", "![");
+        let start = source
+            .find(marker)
+            .expect("generate_handler! não encontrado")
+            + marker.len();
+        let end = start
+            + source[start..]
+                .find(']')
+                .expect("generate_handler! sem fim");
+        source[start..end]
+            .split(',')
+            .map(|entry| entry.trim().rsplit("::").next().unwrap_or("").to_string())
+            .filter(|name| !name.is_empty())
+            .collect()
+    }
+
+    fn app_permissions(capability: &Value) -> BTreeSet<String> {
+        capability["permissions"]
+            .as_array()
+            .expect("capability sem permissions")
+            .iter()
+            .filter_map(Value::as_str)
+            // Permissão de app não tem prefixo de plugin (`core:`, `sql:`…).
+            .filter(|p| !p.contains(':'))
+            .map(str::to_string)
+            .collect()
+    }
+
+    fn windows(value: &Value) -> BTreeSet<String> {
+        value
+            .as_array()
+            .expect("lista de janelas")
+            .iter()
+            .filter_map(|w| w.as_str().or_else(|| w["label"].as_str()))
+            .map(str::to_string)
+            .collect()
+    }
+
+    fn json(source: &str) -> Value {
+        serde_json::from_str(source).expect("JSON inválido")
+    }
+
+    #[test]
+    fn todo_comando_registrado_esta_no_manifesto() {
+        let listed: BTreeSet<String> = SHARED_COMMANDS
+            .iter()
+            .chain(MAIN_ONLY_COMMANDS)
+            .map(|c| c.to_string())
+            .collect();
+        assert_eq!(
+            listed.len(),
+            SHARED_COMMANDS.len() + MAIN_ONLY_COMMANDS.len(),
+            "comando repetido em app_commands.rs"
+        );
+        assert_eq!(registered_commands(), listed);
+    }
+
+    #[test]
+    fn default_libera_os_compartilhados_em_todas_as_janelas() {
+        let capability = json(include_str!("../capabilities/default.json"));
+        let expected: BTreeSet<String> = SHARED_COMMANDS.iter().map(|c| permission(c)).collect();
+        assert_eq!(app_permissions(&capability), expected);
+
+        let conf = json(include_str!("../tauri.conf.json"));
+        assert_eq!(
+            windows(&capability["windows"]),
+            windows(&conf["app"]["windows"])
+        );
+    }
+
+    #[test]
+    fn ponte_da_api_local_so_na_janela_main() {
+        let capability = json(include_str!("../capabilities/local-api-bridge.json"));
+        let expected: BTreeSet<String> = MAIN_ONLY_COMMANDS.iter().map(|c| permission(c)).collect();
+        assert_eq!(app_permissions(&capability), expected);
+        assert_eq!(
+            windows(&capability["windows"]),
+            BTreeSet::from(["main".to_string()])
+        );
+    }
+}
