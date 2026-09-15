@@ -92,12 +92,15 @@ export class TaskRepository implements ITaskRepository {
       // planned_task_id fica fora do UPDATE: é a origem da execução, imutável
       // depois do início. Incluí-lo faria todo caller que monta uma Task sem o
       // campo (edição, merge, regras pós-parada) apagar o vínculo sem querer.
+      //
+      // workspace_id entra: é o que mover entre workspaces altera.
       `UPDATE tasks SET
-        name = $1, project_id = $2, category_id = $3, billable = $4,
-        start_time = $5, end_time = $6, duration_seconds = $7,
-        status = $8, updated_at = $9
-       WHERE id = $10`,
+        workspace_id = $1, name = $2, project_id = $3, category_id = $4, billable = $5,
+        start_time = $6, end_time = $7, duration_seconds = $8,
+        status = $9, updated_at = $10
+       WHERE id = $11`,
       [
+        task.workspaceId,
         task.name,
         task.projectId,
         task.categoryId,
