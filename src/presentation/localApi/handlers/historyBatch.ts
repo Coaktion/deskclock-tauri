@@ -64,8 +64,8 @@ export const mergeHistoryTasks: LocalApiHandler = async (deps, params) => {
   if (new Set(ids).size < 2) throw new DomainError("Informe ao menos duas tarefas para unificar");
   const tasks = await loadAll(deps, ids);
   assertSameGroup(tasks);
-  // `mergeTaskGroup` grava o fim como agora: num dia passado o registro somado
-  // se esticaria até hoje. A tela também só unifica as entradas de hoje.
+  // Espelha a tela, que só unifica as entradas de hoje (`TodayEntriesSection`).
+  // O use case serviria a qualquer dia; a restrição é só da interface.
   if (localDateISO(tasks[0].startTime) !== deps.todayISO()) {
     throw new ConflictError("Só é possível unificar as tarefas de hoje.");
   }

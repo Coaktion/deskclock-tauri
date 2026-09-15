@@ -257,6 +257,7 @@ pub async fn post_tasks_delete(State(state): State<Arc<ApiState>>, body: Bytes) 
     request_body(
         content = TaskIdsRequest,
         description = "Unifica um grupo num registro só, com a duração somada; os originais são excluídos. \
+            O registro começa no início mais cedo e termina no maior fim do grupo. \
             Só vale para as tarefas de hoje. As tarefas precisam ser do mesmo dia e workspace, com nome, projeto, categoria e campos personalizados iguais.",
         example = json!({ "ids": ["t1…", "t2…"] })
     ),
