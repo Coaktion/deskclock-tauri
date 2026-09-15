@@ -151,6 +151,20 @@ describe("history.create", () => {
     expect(invalida.status).toBe(400);
     expect(deps.taskRepo.save).not.toHaveBeenCalled();
   });
+
+  it("projeto inexistente vence a duração curta: 409, pois o mínimo só é checado ao gravar", async () => {
+    const deps = makeDeps();
+    const result = await dispatchLocalApiRequest(deps, "history.create", {
+      body: {
+        ...corpo,
+        projectName: "Projeto que não existe",
+        endTime: localISO(2026, 9, 14, 9, 0, 30),
+      },
+    });
+    expect(result.status).toBe(409);
+    expect(deps.taskRepo.save).not.toHaveBeenCalled();
+    expect(deps.notifyTasksChanged).not.toHaveBeenCalled();
+  });
 });
 
 describe("history.update", () => {

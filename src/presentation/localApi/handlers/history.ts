@@ -1,6 +1,6 @@
 import type { Task } from "@domain/entities/Task";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
-import { updateTask } from "@domain/usecases/tasks/UpdateTask";
+import { editCompletedTask } from "@domain/usecases/tasks/EditCompletedTask";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
@@ -23,8 +23,6 @@ interface TaskBody extends TaskEditBody {
   startTime?: string | null;
   endTime?: string | null;
 }
-
-const MIN_DURATION_SECONDS = 60;
 
 function billableFilter(value: string | null | undefined): boolean | undefined {
   if (value === undefined || value === null || value === "") return undefined;
@@ -76,11 +74,8 @@ export const createHistoryTask: LocalApiHandler = async (deps, params) => {
   const billable = requireBoolean(body.billable);
   const startTime = parseInstant(body.startTime, "startTime");
   const endTime = parseInstant(body.endTime, "endTime");
+  // O mínimo de 1 minuto é do `createRetroactiveTask`, o mesmo do Lançamento Manual.
   const durationSeconds = secondsBetween(startTime, endTime);
-  // Mesma trava do Lançamento Manual (`useRetroactiveForm`).
-  if (durationSeconds < MIN_DURATION_SECONDS) {
-    throw new DomainError("A duração mínima é 1 minuto.");
-  }
   const [projectId, categoryId] = await Promise.all([
     resolveProjectId(deps, workspaceId, body.projectId, body.projectName),
     resolveCategoryId(deps, workspaceId, body.categoryId, body.categoryName),
@@ -125,11 +120,8 @@ export const updateHistoryTask: LocalApiHandler = async (deps, params) => {
     ...(await buildTaskEditPatch(deps, task, body)),
     ...intervalPatch(task, body),
   };
-  const nowISO = deps.nowISO();
-  const updated = await updateTask(deps.taskRepo, task.id, input, nowISO);
-  // Igual ao `EditTaskModal`: faturamento é do grupo (§6.2), inclusive do grupo
-  // novo quando a edição mudou a chave. Grupo uniforme não gera escrita.
-  await setGroupBillable(deps.taskRepo, updated, updated.billable, nowISO);
+  // O mesmo use case do `EditTaskModal`: o billable resultante vai ao grupo (§6.2).
+  const updated = await editCompletedTask(deps.taskRepo, task.id, input, deps.nowISO());
   await deps.notifyTasksChanged();
   return { status: 200, body: await taskDto(deps, updated) };
 };

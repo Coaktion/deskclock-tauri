@@ -9,14 +9,13 @@ import { duplicatePlannedTask as duplicatePlannedTaskUC } from "@domain/usecases
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
 import { getPlannedTasksForWeek } from "@domain/usecases/plannedTasks/GetPlannedTasksForWeek";
 import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
-import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { DomainError } from "@shared/errors";
 import { localDateISO } from "@shared/utils/time";
 import { ConflictError, NotFoundError } from "../errors";
 import { loadCatalogNames, plannedTaskDto, taskDto, toPlannedTaskDto } from "../dto";
 import { assertDate } from "../period";
 import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "../resolve";
-import { parseInstant, secondsBetween } from "../taskInput";
+import { parseInstant } from "../taskInput";
 import type { LocalApiDeps, LocalApiHandler, LocalApiParams } from "../types";
 
 interface PlannedTaskBody {
@@ -47,8 +46,6 @@ interface LaunchRetroactiveBody {
 
 const SCHEDULE_TYPES: ScheduleType[] = ["specific_date", "recurring", "period"];
 const ACTION_TYPES: PlannedTaskAction["type"][] = ["open_url", "open_file"];
-// Mesma trava do Lançamento Manual (`useRetroactiveForm`).
-const MIN_DURATION_SECONDS = 60;
 // Ordem padrão do domínio (`CreatePlannedTask`): a UI não reordena, então as
 // listas saem na ordem de criação.
 const DEFAULT_SORT_ORDER = 0;
@@ -255,13 +252,19 @@ async function launchDate(deps: LocalApiDeps, planned: PlannedTask, body: Launch
   return date;
 }
 
-/** Caminho do formulário da tela: a planejada sem horário só pré-preenche, o horário vem do usuário. */
-async function launchUntimed(
-  deps: LocalApiDeps,
-  planned: PlannedTask,
-  body: LaunchRetroactiveBody,
-  date: string
-) {
+/**
+ * Intervalo que o corpo da requisição fornece para a planejada. Sem horário, ela
+ * na tela só pré-preenche e o horário vem do usuário: `startTime`/`endTime` são
+ * obrigatórios. Com horário, o corpo não pode trazê-los e o retorno é
+ * `undefined` — o use case usa o da planejada.
+ */
+function requestIntervalFor(planned: PlannedTask, body: LaunchRetroactiveBody, date: string) {
+  if (planned.startTime && planned.endTime) {
+    if (body.startTime || body.endTime) {
+      throw new DomainError("A planejada já tem horário: não envie startTime nem endTime");
+    }
+    return undefined;
+  }
   if (!body.startTime || !body.endTime) {
     throw new DomainError("Planejada sem horário: informe startTime e endTime");
   }
@@ -271,48 +274,22 @@ async function launchUntimed(
   if (localDateISO(startTime) !== date) {
     throw new DomainError(`startTime deve estar no dia ${date}`);
   }
-  const durationSeconds = secondsBetween(startTime, endTime);
-  if (durationSeconds < MIN_DURATION_SECONDS) {
-    throw new DomainError("A duração mínima é 1 minuto.");
-  }
-  const task = await createRetroactiveTask(
-    deps.taskRepo,
-    {
-      workspaceId: planned.workspaceId,
-      name: planned.name || null,
-      projectId: planned.projectId,
-      categoryId: planned.categoryId,
-      billable: planned.billable,
-      startTime,
-      endTime,
-      durationSeconds,
-      customValues: { ...planned.customValues },
-    },
-    deps.nowISO()
-  );
-  await completePlannedTaskUC(deps.plannedTaskRepo, planned.id, date);
-  return task;
+  return { startTime, endTime };
 }
 
 export const launchPlannedTaskRetroactiveHandler: LocalApiHandler = async (deps, params) => {
   const planned = await findOrThrow(deps, params.id);
   const body = (params.body ?? {}) as LaunchRetroactiveBody;
   const date = await launchDate(deps, planned, body);
-  let task;
-  if (planned.startTime && planned.endTime) {
-    if (body.startTime || body.endTime) {
-      throw new DomainError("A planejada já tem horário: não envie startTime nem endTime");
-    }
-    task = await launchPlannedTaskRetroactively(
-      deps.taskRepo,
-      deps.plannedTaskRepo,
-      planned,
-      date,
-      deps.nowISO()
-    );
-  } else {
-    task = await launchUntimed(deps, planned, body, date);
-  }
+  // Sem horário, o mínimo de 1 minuto é do domínio (`createRetroactiveTask`).
+  const task = await launchPlannedTaskRetroactively(
+    deps.taskRepo,
+    deps.plannedTaskRepo,
+    planned,
+    date,
+    deps.nowISO(),
+    requestIntervalFor(planned, body, date)
+  );
   await deps.notifyTasksChanged();
   await deps.notifyPlannedTasksChanged();
   return { status: 201, body: await taskDto(deps, task) };
