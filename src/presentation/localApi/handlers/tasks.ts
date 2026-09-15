@@ -2,9 +2,11 @@ import type { Task } from "@domain/entities/Task";
 import type { CustomValues } from "@domain/entities/CustomField";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
+import { DomainError } from "@shared/errors";
 import { ConflictError, NotFoundError } from "../errors";
 import { loadCatalogNames, taskDto, toTaskDto } from "../dto";
 import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "../resolve";
+import { buildTaskEditPatch, parseInstant, type TaskEditBody } from "../taskInput";
 import type { LocalApiDeps, LocalApiHandler } from "../types";
 
 // O envio automático depende de rede e passaria do prazo de 10s da ponte: a
@@ -124,4 +126,29 @@ export const cancelTask: LocalApiHandler = async (deps) => {
   if (!deps.running.runningTask) throw new NotFoundError("Nenhuma tarefa ativa");
   await deps.running.cancelTask();
   return { status: 204, body: null };
+};
+
+interface ActiveTaskBody extends TaskEditBody {
+  startTime?: string | null;
+}
+
+/** Pelo contexto, que leva a edição também à planejada de origem. Ausente preserva. */
+export const updateActiveTaskHandler: LocalApiHandler = async (deps, params) => {
+  const active = deps.running.runningTask;
+  if (!active) throw new NotFoundError("Nenhuma tarefa ativa");
+  const body = (params.body ?? {}) as ActiveTaskBody;
+  let startTime: string | undefined;
+  if (body.startTime !== undefined) {
+    startTime = parseInstant(body.startTime, "startTime");
+    // A tela recorta o início futuro para agora; pela API, avisar é mais honesto.
+    if (startTime > deps.nowISO()) throw new DomainError("startTime não pode estar no futuro");
+  }
+  const input = {
+    ...(await buildTaskEditPatch(deps, active, body)),
+    ...(startTime && { startTime }),
+  };
+  await deps.running.updateActiveTask(input);
+  await deps.notifyTasksChanged();
+  const updated = (await deps.taskRepo.findById(active.id)) ?? { ...active, ...input };
+  return { status: 200, body: await taskDto(deps, updated) };
 };

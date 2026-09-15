@@ -14,6 +14,12 @@ export interface LocalApiParams {
   id?: string;
   date?: string | null;
   workspaceId?: string | null;
+  from?: string | null;
+  to?: string | null;
+  name?: string | null;
+  projectId?: string | null;
+  categoryId?: string | null;
+  billable?: string | null;
   body?: unknown;
 }
 
@@ -31,6 +37,7 @@ export type RunningTaskOps = Pick<
   | "resumeTask"
   | "stopTask"
   | "cancelTask"
+  | "updateActiveTask"
 >;
 
 /**
@@ -60,6 +67,7 @@ export interface LocalApiDeps {
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;
+  notifyTasksChanged: () => Promise<void>;
   notifyPlannedTasksChanged: () => Promise<void>;
   notifyProjectsChanged: () => Promise<void>;
   notifyCategoriesChanged: () => Promise<void>;

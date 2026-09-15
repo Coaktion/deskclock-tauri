@@ -28,6 +28,20 @@ import {
   uncompletePlannedTask,
   updatePlannedTaskHandler,
 } from "./handlers/plannedTasks";
+import {
+  createHistoryTask,
+  deleteHistoryTask,
+  getHistoryTask,
+  listHistory,
+  setHistoryTaskBillable,
+  updateHistoryTask,
+} from "./handlers/history";
+import {
+  deleteManyHistoryTasks,
+  mergeHistoryTasks,
+  moveHistoryTasks,
+} from "./handlers/historyBatch";
+import { getPeriodTotals, getWeekTotals } from "./handlers/totals";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
@@ -37,6 +51,7 @@ import {
   startTask,
   stopTask,
   toggleTask,
+  updateActiveTaskHandler,
 } from "./handlers/tasks";
 import {
   createWorkspaceHandler,
@@ -57,6 +72,20 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "tasks.stop": stopTask,
   "tasks.toggle": toggleTask,
   "tasks.cancel": cancelTask,
+  "tasks.updateActive": updateActiveTaskHandler,
+  // Registros concluídos: `history.*` e não `tasks.*`, porque não mexem na
+  // tarefa em execução e não devem esperar o render (`waitsForNextCommit`).
+  "history.list": listHistory,
+  "history.get": getHistoryTask,
+  "history.create": createHistoryTask,
+  "history.update": updateHistoryTask,
+  "history.delete": deleteHistoryTask,
+  "history.deleteMany": deleteManyHistoryTasks,
+  "history.setBillable": setHistoryTaskBillable,
+  "history.merge": mergeHistoryTasks,
+  "history.move": moveHistoryTasks,
+  "totals.period": getPeriodTotals,
+  "totals.week": getWeekTotals,
   "workspaces.list": listWorkspaces,
   "workspaces.create": createWorkspaceHandler,
   "workspaces.update": updateWorkspaceHandler,

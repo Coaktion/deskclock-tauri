@@ -13,8 +13,12 @@ import { deleteCategory } from "@domain/usecases/categories/DeleteCategory";
 import { deleteCategories } from "@domain/usecases/categories/DeleteCategories";
 import { bulkImportCategories } from "@domain/usecases/categories/BulkImportCategories";
 import { NotFoundError } from "../errors";
-import { resolveRequestWorkspace } from "../resolve";
-import type { LocalApiDeps, LocalApiHandler } from "../types";
+import {
+  findCategoryInWorkspace,
+  findProjectInWorkspace,
+  resolveRequestWorkspace,
+} from "../resolve";
+import type { LocalApiHandler } from "../types";
 
 interface ScopedBody {
   workspaceId?: string | null;
@@ -48,27 +52,6 @@ function categoryDto(c: Category) {
     name: c.name,
     defaultBillable: c.defaultBillable,
   };
-}
-
-// Id de outro workspace é 404: a rota é escopada, e ali ele não existe.
-export async function findProjectInWorkspace(
-  deps: LocalApiDeps,
-  workspaceId: string,
-  id: string | undefined
-): Promise<Project> {
-  const project = (await deps.projectRepo.findAll(workspaceId)).find((p) => p.id === id);
-  if (!project) throw new NotFoundError(`Projeto '${id}' não encontrado no workspace`);
-  return project;
-}
-
-async function findCategoryInWorkspace(
-  deps: LocalApiDeps,
-  workspaceId: string,
-  id: string | undefined
-): Promise<Category> {
-  const category = (await deps.categoryRepo.findAll(workspaceId)).find((c) => c.id === id);
-  if (!category) throw new NotFoundError(`Categoria '${id}' não encontrada no workspace`);
-  return category;
 }
 
 // Tudo ou nada: apagar só parte do lote esconderia do cliente o id que errou.

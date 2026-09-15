@@ -12,6 +12,7 @@ import {
   notifyProjectCategoriesChanged,
   notifyProjectsChanged,
 } from "@shared/utils/catalogSync";
+import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { todayISO } from "@shared/utils/time";
 import { waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
 import { errorResult } from "./errors";
@@ -57,6 +58,7 @@ export function useLocalApiBridge(): void {
       activeWorkspaceId,
       running,
       workspaces: { create, update, remove, switchTo },
+      notifyTasksChanged,
       notifyPlannedTasksChanged: () => emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {}),
       notifyProjectsChanged,
       notifyCategoriesChanged,

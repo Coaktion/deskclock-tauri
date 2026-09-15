@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Workspace } from "@domain/entities/Workspace";
+import { DomainError, DuplicateNameError } from "@shared/errors";
 import { dispatchLocalApiRequest } from "@presentation/localApi/dispatch";
 import { makeDeps, makeTask, NOW, WS_ATIVO, WS_OUTRO } from "../fakeDeps";
 
@@ -235,5 +236,33 @@ describe("workspaces.setActive", () => {
     const semId = await dispatchLocalApiRequest(deps, "workspaces.setActive", { body: {} });
     expect(fantasma.status).toBe(409);
     expect(semId.status).toBe(400);
+  });
+});
+
+describe("workspaces — erros do domínio pelo hook", () => {
+  it("delete move para o próprio workspace sai 400", async () => {
+    const deps = depsComDoisWorkspaces();
+    deps.workspaces.remove.mockRejectedValue(
+      new DomainError("O workspace de destino deve ser diferente do excluído.")
+    );
+    const result = await dispatchLocalApiRequest(deps, "workspaces.delete", {
+      id: WS_OUTRO,
+      body: { mode: "move", toWorkspaceId: WS_OUTRO },
+    });
+    expect(result.status).toBe(400);
+    expect(deps.workspaces.remove).toHaveBeenCalledWith(WS_OUTRO, {
+      mode: "move",
+      toWorkspaceId: WS_OUTRO,
+    });
+  });
+
+  it("update com nome duplicado sai 409", async () => {
+    const deps = makeDeps();
+    deps.workspaces.update.mockRejectedValue(new DuplicateNameError("Workspace já existe."));
+    const result = await dispatchLocalApiRequest(deps, "workspaces.update", {
+      id: WS_OUTRO,
+      body: { name: WS_ATIVO },
+    });
+    expect(result.status).toBe(409);
   });
 });

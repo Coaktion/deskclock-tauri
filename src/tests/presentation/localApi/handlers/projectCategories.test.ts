@@ -84,3 +84,26 @@ describe("projectCategories.set", () => {
     expect(deps.projectCategoryRepo.setForProject).not.toHaveBeenCalled();
   });
 });
+
+describe("projectCategories.set com workspaceId explícito", () => {
+  it("valida as categorias no workspace do projeto", async () => {
+    const deps = makeDeps();
+    deps.projectRepo.findAll.mockResolvedValue([
+      { id: "proj-outro", workspaceId: WS_OUTRO, name: "Outro", colorIndex: 1 },
+    ]);
+    deps.categoryRepo.findAll.mockResolvedValue([
+      { id: "cat-outro", workspaceId: WS_OUTRO, name: "Dev", defaultBillable: true },
+    ]);
+    const result = await dispatchLocalApiRequest(deps, "projectCategories.set", {
+      id: "proj-outro",
+      workspaceId: WS_OUTRO,
+      body: { categoryIds: ["cat-outro"] },
+    });
+    expect(result.status).toBe(200);
+    expect(deps.projectRepo.findAll).toHaveBeenCalledWith(WS_OUTRO);
+    expect(deps.categoryRepo.findAll).toHaveBeenCalledWith(WS_OUTRO);
+    expect(deps.projectCategoryRepo.setForProject).toHaveBeenCalledWith("proj-outro", [
+      "cat-outro",
+    ]);
+  });
+});

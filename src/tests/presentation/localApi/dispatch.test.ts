@@ -50,5 +50,8 @@ describe("waitsForNextCommit", () => {
     expect(waitsForNextCommit("projects.create")).toBe(false);
     expect(waitsForNextCommit("plannedTasks.create")).toBe(false);
     expect(waitsForNextCommit("status.get")).toBe(false);
+    expect(waitsForNextCommit("tasks.updateActive")).toBe(true);
+    expect(waitsForNextCommit("history.update")).toBe(false);
+    expect(waitsForNextCommit("totals.week")).toBe(false);
   });
 });

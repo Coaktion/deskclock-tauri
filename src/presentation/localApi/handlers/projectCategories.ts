@@ -1,8 +1,7 @@
 import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import { ConflictError } from "../errors";
-import { resolveRequestWorkspace } from "../resolve";
+import { findProjectInWorkspace, resolveRequestWorkspace } from "../resolve";
 import type { LocalApiHandler } from "../types";
-import { findProjectInWorkspace } from "./catalog";
 
 function projectCategoryDto(row: ProjectCategory) {
   return { categoryId: row.categoryId, source: row.source, createdAt: row.createdAt };

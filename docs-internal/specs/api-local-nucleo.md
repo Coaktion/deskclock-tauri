@@ -126,8 +126,8 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 | Fase | Estado |
 |---|---|
 | 0 | commitada (2f6683a); verificação manual parcial pelo usuário, ok |
-| 1 | implementada, aguardando revisão e verificação manual |
-| 2 | pendente |
+| 1 | commitada (35cfe76); verificada pelo usuário |
+| 2 | implementada, aguardando revisão e verificação manual |
 | 3 | pendente |
 
 **Pendências abertas na revisão da Fase 0** (não implementadas):
@@ -139,6 +139,35 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 - Restringir `local_api_respond` e `local_api_bridge_ready` à janela `main` nas capabilities do
   Tauri.
 - `Bridge.ready` nunca é resetado: recarregar o webview principal dá 504 em vez de 503.
+
+**Decisões da Fase 2 (implementação, a revisar).** As regras vivem em
+`src/presentation/localApi/handlers/{history,historyBatch,totals}.ts` e em `tasks.ts` (`PATCH /tasks/active`).
+- Ops do Histórico usam o prefixo `history.*` (e `totals.*`), não `tasks.*`: não mexem na tarefa em execução e
+  não devem esperar o render em `waitsForNextCommit`. Só `tasks.updateActive` espera.
+- Tarefa por id (`GET/PUT/DELETE /tasks/{id}`, lotes `delete`/`merge`/`move`) **não é escopada por workspace**,
+  como as planejadas por id; projeto e categoria resolvem no workspace da própria tarefa. **Decisão do usuário,
+  2026-09-15.**
+- Instantes (`startTime`/`endTime`) entram como ISO 8601 com hora. `POST /tasks` exige ≥ 1 minuto (trava do
+  Lançamento Manual); `PUT` só recusa fim antes do início (o modal não tem mínimo). Início ou fim informado
+  recalcula a duração.
+- `PUT /tasks/{id}` repete o `EditTaskModal`: `updateTask` + `setGroupBillable` com o billable resultante.
+- §6.2 na API (**decisão do usuário, 2026-09-15**): em `PUT /tasks/{id}` e `PATCH /tasks/active`, trocar a
+  categoria (id ou nome) sem enviar `billable` aplica o `defaultBillable` da nova (`billableForCategoryChange`,
+  `resolve.ts`). `billable` enviado sempre vence; categoria limpa (`null`) ou reenviada igual preserva o atual.
+  No `PUT`, o billable resultante continua indo ao grupo.
+- `PATCH /tasks/active` com `startTime` futuro → 400 (a tela recorta para agora).
+- `POST /tasks/move`: destino igual ao workspace de alguma tarefa → 400; `targetId` fora do destino → 409;
+  `kind: "create"` avisa `notifyProjectsChanged`/`notifyCategoriesChanged`.
+- `GET /totals/week?date` usa `weekBoundsOf(date)` (novo, `shared/utils/time.ts`), e `weekBoundsISO()` passou a
+  ser `weekBoundsOf(todayISO())` — **edição autorizada pelo usuário, 2026-09-15** (impact HIGH), mesma saída.
+- `POST /tasks/merge` só aceita tarefas de **hoje** (409 fora disso), como a tela, que só unifica em
+  `TodayEntriesSection`. `ids` vazio nos lotes → 400. `startTime`/`endTime: null` no `PUT` → 400.
+- **Pendência de domínio:** `mergeTaskGroup` grava `endTime` = agora; só é correto para o dia corrente.
+- **Pendência de domínio:** o mínimo de 1 minuto do retroativo mora em `useRetroactiveForm.ts` e a composição
+  `updateTask` + `setGroupBillable` em `EditTaskModal.tsx` — regras em presentation que a API repete. Mover para
+  o domínio (validação em `createRetroactiveTask`, um `editCompletedTask`) numa rodada própria.
+- **Pendência:** `IntegrationsModalsHost.tsx` e `WeekPlanningView.tsx` ainda têm cópia própria do cálculo da
+  segunda-feira; migrar para `weekBoundsOf` fica fora da Fase 2.
 
 **Regras só da API — decisões do usuário, 2026-09-15 (Fase 1).** A UI e o domínio seguem como
 estão; as três vivem em `src/presentation/localApi/handlers/workspaces.ts`.

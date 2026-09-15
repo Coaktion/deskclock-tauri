@@ -65,9 +65,11 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
   const taskRepo = {
     save: vi.fn(),
     update: vi.fn(),
-    findById: vi.fn(async () => null),
+    findById: vi.fn(async (_id: string): Promise<Task | null> => null),
     findByStatus: vi.fn(async () => []),
-    findByDateRange: vi.fn(async () => []),
+    findByDateRange: vi.fn(
+      async (_start: string, _end: string, _ws?: string): Promise<Task[]> => []
+    ),
     findLastDayWithCompletedTasks: vi.fn(async () => null),
     delete: vi.fn(),
     deleteMany: vi.fn(),
@@ -134,6 +136,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     resumeTask: vi.fn(async (): Promise<Task | null> => null),
     stopTask: vi.fn(async () => null),
     cancelTask: vi.fn(async () => {}),
+    updateActiveTask: vi.fn(async () => {}),
     ...overrides.running,
   };
 
@@ -176,6 +179,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,
+    notifyTasksChanged: vi.fn(async () => {}),
     notifyPlannedTasksChanged: vi.fn(async () => {}),
     notifyProjectsChanged: vi.fn(async () => {}),
     notifyCategoriesChanged: vi.fn(async () => {}),

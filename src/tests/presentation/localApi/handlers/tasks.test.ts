@@ -221,3 +221,87 @@ describe("status.get", () => {
     );
   });
 });
+
+describe("tasks.updateActive", () => {
+  it("edita pelo contexto só o que veio, resolvendo o catálogo no workspace da tarefa", async () => {
+    const ativa = makeTask({ workspaceId: WS_OUTRO });
+    const deps = makeDeps({ running: { runningTask: ativa } });
+    deps.taskRepo.findById.mockResolvedValue({ ...ativa, name: "Nova" });
+    deps.categoryRepo.findAll.mockResolvedValue([
+      { id: "cat-outro", workspaceId: WS_OUTRO, name: "Dev", defaultBillable: true },
+    ]);
+
+    const result = await dispatchLocalApiRequest(deps, "tasks.updateActive", {
+      body: { name: " Nova ", categoryId: "cat-outro", startTime: localISO(2026, 9, 15, 8) },
+    });
+
+    expect(result.status).toBe(200);
+    expect(deps.categoryRepo.findAll).toHaveBeenCalledWith(WS_OUTRO);
+    expect(deps.running.updateActiveTask).toHaveBeenCalledWith({
+      name: "Nova",
+      categoryId: "cat-outro",
+      billable: true,
+      startTime: localISO(2026, 9, 15, 8),
+    });
+    expect(result.body).toMatchObject({ id: "t-1", name: "Nova" });
+    expect(deps.notifyTasksChanged).toHaveBeenCalled();
+  });
+
+  it("null limpa o projeto", async () => {
+    const deps = makeDeps({ running: { runningTask: makeTask({ projectId: "proj-ativo" }) } });
+    await dispatchLocalApiRequest(deps, "tasks.updateActive", { body: { projectId: null } });
+    expect(deps.running.updateActiveTask).toHaveBeenCalledWith({ projectId: null });
+  });
+
+  it("devolve 404 sem tarefa ativa", async () => {
+    const deps = makeDeps();
+    const result = await dispatchLocalApiRequest(deps, "tasks.updateActive", { body: {} });
+    expect(result.status).toBe(404);
+    expect(deps.notifyTasksChanged).not.toHaveBeenCalled();
+  });
+
+  it("devolve 400 para início no futuro e 409 para projeto de outro workspace, sem editar", async () => {
+    const deps = makeDeps({ running: { runningTask: makeTask() } });
+    const futuro = await dispatchLocalApiRequest(deps, "tasks.updateActive", {
+      body: { startTime: localISO(2026, 9, 15, 11) },
+    });
+    const projeto = await dispatchLocalApiRequest(deps, "tasks.updateActive", {
+      body: { projectName: "Outro" },
+    });
+    expect(futuro.status).toBe(400);
+    expect(projeto.status).toBe(409);
+    expect(deps.running.updateActiveTask).not.toHaveBeenCalled();
+  });
+});
+
+describe("tasks.updateActive — billable pela categoria (§6.2)", () => {
+  it("categoria nova sem billable aplica o defaultBillable dela", async () => {
+    const deps = makeDeps({ running: { runningTask: makeTask({ billable: true }) } });
+    await dispatchLocalApiRequest(deps, "tasks.updateActive", {
+      body: { categoryName: "Reuniões" },
+    });
+    expect(deps.running.updateActiveTask).toHaveBeenCalledWith({
+      categoryId: "cat-ativo",
+      billable: false,
+    });
+  });
+
+  it("billable enviado vence o defaultBillable", async () => {
+    const deps = makeDeps({ running: { runningTask: makeTask({ billable: false }) } });
+    await dispatchLocalApiRequest(deps, "tasks.updateActive", {
+      body: { categoryId: "cat-ativo", billable: true },
+    });
+    expect(deps.running.updateActiveTask).toHaveBeenCalledWith({
+      categoryId: "cat-ativo",
+      billable: true,
+    });
+  });
+
+  it("categoria limpa sem billable preserva o atual", async () => {
+    const deps = makeDeps({
+      running: { runningTask: makeTask({ categoryId: "cat-ativo", billable: true }) },
+    });
+    await dispatchLocalApiRequest(deps, "tasks.updateActive", { body: { categoryId: null } });
+    expect(deps.running.updateActiveTask).toHaveBeenCalledWith({ categoryId: null });
+  });
+});

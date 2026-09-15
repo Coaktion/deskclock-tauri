@@ -89,10 +89,12 @@ pub struct WorkspaceQuery {
     workspace_id: Option<String>,
 }
 
-// Submódulos por recurso: enxergam `forward`, `parse_body` e `WorkspaceQuery`
-// sem que eles precisem sair do escopo privado deste módulo.
+// Submódulos por recurso: enxergam `forward`, `forward_with_body` e
+// `WorkspaceQuery` sem que eles precisem sair do escopo privado deste módulo.
 pub mod catalog;
 pub mod custom_fields;
+pub mod history;
+pub mod totals;
 pub mod workspaces;
 
 /// Valida o corpo e o repassa em `params.body`, junto do que a rota já extraiu.

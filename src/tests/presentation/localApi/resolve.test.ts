@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { resolveCategoryId, resolveProjectId } from "@presentation/localApi/resolve";
-import { ConflictError } from "@presentation/localApi/errors";
+import {
+  findCategoryInWorkspace,
+  findProjectInWorkspace,
+  resolveCatalogPatch,
+  resolveCategoryId,
+  resolveProjectId,
+} from "@presentation/localApi/resolve";
+import { ConflictError, NotFoundError } from "@presentation/localApi/errors";
 import { makeDeps, WS_ATIVO, WS_OUTRO } from "./fakeDeps";
 
 describe("resolveCategoryId", () => {
@@ -34,5 +40,28 @@ describe("resolveCategoryId", () => {
 describe("resolveProjectId", () => {
   it("sem id nem nome devolve null", async () => {
     await expect(resolveProjectId(makeDeps(), WS_ATIVO, null, null)).resolves.toBeNull();
+  });
+});
+
+describe("findProjectInWorkspace e findCategoryInWorkspace", () => {
+  it("devolvem o item do workspace e recusam com 404 o de fora", async () => {
+    const deps = makeDeps();
+    await expect(findProjectInWorkspace(deps, WS_ATIVO, "proj-ativo")).resolves.toMatchObject({
+      name: "Cliente",
+    });
+    await expect(findCategoryInWorkspace(deps, WS_ATIVO, "cat-x")).rejects.toBeInstanceOf(
+      NotFoundError
+    );
+    expect(deps.categoryRepo.findAll).toHaveBeenCalledWith(WS_ATIVO);
+  });
+});
+
+describe("resolveCatalogPatch", () => {
+  it("só inclui o que o corpo trouxe, e null limpa", async () => {
+    const deps = makeDeps();
+    await expect(resolveCatalogPatch(deps, WS_ATIVO, { name: "x" } as never)).resolves.toEqual({});
+    await expect(
+      resolveCatalogPatch(deps, WS_ATIVO, { projectId: null, categoryName: "Reuniões" })
+    ).resolves.toEqual({ projectId: null, categoryId: "cat-ativo" });
   });
 });

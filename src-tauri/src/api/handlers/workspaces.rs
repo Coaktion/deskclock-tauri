@@ -138,6 +138,7 @@ pub async fn get_active_workspace(State(state): State<Arc<ApiState>>) -> Respons
     ),
     responses(
         (status = 200, description = "Workspace ativo depois da troca", body = WorkspaceDto),
+        (status = 400, description = "id ausente ou vazio", body = ErrorResponse),
         (status = 409, description = "Workspace não encontrado, ou há tarefa ativa", body = ErrorResponse)
     )
 )]

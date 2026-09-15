@@ -43,3 +43,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+
+[dev-dependencies]
+# `ServiceExt::oneshot` para o teste de roteamento da API local.
+tower = { version = "0.5", features = ["util"] }

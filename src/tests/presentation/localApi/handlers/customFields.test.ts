@@ -111,3 +111,29 @@ describe("customFields.update e customFields.delete", () => {
     expect(deps.customFieldRepo.delete).not.toHaveBeenCalled();
   });
 });
+
+describe("customFields.update — conflitos e corpo vazio", () => {
+  it("devolve 409 para rótulo que já existe e não avisa", async () => {
+    const deps = makeDeps();
+    deps.customFieldRepo.findById.mockResolvedValue(ETAPA);
+    deps.customFieldRepo.findByLabel.mockResolvedValue({ ...ETAPA, id: "f-2", label: "Fase" });
+    const result = await dispatchLocalApiRequest(deps, "customFields.update", {
+      id: "f-1",
+      body: { label: "Fase" },
+    });
+    expect(result.status).toBe(409);
+    expect(deps.customFieldRepo.update).not.toHaveBeenCalled();
+    expect(deps.notifyCustomFieldsChanged).not.toHaveBeenCalled();
+  });
+
+  it("corpo vazio preserva o campo", async () => {
+    const deps = makeDeps();
+    deps.customFieldRepo.findById.mockResolvedValue(ETAPA);
+    const result = await dispatchLocalApiRequest(deps, "customFields.update", {
+      id: "f-1",
+      body: null,
+    });
+    expect(result).toEqual({ status: 200, body: ETAPA });
+    expect(deps.customFieldRepo.update).toHaveBeenCalledWith(ETAPA);
+  });
+});

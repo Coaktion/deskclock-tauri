@@ -427,3 +427,150 @@ pub struct PlannedTaskCompleteRequest {
     /// Data no formato YYYY-MM-DD. Se omitida, usa a data de hoje.
     pub date: Option<String>,
 }
+
+// ================================================================
+// Histórico e totais
+// ================================================================
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTaskRequest {
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub project_name: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    pub billable: bool,
+    /// Instante ISO 8601 com hora.
+    pub start_time: String,
+    /// Instante ISO 8601 com hora; ao menos 1 minuto depois do início.
+    pub end_time: String,
+    #[serde(default)]
+    pub custom_values: Option<HashMap<String, String>>,
+}
+
+/// Edição parcial: campo ausente é preservado; `null` limpa, exceto em `startTime`/`endTime` (400).
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTaskRequest {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub project_name: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    #[serde(default)]
+    pub billable: Option<bool>,
+    /// Instante ISO 8601. Início ou fim informado recalcula a duração.
+    #[serde(default)]
+    pub start_time: Option<String>,
+    #[serde(default)]
+    pub end_time: Option<String>,
+    #[serde(default)]
+    pub custom_values: Option<HashMap<String, String>>,
+}
+
+/// Edição parcial da tarefa em execução ou pausada: ausente é preservado.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateActiveTaskRequest {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub project_name: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    #[serde(default)]
+    pub billable: Option<bool>,
+    /// Instante ISO 8601, não futuro.
+    #[serde(default)]
+    pub start_time: Option<String>,
+    #[serde(default)]
+    pub custom_values: Option<HashMap<String, String>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct TaskIdsRequest {
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct SetTaskBillableRequest {
+    pub billable: bool,
+}
+
+/// O que fazer com o projeto ou a categoria no workspace de destino.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum CatalogResolutionDto {
+    /// Usa um item que já existe no destino.
+    Match {
+        #[serde(rename = "targetId")]
+        target_id: String,
+    },
+    /// Cria (ou reaproveita, se já existir) um item com este nome no destino.
+    Create { name: String },
+    /// Deixa vazio.
+    Unset,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveTasksRequest {
+    pub ids: Vec<String>,
+    pub to_workspace_id: String,
+    pub project: CatalogResolutionDto,
+    pub category: CatalogResolutionDto,
+    pub mode: MoveMode,
+}
+
+/// `move` reatribui as tarefas; `copy` deixa as originais intactas.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum MoveMode {
+    Move,
+    Copy,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MoveTasksResponse {
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PeriodTotalsDto {
+    pub from: String,
+    pub to: String,
+    pub total_seconds: i64,
+    pub billable_seconds: i64,
+    pub non_billable_seconds: i64,
+    pub count: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WeekTotalsDto {
+    /// Segunda-feira, YYYY-MM-DD.
+    pub week_start: String,
+    /// Domingo, YYYY-MM-DD.
+    pub week_end: String,
+    pub total_seconds: i64,
+    pub days_worked: i64,
+}
