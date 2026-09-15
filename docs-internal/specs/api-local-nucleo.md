@@ -128,7 +128,7 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 | 0 | commitada (2f6683a); verificação manual parcial pelo usuário, ok |
 | 1 | commitada (35cfe76); verificada pelo usuário |
 | 2 | commitada (a8567b8 + 895ab53) |
-| 3 | implementada, aguardando revisão e verificação manual |
+| 3 | commitada (87c2f1d); revisada e verificada por curl no app de dev |
 
 **Pendências da revisão da Fase 0 — resolvidas na Fase 3:**
 - `sortOrder` na criação: a API passou a gravar **0**, como o `CreatePlannedTask` (ver decisões da Fase 3).
