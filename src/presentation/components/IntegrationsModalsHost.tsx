@@ -15,21 +15,14 @@ import { MondayImportModal } from "@presentation/modals/MondayImportModal";
 import { MondaySendModal } from "@presentation/modals/MondaySendModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
 import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
+import { weekBoundsISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
 function defaultCalendarRangeISO() {
-  const today = new Date();
-  const dow = today.getDay();
-  const diffToMon = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(today);
-  mon.setDate(today.getDate() + diffToMon);
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const { start, end } = weekBoundsISO();
   return {
-    defaultFromISO: new Date(fmt(mon) + "T00:00:00").toISOString(),
-    defaultToISO: new Date(fmt(sun) + "T23:59:59").toISOString(),
+    defaultFromISO: new Date(start + "T00:00:00").toISOString(),
+    defaultToISO: new Date(end + "T23:59:59").toISOString(),
   };
 }
 

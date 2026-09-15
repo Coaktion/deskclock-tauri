@@ -89,6 +89,12 @@ pub struct WorkspaceQuery {
     workspace_id: Option<String>,
 }
 
+/// Parâmetros das rotas `/{id}?workspaceId=` que não extraem mais nada: o TS
+/// resolve o workspace ausente como o ativo.
+fn scoped_params(id: String, q: &WorkspaceQuery) -> Value {
+    json!({ "id": id, "workspaceId": q.workspace_id })
+}
+
 // Submódulos por recurso: enxergam `forward`, `forward_with_body` e
 // `WorkspaceQuery` sem que eles precisem sair do escopo privado deste módulo.
 pub mod catalog;

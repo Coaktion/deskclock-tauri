@@ -1,7 +1,7 @@
 //! Projetos, categorias e categorias por projeto. Como o resto dos handlers,
 //! só repassam à janela principal.
 
-use super::{forward, forward_with_body, WorkspaceQuery};
+use super::{forward, forward_with_body, scoped_params, WorkspaceQuery};
 use crate::api::models::{
     CategoryDto, CreateCategoryRequest, CreateProjectRequest, DeleteManyRequest, ErrorResponse,
     ImportCatalogRequest, ImportCatalogResponse, ProjectCategoryDto, ProjectDto,
@@ -71,7 +71,7 @@ pub async fn put_project(
         "projects.update",
         &body,
         true,
-        json!({ "id": id, "workspaceId": q.workspace_id }),
+        scoped_params(id, &q),
     )
     .await
 }
@@ -94,12 +94,7 @@ pub async fn delete_project(
     Path(id): Path<String>,
     Query(q): Query<WorkspaceQuery>,
 ) -> Response {
-    forward(
-        &state,
-        "projects.delete",
-        json!({ "id": id, "workspaceId": q.workspace_id }),
-    )
-    .await
+    forward(&state, "projects.delete", scoped_params(id, &q)).await
 }
 
 #[utoipa::path(
@@ -166,12 +161,7 @@ pub async fn get_project_categories(
     Path(id): Path<String>,
     Query(q): Query<WorkspaceQuery>,
 ) -> Response {
-    forward(
-        &state,
-        "projectCategories.list",
-        json!({ "id": id, "workspaceId": q.workspace_id }),
-    )
-    .await
+    forward(&state, "projectCategories.list", scoped_params(id, &q)).await
 }
 
 #[utoipa::path(
@@ -205,7 +195,7 @@ pub async fn put_project_categories(
         "projectCategories.set",
         &body,
         true,
-        json!({ "id": id, "workspaceId": q.workspace_id }),
+        scoped_params(id, &q),
     )
     .await
 }
@@ -265,7 +255,7 @@ pub async fn put_category(
         "categories.update",
         &body,
         true,
-        json!({ "id": id, "workspaceId": q.workspace_id }),
+        scoped_params(id, &q),
     )
     .await
 }
@@ -288,12 +278,7 @@ pub async fn delete_category(
     Path(id): Path<String>,
     Query(q): Query<WorkspaceQuery>,
 ) -> Response {
-    forward(
-        &state,
-        "categories.delete",
-        json!({ "id": id, "workspaceId": q.workspace_id }),
-    )
-    .await
+    forward(&state, "categories.delete", scoped_params(id, &q)).await
 }
 
 #[utoipa::path(
