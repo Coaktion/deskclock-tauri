@@ -8,7 +8,7 @@ import { IntegrationsUiProvider } from "@presentation/contexts/IntegrationsUiCon
 import { IntegrationsRail } from "@presentation/components/IntegrationsRail";
 import { IntegrationsModalsHost } from "@presentation/components/IntegrationsModalsHost";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
+import { useActiveWorkspaceId, WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { TourProvider } from "@presentation/contexts/TourContext";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
@@ -31,6 +31,7 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { TasksPage } from "@presentation/pages/TasksPage";
+import { useLocalApiBridge } from "@presentation/localApi/useLocalApiBridge";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
@@ -98,6 +99,7 @@ function MainContent({
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const { projectRepo, categoryRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const config = useAppConfig();
 
   // Rastreamento automático de reuniões do Google Agenda (gated por config).
@@ -107,6 +109,8 @@ function MainContent({
   // Releitura diária dos boards do Monday como projetos (gated por já haver
   // board mapeado no workspace ativo).
   useMondayProjectsTracker();
+  // API local: executa aqui as requisições que o servidor Rust repassa.
+  useLocalApiBridge();
 
   // Ctrl+1–7 navigates directly
   useEffect(() => {
@@ -132,7 +136,10 @@ function MainContent({
     return () => document.removeEventListener("keydown", onKey);
   }, [setPage]);
 
-  // Deep link: task/start — resolve nomes para IDs e inicia a tarefa
+  // Deep link: task/start — resolve nomes para IDs e inicia a tarefa. Os nomes
+  // resolvem no workspace ativo, que é onde `startTask` cria a tarefa: buscar em
+  // todos podia pôr na tarefa um projeto de outro workspace. Nome que não existe
+  // ali segue como antes — a tarefa começa sem projeto ou categoria.
   const handleDeepLinkStart = useCallback(
     async (params: {
       name?: string | null;
@@ -140,25 +147,19 @@ function MainContent({
       categoryName?: string | null;
       billable: boolean;
     }) => {
-      const [projects, categories] = await Promise.all([
-        projectRepo.findAll(),
-        categoryRepo.findAll(),
+      const [project, category] = await Promise.all([
+        params.projectName ? projectRepo.findByName(params.projectName, workspaceId) : null,
+        params.categoryName ? categoryRepo.findByName(params.categoryName, workspaceId) : null,
       ]);
-      const projectId = params.projectName
-        ? (projects.find((p) => p.name === params.projectName)?.id ?? null)
-        : null;
-      const categoryId = params.categoryName
-        ? (categories.find((c) => c.name === params.categoryName)?.id ?? null)
-        : null;
       await startTask({
         name: params.name ?? null,
-        projectId,
-        categoryId,
+        projectId: project?.id ?? null,
+        categoryId: category?.id ?? null,
         billable: params.billable,
       });
       setPage("tasks");
     },
-    [projectRepo, categoryRepo, startTask, setPage]
+    [projectRepo, categoryRepo, workspaceId, startTask, setPage]
   );
 
   useEffect(() => {

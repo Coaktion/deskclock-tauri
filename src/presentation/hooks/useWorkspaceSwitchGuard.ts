@@ -5,7 +5,7 @@ import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 
 interface GuardInput {
   runningTask: Task | null;
-  stopTask: (completed: boolean) => Promise<void>;
+  stopTask: (completed: boolean) => Promise<unknown>;
 }
 
 /**

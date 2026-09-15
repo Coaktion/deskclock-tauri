@@ -49,7 +49,7 @@
   - **Botões por card:** Play (inicia nova execução com os mesmos dados, se não houver tarefa em andamento) | Edit (modal completo) | Delete (sem confirmação).
 - **Agrupamento:** Tarefas com mesmo Nome + Projeto + Categoria são agrupadas visualmente.
   - Grupo exibe duração total.
-  - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação.
+  - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação (início e fim: §6.3).
   - Edit no grupo → altera todas as tarefas do grupo.
   - Expandir grupo → editar/excluir tarefa individual.
 

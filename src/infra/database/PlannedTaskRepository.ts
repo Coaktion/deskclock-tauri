@@ -146,6 +146,16 @@ export class PlannedTaskRepository implements IPlannedTaskRepository {
     return rows[0] ? (await hydrate(db, rows))[0] : null;
   }
 
+  async findAll(workspaceId: UUID): Promise<PlannedTask[]> {
+    const db = await getDb();
+    const rows = await db.select<PlannedTaskRow[]>(
+      `SELECT * FROM planned_tasks WHERE workspace_id = $1
+       ORDER BY sort_order ASC, created_at ASC`,
+      [workspaceId]
+    );
+    return hydrate(db, rows);
+  }
+
   async findForDate(dateISO: string, workspaceId?: UUID): Promise<PlannedTask[]> {
     const db = await getDb();
     // Traz todas e filtra em JS para lidar com recurring e period.

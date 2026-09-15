@@ -2,12 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "enables the default permissions",
-  "windows": [
-    "main",
-    "overlay-compact",
-    "overlay-popup",
-    "toast"
-  ],
+  "windows": ["main", "overlay-compact", "overlay-popup", "toast"],
   "permissions": [
     "core:default",
     "core:window:allow-set-size",
@@ -42,6 +37,30 @@
     },
     "opener:allow-open-path",
     "updater:allow-check",
-    "updater:allow-download-and-install"
+    "updater:allow-download-and-install",
+    "allow-get-db-bootstrap",
+    "allow-save-file",
+    "allow-update-tray-tooltip",
+    "allow-update-tray-icon",
+    "allow-update-shortcuts",
+    "allow-start-oauth-server",
+    "allow-post-form-json",
+    "allow-get-bearer-json",
+    "allow-post-bearer-json",
+    "allow-get-platform",
+    "allow-get-display-server",
+    "allow-open-in-browser",
+    "allow-open-in-file-manager",
+    "allow-check-for-update",
+    "allow-download-and-install-update",
+    "allow-relaunch-app",
+    "allow-start-local-api",
+    "allow-stop-local-api",
+    "allow-get-local-api-status",
+    "allow-get-pending-deep-link-page",
+    "allow-get-pending-start-task",
+    "allow-get-pending-retroactive-prefill",
+    "allow-log-frontend",
+    "allow-backup-db-to-drive"
   ]
 }

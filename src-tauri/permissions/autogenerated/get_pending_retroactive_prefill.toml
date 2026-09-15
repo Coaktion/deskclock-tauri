@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-pending-retroactive-prefill"
+description = "Enables the get_pending_retroactive_prefill command without any pre-configured scope."
+commands.allow = ["get_pending_retroactive_prefill"]
+
+[[permission]]
+identifier = "deny-get-pending-retroactive-prefill"
+description = "Denies the get_pending_retroactive_prefill command without any pre-configured scope."
+commands.deny = ["get_pending_retroactive_prefill"]

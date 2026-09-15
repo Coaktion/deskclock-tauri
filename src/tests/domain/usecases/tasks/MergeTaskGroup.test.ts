@@ -137,4 +137,86 @@ describe("mergeTaskGroup", () => {
     expect(result.categoryId).toBe("c1");
     expect(result.billable).toBe(true);
   });
+
+  describe("fim do registro somado", () => {
+    it("usa o maior endTime do grupo, com as tarefas fora de ordem", async () => {
+      const tasks = [
+        makeTask({
+          id: "t1",
+          startTime: "2026-04-08T13:00:00.000Z",
+          endTime: "2026-04-08T14:15:00.000Z",
+          durationSeconds: 4500,
+        }),
+        makeTask({
+          id: "t2",
+          startTime: "2026-04-08T15:00:00.000Z",
+          endTime: "2026-04-08T15:30:00.000Z",
+          durationSeconds: 1800,
+        }),
+        makeTask({
+          id: "t3",
+          startTime: "2026-04-08T09:00:00.000Z",
+          endTime: "2026-04-08T10:00:00.000Z",
+          durationSeconds: 3600,
+        }),
+      ];
+      const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
+      expect(result.startTime).toBe("2026-04-08T09:00:00.000Z");
+      expect(result.endTime).toBe("2026-04-08T15:30:00.000Z");
+      expect(result.durationSeconds).toBe(9900);
+      expect(result.updatedAt).toBe(NOW);
+    });
+
+    it("ignora tarefa sem endTime ao escolher o maior fim", async () => {
+      const tasks = [
+        makeTask({ id: "t1", endTime: null }),
+        makeTask({
+          id: "t2",
+          startTime: "2026-04-08T10:00:00.000Z",
+          endTime: "2026-04-08T10:30:00.000Z",
+          durationSeconds: 1800,
+        }),
+      ];
+      const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
+      expect(result.endTime).toBe("2026-04-08T10:30:00.000Z");
+    });
+
+    it("sem nenhum endTime, fecha com o início mais cedo + a duração somada", async () => {
+      const tasks = [
+        makeTask({
+          id: "t1",
+          startTime: "2026-04-08T10:00:00.000Z",
+          endTime: null,
+          durationSeconds: 1800,
+        }),
+        makeTask({
+          id: "t2",
+          startTime: "2026-04-08T09:00:00.000Z",
+          endTime: null,
+          durationSeconds: 3600,
+        }),
+      ];
+      const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
+      expect(result.endTime).toBe("2026-04-08T10:30:00.000Z");
+    });
+
+    it("num dia passado não estica o fim até agora", async () => {
+      const tasks = [
+        makeTask({
+          id: "t1",
+          startTime: "2026-03-02T09:00:00.000Z",
+          endTime: "2026-03-02T10:00:00.000Z",
+        }),
+        makeTask({
+          id: "t2",
+          startTime: "2026-03-02T11:00:00.000Z",
+          endTime: "2026-03-02T11:45:00.000Z",
+          durationSeconds: 2700,
+        }),
+      ];
+      const result = await mergeTaskGroup(makeRepo(), tasks, NOW);
+      expect(result.endTime).toBe("2026-03-02T11:45:00.000Z");
+      expect(result.createdAt).toBe(NOW);
+    });
+  });
 });

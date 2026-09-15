@@ -56,10 +56,10 @@ fn get_pending_retroactive_prefill(
 }
 use commands::{
     backup_db_to_drive, check_for_update, download_and_install_update, get_bearer_json,
-    get_display_server, get_local_api_status, get_platform, log_frontend, open_in_browser,
-    open_in_file_manager, post_bearer_json, post_form_json, relaunch_app, save_file,
-    start_local_api, start_oauth_server, stop_local_api, update_shortcuts, update_tray_icon,
-    update_tray_tooltip,
+    get_display_server, get_local_api_status, get_platform, local_api_bridge_ready,
+    local_api_respond, log_frontend, open_in_browser, open_in_file_manager, post_bearer_json,
+    post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
+    update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -362,6 +362,17 @@ pub fn run() {
         // criadas antes do hook, e no Windows uma delas já chama get_db_bootstrap
         // nesse intervalo. Ver o comentário de topo de database.rs.
         .manage(database::DbBootstrapState::default())
+        .on_page_load(|webview, payload| {
+            // Recarregar a janela principal derruba o ouvinte da ponte; até o novo
+            // avisar prontidão, a API responde 503 em vez de pendurar até o 504.
+            if webview.label() == "main"
+                && payload.event() == tauri::webview::PageLoadEvent::Started
+            {
+                if let Some(bridge) = webview.try_state::<Arc<api::bridge::Bridge>>() {
+                    bridge.mark_unready();
+                }
+            }
+        })
         .setup(|app| {
             // Log habilitado também em release. Targets explícitos (Stdout + LogDir)
             // para não depender do default do plugin — garante que sempre há arquivo.
@@ -422,6 +433,15 @@ pub fn run() {
             keep_overlays_topmost(app.handle().clone());
 
             app.manage(Arc::new(api::ApiServerState::default()));
+            let bridge_handle = app.handle().clone();
+            app.manage(Arc::new(api::bridge::Bridge::new(
+                move |request| {
+                    bridge_handle
+                        .emit_to("main", api::bridge::REQUEST_EVENT, request)
+                        .map_err(|e| e.to_string())
+                },
+                api::bridge::DEFAULT_TIMEOUT,
+            )));
             app.manage(PendingDeepLinkPage(Mutex::new(None)));
             app.manage(PendingStartTask(Mutex::new(None)));
             app.manage(PendingRetroactivePrefill(Mutex::new(None)));
@@ -482,6 +502,8 @@ pub fn run() {
             start_local_api,
             stop_local_api,
             get_local_api_status,
+            local_api_respond,
+            local_api_bridge_ready,
             get_pending_deep_link_page,
             get_pending_start_task,
             get_pending_retroactive_prefill,
@@ -490,4 +512,102 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// A ACL recusa em runtime o comando que ficou fora do manifesto ou da
+/// capability, e o app não abre (`get_db_bootstrap not allowed`). Estes testes
+/// trazem essa falha para o `cargo test`.
+#[cfg(test)]
+mod app_commands_acl {
+    include!("../app_commands.rs");
+
+    use serde_json::Value;
+    use std::collections::BTreeSet;
+
+    fn permission(command: &str) -> String {
+        format!("allow-{}", command.replace('_', "-"))
+    }
+
+    fn registered_commands() -> BTreeSet<String> {
+        let source = include_str!("lib.rs");
+        let marker = concat!("generate_handler", "![");
+        let start = source
+            .find(marker)
+            .expect("generate_handler! não encontrado")
+            + marker.len();
+        let end = start
+            + source[start..]
+                .find(']')
+                .expect("generate_handler! sem fim");
+        source[start..end]
+            .split(',')
+            .map(|entry| entry.trim().rsplit("::").next().unwrap_or("").to_string())
+            .filter(|name| !name.is_empty())
+            .collect()
+    }
+
+    fn app_permissions(capability: &Value) -> BTreeSet<String> {
+        capability["permissions"]
+            .as_array()
+            .expect("capability sem permissions")
+            .iter()
+            .filter_map(Value::as_str)
+            // Permissão de app não tem prefixo de plugin (`core:`, `sql:`…).
+            .filter(|p| !p.contains(':'))
+            .map(str::to_string)
+            .collect()
+    }
+
+    fn windows(value: &Value) -> BTreeSet<String> {
+        value
+            .as_array()
+            .expect("lista de janelas")
+            .iter()
+            .filter_map(|w| w.as_str().or_else(|| w["label"].as_str()))
+            .map(str::to_string)
+            .collect()
+    }
+
+    fn json(source: &str) -> Value {
+        serde_json::from_str(source).expect("JSON inválido")
+    }
+
+    #[test]
+    fn todo_comando_registrado_esta_no_manifesto() {
+        let listed: BTreeSet<String> = SHARED_COMMANDS
+            .iter()
+            .chain(MAIN_ONLY_COMMANDS)
+            .map(|c| c.to_string())
+            .collect();
+        assert_eq!(
+            listed.len(),
+            SHARED_COMMANDS.len() + MAIN_ONLY_COMMANDS.len(),
+            "comando repetido em app_commands.rs"
+        );
+        assert_eq!(registered_commands(), listed);
+    }
+
+    #[test]
+    fn default_libera_os_compartilhados_em_todas_as_janelas() {
+        let capability = json(include_str!("../capabilities/default.json"));
+        let expected: BTreeSet<String> = SHARED_COMMANDS.iter().map(|c| permission(c)).collect();
+        assert_eq!(app_permissions(&capability), expected);
+
+        let conf = json(include_str!("../tauri.conf.json"));
+        assert_eq!(
+            windows(&capability["windows"]),
+            windows(&conf["app"]["windows"])
+        );
+    }
+
+    #[test]
+    fn ponte_da_api_local_so_na_janela_main() {
+        let capability = json(include_str!("../capabilities/local-api-bridge.json"));
+        let expected: BTreeSet<String> = MAIN_ONLY_COMMANDS.iter().map(|c| permission(c)).collect();
+        assert_eq!(app_permissions(&capability), expected);
+        assert_eq!(
+            windows(&capability["windows"]),
+            BTreeSet::from(["main".to_string()])
+        );
+    }
 }

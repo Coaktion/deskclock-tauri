@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-bearer-json"
+description = "Enables the get_bearer_json command without any pre-configured scope."
+commands.allow = ["get_bearer_json"]
+
+[[permission]]
+identifier = "deny-get-bearer-json"
+description = "Denies the get_bearer_json command without any pre-configured scope."
+commands.deny = ["get_bearer_json"]

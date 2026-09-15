@@ -2,6 +2,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
+import { DomainError } from "@shared/errors";
 import { localISO } from "../../../helpers/localTime";
 import { describe, expect, it, vi } from "vitest";
 
@@ -25,6 +26,7 @@ function makePlannedRepo(overrides: Partial<IPlannedTaskRepository> = {}): IPlan
     update: vi.fn(async () => undefined),
     findById: vi.fn(async () => null),
     findForDate: vi.fn(async () => []),
+    findAll: vi.fn(async () => []),
     findForWeek: vi.fn(async () => []),
     complete: vi.fn(async () => undefined),
     uncomplete: vi.fn(async () => undefined),
@@ -165,5 +167,76 @@ describe("launchPlannedTaskRetroactively", () => {
     );
 
     expect(task.name).toBeNull();
+  });
+
+  describe("com intervalo explícito (planejada sem horário)", () => {
+    const semHorario = () =>
+      makePlanned({
+        startTime: undefined,
+        endTime: undefined,
+        billable: true,
+        customValues: { "field-stage": "opt-2" },
+      });
+
+    it("grava o intervalo recebido com os dados da planejada e a conclui na data", async () => {
+      const taskRepo = makeTaskRepo();
+      const plannedRepo = makePlannedRepo();
+      const interval = {
+        startTime: localISO(2026, 4, 8, 23, 30),
+        endTime: localISO(2026, 4, 9, 0, 15),
+      };
+
+      const task = await launchPlannedTaskRetroactively(
+        taskRepo,
+        plannedRepo,
+        semHorario(),
+        DATE,
+        NOW,
+        interval
+      );
+
+      expect(task).toMatchObject({
+        ...interval,
+        durationSeconds: 2700,
+        workspaceId: "ws-1",
+        name: "Daily",
+        projectId: "proj-1",
+        categoryId: "cat-1",
+        billable: true,
+        customValues: { "field-stage": "opt-2" },
+      });
+      expect(taskRepo.save).toHaveBeenCalledWith(task);
+      expect(plannedRepo.complete).toHaveBeenCalledWith("pt-1", DATE);
+    });
+
+    it("o intervalo recebido vence o horário da planejada", async () => {
+      const interval = {
+        startTime: localISO(2026, 4, 8, 14),
+        endTime: localISO(2026, 4, 8, 14, 45),
+      };
+      const task = await launchPlannedTaskRetroactively(
+        makeTaskRepo(),
+        makePlannedRepo(),
+        makePlanned(),
+        DATE,
+        NOW,
+        interval
+      );
+      expect(task.startTime).toBe(interval.startTime);
+      expect(task.durationSeconds).toBe(2700);
+    });
+
+    it("recusa menos de 1 minuto sem gravar nem concluir", async () => {
+      const taskRepo = makeTaskRepo();
+      const plannedRepo = makePlannedRepo();
+      await expect(
+        launchPlannedTaskRetroactively(taskRepo, plannedRepo, semHorario(), DATE, NOW, {
+          startTime: localISO(2026, 4, 8, 9),
+          endTime: localISO(2026, 4, 8, 9, 0, 30),
+        })
+      ).rejects.toBeInstanceOf(DomainError);
+      expect(taskRepo.save).not.toHaveBeenCalled();
+      expect(plannedRepo.complete).not.toHaveBeenCalled();
+    });
   });
 });

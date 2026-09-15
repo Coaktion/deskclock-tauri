@@ -305,6 +305,14 @@ describe("TaskRepository", () => {
       expect(sql).not.toContain("planned_task_id");
       expect(args).not.toContain("pt-1");
     });
+
+    it("grava workspace_id — mover entre workspaces depende do UPDATE", async () => {
+      const repo = new TaskRepository();
+      await repo.update(makeTask({ workspaceId: "ws-destino" }));
+      const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+      expect(sql).toMatch(/workspace_id = \$1\b/);
+      expect(args[0]).toBe("ws-destino");
+    });
   });
 
   describe("delete", () => {

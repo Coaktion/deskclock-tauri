@@ -1,6 +1,21 @@
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
+import { addSecondsISO } from "@shared/utils/time";
 import { generateUUID } from "@shared/utils/uuid";
+
+/**
+ * Fim do registro somado: o maior `endTime` do grupo. Gravar "agora" esticava
+ * uma unificação de dia passado até hoje, e mesmo hoje punha na exportação um
+ * fim que ninguém registrou. Sem nenhum fim gravado, fecha a conta com a duração.
+ */
+function mergedEndTime(tasks: Task[], earliest: string, totalSeconds: number): string {
+  const ends = tasks
+    .map((t) => t.endTime)
+    .filter((end): end is string => Boolean(end))
+    .map((end) => new Date(end).getTime());
+  if (ends.length === 0) return addSecondsISO(earliest, totalSeconds);
+  return new Date(Math.max(...ends)).toISOString();
+}
 
 export async function mergeTaskGroup(
   repo: ITaskRepository,
@@ -23,7 +38,7 @@ export async function mergeTaskGroup(
     categoryId: first.categoryId,
     billable: first.billable,
     startTime: earliest,
-    endTime: nowISO,
+    endTime: mergedEndTime(tasks, earliest, totalSeconds),
     durationSeconds: totalSeconds,
     status: "completed",
     createdAt: nowISO,

@@ -1,10 +1,11 @@
-use crate::api::db::{
-    new_uuid, now_iso_utc, task_record_to_dto, Db, PlannedTaskRecord, TaskRecord,
-};
+//! Handlers HTTP. Só extraem path, query e corpo, repassam à janela principal
+//! pela ponte e devolvem o status e o corpo que ela decidir.
+
+use crate::api::bridge::{BridgeError, BridgeResponse};
 use crate::api::models::{
-    CategoryDto, CreatePlannedTaskRequest, ErrorResponse, PlannedTaskActionDto,
-    PlannedTaskCompleteRequest, PlannedTaskDto, ProjectDto, StartTaskRequest, StatusResponse,
-    StopTaskRequest, TaskDto, ToggleTaskRequest, UpdatePlannedTaskRequest,
+    CategoryDto, CreatePlannedTaskRequest, ErrorResponse, PlannedTaskCompleteRequest,
+    PlannedTaskDto, ProjectDto, StartTaskRequest, StatusResponse, StopTaskRequest, TaskDto,
+    ToggleTaskRequest, UpdatePlannedTaskRequest,
 };
 use crate::api::state::ApiState;
 use axum::{
@@ -14,92 +15,110 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use serde_json::json;
+use serde::de::DeserializeOwned;
+use serde::Deserialize;
+use serde_json::{json, Value};
 use std::sync::Arc;
-use tauri::Emitter;
 
-pub struct ApiError {
-    status: StatusCode,
-    message: String,
+fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
+    (
+        status,
+        Json(ErrorResponse {
+            error: message.into(),
+        }),
+    )
+        .into_response()
 }
 
-impl ApiError {
-    pub fn new(status: StatusCode, msg: impl Into<String>) -> Self {
-        Self {
-            status,
-            message: msg.into(),
+fn to_http(result: Result<BridgeResponse, BridgeError>) -> Response {
+    match result {
+        Ok(BridgeResponse { status, body }) => {
+            let status = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+            if status == StatusCode::NO_CONTENT {
+                status.into_response()
+            } else {
+                (status, Json(body)).into_response()
+            }
         }
-    }
-    pub fn internal(msg: impl Into<String>) -> Self {
-        Self::new(StatusCode::INTERNAL_SERVER_ERROR, msg)
-    }
-    pub fn not_found(msg: impl Into<String>) -> Self {
-        Self::new(StatusCode::NOT_FOUND, msg)
-    }
-    pub fn conflict(msg: impl Into<String>) -> Self {
-        Self::new(StatusCode::CONFLICT, msg)
-    }
-}
-
-impl From<rusqlite::Error> for ApiError {
-    fn from(e: rusqlite::Error) -> Self {
-        ApiError::internal(format!("SQLite error: {e}"))
+        Err(BridgeError::NotReady) => error_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "App ainda carregando — tente novamente em instantes",
+        ),
+        Err(BridgeError::Timeout) => {
+            error_response(StatusCode::GATEWAY_TIMEOUT, "O app não respondeu a tempo")
+        }
+        Err(BridgeError::Failed(e)) => error_response(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Falha ao falar com o app: {e}"),
+        ),
     }
 }
 
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        (
-            self.status,
-            Json(ErrorResponse {
-                error: self.message,
-            }),
-        )
-            .into_response()
-    }
+async fn forward(state: &ApiState, op: &str, params: Value) -> Response {
+    to_http(state.bridge.request(op, params).await)
 }
 
-type ApiResult<T> = Result<T, ApiError>;
-
-// Aceita corpo ausente, vazio ou `null` — todos tratados como None.
-fn parse_optional_body<T: serde::de::DeserializeOwned>(body: &Bytes) -> ApiResult<Option<T>> {
+/// Valida o corpo contra o DTO e devolve o JSON como o cliente mandou — é o TS
+/// quem decide padrão e ausência, e reserializar o DTO apagaria a diferença
+/// entre campo ausente e `null`. Corpo vazio vira `null`.
+fn parse_body<T: DeserializeOwned>(body: &Bytes, required: bool) -> Result<Value, Box<Response>> {
     if body.is_empty() || body.as_ref() == b"null" {
-        return Ok(None);
+        if required {
+            return Err(Box::new(error_response(
+                StatusCode::BAD_REQUEST,
+                "Corpo JSON obrigatório",
+            )));
+        }
+        return Ok(Value::Null);
     }
-    serde_json::from_slice(body)
-        .map(Some)
-        .map_err(|e| ApiError::new(StatusCode::BAD_REQUEST, format!("JSON inválido: {e}")))
+    let value: Value = serde_json::from_slice(body).map_err(invalid_json)?;
+    serde_json::from_value::<T>(value.clone()).map_err(invalid_json)?;
+    Ok(value)
 }
 
-fn emit_running_task_changed(state: &ApiState, task: Option<&TaskDto>) {
-    // O frontend tem filtros de `source` assimétricos: o overlay ignora
-    // `source === "overlay"` e a janela principal ignora qualquer coisa
-    // diferente de `"overlay"`. Para alcançar as duas janelas sem tocar no
-    // frontend, emitimos o mesmo payload duas vezes com sources distintos.
-    let base_payload = |source: &str| {
-        json!({
-            "task": task,
-            "source": source,
-        })
-    };
-    let _ = state
-        .app_handle
-        .emit("running-task-changed", base_payload("api"));
-    let _ = state
-        .app_handle
-        .emit("running-task-changed", base_payload("overlay"));
+fn invalid_json(e: serde_json::Error) -> Box<Response> {
+    Box::new(error_response(
+        StatusCode::BAD_REQUEST,
+        format!("JSON inválido: {e}"),
+    ))
 }
 
-fn build_task_dto(db: &Db, task: &TaskRecord) -> rusqlite::Result<TaskDto> {
-    let project_name = match &task.project_id {
-        Some(id) => db.find_project_name(id)?,
-        None => None,
-    };
-    let category_name = match &task.category_id {
-        Some(id) => db.find_category_name(id)?,
-        None => None,
-    };
-    Ok(task_record_to_dto(task, project_name, category_name))
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceQuery {
+    workspace_id: Option<String>,
+}
+
+/// Parâmetros das rotas `/{id}?workspaceId=` que não extraem mais nada: o TS
+/// resolve o workspace ausente como o ativo.
+fn scoped_params(id: String, q: &WorkspaceQuery) -> Value {
+    json!({ "id": id, "workspaceId": q.workspace_id })
+}
+
+// Submódulos por recurso: enxergam `forward`, `forward_with_body` e
+// `WorkspaceQuery` sem que eles precisem sair do escopo privado deste módulo.
+pub mod catalog;
+pub mod custom_fields;
+pub mod history;
+pub mod planned_tasks;
+pub mod totals;
+pub mod workspaces;
+
+/// Valida o corpo e o repassa em `params.body`, junto do que a rota já extraiu.
+async fn forward_with_body<T: DeserializeOwned>(
+    state: &ApiState,
+    op: &str,
+    body: &Bytes,
+    required: bool,
+    mut params: Value,
+) -> Response {
+    match parse_body::<T>(body, required) {
+        Ok(body) => {
+            params["body"] = body;
+            forward(state, op, params).await
+        }
+        Err(r) => *r,
+    }
 }
 
 // ---------------- GET /status ----------------
@@ -108,27 +127,23 @@ fn build_task_dto(db: &Db, task: &TaskRecord) -> rusqlite::Result<TaskDto> {
     get,
     path = "/status",
     tag = "status",
+    params(
+        ("workspaceId" = Option<String>, Query, description = "Workspace dos totais de hoje. Ausente = workspace ativo.")
+    ),
     responses(
         (status = 200, description = "Estado atual do timer e totais do dia", body = StatusResponse)
     )
 )]
-pub async fn get_status(State(state): State<Arc<ApiState>>) -> ApiResult<Json<StatusResponse>> {
-    let db = state.open_db()?;
-    let today = db.today_totals()?;
-    let active = db.active_task()?;
-    let (running, task_dto) = match active {
-        Some(t) => {
-            let is_running = t.status == "running";
-            let dto = build_task_dto(&db, &t)?;
-            (is_running, Some(dto))
-        }
-        None => (false, None),
-    };
-    Ok(Json(StatusResponse {
-        running,
-        task: task_dto,
-        today,
-    }))
+pub async fn get_status(
+    State(state): State<Arc<ApiState>>,
+    Query(q): Query<WorkspaceQuery>,
+) -> Response {
+    forward(
+        &state,
+        "status.get",
+        json!({ "workspaceId": q.workspace_id }),
+    )
+    .await
 }
 
 // ---------------- POST /tasks/start ----------------
@@ -139,7 +154,8 @@ pub async fn get_status(State(state): State<Arc<ApiState>>) -> ApiResult<Json<St
     tag = "tasks",
     request_body(
         content = StartTaskRequest,
-        description = "Dados da nova tarefa. Todos os campos são opcionais exceto `billable`.",
+        description = "Dados da nova tarefa. Todos os campos são opcionais exceto `billable`. \
+            A tarefa ativa, se houver, é concluída antes (com as regras de parada).",
         example = json!({
             "name": "Reunião de planejamento",
             "projectName": "Meu Projeto",
@@ -149,39 +165,14 @@ pub async fn get_status(State(state): State<Arc<ApiState>>) -> ApiResult<Json<St
     ),
     responses(
         (status = 201, description = "Tarefa iniciada", body = TaskDto),
-        (status = 409, description = "Projeto/categoria não encontrado", body = ErrorResponse)
+        (status = 409, description = "Workspace, projeto ou categoria não encontrado no workspace", body = ErrorResponse)
     )
 )]
-pub async fn post_start(
-    State(state): State<Arc<ApiState>>,
-    Json(req): Json<StartTaskRequest>,
-) -> ApiResult<(StatusCode, Json<TaskDto>)> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-
-    let project_id = resolve_project(&db, req.project_id, req.project_name)?;
-    let category_id = resolve_category(&db, req.category_id, req.category_name)?;
-
-    let now = now_iso_utc();
-    db.complete_all_active(&now)?;
-
-    let task = TaskRecord {
-        id: new_uuid(),
-        name: req.name,
-        project_id,
-        category_id,
-        billable: req.billable,
-        start_time: now.clone(),
-        end_time: None,
-        duration_seconds: Some(0),
-        status: "running".to_string(),
-        created_at: now.clone(),
-        updated_at: now,
-    };
-    db.insert_task(&task)?;
-    let dto = build_task_dto(&db, &task)?;
-    emit_running_task_changed(&state, Some(&dto));
-    Ok((StatusCode::CREATED, Json(dto)))
+pub async fn post_start(State(state): State<Arc<ApiState>>, body: Bytes) -> Response {
+    match parse_body::<StartTaskRequest>(&body, true) {
+        Ok(body) => forward(&state, "tasks.start", json!({ "body": body })).await,
+        Err(r) => *r,
+    }
 }
 
 // ---------------- POST /tasks/pause ----------------
@@ -195,26 +186,8 @@ pub async fn post_start(
         (status = 404, description = "Nenhuma tarefa em execução", body = ErrorResponse)
     )
 )]
-pub async fn post_pause(State(state): State<Arc<ApiState>>) -> ApiResult<Json<TaskDto>> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-    let active = db
-        .active_task()?
-        .ok_or_else(|| ApiError::not_found("Nenhuma tarefa em execução"))?;
-    if active.status != "running" {
-        return Err(ApiError::not_found("Tarefa ativa não está em execução"));
-    }
-    let now = now_iso_utc();
-    let elapsed = crate::api::db::seconds_between(&active.start_time, &now).max(0);
-    let mut updated = active.clone();
-    updated.status = "paused".to_string();
-    updated.duration_seconds = Some(active.duration_seconds.unwrap_or(0) + elapsed);
-    updated.start_time = now.clone();
-    updated.updated_at = now;
-    db.update_task(&updated)?;
-    let dto = build_task_dto(&db, &updated)?;
-    emit_running_task_changed(&state, Some(&dto));
-    Ok(Json(dto))
+pub async fn post_pause(State(state): State<Arc<ApiState>>) -> Response {
+    forward(&state, "tasks.pause", json!({})).await
 }
 
 // ---------------- POST /tasks/resume ----------------
@@ -228,26 +201,8 @@ pub async fn post_pause(State(state): State<Arc<ApiState>>) -> ApiResult<Json<Ta
         (status = 404, description = "Nenhuma tarefa pausada", body = ErrorResponse)
     )
 )]
-pub async fn post_resume(State(state): State<Arc<ApiState>>) -> ApiResult<Json<TaskDto>> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-    let active = db
-        .active_task()?
-        .ok_or_else(|| ApiError::not_found("Nenhuma tarefa pausada"))?;
-    if active.status != "paused" {
-        return Err(ApiError::not_found("Tarefa ativa não está pausada"));
-    }
-    let now = now_iso_utc();
-    // Conclui qualquer running remanescente antes de retomar.
-    // (Segurança: neste ponto active_task retornaria running antes de paused.)
-    let mut updated = active.clone();
-    updated.status = "running".to_string();
-    updated.start_time = now.clone();
-    updated.updated_at = now;
-    db.update_task(&updated)?;
-    let dto = build_task_dto(&db, &updated)?;
-    emit_running_task_changed(&state, Some(&dto));
-    Ok(Json(dto))
+pub async fn post_resume(State(state): State<Arc<ApiState>>) -> Response {
+    forward(&state, "tasks.resume", json!({})).await
 }
 
 // ---------------- POST /tasks/stop ----------------
@@ -258,36 +213,22 @@ pub async fn post_resume(State(state): State<Arc<ApiState>>) -> ApiResult<Json<T
     tag = "tasks",
     request_body(
         content = StopTaskRequest,
-        description = "Opcional — corpo pode ser omitido. `completed` define se a tarefa foi concluída (padrão: true).",
+        description = "Opcional — corpo pode ser omitido. `completed` define se a tarefa foi concluída (padrão: true). \
+            Aplica as regras de parada: descarte de tarefa com menos de 1 minuto, arredondamento, \
+            conclusão da planejada de origem e envio automático.",
         example = json!({ "completed": true })
     ),
     responses(
         (status = 200, description = "Tarefa parada", body = TaskDto),
+        (status = 204, description = "Tarefa descartada por durar menos de 1 minuto"),
         (status = 404, description = "Nenhuma tarefa ativa", body = ErrorResponse)
     )
 )]
-pub async fn post_stop(
-    State(state): State<Arc<ApiState>>,
-    body: Bytes,
-) -> ApiResult<Json<TaskDto>> {
-    let _guard = state.write_lock.lock().unwrap();
-    let req: Option<StopTaskRequest> = parse_optional_body(&body)?;
-    let _completed = req.map(|r| r.completed).unwrap_or(true);
-    let db = state.open_db()?;
-    let active = db
-        .active_task()?
-        .ok_or_else(|| ApiError::not_found("Nenhuma tarefa ativa"))?;
-    let now = now_iso_utc();
-    let total = crate::api::db::effective_duration(&active, &now);
-    let mut updated = active.clone();
-    updated.status = "completed".to_string();
-    updated.end_time = Some(now.clone());
-    updated.duration_seconds = Some(total);
-    updated.updated_at = now;
-    db.update_task(&updated)?;
-    let dto = build_task_dto(&db, &updated)?;
-    emit_running_task_changed(&state, None);
-    Ok(Json(dto))
+pub async fn post_stop(State(state): State<Arc<ApiState>>, body: Bytes) -> Response {
+    match parse_body::<StopTaskRequest>(&body, false) {
+        Ok(body) => forward(&state, "tasks.stop", json!({ "body": body })).await,
+        Err(r) => *r,
+    }
 }
 
 // ---------------- POST /tasks/toggle ----------------
@@ -308,39 +249,14 @@ pub async fn post_stop(
         })
     ),
     responses(
-        (status = 200, description = "Novo estado da tarefa", body = TaskDto)
+        (status = 200, description = "Novo estado da tarefa", body = TaskDto),
+        (status = 409, description = "Workspace, projeto ou categoria não encontrado no workspace", body = ErrorResponse)
     )
 )]
-pub async fn post_toggle(
-    State(state): State<Arc<ApiState>>,
-    body: Bytes,
-) -> ApiResult<Json<TaskDto>> {
-    let db = state.open_db()?;
-    let active = db.active_task()?;
-    drop(db);
-
-    match active {
-        Some(t) if t.status == "running" => {
-            let res = post_pause(State(state.clone())).await?;
-            Ok(res)
-        }
-        Some(t) if t.status == "paused" => {
-            let res = post_resume(State(state.clone())).await?;
-            Ok(res)
-        }
-        _ => {
-            let req = parse_optional_body::<ToggleTaskRequest>(&body)?.unwrap_or_default();
-            let start_req = StartTaskRequest {
-                name: req.name,
-                project_id: req.project_id,
-                project_name: req.project_name,
-                category_id: req.category_id,
-                category_name: req.category_name,
-                billable: req.billable,
-            };
-            let (_status, dto) = post_start(State(state), Json(start_req)).await?;
-            Ok(dto)
-        }
+pub async fn post_toggle(State(state): State<Arc<ApiState>>, body: Bytes) -> Response {
+    match parse_body::<ToggleTaskRequest>(&body, false) {
+        Ok(body) => forward(&state, "tasks.toggle", json!({ "body": body })).await,
+        Err(r) => *r,
     }
 }
 
@@ -355,15 +271,8 @@ pub async fn post_toggle(
         (status = 404, description = "Nenhuma tarefa ativa", body = ErrorResponse)
     )
 )]
-pub async fn post_cancel(State(state): State<Arc<ApiState>>) -> ApiResult<StatusCode> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-    let active = db
-        .active_task()?
-        .ok_or_else(|| ApiError::not_found("Nenhuma tarefa ativa"))?;
-    db.delete_task(&active.id)?;
-    emit_running_task_changed(&state, None);
-    Ok(StatusCode::NO_CONTENT)
+pub async fn post_cancel(State(state): State<Arc<ApiState>>) -> Response {
+    forward(&state, "tasks.cancel", json!({})).await
 }
 
 // ---------------- GET /projects ----------------
@@ -372,13 +281,23 @@ pub async fn post_cancel(State(state): State<Arc<ApiState>>) -> ApiResult<Status
     get,
     path = "/projects",
     tag = "catalog",
+    params(
+        ("workspaceId" = Option<String>, Query, description = "Ausente = workspace ativo.")
+    ),
     responses(
-        (status = 200, description = "Lista de projetos", body = Vec<ProjectDto>)
+        (status = 200, description = "Projetos do workspace", body = Vec<ProjectDto>)
     )
 )]
-pub async fn get_projects(State(state): State<Arc<ApiState>>) -> ApiResult<Json<Vec<ProjectDto>>> {
-    let db = state.open_db()?;
-    Ok(Json(db.list_projects()?))
+pub async fn get_projects(
+    State(state): State<Arc<ApiState>>,
+    Query(q): Query<WorkspaceQuery>,
+) -> Response {
+    forward(
+        &state,
+        "projects.list",
+        json!({ "workspaceId": q.workspace_id }),
+    )
+    .await
 }
 
 // ---------------- GET /categories ----------------
@@ -387,119 +306,36 @@ pub async fn get_projects(State(state): State<Arc<ApiState>>) -> ApiResult<Json<
     get,
     path = "/categories",
     tag = "catalog",
+    params(
+        ("workspaceId" = Option<String>, Query, description = "Ausente = workspace ativo.")
+    ),
     responses(
-        (status = 200, description = "Lista de categorias", body = Vec<CategoryDto>)
+        (status = 200, description = "Categorias do workspace", body = Vec<CategoryDto>)
     )
 )]
 pub async fn get_categories(
     State(state): State<Arc<ApiState>>,
-) -> ApiResult<Json<Vec<CategoryDto>>> {
-    let db = state.open_db()?;
-    Ok(Json(db.list_categories()?))
-}
-
-// ---------------- Helpers ----------------
-
-fn resolve_project(db: &Db, id: Option<String>, name: Option<String>) -> ApiResult<Option<String>> {
-    if let Some(id) = id {
-        if db.find_project_name(&id)?.is_none() {
-            return Err(ApiError::conflict(format!(
-                "Projeto com id '{id}' não encontrado"
-            )));
-        }
-        return Ok(Some(id));
-    }
-    if let Some(name) = name {
-        return match db.find_project_id_by_name(&name)? {
-            Some(id) => Ok(Some(id)),
-            None => Err(ApiError::conflict(format!(
-                "Projeto com nome '{name}' não encontrado"
-            ))),
-        };
-    }
-    Ok(None)
-}
-
-fn resolve_category(
-    db: &Db,
-    id: Option<String>,
-    name: Option<String>,
-) -> ApiResult<Option<String>> {
-    if let Some(id) = id {
-        if db.find_category_name(&id)?.is_none() {
-            return Err(ApiError::conflict(format!(
-                "Categoria com id '{id}' não encontrada"
-            )));
-        }
-        return Ok(Some(id));
-    }
-    if let Some(name) = name {
-        return match db.find_category_id_by_name(&name)? {
-            Some(id) => Ok(Some(id)),
-            None => Err(ApiError::conflict(format!(
-                "Categoria com nome '{name}' não encontrada"
-            ))),
-        };
-    }
-    Ok(None)
+    Query(q): Query<WorkspaceQuery>,
+) -> Response {
+    forward(
+        &state,
+        "categories.list",
+        json!({ "workspaceId": q.workspace_id }),
+    )
+    .await
 }
 
 // ================================================================
-// PlannedTask helpers
+// Planned tasks
 // ================================================================
 
-fn planned_task_record_to_dto(
-    task: &PlannedTaskRecord,
-    project_name: Option<String>,
-    category_name: Option<String>,
-) -> PlannedTaskDto {
-    PlannedTaskDto {
-        id: task.id.clone(),
-        name: task.name.clone(),
-        project_id: task.project_id.clone(),
-        project_name,
-        category_id: task.category_id.clone(),
-        category_name,
-        billable: task.billable,
-        schedule_type: task.schedule_type.clone(),
-        schedule_date: task.schedule_date.clone(),
-        recurring_days: task
-            .recurring_days
-            .as_ref()
-            .and_then(|s| serde_json::from_str(s).ok()),
-        period_start: task.period_start.clone(),
-        period_end: task.period_end.clone(),
-        completed_dates: serde_json::from_str(&task.completed_dates).unwrap_or_default(),
-        actions: serde_json::from_str::<Vec<PlannedTaskActionDto>>(&task.actions)
-            .unwrap_or_default(),
-        sort_order: task.sort_order,
-        created_at: task.created_at.clone(),
-    }
-}
-
-fn build_planned_task_dto(db: &Db, task: &PlannedTaskRecord) -> ApiResult<PlannedTaskDto> {
-    let project_name = match &task.project_id {
-        Some(id) => db.find_project_name(id)?,
-        None => None,
-    };
-    let category_name = match &task.category_id {
-        Some(id) => db.find_category_name(id)?,
-        None => None,
-    };
-    Ok(planned_task_record_to_dto(
-        task,
-        project_name,
-        category_name,
-    ))
-}
-
-// ================================================================
-// GET /planned-tasks
-// ================================================================
-
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlannedTasksQuery {
     date: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
+    workspace_id: Option<String>,
 }
 
 #[utoipa::path(
@@ -507,31 +343,29 @@ pub struct PlannedTasksQuery {
     path = "/planned-tasks",
     tag = "planned-tasks",
     params(
-        ("date" = Option<String>, Query, description = "Filtrar por data YYYY-MM-DD (aplica regras de recorrência). Se omitido, retorna todas.")
+        ("date" = Option<String>, Query, description = "Um dia, YYYY-MM-DD: as planejadas daquele dia, com recorrência (dia da semana) e período aberto aplicados. Não combina com `from`/`to`."),
+        ("from" = Option<String>, Query, description = "Primeiro dia do período, YYYY-MM-DD. Ausente com `to` presente = o mesmo de `to`."),
+        ("to" = Option<String>, Query, description = "Último dia do período, YYYY-MM-DD. Ausente com `from` presente = o mesmo de `from`. \
+            O período traz o que pode ocorrer nele, como a semana do Planejamento: data específica no intervalo, toda recorrente e período que o cruza."),
+        ("workspaceId" = Option<String>, Query, description = "Ausente = workspace ativo.")
     ),
     responses(
-        (status = 200, description = "Lista de tarefas planejadas", body = Vec<PlannedTaskDto>)
+        (status = 200, description = "Planejadas do workspace, na ordem das listas. Sem `date` nem `from`/`to`, todas.", body = Vec<PlannedTaskDto>),
+        (status = 400, description = "Data fora do formato, `from` depois de `to`, ou `date` junto de `from`/`to`", body = ErrorResponse),
+        (status = 409, description = "Workspace não encontrado", body = ErrorResponse)
     )
 )]
 pub async fn get_planned_tasks(
     State(state): State<Arc<ApiState>>,
     Query(q): Query<PlannedTasksQuery>,
-) -> ApiResult<Json<Vec<PlannedTaskDto>>> {
-    let db = state.open_db()?;
-    let records = match q.date {
-        Some(ref date) => db.list_planned_tasks_for_date(date)?,
-        None => db.list_planned_tasks()?,
-    };
-    let dtos: Vec<PlannedTaskDto> = records
-        .iter()
-        .map(|t| build_planned_task_dto(&db, t))
-        .collect::<ApiResult<_>>()?;
-    Ok(Json(dtos))
+) -> Response {
+    forward(
+        &state,
+        "plannedTasks.list",
+        json!({ "date": q.date, "from": q.from, "to": q.to, "workspaceId": q.workspace_id }),
+    )
+    .await
 }
-
-// ================================================================
-// GET /planned-tasks/:id
-// ================================================================
 
 #[utoipa::path(
     get,
@@ -546,17 +380,9 @@ pub async fn get_planned_tasks(
 pub async fn get_planned_task(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
-) -> ApiResult<Json<PlannedTaskDto>> {
-    let db = state.open_db()?;
-    let task = db
-        .find_planned_task(&id)?
-        .ok_or_else(|| ApiError::not_found(format!("Tarefa planejada '{id}' não encontrada")))?;
-    Ok(Json(build_planned_task_dto(&db, &task)?))
+) -> Response {
+    forward(&state, "plannedTasks.get", json!({ "id": id })).await
 }
-
-// ================================================================
-// POST /planned-tasks
-// ================================================================
 
 #[utoipa::path(
     post,
@@ -564,7 +390,9 @@ pub async fn get_planned_task(
     tag = "planned-tasks",
     request_body(
         content = CreatePlannedTaskRequest,
-        description = "Dados da nova tarefa planejada.",
+        description = "Dados da nova tarefa planejada. `scheduleType`: `specific_date` (usa `scheduleDate`), \
+            `recurring` (usa `recurringDays`, 0 = domingo) ou `period` (usa `periodStart`/`periodEnd`). \
+            `billable` padrão: true; `sortOrder` padrão: 0, como no app. `startTime`/`endTime` são horas \"HH:MM\".",
         example = json!({
             "name": "Daily standup",
             "categoryName": "Reuniões",
@@ -575,55 +403,16 @@ pub async fn get_planned_task(
     ),
     responses(
         (status = 201, description = "Tarefa planejada criada", body = PlannedTaskDto),
-        (status = 409, description = "Projeto/categoria não encontrado", body = ErrorResponse)
+        (status = 400, description = "`scheduleType` ou tipo de ação inválido", body = ErrorResponse),
+        (status = 409, description = "Workspace, projeto ou categoria não encontrado no workspace", body = ErrorResponse)
     )
 )]
-pub async fn post_planned_task(
-    State(state): State<Arc<ApiState>>,
-    Json(req): Json<CreatePlannedTaskRequest>,
-) -> ApiResult<(StatusCode, Json<PlannedTaskDto>)> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-
-    let project_id = resolve_project(&db, req.project_id, req.project_name)?;
-    let category_id = resolve_category(&db, req.category_id, req.category_name)?;
-
-    let sort_order = req
-        .sort_order
-        .unwrap_or_else(|| db.max_planned_task_sort_order().unwrap_or(-1) + 1);
-
-    let recurring_days_json = req
-        .recurring_days
-        .as_ref()
-        .map(|d| serde_json::to_string(d).unwrap_or_else(|_| "null".to_string()));
-
-    let actions_json = serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
-
-    let now = now_iso_utc();
-    let task = PlannedTaskRecord {
-        id: new_uuid(),
-        name: req.name,
-        project_id,
-        category_id,
-        billable: req.billable,
-        schedule_type: req.schedule_type,
-        schedule_date: req.schedule_date,
-        recurring_days: recurring_days_json,
-        period_start: req.period_start,
-        period_end: req.period_end,
-        completed_dates: "[]".to_string(),
-        actions: actions_json,
-        sort_order,
-        created_at: now,
-    };
-    db.insert_planned_task(&task)?;
-    let dto = build_planned_task_dto(&db, &task)?;
-    Ok((StatusCode::CREATED, Json(dto)))
+pub async fn post_planned_task(State(state): State<Arc<ApiState>>, body: Bytes) -> Response {
+    match parse_body::<CreatePlannedTaskRequest>(&body, true) {
+        Ok(body) => forward(&state, "plannedTasks.create", json!({ "body": body })).await,
+        Err(r) => *r,
+    }
 }
-
-// ================================================================
-// PUT /planned-tasks/:id
-// ================================================================
 
 #[utoipa::path(
     put,
@@ -632,7 +421,9 @@ pub async fn post_planned_task(
     params(("id" = String, Path, description = "ID da tarefa planejada")),
     request_body(
         content = UpdatePlannedTaskRequest,
-        description = "Substitui todos os campos atualizáveis da tarefa planejada. `completedDates` é preservado.",
+        description = "Substitui os campos atualizáveis da tarefa planejada. `completedDates` é preservado; \
+            `sortOrder`, `startTime`, `endTime` e `customValues` ausentes também; \
+            `null` em `startTime`, `endTime` ou `customValues` limpa o campo.",
         example = json!({
             "name": "Daily standup",
             "billable": false,
@@ -643,55 +434,28 @@ pub async fn post_planned_task(
     ),
     responses(
         (status = 200, description = "Tarefa planejada atualizada", body = PlannedTaskDto),
+        (status = 400, description = "`scheduleType` ou tipo de ação inválido", body = ErrorResponse),
         (status = 404, description = "Não encontrada", body = ErrorResponse),
-        (status = 409, description = "Projeto/categoria não encontrado", body = ErrorResponse)
+        (status = 409, description = "Projeto/categoria não encontrado no workspace da tarefa", body = ErrorResponse)
     )
 )]
 pub async fn put_planned_task(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
-    Json(req): Json<UpdatePlannedTaskRequest>,
-) -> ApiResult<Json<PlannedTaskDto>> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-
-    let existing = db
-        .find_planned_task(&id)?
-        .ok_or_else(|| ApiError::not_found(format!("Tarefa planejada '{id}' não encontrada")))?;
-
-    let project_id = resolve_project(&db, req.project_id, req.project_name)?;
-    let category_id = resolve_category(&db, req.category_id, req.category_name)?;
-
-    let recurring_days_json = req
-        .recurring_days
-        .as_ref()
-        .map(|d| serde_json::to_string(d).unwrap_or_else(|_| "null".to_string()));
-
-    let actions_json = serde_json::to_string(&req.actions).unwrap_or_else(|_| "[]".to_string());
-
-    let updated = PlannedTaskRecord {
-        id: existing.id.clone(),
-        name: req.name,
-        project_id,
-        category_id,
-        billable: req.billable,
-        schedule_type: req.schedule_type,
-        schedule_date: req.schedule_date,
-        recurring_days: recurring_days_json,
-        period_start: req.period_start,
-        period_end: req.period_end,
-        completed_dates: existing.completed_dates.clone(),
-        actions: actions_json,
-        sort_order: req.sort_order.unwrap_or(existing.sort_order),
-        created_at: existing.created_at.clone(),
-    };
-    db.update_planned_task(&updated)?;
-    Ok(Json(build_planned_task_dto(&db, &updated)?))
+    body: Bytes,
+) -> Response {
+    match parse_body::<UpdatePlannedTaskRequest>(&body, true) {
+        Ok(body) => {
+            forward(
+                &state,
+                "plannedTasks.update",
+                json!({ "id": id, "body": body }),
+            )
+            .await
+        }
+        Err(r) => *r,
+    }
 }
-
-// ================================================================
-// DELETE /planned-tasks/:id
-// ================================================================
 
 #[utoipa::path(
     delete,
@@ -706,18 +470,9 @@ pub async fn put_planned_task(
 pub async fn delete_planned_task(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
-) -> ApiResult<StatusCode> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-    db.find_planned_task(&id)?
-        .ok_or_else(|| ApiError::not_found(format!("Tarefa planejada '{id}' não encontrada")))?;
-    db.delete_planned_task(&id)?;
-    Ok(StatusCode::NO_CONTENT)
+) -> Response {
+    forward(&state, "plannedTasks.delete", json!({ "id": id })).await
 }
-
-// ================================================================
-// POST /planned-tasks/:id/complete
-// ================================================================
 
 #[utoipa::path(
     post,
@@ -731,6 +486,7 @@ pub async fn delete_planned_task(
     ),
     responses(
         (status = 200, description = "Tarefa marcada como concluída", body = PlannedTaskDto),
+        (status = 400, description = "Data fora do formato", body = ErrorResponse),
         (status = 404, description = "Não encontrada", body = ErrorResponse)
     )
 )]
@@ -738,28 +494,19 @@ pub async fn post_planned_task_complete(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
     body: Bytes,
-) -> ApiResult<Json<PlannedTaskDto>> {
-    let _guard = state.write_lock.lock().unwrap();
-    let req: Option<PlannedTaskCompleteRequest> = parse_optional_body(&body)?;
-    let date = req
-        .and_then(|r| r.date)
-        .unwrap_or_else(|| chrono::Local::now().format("%Y-%m-%d").to_string());
-    let db = state.open_db()?;
-    let found = db.complete_planned_task(&id, &date)?;
-    if !found {
-        return Err(ApiError::not_found(format!(
-            "Tarefa planejada '{id}' não encontrada"
-        )));
+) -> Response {
+    match parse_body::<PlannedTaskCompleteRequest>(&body, false) {
+        Ok(body) => {
+            forward(
+                &state,
+                "plannedTasks.complete",
+                json!({ "id": id, "body": body }),
+            )
+            .await
+        }
+        Err(r) => *r,
     }
-    let updated = db
-        .find_planned_task(&id)?
-        .ok_or_else(|| ApiError::internal("Tarefa não encontrada após atualização"))?;
-    Ok(Json(build_planned_task_dto(&db, &updated)?))
 }
-
-// ================================================================
-// DELETE /planned-tasks/:id/complete/:date
-// ================================================================
 
 #[utoipa::path(
     delete,
@@ -771,23 +518,18 @@ pub async fn post_planned_task_complete(
     ),
     responses(
         (status = 200, description = "Conclusão removida", body = PlannedTaskDto),
+        (status = 400, description = "Data fora do formato", body = ErrorResponse),
         (status = 404, description = "Não encontrada", body = ErrorResponse)
     )
 )]
 pub async fn delete_planned_task_complete(
     State(state): State<Arc<ApiState>>,
     Path((id, date)): Path<(String, String)>,
-) -> ApiResult<Json<PlannedTaskDto>> {
-    let _guard = state.write_lock.lock().unwrap();
-    let db = state.open_db()?;
-    let found = db.uncomplete_planned_task(&id, &date)?;
-    if !found {
-        return Err(ApiError::not_found(format!(
-            "Tarefa planejada '{id}' não encontrada"
-        )));
-    }
-    let updated = db
-        .find_planned_task(&id)?
-        .ok_or_else(|| ApiError::internal("Tarefa não encontrada após atualização"))?;
-    Ok(Json(build_planned_task_dto(&db, &updated)?))
+) -> Response {
+    forward(
+        &state,
+        "plannedTasks.uncomplete",
+        json!({ "id": id, "date": date }),
+    )
+    .await
 }

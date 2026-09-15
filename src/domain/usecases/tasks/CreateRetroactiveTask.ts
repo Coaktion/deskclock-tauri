@@ -1,7 +1,14 @@
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task } from "@domain/entities/Task";
 import type { CustomValues } from "@domain/entities/CustomField";
+import { DomainError } from "@shared/errors";
 import { generateUUID } from "@shared/utils/uuid";
+
+/**
+ * Trava do Lançamento Manual. Mora no domínio para a tela e a API local
+ * recusarem o mesmo registro com a mesma mensagem, sem cada uma repetir a regra.
+ */
+export const MIN_RETROACTIVE_DURATION_SECONDS = 60;
 
 interface CreateRetroactiveInput {
   workspaceId: string;
@@ -20,6 +27,9 @@ export async function createRetroactiveTask(
   input: CreateRetroactiveInput,
   nowISO: string
 ): Promise<Task> {
+  if (input.durationSeconds < MIN_RETROACTIVE_DURATION_SECONDS) {
+    throw new DomainError("A duração mínima é 1 minuto.");
+  }
   const task: Task = {
     id: generateUUID(),
     workspaceId: input.workspaceId,
