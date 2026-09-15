@@ -108,6 +108,180 @@ pub struct ProjectDto {
     pub id: String,
     pub workspace_id: String,
     pub name: String,
+    /// Slot da paleta de cores de projeto, atribuído na criação.
+    pub color_index: i64,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectRequest {
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateProjectRequest {
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCategoryRequest {
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    pub name: String,
+    /// Padrão: true.
+    #[serde(default)]
+    pub default_billable: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCategoryRequest {
+    pub name: String,
+    /// Ausente = preservado.
+    #[serde(default)]
+    pub default_billable: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCatalogRequest {
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    /// Um nome por linha.
+    pub text: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCatalogResponse {
+    pub created: i64,
+    /// Linhas não importadas (nome repetido ou vazio).
+    pub skipped: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteManyRequest {
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectCategoryDto {
+    pub category_id: String,
+    /// "manual" ou "monday".
+    pub source: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetProjectCategoriesRequest {
+    pub category_ids: Vec<String>,
+}
+
+// ================================================================
+// Workspaces
+// ================================================================
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceDto {
+    pub id: String,
+    pub name: String,
+    /// Slot da paleta (rose, orange, amber, lime, teal, cyan, violet, fuchsia).
+    pub color: String,
+    pub created_at: String,
+    pub active: bool,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateWorkspaceRequest {
+    pub name: String,
+    /// Ausente = derivada do nome.
+    #[serde(default)]
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateWorkspaceRequest {
+    pub name: String,
+    /// Ausente = preservada.
+    #[serde(default)]
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteWorkspaceRequest {
+    /// "move" ou "delete".
+    pub mode: String,
+    /// Obrigatório com `mode: "move"`.
+    #[serde(default)]
+    pub to_workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetActiveWorkspaceRequest {
+    pub id: String,
+}
+
+// ================================================================
+// Campos personalizados
+// ================================================================
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CustomFieldOptionDto {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomFieldDto {
+    pub id: String,
+    pub label: String,
+    /// "text", "multiline", "select" ou "checkbox".
+    #[serde(rename = "type")]
+    pub field_type: String,
+    pub options: Vec<CustomFieldOptionDto>,
+    pub sort_order: i64,
+    pub archived: bool,
+    pub created_at: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCustomFieldRequest {
+    pub label: String,
+    #[serde(rename = "type")]
+    pub field_type: String,
+    #[serde(default)]
+    pub option_labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCustomFieldRequest {
+    #[serde(default)]
+    pub label: Option<String>,
+    #[serde(default)]
+    pub option_labels: Option<Vec<String>>,
+    #[serde(default)]
+    pub archived: Option<bool>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]

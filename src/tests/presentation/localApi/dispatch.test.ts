@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { dispatchLocalApiRequest, changesRunningTask } from "@presentation/localApi/dispatch";
+import { dispatchLocalApiRequest, waitsForNextCommit } from "@presentation/localApi/dispatch";
 import { toErrorResult, NotFoundError, ConflictError } from "@presentation/localApi/errors";
 import { DomainError, DuplicateNameError } from "@shared/errors";
 import { makeDeps, makeTask } from "./fakeDeps";
@@ -41,10 +41,14 @@ describe("toErrorResult", () => {
   });
 });
 
-describe("changesRunningTask", () => {
-  it("só as ops de tarefa em execução esperam o render seguinte", () => {
-    expect(changesRunningTask("tasks.stop")).toBe(true);
-    expect(changesRunningTask("plannedTasks.create")).toBe(false);
-    expect(changesRunningTask("status.get")).toBe(false);
+describe("waitsForNextCommit", () => {
+  it("só as ops que mexem na tarefa em execução ou nos workspaces esperam o render seguinte", () => {
+    expect(waitsForNextCommit("tasks.stop")).toBe(true);
+    expect(waitsForNextCommit("workspaces.setActive")).toBe(true);
+    expect(waitsForNextCommit("workspaces.delete")).toBe(true);
+    expect(waitsForNextCommit("workspaces.list")).toBe(false);
+    expect(waitsForNextCommit("projects.create")).toBe(false);
+    expect(waitsForNextCommit("plannedTasks.create")).toBe(false);
+    expect(waitsForNextCommit("status.get")).toBe(false);
   });
 });

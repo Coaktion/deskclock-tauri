@@ -125,8 +125,8 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 
 | Fase | Estado |
 |---|---|
-| 0 | implementada, aguardando revisão e verificação manual |
-| 1 | pendente |
+| 0 | commitada (2f6683a); verificação manual parcial pelo usuário, ok |
+| 1 | implementada, aguardando revisão e verificação manual |
 | 2 | pendente |
 | 3 | pendente |
 
@@ -139,6 +139,18 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 - Restringir `local_api_respond` e `local_api_bridge_ready` à janela `main` nas capabilities do
   Tauri.
 - `Bridge.ready` nunca é resetado: recarregar o webview principal dá 504 em vez de 503.
+
+**Regras só da API — decisões do usuário, 2026-09-15 (Fase 1).** A UI e o domínio seguem como
+estão; as três vivem em `src/presentation/localApi/handlers/workspaces.ts`.
+- `DELETE /workspaces/{id}` com a tarefa ativa (em execução ou pausada) naquele workspace → **409**,
+  nos modos `move` e `delete`. A UI não barra; pela API a exclusão apagaria ou moveria a tarefa por
+  baixo do timer.
+- `color` fora de `WORKSPACE_COLORS` em `POST`/`PUT /workspaces` → **400** (`isWorkspaceColor`). A UI
+  só oferece os slots; o domínio aceita qualquer string. `color` ausente: no `POST` segue o padrão do domínio
+  (derivada do nome); no `PUT` preserva a cor atual, como os outros `PUT` parciais da API.
+- Excluir o último workspace e destino de `move` inexistente → **409**, checados no handler antes de
+  chamar a exclusão. O domínio lança `DomainError` (que a API mapeia para 400) e a UI não deixa
+  chegar lá. `DEFAULT_WORKSPACE_ID` não tem regra própria, como na UI e no domínio.
 
 **Fora do escopo, registrado:** o deep link `task/start` (`App.tsx`, `handleDeepLinkStart`) resolve
 projeto e categoria por nome com `findAll()` sem workspace — o mesmo defeito 2.

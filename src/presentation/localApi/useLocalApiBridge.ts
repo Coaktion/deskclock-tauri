@@ -2,17 +2,24 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
+import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import {
+  notifyCategoriesChanged,
+  notifyCustomFieldsChanged,
+  notifyProjectCategoriesChanged,
+  notifyProjectsChanged,
+} from "@shared/utils/catalogSync";
 import { todayISO } from "@shared/utils/time";
-import { changesRunningTask, dispatchLocalApiRequest } from "./dispatch";
+import { waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
 import { errorResult } from "./errors";
 import { createSerialQueue, waitForSignal } from "./queue";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
-// Teto da espera pelo render depois de mexer na tarefa em execução. Uma op que
+// Teto da espera pelo render depois de mexer em estado de contexto. Uma op que
 // falhou não muda estado nenhum, e sem teto a fila pararia esperando.
 const COMMIT_WAIT_MS = 300;
 
@@ -28,9 +35,10 @@ interface BridgeRequest {
  * do `RunningTaskProvider`.
  */
 export function useLocalApiBridge(): void {
-  const { taskRepo, plannedTaskRepo, projectRepo, categoryRepo, workspaceRepo } = useRepositories();
+  const repos = useRepositories();
   const running = useRunningTask();
-  const activeWorkspaceId = useActiveWorkspaceId();
+  const { activeWorkspaceId, switchTo } = useWorkspaces();
+  const { create, update, remove } = useWorkspaceAdmin();
   const depsRef = useRef<LocalApiDeps | null>(null);
   const commitListeners = useRef(new Set<() => void>());
 
@@ -39,14 +47,21 @@ export function useLocalApiBridge(): void {
   // requisição só pode começar com o retrato deste commit.
   useLayoutEffect(() => {
     depsRef.current = {
-      taskRepo,
-      plannedTaskRepo,
-      projectRepo,
-      categoryRepo,
-      workspaceRepo,
+      taskRepo: repos.taskRepo,
+      plannedTaskRepo: repos.plannedTaskRepo,
+      projectRepo: repos.projectRepo,
+      categoryRepo: repos.categoryRepo,
+      workspaceRepo: repos.workspaceRepo,
+      projectCategoryRepo: repos.projectCategoryRepo,
+      customFieldRepo: repos.customFieldRepo,
       activeWorkspaceId,
       running,
+      workspaces: { create, update, remove, switchTo },
       notifyPlannedTasksChanged: () => emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {}),
+      notifyProjectsChanged,
+      notifyCategoriesChanged,
+      notifyProjectCategoriesChanged,
+      notifyCustomFieldsChanged,
       nowISO: () => new Date().toISOString(),
       todayISO,
     };
@@ -64,7 +79,7 @@ export function useLocalApiBridge(): void {
         ? await dispatchLocalApiRequest(deps, op, params)
         : errorResult(503, "App ainda carregando — tente novamente em instantes");
       await invoke("local_api_respond", { id, status: result.status, body: result.body ?? null });
-      if (deps && changesRunningTask(op) && depsRef.current === deps) {
+      if (deps && waitsForNextCommit(op) && depsRef.current === deps) {
         await waitForSignal(commitListeners.current, COMMIT_WAIT_MS);
       }
     };

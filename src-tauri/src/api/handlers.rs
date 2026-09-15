@@ -89,6 +89,29 @@ pub struct WorkspaceQuery {
     workspace_id: Option<String>,
 }
 
+// Submódulos por recurso: enxergam `forward`, `parse_body` e `WorkspaceQuery`
+// sem que eles precisem sair do escopo privado deste módulo.
+pub mod catalog;
+pub mod custom_fields;
+pub mod workspaces;
+
+/// Valida o corpo e o repassa em `params.body`, junto do que a rota já extraiu.
+async fn forward_with_body<T: DeserializeOwned>(
+    state: &ApiState,
+    op: &str,
+    body: &Bytes,
+    required: bool,
+    mut params: Value,
+) -> Response {
+    match parse_body::<T>(body, required) {
+        Ok(body) => {
+            params["body"] = body;
+            forward(state, op, params).await
+        }
+        Err(r) => *r,
+    }
+}
+
 // ---------------- GET /status ----------------
 
 #[utoipa::path(

@@ -37,7 +37,10 @@ let running: Partial<RunningTaskContextValue> = { runningTask: null };
 vi.mock("@presentation/hooks/useRunningTask", () => ({ useRunningTask: () => running }));
 vi.mock("@presentation/contexts/RepositoriesContext", () => ({ useRepositories: () => ({}) }));
 vi.mock("@presentation/contexts/WorkspaceContext", () => ({
-  useActiveWorkspaceId: () => WS_ATIVO,
+  useWorkspaces: () => ({ activeWorkspaceId: WS_ATIVO, switchTo: vi.fn() }),
+}));
+vi.mock("@presentation/hooks/useWorkspaceAdmin", () => ({
+  useWorkspaceAdmin: () => ({ create: vi.fn(), update: vi.fn(), remove: vi.fn() }),
 }));
 
 const OK: LocalApiResult = { status: 200, body: {} };

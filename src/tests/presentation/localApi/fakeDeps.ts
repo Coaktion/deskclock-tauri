@@ -6,6 +6,11 @@ import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRe
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
 import type { ICategoryRepository } from "@domain/repositories/ICategoryRepository";
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
+import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
+import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { CustomField } from "@domain/entities/CustomField";
+import type { ProjectCategory } from "@domain/entities/ProjectCategory";
+import type { Workspace } from "@domain/entities/Workspace";
 import type { LocalApiDeps, RunningTaskOps } from "@presentation/localApi/types";
 import { localISO } from "../../helpers/localTime";
 
@@ -132,15 +137,50 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     ...overrides.running,
   };
 
+  const projectCategoryRepo = {
+    findByProject: vi.fn(async (): Promise<ProjectCategory[]> => []),
+    findAll: vi.fn(async (): Promise<ProjectCategory[]> => []),
+    setForProject: vi.fn(async () => {}),
+    replaceMondayFor: vi.fn(async () => {}),
+  } satisfies Record<keyof IProjectCategoryRepository, unknown>;
+
+  const customFieldRepo = {
+    findAll: vi.fn(async (): Promise<CustomField[]> => []),
+    findById: vi.fn(async (): Promise<CustomField | null> => null),
+    findByLabel: vi.fn(async (): Promise<CustomField | null> => null),
+    save: vi.fn(async (_field: CustomField) => {}),
+    update: vi.fn(async (_field: CustomField) => {}),
+    delete: vi.fn(async () => {}),
+  } satisfies Record<keyof ICustomFieldRepository, unknown>;
+
+  const workspaces = {
+    create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
+      id: "ws-novo",
+      name,
+      color: color ?? "rose",
+      createdAt: NOW,
+    })),
+    update: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
+    switchTo: vi.fn(async () => {}),
+  };
+
   const deps = {
     taskRepo,
     plannedTaskRepo,
     projectRepo,
     categoryRepo,
     workspaceRepo,
+    projectCategoryRepo,
+    customFieldRepo,
     activeWorkspaceId: WS_ATIVO,
     running,
+    workspaces,
     notifyPlannedTasksChanged: vi.fn(async () => {}),
+    notifyProjectsChanged: vi.fn(async () => {}),
+    notifyCategoriesChanged: vi.fn(async () => {}),
+    notifyProjectCategoriesChanged: vi.fn(async () => {}),
+    notifyCustomFieldsChanged: vi.fn(async () => {}),
     nowISO: () => NOW,
     todayISO: () => TODAY,
   };

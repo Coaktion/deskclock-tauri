@@ -1,5 +1,24 @@
 import { errorResult, toErrorResult } from "./errors";
-import { listCategories, listProjects } from "./handlers/catalog";
+import {
+  createCategoryHandler,
+  createProjectHandler,
+  deleteCategoryHandler,
+  deleteManyCategories,
+  deleteManyProjects,
+  deleteProjectHandler,
+  importCategories,
+  importProjects,
+  listCategories,
+  listProjects,
+  updateCategoryHandler,
+  updateProjectHandler,
+} from "./handlers/catalog";
+import {
+  createCustomFieldHandler,
+  deleteCustomFieldHandler,
+  listCustomFields,
+  updateCustomFieldHandler,
+} from "./handlers/customFields";
 import {
   completePlannedTask,
   createPlannedTaskHandler,
@@ -9,6 +28,7 @@ import {
   uncompletePlannedTask,
   updatePlannedTaskHandler,
 } from "./handlers/plannedTasks";
+import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
   getStatus,
@@ -18,9 +38,17 @@ import {
   stopTask,
   toggleTask,
 } from "./handlers/tasks";
+import {
+  createWorkspaceHandler,
+  deleteWorkspaceHandler,
+  getActiveWorkspace,
+  listWorkspaces,
+  setActiveWorkspace,
+  updateWorkspaceHandler,
+} from "./handlers/workspaces";
 import type { LocalApiDeps, LocalApiHandler, LocalApiParams, LocalApiResult } from "./types";
 
-/** As chaves são as `op` que `src-tauri/src/api/handlers.rs` emite. */
+/** As chaves são as `op` que `src-tauri/src/api/handlers.rs` e seus submódulos emitem. */
 const HANDLERS: Record<string, LocalApiHandler> = {
   "status.get": getStatus,
   "tasks.start": startTask,
@@ -29,8 +57,30 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "tasks.stop": stopTask,
   "tasks.toggle": toggleTask,
   "tasks.cancel": cancelTask,
+  "workspaces.list": listWorkspaces,
+  "workspaces.create": createWorkspaceHandler,
+  "workspaces.update": updateWorkspaceHandler,
+  "workspaces.delete": deleteWorkspaceHandler,
+  "workspaces.getActive": getActiveWorkspace,
+  "workspaces.setActive": setActiveWorkspace,
   "projects.list": listProjects,
+  "projects.create": createProjectHandler,
+  "projects.update": updateProjectHandler,
+  "projects.delete": deleteProjectHandler,
+  "projects.import": importProjects,
+  "projects.deleteMany": deleteManyProjects,
+  "projectCategories.list": listProjectCategories,
+  "projectCategories.set": setProjectCategories,
   "categories.list": listCategories,
+  "categories.create": createCategoryHandler,
+  "categories.update": updateCategoryHandler,
+  "categories.delete": deleteCategoryHandler,
+  "categories.import": importCategories,
+  "categories.deleteMany": deleteManyCategories,
+  "customFields.list": listCustomFields,
+  "customFields.create": createCustomFieldHandler,
+  "customFields.update": updateCustomFieldHandler,
+  "customFields.delete": deleteCustomFieldHandler,
   "plannedTasks.list": listPlannedTasks,
   "plannedTasks.get": getPlannedTask,
   "plannedTasks.create": createPlannedTaskHandler,
@@ -55,7 +105,18 @@ export async function dispatchLocalApiRequest(
   }
 }
 
-/** Ops que mudam o `RunningTaskContext` — a próxima requisição precisa esperar o render. */
-export function changesRunningTask(op: string): boolean {
-  return op.startsWith("tasks.");
+const WORKSPACE_MUTATIONS = new Set([
+  "workspaces.create",
+  "workspaces.update",
+  "workspaces.delete",
+  "workspaces.setActive",
+]);
+
+/**
+ * Ops que mudam o que o retrato lê de contexto — a tarefa em execução, o
+ * workspace ativo ou a lista de workspaces. A próxima requisição precisa
+ * esperar o render.
+ */
+export function waitsForNextCommit(op: string): boolean {
+  return op.startsWith("tasks.") || WORKSPACE_MUTATIONS.has(op);
 }
