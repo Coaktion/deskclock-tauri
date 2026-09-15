@@ -10,18 +10,20 @@ import { makeTask, WS_ATIVO } from "./fakeDeps";
 // dispara as requisições como se viessem do Rust.
 type RequestHandler = (event: { payload: unknown }) => void;
 const bus = vi.hoisted(() => ({
-  handler: null as RequestHandler | null,
-  resolveListen: null as (() => void) | null,
+  handlers: [] as RequestHandler[],
+  resolvers: [] as (() => void)[],
+  unlisten: (() => {}) as () => void,
   invoke: vi.fn(async (_cmd: string, _args?: unknown) => undefined as unknown),
   dispatch: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/event", () => ({
   emit: vi.fn(async () => {}),
+  // Guarda todos os ouvintes: é assim que se reproduz o ouvinte duplicado.
   listen: (_event: string, handler: RequestHandler) => {
-    bus.handler = handler;
+    bus.handlers.push(handler);
     return new Promise<() => void>((resolve) => {
-      bus.resolveListen = () => resolve(() => {});
+      bus.resolvers.push(() => resolve(() => bus.unlisten()));
     });
   },
 }));
@@ -46,8 +48,16 @@ vi.mock("@presentation/hooks/useWorkspaceAdmin", () => ({
 const OK: LocalApiResult = { status: 200, body: {} };
 
 function request(id: string, op: string) {
-  bus.handler?.({ payload: { id, op, params: {} } });
+  bus.handlers.forEach((handler) => handler({ payload: { id, op, params: {} } }));
 }
+
+function respondCount(id: string) {
+  return bus.invoke.mock.calls.filter(
+    ([cmd, args]) => cmd === "local_api_respond" && (args as { id: string }).id === id
+  ).length;
+}
+
+const resolveAll = () => bus.resolvers.forEach((resolve) => resolve());
 
 function responded(id: string) {
   return bus.invoke.mock.calls.some(
@@ -57,14 +67,16 @@ function responded(id: string) {
 
 async function mountReady() {
   const hook = renderHook(() => useLocalApiBridge());
-  await act(async () => bus.resolveListen?.());
+  await act(async () => resolveAll());
   return hook;
 }
 
 describe("useLocalApiBridge", () => {
   beforeEach(() => {
-    bus.handler = null;
-    bus.resolveListen = null;
+    bus.handlers = [];
+    bus.resolvers = [];
+    bus.unlisten = () => {};
+    globalThis.__deskclockLocalApiSeenIds = undefined;
     bus.invoke.mockClear();
     bus.dispatch.mockReset();
     running = { runningTask: null };
@@ -75,7 +87,7 @@ describe("useLocalApiBridge", () => {
     await act(async () => {});
     expect(bus.invoke).not.toHaveBeenCalledWith("local_api_bridge_ready");
 
-    await act(async () => bus.resolveListen?.());
+    await act(async () => resolveAll());
     expect(bus.invoke).toHaveBeenCalledWith("local_api_bridge_ready");
   });
 
@@ -119,6 +131,84 @@ describe("useLocalApiBridge", () => {
     await vi.waitFor(() => expect(responded("r2")).toBe(true));
     expect(bus.dispatch).toHaveBeenCalledTimes(2);
     expect(erro).toHaveBeenCalled();
+    erro.mockRestore();
+  });
+
+  it("com dois ouvintes vivos, a mesma requisição executa e responde uma vez só", async () => {
+    bus.dispatch.mockResolvedValue(OK);
+    await mountReady();
+    await mountReady();
+    expect(bus.handlers).toHaveLength(2);
+
+    await act(async () => request("r1", "history.create"));
+    await vi.waitFor(() => expect(responded("r1")).toBe(true));
+    await act(async () => {});
+
+    expect(bus.dispatch).toHaveBeenCalledTimes(1);
+    expect(respondCount("r1")).toBe(1);
+  });
+
+  it("ids diferentes continuam executando cada um", async () => {
+    bus.dispatch.mockResolvedValue(OK);
+    await mountReady();
+    await mountReady();
+
+    await act(async () => {
+      request("r1", "history.create");
+      request("r2", "history.create");
+    });
+    await vi.waitFor(() => expect(responded("r2")).toBe(true));
+    await act(async () => {});
+
+    expect(bus.dispatch).toHaveBeenCalledTimes(2);
+    expect(respondCount("r1")).toBe(1);
+    expect(respondCount("r2")).toBe(1);
+  });
+
+  it("falha ao remover o ouvinte é logada e não quebra a desmontagem", async () => {
+    const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+    bus.unlisten = () => {
+      throw new TypeError("Cannot read properties of undefined (reading 'handlerId')");
+    };
+    const { unmount } = await mountReady();
+
+    expect(() => unmount()).not.toThrow();
+    await vi.waitFor(() =>
+      expect(erro).toHaveBeenCalledWith(
+        "[local-api] falha ao remover o ouvinte da ponte",
+        expect.any(TypeError)
+      )
+    );
+    erro.mockRestore();
+  });
+
+  it("ouvinte de efeito já limpo não executa: a requisição roda na instância remontada", async () => {
+    const erro = vi.spyOn(console, "error").mockImplementation(() => {});
+    const vistas: (string | undefined)[] = [];
+    bus.dispatch.mockImplementation(async (deps: LocalApiDeps) => {
+      vistas.push(deps.running.runningTask?.id);
+      return OK;
+    });
+    // Remoção que lança deixa o ouvinte antigo vivo, como na corrida do Tauri.
+    bus.unlisten = () => {
+      throw new TypeError("Cannot read properties of undefined (reading 'handlerId')");
+    };
+    const antiga = await mountReady();
+    antiga.unmount();
+
+    running = { runningTask: makeTask({ id: "viva" }) };
+    await mountReady();
+    expect(bus.handlers).toHaveLength(2);
+
+    await act(async () => request("r1", "history.create"));
+    await vi.waitFor(() => expect(responded("r1")).toBe(true));
+    await act(async () => {});
+
+    expect(bus.dispatch).toHaveBeenCalledTimes(1);
+    expect(respondCount("r1")).toBe(1);
+    expect(vistas).toEqual(["viva"]);
+    // A instância remontada só desmonta na limpeza automática, já sem o espião.
+    bus.unlisten = () => {};
     erro.mockRestore();
   });
 });

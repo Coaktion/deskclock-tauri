@@ -169,6 +169,14 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 - **Pendência:** `IntegrationsModalsHost.tsx` e `WeekPlanningView.tsx` ainda têm cópia própria do cálculo da
   segunda-feira; migrar para `weekBoundsOf` fica fora da Fase 2.
 
+**Defeito corrigido na Fase 2 — escrita executada duas vezes (2026-09-15).** Com `pnpm tauri dev`, um `POST /tasks`
+gravava duas tarefas. No Tauri 2.10.3, o StrictMode desmonta o efeito do `useLocalApiBridge` antes de o `eval` que
+registra o ouvinte rodar na página; o `unregisterListener` lança `TypeError`, o `plugin:event|unlisten` nunca é
+chamado e ficam dois ouvintes vivos. Correção: `claimRequestId` (`queue.ts`) deduplica por id no `globalThis`,
+síncrono, antes de enfileirar (últimos 500 ids); ouvinte cujo efeito já foi limpo ignora a requisição antes de
+reivindicar o id — senão, com a ordem de entrega indefinida do Tauri, requisições seguidas cairiam em filas
+diferentes e perderiam a execução serial. A limpeza passa a logar a falha em vez de engoli-la.
+
 **Regras só da API — decisões do usuário, 2026-09-15 (Fase 1).** A UI e o domínio seguem como
 estão; as três vivem em `src/presentation/localApi/handlers/workspaces.ts`.
 - `DELETE /workspaces/{id}` com a tarefa ativa (em execução ou pausada) naquele workspace → **409**,

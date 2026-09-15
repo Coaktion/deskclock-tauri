@@ -23,3 +23,23 @@ export function waitForSignal(listeners: Set<() => void>, timeoutMs: number): Pr
     listeners.add(done);
   });
 }
+
+declare global {
+  var __deskclockLocalApiSeenIds: Set<string> | undefined;
+}
+
+// Folga para entregas repetidas quase simultâneas, sem crescer sem limite.
+export const MAX_SEEN_IDS = 500;
+
+/**
+ * `true` só na primeira vez que o id de requisição aparece **nesta página**. O
+ * registro mora no `globalThis`, e não no módulo: o HMR recria o módulo, e um
+ * ouvinte antigo que sobrevivesse guardaria um conjunto antigo.
+ */
+export function claimRequestId(id: string): boolean {
+  const seen = (globalThis.__deskclockLocalApiSeenIds ??= new Set());
+  if (seen.has(id)) return false;
+  seen.add(id);
+  if (seen.size > MAX_SEEN_IDS) seen.delete(seen.values().next().value as string);
+  return true;
+}

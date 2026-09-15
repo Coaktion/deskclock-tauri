@@ -1,5 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
-import { createSerialQueue, waitForSignal } from "@presentation/localApi/queue";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import {
+  claimRequestId,
+  createSerialQueue,
+  MAX_SEEN_IDS,
+  waitForSignal,
+} from "@presentation/localApi/queue";
 
 describe("createSerialQueue", () => {
   it("executa um trabalho por vez, na ordem de chegada", async () => {
@@ -50,5 +55,24 @@ describe("waitForSignal", () => {
     await espera;
     expect(listeners.size).toBe(0);
     vi.useRealTimers();
+  });
+});
+
+describe("claimRequestId", () => {
+  afterEach(() => {
+    globalThis.__deskclockLocalApiSeenIds = undefined;
+  });
+
+  it("aceita o id uma vez por página", () => {
+    expect(claimRequestId("a")).toBe(true);
+    expect(claimRequestId("a")).toBe(false);
+  });
+
+  it("passado o limite, esquece o mais antigo", () => {
+    claimRequestId("a");
+    for (let i = 0; i < MAX_SEEN_IDS; i++) claimRequestId(`id-${i}`);
+    const seen = globalThis.__deskclockLocalApiSeenIds as Set<string> | undefined;
+    expect(seen?.size).toBe(MAX_SEEN_IDS);
+    expect(claimRequestId("a")).toBe(true);
   });
 });

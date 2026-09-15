@@ -16,7 +16,7 @@ import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { todayISO } from "@shared/utils/time";
 import { waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
 import { errorResult } from "./errors";
-import { createSerialQueue, waitForSignal } from "./queue";
+import { claimRequestId, createSerialQueue, waitForSignal } from "./queue";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -86,7 +86,10 @@ export function useLocalApiBridge(): void {
       }
     };
 
+    // No Tauri 2.10 um ouvinte pode sobreviver à limpeza e a mesma requisição
+    // chegar a dois: descartado ignora, e o id deduplica os vivos (spec §6).
     const unlisten = listen<BridgeRequest>(REQUEST_EVENT, ({ payload }) => {
+      if (disposed || !claimRequestId(payload.id)) return;
       void enqueue(() => handle(payload)).catch((error) => {
         console.error("[local-api] falha ao responder", error);
       });
@@ -99,7 +102,11 @@ export function useLocalApiBridge(): void {
 
     return () => {
       disposed = true;
-      void unlisten.then((fn) => fn());
+      void unlisten
+        .then((fn) => fn())
+        .catch((error) => {
+          console.error("[local-api] falha ao remover o ouvinte da ponte", error);
+        });
     };
   }, []);
 }
