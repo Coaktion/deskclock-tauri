@@ -9,7 +9,7 @@ import {
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { IconButton, TaskRow } from "@presentation/components/ui";
+import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
 import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
 import { getProjectColor } from "@shared/utils/projectColor";
 
@@ -20,6 +20,11 @@ interface PlannedTaskItemProps {
   categories: Category[];
   /** Se a execução em curso impede este ▶ — e, quando ela é esta mesma tarefa, quem o diz. */
   playBlock?: PlayBlock;
+  /**
+   * O realce da linha em execução, derivado **pela tela**: aqui não há acesso à
+   * tarefa em curso, só ao id desta planejada.
+   */
+  execution?: RowExecution;
   /** true quando o rastreamento automático está acompanhando esta reunião para notificar. */
   tracked?: boolean;
   onPlay: (task: PlannedTask) => void;
@@ -53,6 +58,7 @@ export function PlannedTaskItem({
   projects,
   categories,
   playBlock = "none",
+  execution,
   tracked = false,
   onPlay,
   onUpdate,
@@ -91,6 +97,7 @@ export function PlannedTaskItem({
       <TaskRow
         title={task.name}
         completed={isCompleted}
+        execution={execution}
         titleMarks={
           (task.scheduleType === "recurring" || tracked) && (
             <>

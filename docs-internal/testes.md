@@ -7,6 +7,7 @@
 O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis sem dependências de runtime externo (Tauri, DOM, rede).
 
 **O que testamos:**
+
 - `domain/usecases/` — lógica de negócio pura com repositório mockado (`vi.fn()`)
 - `infra/database/` — repositórios SQLite com `getDb()` mockado via `vi.mock`
 - `infra/integrations/google/` — funções utilitárias puras (ex: `parseRRuleDays`)
@@ -18,6 +19,14 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   sobre o contrato (papel ARIA, nome acessível, o que a prop ausente deixa de desenhar), nunca
   sobre classe ou markup. Componente de tela continua sem teste de renderização.
 
+  > **Emenda de 2026-09-16.** Onde o contrato **é** tom ou movimento, e nada além da classe o
+  > expressa, afirmar a classe vale. É o caso do `ExecutionDot`: o que distingue em execução de
+  > pausada são o `animate-pulse` e o token de cor, e não há papel ARIA que carregue isso — o
+  > `title` diz o estado, mas não diz que ele pulsa. A régua continua sendo o contrato: afirme a
+  > classe que **significa** (o pulso, o tom do estado), nunca a que **arranja** (padding, grade,
+  > gap, ordem de coluna) — essa é medida, e quem a mede é a `screenGeometry`. Sem a fresta, tirar
+  > o pulso do primitivo passaria verde.
+
 > Não há `@testing-library/jest-dom` no setup — `toBeInTheDocument` não existe. Use
 > `expect(...).toBeTruthy()` e os atributos direto do elemento.
 
@@ -27,6 +36,7 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 > teste de hook achando que a ferramenta não existia.
 
 **O que não testamos (e por quê):**
+
 - Renderização de componentes React — decisão de custo, não de ferramenta: a asserção é sobre
   markup, que muda a cada ajuste visual. Se a lógica valer teste, ela sai do componente e vira
   hook ou use case.
@@ -34,6 +44,7 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
 - Contexts React acoplados ao runtime Tauri (`RunningTaskContext`)
 
 **Convenções:**
+
 - Arquivos espelham o source: `src/tests/domain/usecases/plannedTasks/CreatePlannedTask.test.ts`
 - Factory `makeRepo()` reutilizada por arquivo de teste para minimizar boilerplate
 - Casos de teste nomeados em português, descrevendo o comportamento esperado
@@ -47,4 +58,3 @@ O projeto adota testes **unitários** com Vitest, focados nas camadas testáveis
   é "meio-dia do dia 30 **para quem trabalhou**", e é isso que o helper escreve.
 
 ---
-

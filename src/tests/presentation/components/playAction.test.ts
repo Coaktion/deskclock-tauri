@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
+import type { Task, TaskStatus } from "@domain/entities/Task";
 import {
+  executionOf,
   isPlayBlocked,
   playTitle,
   resolvePlayBlock,
@@ -42,6 +44,32 @@ describe("playTitle", () => {
 
   it("as demais linhas dizem que há outra em execução", () => {
     expect(playTitle("other", "Repetir tarefa")).toBe(PLAY_BLOCKED_TITLE);
+  });
+});
+
+describe("executionOf", () => {
+  // Só o `status` importa aqui: é o único campo que o helper lê, e um fixture
+  // cheio de tarefa faria o teste falhar no dia em que a entidade ganhar campo.
+  const task = (status: TaskStatus) => ({ status }) as Task;
+
+  it("sem ser a linha da execução, não há realce", () => {
+    expect(executionOf("none", task("running"))).toBeUndefined();
+    expect(executionOf("other", task("running"))).toBeUndefined();
+  });
+
+  it("sem tarefa em curso, não há realce — mesmo em `self`", () => {
+    expect(executionOf("self", null)).toBeUndefined();
+  });
+
+  it("a linha da execução se realça no estado dela", () => {
+    expect(executionOf("self", task("running"))).toBe("running");
+    expect(executionOf("self", task("paused"))).toBe("paused");
+  });
+
+  it("concluída não é pausa — ela não se realça", () => {
+    // Não há caminho que ponha uma concluída no lugar da execução em curso; o
+    // que o teste trava é a tradução, não o caminho.
+    expect(executionOf("self", task("completed"))).toBeUndefined();
   });
 });
 

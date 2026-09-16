@@ -176,4 +176,87 @@ describe("TaskRow", () => {
     expect(onToggleBillable).toHaveBeenCalled();
     expect(onClick).not.toHaveBeenCalled();
   });
+
+  /**
+   * O realce é **par**: a marca ao lado do nome e o fundo da faixa. Sozinho, o
+   * fundo não diz nada a quem não distingue o tom, e sozinha a marca de 6px some
+   * numa lista cheia.
+   */
+  it("a linha em execução pulsa ao lado do nome e tinge a faixa", () => {
+    const { container } = render(<TaskRow title="Daily" execution="running" />);
+    const marca = screen.getByTitle("Em execução");
+
+    expect(marca.className).toContain("animate-pulse");
+    expect(marca.className).toContain("bg-accent");
+    expect(container.firstElementChild!.className).toContain("bg-accent/5");
+  });
+
+  /** Pausada é outro estado, não o mesmo mais fraco: sem pulso e no tom da pausa. */
+  it("a linha pausada tem marca e tom próprios, e não pulsa", () => {
+    const { container } = render(<TaskRow title="Daily" execution="paused" />);
+    const marca = screen.getByTitle("Pausada");
+
+    expect(marca.className).not.toContain("animate-pulse");
+    expect(marca.className).toContain("bg-paused");
+    expect(container.firstElementChild!.className).toContain("bg-paused/5");
+  });
+
+  /**
+   * A seleção vence o fundo — é o gesto em curso —, e a marca continua: perder as
+   * duas coisas ao marcar a caixa esconderia justamente a linha que não se quer
+   * excluir por engano.
+   */
+  it("selecionada e em execução, o fundo é o da seleção e a marca fica", () => {
+    const { container } = render(<TaskRow title="Daily" execution="running" selected />);
+
+    expect(container.firstElementChild!.className).toContain("bg-accent/10");
+    expect(container.firstElementChild!.className).not.toContain("bg-accent/5");
+    expect(screen.getByTitle("Em execução")).toBeTruthy();
+  });
+
+  /**
+   * O outro lado, e o que guarda os call sites que não passam a prop: sem
+   * `execution` a linha é exatamente a de antes.
+   */
+  it("sem execução, a linha não ganha marca nem tinta", () => {
+    const { container } = render(<TaskRow title="Daily" duration="1h" />);
+
+    expect(screen.queryByTitle("Em execução")).toBeNull();
+    expect(screen.queryByTitle("Pausada")).toBeNull();
+    expect(container.firstElementChild!.className).toContain("hover:bg-surface");
+    expect(container.firstElementChild!.className).not.toContain("bg-accent/5");
+    expect(container.firstElementChild!.className).not.toContain("bg-paused/5");
+  });
+
+  /**
+   * `false` é o que o `PlannedTaskItem` passa em `titleMarks` quando não há
+   * recorrência nem sino, e sem execução o grupo de marcas não pode nascer vazio
+   * — um invólucro a mais mudaria a linha nos call sites que não realçam.
+   */
+  it("sem marca nenhuma, o grupo ao lado do nome não é emitido", () => {
+    const { container } = render(<TaskRow title="Daily" titleMarks={false} />);
+
+    expect(container.querySelector(".gap-1\\.5")).toBeNull();
+  });
+
+  /**
+   * As duas marcas dividem o mesmo grupo ao lado do nome, e compor não pode
+   * custar nenhuma delas — foi o que quase aconteceu: o grupo só existia quando
+   * o call site passava `titleMarks`.
+   */
+  it("a marca de execução convive com as marcas do call site", () => {
+    render(
+      <TaskRow title="Daily" execution="running" titleMarks={<span data-marca="recorrente" />} />
+    );
+
+    const marca = screen.getByTitle("Em execução");
+    const grupo = marca.parentElement!;
+
+    expect(grupo.querySelector("[data-marca]")).not.toBeNull();
+    expect(grupo.textContent).toContain("Daily");
+    // E a de execução vem primeiro: ela fala do agora.
+    expect([...grupo.children].indexOf(marca)).toBeLessThan(
+      [...grupo.children].findIndex((c) => c.hasAttribute("data-marca"))
+    );
+  });
 });

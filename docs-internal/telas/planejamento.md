@@ -35,6 +35,7 @@
 > Teclado e leitor de tela vêm junto: `role="separator"` com os limites, setas **do próprio eixo**
 > ajustando de 16 em 16 px (consumir a seta do eixo alheio roubaria a tecla de quem navega a tela),
 > `Home` e duplo clique voltando ao padrão.
+
 - **Só dias úteis.** Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta — a antiga `showWeekend` foi removida. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia.
 
 > **A regra vale também na entrada, e o import da Agenda era o único lugar que ainda não a
@@ -44,6 +45,7 @@
 > continuava selecionado por padrão, entrava na contagem do botão e era importado do mesmo jeito. Os
 > dias sugeridos pela recorrência do Google são aparados pela mesma régua, ou a série que repete às
 > segundas e aos sábados guardaria um `6` que a lista de dias não mostra nem permite desmarcar.
+
 - **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex, no topo da coluna da direita. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
 - **Barra de seleção:** "Selecionar tarefas" fica na **mesma linha dos botões de dia**, encostado à direita (`ml-auto`) — não no header, e só aparece havendo ao menos uma tarefa. Cabe ali desde que o fim de semana saiu do planejamento; uma linha só para a barra custava altura que é da lista. A rolagem horizontal fica no grupo das pílulas, não na linha: na linha, os botões de seleção sairiam da tela junto com os dias.
 - **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campos personalizados, agendamento e ações — empilhados na coluna.
@@ -60,7 +62,27 @@
 - **E o chip de faturamento vem depois deles, ancorado à direita.** A largura que os botões abrem sai do `1fr` do nome e puxa para a esquerda tudo o que estiver à direita dele: com o chip antes, ele andava ~118px no instante em que o cursor entrava na linha, e o `Excluir` — que não pergunta — herdava o lugar onde o dedo já estava indo. Desde que o chip virou controle (`bbb4a1b`), posição estável é requisito, não acabamento. Em repouso o desenho não muda: a célula fechada cancela o `gap` que não ocupa (`-mr-2.5`), e o chip fica exatamente onde sempre esteve. Só vale onde a célula fecha em largura — nas Entradas, que têm duração e portanto célula já reservada, o chip continua antes.
 - **Importar Google Agenda:** **não se entra por aqui.** O botão que ficava ao lado da navegação de semana foi removido — o modal abre pelo rail de integrações e pela tela de Integrações, que é onde está o seletor de workspace que governa o destino do import (§5.7). Ter dois caminhos para o mesmo modal era justamente o que fazia o import nascer num workspace diferente do que o Planejamento mostra na tela.
 
+#### Realce da tarefa em execução
+
+- **A linha que está rodando se acende**, e o realce é um par: um ponto de 6px **ao lado do nome**,
+  na mesma fileira das marcas de recorrência e do sino (a de execução vem primeiro), e a faixa
+  inteira tingida. Nenhum dos dois basta sozinho — o fundo em 5% não se lê como estado por quem não
+  distingue o tom, e o ponto sozinho some numa lista cheia.
+- **Em execução e pausada são estados distintos, não um mais fraco que o outro.** Em execução: ponto
+  em `accent` **pulsando**, faixa `bg-accent/5`. Pausada: ponto em `paused`, **sem pulso**, faixa
+  `bg-paused/5`. É a mesma língua do chip da barra de título e do omnibox rodando. O ponto carrega
+  `title` ("Em execução" / "Pausada"), que é a única coisa que anuncia o estado sem ser cor.
+- **A seleção vence o fundo.** Marcada, a linha volta ao `bg-accent/10` da seleção — é o gesto que o
+  usuário está fazendo agora —, e o ponto continua lá. Fosse o contrário, a linha em execução
+  sumiria no meio das outras justamente enquanto se escolhe o que excluir.
+- **O sinal é o que já existia**: `playBlock === "self"`, a mesma leitura que decide se o ▶ desta
+  linha está bloqueado por ela mesma. `executionOf` (em `components/playAction.ts`, ao lado do
+  `resolvePlayBlock`) traduz esse `self` mais o status da tarefa em curso no realce; quem deriva é a
+  tela (`WeekPlanningView`), porque o `PlannedTaskItem` só conhece o id da planejada. O realce em si
+  é do `TaskRow`, então toda lista que passar a prop o ganha idêntico.
+
 #### Lógica de Concluir/Pendente
+
 - **Concluir:** Adiciona a data atual ao array `completed_dates`. Tarefa deixa de aparecer na lista de planejadas na Tela de Tarefas para aquele dia, mas permanece no planejamento.
 - **Pendente:** Remove a data do array `completed_dates`. Tarefa volta a aparecer como planejada.
 

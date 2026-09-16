@@ -12,7 +12,7 @@ import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { runningPlannedTaskId } from "@domain/utils/plannedLink";
-import { resolvePlayBlock } from "@presentation/components/playAction";
+import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { useTour } from "@presentation/hooks/useTour";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -395,26 +395,32 @@ export function WeekPlanningView() {
                   {dayTasks.length === 0 ? (
                     <p className="px-3 py-2.5 text-xs text-fg-muted">Nenhuma tarefa planejada</p>
                   ) : (
-                    dayTasks.map((task) => (
-                      <PlannedTaskItem
-                        key={task.id}
-                        task={task}
-                        dateISO={day}
-                        projects={projects}
-                        categories={categories}
-                        playBlock={resolvePlayBlock(runningPlannedId, task.id)}
-                        tracked={day === trackedToday && trackedIds.has(task.id)}
-                        onPlay={handlePlay}
-                        onUpdate={update}
-                        onComplete={complete}
-                        onUncomplete={uncomplete}
-                        onDuplicate={duplicate}
-                        onDelete={remove}
-                        selectMode={selectMode}
-                        selected={selectedIds.has(task.id)}
-                        onToggleSelect={toggleSelectTask}
-                      />
-                    ))
+                    dayTasks.map((task) => {
+                      // A mesma leitura serve ao ▶ e ao realce: separadas, uma
+                      // linha poderia bloquear o play sem se acender.
+                      const playBlock = resolvePlayBlock(runningPlannedId, task.id);
+                      return (
+                        <PlannedTaskItem
+                          key={task.id}
+                          task={task}
+                          dateISO={day}
+                          projects={projects}
+                          categories={categories}
+                          playBlock={playBlock}
+                          execution={executionOf(playBlock, runningTask)}
+                          tracked={day === trackedToday && trackedIds.has(task.id)}
+                          onPlay={handlePlay}
+                          onUpdate={update}
+                          onComplete={complete}
+                          onUncomplete={uncomplete}
+                          onDuplicate={duplicate}
+                          onDelete={remove}
+                          selectMode={selectMode}
+                          selected={selectedIds.has(task.id)}
+                          onToggleSelect={toggleSelectTask}
+                        />
+                      );
+                    })
                   )}
                 </SectionCard>
               );

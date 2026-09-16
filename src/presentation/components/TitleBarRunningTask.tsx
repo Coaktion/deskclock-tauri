@@ -1,5 +1,5 @@
 import { Pause, Play, Square, X } from "lucide-react";
-import { IconButton } from "@presentation/components/ui";
+import { ExecutionDot, IconButton } from "@presentation/components/ui";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { formatHHMMSS } from "@shared/utils/time";
@@ -40,9 +40,7 @@ export function TitleBarRunningTask({ onStopRequest, onOpenRequest }: TitleBarRu
             isRunning ? "hover:bg-accent/10" : "hover:bg-paused/10"
           }`}
         >
-          <span
-            className={`shrink-0 w-1.5 h-1.5 rounded-full ${isRunning ? "bg-accent" : "bg-paused"}`}
-          />
+          <ExecutionDot execution={isRunning ? "running" : "paused"} />
           <span
             className={`text-sm truncate max-w-56 ${runningTask.name ? "text-fg-secondary" : "text-fg-muted italic"}`}
           >

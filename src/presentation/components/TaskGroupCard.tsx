@@ -7,7 +7,7 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { TaskRow } from "@presentation/components/ui";
+import { TaskRow, type RowExecution } from "@presentation/components/ui";
 import type { PlayBlock } from "@presentation/components/playAction";
 import { TaskCard } from "./TaskCard";
 
@@ -21,6 +21,15 @@ interface TaskGroupCardProps {
    * do ▶ é o mesmo para o cabeçalho e para as filhas — o pai resolve uma vez.
    */
   playBlock?: PlayBlock;
+  /**
+   * O realce da execução em curso, e ele **não** acompanha o `playBlock`: o
+   * bloqueio vale para o grupo inteiro justamente porque a chave é compartilhada
+   * (§6.3), e é essa mesma partilha que impede o realce de descer às filhas —
+   * acesas todas, um grupo de seis registros se acenderia inteiro por causa de
+   * uma execução que não é nenhum deles. Quem se acende é o cabeçalho, que é a
+   * linha que fala pela chave.
+   */
+  execution?: RowExecution;
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: (group: TaskGroup) => void;
@@ -40,6 +49,7 @@ export function TaskGroupCard({
   categories,
   sentIds,
   playBlock = "none",
+  execution,
   selectable = false,
   selected = false,
   onToggleSelect,
@@ -80,6 +90,8 @@ export function TaskGroupCard({
         categories={categories}
         sent={sentIds?.has(first.id)}
         playBlock={playBlock}
+        // Entrada solta: ela **é** a linha da chave, então é ela que se acende.
+        execution={execution}
         onPlay={onPlay}
         onEdit={onEdit}
         onDelete={onDelete}
@@ -112,6 +124,7 @@ export function TaskGroupCard({
         // clicar era a única linha da tela em que o chip não respondia.
         onToggleBillable={() => onToggleBillable(first)}
         dotColor={projectColor}
+        execution={execution}
         selected={selectable && selected}
         onClick={handleRowClick}
         leading={
@@ -192,6 +205,10 @@ export function TaskGroupCard({
        * quem diz o pertencimento é o trilho do `nested`. Sem casca em volta
        * porque, embrulhadas, a última filha vira `:last-child` do embrulho e
        * perde a régua no meio da lista — e o grupo recolhido também.
+       *
+       * **Sem `execution`, e é de propósito** (ver a prop): a chave é de todas
+       * as irmãs, então acender por chave acenderia o grupo inteiro. O realce
+       * para no cabeçalho, que é quem fala pela chave.
        */}
       {expanded &&
         tasks.map((t) => (
