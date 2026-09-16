@@ -1,4 +1,4 @@
-import { CalendarDays, DownloadCloud, ListChecks, Send, Sheet } from "lucide-react";
+import { CalendarDays, DownloadCloud, ListChecks, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import { isMondayReady } from "@domain/usecases/monday/isMondayReady";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -7,6 +7,8 @@ import {
   type IntegrationModal,
 } from "@presentation/contexts/IntegrationsUiContext";
 import { ClockifyLogo } from "@presentation/sections/integrations/clockify/ClockifyLogo";
+import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
+import { GoogleSheetsLogo } from "@presentation/sections/integrations/google/GoogleSheetsLogo";
 import { MondayLogo } from "@presentation/sections/integrations/monday/MondayLogo";
 
 interface FlyoutAction {
@@ -110,8 +112,10 @@ export function IntegrationsRail() {
         <RailTile
           title="Google Sheets"
           status="Conectado"
-          icon={<Sheet size={18} />}
-          tileClassName="bg-[#0f9d58]"
+          // Placa neutra, como a do Monday: o logo já traz as cores da marca, e
+          // sobre o verde dele a folha verde sumiria.
+          icon={<GoogleSheetsLogo size={18} />}
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Enviar tarefas manualmente…",
@@ -127,8 +131,9 @@ export function IntegrationsRail() {
         <RailTile
           title="Google Agenda"
           status="Conectado"
-          icon={<CalendarDays size={18} />}
-          tileClassName="bg-[#4285f4]"
+          // Placa neutra pelo mesmo motivo da do Sheets.
+          icon={<GoogleCalendarLogo size={18} />}
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Importar eventos",
@@ -144,8 +149,10 @@ export function IntegrationsRail() {
         <RailTile
           title="Clockify"
           status="Conectado"
+          // Placa neutra, como na tela de Integrações: o logo já traz a própria
+          // placa azul, e sobre o mesmo azul ela sumia.
           icon={<ClockifyLogo size={18} />}
-          tileClassName="bg-[#03a9f4]"
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Gerenciar apontamentos…",

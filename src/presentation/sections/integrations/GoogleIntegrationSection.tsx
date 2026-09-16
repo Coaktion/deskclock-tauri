@@ -37,7 +37,6 @@ import { formatLastSync } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
   AlertTriangle,
-  Calendar,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -48,7 +47,6 @@ import {
   LogOut,
   RefreshCw,
   Send,
-  TableProperties,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -62,7 +60,10 @@ import {
 import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
 import { AutoSyncControls, type AutoSyncNow } from "./AutoSyncControls";
 import { SHEETS_AUTO_SYNC_KEYS } from "./autoSyncIntegrations";
+import { GoogleCalendarLogo } from "./google/GoogleCalendarLogo";
+import { GoogleDriveLogo } from "./google/GoogleDriveLogo";
 import { GoogleLogo } from "./google/GoogleLogo";
+import { GoogleSheetsLogo } from "./google/GoogleSheetsLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
 
 const DURATION_FORMATS = [
@@ -620,17 +621,17 @@ export function GoogleIntegrationCard() {
 
       {/* Sub-seções */}
       <div data-tour="google-sheets-section">
-        <SubSection icon={<TableProperties size={14} />} title="Google Sheets">
+        <SubSection icon={<GoogleSheetsLogo size={14} />} title="Google Sheets">
           <SheetsSection disabled={!connected} />
         </SubSection>
       </div>
       <div data-tour="google-calendar-section">
-        <SubSection icon={<Calendar size={14} />} title="Google Calendar">
+        <SubSection icon={<GoogleCalendarLogo size={14} />} title="Google Calendar">
           <CalendarSection disabled={!connected} />
         </SubSection>
       </div>
       <div data-tour="google-drive-backup">
-        <SubSection icon={<DatabaseBackup size={14} />} title="Backup do banco">
+        <SubSection icon={<GoogleDriveLogo size={14} />} title="Backup do banco">
           <BackupSection disabled={!connected} />
         </SubSection>
       </div>
