@@ -4,6 +4,7 @@ import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTas
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
+import { indexPlannedById } from "@domain/utils/plannedActions";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
 import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
@@ -53,7 +54,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /*
  * **O popup tem uma altura só, e ela não depende do estado.** Idle e running
@@ -545,6 +546,9 @@ export function PopupOverlayContent({
   const { categories } = useCategories();
   const { activeFields } = useCustomFields();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
+  // Sobre `tasks`, não `pending`: parar como "Concluída" tira a planejada do
+  // `pending`, e é justo a origem dessa execução que o ⚡ das Executadas procura.
+  const plannedIndex = useMemo(() => indexPlannedById(tasks), [tasks]);
   // Com um grupo só, o rótulo é ruído sobre uma lista que já é homogênea.
   const { timed, untimed } = groupPlannedBySchedule(pending);
   const showHeadings = timed.length > 0 && untimed.length > 0;
@@ -704,6 +708,7 @@ export function PopupOverlayContent({
             categories={categories}
             runningGroupKey={runningGroupKey}
             runningTask={runningTask}
+            plannedIndex={plannedIndex}
             onRepeat={handleRepeat}
             onEdit={setEditingCompleted}
           />
