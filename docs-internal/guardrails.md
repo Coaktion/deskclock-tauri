@@ -55,6 +55,7 @@ Se você está prestes a:
 - **Copiar UI de envio automático (Modo / Gatilho / Horário / Último envio)** → use `<AutoSyncControls keys={...}>` com as chaves vindas de `autoSyncIntegrations.ts`. Dentro de uma seção que já existe, `shell="inline"`; no nível do card, o padrão `section`.
 - **Escrever um "Enviar agora" que monta as deps do `runDailyTemplate` à mão** → é `runDailyFor(nome, todayISO())`. A estratégia já faz isso, e a cópia no componente diverge em silêncio quando a estratégia muda.
 - **Copiar lógica de import de catálogo (fetch → find/create → mapping → persist)** → use helper `runIntegrationImport(...)`.
+- **Copiar o mecanismo de painel ancorado (estado aberto, `triggerRef`, `getBoundingClientRect` → `position: fixed`, clique fora, portal para o `body`)** → use `useAnchoredPanel`. O que varia entre os call sites é opção: `matchTriggerWidth` (o dropdown que copia a largura do campo) e `closeOnScroll` (o gatilho que vive dentro de um scroller). Fechar no resize já vem, e é o tipo de guarda que a cópia esquece num dos dois lados.
 
 Se a abstração ainda não existe (porque o item de refactor está pending), **pare e pergunte** se vale criá-la agora vs esperar o refactor agendado.
 

@@ -59,7 +59,7 @@ tingimento de borda e fundo do omnibox em execução —, para ser achado de rel
   personalizados da planejada. Pelo teclado: ↑/↓ andam pela lista e Enter inicia a ativa; com a
   lista fechada ou vazia, Enter inicia o rascunho como tarefa avulsa. ESC fecha só a lista.
 - Rodapé da lista: **"Ver semana →"**, que leva ao Planejamento.
-- As ações configuradas ficam disponíveis como chips clicáveis no Popup Flyout durante a execução (ver §6.5).
+- **A lista suspensa do omnibox não oferece as ações** — o ⚡ que as executa está na linha do Planejamento e na lista de planejadas do popup, e ali ele dispensa dar play e abrir a edição. Durante a execução elas continuam como chips clicáveis no Popup Flyout (ver §6.5).
 
 > **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
 
