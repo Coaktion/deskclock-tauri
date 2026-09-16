@@ -1,4 +1,5 @@
 import type { Task } from "@domain/entities/Task";
+import { indexPlannedById } from "@domain/utils/plannedActions";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import {
   Button,
@@ -13,6 +14,7 @@ import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useDaySummaries } from "@presentation/hooks/useDaySummaries";
 import { useHistory, type QuickFilter } from "@presentation/hooks/useHistory";
+import { usePlannedTasksForWorkspace } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
@@ -86,6 +88,8 @@ export function HistoryPage() {
   // nem desmonta a seleção em lote, que também mora aqui.
   const [tab, setTab] = useState<ResultTab>("tarefas");
   const { workspaces } = useWorkspaces();
+  const { tasks: plannedTasks } = usePlannedTasksForWorkspace();
+  const plannedIndex = useMemo(() => indexPlannedById(plannedTasks), [plannedTasks]);
 
   useEffect(() => {
     void search(filters);
@@ -306,6 +310,7 @@ export function HistoryPage() {
                   selectedIds={selectedIds}
                   canMoveToWorkspace={workspaces.length > 1}
                   emptyMessage={emptyResultMessage(searchedQuick)}
+                  plannedIndex={plannedIndex}
                   onEnterSelectMode={() => setSelectMode(true)}
                   onExitSelectMode={exitSelectMode}
                   onToggleSelectTask={toggleSelectTask}

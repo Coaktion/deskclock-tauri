@@ -1,6 +1,8 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
+import { actionsOfPlanned, type PlannedIndex } from "@domain/utils/plannedActions";
+import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { Button, IconButton, SectionCard, TaskRow } from "@presentation/components/ui";
 import type { DayGroup } from "@presentation/hooks/useHistory";
@@ -30,6 +32,11 @@ interface HistoryTasksTabProps {
    * de filtro.
    */
   emptyMessage: string;
+  /**
+   * As planejadas do workspace, por id. O ⚡ da linha lê a ação **atual** da
+   * origem — a `Task` não guarda cópia —, e a origem excluída não oferece nada.
+   */
+  plannedIndex: PlannedIndex;
   onEnterSelectMode: () => void;
   onExitSelectMode: () => void;
   onToggleSelectTask: (id: string) => void;
@@ -55,6 +62,7 @@ export function HistoryTasksTab({
   selectedIds,
   canMoveToWorkspace,
   emptyMessage,
+  plannedIndex,
   onEnterSelectMode,
   onExitSelectMode,
   onToggleSelectTask,
@@ -172,6 +180,15 @@ export function HistoryTasksTab({
                     </span>
                   }
                   duration={formatHHMMSS(task.durationSeconds ?? 0)}
+                  /* Some no modo de seleção pela mesma regra do `PlannedTaskItem`: a
+                     linha inteira é alvo de marcar, e o ⚡ engoliria o clique. */
+                  badges={
+                    !selectMode && (
+                      <PlannedActionsFlyout
+                        actions={actionsOfPlanned(plannedIndex, task.plannedTaskId)}
+                      />
+                    )
+                  }
                   billable={task.billable}
                   onToggleBillable={() => onToggleBillable(task)}
                   dotColor={projectColorOf(projects, task.projectId)}

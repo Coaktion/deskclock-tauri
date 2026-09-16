@@ -118,19 +118,19 @@ function usePlannedTasksBase(
   return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };
 }
 
-export function usePlannedTasksForDate(dateISO: string) {
-  const workspaceId = useActiveWorkspaceId();
-  const loadFn = useCallback(
-    (repo: IPlannedTaskRepository) => getPlannedTasksForDate(repo, dateISO, workspaceId),
-    [dateISO, workspaceId]
-  );
-  const onMutate = useCallback(() => {
-    emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-  }, []);
-  const base = usePlannedTasksBase(loadFn, onMutate);
+function emitPlannedTasksChanged() {
+  emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+}
+
+/**
+ * O recorte carregado, mantido em dia com as outras janelas: quem muta avisa, e
+ * quem ouve o aviso relê. Os três recortes (dia, semana, workspace) só diferem
+ * no `loadFn`.
+ */
+function usePlannedTasksSynced(loadFn: (repo: IPlannedTaskRepository) => Promise<PlannedTask[]>) {
+  const base = usePlannedTasksBase(loadFn, emitPlannedTasksChanged);
   const { reload } = base;
 
-  // Recarrega quando outra janela muta tarefas planejadas
   useEffect(() => {
     const unlisten = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => reload());
     return () => {
@@ -141,25 +141,34 @@ export function usePlannedTasksForDate(dateISO: string) {
   return base;
 }
 
+export function usePlannedTasksForDate(dateISO: string) {
+  const workspaceId = useActiveWorkspaceId();
+  const loadFn = useCallback(
+    (repo: IPlannedTaskRepository) => getPlannedTasksForDate(repo, dateISO, workspaceId),
+    [dateISO, workspaceId]
+  );
+  return usePlannedTasksSynced(loadFn);
+}
+
 export function usePlannedTasksForWeek(startISO: string, endISO: string) {
   const workspaceId = useActiveWorkspaceId();
   const loadFn = useCallback(
     (repo: IPlannedTaskRepository) => getPlannedTasksForWeek(repo, startISO, endISO, workspaceId),
     [startISO, endISO, workspaceId]
   );
-  const onMutate = useCallback(() => {
-    emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-  }, []);
-  const base = usePlannedTasksBase(loadFn, onMutate);
-  const { reload } = base;
+  return usePlannedTasksSynced(loadFn);
+}
 
-  // Recarrega quando outra janela muta tarefas planejadas (ex: popup flyout)
-  useEffect(() => {
-    const unlisten = listen(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, () => reload());
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [reload]);
-
-  return base;
+/**
+ * Todas as planejadas do workspace ativo, sem recorte de dia. É a lista de quem
+ * resolve a origem de tarefas de datas quaisquer — o histórico mostra execução
+ * de semanas atrás, cuja planejada o recorte do dia não alcança.
+ */
+export function usePlannedTasksForWorkspace() {
+  const workspaceId = useActiveWorkspaceId();
+  const loadFn = useCallback(
+    (repo: IPlannedTaskRepository) => repo.findAll(workspaceId),
+    [workspaceId]
+  );
+  return usePlannedTasksSynced(loadFn);
 }

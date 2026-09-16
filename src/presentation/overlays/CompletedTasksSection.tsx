@@ -2,6 +2,8 @@ import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
+import { actionsOfTasks, type PlannedIndex } from "@domain/utils/plannedActions";
+import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import {
   executionOf,
   isPlayBlocked,
@@ -31,6 +33,12 @@ interface CompletedTasksSectionProps {
    * esta seção: derivar lá em cima seria a mesma leitura feita duas vezes.
    */
   runningTask: Task | null;
+  /**
+   * As planejadas do dia por id, **concluídas inclusive**, para o ⚡ de cada
+   * grupo. A ação é lida da planejada agora, não da execução — a `Task` nunca a
+   * copiou —, então a origem excluída não deixa ⚡ e a editada mostra a nova.
+   */
+  plannedIndex: PlannedIndex;
   /** Inicia uma nova execução com os dados da tarefa concluída (repetir). */
   onRepeat: (group: TaskGroup) => void;
   /** Abre a edição do grupo no painel que cobre o popup. */
@@ -49,6 +57,7 @@ export function CompletedTasksSection({
   categories,
   runningGroupKey,
   runningTask,
+  plannedIndex,
   onRepeat,
   onEdit,
 }: CompletedTasksSectionProps) {
@@ -101,6 +110,7 @@ export function CompletedTasksSection({
               subtitle={subtitle || undefined}
               execution={executionOf(block, runningTask)}
               dotColor={getProjectColor(project)}
+              badges={<PlannedActionsFlyout actions={actionsOfTasks(plannedIndex, group.tasks)} />}
               duration={formatDurationCompact(group.totalSeconds)}
               /* Editar antes de repetir, a mesma ordem da linha planejada:
                  primeiro o que ajusta o registro, depois o que age. */
