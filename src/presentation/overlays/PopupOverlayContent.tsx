@@ -6,6 +6,7 @@ import type { Task } from "@domain/entities/Task";
 import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
+import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import {
   executionOf,
   isPlayBlocked,
@@ -483,6 +484,9 @@ function PlannedRow({
       }
       subtitle={subtitle || undefined}
       dotColor={getProjectColor(project)}
+      /* O ⚡ executa a ação sem play e sem abrir o painel de edição. Ele fica na
+         célula do chip, que existe mesmo sem `billable`. */
+      badges={<PlannedActionsFlyout actions={task.actions} />}
       duration={startTime}
       collapseActions={!startTime}
       actions={

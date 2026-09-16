@@ -11,8 +11,32 @@ describe("FilterPill", () => {
     );
     expect(screen.getByRole("button").getAttribute("aria-pressed")).toBe("true");
 
-    rerender(<FilterPill onClick={vi.fn()}>Hoje</FilterPill>);
+    rerender(
+      <FilterPill active={false} onClick={vi.fn()}>
+        Hoje
+      </FilterPill>
+    );
     expect(screen.getByRole("button").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("sem `active`, não se anuncia como alternável", () => {
+    // A pílula que dispara e volta ao mesmo estado — o ⚡ de uma ação só — seria
+    // um toggle preso em "não pressionado" se o atributo saísse sempre.
+    render(<FilterPill onClick={vi.fn()}>Abrir</FilterPill>);
+    expect(screen.getByRole("button").getAttribute("aria-pressed")).toBeNull();
+  });
+
+  it("aceita um nome acessível quando o conteúdo é só um número", () => {
+    render(
+      <FilterPill
+        onClick={vi.fn()}
+        title="Abrir uma das 2 ações"
+        aria-label="Abrir uma das 2 ações"
+      >
+        2
+      </FilterPill>
+    );
+    expect(screen.getByRole("button", { name: "Abrir uma das 2 ações" })).toBeTruthy();
   });
 
   it("mostra a contagem quando ela existe, inclusive zero", () => {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play, Check, Copy, Trash2, RotateCcw, Pencil, Zap, RefreshCw, Bell } from "lucide-react";
+import { Play, Check, Copy, Trash2, RotateCcw, Pencil, RefreshCw, Bell } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -8,6 +8,7 @@ import {
   EditPlannedTaskModal,
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
+import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
 import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
@@ -79,16 +80,15 @@ export function PlannedTaskItem({
     await onUpdate(id, input);
   }
 
-  const subtitle = (project || category || task.actions.length > 0) && (
+  /*
+   * O ⚡ saiu daqui e virou o `PlannedActionsFlyout`, no slot `badges`. Com ele
+   * foi embora a última razão de a guarda olhar `task.actions`: mantida, a tarefa
+   * que só tem ações passaria a desenhar um subtítulo vazio.
+   */
+  const subtitle = (project || category) && (
     <span className="inline-flex items-center gap-1.5">
       {[project?.name, category?.name].filter(Boolean).join(" · ")}
       {task.scheduleType === "period" && task.periodEnd && <span>até {task.periodEnd}</span>}
-      {task.actions.length > 0 && (
-        <span className="inline-flex items-center gap-0.5 text-amber-500/80">
-          <Zap size={14} />
-          {task.actions.length}
-        </span>
-      )}
     </span>
   );
 
@@ -119,6 +119,15 @@ export function PlannedTaskItem({
         }
         subtitle={subtitle || undefined}
         dotColor={getProjectColor(project)}
+        /* Ancorado **depois** da célula que cresce no hover, junto do chip de
+           faturamento: é a mesma posição que impede o chip de andar quando a
+           fileira de botões abre.
+
+           Some no modo de seleção pelo mesmo motivo que os cinco botões abaixo:
+           ali a linha inteira é alvo de marcar, e um controle que engole o
+           clique faria a tarefa recusar a seleção justamente enquanto se
+           escolhe o que excluir em lote. */
+        badges={!selectMode && <PlannedActionsFlyout actions={task.actions} />}
         billable={task.billable}
         /* `onUpdate` é o `update` do usePlannedTasks: recarrega e emite
            PLANNED_TASKS_CHANGED, então o popup acompanha sem nada a mais. */
