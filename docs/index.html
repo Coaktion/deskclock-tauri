@@ -763,6 +763,10 @@
     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
     Zendesk
   </a>
+  <a class="sidebar-link" onclick="show('llm')">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+    Provedor de IA
+  </a>
 
   <div class="sidebar-section-label">App</div>
   <a class="sidebar-link" onclick="show('overlays')">
@@ -803,7 +807,7 @@
         <button type="button" data-a="ambar" aria-pressed="false" title="Âmbar"><span></span></button>
       </div>
     </div>
-    <div class="sidebar-version">v2.0.0 · DeskClock</div>
+    <div class="sidebar-version">v2.1.0 · DeskClock</div>
   </div>
 </nav>
 
@@ -847,7 +851,7 @@
       </div>
       <div class="quick-nav-card" onclick="show('integrations')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        <div class="quick-nav-card-text"><h4>Integrações</h4><p>Google, Clockify, Monday, Zendesk</p></div>
+        <div class="quick-nav-card-text"><h4>Integrações</h4><p>Google, Clockify, Monday, Zendesk, IA</p></div>
       </div>
       <div class="quick-nav-card" onclick="show('overlays')">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
@@ -1020,6 +1024,29 @@
       <div class="callout-body"><strong>Arredondamento opcional</strong>Se "Arredondar duração ao parar" estiver ligado em <a onclick="show('settings')">Configurações</a>, a duração encaixa no slot mais próximo (15, 30, 60 min — você escolhe quais) no momento da parada.</div>
     </div>
 
+    <h2 id="barra-de-titulo">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
+      A tarefa em execução em qualquer tela
+    </h2>
+
+    <p>Enquanto uma tarefa roda, a <strong>barra de título</strong> da janela mostra um chip com ela — em qualquer tela, não só em Tarefas. O chip ganha o tom da cor de destaque quando a tarefa está rodando e o âmbar quando está pausada.</p>
+
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Parte do chip</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Ponto, nome e cronômetro</strong></td><td>Clicar leva à tela de Tarefas, com a edição da tarefa em execução aberta.</td></tr>
+          <tr><td><strong>Raio (⚡)</strong></td><td>Só aparece quando a tarefa veio de uma planejada com <a onclick="show('planning/acoes-tarefa')">ações</a>. Com uma ação, abre direto; com mais de uma, mostra os chips para você escolher.</td></tr>
+          <tr><td><strong>Pausar / Retomar</strong></td><td>Alterna a execução sem sair da tela atual.</td></tr>
+          <tr><td><strong>Parar</strong> (quadrado)</td><td>Leva à tela de Tarefas e abre o fluxo de parada — <strong>Concluída</strong> ou <strong>Pendente</strong>.</td></tr>
+          <tr><td><strong>Cancelar</strong> (×, em vermelho)</td><td>Descarta a tarefa imediatamente, sem confirmação. Fica separado dos outros botões por um traço.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>A tarefa em execução nas listas</h3>
+    <p>A tarefa que está rodando também se destaca onde ela aparece — nas <a onclick="show('tasks/entradas-hoje')">Entradas de hoje</a>, no <a onclick="show('planning')">Planejamento</a> e nas duas abas do <a onclick="show('overlays/popup-flyout')">Popup Flyout</a>: a linha ganha um fundo tingido e um ponto ao lado do nome. O ponto pulsa enquanto a tarefa roda e fica âmbar quando ela está pausada; ao passar o cursor, ele diz "Em execução" ou "Pausada". Num grupo de tarefas iguais, quem se destaca é o cabeçalho do grupo.</p>
+
     <h2 id="tarefas-planejadas">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/></svg>
       Tarefas planejadas para hoje
@@ -1028,12 +1055,12 @@
     <div class="tour-tip">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
-        <div class="tour-tip-label">Seção de planejadas</div>
-        <p>Tarefas que você programou para este dia aparecem aqui. Clique no botão de play em qualquer uma para iniciá-la instantaneamente.</p>
+        <div class="tour-tip-label">Planejadas no omnibox</div>
+        <p>Ao clicar na caixa de tarefa, as planejadas pendentes do dia aparecem numa lista logo abaixo dela. Digite para filtrar e escolha uma para iniciá-la na hora.</p>
       </div>
     </div>
 
-    <p>Ao clicar em Play em uma tarefa planejada, o timer inicia já com nome, projeto, categoria e campos personalizados preenchidos. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis no <a onclick="show('overlays')">Popup Flyout</a> durante a execução — você dispara cada uma sob demanda, quando precisar.</p>
+    <p>Escolher uma planejada na lista inicia o timer já com nome, projeto, categoria e campos personalizados preenchidos. O chip de faturamento de cada linha continua alternando ali mesmo, sem iniciar a tarefa, e <strong>"Ver semana →"</strong> leva ao <a onclick="show('planning')">Planejamento</a>. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis durante a execução — no card da tarefa em execução, no <a onclick="show('tasks/barra-de-titulo')">chip da barra de título</a> e no <a onclick="show('overlays')">Popup Flyout</a>. Você dispara cada uma sob demanda, quando precisar.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -1149,7 +1176,7 @@
         <div class="step-num">1</div>
         <div class="step-content">
           <h4>Selecione a data</h4>
-          <p>Use as setas ou o seletor de data no cabeçalho para navegar até o dia desejado.</p>
+          <p>Use as setas ou o seletor de data no cabeçalho para navegar até o dia desejado. No seletor, dá para digitar a data (<code>DD/MM/AAAA</code>) ou clicar no mês ou no ano do calendário para saltar direto — sem avançar mês a mês.</p>
         </div>
       </div>
       <div class="step">
@@ -1310,7 +1337,7 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Criar tarefa planejada</div>
-        <p>Adicione tarefas com nome, projeto, categoria, campos personalizados e ações. Escolha entre data única, recorrente (dias da semana) ou período com início e fim.</p>
+        <p>Adicione tarefas com nome, projeto, categoria, campos personalizados e ações. Escolha entre data única, recorrente (dias da semana) ou período — com data de início e, se quiser, de fim.</p>
       </div>
     </div>
 
@@ -1333,7 +1360,7 @@
           <tr>
             <td><strong>Período</strong></td>
             <td>Sprint, campanha, projeto temporário</td>
-            <td>Aparece todos os dias entre a data de início e fim informadas.</td>
+            <td>Aparece todos os dias a partir da data de início, até a data de fim. <strong>O fim é opcional:</strong> use <strong>"Limpar"</strong> no calendário do fim para deixar o período em aberto — ele segue aparecendo até você excluí-lo. O início é obrigatório, e um fim anterior ao início é recusado.</td>
           </tr>
         </tbody>
       </table>
@@ -1359,7 +1386,22 @@
       Ações por tarefa
     </h2>
 
-    <p>Cada tarefa planejada pode ter ações associadas a ela, configuradas no formulário de criação, no modal de edição ou no painel de edição do próprio overlay. Após iniciar a tarefa pelo Play, as ações aparecem como chips clicáveis no <a onclick="show('overlays')">Popup Flyout</a> — você dispara cada uma quando quiser, quantas vezes quiser. Elas <strong>não</strong> são executadas automaticamente ao iniciar.</p>
+    <p>Cada tarefa planejada pode ter ações associadas a ela, configuradas no formulário de criação, no modal de edição ou no painel de edição do próprio overlay. Você dispara cada uma quando quiser, quantas vezes quiser. Elas <strong>não</strong> são executadas automaticamente ao iniciar.</p>
+
+    <h3>O raio (⚡)</h3>
+    <p>Toda tarefa que tem ações mostra um <strong>raio</strong> ao lado do chip de faturamento, com o número de ações. Ele não é só um rótulo — ele executa:</p>
+    <ul>
+      <li><strong>Com uma ação só</strong>, o clique abre a URL ou o arquivo direto.</li>
+      <li><strong>Com duas ou mais</strong>, o clique abre um painel com os chips, e você escolhe qual abrir.</li>
+    </ul>
+    <p>Não é preciso dar play nem abrir a edição para disparar uma ação. O raio aparece em todo lugar onde a tarefa planejada — ou uma tarefa que veio dela — é exibida:</p>
+    <ul>
+      <li>na linha da tarefa no <strong>Planejamento</strong>;</li>
+      <li>nas abas <strong>Planejadas</strong> e <strong>Executadas</strong> do <a onclick="show('overlays/popup-flyout')">Popup Flyout</a>;</li>
+      <li>nas entradas do <a onclick="show('history')">Histórico</a> que vieram de uma planejada;</li>
+      <li>no <a onclick="show('tasks/barra-de-titulo')">chip da barra de título</a>, enquanto a tarefa roda.</li>
+    </ul>
+    <p>Nas tarefas já executadas, o raio oferece as ações <strong>atuais</strong> da planejada de origem: se você mudou as ações depois, valem as novas; se excluiu a planejada, o raio some. No modo de seleção ele também some, porque ali o clique na linha serve para marcar.</p>
 
     <div class="table-scroll">
 
@@ -1391,7 +1433,7 @@
       A linha da tarefa planejada
     </h2>
 
-    <p>Em repouso, a linha mostra o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em> e o chip de faturamento — que é controle, não rótulo: clicar nele alterna. Os botões aparecem no hover (ou ao navegar pelo teclado) e não ocupam largura enquanto estão escondidos:</p>
+    <p>Em repouso, a linha mostra o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o <a onclick="show('planning/acoes-tarefa')">raio das ações</a> (quando há) e o chip de faturamento — que é controle, não rótulo: clicar nele alterna. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha. Os botões aparecem no hover (ou ao navegar pelo teclado) e não ocupam largura enquanto estão escondidos:</p>
 
     <div class="table-scroll">
 
@@ -1477,9 +1519,11 @@
     <p>Botões de atalho para os períodos mais comuns:</p>
     <ul>
       <li><strong>Hoje</strong></li>
+      <li><strong>Último trabalhado:</strong> o último dia com registro <strong>antes de hoje</strong> — não necessariamente ontem. Numa segunda-feira, em geral é a sexta; atravessa fins de semana, feriados e férias.</li>
       <li><strong>7 dias</strong></li>
       <li><strong>30 dias</strong></li>
       <li><strong>Este mês</strong></li>
+      <li><strong>Personalizado:</strong> abre os filtros avançados para você escolher o período.</li>
     </ul>
 
     <h3>Filtros avançados</h3>
@@ -1487,7 +1531,7 @@
           <table class="data-table">
         <thead><tr><th>Filtro</th><th>Tipo</th></tr></thead>
         <tbody>
-          <tr><td><strong>Período</strong></td><td>Data início + data fim</td></tr>
+          <tr><td><strong>Período</strong></td><td>Um campo só, com um calendário para as duas pontas: o primeiro clique marca o início e o segundo, o fim. Se você clicar primeiro numa data anterior, as pontas trocam de lugar sozinhas</td></tr>
           <tr><td><strong>Nome</strong></td><td>Texto livre (busca parcial)</td></tr>
           <tr><td><strong>Projeto</strong></td><td>Seleção com autocomplete</td></tr>
           <tr><td><strong>Categoria</strong></td><td>Seleção com autocomplete</td></tr>
@@ -1501,15 +1545,45 @@
       Resultados
     </h2>
 
-    <p>Os resultados são agrupados por dia, cada dia num cartão. O cabeçalho de cada grupo exibe o dia da semana, a data e o total de horas do dia. Cada grupo pode ser exportado individualmente.</p>
+    <p>O resultado da busca se divide em abas:</p>
 
-    <p>Acima da lista, os totalizadores do conjunto filtrado: total de horas, billable, non-billable e quantidade de registros.</p>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Aba</th><th>O que mostra</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tarefas</strong></td><td>A lista de registros, agrupada por dia.</td></tr>
+          <tr><td><strong>KPIs</strong></td><td>A linha do tempo das tarefas, a distribuição de horas por projeto e os totalizadores do conjunto filtrado: total, billable, non-billable e quantidade de registros.</td></tr>
+          <tr><td><strong>Resumo</strong></td><td>Um parágrafo por dia, escrito por IA. Só aparece com um <a onclick="show('llm')">provedor de IA</a> conectado — ver <a onclick="show('history/resumo-ia')">abaixo</a>.</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-    <p>Por tarefa, os botões disponíveis são <strong>Editar</strong> (abre modal completo) e <strong>Excluir</strong> (sem confirmação). A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa e, havendo mais de um workspace, <strong>Mover para workspace</strong>.</p>
+    <p>Na aba Tarefas, cada dia fica num cartão. O cabeçalho de cada grupo exibe o dia da semana, a data e o total de horas do dia. Cada grupo pode ser exportado individualmente.</p>
+
+    <p>Por tarefa, os botões disponíveis são <strong>Editar</strong> (abre modal completo) e <strong>Excluir</strong> (sem confirmação). A entrada que veio de uma tarefa planejada com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre as ações da planejada de origem. A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa e, havendo mais de um workspace, <strong>Mover para workspace</strong>.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="callout-body">O Histórico mostra apenas o <strong>workspace ativo</strong>. O agrupamento por dia usa sempre o seu fuso local — uma tarefa que cruza a meia-noite pertence ao dia em que começou.</div>
+    </div>
+
+    <h2 id="resumo-ia">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+      Resumo por IA
+    </h2>
+
+    <p>Com um <a onclick="show('llm')">provedor de IA</a> conectado, o resultado ganha a aba <strong>Resumo</strong>: um parágrafo curto por dia, descrevendo no que o tempo foi gasto, a partir dos nomes, projetos e durações das tarefas daquele dia.</p>
+
+    <ul>
+      <li><strong>Só gera quando você abre a aba.</strong> Buscar sem abri-la não consome nada do provedor.</li>
+      <li><strong>Até 5 dias por vez</strong>, os mais recentes da busca. Se a busca trouxer mais, um aviso no topo do cartão diz isso.</li>
+      <li><strong>Dias passados ficam guardados.</strong> Buscar de novo a mesma semana mostra os resumos já gerados, sem nova requisição. <strong>Hoje</strong> é a exceção: como o dia ainda não acabou, o resumo dele é refeito a cada vez.</li>
+      <li><strong>Falhas não se repetem sozinhas.</strong> Se um dia falhar, ou se o limite do provedor for atingido no meio, a aba mostra o que aconteceu e o botão <strong>"Tentar novamente"</strong>.</li>
+    </ul>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Os dados vão para o provedor que você escolheu.</strong> Para escrever o resumo, o DeskClock envia ao provedor o nome, o projeto e a duração das tarefas do dia. Se prefere que nada saia do computador, use um provedor local, como Ollama ou LM Studio.</div>
     </div>
 
     <h2 id="exportar">
@@ -1851,6 +1925,13 @@
         <h4>Zendesk</h4>
         <p>Importe tickets abertos como tarefas planejadas, com filtros de organização.</p>
       </div>
+      <div class="feature-card" style="cursor:pointer" onclick="show('llm')">
+        <div class="feature-card-icon" style="background:oklch(0.62 0.19 var(--accent-hue) / .15)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-text)" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+        </div>
+        <h4>Provedor de IA</h4>
+        <p>Conecte um provedor de LLM para gerar o resumo dos seus dias no Histórico.</p>
+      </div>
     </div>
 
     <div class="tour-tip">
@@ -1885,9 +1966,22 @@
       O rail de integrações
     </h2>
 
-    <p>A faixa estreita à direita, presente em <strong>todas</strong> as telas, mostra um ícone por integração conectada. Passar o cursor abre um flyout com as ações daquela integração — importar eventos, enviar tarefas manualmente, gerenciar apontamentos, importar itens — sem precisar navegar até a tela de Integrações.</p>
+    <p>A faixa estreita à direita, presente em <strong>todas</strong> as telas, mostra uma placa por integração conectada, com o logo oficial de cada serviço. Passar o cursor abre um flyout com as ações daquela integração, sem precisar navegar até a tela de Integrações:</p>
 
-    <p>O ícone também carrega o <strong>estado</strong>: quando algo falha, ele muda de cor e o tooltip traz a causa técnica do erro. O rail pode ser desligado em <a onclick="show('settings')">Configurações → Geral</a>.</p>
+    <div class="table-scroll">
+      <table class="data-table">
+        <thead><tr><th>Placa</th><th>Ações no flyout</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Google Sheets</strong></td><td>Enviar tarefas manualmente…</td></tr>
+          <tr><td><strong>Google Agenda</strong></td><td>Importar eventos</td></tr>
+          <tr><td><strong>Clockify</strong></td><td>Gerenciar apontamentos… · Enviar tarefas manualmente…</td></tr>
+          <tr><td><strong>Zendesk</strong></td><td>Importar tickets como planejadas…</td></tr>
+          <tr><td><strong>Monday</strong></td><td>Enviar tarefas manualmente… · Importar itens como planejadas… · Gerenciar atividades…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Como só aparecem as integrações conectadas, a placa não precisa de indicador de estado — o flyout confirma com "Conectado". O Monday só entra no rail quando está configurado de ponta a ponta. O rail pode ser desligado em <a onclick="show('settings')">Configurações → Geral</a>.</p>
 
     <h2 id="workspace-por-integracao">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
@@ -2000,7 +2094,7 @@
       </div>
     </div>
 
-    <p>Após conectar o Google, o modal <strong>"Importar eventos"</strong> fica disponível no rail de integrações e no card do Google, na tela de Integrações. Você escolhe o período desejado e os eventos são exibidos em um accordion de dois níveis — semana e dia — permitindo selecionar quais importar e configurar projeto, categoria e recorrência para cada um.</p>
+    <p>Após conectar o Google, o modal <strong>"Importar eventos"</strong> fica disponível no rail de integrações e no card do Google, na tela de Integrações. Você escolhe o período num campo único, com atalhos ao lado do calendário (<em>Esta semana</em>, <em>Próxima semana</em>, <em>Semana passada</em>, <em>Este mês</em>), e os eventos são exibidos em um accordion de dois níveis — semana e dia — permitindo selecionar quais importar e configurar projeto, categoria e recorrência para cada um.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -2044,7 +2138,7 @@
       Backup do banco no Drive
     </h2>
 
-    <p>Terceira subseção do card do Google. O DeskClock gera um snapshot do banco de dados e o envia para uma pasta <strong>visível</strong> no seu Drive, chamada <code>DeskClock Backups</code>.</p>
+    <p>Terceira subseção do card do Google, <strong>Backup do banco</strong>, identificada pelo logo do Drive. O DeskClock gera um snapshot do banco de dados e o envia para uma pasta <strong>visível</strong> no seu Drive, chamada <code>DeskClock Backups</code>.</p>
 
     <div class="table-scroll">
 
@@ -2073,7 +2167,7 @@
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div class="callout-body"><strong>Os tokens das integrações são removidos do arquivo antes de ele subir.</strong> Um arquivo no Drive é bem mais exposto que a pasta local do app. O preço da troca: ao restaurar um backup, você reconecta Google, Clockify, Monday e Zendesk.</div>
+      <div class="callout-body"><strong>Os tokens das integrações são removidos do arquivo antes de ele subir.</strong> Um arquivo no Drive é bem mais exposto que a pasta local do app. O preço da troca: ao restaurar um backup, você reconecta Google, Clockify, Monday e Zendesk, e informa de novo a chave do provedor de IA.</div>
     </div>
 
     <h3>Como restaurar</h3>
@@ -2105,7 +2199,7 @@
         <div class="step-num">4</div>
         <div class="step-content">
           <h4>Abra o app e reconecte as integrações</h4>
-          <p>Google, Clockify, Monday e Zendesk.</p>
+          <p>Google, Clockify, Monday e Zendesk — e a chave do provedor de IA, se você usa um.</p>
         </div>
       </div>
     </div>
@@ -2345,6 +2439,11 @@
       </div>
     </div>
 
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Fechou a janela sem autorizar? É só clicar em Conectar de novo.</strong> A nova tentativa substitui a anterior, e o app espera a autorização por até 5 minutos. Se você <strong>negar</strong> o acesso no Zendesk, o motivo informado por ele aparece na hora, ao lado do botão — sem ficar esperando.</div>
+    </div>
+
     <h2 id="importar-tickets">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
       Importar tickets
@@ -2354,7 +2453,7 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="tour-tip-content">
         <div class="tour-tip-label">Importação de tickets</div>
-        <p>Após conectar, o modal "Importar tickets" fica disponível no rail de integrações e no card do Zendesk. Você escolhe quais tickets abertos importar como tarefas planejadas, com filtros de organização e tipo de ticket.</p>
+        <p>Após conectar, o modal "Importar tickets" fica disponível no card do Zendesk e na placa do Zendesk no rail de integrações, em "Importar tickets como planejadas…". Você escolhe quais tickets abertos importar como tarefas planejadas, com filtros de organização e tipo de ticket.</p>
       </div>
     </div>
 
@@ -2366,7 +2465,70 @@
       </div>
     </div>
 
-    <p>Cada ticket importado já vem com uma <a onclick="show('planning')">ação</a> apontando para ele no Zendesk, rotulada como "Zendesk". Ao iniciar a tarefa, o chip fica a um clique no overlay.</p>
+    <p>Ao terminar, o modal fecha e um aviso confirma quantos tickets foram importados.</p>
+
+    <p>Cada ticket importado já vem com uma <a onclick="show('planning/acoes-tarefa')">ação</a> apontando para ele no Zendesk, rotulada como "Zendesk". O raio (⚡) da tarefa abre o ticket com um clique.</p>
+  </section>
+
+  <!-- ──────────────────── LLM ──────────────────── -->
+  <section id="llm" class="section">
+    <div class="page-header">
+      <div class="page-header-eyebrow">Integração</div>
+      <h1>Provedor de IA</h1>
+      <p>Conecte um provedor de LLM para gerar o resumo dos seus dias de trabalho no Histórico.</p>
+    </div>
+
+    <p>O DeskClock não vem com um modelo de IA embutido: você escolhe o provedor e usa a sua própria chave. O card <strong>Provedor de IA</strong> fica na tela de Integrações. Enquanto nenhum provedor estiver conectado, nada de IA aparece no resto do app.</p>
+
+    <h2 id="llm-conectar">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+      Conectar
+    </h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Escolha o provedor</h4>
+          <p>Groq, OpenAI, OpenRouter, Google Gemini, Anthropic, DeepSeek, Mistral, xAI, Ollama (local), LM Studio (local) ou Personalizado. A URL base é preenchida pelo provedor escolhido; em Personalizado, você informa a sua.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Cole a chave de API</h4>
+          <p>Os provedores locais não pedem chave.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Clique em Testar conexão</h4>
+          <p>O teste valida a chave e traz a lista de modelos disponíveis, sem consumir tokens. Nada é salvo antes de ele passar.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Escolha o modelo e conecte</h4>
+          <p>Escolha da lista ou digite o identificador do modelo no campo ao lado — a lista do provedor costuma misturar modelos que não são de texto, então ela sugere, mas não limita.</p>
+        </div>
+      </div>
+    </div>
+
+    <p>Com o provedor conectado, o card mostra provedor, modelo e URL base, além de <strong>"Trocar provedor…"</strong>. <strong>Desconectar</strong> apaga a chave e o modelo, mas mantém o provedor e a URL, para reconectar ser só colar a chave de novo.</p>
+
+    <h2 id="llm-cota">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Cota do provedor
+    </h2>
+
+    <p>Quando o provedor informa os limites de uso, o card mostra quantas requisições e tokens restam e em quanto tempo renovam, com o texto que o próprio provedor enviou. A medição é da última geração de resumo, e o card diz há quanto tempo ela foi feita. Depois de uma hora, avisa que os números podem já ter renovado. Provedores que não informam limites não mostram esse bloco.</p>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <div class="callout-body"><strong>Limite atingido?</strong> O resumo para no primeiro dia recusado por limite e marca os demais como não gerados. Espere a renovação e use <strong>"Tentar novamente"</strong> na aba Resumo do <a onclick="show('history/resumo-ia')">Histórico</a>.</div>
+    </div>
   </section>
 
   <!-- ──────────────────── OVERLAYS ──────────────────── -->
@@ -2442,11 +2604,12 @@
     </ul>
 
     <h3>Aba Planejadas</h3>
-    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. Por linha, no hover: <strong>Editar</strong>, <strong>Concluir</strong> e <strong>Iniciar</strong>.</p>
+    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. Por linha, no hover: <strong>Editar</strong>, <strong>Concluir</strong> e <strong>Iniciar</strong>. A tarefa com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre a ação sem precisar iniciar a tarefa.</p>
     <p>Concluir direto daqui é útil para a tarefa que você parou como "Pendente" mas que estava de fato terminada — não precisa abrir o planejamento para isso.</p>
 
     <h3>Aba Executadas</h3>
-    <p>O que já foi registrado hoje, com <strong>Editar</strong> e <strong>Repetir</strong> por linha. A edição vale para o grupo inteiro: com duas ou mais tarefas iguais, o painel avisa quantas serão atualizadas.</p>
+    <p>O que já foi registrado hoje, com <strong>Editar</strong> e <strong>Repetir</strong> por linha. A edição vale para o grupo inteiro: com duas ou mais tarefas iguais, o painel avisa quantas serão atualizadas. Quando o registro veio de uma planejada com ações, o raio (⚡) aparece aqui também — inclusive depois de a planejada ser concluída.</p>
+    <p>Nas duas abas, a tarefa em execução se destaca com fundo tingido e um ponto ao lado do nome.</p>
 
     <h3>O card da tarefa em execução</h3>
     <p>Duas linhas, divididas por objeto — em cima a <strong>tarefa</strong>, embaixo o <strong>tempo</strong>:</p>
@@ -2530,12 +2693,16 @@
         <thead><tr><th>Configuração</th><th>Padrão</th><th>Descrição</th></tr></thead>
         <tbody>
           <tr><td><strong>Iniciar na inicialização do computador</strong></td><td>Desativado</td><td>Registra o app no startup do SO.</td></tr>
-          <tr><td><strong>Timer ao vivo no ícone da bandeja</strong></td><td>Desativado</td><td>Exibe o timer no ícone da área de notificação enquanto uma tarefa está em execução.</td></tr>
           <tr><td><strong>Fechar ao perder foco</strong></td><td>Desativado</td><td>A janela principal fecha ao perder o foco. Use o Pin na barra de título para suspender temporariamente.</td></tr>
           <tr><td><strong>Mostrar rail de integrações</strong></td><td>Ativado</td><td>A faixa à direita, com os atalhos das integrações conectadas. Aparece em todas as telas.</td></tr>
         </tbody>
       </table>
         </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>O timer na bandeja está sempre ligado.</strong> A opção "Timer ao vivo no ícone da bandeja" saiu: o ícone da área de notificação sempre mostra o cronômetro e o nome da tarefa em execução (ou avisa que ela está pausada). No Windows, o texto aparece ao passar o cursor sobre o ícone; no Linux, fica escrito ao lado do ícone, sem precisar do cursor. Nomes longos são encurtados.</div>
+    </div>
 
     <h3>Duração</h3>
     <div class="table-scroll">
@@ -2650,7 +2817,8 @@
       Atualizações
     </h2>
 
-    <p>Mostra a versão instalada e permite procurar uma nova. Havendo atualização, o download e a instalação acontecem pelo próprio app — sem baixar instalador à mão.</p>
+    <p>Mostra a versão instalada e, logo abaixo, as <strong>novidades desta versão</strong> — as notas da versão que você está usando, separadas em novidades, correções e melhorias. Assim dá para ver o que mudou sem depender de haver uma atualização.</p>
+    <p><strong>"Verificar atualizações"</strong> procura uma versão nova. Havendo, as notas dela aparecem antes do botão <strong>"Baixar e instalar"</strong>, e o download e a instalação acontecem pelo próprio app — sem baixar instalador à mão. Ao terminar, <strong>"Reiniciar agora"</strong> aplica a atualização.</p>
   </section>
 
   <!-- ──────────────────── SHORTCUTS ──────────────────── -->
@@ -2743,6 +2911,11 @@
             <td><kbd>Tab</kbd></td>
             <td>Formulários</td>
             <td>Próximo campo</td>
+          </tr>
+          <tr>
+            <td><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td>
+            <td>Calendário aberto</td>
+            <td>Move entre os dias; <kbd>↑</kbd> e <kbd>↓</kbd> pulam uma semana, <kbd>PgUp</kbd> e <kbd>PgDn</kbd> pulam quatro</td>
           </tr>
         </tbody>
       </table>
