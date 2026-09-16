@@ -1,3 +1,4 @@
+use crate::api::bridge::Bridge;
 use crate::api::routes::build_router;
 use crate::api::state::ApiState;
 use serde::Serialize;
@@ -120,14 +121,8 @@ pub async fn start(app: AppHandle, port: u16) -> Result<u16, String> {
         stop_internal(&server_state).await;
     }
 
-    let db_path = resolve_db_path(&app)?;
-    if !db_path.exists() {
-        let msg = format!("Banco não encontrado em {}", db_path.display());
-        server_state.set_error(msg.clone());
-        return Err(msg);
-    }
-
-    let api_state = Arc::new(ApiState::new(db_path, app.clone()));
+    let bridge: tauri::State<Arc<Bridge>> = app.state();
+    let api_state = Arc::new(ApiState::new(bridge.inner().clone()));
     let router = build_router(api_state);
 
     let addr: SocketAddr = ([127, 0, 0, 1], port).into();

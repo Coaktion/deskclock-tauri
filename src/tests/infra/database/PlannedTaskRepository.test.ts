@@ -213,6 +213,28 @@ describe("PlannedTaskRepository", () => {
     });
   });
 
+  describe("findAll", () => {
+    it("filtra só pelo workspace, sem recorte de data, na ordem das listas", async () => {
+      mockDb.select.mockResolvedValue([
+        makeRow({ schedule_type: "period", schedule_date: null, period_start: null }),
+      ]);
+      const repo = new PlannedTaskRepository();
+      const result = await repo.findAll("ws-1");
+      const [sql, params] = mockDb.select.mock.calls[0];
+      expect(sql).toContain("WHERE workspace_id = $1");
+      expect(sql).not.toContain("schedule_date");
+      expect(sql).toContain("ORDER BY sort_order ASC, created_at ASC");
+      expect(params).toEqual(["ws-1"]);
+      expect(result).toHaveLength(1);
+    });
+
+    it("não consulta valores personalizados quando o workspace não tem planejadas", async () => {
+      const repo = new PlannedTaskRepository();
+      expect(await repo.findAll("ws-1")).toEqual([]);
+      expect(mockDb.select).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("findForDate", () => {
     it("retorna tarefas com specific_date na data informada", async () => {
       mockDb.select.mockResolvedValue([makeRow()]);

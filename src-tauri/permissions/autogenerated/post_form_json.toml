@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-post-form-json"
+description = "Enables the post_form_json command without any pre-configured scope."
+commands.allow = ["post_form_json"]
+
+[[permission]]
+identifier = "deny-post-form-json"
+description = "Denies the post_form_json command without any pre-configured scope."
+commands.deny = ["post_form_json"]

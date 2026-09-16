@@ -7,7 +7,8 @@ export type IntegrationModal =
   | "clockify-entries"
   | "monday-send"
   | "monday-import"
-  | "monday-entries";
+  | "monday-entries"
+  | "zendesk-import";
 
 interface IntegrationsUiContextValue {
   modal: IntegrationModal | null;

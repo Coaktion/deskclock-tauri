@@ -13,6 +13,11 @@ import { showToast } from "@shared/utils/toast";
 import { emit } from "@tauri-apps/api/event";
 import { useCallback } from "react";
 
+export interface StopRulesOptions {
+  /** Não aguarda o envio automático — a promessa resolve com o registro final gravado. */
+  syncInBackground?: boolean;
+}
+
 export function usePostStopLogic(config: ConfigContextValue, triggerReload: () => void) {
   const { taskRepo, plannedTaskRepo } = useRepositories();
   const { runPerTask } = useAutoSync();
@@ -57,7 +62,8 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
     async (
       task: Task,
       plannedTaskId: string | null | undefined,
-      completed: boolean
+      completed: boolean,
+      options: StopRulesOptions = {}
     ): Promise<Task | null> => {
       const duration = task.durationSeconds ?? 0;
 
@@ -100,7 +106,16 @@ export function usePostStopLogic(config: ConfigContextValue, triggerReload: () =
         // `null` explícito também cai na tarefa, ao contrário do que vale no
         // evento entre janelas: o vínculo gravado é imutável e é a verdade.
         await completePlannedIfNeeded(plannedTaskId ?? task.plannedTaskId);
-        await autoSyncTask(finalTask);
+        if (options.syncInBackground) {
+          // Quem pediu (a API local) responde com o registro já final; o envio
+          // depende de rede e estouraria o prazo da requisição. Os toasts saem
+          // do mesmo jeito, só depois.
+          void autoSyncTask(finalTask).catch((error) => {
+            console.error("[post-stop] envio automático falhou", error);
+          });
+        } else {
+          await autoSyncTask(finalTask);
+        }
       }
 
       return finalTask;

@@ -8,7 +8,7 @@ import { IntegrationsUiProvider } from "@presentation/contexts/IntegrationsUiCon
 import { IntegrationsRail } from "@presentation/components/IntegrationsRail";
 import { IntegrationsModalsHost } from "@presentation/components/IntegrationsModalsHost";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
+import { useActiveWorkspaceId, WorkspaceProvider } from "@presentation/contexts/WorkspaceContext";
 import { RunningTaskProvider } from "@presentation/contexts/RunningTaskContext";
 import { TourProvider } from "@presentation/contexts/TourContext";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
@@ -31,29 +31,39 @@ import { PlanningPage } from "@presentation/pages/PlanningPage";
 import { RetroactivePage } from "@presentation/pages/RetroactivePage";
 import { SettingsPage } from "@presentation/pages/SettingsPage";
 import { TasksPage } from "@presentation/pages/TasksPage";
+import type { OmniboxFocus } from "@presentation/hooks/useOmniboxRunningEdit";
+import { useLocalApiBridge } from "@presentation/localApi/useLocalApiBridge";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+/** Teto do nome no rótulo da bandeja — painel do SO, não a lista de tarefas. */
+const TRAY_NAME_MAX_CHARS = 30;
+
+function truncateTrayName(name: string): string {
+  if (name.length <= TRAY_NAME_MAX_CHARS) return name;
+  return `${name.slice(0, TRAY_NAME_MAX_CHARS)}…`;
+}
+
 function PageContent({
   page,
   setPage,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
 }: {
   page: Page;
   setPage: (p: Page) => void;
-  focusTaskEdit: boolean;
-  onFocusTaskEditHandled: () => void;
+  omniboxFocus: OmniboxFocus;
+  onOmniboxFocusHandled: () => void;
 }) {
   switch (page) {
     case "tasks":
       return (
         <TasksPage
-          focusTaskEdit={focusTaskEdit}
-          onFocusTaskEditHandled={onFocusTaskEditHandled}
+          omniboxFocus={omniboxFocus}
+          onOmniboxFocusHandled={onOmniboxFocusHandled}
           onNavigatePlanning={() => setPage("planning")}
         />
       );
@@ -78,18 +88,23 @@ function MainContent({
   setPage,
   isPinned,
   onTogglePin,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
+  onStopRequest,
+  onOpenRequest,
 }: {
   page: Page;
   setPage: (p: Page) => void;
   isPinned: boolean;
   onTogglePin: () => void;
-  focusTaskEdit: boolean;
-  onFocusTaskEditHandled: () => void;
+  omniboxFocus: OmniboxFocus;
+  onOmniboxFocusHandled: () => void;
+  onStopRequest: () => void;
+  onOpenRequest: () => void;
 }) {
   const { startTask, pauseTask, resumeTask, stopTask, runningTask } = useRunningTask();
   const { projectRepo, categoryRepo } = useRepositories();
+  const workspaceId = useActiveWorkspaceId();
   const config = useAppConfig();
 
   // Rastreamento automático de reuniões do Google Agenda (gated por config).
@@ -99,6 +114,8 @@ function MainContent({
   // Releitura diária dos boards do Monday como projetos (gated por já haver
   // board mapeado no workspace ativo).
   useMondayProjectsTracker();
+  // API local: executa aqui as requisições que o servidor Rust repassa.
+  useLocalApiBridge();
 
   // Ctrl+1–7 navigates directly
   useEffect(() => {
@@ -124,7 +141,10 @@ function MainContent({
     return () => document.removeEventListener("keydown", onKey);
   }, [setPage]);
 
-  // Deep link: task/start — resolve nomes para IDs e inicia a tarefa
+  // Deep link: task/start — resolve nomes para IDs e inicia a tarefa. Os nomes
+  // resolvem no workspace ativo, que é onde `startTask` cria a tarefa: buscar em
+  // todos podia pôr na tarefa um projeto de outro workspace. Nome que não existe
+  // ali segue como antes — a tarefa começa sem projeto ou categoria.
   const handleDeepLinkStart = useCallback(
     async (params: {
       name?: string | null;
@@ -132,25 +152,19 @@ function MainContent({
       categoryName?: string | null;
       billable: boolean;
     }) => {
-      const [projects, categories] = await Promise.all([
-        projectRepo.findAll(),
-        categoryRepo.findAll(),
+      const [project, category] = await Promise.all([
+        params.projectName ? projectRepo.findByName(params.projectName, workspaceId) : null,
+        params.categoryName ? categoryRepo.findByName(params.categoryName, workspaceId) : null,
       ]);
-      const projectId = params.projectName
-        ? (projects.find((p) => p.name === params.projectName)?.id ?? null)
-        : null;
-      const categoryId = params.categoryName
-        ? (categories.find((c) => c.name === params.categoryName)?.id ?? null)
-        : null;
       await startTask({
         name: params.name ?? null,
-        projectId,
-        categoryId,
+        projectId: project?.id ?? null,
+        categoryId: category?.id ?? null,
         billable: params.billable,
       });
       setPage("tasks");
     },
-    [projectRepo, categoryRepo, startTask, setPage]
+    [projectRepo, categoryRepo, workspaceId, startTask, setPage]
   );
 
   useEffect(() => {
@@ -187,24 +201,20 @@ function MainContent({
     }
 
     if (runningTask.status === "paused") {
-      const name = runningTask.name || "(sem nome)";
+      const name = truncateTrayName(runningTask.name || "(sem nome)");
       invoke("update_tray_tooltip", { text: `DeskClock — ${name} (pausada)` }).catch(() => {});
       return;
     }
 
     const interval = setInterval(() => {
-      const name = runningTask.name || "(sem nome)";
-      if (!config.get("liveTrayTimer")) {
-        invoke("update_tray_tooltip", { text: `DeskClock — ${name} (executando)` }).catch(() => {});
-        return;
-      }
+      const name = truncateTrayName(runningTask.name || "(sem nome)");
       const elapsed = effectiveDuration(runningTask, new Date().toISOString());
       invoke("update_tray_tooltip", {
         text: `${formatHHMMSS(elapsed)} — ${name}`,
       }).catch(() => {});
     }, 1000);
     return () => clearInterval(interval);
-  }, [runningTask, config]);
+  }, [runningTask]);
 
   // Atalhos globais: toggle-task
   useEffect(() => {
@@ -236,15 +246,22 @@ function MainContent({
 
   return (
     <div className="flex flex-col h-screen bg-canvas text-fg overflow-hidden">
-      <TitleBar page={page} showPin={showPin} isPinned={isPinned} onTogglePin={onTogglePin} />
+      <TitleBar
+        page={page}
+        showPin={showPin}
+        isPinned={isPinned}
+        onTogglePin={onTogglePin}
+        onStopRequest={onStopRequest}
+        onOpenRequest={onOpenRequest}
+      />
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <Sidebar current={page} onChange={setPage} />
         <main className="flex-1 overflow-hidden">
           <PageContent
             page={page}
             setPage={setPage}
-            focusTaskEdit={focusTaskEdit}
-            onFocusTaskEditHandled={onFocusTaskEditHandled}
+            omniboxFocus={omniboxFocus}
+            onOmniboxFocusHandled={onOmniboxFocusHandled}
           />
         </main>
         <IntegrationsRail />
@@ -260,10 +277,16 @@ function AppInner() {
   const { createDriveBackupRunner } = useIntegrations();
   const [page, setPage] = useState<Page>("tasks");
   const [isPinned, setIsPinned] = useState(false);
-  const [focusTaskEdit, setFocusTaskEdit] = useState(false);
+  const [omniboxFocus, setOmniboxFocus] = useState<OmniboxFocus>(null);
   const [setupDone, setSetupDone] = useState(false);
   const isPinnedRef = useRef(false);
   const ignoreBlurRef = useRef(false);
+
+  /** Porta única da tela de Tarefas com um pedido de foco: barra de título e overlay. */
+  function openTasksWith(focus: OmniboxFocus) {
+    setPage("tasks");
+    setOmniboxFocus(focus);
+  }
 
   useEffect(() => {
     if (config.isLoaded && !config.loadError) setSetupDone(config.get("setupCompleted"));
@@ -282,7 +305,7 @@ function AppInner() {
   useAppRouter({
     config,
     setPage,
-    setFocusTaskEdit,
+    openTasksWith,
     ignoreBlurRef,
     showMainWindow,
   });
@@ -331,8 +354,10 @@ function AppInner() {
           setPage={setPage}
           isPinned={isPinned}
           onTogglePin={() => setIsPinned((v) => !v)}
-          focusTaskEdit={focusTaskEdit}
-          onFocusTaskEditHandled={() => setFocusTaskEdit(false)}
+          omniboxFocus={omniboxFocus}
+          onOmniboxFocusHandled={() => setOmniboxFocus(null)}
+          onStopRequest={() => openTasksWith("stop")}
+          onOpenRequest={() => openTasksWith("edit")}
         />
       </TourProvider>
     </RunningTaskProvider>

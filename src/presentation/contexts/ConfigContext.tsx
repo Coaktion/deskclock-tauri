@@ -1,5 +1,6 @@
 import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
+import { DEFAULT_LLM_PROVIDER_ID } from "@infra/integrations/llm/providers";
 import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
 import type {
   AppConfig,
@@ -17,7 +18,6 @@ const DEFAULTS: AppConfig = {
   setupCompleted: false,
   userName: "",
   startOnBoot: false,
-  liveTrayTimer: false,
   closeOnFocusLoss: false,
   discardTasksUnderOneMinute: false,
   showIntegrationsRail: true,
@@ -126,6 +126,12 @@ const DEFAULTS: AppConfig = {
   mondayAutoImportEnabled: false,
   mondayProjectsSyncLastDate: "",
   mondayProjectsLastSyncError: "",
+  llmProviderId: DEFAULT_LLM_PROVIDER_ID,
+  llmBaseUrl: "",
+  llmModel: "",
+  llmApiKey: "",
+  llmLastLimits: {},
+  llmLastLimitsAt: "",
   activeWorkspaceId: "",
   // Workspace do DeskClock de cada integração. Vazio resolve para o "Padrão" na
   // leitura (`resolveIntegrationWorkspaceId`): é o que torna a migração

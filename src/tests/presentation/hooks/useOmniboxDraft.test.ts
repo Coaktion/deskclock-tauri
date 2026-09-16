@@ -37,7 +37,7 @@ function keyEvent(key: string) {
 }
 
 function setup(tasks: PlannedTask[] = [planned("Daily do time"), planned("Revisão do fluxo")]) {
-  const startTask = vi.fn(() => Promise.resolve());
+  const startTask = vi.fn(() => Promise.resolve(null));
   const onStarted = vi.fn();
   const hook = renderHook(() =>
     useOmniboxDraft({ plannedTasks: tasks, today: TODAY, startTask, onStarted })

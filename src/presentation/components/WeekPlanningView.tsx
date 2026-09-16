@@ -12,40 +12,28 @@ import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { runningPlannedTaskId } from "@domain/utils/plannedLink";
-import { resolvePlayBlock } from "@presentation/components/playAction";
+import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { useTour } from "@presentation/hooks/useTour";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { todayISO } from "@shared/utils/time";
+import { addDaysISO, todayISO, weekBoundsOf } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const DAY_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
+/** `AAAA-MM-DD` → `DD/MM`. */
+function dayMonthLabel(dateISO: string): string {
+  return `${dateISO.slice(8, 10)}/${dateISO.slice(5, 7)}`;
+}
+
 function getWeekBounds(offset: number): { start: string; end: string; label: string } {
-  const today = new Date();
-  const dow = today.getDay();
-  const diffToMon = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(today);
-  mon.setDate(today.getDate() + diffToMon + offset * 7);
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-
-  const fmt = (d: Date) => {
-    const y = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, "0");
-    const da = String(d.getDate()).padStart(2, "0");
-    return `${y}-${mo}-${da}`;
-  };
-
-  const fmtLabel = (d: Date) =>
-    `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-
+  const { start, end } = weekBoundsOf(addDaysISO(todayISO(), offset * 7));
   return {
-    start: fmt(mon),
-    end: fmt(sun),
-    label: `${fmtLabel(mon)} — ${fmtLabel(sun)}/${sun.getFullYear()}`,
+    start,
+    end,
+    label: `${dayMonthLabel(start)} — ${dayMonthLabel(end)}/${end.slice(0, 4)}`,
   };
 }
 
@@ -407,26 +395,32 @@ export function WeekPlanningView() {
                   {dayTasks.length === 0 ? (
                     <p className="px-3 py-2.5 text-xs text-fg-muted">Nenhuma tarefa planejada</p>
                   ) : (
-                    dayTasks.map((task) => (
-                      <PlannedTaskItem
-                        key={task.id}
-                        task={task}
-                        dateISO={day}
-                        projects={projects}
-                        categories={categories}
-                        playBlock={resolvePlayBlock(runningPlannedId, task.id)}
-                        tracked={day === trackedToday && trackedIds.has(task.id)}
-                        onPlay={handlePlay}
-                        onUpdate={update}
-                        onComplete={complete}
-                        onUncomplete={uncomplete}
-                        onDuplicate={duplicate}
-                        onDelete={remove}
-                        selectMode={selectMode}
-                        selected={selectedIds.has(task.id)}
-                        onToggleSelect={toggleSelectTask}
-                      />
-                    ))
+                    dayTasks.map((task) => {
+                      // A mesma leitura serve ao ▶ e ao realce: separadas, uma
+                      // linha poderia bloquear o play sem se acender.
+                      const playBlock = resolvePlayBlock(runningPlannedId, task.id);
+                      return (
+                        <PlannedTaskItem
+                          key={task.id}
+                          task={task}
+                          dateISO={day}
+                          projects={projects}
+                          categories={categories}
+                          playBlock={playBlock}
+                          execution={executionOf(playBlock, runningTask)}
+                          tracked={day === trackedToday && trackedIds.has(task.id)}
+                          onPlay={handlePlay}
+                          onUpdate={update}
+                          onComplete={complete}
+                          onUncomplete={uncomplete}
+                          onDuplicate={duplicate}
+                          onDelete={remove}
+                          selectMode={selectMode}
+                          selected={selectedIds.has(task.id)}
+                          onToggleSelect={toggleSelectTask}
+                        />
+                      );
+                    })
                   )}
                 </SectionCard>
               );

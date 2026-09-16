@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-stop-local-api"
+description = "Enables the stop_local_api command without any pre-configured scope."
+commands.allow = ["stop_local_api"]
+
+[[permission]]
+identifier = "deny-stop-local-api"
+description = "Denies the stop_local_api command without any pre-configured scope."
+commands.deny = ["stop_local_api"]

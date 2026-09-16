@@ -4,15 +4,25 @@ import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTas
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
+import { indexPlannedById } from "@domain/utils/plannedActions";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
+import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import {
+  executionOf,
   isPlayBlocked,
   playTitle,
   resolvePlayBlock,
   type PlayBlock,
 } from "@presentation/components/playAction";
-import { Button, IconButton, Input, TaskRow } from "@presentation/components/ui";
+import {
+  Button,
+  ExecutionDot,
+  IconButton,
+  Input,
+  TaskRow,
+  type RowExecution,
+} from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
@@ -44,7 +54,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /*
  * **O popup tem uma altura só, e ela não depende do estado.** Idle e running
@@ -278,10 +288,7 @@ function RunningCard({
           nome é longo (medido: ele para em 190px e a linha fecha exata). Quem
           ocupa a folga passa a ser o `ml-auto` do cancelar. */}
       <div className="flex items-center gap-1.5">
-        <span
-          title={isRunning ? "Rodando" : "Pausada"}
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-accent" : "bg-paused"}`}
-        />
+        <ExecutionDot execution={isRunning ? "running" : "paused"} />
         <button
           onClick={onEdit}
           title="Editar tarefa"
@@ -427,6 +434,8 @@ interface PlannedRowProps {
   tracked: boolean;
   /** Se a execução em curso impede este ▶ — e, quando ela nasceu desta planejada, quem o diz. */
   playBlock: PlayBlock;
+  /** O realce da execução em curso, derivado **pela tela**: aqui só há o id da planejada. */
+  execution?: RowExecution;
   onEdit: (task: PlannedTask) => void;
   onComplete: (task: PlannedTask) => void;
   onPlay: (task: PlannedTask) => void;
@@ -448,6 +457,7 @@ function PlannedRow({
   categories,
   tracked,
   playBlock,
+  execution,
   onEdit,
   onComplete,
   onPlay,
@@ -462,6 +472,7 @@ function PlannedRow({
   return (
     <TaskRow
       title={task.name}
+      execution={execution}
       titleMarks={
         tracked ? (
           <span
@@ -474,6 +485,9 @@ function PlannedRow({
       }
       subtitle={subtitle || undefined}
       dotColor={getProjectColor(project)}
+      /* O ⚡ executa a ação sem play e sem abrir o painel de edição. Ele fica na
+         célula do chip, que existe mesmo sem `billable`. */
+      badges={<PlannedActionsFlyout actions={task.actions} />}
       duration={startTime}
       collapseActions={!startTime}
       actions={
@@ -532,6 +546,9 @@ export function PopupOverlayContent({
   const { categories } = useCategories();
   const { activeFields } = useCustomFields();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
+  // Sobre `tasks`, não `pending`: parar como "Concluída" tira a planejada do
+  // `pending`, e é justo a origem dessa execução que o ⚡ das Executadas procura.
+  const plannedIndex = useMemo(() => indexPlannedById(tasks), [tasks]);
   // Com um grupo só, o rótulo é ruído sobre uma lista que já é homogênea.
   const { timed, untimed } = groupPlannedBySchedule(pending);
   const showHeadings = timed.length > 0 && untimed.length > 0;
@@ -589,6 +606,29 @@ export function PopupOverlayContent({
 
   async function handleOpenApp() {
     await emit(OVERLAY_EVENTS.OVERLAY_OPEN_APP);
+  }
+
+  /**
+   * As duas seções desenham a mesma linha, e é aqui que a leitura da execução
+   * acontece **uma vez**: a que decide o ▶ é a mesma que decide o realce, e
+   * separadas uma linha poderia bloquear o play sem se acender.
+   */
+  function plannedRow(task: PlannedTask) {
+    const playBlock = resolvePlayBlock(runningPlannedId, task.id);
+    return (
+      <PlannedRow
+        key={task.id}
+        task={task}
+        projects={projects}
+        categories={categories}
+        tracked={trackedIds.has(task.id)}
+        playBlock={playBlock}
+        execution={executionOf(playBlock, runningTask)}
+        onEdit={setEditingTask}
+        onComplete={(t) => void complete(t.id, today)}
+        onPlay={handlePlay}
+      />
+    );
   }
 
   return (
@@ -654,33 +694,9 @@ export function PopupOverlayContent({
             ) : (
               <>
                 {showHeadings && <SectionHeading>Com hora de início</SectionHeading>}
-                {timed.map((task) => (
-                  <PlannedRow
-                    key={task.id}
-                    task={task}
-                    projects={projects}
-                    categories={categories}
-                    tracked={trackedIds.has(task.id)}
-                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
-                    onEdit={setEditingTask}
-                    onComplete={(t) => void complete(t.id, today)}
-                    onPlay={handlePlay}
-                  />
-                ))}
+                {timed.map((task) => plannedRow(task))}
                 {showHeadings && <SectionHeading>Sem hora definida</SectionHeading>}
-                {untimed.map((task) => (
-                  <PlannedRow
-                    key={task.id}
-                    task={task}
-                    projects={projects}
-                    categories={categories}
-                    tracked={trackedIds.has(task.id)}
-                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
-                    onEdit={setEditingTask}
-                    onComplete={(t) => void complete(t.id, today)}
-                    onPlay={handlePlay}
-                  />
-                ))}
+                {untimed.map((task) => plannedRow(task))}
               </>
             )}
           </div>
@@ -691,6 +707,8 @@ export function PopupOverlayContent({
             projects={projects}
             categories={categories}
             runningGroupKey={runningGroupKey}
+            runningTask={runningTask}
+            plannedIndex={plannedIndex}
             onRepeat={handleRepeat}
             onEdit={setEditingCompleted}
           />

@@ -18,10 +18,14 @@ import {
   MondayIntegrationCard,
   MondayTile,
 } from "@presentation/sections/integrations/MondayIntegrationSection";
+import {
+  LlmIntegrationCard,
+  LlmTile,
+} from "@presentation/sections/integrations/LlmIntegrationSection";
 
 /* ── Page ── */
 
-type IntegrationDetail = "google" | "clockify" | "zendesk" | "monday" | null;
+type IntegrationDetail = "google" | "clockify" | "zendesk" | "monday" | "llm" | null;
 
 export function IntegrationsPage() {
   const [detail, setDetail] = useState<IntegrationDetail>(null);
@@ -56,6 +60,7 @@ export function IntegrationsPage() {
             {detail === "clockify" && <ClockifyIntegrationCard />}
             {detail === "zendesk" && <ZendeskIntegrationCard />}
             {detail === "monday" && <MondayIntegrationCard />}
+            {detail === "llm" && <LlmIntegrationCard />}
           </div>
         </div>
       </div>
@@ -83,6 +88,9 @@ export function IntegrationsPage() {
             </div>
             <div data-tour="integrations-monday-tile">
               <MondayTile onClick={() => setDetail("monday")} />
+            </div>
+            <div data-tour="integrations-llm-tile">
+              <LlmTile onClick={() => setDetail("llm")} />
             </div>
           </div>
         </div>

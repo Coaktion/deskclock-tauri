@@ -11,7 +11,7 @@ import { applyRunningTaskEditToPlanned } from "@domain/usecases/plannedTasks/App
 import { resolveActivePlannedLink } from "@domain/utils/plannedLink";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
-import { usePostStopLogic } from "@presentation/hooks/usePostStopLogic";
+import { usePostStopLogic, type StopRulesOptions } from "@presentation/hooks/usePostStopLogic";
 import { useOverlaySync } from "@presentation/hooks/useOverlaySync";
 import { useTraySync } from "@presentation/hooks/useTraySync";
 import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
@@ -20,6 +20,8 @@ import { emit } from "@tauri-apps/api/event";
 import { createContext, useCallback, useEffect, useRef, useState } from "react";
 
 interface StartInput {
+  /** Ausente = workspace ativo. Só a API local informa outro. */
+  workspaceId?: string;
   name?: string | null;
   projectId?: string | null;
   categoryId?: string | null;
@@ -45,17 +47,25 @@ export interface RunningTaskContextValue {
   runningTask: Task | null;
   reloadSignal: number;
   activePlannedTaskId: string | null;
-  startTask: (input: StartInput) => Promise<void>;
+  /** Retorna a nova tarefa, ou null quando já havia uma ativa ou outro início em curso. */
+  startTask: (input: StartInput) => Promise<Task | null>;
   /**
    * Encerra a tarefa atual (se houver, como concluída, aplicando as regras de
    * pós-parada) e inicia uma nova. Usado pelo rastreamento de reuniões, onde a
    * troca é intencional — diferente de startTask, que é no-op quando há tarefa
    * em execução. Retorna a nova tarefa.
    */
-  switchToTask: (input: StartInput) => Promise<Task | null>;
-  pauseTask: () => Promise<void>;
-  resumeTask: () => Promise<void>;
-  stopTask: (completed: boolean, endTimeISO?: string) => Promise<void>;
+  switchToTask: (input: StartInput, options?: StopRulesOptions) => Promise<Task | null>;
+  /** Retorna a tarefa pausada, ou null sem tarefa ativa. */
+  pauseTask: () => Promise<Task | null>;
+  /** Retorna a tarefa retomada, ou null sem tarefa ativa. */
+  resumeTask: () => Promise<Task | null>;
+  /** Retorna a tarefa final (após arredondamento), ou null sem tarefa ativa ou quando descartada. */
+  stopTask: (
+    completed: boolean,
+    endTimeISO?: string,
+    options?: StopRulesOptions
+  ) => Promise<Task | null>;
   cancelTask: () => Promise<void>;
   updateActiveTask: (input: UpdateInput) => Promise<void>;
 }
@@ -118,20 +128,21 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   useTraySync(runningTask?.status);
 
   const startTask = useCallback(
-    async (input: StartInput) => {
-      if (runningTask) return;
-      if (isStartingTaskRef.current) return;
+    async (input: StartInput): Promise<Task | null> => {
+      if (runningTask) return null;
+      if (isStartingTaskRef.current) return null;
       isStartingTaskRef.current = true;
       try {
         const task = await startTaskUC(
           taskRepo,
-          { ...input, workspaceId },
+          { ...input, workspaceId: input.workspaceId ?? workspaceId },
           new Date().toISOString()
         );
         setRunningTask(task);
         setActivePlannedTaskId(input.plannedTaskId ?? null);
         triggerReload();
         await notifyOverlay(task, input.plannedTaskId ?? null);
+        return task;
       } finally {
         isStartingTaskRef.current = false;
       }
@@ -140,16 +151,20 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
   );
 
   const switchToTask = useCallback(
-    async (input: StartInput): Promise<Task | null> => {
+    async (input: StartInput, options?: StopRulesOptions): Promise<Task | null> => {
       if (isStartingTaskRef.current) return null;
       isStartingTaskRef.current = true;
       try {
         const nowISO = new Date().toISOString();
         if (runningTask) {
           const stopped = await stopTaskUC(taskRepo, runningTask.id, nowISO, nowISO);
-          await applyStopRules(stopped, activePlannedTaskId, true);
+          await applyStopRules(stopped, activePlannedTaskId, true, options);
         }
-        const task = await startTaskUC(taskRepo, { ...input, workspaceId }, nowISO);
+        const task = await startTaskUC(
+          taskRepo,
+          { ...input, workspaceId: input.workspaceId ?? workspaceId },
+          nowISO
+        );
         setRunningTask(task);
         setActivePlannedTaskId(input.plannedTaskId ?? null);
         triggerReload();
@@ -162,23 +177,29 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
     [taskRepo, runningTask, activePlannedTaskId, triggerReload, applyStopRules, workspaceId]
   );
 
-  const pauseTask = useCallback(async () => {
-    if (!runningTask) return;
+  const pauseTask = useCallback(async (): Promise<Task | null> => {
+    if (!runningTask) return null;
     const updated = await pauseTaskUC(taskRepo, runningTask.id, new Date().toISOString());
     setRunningTask(updated);
     await notifyOverlay(updated);
+    return updated;
   }, [taskRepo, runningTask]);
 
-  const resumeTask = useCallback(async () => {
-    if (!runningTask) return;
+  const resumeTask = useCallback(async (): Promise<Task | null> => {
+    if (!runningTask) return null;
     const updated = await resumeTaskUC(taskRepo, runningTask.id, new Date().toISOString());
     setRunningTask(updated);
     await notifyOverlay(updated);
+    return updated;
   }, [taskRepo, runningTask]);
 
   const stopTask = useCallback(
-    async (completed: boolean, endTimeISO?: string) => {
-      if (!runningTask) return;
+    async (
+      completed: boolean,
+      endTimeISO?: string,
+      options?: StopRulesOptions
+    ): Promise<Task | null> => {
+      if (!runningTask) return null;
       const nowISO = new Date().toISOString();
       const stoppedTask = await stopTaskUC(taskRepo, runningTask.id, endTimeISO ?? nowISO, nowISO);
       const plannedId = activePlannedTaskId;
@@ -186,7 +207,7 @@ export function RunningTaskProvider({ children, config }: RunningTaskProviderPro
       setActivePlannedTaskId(null);
       triggerReload();
       await notifyOverlay(null);
-      await applyStopRules(stoppedTask, plannedId, completed);
+      return applyStopRules(stoppedTask, plannedId, completed, options);
     },
     [taskRepo, runningTask, activePlannedTaskId, triggerReload, applyStopRules]
   );

@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
+import { actionsOfPlanned, indexPlannedById } from "@domain/utils/plannedActions";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
-import { useOmniboxRunningEdit } from "@presentation/hooks/useOmniboxRunningEdit";
+import {
+  useOmniboxRunningEdit,
+  type OmniboxFocus,
+} from "@presentation/hooks/useOmniboxRunningEdit";
 import { OmniboxIdle } from "./OmniboxIdle";
 import { OmniboxRunning } from "./OmniboxRunning";
 
@@ -16,8 +20,9 @@ interface OmniboxProps {
   projects: Project[];
   categories: Category[];
   onStarted?: () => void;
-  focusTaskEdit?: boolean;
-  onFocusTaskEditHandled?: () => void;
+  omniboxFocus?: OmniboxFocus;
+  onOmniboxFocusHandled?: () => void;
+  catalogsLoading?: boolean;
   onTogglePlannedBillable: (task: PlannedTask) => void;
   onNavigatePlanning?: () => void;
 }
@@ -28,8 +33,9 @@ export function Omnibox({
   projects,
   categories,
   onStarted,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
+  catalogsLoading,
   onTogglePlannedBillable,
   onNavigatePlanning,
 }: OmniboxProps) {
@@ -45,6 +51,7 @@ export function Omnibox({
   } = useRunningTask();
   const seconds = useTaskTimer(runningTask);
   const containerRef = useRef<HTMLDivElement>(null);
+  const plannedIndex = useMemo(() => indexPlannedById(plannedTasks), [plannedTasks]);
 
   const draft = useOmniboxDraft({ plannedTasks, today, startTask, onStarted });
 
@@ -52,8 +59,9 @@ export function Omnibox({
     runningTask,
     projects,
     categories,
-    focusTaskEdit,
-    onFocusTaskEditHandled,
+    omniboxFocus,
+    onOmniboxFocusHandled,
+    catalogsLoading,
     updateActiveTask,
     stopTask,
     pauseTask,
@@ -80,7 +88,7 @@ export function Omnibox({
   }, [handleOutsideClick]);
 
   if (runningTask) {
-    const runningActions = plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
+    const runningActions = actionsOfPlanned(plannedIndex, activePlannedTaskId);
     return (
       <OmniboxRunning
         {...edit}

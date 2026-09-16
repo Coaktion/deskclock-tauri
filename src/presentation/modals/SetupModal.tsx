@@ -5,7 +5,7 @@ import type { ConfigContextValue } from "@presentation/contexts/ConfigContext";
 import type { Page } from "@presentation/components/Sidebar";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { GoogleLogo } from "@presentation/sections/integrations/google/GoogleLogo";
-import { ZendeskLogoSmall } from "@presentation/sections/integrations/ZendeskIntegrationSection";
+import { ZendeskLogoSmall } from "@presentation/sections/integrations/zendesk/ZendeskLogo";
 import { ClockifyLogo } from "@presentation/sections/integrations/clockify/ClockifyLogo";
 import { MondayLogo } from "@presentation/sections/integrations/monday/MondayLogo";
 

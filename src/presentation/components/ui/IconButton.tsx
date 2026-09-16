@@ -43,6 +43,11 @@ interface IconButtonProps {
   variant?: IconButtonVariant;
   size?: IconButtonSize;
   disabled?: boolean;
+  /**
+   * Só quem **alterna** declara: ausente, nada de `aria-pressed` é emitido — a
+   * mesma régua do `active` do `FilterPill`.
+   */
+  pressed?: boolean;
   className?: string;
 }
 
@@ -54,6 +59,7 @@ export function IconButton({
   variant = "accent",
   size = "md",
   disabled = false,
+  pressed,
   className = "",
 }: IconButtonProps) {
   return (
@@ -63,6 +69,7 @@ export function IconButton({
       disabled={disabled}
       title={title}
       aria-label={title}
+      aria-pressed={pressed}
       className={`inline-flex items-center justify-center shrink-0 rounded-control transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${disabled ? DISABLED : VARIANT[variant]} ${SIZE[size]} ${className}`}
     >
       {icon}

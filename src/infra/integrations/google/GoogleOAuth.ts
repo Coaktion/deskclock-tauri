@@ -1,13 +1,10 @@
-import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { openInBrowser } from "@shared/utils/shell";
+import { openOAuthCallback } from "../oauth/loopbackCallback";
 import { generateCodeChallenge, generateCodeVerifier } from "./pkce";
 
 const CLIENT_ID = import.meta.env.GCP_CLIENT_ID as string;
 const CLIENT_SECRET = import.meta.env.GCP_CLIENT_SECRET as string;
 const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 const USERINFO_ENDPOINT = "https://www.googleapis.com/oauth2/v2/userinfo";
-const AUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
 
 export interface GoogleTokens {
   access_token: string;
@@ -21,13 +18,13 @@ export interface GoogleTokens {
  *
  * 1. Abre um servidor HTTP temporário no Rust (porta aleatória)
  * 2. Abre o browser com a URL de autorização do Google
- * 3. Aguarda o evento "oauth_callback_received" emitido pelo servidor Rust
+ * 3. Aguarda o code (ou o erro) que o servidor Rust recebe no redirect
  * 4. Troca o authorization code pelos tokens via fetch
  * 5. Busca o e-mail do usuário e retorna tudo
  */
 export async function startGoogleOAuth(scopes: string[]): Promise<GoogleTokens> {
-  const port: number = await invoke("start_oauth_server");
-  const redirectUri = `http://localhost:${port}/callback`;
+  const callback = await openOAuthCallback("Google");
+  const { redirectUri } = callback;
 
   const verifier = await generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
@@ -45,29 +42,7 @@ export async function startGoogleOAuth(scopes: string[]): Promise<GoogleTokens> 
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams}`;
 
-  // Aguarda o code vindo do servidor Rust
-  const code = await new Promise<string>((resolve, reject) => {
-    let unlisten: (() => void) | undefined;
-
-    const timer = setTimeout(() => {
-      unlisten?.();
-      reject(new Error("Timeout: autorização não concluída em 5 minutos."));
-    }, AUTH_TIMEOUT_MS);
-
-    listen<string>("oauth_callback_received", (event) => {
-      clearTimeout(timer);
-      unlisten?.();
-      resolve(event.payload);
-    }).then((fn) => {
-      unlisten = fn;
-    });
-
-    openInBrowser(authUrl).catch((err) => {
-      clearTimeout(timer);
-      unlisten?.();
-      reject(new Error(`Não foi possível abrir o browser: ${err}`));
-    });
-  });
+  const code = await callback.waitForCode(authUrl);
 
   // Troca o code por tokens
   const tokenRes = await fetch(TOKEN_ENDPOINT, {

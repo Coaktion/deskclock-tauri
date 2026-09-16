@@ -24,7 +24,13 @@ import {
 } from "@domain/usecases/tasks/SendTasks";
 import { formatDurationCompact, todayISO } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { Badge, Button, FilterPill, Input, Modal } from "@presentation/components/ui";
+import {
+  Badge,
+  Button,
+  DateRangeInput,
+  FilterPill,
+  Modal,
+} from "@presentation/components/ui";
 import {
   useTaskSendSelection,
   buildResultMessage,
@@ -271,25 +277,20 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
 
           {sel.quick === "custom" && (
             <div className="flex items-center gap-2 mt-2.5">
-              <Input
-                type="date"
-                size="sm"
-                aria-label="Início do período"
-                value={sel.customStart}
-                max={sel.customEnd}
-                onChange={(e) => sel.setCustomStart(e.target.value)}
-                className="w-auto"
-              />
-              <span className="text-sm text-fg-muted">até</span>
-              <Input
-                type="date"
-                size="sm"
-                aria-label="Fim do período"
-                value={sel.customEnd}
-                min={sel.customStart}
-                max={todayISO()}
-                onChange={(e) => sel.setCustomEnd(e.target.value)}
-                className="w-auto"
+              {/* Eram dois `<input type="date">` nativos — o calendário do sistema
+                  operacional, que não é o do app e muda de aparência por SO. O
+                  `min`/`max` cruzado que eles usavam para não inverter as pontas
+                  virou a troca automática do campo de período. Sem trilho: os
+                  atalhos daqui são as pílulas acima. */}
+              <DateRangeInput
+                startDate={sel.customStart}
+                endDate={sel.customEnd}
+                onChange={(inicio, fim) => {
+                  sel.setCustomStart(inicio);
+                  sel.setCustomEnd(fim);
+                }}
+                presets={[]}
+                maxISO={todayISO()}
               />
               <Button
                 variant="secondary"

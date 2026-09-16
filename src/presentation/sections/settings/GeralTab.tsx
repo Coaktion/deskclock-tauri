@@ -37,7 +37,6 @@ export function GeralTab() {
 
   const [userName, setUserName] = useState("");
   const [startOnBoot, setStartOnBoot] = useState(false);
-  const [liveTrayTimer, setLiveTrayTimer] = useState(false);
   const [closeOnFocusLoss, setCloseOnFocusLoss] = useState(false);
   const [discardTasksUnderOneMinute, setDiscardTasksUnderOneMinute] = useState(false);
   const [showIntegrationsRail, setShowIntegrationsRail] = useState(true);
@@ -50,7 +49,6 @@ export function GeralTab() {
   useEffect(() => {
     if (!config.isLoaded) return;
     setUserName(config.get("userName"));
-    setLiveTrayTimer(config.get("liveTrayTimer"));
     setCloseOnFocusLoss(config.get("closeOnFocusLoss"));
     setDiscardTasksUnderOneMinute(config.get("discardTasksUnderOneMinute"));
     setShowIntegrationsRail(config.get("showIntegrationsRail"));
@@ -65,8 +63,7 @@ export function GeralTab() {
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleToggle(
-    key:
-      "liveTrayTimer" | "closeOnFocusLoss" | "discardTasksUnderOneMinute" | "showIntegrationsRail",
+    key: "closeOnFocusLoss" | "discardTasksUnderOneMinute" | "showIntegrationsRail",
     setter: (v: boolean) => void,
     value: boolean
   ) {
@@ -135,14 +132,6 @@ export function GeralTab() {
             description="Abre o DeskClock automaticamente ao ligar o computador"
             checked={startOnBoot}
             onChange={handleStartOnBoot}
-          />
-        </SectionRow>
-        <SectionRow>
-          <Toggle
-            label="Timer ao vivo no ícone da bandeja"
-            description="Mostra o tempo da tarefa em execução no tooltip do ícone"
-            checked={liveTrayTimer}
-            onChange={(v) => handleToggle("liveTrayTimer", setLiveTrayTimer, v)}
           />
         </SectionRow>
         <SectionRow>

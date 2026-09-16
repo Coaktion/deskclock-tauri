@@ -4,6 +4,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
+import { DomainError } from "@shared/errors";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
@@ -91,30 +92,39 @@ export function useRetroactiveForm({
     const durationSeconds = Math.round(
       (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
     );
-    if (durationSeconds < 60) {
-      setError("A duração mínima é 1 minuto.");
-      return;
-    }
 
     const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
     const cId = categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null;
 
     setSaving(true);
-    await createRetroactiveTask(
-      taskRepo,
-      {
-        workspaceId,
-        name: name.trim() || null,
-        projectId: pId,
-        categoryId: cId,
-        billable,
-        startTime: startISO,
-        endTime: endISO,
-        durationSeconds,
-        customValues,
-      },
-      new Date().toISOString()
-    );
+    try {
+      // O prefill da planejada não passa por `launchPlannedTaskRetroactively`:
+      // depois de pré-preenchido, o usuário pode editar nome, projeto e campos, e
+      // é o formulário que vale — o use case gravaria os dados da planejada.
+      await createRetroactiveTask(
+        taskRepo,
+        {
+          workspaceId,
+          name: name.trim() || null,
+          projectId: pId,
+          categoryId: cId,
+          billable,
+          startTime: startISO,
+          endTime: endISO,
+          durationSeconds,
+          customValues,
+        },
+        new Date().toISOString()
+      );
+    } catch (e) {
+      // A trava de duração mínima é do domínio; a mensagem dela vai ao formulário.
+      setSaving(false);
+      if (e instanceof DomainError) {
+        setError(e.message);
+        return;
+      }
+      throw e;
+    }
 
     // Se a tarefa veio de uma planejada (prefill) e a data não mudou, marca-a
     // como concluída no dia. O vínculo é sempre zerado após a tentativa para não

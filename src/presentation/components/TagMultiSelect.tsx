@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
 import { Badge } from "@presentation/components/ui";
+import { useAnchoredPanel } from "@presentation/hooks/useAnchoredPanel";
 
 export interface TagOption {
   id: string;
@@ -22,39 +22,24 @@ export function TagMultiSelect({
   onChange,
   placeholder = "Nenhuma tag",
 }: TagMultiSelectProps) {
-  const [open, setOpen] = useState(false);
-  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({});
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
+  /*
+   * O gatilho é o próprio campo, então o painel copia a largura dele. Fora isso
+   * o mecanismo é o mesmo do `PlannedActionsFlyout` (§9.4) — inclusive o fechar
+   * no resize, que este dropdown não tinha: o `right` sai do `window.innerWidth`
+   * do instante da abertura.
+   */
+  const {
+    open,
+    setOpen,
+    triggerRef,
+    panelRef: dropRef,
+    panelStyle: dropStyle,
+    openPanel: openDropdown,
+  } = useAnchoredPanel<HTMLButtonElement>({ matchTriggerWidth: true });
 
   function toggle(id: string) {
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id]);
   }
-
-  function openDropdown() {
-    if (triggerRef.current) {
-      const r = triggerRef.current.getBoundingClientRect();
-      setDropStyle({
-        position: "fixed",
-        top: r.bottom + 4,
-        right: window.innerWidth - r.right,
-        minWidth: r.width,
-      });
-    }
-    setOpen(true);
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    function handleOutside(e: MouseEvent) {
-      const t = e.target as Node;
-      if (!triggerRef.current?.contains(t) && !dropRef.current?.contains(t)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [open]);
 
   const selected = allTags.filter((t) => selectedIds.includes(t.id));
 

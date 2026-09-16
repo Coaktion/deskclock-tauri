@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Task } from "@domain/entities/Task";
+import { localISO } from "../../helpers/localTime";
+import { startOfDayISO } from "@shared/utils/time";
 
 const mockDb = {
   select: vi.fn(),
@@ -147,6 +149,94 @@ describe("TaskRepository", () => {
     });
   });
 
+  describe("findLastDayWithCompletedTasks", () => {
+    it("devolve o dia local do último start_time concluído", async () => {
+      // 23h locais do dia 21 pode ser o dia 22 em UTC: quem responde é o dia do
+      // usuário, não o do instante gravado (§6.6).
+      const lastStart = localISO(2026, 8, 21, 23, 30);
+      mockDb.select.mockResolvedValue([{ last_start: lastStart }]);
+      const repo = new TaskRepository();
+
+      const result = await repo.findLastDayWithCompletedTasks();
+
+      expect(result).toBe("2026-08-21");
+    });
+
+    it("filtra por status concluído numa query só", async () => {
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 9) }]);
+      const repo = new TaskRepository();
+
+      await repo.findLastDayWithCompletedTasks();
+
+      expect(mockDb.select).toHaveBeenCalledTimes(1);
+      const [sql] = mockDb.select.mock.calls[0] as [string];
+      expect(sql).toContain("MAX(start_time)");
+      expect(sql).toContain("status = 'completed'");
+    });
+
+    it("restringe ao workspace quando informado", async () => {
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 9) }]);
+      const repo = new TaskRepository();
+
+      await repo.findLastDayWithCompletedTasks("ws-2");
+
+      const [sql, args] = mockDb.select.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("workspace_id = $1");
+      expect(args).toEqual(["ws-2"]);
+    });
+
+    it("sem `before`, não recorta por dia — o comportamento é o de antes", async () => {
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 9) }]);
+      const repo = new TaskRepository();
+
+      await repo.findLastDayWithCompletedTasks("ws-2");
+
+      const [sql, args] = mockDb.select.mock.calls[0] as [string, unknown[]];
+      expect(sql).not.toContain("start_time <");
+      expect(args).toEqual(["ws-2"]);
+    });
+
+    it("com `before`, ignora o dia de hoje mesmo que ele tenha tarefas", async () => {
+      // O corte entra como o **instante local** em que hoje começa: comparar o
+      // `start_time` cru contra um `AAAA-MM-DD` recortaria o dia errado fora de UTC.
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 17) }]);
+      const repo = new TaskRepository();
+
+      await repo.findLastDayWithCompletedTasks("ws-2", { before: "2026-08-24" });
+
+      const [sql, args] = mockDb.select.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("workspace_id = $1");
+      expect(sql).toContain("start_time < $2");
+      expect(args).toEqual(["ws-2", startOfDayISO("2026-08-24")]);
+    });
+
+    it("atravessa o fim de semana: na segunda sem registro, o dia anterior é a sexta", async () => {
+      // Hoje é segunda, 24/08, e nada foi registrado nela; o maior `start_time`
+      // anterior é o de sexta, 21/08. "Dia anterior" não é "ontem".
+      mockDb.select.mockResolvedValue([{ last_start: localISO(2026, 8, 21, 17, 45) }]);
+      const repo = new TaskRepository();
+
+      const result = await repo.findLastDayWithCompletedTasks("ws-2", { before: "2026-08-24" });
+
+      expect(result).toBe("2026-08-21");
+    });
+
+    it("devolve null quando não há dia anterior ao corte", async () => {
+      mockDb.select.mockResolvedValue([{ last_start: null }]);
+      const repo = new TaskRepository();
+
+      expect(await repo.findLastDayWithCompletedTasks("ws-2", { before: "2026-08-24" })).toBeNull();
+    });
+
+    it("devolve null quando o banco não tem tarefa concluída", async () => {
+      // MAX() sobre conjunto vazio devolve uma linha com NULL, não zero linhas.
+      mockDb.select.mockResolvedValue([{ last_start: null }]);
+      const repo = new TaskRepository();
+
+      expect(await repo.findLastDayWithCompletedTasks()).toBeNull();
+    });
+  });
+
   describe("save", () => {
     it("executa INSERT com os dados corretos", async () => {
       const repo = new TaskRepository();
@@ -214,6 +304,14 @@ describe("TaskRepository", () => {
       const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
       expect(sql).not.toContain("planned_task_id");
       expect(args).not.toContain("pt-1");
+    });
+
+    it("grava workspace_id — mover entre workspaces depende do UPDATE", async () => {
+      const repo = new TaskRepository();
+      await repo.update(makeTask({ workspaceId: "ws-destino" }));
+      const [sql, args] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+      expect(sql).toMatch(/workspace_id = \$1\b/);
+      expect(args[0]).toBe("ws-destino");
     });
   });
 

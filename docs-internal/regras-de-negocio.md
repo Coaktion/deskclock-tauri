@@ -27,7 +27,8 @@
 ### 6.3 Agrupamento de tarefas
 - Critério: Nome + Projeto + Categoria idênticos.
 - Agrupamento é apenas visual — os registros permanecem independentes no banco.
-- Unificar: cria um registro com duração somada e exclui os originais.
+- Unificar: cria um registro com duração somada e exclui os originais. Início = o mais cedo do grupo;
+  fim = o maior fim do grupo (não o instante do clique).
 
 ### 6.4 Autocomplete
 - Filtra conforme digitação.

@@ -86,21 +86,17 @@ export function localDateISO(isoString: string): string {
 }
 
 export function weekBoundsISO(): { start: string; end: string } {
-  const today = new Date();
-  const dow = today.getDay(); // 0=Sun
-  const diffToMon = dow === 0 ? -6 : 1 - dow;
-  const mon = new Date(today);
-  mon.setDate(today.getDate() + diffToMon);
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
+  return weekBoundsOf(todayISO());
+}
 
-  const fmt = (d: Date) => {
-    const y = d.getFullYear();
-    const mo = String(d.getMonth() + 1).padStart(2, "0");
-    const da = String(d.getDate()).padStart(2, "0");
-    return `${y}-${mo}-${da}`;
-  };
-  return { start: fmt(mon), end: fmt(sun) };
+/**
+ * Segunda e domingo (AAAA-MM-DD) da semana de um dia local qualquer — a mesma
+ * semana do `weekBoundsISO`, que é esta função aplicada a hoje.
+ */
+export function weekBoundsOf(dateISO: string): { start: string; end: string } {
+  const dow = new Date(dateISO + "T12:00:00Z").getUTCDay(); // 0=Sun
+  const start = addDaysISO(dateISO, dow === 0 ? -6 : 1 - dow);
+  return { start, end: addDaysISO(start, 6) };
 }
 
 export function formatHHMM(totalSeconds: number): string {

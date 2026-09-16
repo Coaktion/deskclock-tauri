@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
+import {
+  createRetroactiveTask,
+  MIN_RETROACTIVE_DURATION_SECONDS,
+} from "@domain/usecases/tasks/CreateRetroactiveTask";
+import { DomainError } from "@shared/errors";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 
 function makeRepo(overrides: Partial<ITaskRepository> = {}): ITaskRepository {
@@ -9,6 +13,7 @@ function makeRepo(overrides: Partial<ITaskRepository> = {}): ITaskRepository {
     findById: vi.fn(async () => null),
     findByStatus: vi.fn(async () => []),
     findByDateRange: vi.fn(async () => []),
+    findLastDayWithCompletedTasks: vi.fn(async () => null),
     delete: vi.fn(async () => undefined),
     deleteMany: vi.fn(async () => undefined),
     ...overrides,
@@ -179,5 +184,33 @@ describe("createRetroactiveTask", () => {
     expect(repo.update).not.toHaveBeenCalled();
     expect(repo.findByStatus).not.toHaveBeenCalled();
     expect(repo.findByDateRange).not.toHaveBeenCalled();
+  });
+
+  describe("duração mínima de 1 minuto", () => {
+    const input = (durationSeconds: number) => ({
+      workspaceId: "ws-1",
+      name: null,
+      projectId: null,
+      categoryId: null,
+      billable: true,
+      startTime: START,
+      endTime: END,
+      durationSeconds,
+    });
+
+    it.each([59, 0, -60])("recusa %i segundos com DomainError e não grava", async (seconds) => {
+      const repo = makeRepo();
+      const promise = createRetroactiveTask(repo, input(seconds), NOW);
+      await expect(promise).rejects.toBeInstanceOf(DomainError);
+      await expect(promise).rejects.toThrow("A duração mínima é 1 minuto.");
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it("aceita exatamente 1 minuto", async () => {
+      const repo = makeRepo();
+      const task = await createRetroactiveTask(repo, input(MIN_RETROACTIVE_DURATION_SECONDS), NOW);
+      expect(task.durationSeconds).toBe(60);
+      expect(repo.save).toHaveBeenCalledWith(task);
+    });
   });
 });

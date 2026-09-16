@@ -4,16 +4,21 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { DatePickerInput } from "@presentation/components/DatePickerInput";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { boxClass } from "@presentation/components/fieldStyles";
-import { BillableChip, Button, Field, Input, Modal } from "@presentation/components/ui";
+import {
+  BillableChip,
+  Button,
+  DatePickerInput,
+  Field,
+  Input,
+  Modal,
+} from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useDurationSync } from "@presentation/hooks/useDurationSync";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
-import { updateTask } from "@domain/usecases/tasks/UpdateTask";
-import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
+import { editCompletedTask } from "@domain/usecases/tasks/EditCompletedTask";
 import { buildTaskInterval, resolveRegisteredEndHHMM } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
@@ -93,8 +98,9 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
     const interval = buildTaskInterval(startDate, startTime, endOverrideHHMM ?? endTime);
 
     setSaving(true);
-    const nowISO = new Date().toISOString();
-    const updated = await updateTask(
+    // Faturamento é do grupo: o use case leva o billable salvo às irmãs, caminho
+    // que a trava do chip da lista não alcança.
+    await editCompletedTask(
       taskRepo,
       task.id,
       {
@@ -105,14 +111,8 @@ export function EditTaskModal({ task, projects, categories, onSave, onClose }: E
         ...interval,
         customValues,
       },
-      nowISO
+      new Date().toISOString()
     );
-    // O modal edita uma tarefa, mas faturamento é do grupo: o chip daqui deixava
-    // a irmã com o valor antigo, e a trava do chip da lista não alcança este
-    // caminho. Vale o que o modal salvou — inclusive quando a edição mudou o
-    // nome e a tarefa passou a pertencer a outro grupo, cujo valor ela leva
-    // consigo. Grupo já uniforme não gera escrita nenhuma.
-    await setGroupBillable(taskRepo, updated, billable, nowISO);
     void notifyTasksChanged();
     setSaving(false);
     onSave();

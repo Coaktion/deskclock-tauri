@@ -4,7 +4,7 @@ import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
-import { resolvePlayBlock } from "@presentation/components/playAction";
+import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { TaskGroupCard } from "./TaskGroupCard";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { EditGroupModal } from "@presentation/modals/EditGroupModal";
@@ -119,23 +119,29 @@ export function TodayEntriesSection({
         <p className="text-sm text-fg-muted text-center py-6">Nenhuma entrada hoje.</p>
       ) : (
         <div>
-          {groups.map((g) => (
-            <TaskGroupCard
-              key={g.key}
-              group={g}
-              projects={projects}
-              categories={categories}
-              sentIds={sentIds}
-              playBlock={resolvePlayBlock(runningGroupKey, g.key)}
-              onPlay={handlePlay}
-              onEdit={setEditingTask}
-              onDelete={handleDelete}
-              onMerge={handleMerge}
-              onEditGroup={setEditingGroup}
-              onMoveToWorkspace={workspaces.length > 1 ? setMovingTasks : undefined}
-              onToggleBillable={handleToggleBillable}
-            />
-          ))}
+          {groups.map((g) => {
+            // A mesma leitura serve ao ▶ e ao realce: separadas, uma linha
+            // poderia bloquear o play sem se acender.
+            const playBlock = resolvePlayBlock(runningGroupKey, g.key);
+            return (
+              <TaskGroupCard
+                key={g.key}
+                group={g}
+                projects={projects}
+                categories={categories}
+                sentIds={sentIds}
+                playBlock={playBlock}
+                execution={executionOf(playBlock, runningTask)}
+                onPlay={handlePlay}
+                onEdit={setEditingTask}
+                onDelete={handleDelete}
+                onMerge={handleMerge}
+                onEditGroup={setEditingGroup}
+                onMoveToWorkspace={workspaces.length > 1 ? setMovingTasks : undefined}
+                onToggleBillable={handleToggleBillable}
+              />
+            );
+          })}
         </div>
       )}
 

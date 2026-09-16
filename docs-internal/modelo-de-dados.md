@@ -198,6 +198,30 @@ Escopam por workspace: `Task`, `PlannedTask`, `Project`, `Category` e
 | key | string (PK) |
 | value | JSON |
 
+### 4.7.1 DaySummary (`day_summaries`)
+
+| Campo | Tipo | Regras |
+|---|---|---|
+| day | string | Dia **local** `AAAA-MM-DD` resumido — não o dia em que se gerou. PK junto com `workspace_id` |
+| workspace_id | UUID | FK → `workspaces`, `ON DELETE CASCADE`. PK junto com `day` |
+| summary | string | O parágrafo devolvido pelo provedor de IA |
+| generated_at | datetime | Instante da geração |
+
+O resumo por IA da tela de Histórico (`docs-internal/telas/historico.md`), gerado pelo lote
+`domain/usecases/llm/SummarizeWorkdays.ts`. Migration **018**.
+
+> **A chave natural é o par dia+workspace**, e não um id próprio: par duplicado não significa nada.
+> O texto morava em três chaves de `AppConfig` (`llmSummaryDate`, `llmSummaryText`,
+> `llmSummaryWorkspaceId`) e a config guarda **um** de cada — com um resumo por vez, o Histórico,
+> que resume vários dias de uma busca, sobrescreveria o dia anterior a cada dia novo.
+>
+> **Guardar é o que impede pagar duas vezes a mesma cota**, e é a razão de existir do teto de 5 dias
+> por geração: o lote consulta a tabela antes de chamar o provedor. Um resumo de um dia é fato que
+> não muda — o dia acabou, e as tarefas dele também —, então guardá-lo não cria dado a expirar.
+>
+> `INSERT OR REPLACE` no `save`: o único caminho que chega ali é uma geração que o usuário pediu de
+> propósito, e o texto novo é o que ele quer ver.
+
 ### 4.8 Migrations
 
 **Criar uma migration é criar um arquivo** em `src-tauri/migrations/`, no padrão

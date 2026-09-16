@@ -2,6 +2,7 @@ import { getDb } from "./db";
 import { loadCustomValues, saveCustomValues } from "./customValues";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { Task, TaskStatus } from "@domain/entities/Task";
+import { localDateISO, startOfDayISO } from "@shared/utils/time";
 
 interface TaskRow {
   id: string;
@@ -17,6 +18,10 @@ interface TaskRow {
   created_at: string;
   updated_at: string;
   planned_task_id: string | null;
+}
+
+interface LastCompletedRow {
+  last_start: string | null;
 }
 
 function rowToTask(r: TaskRow): Task {
@@ -87,12 +92,15 @@ export class TaskRepository implements ITaskRepository {
       // planned_task_id fica fora do UPDATE: é a origem da execução, imutável
       // depois do início. Incluí-lo faria todo caller que monta uma Task sem o
       // campo (edição, merge, regras pós-parada) apagar o vínculo sem querer.
+      //
+      // workspace_id entra: é o que mover entre workspaces altera.
       `UPDATE tasks SET
-        name = $1, project_id = $2, category_id = $3, billable = $4,
-        start_time = $5, end_time = $6, duration_seconds = $7,
-        status = $8, updated_at = $9
-       WHERE id = $10`,
+        workspace_id = $1, name = $2, project_id = $3, category_id = $4, billable = $5,
+        start_time = $6, end_time = $7, duration_seconds = $8,
+        status = $9, updated_at = $10
+       WHERE id = $11`,
       [
+        task.workspaceId,
         task.name,
         task.projectId,
         task.categoryId,
@@ -137,6 +145,41 @@ export class TaskRepository implements ITaskRepository {
           [startISO, endISO]
         );
     return hydrate(db, rows);
+  }
+
+  /**
+   * `MAX(start_time)` resolve o dia numa query só porque os instantes são gravados
+   * pelo `toISOString()`: em UTC, largura fixa, então a ordem lexicográfica do texto
+   * é a ordem cronológica. E como o dia local cresce junto com o instante, o dia do
+   * maior `start_time` é o último dia local com registro — sem precisar varrer as
+   * linhas para converter cada uma.
+   *
+   * O corte de `options.before` é por **dia local**, e por isso ele vira instante com
+   * `startOfDayISO` antes de entrar na query — como o `findByDateRange` já faz.
+   * Comparar `start_time` cru contra um `AAAA-MM-DD` compararia um texto de 24
+   * caracteres com um de 10 e recortaria o dia errado em todo fuso diferente de UTC.
+   */
+  async findLastDayWithCompletedTasks(
+    workspaceId?: string,
+    options?: { before?: string }
+  ): Promise<string | null> {
+    const db = await getDb();
+    const conditions = ["status = 'completed'"];
+    const params: string[] = [];
+    if (workspaceId) {
+      params.push(workspaceId);
+      conditions.push(`workspace_id = $${params.length}`);
+    }
+    if (options?.before) {
+      params.push(startOfDayISO(options.before));
+      conditions.push(`start_time < $${params.length}`);
+    }
+    const rows = await db.select<LastCompletedRow[]>(
+      `SELECT MAX(start_time) AS last_start FROM tasks WHERE ${conditions.join(" AND ")}`,
+      params
+    );
+    const lastStart = rows[0]?.last_start;
+    return lastStart ? localDateISO(lastStart) : null;
   }
 
   async delete(id: string): Promise<void> {

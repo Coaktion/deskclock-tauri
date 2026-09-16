@@ -1028,6 +1028,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tokio",
  "tokio-util",
+ "tower",
  "tower-http",
  "utoipa",
  "utoipa-swagger-ui",

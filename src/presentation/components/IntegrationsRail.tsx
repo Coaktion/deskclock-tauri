@@ -1,4 +1,4 @@
-import { CalendarDays, DownloadCloud, ListChecks, Send, Sheet } from "lucide-react";
+import { CalendarDays, DownloadCloud, ListChecks, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import { isMondayReady } from "@domain/usecases/monday/isMondayReady";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -7,7 +7,10 @@ import {
   type IntegrationModal,
 } from "@presentation/contexts/IntegrationsUiContext";
 import { ClockifyLogo } from "@presentation/sections/integrations/clockify/ClockifyLogo";
+import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
+import { GoogleSheetsLogo } from "@presentation/sections/integrations/google/GoogleSheetsLogo";
 import { MondayLogo } from "@presentation/sections/integrations/monday/MondayLogo";
+import { ZendeskLogoSmall } from "@presentation/sections/integrations/zendesk/ZendeskLogo";
 
 interface FlyoutAction {
   label: string;
@@ -37,10 +40,6 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
         >
           {icon}
         </span>
-        <span
-          className="absolute right-1.5 bottom-1.5 w-2 h-2 rounded-full bg-billable border-[1.5px] border-surface"
-          aria-hidden
-        />
       </button>
 
       {/*
@@ -99,7 +98,9 @@ export function IntegrationsRail() {
     projectMapping: config.get("mondayProjectMapping"),
   });
 
-  if (!googleConnected && !clockifyConnected && !mondayReady) return null;
+  const zendeskConnected = !!config.get("zendeskAccessToken");
+
+  if (!googleConnected && !clockifyConnected && !zendeskConnected && !mondayReady) return null;
 
   return (
     <aside
@@ -110,8 +111,10 @@ export function IntegrationsRail() {
         <RailTile
           title="Google Sheets"
           status="Conectado"
-          icon={<Sheet size={18} />}
-          tileClassName="bg-[#0f9d58]"
+          // Placa neutra, como a do Monday: o logo já traz as cores da marca, e
+          // sobre o verde dele a folha verde sumiria.
+          icon={<GoogleSheetsLogo size={18} />}
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Enviar tarefas manualmente…",
@@ -127,8 +130,9 @@ export function IntegrationsRail() {
         <RailTile
           title="Google Agenda"
           status="Conectado"
-          icon={<CalendarDays size={18} />}
-          tileClassName="bg-[#4285f4]"
+          // Placa neutra pelo mesmo motivo da do Sheets.
+          icon={<GoogleCalendarLogo size={18} />}
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Importar eventos",
@@ -144,8 +148,10 @@ export function IntegrationsRail() {
         <RailTile
           title="Clockify"
           status="Conectado"
+          // Placa neutra, como na tela de Integrações: o logo já traz a própria
+          // placa azul, e sobre o mesmo azul ela sumia.
           icon={<ClockifyLogo size={18} />}
-          tileClassName="bg-[#03a9f4]"
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Gerenciar apontamentos…",
@@ -156,6 +162,24 @@ export function IntegrationsRail() {
               label: "Enviar tarefas manualmente…",
               icon: <Send size={14} />,
               modal: "clockify-send",
+            },
+          ]}
+          onOpen={openModal}
+        />
+      )}
+
+      {/* A ordem das placas é a da tela de Integrações. */}
+      {zendeskConnected && (
+        <RailTile
+          title="Zendesk"
+          status="Conectado"
+          icon={<ZendeskLogoSmall size={18} />}
+          tileClassName="bg-raised"
+          actions={[
+            {
+              label: "Importar tickets como planejadas…",
+              icon: <DownloadCloud size={14} />,
+              modal: "zendesk-import",
             },
           ]}
           onOpen={openModal}
