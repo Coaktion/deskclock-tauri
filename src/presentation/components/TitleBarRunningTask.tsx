@@ -1,5 +1,8 @@
 import { Pause, Play, Square, X } from "lucide-react";
+import { runningPlannedTaskId } from "@domain/utils/plannedLink";
+import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { ExecutionDot, IconButton } from "@presentation/components/ui";
+import { usePlannedTaskActions } from "@presentation/hooks/usePlannedTaskActions";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { formatHHMMSS } from "@shared/utils/time";
@@ -12,8 +15,9 @@ interface TitleBarRunningTaskProps {
 }
 
 export function TitleBarRunningTask({ onStopRequest, onOpenRequest }: TitleBarRunningTaskProps) {
-  const { runningTask, pauseTask, resumeTask, cancelTask } = useRunningTask();
+  const { runningTask, activePlannedTaskId, pauseTask, resumeTask, cancelTask } = useRunningTask();
   const seconds = useTaskTimer(runningTask);
+  const actions = usePlannedTaskActions(runningPlannedTaskId(activePlannedTaskId, runningTask));
 
   if (!runningTask) return null;
 
@@ -27,8 +31,8 @@ export function TitleBarRunningTask({ onStopRequest, onOpenRequest }: TitleBarRu
         }`}
       >
         {/* Quem abre é o rótulo, não o chip: `role="button"` na casca torna
-            presentacionais os botões de dentro, e o leitor de tela anunciaria os
-            três como um só. É o mesmo recorte do nome no overlay popup.
+            presentacionais os botões de dentro, e o leitor de tela anunciaria
+            todos como um só. É o mesmo recorte do nome no overlay popup.
 
             O realce do hover mora aqui, e não na casca: aceso no chip inteiro,
             ele prometia clique na borda e no vão entre os botões, onde não há. */}
@@ -54,6 +58,9 @@ export function TitleBarRunningTask({ onStopRequest, onOpenRequest }: TitleBarRu
             {formatHHMMSS(seconds)}
           </span>
         </button>
+        {/* O ⚡ fica do lado de Pausar e Parar, e não além do traço: ele age
+            sobre a tarefa, não a descarta. Sem ações, não desenha nada. */}
+        <PlannedActionsFlyout variant="icon" actions={actions} />
         <IconButton
           size="sm"
           icon={isRunning ? <Pause size={14} /> : <Play size={14} />}

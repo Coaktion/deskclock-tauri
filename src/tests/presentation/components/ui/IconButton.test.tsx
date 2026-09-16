@@ -21,6 +21,20 @@ describe("IconButton", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it("sem `pressed`, não se anuncia como alternável", () => {
+    render(<IconButton icon={<svg />} title="Editar" onClick={vi.fn()} />);
+    expect(screen.getByRole("button").hasAttribute("aria-pressed")).toBe(false);
+  });
+
+  it("com `pressed`, anuncia o estado nos dois sentidos", () => {
+    const { rerender } = render(
+      <IconButton icon={<svg />} title="Ações" onClick={vi.fn()} pressed={false} />
+    );
+    expect(screen.getByRole("button").getAttribute("aria-pressed")).toBe("false");
+    rerender(<IconButton icon={<svg />} title="Ações" onClick={vi.fn()} pressed />);
+    expect(screen.getByRole("button", { pressed: true })).toBeTruthy();
+  });
+
   it("desenha o ícone que recebe", () => {
     render(<IconButton icon={<svg data-testid="lixeira" />} title="Excluir" onClick={vi.fn()} />);
     expect(screen.getByTestId("lixeira")).toBeTruthy();

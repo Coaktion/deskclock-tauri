@@ -4,7 +4,7 @@ import { Zap } from "lucide-react";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { executeActions } from "@domain/utils/actions";
 import { ActionChip, actionLabel } from "@presentation/components/ActionChip";
-import { FilterPill } from "@presentation/components/ui";
+import { FilterPill, IconButton } from "@presentation/components/ui";
 import { useAnchoredPanel } from "@presentation/hooks/useAnchoredPanel";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 
@@ -25,6 +25,12 @@ function run(action: PlannedTaskAction) {
 
 interface PlannedActionsFlyoutProps {
   actions: PlannedTaskAction[];
+  /**
+   * `pill` é o ⚡ com a contagem, das linhas. `icon` é o glifo sozinho, do chip
+   * da barra de título: 24px de altura já com quatro botões não comportam a
+   * pílula, e a contagem sobrevive só no nome acessível.
+   */
+  variant?: "pill" | "icon";
 }
 
 /**
@@ -42,14 +48,22 @@ interface PlannedActionsFlyoutProps {
  * mecanismo dos dois é o `useAnchoredPanel`; daqui vem só o `closeOnScroll`,
  * que é a diferença entre um gatilho dentro de um scroller e um fora.
  */
-export function PlannedActionsFlyout({ actions }: PlannedActionsFlyoutProps) {
+export function PlannedActionsFlyout({ actions, variant = "pill" }: PlannedActionsFlyoutProps) {
+  // A variante decide o scroller: a pílula mora em listas que rolam, o ícone na
+  // barra de título, que não rola. Lá o `closeOnScroll` só fecharia o painel
+  // quando a **página** por baixo rolasse — que não move o gatilho.
   const { open, setOpen, triggerRef, panelRef, panelStyle, openPanel } =
-    useAnchoredPanel<HTMLSpanElement>({ closeOnScroll: true });
+    useAnchoredPanel<HTMLSpanElement>({ closeOnScroll: variant === "pill" });
 
   if (actions.length === 0) return null;
 
   const only = singleAction(actions);
   const label = only ? `Abrir ${actionLabel(only)}` : `Abrir uma das ${actions.length} ações`;
+  const trigger = () => (only ? run(only) : open ? setOpen(false) : openPanel());
+  /* Só o gatilho que **alterna** se anuncia como alternável: com uma ação ele
+     dispara e volta ao mesmo estado, e um `aria-pressed` preso em "não
+     pressionado" descreveria um botão que não existe. */
+  const pressed = only ? undefined : open;
 
   return (
     /*
@@ -64,21 +78,28 @@ export function PlannedActionsFlyout({ actions }: PlannedActionsFlyoutProps) {
      * seria o usuário, não o teste.
      */
     <span ref={triggerRef} className="inline-flex" onClick={(e) => e.stopPropagation()}>
-      <FilterPill
-        size="sm"
-        icon={<Zap size={14} />}
-        /* Só a pílula que **alterna** se anuncia como alternável: com uma ação
-           ela dispara e volta ao mesmo estado, e um `aria-pressed` preso em
-           "não pressionado" descreveria um botão que não existe. */
-        active={only ? undefined : open}
-        title={label}
-        /* O conteúdo da pílula é a contagem, e pela regra de accname o conteúdo
-           vence o `title`: sem isto o leitor de tela anuncia só "2, botão". */
-        aria-label={label}
-        onClick={() => (only ? run(only) : open ? setOpen(false) : openPanel())}
-      >
-        <span className="font-mono tabular-nums">{actions.length}</span>
-      </FilterPill>
+      {variant === "icon" ? (
+        <IconButton
+          size="sm"
+          icon={<Zap size={14} />}
+          title={label}
+          pressed={pressed}
+          onClick={trigger}
+        />
+      ) : (
+        <FilterPill
+          size="sm"
+          icon={<Zap size={14} />}
+          active={pressed}
+          title={label}
+          /* O conteúdo da pílula é a contagem, e pela regra de accname o conteúdo
+             vence o `title`: sem isto o leitor de tela anuncia só "2, botão". */
+          aria-label={label}
+          onClick={trigger}
+        >
+          <span className="font-mono tabular-nums">{actions.length}</span>
+        </FilterPill>
+      )}
 
       {open &&
         createPortal(

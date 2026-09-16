@@ -24,7 +24,7 @@ principal. O `TitleBar` ganha um bloco **centralizado** (`TitleBarRunningTask`) 
 (`ExecutionDot` — pulsa em acento enquanto roda, fica parado em `paused` na pausa; o pulso chegou
 aqui em 2026-09-15, com a extração do primitivo, por decisão do usuário), nome ("(sem nome)" quando
 vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as
-ações Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px tingido pelo mesmo estado — o
+ações ⚡ (quando a planejada de origem tem ações), Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px tingido pelo mesmo estado — o
 tingimento de borda e fundo do omnibox em execução —, para ser achado de relance.
 
 - **Some na tela de Tarefas**: ali o omnibox já mostra o mesmo, e repetir o cronômetro a 100px de
@@ -39,6 +39,13 @@ tingimento de borda e fundo do omnibox em execução —, para ser achado de rel
   mesmo canal do `"edit"` que o overlay usa.
 - **Cancelar descarta na hora**, sem confirmação (regra do produto), e fica separado do Parar por um
   traço — o mesmo motivo do omnibox: o descarte não pode ficar a um pixel da ação que salva.
+- **O ⚡ da planejada de origem é o quinto controle**, entre o rótulo e o Pausar — age sobre a
+  tarefa, então fica do lado das ações que salvam, e não além do traço. É o mesmo
+  `PlannedActionsFlyout` das linhas, na variante `icon`: uma ação executa direto, duas ou mais abrem
+  o painel de chips, para baixo e alinhado à direita do ⚡. **A contagem não aparece**: são 24px de
+  altura com quatro botões, e a pílula com número não cabe; ela vai para o nome acessível ("Abrir
+  uma das N ações"). Sem planejada de origem, ou sem ações, o ⚡ não é desenhado. As ações vêm de
+  `usePlannedTaskActions`, que relê ao evento de planejadas alteradas.
 - As laterais continuam região de arraste; o bloco do meio não é, para os cliques funcionarem.
 
 #### Seção 2 — Tarefas planejadas para hoje (dentro do omnibox)
