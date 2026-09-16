@@ -761,6 +761,10 @@ tudo em sans · rótulo da sidebar: **9px**/500 lh 1 vs 12,25px (é o que corta 
 trilho 3px, todos os offsets), sidebar 68px / barra ativa 2px / paddings, tokens de cor, fontes,
 raios, `p-5` do corpo.
 
+> **Exceção declarada, 2026-09-15:** o usuário decidiu acrescentar ao `TitleBar` o bloco
+> centralizado da tarefa em execução (`TitleBarRunningTask`, oculto na tela de Tarefas — ver
+> `docs-internal/telas/tarefas.md`). As medidas existentes da barra continuam valendo.
+
 ### 7.5 Decisões do usuário — 2026-08-10
 
 1. **Escala ganha três degraus.** `--text-nav` 9px (rótulo da sidebar), `--text-micro` 11px (mono

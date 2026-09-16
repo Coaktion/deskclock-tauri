@@ -2,6 +2,7 @@ import { Maximize2, Minimize2, Pin, PinOff, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
 import type { Page } from "./Sidebar";
+import { TitleBarRunningTask } from "./TitleBarRunningTask";
 
 const appWindow = getCurrentWindow();
 
@@ -20,9 +21,20 @@ interface TitleBarProps {
   showPin: boolean;
   isPinned: boolean;
   onTogglePin: () => void;
+  /** Parar da barra: leva à tela de Tarefas e abre lá o fluxo de parada do omnibox. */
+  onStopRequest: () => void;
+  /** Clique no rótulo (ponto, nome e cronômetro): leva ao omnibox da tela de Tarefas. */
+  onOpenRequest: () => void;
 }
 
-export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps) {
+export function TitleBar({
+  page,
+  showPin,
+  isPinned,
+  onTogglePin,
+  onStopRequest,
+  onOpenRequest,
+}: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -38,16 +50,27 @@ export function TitleBar({ page, showPin, isPinned, onTogglePin }: TitleBarProps
   const toggleMaximize = () => appWindow.toggleMaximize();
 
   return (
-    <div className="h-8 bg-canvas border-b border-border-subtle flex items-center shrink-0 select-none">
+    // Grade 1fr/auto/1fr: as duas laterais medem o mesmo, então o bloco do meio
+    // fica no centro da janela, e não no centro do que sobra entre rótulo e
+    // controles. O bloco não é região de arraste — senão os cliques viram arrastar.
+    <div className="h-8 bg-canvas border-b border-border-subtle grid grid-cols-[1fr_auto_1fr] items-center shrink-0 select-none">
       {/* Área de arraste */}
-      <div data-tauri-drag-region className="flex-1 flex items-center gap-2 px-3 h-full min-w-0">
+      <div data-tauri-drag-region className="flex items-center gap-2 px-3 h-full min-w-0">
         <span className="text-sm font-semibold text-fg-muted tracking-wide">DeskClock</span>
         <span className="text-fg-muted text-sm">·</span>
         <span className="text-sm text-fg-secondary truncate">{PAGE_LABELS[page]}</span>
       </div>
 
-      {/* Controles da janela */}
-      <div className="flex items-center h-full shrink-0">
+      {/* Na tela de Tarefas o omnibox já mostra a tarefa e o cronômetro. */}
+      <div className="h-full min-w-0">
+        {page !== "tasks" && (
+          <TitleBarRunningTask onStopRequest={onStopRequest} onOpenRequest={onOpenRequest} />
+        )}
+      </div>
+
+      {/* Controles da janela, precedidos de vão arrastável */}
+      <div className="flex items-center h-full min-w-0">
+        <div data-tauri-drag-region className="flex-1 h-full" />
         {showPin && (
           <button
             onClick={onTogglePin}

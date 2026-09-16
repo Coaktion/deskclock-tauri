@@ -4,13 +4,15 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import type { Page } from "@presentation/components/Sidebar";
+import type { OmniboxFocus } from "@presentation/hooks/useOmniboxRunningEdit";
 
 const appWindow = getCurrentWindow();
 
 interface AppRouterDeps {
   config: ConfigContextValue;
   setPage: (page: Page) => void;
-  setFocusTaskEdit: (value: boolean) => void;
+  /** Porta única para a tela de Tarefas com pedido de foco — a mesma da barra de título. */
+  openTasksWith: (focus: OmniboxFocus) => void;
   ignoreBlurRef: RefObject<boolean>;
   showMainWindow: (focusToo?: boolean) => Promise<void>;
 }
@@ -18,7 +20,7 @@ interface AppRouterDeps {
 export function useAppRouter({
   config,
   setPage,
-  setFocusTaskEdit,
+  openTasksWith,
   ignoreBlurRef,
   showMainWindow,
 }: AppRouterDeps) {
@@ -50,8 +52,7 @@ export function useAppRouter({
       setTimeout(() => {
         ignoreBlurRef.current = false;
       }, 600);
-      setPage("tasks");
-      setFocusTaskEdit(true);
+      openTasksWith("edit");
       await showMainWindow(true);
     });
     return () => {

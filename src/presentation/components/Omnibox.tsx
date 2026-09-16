@@ -5,7 +5,10 @@ import type { Project } from "@domain/entities/Project";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
-import { useOmniboxRunningEdit } from "@presentation/hooks/useOmniboxRunningEdit";
+import {
+  useOmniboxRunningEdit,
+  type OmniboxFocus,
+} from "@presentation/hooks/useOmniboxRunningEdit";
 import { OmniboxIdle } from "./OmniboxIdle";
 import { OmniboxRunning } from "./OmniboxRunning";
 
@@ -16,8 +19,9 @@ interface OmniboxProps {
   projects: Project[];
   categories: Category[];
   onStarted?: () => void;
-  focusTaskEdit?: boolean;
-  onFocusTaskEditHandled?: () => void;
+  omniboxFocus?: OmniboxFocus;
+  onOmniboxFocusHandled?: () => void;
+  catalogsLoading?: boolean;
   onTogglePlannedBillable: (task: PlannedTask) => void;
   onNavigatePlanning?: () => void;
 }
@@ -28,8 +32,9 @@ export function Omnibox({
   projects,
   categories,
   onStarted,
-  focusTaskEdit,
-  onFocusTaskEditHandled,
+  omniboxFocus,
+  onOmniboxFocusHandled,
+  catalogsLoading,
   onTogglePlannedBillable,
   onNavigatePlanning,
 }: OmniboxProps) {
@@ -52,8 +57,9 @@ export function Omnibox({
     runningTask,
     projects,
     categories,
-    focusTaskEdit,
-    onFocusTaskEditHandled,
+    omniboxFocus,
+    onOmniboxFocusHandled,
+    catalogsLoading,
     updateActiveTask,
     stopTask,
     pauseTask,
