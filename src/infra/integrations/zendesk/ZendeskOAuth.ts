@@ -1,9 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { openInBrowser } from "@shared/utils/shell";
 import { generateCodeChallenge, generateCodeVerifier } from "../google/pkce";
+import { openOAuthCallback } from "../oauth/loopbackCallback";
 
-const AUTH_TIMEOUT_MS = 5 * 60 * 1000;
 // Porta fixa necessária porque o Zendesk exige match exato na redirect URI
 const OAUTH_PORT = 27422;
 
@@ -16,7 +14,8 @@ export interface ZendeskTokens {
 
 interface RustHttpResponse {
   status: number;
-  body: Record<string, unknown>;
+  // `null` quando a resposta não é JSON (o Rust não falha nesse caso).
+  body: Record<string, unknown> | null;
 }
 
 export async function startZendeskOAuth(
@@ -24,8 +23,8 @@ export async function startZendeskOAuth(
   clientId: string,
   clientSecret: string
 ): Promise<ZendeskTokens> {
-  await invoke("start_oauth_server", { port: OAUTH_PORT });
-  const redirectUri = `http://localhost:${OAUTH_PORT}/callback`;
+  const callback = await openOAuthCallback("Zendesk", OAUTH_PORT);
+  const { redirectUri } = callback;
 
   const verifier = await generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
@@ -41,28 +40,7 @@ export async function startZendeskOAuth(
 
   const authUrl = `https://${subdomain}.zendesk.com/oauth/authorizations/new?${authParams}`;
 
-  const code = await new Promise<string>((resolve, reject) => {
-    let unlisten: (() => void) | undefined;
-
-    const timer = setTimeout(() => {
-      unlisten?.();
-      reject(new Error("Timeout: autorização não concluída em 5 minutos."));
-    }, AUTH_TIMEOUT_MS);
-
-    listen<string>("oauth_callback_received", (event) => {
-      clearTimeout(timer);
-      unlisten?.();
-      resolve(event.payload);
-    }).then((fn) => {
-      unlisten = fn;
-    });
-
-    openInBrowser(authUrl).catch((err) => {
-      clearTimeout(timer);
-      unlisten?.();
-      reject(new Error(`Não foi possível abrir o browser: ${err}`));
-    });
-  });
+  const code = await callback.waitForCode(authUrl);
 
   const tokenParams: Record<string, string> = {
     client_id: clientId,
@@ -79,24 +57,25 @@ export async function startZendeskOAuth(
     params: tokenParams,
   });
 
-  if (tokenRes.status >= 400) {
+  const tokenBody = tokenRes.body ?? {};
+  if (tokenRes.status >= 400 || !tokenBody["access_token"]) {
     throw new Error(
-      (tokenRes.body["error_description"] as string) ??
-        (tokenRes.body["error"] as string) ??
-        "Falha ao trocar o código de autorização."
+      (tokenBody["error_description"] as string) ??
+        (tokenBody["error"] as string) ??
+        `Falha ao trocar o código de autorização (HTTP ${tokenRes.status}).`
     );
   }
 
   const userRes = await invoke<RustHttpResponse>("get_bearer_json", {
     url: `https://${subdomain}.zendesk.com/api/v2/users/me.json`,
-    token: tokenRes.body["access_token"] as string,
+    token: tokenBody["access_token"] as string,
   });
-  const user = (userRes.body["user"] as Record<string, unknown>) ?? {};
+  const user = (userRes.body?.["user"] as Record<string, unknown>) ?? {};
 
   return {
-    access_token: tokenRes.body["access_token"] as string,
-    refresh_token: (tokenRes.body["refresh_token"] as string | undefined) ?? null,
-    expires_in: (tokenRes.body["expires_in"] as number | undefined) ?? null,
+    access_token: tokenBody["access_token"] as string,
+    refresh_token: (tokenBody["refresh_token"] as string | undefined) ?? null,
+    expires_in: (tokenBody["expires_in"] as number | undefined) ?? null,
     email: (user["email"] as string) ?? "",
   };
 }
