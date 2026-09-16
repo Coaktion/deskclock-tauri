@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useUpdater } from "@presentation/hooks/useUpdater";
 import { RefreshCw, Download, RotateCcw, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button, SectionCard, SectionRow } from "@presentation/components/ui";
+import { extractVersionNotes } from "@shared/utils/changelog";
+import changelog from "../../../../CHANGELOG.md?raw";
 
 const SECTION_LABELS: Record<string, string> = {
   Features: "Novidades",
@@ -61,6 +63,10 @@ function ReleaseNotes({ body }: { body: string }) {
 function UpdaterSection() {
   const { state, check, downloadAndInstall, relaunch } = useUpdater();
   const [appVersion, setAppVersion] = useState<string>("");
+  const currentNotes = useMemo(
+    () => (appVersion ? extractVersionNotes(changelog, appVersion) : null),
+    [appVersion]
+  );
 
   useEffect(() => {
     getVersion().then(setAppVersion);
@@ -71,6 +77,13 @@ function UpdaterSection() {
       <div className="flex items-center justify-between">
         <p className="text-xs text-fg-muted">Versão atual: {appVersion}</p>
       </div>
+
+      {currentNotes && (
+        <div className="space-y-2">
+          <p className="text-xs text-fg-muted">Novidades desta versão</p>
+          <ReleaseNotes body={currentNotes} />
+        </div>
+      )}
 
       {state.status === "idle" && (
         <Button onClick={check} icon={<RefreshCw size={14} />}>
