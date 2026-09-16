@@ -48,9 +48,7 @@ describe("DatePickerInput", () => {
 
   it("não aceita, digitada, a data que o `maxDate` proíbe", () => {
     const onChange = vi.fn();
-    render(
-      <DatePickerInput value="" onChange={onChange} maxDate={new Date(2026, 8, 10)} />
-    );
+    render(<DatePickerInput value="" onChange={onChange} maxDate={new Date(2026, 8, 10)} />);
     fireEvent.change(campo(), { target: { value: "20092026" } });
     expect(onChange).not.toHaveBeenCalled();
 

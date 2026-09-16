@@ -103,12 +103,12 @@ describe("Calendar", () => {
 
   it("desabilita o que passa do `maxISO`", () => {
     render(<Calendar value="2026-03-14" onSelect={() => {}} maxISO="2026-03-20" />);
-    expect(screen.getByRole("button", { name: rotulo("2026-03-20") }).hasAttribute("disabled")).toBe(
-      false
-    );
-    expect(screen.getByRole("button", { name: rotulo("2026-03-21") }).hasAttribute("disabled")).toBe(
-      true
-    );
+    expect(
+      screen.getByRole("button", { name: rotulo("2026-03-20") }).hasAttribute("disabled")
+    ).toBe(false);
+    expect(
+      screen.getByRole("button", { name: rotulo("2026-03-21") }).hasAttribute("disabled")
+    ).toBe(true);
   });
 
   it("move o foco por seta e atravessa a borda do mês", () => {
