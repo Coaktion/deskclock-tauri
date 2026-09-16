@@ -12,6 +12,7 @@ import {
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { Badge, Button, DateRangeInput, Modal, Toggle } from "@presentation/components/ui";
+import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
 import { todayISO } from "@shared/utils/time";
@@ -673,7 +674,9 @@ export function ImportCalendarModal({
     <Modal
       title={
         <>
-          <Calendar size={16} className="text-accent-text shrink-0" />
+          <span className="shrink-0 flex">
+            <GoogleCalendarLogo size={16} />
+          </span>
           Importar do Google Calendar
         </>
       }
