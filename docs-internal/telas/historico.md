@@ -111,5 +111,8 @@ busca nem desmarca o que estava marcado.**
 - **Agrupamento por dia:** Header do grupo = "Ter. 7 de abr de 2026 — 8:00" (dia da semana abreviado + data + total de horas do dia).
 - **Por grupo-dia:** Botão exportar individual.
 - **Por tarefa:** Botões Edit (modal) | Delete (sem confirmação).
+- **⚡ na linha:** a tarefa que veio de uma planejada mostra o `PlannedActionsFlyout` com a ação
+  **atual** da origem (`actionsOfPlanned`, sobre as planejadas do workspace ativo) — a `Task` não
+  guarda cópia, e a origem excluída não mostra nada. Some no modo de seleção, como no Planejamento.
 
 ---
