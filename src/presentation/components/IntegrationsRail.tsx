@@ -10,6 +10,7 @@ import { ClockifyLogo } from "@presentation/sections/integrations/clockify/Clock
 import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
 import { GoogleSheetsLogo } from "@presentation/sections/integrations/google/GoogleSheetsLogo";
 import { MondayLogo } from "@presentation/sections/integrations/monday/MondayLogo";
+import { ZendeskLogoSmall } from "@presentation/sections/integrations/zendesk/ZendeskLogo";
 
 interface FlyoutAction {
   label: string;
@@ -101,7 +102,9 @@ export function IntegrationsRail() {
     projectMapping: config.get("mondayProjectMapping"),
   });
 
-  if (!googleConnected && !clockifyConnected && !mondayReady) return null;
+  const zendeskConnected = !!config.get("zendeskAccessToken");
+
+  if (!googleConnected && !clockifyConnected && !zendeskConnected && !mondayReady) return null;
 
   return (
     <aside
@@ -163,6 +166,24 @@ export function IntegrationsRail() {
               label: "Enviar tarefas manualmente…",
               icon: <Send size={14} />,
               modal: "clockify-send",
+            },
+          ]}
+          onOpen={openModal}
+        />
+      )}
+
+      {/* A ordem das placas é a da tela de Integrações. */}
+      {zendeskConnected && (
+        <RailTile
+          title="Zendesk"
+          status="Conectado"
+          icon={<ZendeskLogoSmall size={18} />}
+          tileClassName="bg-raised"
+          actions={[
+            {
+              label: "Importar tickets como planejadas…",
+              icon: <DownloadCloud size={14} />,
+              modal: "zendesk-import",
             },
           ]}
           onOpen={openModal}

@@ -10,6 +10,7 @@ import { useIntegrationCatalogs } from "@presentation/hooks/useIntegrationCatalo
 import { ClockifyEntriesModal } from "@presentation/modals/ClockifyEntriesModal";
 import { ClockifySendModal } from "@presentation/modals/ClockifySendModal";
 import { ImportCalendarModal } from "@presentation/modals/ImportCalendarModal";
+import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
 import { MondayEntriesModal } from "@presentation/modals/MondayEntriesModal";
 import { MondayImportModal } from "@presentation/modals/MondayImportModal";
 import { MondaySendModal } from "@presentation/modals/MondaySendModal";
@@ -40,6 +41,7 @@ const MODAL_WORKSPACE_KEY: Record<IntegrationModal, IntegrationWorkspaceKey | nu
   "monday-send": "mondayDeskclockWorkspaceId",
   "monday-import": "mondayDeskclockWorkspaceId",
   "calendar-import": "calendarDeskclockWorkspaceId",
+  "zendesk-import": "zendeskDeskclockWorkspaceId",
   // Operam direto sobre o destino remoto e não montam nada com o catálogo local.
   "clockify-entries": null,
   "monday-entries": null,
@@ -57,6 +59,13 @@ export function IntegrationsModalsHost() {
   const calendarImporter = useMemo(
     () => (config.isLoaded ? factories.createCalendarImporter() : null),
     [config.isLoaded, factories]
+  );
+
+  // Criado só ao abrir: fora do modal ninguém lê o importador, e o Zendesk pode
+  // nem estar conectado.
+  const ticketImporter = useMemo(
+    () => (modal === "zendesk-import" ? factories.createTicketImporter() : null),
+    [modal, factories]
   );
 
   const { defaultFromISO, defaultToISO } = useMemo(defaultCalendarRangeISO, []);
@@ -94,6 +103,25 @@ export function IntegrationsModalsHost() {
           showToast(
             "success",
             `${count} item${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.`
+          );
+        }}
+        onClose={closeModal}
+      />
+    );
+  }
+
+  if (modal === "zendesk-import" && ticketImporter) {
+    return (
+      <ImportZendeskModal
+        importer={ticketImporter}
+        repo={plannedTaskRepo}
+        projects={projects}
+        categories={categories}
+        onImported={(count) => {
+          closeModal();
+          showToast(
+            "success",
+            `${count} ticket${count !== 1 ? "s" : ""} importado${count !== 1 ? "s" : ""}.`
           );
         }}
         onClose={closeModal}
