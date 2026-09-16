@@ -149,8 +149,10 @@ export function IntegrationsRail() {
         <RailTile
           title="Clockify"
           status="Conectado"
+          // Placa neutra, como na tela de Integrações: o logo já traz a própria
+          // placa azul, e sobre o mesmo azul ela sumia.
           icon={<ClockifyLogo size={18} />}
-          tileClassName="bg-[#03a9f4]"
+          tileClassName="bg-raised"
           actions={[
             {
               label: "Gerenciar apontamentos…",
