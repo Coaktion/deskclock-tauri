@@ -1,3 +1,5 @@
+import type { Task } from "@domain/entities/Task";
+
 /**
  * O ▶ nunca some quando há tarefa em execução — ele fica desabilitado e diz o
  * porquê. Sumindo, a linha perdia uma ação sem explicar nada, e a tela ficava
@@ -29,6 +31,24 @@ export const PLAY_SELF_TITLE = "Esta tarefa já está em execução";
 export function resolvePlayBlock(runningKey: string | null, rowKey: string): PlayBlock {
   if (!runningKey) return "none";
   return runningKey === rowKey ? "self" : "other";
+}
+
+/** Como a linha em execução se realça: em curso ou parada no meio. */
+export type RowExecution = "running" | "paused";
+
+/**
+ * Mora ao lado do `resolvePlayBlock` porque lê o **mesmo** `self` — e pelo mesmo
+ * argumento do cabeçalho: a leitura vai para as listas de planejamento e as de
+ * entradas, e copiada a próxima já nasceria discordando sobre o que "pausada"
+ * quer dizer.
+ */
+export function executionOf(block: PlayBlock, runningTask: Task | null): RowExecution | undefined {
+  if (block !== "self" || !runningTask) return undefined;
+  if (runningTask.status === "running") return "running";
+  // `TaskStatus` tem um terceiro membro. Concluída não ocupa o lugar da execução
+  // em curso — e se ocupasse, não seria pausa: realce nenhum é a leitura honesta,
+  // e um `else` a chamaria de pausada calado.
+  return runningTask.status === "paused" ? "paused" : undefined;
 }
 
 /** O rótulo em repouso muda por tela ("Iniciar", "Repetir tarefa"); o bloqueio, não. */

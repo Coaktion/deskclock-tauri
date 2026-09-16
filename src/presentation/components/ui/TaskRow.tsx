@@ -53,6 +53,14 @@ interface TaskRowBaseProps {
    * chip e duração continuam onde estão nas linhas em volta.
    */
   nested?: boolean;
+  /**
+   * A linha **é** a execução em curso, e em que estado. Ausente, a linha é a de
+   * sempre — é isso que mantém intocados os call sites que não realçam nada.
+   *
+   * A união é escrita aqui e não importada de `components/playAction`: quem a
+   * deriva é a tela, e o primitivo não tem por que saber que existe um ▶.
+   */
+  execution?: "running" | "paused";
   selected?: boolean;
   onClick?: () => void;
 }
@@ -108,6 +116,7 @@ export function TaskRow(props: TaskRowProps) {
     actions,
     collapseActions = false,
     nested = false,
+    execution,
     selected = false,
     onClick,
   } = props;
@@ -149,6 +158,46 @@ export function TaskRow(props: TaskRowProps) {
     />
   );
 
+  /**
+   * O pulso é **só** de quem está rodando: pausada e em execução pintadas do
+   * mesmo jeito seriam um estado só, e o que distingue as duas é justamente o
+   * que a linha parada não faz. O `title` não é acabamento — sem texto ao lado,
+   * é a única coisa que anuncia o estado a quem não vê a cor.
+   */
+  const executionMark = execution && (
+    <span
+      title={execution === "running" ? "Em execução" : "Pausada"}
+      className={`shrink-0 w-1.5 h-1.5 rounded-full ${
+        execution === "running" ? "animate-pulse bg-accent" : "bg-paused"
+      }`}
+    />
+  );
+
+  /**
+   * A marca de execução e as do call site dividem o mesmo grupo, e a de execução
+   * vem primeiro: ela fala do agora, e recorrência e sino falam do sempre.
+   */
+  const marks = (executionMark || titleMarks) && (
+    <>
+      {executionMark}
+      {titleMarks}
+    </>
+  );
+
+  /**
+   * A seleção vence o fundo. Ela é o gesto que o usuário está fazendo, e a
+   * execução continua dita pela marca ao lado do nome — enquanto o realce vence,
+   * a linha marcada some no meio das outras justamente enquanto se escolhe o que
+   * excluir.
+   */
+  const background = selected
+    ? "bg-accent/10 hover:bg-accent/15"
+    : execution === "running"
+      ? "bg-accent/5 hover:bg-accent/10"
+      : execution === "paused"
+        ? "bg-paused/5 hover:bg-paused/10"
+        : "hover:bg-surface";
+
   const name = (
     <p className={`text-sm truncate ${completed ? "line-through text-fg-muted" : "text-fg"}`}>
       {title}
@@ -157,10 +206,10 @@ export function TaskRow(props: TaskRowProps) {
 
   const nameBlock = (
     <div className="min-w-0">
-      {titleMarks ? (
+      {marks ? (
         <div className="min-w-0 flex items-center gap-1.5">
           {name}
-          {titleMarks}
+          {marks}
         </div>
       ) : (
         name
@@ -228,9 +277,7 @@ export function TaskRow(props: TaskRowProps) {
       onClick={onClick}
       className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor))} gap-2.5 py-2.5 pr-3 border-b border-border-subtle last:border-b-0 transition-colors ${
         nested ? `relative ${PADDING_LEFT.nested}` : PADDING_LEFT.row
-      } ${selected ? "bg-accent/10 hover:bg-accent/15" : "hover:bg-surface"} ${
-        onClick ? "cursor-pointer" : ""
-      }`}
+      } ${background} ${onClick ? "cursor-pointer" : ""}`}
     >
       {/*
        * A coluna que abre o grupo, reservada pelo primitivo **mesmo vazia**: sem
