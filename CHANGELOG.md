@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.0.1...v2.1.0) (2026-09-16)
+
+
+### Features
+
+* **barra de título:** a tarefa em execução aparece no topo da janela, em qualquer tela — clique no nome para abrir Tarefas, e pause, pare ou cancele dali mesmo
+* **tarefas:** a tarefa em execução fica destacada nas listas do Planejamento, das entradas de hoje e do popup
+* **ações da planejada:** o raio executa as ações da tarefa planejada (abrir link, reunião etc.) sem precisar iniciá-la nem abrir a edição — no Planejamento, nas abas Planejadas e Executadas do popup, no Histórico e no chip da barra de título
+* **histórico:** nova aba com um resumo por IA dos dias buscados, gerado só quando a aba é aberta
+* **histórico:** novo filtro "Último trabalhado", e o filtro personalizado virou um campo de período
+* **integrações:** conecte um provedor de IA (Groq, OpenAI, OpenRouter, Gemini, Anthropic, modelos locais e outros) e veja no card a cota que ele informa
+* **integrações:** o Zendesk ganhou atalho no rail de integrações para importar tickets como planejadas
+* **integrações:** logos atuais do Google, Google Agenda, Google Sheets e Google Drive, e o backup do banco passa a exibir o logo do Drive
+* **integrações:** o rail ficou mais limpo — sem o ponto verde, já que só aparecem ali as integrações conectadas, e com todas as placas no mesmo fundo
+* **atualizações:** a aba Atualizações mostra as novidades da versão instalada
+* **calendário:** novo seletor de datas, com data digitável, salto direto por mês e ano, e um campo de período com atalhos
+* **planejamento:** uma tarefa de período pode ficar sem data de fim
+* **integrações:** o período dos apontamentos e dos envios fica numa caixa só
+* **bandeja:** o timer ao vivo no ícone da bandeja fica sempre ligado
+* **API local:** a API local cobre tarefas planejadas, histórico, lançamento retroativo, totais, workspaces e catálogo
+
+
+### Bug Fixes
+
+* **zendesk:** conectar de novo depois de abandonar uma autorização falhava sempre, mesmo com credenciais válidas; agora funciona, e os erros de conexão mostram o motivo real em vez de uma mensagem genérica
+* **tarefas:** mover tarefas entre workspaces não gravava o workspace de destino
+* **tarefas:** unificar as tarefas de um grupo podia encurtar o registro, porque nem sempre usava o horário de fim mais tardio
+* **overlay:** o popup fechava sozinho cerca de 1 segundo depois de abrir no Linux
+* **linux:** o AppImage não abria no Arch, no Fedora e no Ubuntu 24.04 ou mais novo
+* **API local:** uma mesma requisição podia ser executada duas vezes
+* **configurações:** a descrição da porta da API local quebrava uma palavra por linha
+
 ### [2.0.1](https://github.com/Coaktion/deskclock-tauri/compare/v2.0.0...v2.0.1) (2026-08-20)
 
 
