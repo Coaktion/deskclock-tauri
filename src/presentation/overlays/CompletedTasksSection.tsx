@@ -1,7 +1,13 @@
 import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
+import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
-import { isPlayBlocked, playTitle, resolvePlayBlock } from "@presentation/components/playAction";
+import {
+  executionOf,
+  isPlayBlocked,
+  playTitle,
+  resolvePlayBlock,
+} from "@presentation/components/playAction";
 import { IconButton, TaskRow } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { getProjectColor } from "@shared/utils/projectColor";
@@ -19,6 +25,12 @@ interface CompletedTasksSectionProps {
    * para iniciar outra.
    */
   runningGroupKey: string | null;
+  /**
+   * A execução em curso, para o realce da linha que a compartilha. Vem junto da
+   * chave e não derivada de fora porque quem tem o `PlayBlock` de cada grupo é
+   * esta seção: derivar lá em cima seria a mesma leitura feita duas vezes.
+   */
+  runningTask: Task | null;
   /** Inicia uma nova execução com os dados da tarefa concluída (repetir). */
   onRepeat: (group: TaskGroup) => void;
   /** Abre a edição do grupo no painel que cobre o popup. */
@@ -36,6 +48,7 @@ export function CompletedTasksSection({
   projects,
   categories,
   runningGroupKey,
+  runningTask,
   onRepeat,
   onEdit,
 }: CompletedTasksSectionProps) {
@@ -86,6 +99,7 @@ export function CompletedTasksSection({
                 ) : undefined
               }
               subtitle={subtitle || undefined}
+              execution={executionOf(block, runningTask)}
               dotColor={getProjectColor(project)}
               duration={formatDurationCompact(group.totalSeconds)}
               /* Editar antes de repetir, a mesma ordem da linha planejada:

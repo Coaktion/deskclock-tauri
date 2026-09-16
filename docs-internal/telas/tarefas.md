@@ -20,8 +20,10 @@
 #### A tarefa em execução na barra de título (fora da tela de Tarefas)
 
 Decisão do usuário, 2026-09-15: a tarefa ativa fica visível em **todas** as telas da janela
-principal. O `TitleBar` ganha um bloco **centralizado** (`TitleBarRunningTask`) com ponto de status,
-nome ("(sem nome)" quando vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as
+principal. O `TitleBar` ganha um bloco **centralizado** (`TitleBarRunningTask`) com ponto de status
+(`ExecutionDot` — pulsa em acento enquanto roda, fica parado em `paused` na pausa; o pulso chegou
+aqui em 2026-09-15, com a extração do primitivo, por decisão do usuário), nome ("(sem nome)" quando
+vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as
 ações Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px tingido pelo mesmo estado — o
 tingimento de borda e fundo do omnibox em execução —, para ser achado de relance.
 
@@ -73,6 +75,18 @@ tingimento de borda e fundo do omnibox em execução —, para ser achado de rel
 - **Lista de tarefas registradas hoje:**
   - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.
   - **Botões por card:** Play (inicia nova execução com os mesmos dados, se não houver tarefa em andamento) | Edit (modal completo) | Delete (sem confirmação).
+- **A linha da tarefa em execução se realça** (2026-09-15): ponto de 6px ao lado do nome — acento
+  pulsando enquanto roda, `paused` parado quando pausada — e a faixa tingida no mesmo tom
+  (`ExecutionDot` + a prop `execution` do `TaskRow`). A execução em curso é **outro registro**, sem
+  id que a ligue à linha: quem as identifica é a chave de agrupamento (§6.3), a mesma que o ▶ desta
+  tela já usa para decidir o que repetir. A leitura é uma só por linha — a que bloqueia o ▶ é a que
+  acende a linha —, e mora no `TodayEntriesSection`, que é onde a tarefa em execução está.
+- **Só o cabeçalho do grupo e a entrada solta se acendem; as filhas, nunca.** A chave é de todas as
+  irmãs por definição, então acender por chave acenderia o grupo inteiro — seis registros
+  realçados por causa de uma execução que não é nenhum deles. Quem fala pela chave é o cabeçalho, e
+  é ele que se acende; expandir o grupo não espalha o realce. É por isso que `execution` é prop
+  própria do `TaskCard` e não uma leitura do `playBlock`: o bloqueio do ▶ vale para o grupo inteiro,
+  o realce não.
 - **Agrupamento:** Tarefas com mesmo Nome + Projeto + Categoria são agrupadas visualmente.
   - Grupo exibe duração total.
   - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação (início e fim: §6.3).

@@ -9,13 +9,8 @@ import {
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { IconButton, TaskRow } from "@presentation/components/ui";
-import {
-  isPlayBlocked,
-  playTitle,
-  type PlayBlock,
-  type RowExecution,
-} from "@presentation/components/playAction";
+import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
+import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
 import { getProjectColor } from "@shared/utils/projectColor";
 
 interface PlannedTaskItemProps {

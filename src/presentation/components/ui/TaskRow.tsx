@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BillableChip } from "./BillableChip";
+import { ExecutionDot, type RowExecution } from "./ExecutionDot";
 
 /**
  * Faturamento é **par**, nunca prop solta: a linha que o informa é a linha que o
@@ -57,10 +58,11 @@ interface TaskRowBaseProps {
    * A linha **é** a execução em curso, e em que estado. Ausente, a linha é a de
    * sempre — é isso que mantém intocados os call sites que não realçam nada.
    *
-   * A união é escrita aqui e não importada de `components/playAction`: quem a
-   * deriva é a tela, e o primitivo não tem por que saber que existe um ▶.
+   * A união mora ao lado do `ExecutionDot`, em `components/ui/`, e não em
+   * `components/playAction`: quem a deriva é a tela, e o primitivo não pode
+   * depender de um módulo de tela para saber desenhar o próprio ponto.
    */
-  execution?: "running" | "paused";
+  execution?: RowExecution;
   selected?: boolean;
   onClick?: () => void;
 }
@@ -159,19 +161,11 @@ export function TaskRow(props: TaskRowProps) {
   );
 
   /**
-   * O pulso é **só** de quem está rodando: pausada e em execução pintadas do
-   * mesmo jeito seriam um estado só, e o que distingue as duas é justamente o
-   * que a linha parada não faz. O `title` não é acabamento — sem texto ao lado,
-   * é a única coisa que anuncia o estado a quem não vê a cor.
+   * A marca é o `ExecutionDot` — o mesmo ponto do card do popup e do chip da
+   * barra de título. O que ele desenha, e por que só quem roda pulsa, está na
+   * definição dele.
    */
-  const executionMark = execution && (
-    <span
-      title={execution === "running" ? "Em execução" : "Pausada"}
-      className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-        execution === "running" ? "animate-pulse bg-accent" : "bg-paused"
-      }`}
-    />
-  );
+  const executionMark = execution && <ExecutionDot execution={execution} />;
 
   /**
    * A marca de execução e as do call site dividem o mesmo grupo, e a de execução

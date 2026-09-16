@@ -1,4 +1,8 @@
 import type { Task } from "@domain/entities/Task";
+// A união é do primitivo que a desenha, e é de lá que ela vem — tela importando
+// primitivo é a direção permitida, e o tipo é apagado na compilação, então não
+// há ciclo a temer (o `ExecutionDot` não importa nada daqui).
+import type { RowExecution } from "@presentation/components/ui/ExecutionDot";
 
 /**
  * O ▶ nunca some quando há tarefa em execução — ele fica desabilitado e diz o
@@ -32,9 +36,6 @@ export function resolvePlayBlock(runningKey: string | null, rowKey: string): Pla
   if (!runningKey) return "none";
   return runningKey === rowKey ? "self" : "other";
 }
-
-/** Como a linha em execução se realça: em curso ou parada no meio. */
-export type RowExecution = "running" | "paused";
 
 /**
  * Mora ao lado do `resolvePlayBlock` porque lê o **mesmo** `self` — e pelo mesmo

@@ -5,6 +5,7 @@ export { TourButton } from "./TourButton";
 export { Toggle } from "./Toggle";
 export { KpiCard, type KpiTone } from "./KpiCard";
 export { TaskRow } from "./TaskRow";
+export { ExecutionDot, type RowExecution } from "./ExecutionDot";
 export { FilterPill } from "./FilterPill";
 export { Badge, type BadgeTone } from "./Badge";
 export { BillableChip } from "./BillableChip";

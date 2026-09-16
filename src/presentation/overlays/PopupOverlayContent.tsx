@@ -7,12 +7,20 @@ import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
 import {
+  executionOf,
   isPlayBlocked,
   playTitle,
   resolvePlayBlock,
   type PlayBlock,
 } from "@presentation/components/playAction";
-import { Button, IconButton, Input, TaskRow } from "@presentation/components/ui";
+import {
+  Button,
+  ExecutionDot,
+  IconButton,
+  Input,
+  TaskRow,
+  type RowExecution,
+} from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
@@ -278,10 +286,7 @@ function RunningCard({
           nome é longo (medido: ele para em 190px e a linha fecha exata). Quem
           ocupa a folga passa a ser o `ml-auto` do cancelar. */}
       <div className="flex items-center gap-1.5">
-        <span
-          title={isRunning ? "Rodando" : "Pausada"}
-          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isRunning ? "animate-pulse bg-accent" : "bg-paused"}`}
-        />
+        <ExecutionDot execution={isRunning ? "running" : "paused"} />
         <button
           onClick={onEdit}
           title="Editar tarefa"
@@ -427,6 +432,8 @@ interface PlannedRowProps {
   tracked: boolean;
   /** Se a execução em curso impede este ▶ — e, quando ela nasceu desta planejada, quem o diz. */
   playBlock: PlayBlock;
+  /** O realce da execução em curso, derivado **pela tela**: aqui só há o id da planejada. */
+  execution?: RowExecution;
   onEdit: (task: PlannedTask) => void;
   onComplete: (task: PlannedTask) => void;
   onPlay: (task: PlannedTask) => void;
@@ -448,6 +455,7 @@ function PlannedRow({
   categories,
   tracked,
   playBlock,
+  execution,
   onEdit,
   onComplete,
   onPlay,
@@ -462,6 +470,7 @@ function PlannedRow({
   return (
     <TaskRow
       title={task.name}
+      execution={execution}
       titleMarks={
         tracked ? (
           <span
@@ -591,6 +600,29 @@ export function PopupOverlayContent({
     await emit(OVERLAY_EVENTS.OVERLAY_OPEN_APP);
   }
 
+  /**
+   * As duas seções desenham a mesma linha, e é aqui que a leitura da execução
+   * acontece **uma vez**: a que decide o ▶ é a mesma que decide o realce, e
+   * separadas uma linha poderia bloquear o play sem se acender.
+   */
+  function plannedRow(task: PlannedTask) {
+    const playBlock = resolvePlayBlock(runningPlannedId, task.id);
+    return (
+      <PlannedRow
+        key={task.id}
+        task={task}
+        projects={projects}
+        categories={categories}
+        tracked={trackedIds.has(task.id)}
+        playBlock={playBlock}
+        execution={executionOf(playBlock, runningTask)}
+        onEdit={setEditingTask}
+        onComplete={(t) => void complete(t.id, today)}
+        onPlay={handlePlay}
+      />
+    );
+  }
+
   return (
     <div className="relative w-full h-full flex flex-col bg-canvas border border-border rounded-card shadow-2xl overflow-visible">
       {/* Header. Não há botão de fechar: o popup some no ESC e ao perder o foco,
@@ -654,33 +686,9 @@ export function PopupOverlayContent({
             ) : (
               <>
                 {showHeadings && <SectionHeading>Com hora de início</SectionHeading>}
-                {timed.map((task) => (
-                  <PlannedRow
-                    key={task.id}
-                    task={task}
-                    projects={projects}
-                    categories={categories}
-                    tracked={trackedIds.has(task.id)}
-                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
-                    onEdit={setEditingTask}
-                    onComplete={(t) => void complete(t.id, today)}
-                    onPlay={handlePlay}
-                  />
-                ))}
+                {timed.map((task) => plannedRow(task))}
                 {showHeadings && <SectionHeading>Sem hora definida</SectionHeading>}
-                {untimed.map((task) => (
-                  <PlannedRow
-                    key={task.id}
-                    task={task}
-                    projects={projects}
-                    categories={categories}
-                    tracked={trackedIds.has(task.id)}
-                    playBlock={resolvePlayBlock(runningPlannedId, task.id)}
-                    onEdit={setEditingTask}
-                    onComplete={(t) => void complete(t.id, today)}
-                    onPlay={handlePlay}
-                  />
-                ))}
+                {untimed.map((task) => plannedRow(task))}
               </>
             )}
           </div>
@@ -691,6 +699,7 @@ export function PopupOverlayContent({
             projects={projects}
             categories={categories}
             runningGroupKey={runningGroupKey}
+            runningTask={runningTask}
             onRepeat={handleRepeat}
             onEdit={setEditingCompleted}
           />
