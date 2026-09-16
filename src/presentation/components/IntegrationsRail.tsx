@@ -37,10 +37,6 @@ function RailTile({ title, status, icon, tileClassName, actions, onOpen }: RailT
         >
           {icon}
         </span>
-        <span
-          className="absolute right-1.5 bottom-1.5 w-2 h-2 rounded-full bg-billable border-[1.5px] border-surface"
-          aria-hidden
-        />
       </button>
 
       {/*
