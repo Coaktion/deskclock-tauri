@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
+import { actionsOfPlanned, indexPlannedById } from "@domain/utils/plannedActions";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
@@ -50,6 +51,7 @@ export function Omnibox({
   } = useRunningTask();
   const seconds = useTaskTimer(runningTask);
   const containerRef = useRef<HTMLDivElement>(null);
+  const plannedIndex = useMemo(() => indexPlannedById(plannedTasks), [plannedTasks]);
 
   const draft = useOmniboxDraft({ plannedTasks, today, startTask, onStarted });
 
@@ -86,7 +88,7 @@ export function Omnibox({
   }, [handleOutsideClick]);
 
   if (runningTask) {
-    const runningActions = plannedTasks.find((t) => t.id === activePlannedTaskId)?.actions ?? [];
+    const runningActions = actionsOfPlanned(plannedIndex, activePlannedTaskId);
     return (
       <OmniboxRunning
         {...edit}
