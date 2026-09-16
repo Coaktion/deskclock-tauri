@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
-import { actionsOfPlanned, indexPlannedById } from "@domain/utils/plannedActions";
+import { actionsOf } from "@domain/utils/plannedActions";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 
-const NO_ACTIONS = actionsOfPlanned(indexPlannedById([]), null);
+const NO_ACTIONS = actionsOf(null);
 
 /**
  * As ações da planejada de uma única tarefa, para a superfície que não carrega
@@ -23,8 +23,7 @@ export function usePlannedTaskActions(plannedTaskId: string | null): PlannedTask
     async (id: string, isCancelled: () => boolean) => {
       let actions: PlannedTaskAction[];
       try {
-        const planned = await plannedTaskRepo.findById(id);
-        actions = planned ? actionsOfPlanned(indexPlannedById([planned]), id) : NO_ACTIONS;
+        actions = actionsOf(await plannedTaskRepo.findById(id));
       } catch {
         actions = NO_ACTIONS;
       }

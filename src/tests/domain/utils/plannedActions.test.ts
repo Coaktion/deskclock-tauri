@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { actionsOfPlanned, actionsOfTasks, indexPlannedById } from "@domain/utils/plannedActions";
+import {
+  actionsOf,
+  actionsOfPlanned,
+  actionsOfTasks,
+  indexPlannedById,
+} from "@domain/utils/plannedActions";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Task } from "@domain/entities/Task";
 
@@ -100,5 +105,19 @@ describe("actionsOfTasks", () => {
   it("todas as origens excluídas ou sem vínculo resultam em vazio", () => {
     const tasks = [makeTask("t1", "excluida"), makeTask("t2")];
     expect(actionsOfTasks(INDEX, tasks)).toEqual([]);
+  });
+});
+
+describe("actionsOf", () => {
+  it("sem planejada, devolve a mesma referência vazia que as demais funções", () => {
+    const empty = actionsOf(null);
+    expect(empty).toEqual([]);
+    expect(actionsOf(undefined)).toBe(empty);
+    expect(actionsOf(makePlanned("p1", []))).toBe(empty);
+  });
+
+  it("com ações, devolve as da planejada", () => {
+    const planned = makePlanned("p1", [URL_ACTION]);
+    expect(actionsOf(planned)).toBe(planned.actions);
   });
 });

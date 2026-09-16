@@ -23,9 +23,10 @@ Decisão do usuário, 2026-09-15: a tarefa ativa fica visível em **todas** as t
 principal. O `TitleBar` ganha um bloco **centralizado** (`TitleBarRunningTask`) com ponto de status
 (`ExecutionDot` — pulsa em acento enquanto roda, fica parado em `paused` na pausa; o pulso chegou
 aqui em 2026-09-15, com a extração do primitivo, por decisão do usuário), nome ("(sem nome)" quando
-vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as
-ações ⚡ (quando a planejada de origem tem ações), Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px tingido pelo mesmo estado — o
-tingimento de borda e fundo do omnibox em execução —, para ser achado de relance.
+vazio), cronômetro `HH:MM:SS` — acento rodando, `paused` pausada — e as ações ⚡ (quando a
+planejada de origem tem ações), Pausar/Retomar, Parar e Cancelar. Tudo dentro de um chip de 24px
+tingido pelo mesmo estado — o tingimento de borda e fundo do omnibox em execução —, para ser
+achado de relance.
 
 - **Some na tela de Tarefas**: ali o omnibox já mostra o mesmo, e repetir o cronômetro a 100px de
   distância só duplicaria.

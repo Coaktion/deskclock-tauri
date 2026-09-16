@@ -15,6 +15,12 @@ export type PlannedIndex = ReadonlyMap<string, PlannedTask>;
  */
 const NO_ACTIONS: PlannedTaskAction[] = Object.freeze([]) as unknown as PlannedTaskAction[];
 
+/** As ações de uma planejada já em mãos, com a mesma referência para "nenhuma". */
+export function actionsOf(planned: PlannedTask | null | undefined): PlannedTaskAction[] {
+  const actions = planned?.actions;
+  return actions && actions.length > 0 ? actions : NO_ACTIONS;
+}
+
 export function indexPlannedById(list: readonly PlannedTask[]): PlannedIndex {
   return new Map(list.map((planned) => [planned.id, planned]));
 }
@@ -29,8 +35,7 @@ export function actionsOfPlanned(
   plannedTaskId: string | null | undefined
 ): PlannedTaskAction[] {
   if (!plannedTaskId) return NO_ACTIONS;
-  const actions = index.get(plannedTaskId)?.actions;
-  return actions && actions.length > 0 ? actions : NO_ACTIONS;
+  return actionsOf(index.get(plannedTaskId));
 }
 
 /**
