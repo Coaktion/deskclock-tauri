@@ -61,6 +61,7 @@ import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentati
 import { AutoSyncControls, type AutoSyncNow } from "./AutoSyncControls";
 import { SHEETS_AUTO_SYNC_KEYS } from "./autoSyncIntegrations";
 import { GoogleCalendarLogo } from "./google/GoogleCalendarLogo";
+import { GoogleDriveLogo } from "./google/GoogleDriveLogo";
 import { GoogleLogo } from "./google/GoogleLogo";
 import { GoogleSheetsLogo } from "./google/GoogleSheetsLogo";
 import { OVERLAY_EVENTS, type MeetingTrackerSyncResultPayload } from "@shared/types/overlayEvents";
@@ -630,7 +631,7 @@ export function GoogleIntegrationCard() {
         </SubSection>
       </div>
       <div data-tour="google-drive-backup">
-        <SubSection icon={<DatabaseBackup size={14} />} title="Backup do banco">
+        <SubSection icon={<GoogleDriveLogo size={14} />} title="Backup do banco">
           <BackupSection disabled={!connected} />
         </SubSection>
       </div>
