@@ -1,45 +1,19 @@
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
-import { useIntegrationCatalogs } from "@presentation/hooks/useIntegrationCatalogs";
+import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
 import { useTour } from "@presentation/hooks/useTour";
 import { startZendeskOAuth } from "@infra/integrations/zendesk/ZendeskOAuth";
 import { ZendeskTokenManager } from "@infra/integrations/zendesk/ZendeskTokenManager";
-import { ImportZendeskModal } from "@presentation/modals/ImportZendeskModal";
-import { CalendarDays, CheckCircle2, Key, LogIn, LogOut, X } from "lucide-react";
+import { CalendarDays, Key, LogIn, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, IconButton, Input, TourButton } from "@presentation/components/ui";
+import { Button, Input, TourButton } from "@presentation/components/ui";
 import { DeskclockWorkspaceRow, IntegrationTile, Row, StatusBadge, SubSection } from "./shared";
-
-/* ── SVG Zendesk ── */
-
-export function ZendeskLogoSmall({ size = 20 }: { size?: number }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 26 26"
-      aria-hidden="true"
-      className="zendesk-logo"
-    >
-      <path
-        fill="currentColor"
-        d="M12 8.2v14.5H0zM12 3c0 3.3-2.7 6-6 6S0 6.3 0 3h12zm2 19.7c0-3.3 2.7-6 6-6s6 2.7 6 6H14zm0-5.2V3h12z"
-      />
-    </svg>
-  );
-}
+import { ZendeskLogoSmall } from "./zendesk/ZendeskLogo";
 
 /* ── Card Zendesk ── */
 
 export function ZendeskIntegrationCard() {
-  const { plannedTaskRepo } = useRepositories();
   const config = useAppConfig();
-  const factories = useIntegrations();
-  // Catálogos do workspace da integração: o import cria as planejadas lá, e as
-  // do ativo fariam a tarefa apontar para projeto de outro workspace.
-  const { projects, categories } = useIntegrationCatalogs("zendeskDeskclockWorkspaceId");
+  const { openModal } = useIntegrationsUi();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState("");
   const [subdomain, setSubdomain] = useState("");
@@ -47,8 +21,6 @@ export function ZendeskIntegrationCard() {
   const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importedCount, setImportedCount] = useState<number | null>(null);
   const { startTour, hasSeenTour } = useTour("zendesk-detail");
 
   useEffect(() => {
@@ -92,7 +64,14 @@ export function ZendeskIntegrationCard() {
       setConnected(true);
       setEmail(tokens.email);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao conectar com o Zendesk.");
+      // O `invoke` do Tauri rejeita com string, não com Error: sem isto o motivo real sumia.
+      setError(
+        err instanceof Error
+          ? err.message
+          : typeof err === "string" && err
+            ? err
+            : "Erro ao conectar com o Zendesk."
+      );
     } finally {
       setLoading(false);
     }
@@ -104,8 +83,6 @@ export function ZendeskIntegrationCard() {
     setConnected(false);
     setEmail("");
   }
-
-  const ticketImporter = connected ? factories.createTicketImporter() : null;
 
   return (
     <div className="rounded-card border border-border-subtle bg-surface overflow-hidden">
@@ -231,48 +208,14 @@ export function ZendeskIntegrationCard() {
               Importe tickets abertos atribuídos a você como tarefas planejadas.
             </p>
             <Button
-              onClick={() => {
-                setImportedCount(null);
-                setShowImportModal(true);
-              }}
+              onClick={() => openModal("zendesk-import")}
               icon={<CalendarDays size={14} />}
               className="w-full"
             >
               Importar tickets…
             </Button>
-
-            {importedCount !== null && (
-              <div className="mt-2 flex items-center gap-2 px-3 py-2 bg-billable/10 border border-billable/20 rounded-control">
-                <CheckCircle2 size={14} className="text-billable shrink-0" />
-                <span className="text-xs text-billable flex-1">
-                  {importedCount} ticket{importedCount !== 1 ? "s" : ""} importado
-                  {importedCount !== 1 ? "s" : ""}.
-                </span>
-                <IconButton
-                  icon={<X size={14} />}
-                  title="Dispensar aviso"
-                  variant="neutral"
-                  size="sm"
-                  onClick={() => setImportedCount(null)}
-                />
-              </div>
-            )}
           </div>
         </SubSection>
-      )}
-
-      {showImportModal && ticketImporter && (
-        <ImportZendeskModal
-          importer={ticketImporter}
-          repo={plannedTaskRepo}
-          projects={projects}
-          categories={categories}
-          onImported={(count) => {
-            setShowImportModal(false);
-            setImportedCount(count);
-          }}
-          onClose={() => setShowImportModal(false)}
-        />
       )}
     </div>
   );
