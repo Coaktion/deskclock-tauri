@@ -74,8 +74,10 @@ compila → `pnpm lint` → commit semântico → PR.
 
 **Documentação interna mora em `docs-internal/`, nunca em `docs/`.** O `docs/` é a pasta que o
 GitHub Pages publica (`main:/docs` → `coaktion.github.io/deskclock-tauri`), e o repositório é
-**público**: arquivo colocado ali vai ao ar no merge, sem ninguém decidir isso. Ele tem três
-arquivos e só deve ter três — `index.html` (o manual do usuário), `favicon.svg` e `favicon.png`.
+**público**: arquivo colocado ali vai ao ar no merge, sem ninguém decidir isso. Ele só deve ter
+`index.html` (o manual do usuário), `favicon.svg`, `favicon.png` e `fonts/` — as três fontes `.woff2`
+que o `@font-face` do manual carrega para ter a tipografia do app (o Pages não publica
+`docs-internal/`, então elas não podem morar lá).
 Já esteve com os specs do Monday dentro, board ids da Aktie e tudo, servidos em HTML na internet
 aberta. Doc novo de arquitetura, tela, integração ou spec: `docs-internal/`.
 
