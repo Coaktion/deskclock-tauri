@@ -56,6 +56,7 @@ const DEFAULTS: AppConfig = {
   sheetsAutoSyncLastFiredDate: "",
   sheetsDailySyncLastTimestamp: "",
   calendarAutoTrackingEnabled: false,
+  calendarIgnoreRules: [],
   calendarLastSyncError: "",
   driveBackupEnabled: false,
   driveBackupFrequency: "weekly" as const,

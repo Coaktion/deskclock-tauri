@@ -60,6 +60,7 @@ import {
 import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
 import { AutoSyncControls, type AutoSyncNow } from "./AutoSyncControls";
 import { SHEETS_AUTO_SYNC_KEYS } from "./autoSyncIntegrations";
+import { CalendarIgnoreRules } from "./google/CalendarIgnoreRules";
 import { GoogleCalendarLogo } from "./google/GoogleCalendarLogo";
 import { GoogleDriveLogo } from "./google/GoogleDriveLogo";
 import { GoogleLogo } from "./google/GoogleLogo";
@@ -397,6 +398,7 @@ function CalendarSection({ disabled }: { disabled: boolean }) {
           </div>
         )}
       </div>
+      <CalendarIgnoreRules />
       <div className="flex items-start gap-2 mb-2 p-2.5 bg-accent/5 border border-accent/20 rounded-control">
         <Info size={14} className="text-accent-text shrink-0 mt-0.5" />
         <p className="text-body text-accent-text leading-relaxed">

@@ -1,3 +1,4 @@
+import type { CalendarIgnoreRule } from "@shared/types/calendarConfig";
 import type {
   ClockifyCategoryMapping,
   ClockifyProjectMapping,
@@ -108,6 +109,11 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   sheetsDailySyncLastTimestamp: string;
   // Google Agenda
   calendarAutoTrackingEnabled: boolean;
+  /**
+   * Eventos deixados de lado pelo nome. Valem para o rastreio automático e para
+   * o "Importar eventos", que os mostra desmarcados.
+   */
+  calendarIgnoreRules: CalendarIgnoreRule[];
   /**
    * Resultado do último ciclo de rastreamento: "" quando correu bem, a mensagem
    * de erro quando falhou. O ciclo roda em segundo plano e engolia a falha em
