@@ -4,6 +4,7 @@ import type { Project } from "@domain/entities/Project";
 import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICalendarImporter";
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import { addIgnoreRule, isEventIgnored } from "@domain/usecases/calendar/isEventIgnored";
 import { trackImportedMeetings } from "@domain/usecases/calendar/trackImportedMeetings";
 import { dedupeCalendarEvents } from "@domain/usecases/plannedTasks/DedupeCalendarEvents";
 import {
@@ -11,7 +12,14 @@ import {
   type ImportEventInput,
 } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { Autocomplete } from "@presentation/components/Autocomplete";
-import { Badge, Button, DateRangeInput, Modal, Toggle } from "@presentation/components/ui";
+import {
+  Badge,
+  Button,
+  DateRangeInput,
+  IconButton,
+  Modal,
+  Toggle,
+} from "@presentation/components/ui";
 import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
@@ -24,6 +32,7 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronRight,
+  EyeOff,
   Loader2,
   Repeat2,
   Square,
@@ -237,6 +246,8 @@ interface EventRowProps {
   categoryOptionsFor: (projectId: string | null) => Category[];
   isDeduped: boolean;
   isDuplicateOfExisting: boolean;
+  /** Casa com uma regra de "Eventos ignorados": vem desmarcado e sem o "Ignorar sempre". */
+  isIgnored: boolean;
   /**
    * Dias que a planejada terá de fato — os desta linha mais os das ocorrências
    * que ela absorveu. Fica no resumo, e não no editor: ali se edita o dia deste
@@ -245,6 +256,7 @@ interface EventRowProps {
   effectiveRecurringDays: number[];
   onToggleSelect: () => void;
   onEditChange: (s: EventEditState) => void;
+  onIgnore: () => void;
 }
 
 function EventRow({
@@ -255,9 +267,11 @@ function EventRow({
   categoryOptionsFor,
   isDeduped,
   isDuplicateOfExisting,
+  isIgnored,
   effectiveRecurringDays,
   onToggleSelect,
   onEditChange,
+  onIgnore,
 }: EventRowProps) {
   const hasEdits =
     editState.projectId !== null ||
@@ -299,6 +313,7 @@ function EventRow({
                 já existe
               </Badge>
             )}
+            {isIgnored && <Badge title="Casa com uma regra de eventos ignorados">Ignorado</Badge>}
           </div>
           <p className="text-xs text-fg-muted mt-0.5">
             {event.allDay
@@ -319,6 +334,18 @@ function EventRow({
             )}
           </p>
         </div>
+        {!isIgnored && (
+          // O clique na linha abre o editor; o span impede que ignorar também o abra.
+          <span onClick={(e) => e.stopPropagation()}>
+            <IconButton
+              icon={<EyeOff size={14} />}
+              title="Ignorar sempre"
+              variant="neutral"
+              size="sm"
+              onClick={onIgnore}
+            />
+          </span>
+        )}
         <span className="p-1 text-fg-muted shrink-0">
           {editState.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
@@ -388,6 +415,7 @@ export function ImportCalendarModal({
   // Desligado por padrão: rastrear é assumir que o dia inteiro importado vira
   // aviso na tela, e quem importa uma semana de agenda raramente quer isso.
   const [trackMeetings, setTrackMeetings] = useState(false);
+  const [ignoreRules, setIgnoreRules] = useState(() => config.get("calendarIgnoreRules"));
 
   useEffect(() => {
     setLoading(true);
@@ -424,7 +452,14 @@ export function ImportCalendarModal({
         const duplicateIds = new Set(
           evts.filter((e) => names.has(e.title.toLowerCase().trim())).map((e) => e.id)
         );
-        setSelected(new Set(evts.filter((e) => !duplicateIds.has(e.id)).map((e) => e.id)));
+        const rules = config.get("calendarIgnoreRules");
+        setSelected(
+          new Set(
+            evts
+              .filter((e) => !duplicateIds.has(e.id) && !isEventIgnored(e.title, rules))
+              .map((e) => e.id)
+          )
+        );
         const map = new Map<string, EventEditState>();
         evts.forEach((e) => map.set(e.id, defaultEditState(e, projects, categories)));
         setEditMap(map);
@@ -647,6 +682,7 @@ export function ImportCalendarModal({
               categoryOptionsFor={categoryOptionsFor}
               isDeduped={dedupedEventIds.has(event.id)}
               isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
+              isIgnored={isEventIgnored(event.title, ignoreRules)}
               effectiveRecurringDays={
                 mergedDaysById.get(event.id) ??
                 editMap.get(event.id)?.recurringDays ??
@@ -655,6 +691,7 @@ export function ImportCalendarModal({
               }
               onToggleSelect={() => toggleEvent(event.id)}
               onEditChange={(s) => updateEdit(event.id, s)}
+              onIgnore={() => void ignoreEvent(event.title)}
             />
           ))
         ) : (
@@ -662,6 +699,21 @@ export function ImportCalendarModal({
         )}
       </div>
     );
+  }
+
+  // A regra casa pelo nome, então desmarca junto toda ocorrência de mesmo título.
+  async function ignoreEvent(title: string) {
+    const next = addIgnoreRule(ignoreRules, { operator: "equals", value: title });
+    setSelected((prev) => {
+      const s = new Set(prev);
+      events.forEach((e) => {
+        if (isEventIgnored(e.title, next)) s.delete(e.id);
+      });
+      return s;
+    });
+    if (next === ignoreRules) return;
+    setIgnoreRules(next);
+    await config.set("calendarIgnoreRules", next);
   }
 
   const allWeekSelected =

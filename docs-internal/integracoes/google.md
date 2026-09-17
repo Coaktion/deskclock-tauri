@@ -25,6 +25,7 @@
 | Autorização | botão OAuth |
 | Workspace DeskClock | dropdown (`calendarDeskclockWorkspaceId`). Governa **só** o "Importar eventos" |
 | Rastrear reuniões automaticamente | toggle (`calendarAutoTrackingEnabled`, padrão desativado; requer Google conectado) |
+| Eventos ignorados | lista de regras (`calendarIgnoreRules`, padrão vazia): operador Igual/Contém + nome, remoção imediata. Sempre visível — vale também para o "Importar eventos" |
 
 > **A Agenda é a exceção ao workspace por integração, e a exceção foi escolhida.** O seletor dela
 > vale só para o **"Importar eventos" manual**; o **rastreio automático de reuniões continua
@@ -33,6 +34,21 @@
 > ele escolheu assim mesmo, e depois **removeu aquele botão** (§5.3): hoje o modal só abre pelo rail
 > e pela tela de Integrações, onde o seletor está à vista. **Não "conserte" sem perguntar.** É por
 > isso que só o `useMeetingTracker` mantém o gate de `workspaceLoading` (§ acima).
+
+> **Eventos ignorados, por nome.** Existem para o evento recorrente que é só lembrete e virava
+> planejada toda semana. Cada regra é `equals` (Igual) ou `contains` (Contém), comparada com a
+> normalização de `nameKey` — sem caixa nem espaço nas pontas; regra em branco nunca casa
+> (`isEventIgnored`). O `syncTodayMeetings` filtra os ignorados **logo após o `getEvents`**, então
+> para o resto do ciclo o evento não está na agenda: uma regra criada no meio do dia age como
+> **cancelamento** — o rastreamento não iniciado sai no reconcile, o já iniciado fica. A planejada
+> **já criada hoje não é apagada**, coerente com "o sync não apaga planejada" e "planejada apagada à
+> mão não volta". Há duas portas para criar regra: a lista em Configurações e o "Ignorar sempre"
+> por linha no "Importar eventos", onde os eventos que casam vêm **desmarcados** com o badge
+> "Ignorado".
+>
+> **O prompt de início não cria regra, de propósito.** Chegou a ter um "Não rastrear mais" e foi
+> retirado a pedido do usuário: é uma ação definitiva ao lado de "Dispensar", que vale só para hoje,
+> e numa recorrente o botão apareceria todo dia para uma reunião que nunca vai ser ignorada.
 
 > **Rastreamento automático de reuniões:** quando ligado, `useMeetingTracker` (na main window, dentro do `RunningTaskProvider`) busca os eventos com horário do dia ao abrir o app e a cada 2 min, rastreando-os num store próprio da integração (`calendar_tracked_meetings` — a identidade do evento fica confinada aqui; `Task`/`PlannedTask` permanecem agnósticas). No horário de início (até 1 min antes) emite um prompt reutilizando a janela `overlay-popup`; confirmar inicia a tarefa via `RunningTaskContext.switchToTask` (encerra a corrente e inicia a da reunião). No término, pergunta se ainda está em andamento e re-pergunta a cada 15 min até encerrar — nunca para sozinho. A decisão de quando exibir cada prompt vive em use cases puros (`computeMeetingPromptActions`, `syncTodayMeetings`).
 

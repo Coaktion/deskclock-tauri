@@ -103,6 +103,7 @@ const RANGE = {
   toISO: "2026-07-01T23:59:59.999Z",
   nowISO: "2026-07-01T08:00:00.000Z",
   workspaceId: "ws-1",
+  ignoreRules: [],
 };
 
 describe("syncTodayMeetings", () => {
@@ -557,6 +558,61 @@ describe("syncTodayMeetings", () => {
           endISO: composeMeetingEndISO("2026-07-01", "10:00", "11:00"),
           startPromptedAt: composeLocalISO("2026-07-01", "10:00"),
         })
+      );
+    });
+  });
+  describe("regras de ignorar", () => {
+    it("evento ignorado não é rastreado nem ganha planejada", async () => {
+      const deps = makeDeps([makeEvent()]);
+      const result = await syncTodayMeetings(deps, {
+        ...RANGE,
+        ignoreRules: [{ operator: "equals", value: "daily" }],
+      });
+      expect(result.tracked).toBe(0);
+      expect(result.plannedCreated).toBe(0);
+      expect(deps.trackedRepo.upsert).not.toHaveBeenCalled();
+      expect(deps.plannedRepo.save).not.toHaveBeenCalled();
+    });
+
+    it("reunião rastreada e não iniciada que passa a ser ignorada é removida", async () => {
+      const deps = makeDeps(
+        [makeEvent()],
+        [makeMeeting({ plannedTaskId: "pt-Daily" })],
+        [makePlanned("Daily", { id: "pt-Daily" })]
+      );
+      await syncTodayMeetings(deps, {
+        ...RANGE,
+        ignoreRules: [{ operator: "equals", value: "Daily" }],
+      });
+      expect(deps.trackedRepo.remove).toHaveBeenCalledWith("evt1");
+      // A planejada já criada fica: o sync não apaga planejada.
+      expect(deps.plannedRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it("reunião já iniciada que passa a ser ignorada continua rastreada", async () => {
+      const deps = makeDeps(
+        [makeEvent()],
+        [makeMeeting({ plannedTaskId: "pt-Daily", startedTaskId: "task1" })]
+      );
+      await syncTodayMeetings(deps, {
+        ...RANGE,
+        ignoreRules: [{ operator: "equals", value: "Daily" }],
+      });
+      expect(deps.trackedRepo.remove).not.toHaveBeenCalled();
+    });
+
+    it("'contains' ignora só os eventos que contêm o trecho", async () => {
+      const deps = makeDeps([
+        makeEvent({ id: "a", title: "Lembrete: pagar conta" }),
+        makeEvent({ id: "b", title: "Daily" }),
+      ]);
+      const result = await syncTodayMeetings(deps, {
+        ...RANGE,
+        ignoreRules: [{ operator: "contains", value: "LEMBRETE" }],
+      });
+      expect(result.tracked).toBe(1);
+      expect(deps.trackedRepo.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ calendarEventId: "b" })
       );
     });
   });

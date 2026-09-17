@@ -117,6 +117,7 @@ export function useMeetingTracker() {
             toISO: endOfDayISO(today),
             nowISO: new Date().toISOString(),
             workspaceId: workspaceIdRef.current,
+            ignoreRules: config.get("calendarIgnoreRules"),
           }
         );
         // Falha por reunião não aborta o ciclo; a primeira mensagem basta para

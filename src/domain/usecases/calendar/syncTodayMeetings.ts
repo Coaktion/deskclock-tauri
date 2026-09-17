@@ -10,6 +10,8 @@ import type { ICategoryRepository } from "@domain/repositories/ICategoryReposito
 import { createPlannedTaskFromEvent } from "@domain/usecases/plannedTasks/ImportCalendarEvents";
 import { openUrlAction } from "@domain/utils/actions";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
+import type { CalendarIgnoreRule } from "@shared/types/calendarConfig";
+import { isEventIgnored } from "./isEventIgnored";
 import { composeLocalISO, composeMeetingEndISO } from "./meetingTime";
 import { nameKey } from "./nameKey";
 
@@ -55,6 +57,8 @@ export interface SyncTodayMeetingsRange {
   nowISO: string;
   /** Workspace que recebe as planejadas criadas e cujo catálogo é consultado. */
   workspaceId: string;
+  /** Regras do usuário: evento que casa com alguma é tratado como ausente da agenda. */
+  ignoreRules: CalendarIgnoreRule[];
 }
 
 /**
@@ -81,13 +85,19 @@ export interface SyncTodayMeetingsRange {
  * Projeto e categoria são pré-preenchidos a partir da descrição do evento
  * (mesma convenção do modal manual: "Projeto:" / "Categoria:"), casando por nome
  * contra os cadastros existentes.
+ *
+ * **Evento ignorado sai da lista logo após a busca**, antes de tudo o mais: para
+ * as etapas seguintes ele simplesmente não está na agenda. Por isso uma regra
+ * criada no meio do dia age como cancelamento — o rastreamento não iniciado é
+ * removido pelo reconcile —, e a planejada já criada fica, como toda planejada
+ * que o sync não apaga.
  */
 export async function syncTodayMeetings(
   deps: SyncTodayMeetingsDeps,
   range: SyncTodayMeetingsRange
 ): Promise<SyncTodayMeetingsResult> {
   const { importer, trackedRepo, projectRepo, categoryRepo } = deps;
-  const { todayISO, fromISO, toISO, workspaceId } = range;
+  const { todayISO, fromISO, toISO, workspaceId, ignoreRules } = range;
 
   const [events, existing, projects, categories] = await Promise.all([
     importer.getEvents(fromISO, toISO),
@@ -97,7 +107,9 @@ export async function syncTodayMeetings(
   ]);
 
   const existingIds = new Set(existing.map((m) => m.calendarEventId));
-  const timed = events.filter((e) => !e.allDay && !!e.startTime);
+  const timed = events.filter(
+    (e) => !e.allDay && !!e.startTime && !isEventIgnored(e.title, ignoreRules)
+  );
   const timedById = new Map(timed.map((e) => [e.id, e]));
 
   // Reconcilia o que já era rastreado contra a agenda atual (remarcações/cancelamentos).
