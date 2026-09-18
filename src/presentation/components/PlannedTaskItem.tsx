@@ -1,8 +1,19 @@
 import { useState } from "react";
-import { Play, Check, Copy, Trash2, RotateCcw, Pencil, RefreshCw, Bell } from "lucide-react";
+import {
+  Play,
+  Check,
+  Copy,
+  Trash2,
+  RotateCcw,
+  Pencil,
+  RefreshCw,
+  Bell,
+  Share2,
+} from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
+import type { CustomField } from "@domain/entities/CustomField";
 import type { UUID } from "@shared/types";
 import {
   EditPlannedTaskModal,
@@ -13,12 +24,22 @@ import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
 import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
 import { getProjectColor } from "@shared/utils/projectColor";
+import { plannedTaskToSharePayload } from "@domain/utils/sharePayload";
+import { buildShareLink } from "@shared/utils/shareLink";
+import { showToast } from "@shared/utils/toast";
 
 interface PlannedTaskItemProps {
   task: PlannedTask;
   dateISO: string;
   projects: Project[];
   categories: Category[];
+  /**
+   * O catálogo inteiro, arquivados inclusive: o link traduz id de campo em
+   * rótulo, e valor já gravado num campo arquivado continua valendo.
+   * Desce por prop porque a linha é renderizada uma vez por tarefa do dia —
+   * `useCustomFields` aqui seria uma carga por linha.
+   */
+  customFields: CustomField[];
   /** Se a execução em curso impede este ▶ — e, quando ela é esta mesma tarefa, quem o diz. */
   playBlock?: PlayBlock;
   /**
@@ -58,6 +79,7 @@ export function PlannedTaskItem({
   dateISO,
   projects,
   categories,
+  customFields,
   playBlock = "none",
   execution,
   tracked = false,
@@ -78,6 +100,18 @@ export function PlannedTaskItem({
 
   async function handleSave(id: string, input: EditPlannedTaskInput) {
     await onUpdate(id, input);
+  }
+
+  async function handleShare() {
+    const link = buildShareLink(
+      plannedTaskToSharePayload(task, projects, categories, customFields)
+    );
+    try {
+      await navigator.clipboard.writeText(link);
+      await showToast("success", "Link copiado para a área de transferência.");
+    } catch {
+      await showToast("error", "Não foi possível copiar o link.");
+    }
   }
 
   /*
@@ -123,7 +157,7 @@ export function PlannedTaskItem({
            faturamento: é a mesma posição que impede o chip de andar quando a
            fileira de botões abre.
 
-           Some no modo de seleção pelo mesmo motivo que os cinco botões abaixo:
+           Some no modo de seleção pelo mesmo motivo que os seis botões abaixo:
            ali a linha inteira é alvo de marcar, e um controle que engole o
            clique faria a tarefa recusar a seleção justamente enquanto se
            escolhe o que excluir em lote. */
@@ -146,7 +180,7 @@ export function PlannedTaskItem({
         selected={selected}
         onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
         /* Sem hover os botões não ocupam largura nenhuma: reservados, o espaço
-           de cinco botões sai do nome da tarefa, que trunca numa linha vazia à
+           de seis botões sai do nome da tarefa, que trunca numa linha vazia à
            direita (§5.3). */
         collapseActions
         actions={
@@ -161,6 +195,12 @@ export function PlannedTaskItem({
                   onClick={() => onPlay(task)}
                 />
               )}
+              <IconButton
+                icon={<Share2 size={14} />}
+                title="Compartilhar"
+                size="sm"
+                onClick={() => void handleShare()}
+              />
               <IconButton
                 icon={<Pencil size={14} />}
                 title="Editar"

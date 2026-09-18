@@ -7,6 +7,7 @@ import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
+import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
@@ -79,6 +80,9 @@ export function WeekPlanningView() {
 
   const { projects } = useProjects();
   const { categories } = useCategories();
+  // Uma carga por tela, não por linha: o catálogo é o mesmo para as sete
+  // colunas do dia e é o `PlannedTaskItem` que o consome, um por tarefa.
+  const { fields: customFields } = useCustomFields();
   const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
   const { startTask, runningTask, activePlannedTaskId } = useRunningTask();
@@ -413,6 +417,7 @@ export function WeekPlanningView() {
                           dateISO={day}
                           projects={projects}
                           categories={categories}
+                          customFields={customFields}
                           playBlock={playBlock}
                           execution={executionOf(playBlock, runningTask)}
                           tracked={day === trackedToday && trackedIds.has(task.id)}
