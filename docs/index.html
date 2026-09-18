@@ -2722,6 +2722,7 @@
 
     <h3>Jornada</h3>
     <p><strong>Meta diária</strong> e <strong>meta semanal</strong>, em horas. É contra elas que os totalizadores da tela de Tarefas mostram o progresso.</p>
+    <p><strong>Primeiro dia da semana</strong> — segunda (padrão) ou domingo. A escolha vale para o app inteiro: o total e a meta semanal, os atalhos "Esta semana", "Semana passada" e "Próxima semana", a vista semanal do Planejamento e a grade dos calendários.</p>
 
     <h3>Janelas</h3>
     <p><strong>Redefinir posições salvas das janelas</strong> — devolve a janela principal e os overlays às posições padrão. Útil quando um overlay ficou fora da área visível depois de mudar de monitor.</p>
@@ -3126,7 +3127,7 @@
         <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
         <tbody>
           <tr><td><code>GET</code></td><td><code>/totals</code></td><td>Totais das tarefas concluídas num período, como no Histórico</td></tr>
-          <tr><td><code>GET</code></td><td><code>/totals/week</code></td><td>Total da semana (segunda a domingo) de uma data</td></tr>
+          <tr><td><code>GET</code></td><td><code>/totals/week</code></td><td>Total da semana de uma data, conforme o primeiro dia da semana configurado</td></tr>
         </tbody>
       </table>
         </div>

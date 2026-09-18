@@ -8,31 +8,46 @@ import {
   parseBrDate,
   toISODate,
   yearPage,
+  weekdayInitials,
+  weekdayNames,
 } from "@shared/utils/calendarGrid";
+
+const SEGUNDA = 1;
+const DOMINGO = 0;
 
 describe("monthCells", () => {
   it("devolve sempre 42 células, mesmo no mês que cabe em cinco semanas", () => {
     // Fevereiro de 2021 começou numa segunda e tem 28 dias: quatro semanas exatas.
-    expect(monthCells(2021, 1)).toHaveLength(42);
-    expect(monthCells(2026, 8)).toHaveLength(42);
+    expect(monthCells(2021, 1, SEGUNDA)).toHaveLength(42);
+    expect(monthCells(2026, 8, SEGUNDA)).toHaveLength(42);
+  });
+
+  it("com a semana no domingo, a grade abre um dia antes", () => {
+    // 1º de setembro de 2026 é uma terça: domingo-primeiro abre em 30/08, e não
+    // em 31/08. A célula do dia 1º anda uma coluna, e nada mais muda.
+    expect(monthCells(2026, 8, DOMINGO)[0].iso).toBe("2026-08-30");
+    expect(monthCells(2026, 8, DOMINGO)).toHaveLength(42);
+    // Fevereiro de 2021 começou numa segunda: domingo-primeiro precisa de uma
+    // célula do mês anterior onde segunda-primeiro não precisava de nenhuma.
+    expect(monthCells(2021, 1, DOMINGO)[0].iso).toBe("2021-01-31");
   });
 
   it("começa na segunda-feira da semana que contém o dia 1", () => {
     // 1º de setembro de 2026 é uma terça — a grade abre na segunda, dia 31/08.
-    expect(monthCells(2026, 8)[0].iso).toBe("2026-08-31");
+    expect(monthCells(2026, 8, SEGUNDA)[0].iso).toBe("2026-08-31");
     // 1º de fevereiro de 2021 é segunda: a grade abre no próprio dia 1.
-    expect(monthCells(2021, 1)[0].iso).toBe("2021-02-01");
+    expect(monthCells(2021, 1, SEGUNDA)[0].iso).toBe("2021-02-01");
   });
 
   it("marca como `outside` o que não é do mês pedido", () => {
-    const cells = monthCells(2026, 8);
+    const cells = monthCells(2026, 8, SEGUNDA);
     expect(cells[0]).toMatchObject({ iso: "2026-08-31", day: 31, outside: true });
     expect(cells[1]).toMatchObject({ iso: "2026-09-01", day: 1, outside: false });
     expect(cells.filter((c) => !c.outside)).toHaveLength(30);
   });
 
   it("cobre o mês inteiro sem buraco nem repetição", () => {
-    const cells = monthCells(2026, 8);
+    const cells = monthCells(2026, 8, SEGUNDA);
     expect(new Set(cells.map((c) => c.iso)).size).toBe(42);
     const doMes = cells.filter((c) => !c.outside).map((c) => c.day);
     expect(doMes).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
@@ -40,15 +55,34 @@ describe("monthCells", () => {
 
   it("vira o ano quando o mês sai de 0–11", () => {
     // É o que deixa a navegação escrever `mes + 1` sem tratar dezembro.
-    expect(monthCells(2026, 12).some((c) => c.iso === "2027-01-15")).toBe(true);
-    expect(monthCells(2026, -1).some((c) => c.iso === "2025-12-15")).toBe(true);
+    expect(monthCells(2026, 12, SEGUNDA).some((c) => c.iso === "2027-01-15")).toBe(true);
+    expect(monthCells(2026, -1, SEGUNDA).some((c) => c.iso === "2025-12-15")).toBe(true);
   });
 
   it("atravessa o horário de verão sem pular nem repetir dia", () => {
     // Outubro de 2018 teve virada de horário no Brasil (dia 4, meia-noite).
-    const cells = monthCells(2018, 9);
+    const cells = monthCells(2018, 9, SEGUNDA);
     const dias = cells.filter((c) => !c.outside).map((c) => c.day);
     expect(dias).toEqual(Array.from({ length: 31 }, (_, i) => i + 1));
+  });
+});
+
+describe("weekdayInitials / weekdayNames", () => {
+  it("rodam a lista para começar no dia escolhido", () => {
+    expect(weekdayInitials(SEGUNDA)).toEqual(["S", "T", "Q", "Q", "S", "S", "D"]);
+    expect(weekdayInitials(DOMINGO)).toEqual(["D", "S", "T", "Q", "Q", "S", "S"]);
+    expect(weekdayNames(SEGUNDA)[0]).toBe("segunda-feira");
+    expect(weekdayNames(DOMINGO)[0]).toBe("domingo");
+  });
+
+  it("o nome e a inicial descrevem a mesma coluna", () => {
+    // É o que o `aria-label` do cabeçalho promete: a inicial ambígua ("S" é
+    // segunda e sábado) só se resolve pelo nome ao lado.
+    for (const inicio of [SEGUNDA, DOMINGO] as const) {
+      const iniciais = weekdayInitials(inicio);
+      const nomes = weekdayNames(inicio);
+      expect(nomes.map((n) => n[0].toUpperCase())).toEqual(iniciais);
+    }
   });
 });
 

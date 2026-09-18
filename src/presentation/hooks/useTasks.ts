@@ -6,6 +6,7 @@ import { groupTasks } from "@domain/utils/groupTasks";
 import { todayISO, weekBoundsISO } from "@shared/utils/time";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { listen } from "@tauri-apps/api/event";
@@ -21,6 +22,7 @@ export function useTasks() {
   const { taskRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
   const { reloadSignal } = useRunningTask();
+  const weekStartsOn = useWeekStart();
   const [today, setToday] = useState(todayISO);
   const [groups, setGroups] = useState<TaskGroup[]>([]);
   const [totals, setTotals] = useState<TaskTotals>({
@@ -40,7 +42,7 @@ export function useTasks() {
   }, []);
 
   const load = useCallback(async () => {
-    const { start, end } = weekBoundsISO();
+    const { start, end } = weekBoundsISO(weekStartsOn);
     const [tasks, weekData] = await Promise.all([
       getTasksForDate(taskRepo, todayISO(), workspaceId),
       getWeekTotal(taskRepo, start, end, workspaceId),
@@ -62,7 +64,7 @@ export function useTasks() {
       weekSeconds: weekData.totalSeconds,
       weekDays: weekData.daysWorked,
     });
-  }, [taskRepo, workspaceId]);
+  }, [taskRepo, workspaceId, weekStartsOn]);
 
   useEffect(() => {
     load();

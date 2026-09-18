@@ -1,3 +1,5 @@
+import type { WeekStart } from "@shared/types/appConfig";
+
 export function formatHHMMSS(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
   const h = Math.floor(s / 3600);
@@ -85,17 +87,24 @@ export function localDateISO(isoString: string): string {
   return `${y}-${m}-${day}`;
 }
 
-export function weekBoundsISO(): { start: string; end: string } {
-  return weekBoundsOf(todayISO());
+export function weekBoundsISO(weekStartsOn: WeekStart): { start: string; end: string } {
+  return weekBoundsOf(todayISO(), weekStartsOn);
 }
 
 /**
- * Segunda e domingo (AAAA-MM-DD) da semana de um dia local qualquer — a mesma
- * semana do `weekBoundsISO`, que é esta função aplicada a hoje.
+ * Primeiro e último dia (AAAA-MM-DD) da semana de um dia local qualquer — a
+ * mesma semana do `weekBoundsISO`, que é esta função aplicada a hoje.
+ *
+ * `weekStartsOn` é **obrigatório**, e não um parâmetro com padrão de segunda,
+ * de propósito: a config vale para o app inteiro, e um padrão deixaria em
+ * segunda, calado, justamente o chamador que alguém esquecesse de ligar nela.
  */
-export function weekBoundsOf(dateISO: string): { start: string; end: string } {
+export function weekBoundsOf(
+  dateISO: string,
+  weekStartsOn: WeekStart
+): { start: string; end: string } {
   const dow = new Date(dateISO + "T12:00:00Z").getUTCDay(); // 0=Sun
-  const start = addDaysISO(dateISO, dow === 0 ? -6 : 1 - dow);
+  const start = addDaysISO(dateISO, -((dow - weekStartsOn + 7) % 7));
   return { start, end: addDaysISO(start, 6) };
 }
 

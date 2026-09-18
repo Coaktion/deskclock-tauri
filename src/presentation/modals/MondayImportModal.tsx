@@ -10,6 +10,8 @@ import {
   Square,
 } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import type { WeekStart } from "@shared/types/appConfig";
 import type { Category } from "@domain/entities/Category";
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
@@ -57,13 +59,16 @@ const PERIOD_LABELS: Record<PeriodFilter, string> = {
  * item encerrado em julho só polui a lista de agosto. O recorte é aplicado sobre
  * o que já veio na busca — **trocar de filtro não custa chamada ao Monday**.
  */
-function periodWindow(filter: PeriodFilter): { start: string; end: string } {
+function periodWindow(
+  filter: PeriodFilter,
+  weekStartsOn: WeekStart
+): { start: string; end: string } {
   const today = todayISO();
   switch (filter) {
     case "today":
       return { start: today, end: today };
     case "week":
-      return weekBoundsISO();
+      return weekBoundsISO(weekStartsOn);
     case "next30":
       return { start: today, end: addDaysISO(today, 30) };
   }
@@ -117,6 +122,7 @@ export function MondayImportModal({
   onImported,
   onClose,
 }: MondayImportModalProps) {
+  const weekStartsOn = useWeekStart();
   const config = useAppConfig();
   const { createMondayApi } = useIntegrations();
   const { mondayImportedItemRepo } = useRepositories();
@@ -260,7 +266,7 @@ export function MondayImportModal({
    * lista, mas não sem dizer para onde foi.
    */
   const [visibleRows, hiddenImported] = useMemo(() => {
-    const window = periodWindow(period);
+    const window = periodWindow(period, weekStartsOn);
     // Item sem cronograma no board entra em qualquer recorte: ele nasce no dia
     // corrente e escondê-lo por falta de data seria escondê-lo para sempre.
     const inWindow = rows.filter(
@@ -270,7 +276,7 @@ export function MondayImportModal({
       inWindow.filter((r) => !imported.has(r.item.id)),
       inWindow.filter((r) => imported.has(r.item.id)).length,
     ] as const;
-  }, [rows, period, imported]);
+  }, [rows, period, imported, weekStartsOn]);
 
   /** Um grupo por projeto, que é o que o usuário reconhece — board é detalhe. */
   const groups = useMemo(() => {

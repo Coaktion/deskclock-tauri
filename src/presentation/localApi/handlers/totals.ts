@@ -14,12 +14,12 @@ export const getPeriodTotals: LocalApiHandler = async (deps, params) => {
   return { status: 200, body: { from, to, ...getHistoryTotals(tasks) } };
 };
 
-/** Semana de segunda a domingo, como o total da tela de Tarefas. */
+/** A semana da config `weekStartsOn`, como o total da tela de Tarefas. */
 export const getWeekTotals: LocalApiHandler = async (deps, params) => {
   const workspaceId = await resolveRequestWorkspace(deps, params.workspaceId);
   const date = params.date || deps.todayISO();
   assertDate(date, "date");
-  const { start, end } = weekBoundsOf(date);
+  const { start, end } = weekBoundsOf(date, deps.weekStartsOn());
   const total = await getWeekTotal(deps.taskRepo, start, end, workspaceId);
   return { status: 200, body: { weekStart: start, weekEnd: end, ...total } };
 };

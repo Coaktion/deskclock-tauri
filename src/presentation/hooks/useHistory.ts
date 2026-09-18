@@ -11,6 +11,8 @@ import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { listen } from "@tauri-apps/api/event";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import type { WeekStart } from "@shared/types/appConfig";
 import { dateRangeFor, type DateRangeId } from "@shared/utils/datePresets";
 import type { UUID } from "@shared/types";
 
@@ -46,10 +48,11 @@ type DayRange = { start: string; end: string };
 async function resolveRange(
   repo: ITaskRepository,
   filters: HistoryFilters,
-  workspaceId: string
+  workspaceId: string,
+  weekStartsOn: WeekStart
 ): Promise<DayRange | null> {
   if (filters.quick !== "lastDay") {
-    return quickToRange(filters.quick, filters.startDate, filters.endDate);
+    return quickToRange(filters.quick, filters.startDate, filters.endDate, weekStartsOn);
   }
   const day = await repo.findLastDayWithCompletedTasks(workspaceId, { before: todayISO() });
   return day ? { start: day, end: day } : null;
@@ -76,10 +79,11 @@ const QUICK_RANGE: Record<Exclude<QuickFilter, "custom" | "lastDay">, DateRangeI
 function quickToRange(
   quick: Exclude<QuickFilter, "lastDay">,
   startDate: string,
-  endDate: string
+  endDate: string,
+  weekStartsOn: WeekStart
 ): DayRange {
   if (quick === "custom") return { start: startDate, end: endDate };
-  return dateRangeFor(QUICK_RANGE[quick]);
+  return dateRangeFor(QUICK_RANGE[quick], weekStartsOn);
 }
 
 function localDateISO(iso: string): string {
@@ -116,6 +120,7 @@ const INITIAL_FILTERS: HistoryFilters = {
 export function useHistory() {
   const { taskRepo } = useRepositories();
   const workspaceId = useActiveWorkspaceId();
+  const weekStartsOn = useWeekStart();
   const [filters, setFilters] = useState<HistoryFilters>(INITIAL_FILTERS);
   const [groups, setGroups] = useState<DayGroup[]>([]);
   const [totals, setTotals] = useState<HistoryTotals>({
@@ -132,7 +137,7 @@ export function useHistory() {
 
   const search = useCallback(
     async (f: HistoryFilters) => {
-      const range = await resolveRange(taskRepo, f, workspaceId);
+      const range = await resolveRange(taskRepo, f, workspaceId, weekStartsOn);
       setSearchedQuick(f.quick);
       if (!range) {
         setGroups([]);
@@ -153,7 +158,7 @@ export function useHistory() {
       setTotals(getHistoryTotals(tasks));
       setSearched(true);
     },
-    [taskRepo, workspaceId]
+    [taskRepo, workspaceId, weekStartsOn]
   );
 
   const updateFilter = useCallback(

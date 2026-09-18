@@ -92,6 +92,14 @@
 - Toda lógica de agrupamento por dia (histórico, lançamento retroativo) extrai a data no fuso local do usuário — nunca faz `.slice(0, 10)` direto no ISO UTC.
 - As funções `startOfDayISO(dateISO)` e `endOfDayISO(dateISO)` constroem limites UTC a partir do horário local: `new Date(dateISO + "T00:00:00").toISOString()`.
 
+### 6.6.1 Fronteira da semana
+- **Onde a semana começa é a config `weekStartsOn`** (Configurações → Geral → Jornada): `1` segunda, `0` domingo — os números do `Date.getDay()`. O padrão é segunda, que era o comportamento fixo até 2026-09-17.
+- Vale para o **app inteiro**, e não só para a grade do calendário: total e meta semanal da tela de Tarefas, os atalhos "Esta semana / Semana passada / Próxima semana", a vista semanal do Planejamento, a janela de importação do Monday e o `/totals/week` da API local.
+- Quem faz a conta é `weekBoundsOf(dateISO, weekStartsOn)`, e o parâmetro é **obrigatório de propósito**: com padrão, o chamador esquecido continuaria em segunda sem ninguém ver.
+- Nas telas o valor vem do hook `useWeekStart()`, que acompanha a troca feita em outra janela pelo `OVERLAY_CONFIG_CHANGED` — sem ele o overlay contaria a semana antiga até ser reaberto. O `useMondayItemTracker` e a ponte da API local leem direto do `config.get`, e **podem**: os dois vivem na janela principal, cujo cache do `ConfigContext` é atualizado pelo próprio `config.set`. Tracker hospedado num overlay precisaria do hook.
+- **A importação da Agenda é exceção deliberada**: o `getMondayISO` do `ImportCalendarModal` fixa a segunda porque aquela tela é de segunda a sexta, e a chave da semana alimenta um `getWeekDays` de cinco dias.
+- **Não confundir com `recurringDays`**, da tarefa recorrente: ali o índice é sempre 0=domingo, é dado gravado, e a config não o toca.
+
 ### 6.7 Workspaces
 - Todo registro nasce no **workspace ativo**, lido do `WorkspaceContext`. Nenhum hook recebe workspace por parâmetro — é isso que mantém as assinaturas públicas estáveis.
 - `findAll(workspaceId?)` e afins tratam `undefined` como "todos os workspaces". **Nenhuma

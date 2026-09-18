@@ -62,7 +62,7 @@ describe("DateRangeInput", () => {
     fireEvent.click(campo());
     fireEvent.click(screen.getByRole("button", { name: "Esta semana" }));
 
-    const esperado = dateRangeFor("thisWeek");
+    const esperado = dateRangeFor("thisWeek", 1);
     expect(onChange).toHaveBeenCalledWith(esperado.start, esperado.end);
   });
 
@@ -84,7 +84,7 @@ describe("DateRangeInput", () => {
   });
 
   it("acende o atalho cujo período está escolhido, e só ele", () => {
-    const semana = dateRangeFor("thisWeek");
+    const semana = dateRangeFor("thisWeek", 1);
     render(
       <DateRangeInput
         startDate={semana.start}

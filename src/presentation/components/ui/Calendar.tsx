@@ -3,14 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import {
   MONTH_ABBR,
   MONTH_NAMES,
-  WEEKDAY_INITIALS,
-  WEEKDAY_NAMES,
   YEAR_PAGE_SIZE,
   monthCells,
   monthOf,
   toISODate,
+  weekdayInitials,
+  weekdayNames,
   yearPage,
 } from "@shared/utils/calendarGrid";
+import type { WeekStart } from "@shared/types/appConfig";
 import { todayISO } from "@shared/utils/time";
 import { IconButton } from "./IconButton";
 
@@ -40,11 +41,26 @@ interface CalendarProps {
   cellClassName?: (iso: string) => string;
   /** Rodapé do painel — "Hoje / Limpar" no campo de data, o resumo no período. */
   footer?: React.ReactNode;
+  /**
+   * Primeiro dia da semana. Chega por prop, e não do `useAppConfig`, porque os
+   * primitivos de `components/ui/` são renderizados sem provider nos testes —
+   * quem lê a config é o campo que abre o painel. **Obrigatória**, pelo mesmo
+   * motivo do `weekBoundsOf`: um padrão silencioso deixaria em segunda quem
+   * esquecesse de ligá-la.
+   */
+  weekStartsOn: WeekStart;
 }
 
 const CELL = "w-8 h-8 grid place-items-center rounded-control transition-colors";
 
-export function Calendar({ value, onSelect, maxISO, cellClassName, footer }: CalendarProps) {
+export function Calendar({
+  value,
+  onSelect,
+  maxISO,
+  cellClassName,
+  footer,
+  weekStartsOn,
+}: CalendarProps) {
   const hoje = todayISO();
   const inicial = monthOf(value) ?? monthOf(hoje)!;
 
@@ -75,7 +91,9 @@ export function Calendar({ value, onSelect, maxISO, cellClassName, footer }: Cal
     gridRef.current?.querySelector<HTMLButtonElement>(`[data-iso="${focused}"]`)?.focus();
   }, [focused]);
 
-  const cells = monthCells(year, month);
+  const cells = monthCells(year, month, weekStartsOn);
+  const iniciais = weekdayInitials(weekStartsOn);
+  const nomes = weekdayNames(weekStartsOn);
   const bloqueado = (iso: string) => (maxISO ? iso > maxISO : false);
 
   function irParaMes(passo: number) {
@@ -181,9 +199,9 @@ export function Calendar({ value, onSelect, maxISO, cellClassName, footer }: Cal
       {view === "days" && (
         <div>
           <div className="grid grid-cols-7">
-            {WEEKDAY_INITIALS.map((letra, i) => (
+            {iniciais.map((letra, i) => (
               <span
-                key={WEEKDAY_NAMES[i]}
+                key={nomes[i]}
                 aria-hidden="true"
                 className="w-8 h-6 grid place-items-center text-nav font-medium text-fg-muted"
               >

@@ -43,6 +43,21 @@ export interface IntegrationWorkspaceConfig {
 
 export type IntegrationWorkspaceKey = keyof IntegrationWorkspaceConfig;
 
+/**
+ * Primeiro dia da semana: `1` segunda, `0` domingo — os mesmos números do
+ * `Date.getDay()`, que é o que deixa o deslocamento da grade ser uma subtração
+ * em vez de uma tabela.
+ *
+ * Vale para o app **inteiro**, não só para o calendário: total e meta semanal,
+ * atalhos de período, a vista semanal do Planejamento e as janelas do Monday.
+ * Uma escolha que parasse no calendário deixaria a primeira coluna da grade em
+ * um dia e o "Esta semana" em outro.
+ */
+export type WeekStart = 0 | 1;
+
+/** Segunda — o comportamento fixo que existia antes da config. */
+export const DEFAULT_WEEK_START: WeekStart = 1;
+
 export interface AppConfig extends IntegrationWorkspaceConfig {
   // Geral
   setupCompleted: boolean;
@@ -158,6 +173,7 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   // Jornada
   dailyGoalHours: number;
   weeklyGoalHours: number;
+  weekStartsOn: WeekStart;
   // Arredondamento de duração
   roundingEnabled: boolean;
   roundingSlots: RoundingSlot[];

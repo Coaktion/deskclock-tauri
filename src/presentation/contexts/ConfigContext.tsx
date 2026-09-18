@@ -2,17 +2,19 @@ import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { DEFAULT_LLM_PROVIDER_ID } from "@infra/integrations/llm/providers";
 import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
+import { DEFAULT_WEEK_START } from "@shared/types/appConfig";
 import type {
   AppConfig,
   ConfigContextValue,
   ConfigKey,
   OverlayPosition,
+  WeekStart,
 } from "@shared/types/appConfig";
 import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
 import { DEFAULT_COLUMN_MAPPING } from "@shared/types/sheetsConfig";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
-export type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition };
+export type { AppConfig, ConfigContextValue, ConfigKey, OverlayPosition, WeekStart };
 
 const DEFAULTS: AppConfig = {
   setupCompleted: false,
@@ -79,6 +81,9 @@ const DEFAULTS: AppConfig = {
   localApiPort: 27420,
   dailyGoalHours: 8,
   weeklyGoalHours: 40,
+  // Segunda é o padrão porque era o comportamento fixo até aqui: quem atualiza
+  // não vê a semana do totalizador mudar de lugar sozinha.
+  weekStartsOn: DEFAULT_WEEK_START,
   roundingEnabled: false,
   roundingSlots: [15, 30, 45, 60],
   roundingTolerance: 0,
@@ -199,4 +204,15 @@ export function useAppConfig(): ConfigContextValue {
   const ctx = useContext(ConfigContext);
   if (!ctx) throw new Error("useAppConfig must be inside ConfigProvider");
   return ctx;
+}
+
+/**
+ * A mesma config, mas devolvendo `null` fora do provider em vez de estourar.
+ *
+ * É para quem é lido **dentro** de um primitivo de `components/ui/`: no app eles
+ * sempre têm o provider acima, e nos testes são montados sozinhos, de propósito.
+ * Quem depende da config para funcionar continua no `useAppConfig`.
+ */
+export function useAppConfigOrNull(): ConfigContextValue | null {
+  return useContext(ConfigContext);
 }

@@ -41,6 +41,9 @@ vi.mock("@presentation/contexts/RepositoriesContext", () => ({ useRepositories: 
 vi.mock("@presentation/contexts/WorkspaceContext", () => ({
   useWorkspaces: () => ({ activeWorkspaceId: WS_ATIVO, switchTo: vi.fn() }),
 }));
+vi.mock("@presentation/contexts/ConfigContext", () => ({
+  useAppConfig: () => ({ isLoaded: true, get: () => 1, set: vi.fn() }),
+}));
 vi.mock("@presentation/hooks/useWorkspaceAdmin", () => ({
   useWorkspaceAdmin: () => ({ create: vi.fn(), update: vi.fn(), remove: vi.fn() }),
 }));

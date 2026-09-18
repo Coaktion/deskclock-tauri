@@ -1,3 +1,4 @@
+import type { WeekStart } from "@shared/types/appConfig";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { IProjectRepository } from "@domain/repositories/IProjectRepository";
@@ -75,6 +76,12 @@ export interface LocalApiDeps {
   notifyCustomFieldsChanged: () => Promise<void>;
   nowISO: () => string;
   todayISO: () => string;
+  /**
+   * Primeiro dia da semana — o mesmo das telas. É função, e não valor, pelo
+   * mesmo motivo do `todayISO`: o retrato é do commit, e quem trocou a config
+   * em Configurações não faz a ponte recomitar.
+   */
+  weekStartsOn: () => WeekStart;
 }
 
 export type LocalApiHandler = (

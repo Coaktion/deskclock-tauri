@@ -59,7 +59,7 @@ pub async fn get_totals(
     path = "/totals/week",
     tag = "totals",
     params(
-        ("date" = Option<String>, Query, description = "Qualquer dia da semana, YYYY-MM-DD. Ausente = hoje. A semana vai de segunda a domingo."),
+        ("date" = Option<String>, Query, description = "Qualquer dia da semana, YYYY-MM-DD. Ausente = hoje. A semana segue a config `weekStartsOn` (Configurações → Geral → Jornada)."),
         ("workspaceId" = Option<String>, Query, description = "Ausente = workspace ativo.")
     ),
     responses(

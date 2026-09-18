@@ -14,7 +14,9 @@ import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { runningPlannedTaskId } from "@domain/utils/plannedLink";
 import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { useTour } from "@presentation/hooks/useTour";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
+import type { WeekStart } from "@shared/types/appConfig";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { addDaysISO, todayISO, weekBoundsOf } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
@@ -28,8 +30,11 @@ function dayMonthLabel(dateISO: string): string {
   return `${dateISO.slice(8, 10)}/${dateISO.slice(5, 7)}`;
 }
 
-function getWeekBounds(offset: number): { start: string; end: string; label: string } {
-  const { start, end } = weekBoundsOf(addDaysISO(todayISO(), offset * 7));
+function getWeekBounds(
+  offset: number,
+  weekStartsOn: WeekStart
+): { start: string; end: string; label: string } {
+  const { start, end } = weekBoundsOf(addDaysISO(todayISO(), offset * 7), weekStartsOn);
   return {
     start,
     end,
@@ -63,11 +68,12 @@ type DayFilter = "all" | string;
 
 export function WeekPlanningView() {
   const { plannedTaskRepo } = useRepositories();
+  const weekStartsOn = useWeekStart();
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const { start, end, label } = getWeekBounds(weekOffset);
+  const { start, end, label } = getWeekBounds(weekOffset, weekStartsOn);
   const days = getDaysOfWeek(start);
   const today = todayISO();
 
@@ -236,9 +242,10 @@ export function WeekPlanningView() {
       <div className="flex-1 min-h-0 flex">
         {/* A `key` remonta o formulário para ele reler o `defaultDate`. Os dois
             ramos são prefixados de propósito: sem isso, "all" usa a data de
-            início da semana — que é a segunda-feira — e filtrar por segunda
-            gera a mesma chave, o formulário não remonta e o campo Data fica
-            preso no valor anterior. O bug só aparecia na segunda. */}
+            início da semana e filtrar por esse mesmo dia gera a chave igual, o
+            formulário não remonta e o campo Data fica preso no valor anterior.
+            O prefixo é o que mantém a colisão impossível nos dois modos —
+            aparecia na segunda, e apareceria no domingo. */}
         <CollapsibleFormColumn
           collapsed={formColumn.value}
           onToggle={formColumn.toggle}

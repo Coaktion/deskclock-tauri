@@ -3,8 +3,25 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
-import { Input, SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
+import {
+  Input,
+  SectionCard,
+  SectionRow,
+  SegmentedControl,
+  SettingLabel,
+  Toggle,
+} from "@presentation/components/ui";
+import { DEFAULT_WEEK_START, type WeekStart } from "@shared/types/appConfig";
+import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
+import { emit } from "@tauri-apps/api/event";
 import { NumberInputWithCommit } from "./SettingsShared";
+
+/** Os dois modos da semana. O valor é o `WeekStart` em texto, e não um rótulo
+ * paralelo: uma segunda grafia da mesma tabela é uma para sair de sincronia. */
+const WEEK_START_OPTIONS = [
+  { value: "1", label: "Segunda" },
+  { value: "0", label: "Domingo" },
+] as const;
 
 /** Escolha dentro de um grupo — retangular, ao contrário da pílula de filtro. */
 function ChoiceChip({
@@ -45,6 +62,7 @@ export function GeralTab() {
   const [roundingTolerance, setRoundingTolerance] = useState(0);
   const [dailyGoalHours, setDailyGoalHours] = useState(8);
   const [weeklyGoalHours, setWeeklyGoalHours] = useState(40);
+  const [weekStartsOn, setWeekStartsOn] = useState<WeekStart>(DEFAULT_WEEK_START);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -57,6 +75,7 @@ export function GeralTab() {
     setRoundingTolerance(config.get("roundingTolerance"));
     setDailyGoalHours(config.get("dailyGoalHours"));
     setWeeklyGoalHours(config.get("weeklyGoalHours"));
+    setWeekStartsOn(config.get("weekStartsOn"));
     isEnabled()
       .then(setStartOnBoot)
       .catch(() => {});
@@ -69,6 +88,16 @@ export function GeralTab() {
   ) {
     setter(value);
     await config.set(key, value);
+  }
+
+  /** Emite para as outras janelas: a config delas é o retrato do mount. */
+  async function handleWeekStart(value: WeekStart) {
+    setWeekStartsOn(value);
+    await config.set("weekStartsOn", value);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "weekStartsOn",
+      value,
+    } satisfies OverlayConfigChangedPayload);
   }
 
   async function handleStartOnBoot(value: boolean) {
@@ -231,6 +260,18 @@ export function GeralTab() {
               setWeeklyGoalHours(v);
               await config.set("weeklyGoalHours", v);
             }}
+          />
+        </SectionRow>
+        <SectionRow className="flex items-center justify-between gap-4">
+          <SettingLabel
+            label="Primeiro dia da semana"
+            description="Vale para o total da semana, os atalhos de período, o Planejamento e o calendário"
+          />
+          <SegmentedControl
+            ariaLabel="Primeiro dia da semana"
+            value={String(weekStartsOn)}
+            onChange={(v) => handleWeekStart(Number(v) as WeekStart)}
+            options={WEEK_START_OPTIONS}
           />
         </SectionRow>
       </SectionCard>

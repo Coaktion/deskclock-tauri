@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import type { WeekStart } from "@shared/types/appConfig";
 import type { Task } from "@domain/entities/Task";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
@@ -188,6 +189,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     notifyCustomFieldsChanged: vi.fn(async () => {}),
     nowISO: () => NOW,
     todayISO: () => TODAY,
+    weekStartsOn: () => 1 as WeekStart,
   };
 
   return deps as typeof deps & LocalApiDeps;

@@ -8,24 +8,40 @@
  * fuso não tem por onde entrar, e o teste não depende da máquina que o roda
  * (§7.6 de `testes.md`).
  *
- * A semana começa na **segunda**, como o `weekBoundsISO` de `time.ts` já assume
- * — o app inteiro conta semana assim, e um calendário domingo-primeiro faria a
- * coluna do fim de semana cair em lugar diferente do resto das telas.
+ * Onde a semana começa é a config `weekStartsOn`, e ela vale para o app inteiro
+ * — o `weekBoundsISO` de `time.ts` lê a mesma escolha. É o que mantém a coluna
+ * do fim de semana na grade e o "Esta semana" do totalizador falando do mesmo
+ * intervalo.
  */
 
-/** Iniciais de segunda a domingo. Uma letra porque a célula tem 32px. */
-export const WEEKDAY_INITIALS = ["S", "T", "Q", "Q", "S", "S", "D"] as const;
+import type { WeekStart } from "@shared/types/appConfig";
+
+/** Iniciais de domingo a sábado. Uma letra porque a célula tem 32px. */
+const WEEKDAY_INITIALS_SUNDAY_FIRST = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
 
 /** Nome do dia por extenso, para o `aria-label` da célula. */
-export const WEEKDAY_NAMES = [
+const WEEKDAY_NAMES_SUNDAY_FIRST = [
+  "domingo",
   "segunda-feira",
   "terça-feira",
   "quarta-feira",
   "quinta-feira",
   "sexta-feira",
   "sábado",
-  "domingo",
 ] as const;
+
+/** A lista rodada para começar no dia escolhido. */
+function rotate<T>(days: readonly T[], weekStartsOn: WeekStart): T[] {
+  return days.map((_, i) => days[(i + weekStartsOn) % 7]);
+}
+
+export function weekdayInitials(weekStartsOn: WeekStart): string[] {
+  return rotate(WEEKDAY_INITIALS_SUNDAY_FIRST, weekStartsOn);
+}
+
+export function weekdayNames(weekStartsOn: WeekStart): string[] {
+  return rotate(WEEKDAY_NAMES_SUNDAY_FIRST, weekStartsOn);
+}
 
 export const MONTH_NAMES = [
   "Janeiro",
@@ -101,7 +117,7 @@ export function monthOf(iso: string): { year: number; month: number } | null {
 }
 
 /**
- * As 42 células do mês: seis semanas de segunda a domingo.
+ * As 42 células do mês: seis semanas a partir de `weekStartsOn`.
  *
  * **São sempre 42, mesmo quando o mês cabe em cinco semanas.** Um número
  * variável faria o popover mudar de altura ao navegar entre meses, e o painel
@@ -111,10 +127,10 @@ export function monthOf(iso: string): { year: number; month: number } | null {
  * (mês 12 é janeiro do ano seguinte). É o que deixa a navegação ser
  * `monthCells(ano, mes + 1)` sem tratar a virada do ano em quem chama.
  */
-export function monthCells(year: number, month: number): CalendarCell[] {
+export function monthCells(year: number, month: number, weekStartsOn: WeekStart): CalendarCell[] {
   const first = new Date(year, month, 1);
-  // `getDay()` é 0 no domingo; com a semana na segunda, o domingo é o 6º passo.
-  const offset = (first.getDay() + 6) % 7;
+  // Quantas colunas o dia 1º está à frente do primeiro dia da semana.
+  const offset = (first.getDay() - weekStartsOn + 7) % 7;
   const normalizedMonth = first.getMonth();
 
   return Array.from({ length: 42 }, (_, i) => {
