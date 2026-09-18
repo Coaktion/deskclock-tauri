@@ -3,6 +3,7 @@ import type { CustomValues } from "@domain/entities/CustomField";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { effectiveDuration } from "@domain/usecases/tasks/_helpers";
 import { DomainError } from "@shared/errors";
+import { localClock } from "@shared/utils/localClock";
 import { ConflictError, NotFoundError } from "../errors";
 import { loadCatalogNames, taskDto, toTaskDto } from "../dto";
 import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "../resolve";
@@ -43,7 +44,8 @@ export function computeTodayTotals(tasks: Task[], nowISO: string) {
 export const getStatus: LocalApiHandler = async (deps, params) => {
   const workspaceId = await resolveRequestWorkspace(deps, params.workspaceId);
   const nowISO = deps.nowISO();
-  const todayTasks = await getTasksForDate(deps.taskRepo, deps.todayISO(), workspaceId);
+  const today = deps.todayISO();
+  const todayTasks = await getTasksForDate(deps.taskRepo, today, workspaceId);
   const active = deps.running.runningTask;
   return {
     status: 200,
@@ -54,6 +56,7 @@ export const getStatus: LocalApiHandler = async (deps, params) => {
         ? toTaskDto(active, await loadCatalogNames(deps, active.workspaceId), nowISO)
         : null,
       today: computeTodayTotals(todayTasks, nowISO),
+      clock: localClock(today, nowISO),
     },
   };
 };

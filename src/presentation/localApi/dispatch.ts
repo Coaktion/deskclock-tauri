@@ -126,6 +126,9 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "plannedTasks.launchRetroactive": launchPlannedTaskRetroactiveHandler,
 };
 
+/** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */
+export const LOCAL_API_OPS: readonly string[] = Object.keys(HANDLERS);
+
 /** Nunca rejeita: todo erro vira status, porque o Rust aguarda uma resposta. */
 export async function dispatchLocalApiRequest(
   deps: LocalApiDeps,

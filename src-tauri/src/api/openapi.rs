@@ -76,6 +76,7 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
     components(schemas(
         models::StatusResponse,
         models::TodayTotals,
+        models::LocalClock,
         models::TaskDto,
         models::StartTaskRequest,
         models::StopTaskRequest,

@@ -33,6 +33,17 @@ pub enum BridgeError {
     Failed(String),
 }
 
+impl BridgeError {
+    /// Mensagem pt-BR para o cliente — a mesma na REST e no MCP.
+    pub fn message(&self) -> String {
+        match self {
+            BridgeError::NotReady => "App ainda carregando — tente novamente em instantes".into(),
+            BridgeError::Timeout => "O app não respondeu a tempo".into(),
+            BridgeError::Failed(e) => format!("Falha ao falar com o app: {e}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct BridgeRequest<'a> {
     pub id: &'a str,

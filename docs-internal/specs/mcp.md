@@ -101,7 +101,41 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 
 | Fase | Estado |
 |---|---|
-| 0 | pendente |
+| 0 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421) |
 | 1 | pendente |
 | 2 | pendente |
 | 3 | pendente |
+
+### Decisões da Fase 0 que a spec não fixava
+
+- **`rmcp` 3.4.0** (`server`, `macros`, `transport-streamable-http-server`). Exige Rust 1.88: o
+  `rust-version` do `Cargo.toml` subiu de 1.77.2 para 1.88. Com o MSRV novo o clippy passou a pedir
+  `is_none_or` no `guard.rs` — trocado, mesmo comportamento.
+- **Sem sessão, resposta JSON pura.** `legacy_session_mode(false)` + `json_response(true)` +
+  `NeverSessionManager`. Toda tool é uma ida e volta à ponte, então não há estado por cliente; e
+  parar/iniciar a API pelas Configurações não deixa cliente com sessão morta. Clientes da revisão
+  2026-07-28 (sem `initialize`) e das anteriores funcionam — há teste para os dois.
+- **Montagem:** `route_service("/mcp", …)` em `build_router`, antes do `.layer(reject_foreign_origin)`,
+  que portanto envolve o `/mcp`. A validação de Host do próprio rmcp continua ligada (padrão:
+  `localhost`, `127.0.0.1`, `::1`); a de Origin do rmcp fica desligada porque a barreira já cobre.
+- **Data de hoje vem do TS:** o `getStatus` devolve `clock: { date: "YYYY-MM-DD", weekday: "Friday",
+  utcOffset: "-03:00" }` (`src/shared/utils/localClock.ts`), calculado do mesmo `todayISO()`/`nowISO()`
+  que produz os totais de `today`. Carimbar com `chrono::Local` no Rust, depois da resposta, podia
+  discordar dos totais perto da meia-noite — "hoje" já tem dono no TS. `get_status` é repasse puro.
+  Efeito colateral aceito: `GET /status` da REST também ganhou `clock` (aditivo; schema `LocalClock`
+  no Swagger). O fuso vai como offset, sem nome IANA.
+- **Descrições das tools em inglês** (consumidas pelo modelo); as mensagens de erro continuam as
+  pt-BR do TS. Tools marcadas com `readOnlyHint: true` e `openWorldHint: false`.
+- **Resultado:** sucesso vai como `structuredContent` + o mesmo JSON em texto. Erro da ponte
+  (status ≥ 400) e `BridgeError` viram `isError: true` com a mensagem; as mensagens de
+  `BridgeError` saíram de `to_http` para `BridgeError::message()`, compartilhadas por REST e MCP.
+- **`list_catalog`** chama as três `op` em sequência com o mesmo `workspaceId` (o
+  `workspaces.list` o ignora) e para no primeiro erro.
+- **Tabela única:** `src-tauri/src/mcp/ops.rs` (`TOOL_OPS`, com a chave de saída de cada `op`
+  explícita); as tools leem as `op` dela (`ops_of`), e o `cargo test` a confere contra `mcp-ops.json`. A lista de ops do TS é exportada
+  como `LOCAL_API_OPS` em `dispatch.ts`.
+- **Sem autenticação além de loopback + Host + Origin**, como a API REST: a partir da Fase 1,
+  qualquer processo local pode iniciar e parar tarefas pelo `/mcp`. Aceito, coerente com a REST.
+- **`plannedTasks.launchRetroactive` é candidata a tool da Fase 2**, pendente de decisão do
+  usuário: ao contrário do `history.create` (`log_past_task`), ela conclui a planejada na data e
+  copia os `customValues` (Project Stage do Monday). Por ora está em `excluded`.

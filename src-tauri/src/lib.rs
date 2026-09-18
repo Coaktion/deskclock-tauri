@@ -1,6 +1,7 @@
 mod api;
 mod commands;
 mod database;
+mod mcp;
 mod tray;
 
 use std::collections::HashMap;
