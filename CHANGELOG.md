@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.1.0...v2.2.0) (2026-09-18)
+
+
+### Features
+
+* **planejamento:** compartilhe uma tarefa planejada por link — o botão na linha copia um link com nome, projeto, categoria e campos personalizados, para mandar no Slack ou onde quiser
+* **compartilhar:** quem abre o link vê a tarefa preenchida e editável, com aviso quando projeto, categoria ou campo não existem no app dele, e escolhe entre iniciar agora ou guardar como planejada de hoje
+* **compartilhar:** novo item na barra lateral para colar um link do DeskClock à mão, para quando ele chega em lugar que não vira link clicável, como a descrição de um evento do Google Meet
+* **agenda:** ignore eventos pelo nome, com regras "Igual" e "Contém" — evento que é só lembrete deixa de virar planejada toda semana; as regras se criam em Configurações ou direto no "Importar eventos"
+* **configurações:** escolha o primeiro dia da semana — vale para o total e a meta semanal, os atalhos de período, o calendário e o Planejamento
+* **overlay:** novo botão "Mostrar / Ocultar overlay" em Configurações, com a mesma ação do atalho
+* **overlay:** o popup não abre mais sozinho ao iniciar ou parar uma tarefa; a opção "Mostrar ao iniciar tarefa" saiu
+
 ## [2.1.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.0.1...v2.1.0) (2026-09-16)
 
 
