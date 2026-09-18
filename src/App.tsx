@@ -23,6 +23,7 @@ import { useMondayProjectsTracker } from "@presentation/hooks/useMondayProjectsT
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
+import { PasteDeepLinkModal } from "@presentation/modals/PasteDeepLinkModal";
 import { SetupModal } from "@presentation/modals/SetupModal";
 import { ShareTaskModal } from "@presentation/modals/ShareTaskModal";
 import { DataPage } from "@presentation/pages/DataPage";
@@ -218,6 +219,10 @@ function MainContent({
     setSharedPayload(payload);
   }, []);
 
+  // Colar o link à mão — o caminho de quem recebeu o `deskclock://` num lugar
+  // que não linkifica texto. O modal é de topo, como o de tarefa recebida.
+  const [pasteLinkOpen, setPasteLinkOpen] = useState(false);
+
   const closeSharedTask = useCallback(() => {
     openShareRef.current = null;
     setSharedPayload(null);
@@ -302,7 +307,7 @@ function MainContent({
         onOpenRequest={onOpenRequest}
       />
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <Sidebar current={page} onChange={setPage} />
+        <Sidebar current={page} onChange={setPage} onOpenPasteLink={() => setPasteLinkOpen(true)} />
         <main className="flex-1 overflow-hidden">
           <PageContent
             page={page}
@@ -315,6 +320,7 @@ function MainContent({
       </div>
       <IntegrationsModalsHost />
       {sharedPayload && <ShareTaskModal payload={sharedPayload} onClose={closeSharedTask} />}
+      {pasteLinkOpen && <PasteDeepLinkModal onClose={() => setPasteLinkOpen(false)} />}
     </div>
   );
 }
