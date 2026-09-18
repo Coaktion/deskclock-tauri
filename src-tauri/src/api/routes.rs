@@ -1,30 +1,18 @@
+use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{catalog, custom_fields, history, planned_tasks, totals, workspaces};
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
 use axum::{
-    http::Method,
+    middleware,
     routing::{delete, get, patch, post, put},
     Router,
 };
 use std::sync::Arc;
-use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub fn build_router(state: Arc<ApiState>) -> Router {
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods([
-            Method::GET,
-            Method::POST,
-            Method::PUT,
-            Method::PATCH,
-            Method::DELETE,
-            Method::OPTIONS,
-        ])
-        .allow_headers(Any);
-
     let api = Router::new()
         .route("/status", get(handlers::get_status))
         .route("/tasks/start", post(handlers::post_start))
@@ -126,7 +114,7 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
     Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
         .merge(api)
-        .layer(cors)
+        .layer(middleware::from_fn(reject_foreign_origin))
 }
 
 #[cfg(test)]
