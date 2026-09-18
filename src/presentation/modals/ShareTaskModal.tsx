@@ -201,9 +201,12 @@ function ShareTaskForm({
         runningTask ? (
           <div className="flex items-start gap-2 px-3 py-2 bg-warning/10 border border-warning/20 rounded-control">
             <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
+            {/* O aviso para em "encerra", de propósito: o que acontece depois
+                é das regras de parada, e uma delas descarta a tarefa com menos
+                de um minuto (`shouldDiscardTask`). Prometer "e a salva como
+                concluída" seria falso justamente no caso em que mais se perde. */}
             <p className="text-xs text-warning">
-              Iniciar agora encerra a tarefa {runningState} &ldquo;{runningName}&rdquo; e a salva
-              como concluída.
+              Iniciar agora encerra a tarefa {runningState} &ldquo;{runningName}&rdquo;.
             </p>
           </div>
         ) : undefined

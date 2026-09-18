@@ -75,4 +75,14 @@ integração. Eram 58KB desta seção.
 - Implementado via `tauri-plugin-opener` (`openUrl`).
 - Posição: rodapé da sidebar, ícone `MessageSquare` (Lucide).
 
+#### Itens da sidebar que não são página
+
+A sidebar deixou de ser só navegação: além do Feedback no rodapé, ela tem **"Receber"**
+(`ClipboardPaste`), entre Integrações e Configurações, que abre o `PasteDeepLinkModal` para colar
+um `deskclock://` à mão. A `Sidebar` distingue os dois tipos pela forma do item — `page` navega,
+`onSelect` age —, e **só o de página acende**: a ação nunca ganha o fundo de acento nem a barrinha
+da esquerda, ou ela pareceria uma tela em que se está. O item fica na lista, e não no rodapé com o
+Feedback, porque é caminho de entrada de trabalho e não meta-ação do app; o motivo de ele existir
+está em `docs-internal/specs/compartilhar-tarefa.md`.
+
 ---

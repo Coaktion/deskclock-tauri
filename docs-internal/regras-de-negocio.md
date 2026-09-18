@@ -6,7 +6,19 @@
 
 ### 6.1 Tarefa em execução
 - Apenas uma tarefa pode estar em execução por vez.
-- Não é possível iniciar nova tarefa enquanto houver uma em execução — é necessário parar a atual primeiro.
+- **`startTask` não inicia nada havendo tarefa ativa** — com uma em execução ou pausada, ele devolve
+  `null` sem tocar no banco. É a guarda que protege todo caminho de início comum: o omnibox, o ▶ da
+  planejada, a reexecução de uma entrada. Para trocar pelo caminho comum, pare a atual primeiro.
+- **Existe o caminho explícito de troca, `switchToTask`**, e ele não é exceção à regra acima: é a
+  outra operação. Ele encerra a tarefa ativa no instante do clique **aplicando as regras de parada**
+  (`applyStopRules`: descarte da tarefa curta, arredondamento, conclusão da planejada de origem, envio
+  automático) e só então inicia a nova — a anterior fica salva como concluída; o único jeito de ela
+  sumir é ela mesma cair na regra da tarefa curta, que valeria igual se tivesse sido parada à mão. Os
+  dois compartilham a mesma trava de reentrância, então dois cliques seguidos não abrem duas tarefas.
+- Quem chama `switchToTask`: o rastreamento automático de reuniões (`useMeetingTracker`), o `start` da
+  API REST local — que sempre teve essa semântica — e o modal de tarefa recebida por link
+  (`ShareTaskModal`, em "Iniciar agora"). Nos três a troca é intencional e anunciada antes do clique —
+  nenhum deles pergunta "tem certeza?" (§1 do CLAUDE.md).
 - Timer começa imediatamente ao clicar "Iniciar", sem exigir dados.
 - Pausar preserva a duração acumulada. Retomar continua de onde parou.
 
