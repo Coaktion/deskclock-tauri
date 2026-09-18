@@ -40,17 +40,14 @@ fn to_http(result: Result<BridgeResponse, BridgeError>) -> Response {
                 (status, Json(body)).into_response()
             }
         }
-        Err(BridgeError::NotReady) => error_response(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "App ainda carregando — tente novamente em instantes",
-        ),
-        Err(BridgeError::Timeout) => {
-            error_response(StatusCode::GATEWAY_TIMEOUT, "O app não respondeu a tempo")
+        Err(e) => {
+            let status = match e {
+                BridgeError::NotReady => StatusCode::SERVICE_UNAVAILABLE,
+                BridgeError::Timeout => StatusCode::GATEWAY_TIMEOUT,
+                BridgeError::Failed(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            error_response(status, e.message())
         }
-        Err(BridgeError::Failed(e)) => error_response(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Falha ao falar com o app: {e}"),
-        ),
     }
 }
 

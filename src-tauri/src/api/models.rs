@@ -49,6 +49,22 @@ pub struct StatusResponse {
     pub task: Option<TaskDto>,
     /// Totais de hoje no workspace da requisição.
     pub today: TodayTotals,
+    /// Dia local do app, do mesmo instante dos totais de hoje.
+    pub clock: LocalClock,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalClock {
+    /// Data local, `AAAA-MM-DD`.
+    #[schema(example = "2026-09-18")]
+    pub date: String,
+    /// Dia da semana em inglês.
+    #[schema(example = "Friday")]
+    pub weekday: String,
+    /// Offset do fuso local em relação a UTC.
+    #[schema(example = "-03:00")]
+    pub utc_offset: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

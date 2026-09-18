@@ -3,6 +3,7 @@ use crate::api::handlers;
 use crate::api::handlers::{catalog, custom_fields, history, planned_tasks, totals, workspaces};
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
+use crate::mcp;
 use axum::{
     middleware,
     routing::{delete, get, patch, post, put},
@@ -109,11 +110,12 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             "/planned-tasks/{id}/launch-retroactive",
             post(planned_tasks::post_planned_task_launch_retroactive),
         )
-        .with_state(state);
+        .with_state(state.clone());
 
     Router::new()
         .merge(SwaggerUi::new("/docs").url("/openapi.json", ApiDoc::openapi()))
         .merge(api)
+        .route_service("/mcp", mcp::service(state))
         .layer(middleware::from_fn(reject_foreign_origin))
 }
 

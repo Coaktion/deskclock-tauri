@@ -92,6 +92,7 @@ aberta. Doc novo de arquitetura, tela, integração ou spec: `docs-internal/`.
 | vai criar **abstração ou integração nova** | `docs-internal/guardrails.md` |
 | a rodada de **fidelidade do design** está em curso | `docs-internal/specs/design-system-fidelity.md` — conferir se a mudança visual não é uma etapa de lá |
 | vai mexer em **deeplink, link de compartilhar tarefa ou no que o link carrega** | `docs-internal/specs/compartilhar-tarefa.md` — o contrato e, principalmente, o que **não** viaja |
+| vai mexer na **API local ou no MCP** (rota, `op` da ponte, tool) | `docs-internal/specs/api-local-nucleo.md` e `docs-internal/specs/mcp.md` — `op` nova se classifica em `src-tauri/mcp-ops.json` |
 | vai mexer no **backup do banco no Drive** | `docs-internal/specs/backup-google-drive.md` — execução em fases, uma por sessão |
 | quer saber **por que** algo é assim | `docs-internal/historico-de-decisoes.md` e `git log` |
 

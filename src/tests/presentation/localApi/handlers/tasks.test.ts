@@ -207,6 +207,11 @@ describe("status.get", () => {
       running: true,
       task: { id: "t-1" },
       today: { totalSeconds: 3600, billableSeconds: 1800, nonBillableSeconds: 1800, taskCount: 2 },
+      clock: {
+        date: TODAY,
+        weekday: "Tuesday",
+        utcOffset: expect.stringMatching(/^[+-]\d{2}:\d{2}$/),
+      },
     });
   });
 

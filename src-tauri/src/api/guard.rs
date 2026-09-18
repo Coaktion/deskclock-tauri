@@ -30,9 +30,7 @@ fn is_loopback_host(host: &str) -> bool {
     let Some((name, port)) = split_host_port(&host) else {
         return false;
     };
-    let port_ok = port.map_or(true, |p| {
-        !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit())
-    });
+    let port_ok = port.is_none_or(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
     port_ok && LOOPBACK_NAMES.contains(&name)
 }
 

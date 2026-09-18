@@ -33,6 +33,7 @@ import { buildExportRows, customColumnField, toCSV, toJSON } from "@domain/utils
 import type { CustomField } from "@domain/entities/CustomField";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { useCopyFeedback } from "@presentation/hooks/useCopyFeedback";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
@@ -316,7 +317,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyFeedback();
   const [savedPath, setSavedPath] = useState<string | null>(null);
 
   const activeProfile = useMemo(
@@ -382,18 +383,14 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
       if (activeProfile.format === "json") {
         const content = toJSON(rows);
         if (dest === "clipboard") {
-          await navigator.clipboard.writeText(content);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          await copy(content);
         } else {
           await saveToFile(new TextEncoder().encode(content), "export.json", "json", "JSON");
         }
       } else {
         const content = toCSV(rows, activeProfile.separator);
         if (dest === "clipboard") {
-          await navigator.clipboard.writeText(content);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
+          await copy(content);
         } else {
           await saveToFile(new TextEncoder().encode(content), "export.csv", "csv", "CSV");
         }
@@ -573,7 +570,7 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
                   onClick={() => void handleExport("clipboard")}
                   disabled={exporting}
                   icon={copied ? <Check size={14} /> : <Copy size={14} />}
-                  className={`flex-1 ${copied ? "text-billable!" : ""}`}
+                  className={`flex-1 ${copied ? "text-success!" : ""}`}
                 >
                   {copied ? "Copiado!" : "Copiar"}
                 </Button>

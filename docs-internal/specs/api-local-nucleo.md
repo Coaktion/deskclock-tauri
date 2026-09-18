@@ -4,6 +4,11 @@
 > Drive. Quem retoma lê a §6 primeiro.
 >
 > Branch: `feat/api-local-nucleo`, saída de **`develop`**. Um PR por fase.
+>
+> **O MCP mora na mesma API** (`POST /mcp`, spec em `docs-internal/specs/mcp.md`). Toda `op` nova
+> em `HANDLERS` (`src/presentation/localApi/dispatch.ts`) precisa entrar em `src-tauri/mcp-ops.json`,
+> como `exposed` (com a tool) ou `excluded` (com o motivo) — `mcpOps.test.ts` e o `cargo test`
+> reprovam `op` sem classificação.
 
 ---
 

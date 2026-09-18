@@ -4,6 +4,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { AlertCircle, ExternalLink } from "lucide-react";
 import { SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
 import { NumberInputWithCommit } from "./SettingsShared";
+import { McpConnectCard } from "./McpConnectCard";
 
 interface ApiStatus {
   running: boolean;
@@ -142,6 +143,10 @@ export function ApiTab() {
           </div>
         </SectionRow>
       </SectionCard>
+
+      {localApiStatus?.running && localApiStatus.port !== null && !localApiLoading && (
+        <McpConnectCard port={localApiStatus.port} />
+      )}
 
       {localApiStatus?.error && !localApiLoading && (
         <div className="flex items-start gap-2 rounded-control bg-danger/10 border border-danger/30 px-3 py-2.5">

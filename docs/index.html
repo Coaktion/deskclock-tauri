@@ -2826,7 +2826,7 @@
       API
     </h2>
 
-    <p>Liga o servidor HTTP local e define a porta. Ver <a onclick="show('api')">API local</a>.</p>
+    <p>Liga o servidor HTTP local e define a porta. Com a API ativa, o cartão <strong>Conectar ao Claude</strong> mostra o comando pronto para ligar o Claude ao DeskClock, com um botão para copiá-lo. Ver <a onclick="show('api')">API local</a> e <a onclick="show('api/api-mcp')">Conectar ao Claude</a>.</p>
 
     <h2 id="aba-atualizacoes">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -3258,6 +3258,68 @@
       </table>
         </div>
 
+    <h2 id="api-mcp">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Conectar ao Claude (MCP)
+    </h2>
+
+    <p>A mesma API também fala <strong>MCP</strong>, o protocolo que assistentes de IA usam para chamar ferramentas. Conectado, o Claude — ou outro cliente MCP — usa o DeskClock a partir de uma conversa em linguagem natural: "inicia uma tarefa de revisão no projeto X", "quanto eu trabalhei nesta semana?". Ele segue as mesmas regras da tela, como a API.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Ative a API</h4>
+          <p>Em <a onclick="show('settings/aba-api')">Configurações → API</a>. O MCP mora no endereço <code>/mcp</code> da mesma porta, e para junto com ela.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Copie o comando</h4>
+          <p>Com a API ativa, o cartão <strong>Conectar ao Claude</strong>, logo abaixo, mostra o comando já com a porta em uso. Na porta padrão ele é <code>claude mcp add --transport http deskclock http://127.0.0.1:27420/mcp</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Rode no terminal</h4>
+          <p>O comando registra o DeskClock no Claude Code. Na próxima conversa, as ferramentas dele já estão disponíveis. Outros clientes MCP aceitam o mesmo endereço, pelo transporte HTTP.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>O que ele pode fazer</h3>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Grupo</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Consultar</strong></td><td>O estado atual (tarefa em execução, totais de hoje, a data de hoje), os projetos, categorias e workspaces cadastrados, as planejadas de um dia ou período, as tarefas concluídas de um período e os totais de um período ou da semana</td></tr>
+          <tr><td><strong>Tarefa em execução</strong></td><td>Iniciar uma tarefa (a ativa é parada antes), pausar, retomar, parar e salvar, e iniciar uma planejada, como o Play</td></tr>
+          <tr><td><strong>Criar</strong></td><td>Planejar uma tarefa (data específica, recorrente ou período), lançar trabalho passado com início e fim, e lançar uma planejada como concluída num dia, como no Lançamento Manual</td></tr>
+        </tbody>
+      </table>
+        </div>
+
+    <p>Alguns pedidos para experimentar:</p>
+    <ul>
+      <li>"O que está rodando agora?"</li>
+      <li>"Inicia 'Revisão de PR' no projeto Portal, categoria Desenvolvimento."</li>
+      <li>"Registra uma reunião de ontem das 14h às 15h30 no projeto Interno."</li>
+      <li>"Planeja 'Daily' toda segunda a sexta, das 9h às 9h15."</li>
+      <li>"Quantas horas faturáveis eu fiz nesta semana?"</li>
+    </ul>
+
+    <div class="callout warning">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div class="callout-body"><strong>Ele não edita nem exclui.</strong> Pelo MCP não se altera nem se apaga o histórico, e não se mexe em projetos, categorias, workspaces ou campos personalizados. No app, excluir é imediato, sem confirmação; um pedido mal entendido numa conversa apagaria dados sem volta. Para isso, use a tela ou a API.</div>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Segurança.</strong> Como a API, o MCP só aceita conexões do próprio computador e não pede senha: qualquer programa rodando na sua máquina pode usá-lo enquanto a API estiver ativa. Desative a API quando não precisar dela.</div>
+    </div>
+
     <h2 id="api-vs-deeplinks">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 7h12M8 12h12M8 17h12"/><path d="M4 7h.01M4 12h.01M4 17h.01"/></svg>
       API ou deep link?
@@ -3271,6 +3333,7 @@
         <tbody>
           <tr><td><strong><a onclick="show('deeplinks')">Deep link</a></strong></td><td>Você quer que o app <strong>apareça</strong> — abrir uma tela, pré-preencher um formulário. Um link basta, nada a configurar.</td></tr>
           <tr><td><strong>API local</strong></td><td>Você quer <strong>ler</strong> o estado ou agir sem trazer a janela à frente. É o caminho para barras de status, scripts e integrações caseiras.</td></tr>
+          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele consulta, cuida da tarefa em execução e cria registros, mas não edita nem exclui.</td></tr>
         </tbody>
       </table>
 

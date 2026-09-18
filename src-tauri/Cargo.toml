@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "DeskClock — registro de horas trabalhadas"
 authors = []
 edition = "2021"
-rust-version = "1.77.2"
+rust-version = "1.88"
 
 [lib]
 name = "deskclock_lib"
@@ -42,6 +42,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rmcp = { version = "3.4.0", features = ["server", "macros", "transport-streamable-http-server"] }
 
 [dev-dependencies]
 # `ServiceExt::oneshot` para o teste de roteamento da API local.
