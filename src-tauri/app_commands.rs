@@ -30,6 +30,8 @@ pub const SHARED_COMMANDS: &[&str] = &[
     "get_pending_deep_link_page",
     "get_pending_start_task",
     "get_pending_retroactive_prefill",
+    "get_pending_shared_task",
+    "open_deep_link",
     "log_frontend",
     "backup_db_to_drive",
 ];

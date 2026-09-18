@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { formatBrDate } from "@shared/utils/calendarGrid";
 import {
   DATE_RANGE_LABELS,
@@ -82,6 +83,7 @@ export function DateRangeInput({
   className = "",
   placeholder = "Escolher período",
 }: DateRangeInputProps) {
+  const weekStartsOn = useWeekStart();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   /**
@@ -158,7 +160,7 @@ export function DateRangeInput({
   }
 
   function aplicarAtalho(id: DateRangeId) {
-    const { start, end } = dateRangeFor(id);
+    const { start, end } = dateRangeFor(id, weekStartsOn);
     onChange(start, end);
     setAguardandoFim(false);
     setOpen(false);
@@ -205,7 +207,8 @@ export function DateRangeInput({
   const texto = startDate
     ? `${formatBrDate(startDate)} → ${endDate ? formatBrDate(endDate) : "…"}`
     : "";
-  const atalhoAtivo = startDate && endDate ? matchDateRange(startDate, endDate, presets) : null;
+  const atalhoAtivo =
+    startDate && endDate ? matchDateRange(startDate, endDate, presets, weekStartsOn) : null;
 
   const controle = (
     <Input
@@ -271,6 +274,7 @@ export function DateRangeInput({
             )}
 
             <Calendar
+              weekStartsOn={weekStartsOn}
               value={startDate}
               onSelect={escolherDia}
               maxISO={maxISO}

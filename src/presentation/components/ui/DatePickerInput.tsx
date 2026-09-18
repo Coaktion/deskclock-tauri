@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { formatBrDate, maskBrDate, parseBrDate } from "@shared/utils/calendarGrid";
 import { todayISO } from "@shared/utils/time";
 import { Calendar } from "./Calendar";
@@ -61,6 +62,7 @@ export function DatePickerInput({
   label,
   clearable = false,
 }: DatePickerInputProps) {
+  const weekStartsOn = useWeekStart();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   // O que está escrito no campo enquanto se digita. `null` = mostrar o `value`
@@ -207,6 +209,7 @@ export function DatePickerInput({
             className="bg-surface border border-border-subtle rounded-card shadow-(--shadow-overlay) p-2"
           >
             <Calendar
+              weekStartsOn={weekStartsOn}
               value={value}
               onSelect={escolher}
               maxISO={maxISO}

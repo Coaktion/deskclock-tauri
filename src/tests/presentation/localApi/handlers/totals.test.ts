@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import type { WeekStart } from "@shared/types/appConfig";
 import { dispatchLocalApiRequest } from "@presentation/localApi/dispatch";
 import { endOfDayISO, startOfDayISO } from "@shared/utils/time";
 import { localISO } from "../../../helpers/localTime";
@@ -72,6 +73,16 @@ describe("totals.week", () => {
       status: 200,
       body: { weekStart: "2026-09-07", weekEnd: "2026-09-13", totalSeconds: 5400, daysWorked: 2 },
     });
+  });
+
+  it("com a config no domingo, a semana do mesmo dia é outra", async () => {
+    // O endpoint responde a mesma semana que o totalizador da tela mostra — se
+    // ficasse fixo na segunda, o `/totals/week` contradiria o app.
+    const deps = makeDeps();
+    deps.weekStartsOn = () => 0 as WeekStart;
+    deps.taskRepo.findByDateRange.mockResolvedValue([]);
+    const result = await dispatchLocalApiRequest(deps, "totals.week", { date: "2026-09-13" });
+    expect(result.body).toMatchObject({ weekStart: "2026-09-13", weekEnd: "2026-09-19" });
   });
 
   it("sem data usa a semana de hoje no workspace ativo; 400 para data inválida", async () => {

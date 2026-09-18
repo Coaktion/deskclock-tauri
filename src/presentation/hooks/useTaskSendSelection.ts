@@ -5,6 +5,8 @@ import type { TaskValidationResult } from "@domain/integrations/taskValidation";
 import { groupTasks } from "@domain/utils/groupTasks";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { todayISO, startOfDayISO, endOfDayISO, localDateISO } from "@shared/utils/time";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import type { WeekStart } from "@shared/types/appConfig";
 import { dateRangeFor, type DateRangeId } from "@shared/utils/datePresets";
 
 export type QuickPeriod = "today" | "yesterday" | "week" | "month" | "custom";
@@ -106,10 +108,11 @@ const QUICK_RANGE: Record<Exclude<QuickPeriod, "custom">, DateRangeId> = {
 export function quickToRange(
   quick: QuickPeriod,
   customStart: string,
-  customEnd: string
+  customEnd: string,
+  weekStartsOn: WeekStart
 ): { start: string; end: string } {
   if (quick === "custom") return { start: customStart, end: customEnd };
-  return dateRangeFor(QUICK_RANGE[quick]);
+  return dateRangeFor(QUICK_RANGE[quick], weekStartsOn);
 }
 
 export interface UseTaskSendSelectionResult {
@@ -144,6 +147,7 @@ export function useTaskSendSelection(
   workspaceId: string
 ): UseTaskSendSelectionResult {
   const { taskRepo, taskLogRepo } = useRepositories();
+  const weekStartsOn = useWeekStart();
 
   const [quick, setQuickState] = useState<QuickPeriod>("today");
   const [customStart, setCustomStartState] = useState(todayISO());
@@ -195,7 +199,12 @@ export function useTaskSendSelection(
 
     async function run() {
       try {
-        const { start, end } = quickToRange(quick, customStartRef.current, customEndRef.current);
+        const { start, end } = quickToRange(
+          quick,
+          customStartRef.current,
+          customEndRef.current,
+          weekStartsOn
+        );
         const [tasks, sentIdsArr] = await Promise.all([
           // Só as tarefas do workspace **da integração**. Antes a busca era sem
           // escopo, de propósito — "integrações enxergam tudo" —, e a lista

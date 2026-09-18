@@ -172,8 +172,9 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
   é que vale.
 - **`editCompletedTask`** (domínio): `updateTask` + `setGroupBillable` com o billable resultante. Usado pelo
   `EditTaskModal` e pelo `PUT /tasks/{id}`.
-- **Segunda-feira da semana:** `IntegrationsModalsHost` usa `weekBoundsISO()` e `WeekPlanningView` usa
-  `weekBoundsOf(addDaysISO(hoje, offset × 7))`; mesma saída.
+- **Início da semana:** `IntegrationsModalsHost` usa `weekBoundsISO(weekStartsOn)` e `WeekPlanningView` usa
+  `weekBoundsOf(addDaysISO(hoje, offset × 7), weekStartsOn)`; mesma saída. O parâmetro é obrigatório e vem da
+  config (§6.6.1 de `regras-de-negocio.md`); aqui ele chega pelo `deps.weekStartsOn()`.
 - **Deep link `task/start`:** projeto e categoria resolvem por `findByName(nome, workspace ativo)` — o workspace em
   que `startTask` cria a tarefa. Nome que não existe ali segue como antes: a tarefa começa sem projeto/categoria.
 - **`scoped_params`** (`api/handlers.rs`) nas seis rotas de `catalog.rs` que só repassam `id` + `workspaceId`.
@@ -216,7 +217,7 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 - ~~`mergeTaskGroup` grava `endTime` = agora~~ — resolvido: maior `endTime` do grupo.
 - ~~Mínimo de 1 minuto em `useRetroactiveForm.ts` e composição do `EditTaskModal.tsx`~~ — resolvido: estão no
   domínio (`createRetroactiveTask`, `editCompletedTask`).
-- ~~Cópias do cálculo da segunda-feira~~ — resolvido: `weekBoundsISO`/`weekBoundsOf`.
+- ~~Cópias do cálculo do início da semana~~ — resolvido: `weekBoundsISO`/`weekBoundsOf`.
 
 **Defeito corrigido na Fase 2 — escrita executada duas vezes (2026-09-15).** Com `pnpm tauri dev`, um `POST /tasks`
 gravava duas tarefas. No Tauri 2.10.3, o StrictMode desmonta o efeito do `useLocalApiBridge` antes de o `eval` que

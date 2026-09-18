@@ -93,7 +93,7 @@ export function useMondayItemTracker() {
           stageField,
           personId: config.get("mondayUserId"),
           workspaceId: destinationWorkspaceId,
-          window: weekBoundsISO(),
+          window: weekBoundsISO(config.get("weekStartsOn")),
           nowISO: new Date().toISOString(),
         }
       );

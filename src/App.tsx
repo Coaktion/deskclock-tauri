@@ -23,7 +23,9 @@ import { useMondayProjectsTracker } from "@presentation/hooks/useMondayProjectsT
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useStartupWindow } from "@presentation/hooks/useStartupWindow";
 import { useUpdateNotifier } from "@presentation/hooks/useUpdateNotifier";
+import { PasteDeepLinkModal } from "@presentation/modals/PasteDeepLinkModal";
 import { SetupModal } from "@presentation/modals/SetupModal";
+import { ShareTaskModal } from "@presentation/modals/ShareTaskModal";
 import { DataPage } from "@presentation/pages/DataPage";
 import { HistoryPage } from "@presentation/pages/HistoryPage";
 import { IntegrationsPage } from "@presentation/pages/IntegrationsPage";
@@ -34,6 +36,7 @@ import { TasksPage } from "@presentation/pages/TasksPage";
 import type { OmniboxFocus } from "@presentation/hooks/useOmniboxRunningEdit";
 import { useLocalApiBridge } from "@presentation/localApi/useLocalApiBridge";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { buildShareLink, parseShareParams, type SharedTaskPayload } from "@shared/utils/shareLink";
 import { formatHHMMSS } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -193,6 +196,55 @@ function MainContent({
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Deep link: task/share — abre o modal de revisão. O Rust entrega o mapa cru
+  // da query; quem o lê é o contrato em `shared/utils/shareLink.ts`.
+  const [sharedPayload, setSharedPayload] = useState<SharedTaskPayload | null>(null);
+  /**
+   * Link que já está aberto na tela. **Os dois caminhos descrevem a mesma
+   * entrega** — o evento (app aberto) e o pendente (app aberto *pelo* link) —, e
+   * o `listen` sob StrictMode já entregou evento em duplicata neste projeto: sem
+   * a trava, o mesmo link empilharia dois modais. A checagem é síncrona, por
+   * `ref`, porque um `useState` ainda não teria sido aplicado quando a segunda
+   * entrega chega. Fechar o modal a limpa — colar o mesmo link de novo é uma
+   * entrega nova, e deve reabrir.
+   */
+  const openShareRef = useRef<string | null>(null);
+
+  const handleSharedTask = useCallback((params: Record<string, string>) => {
+    const payload = parseShareParams(params);
+    if (!payload) return;
+    const key = buildShareLink(payload);
+    if (openShareRef.current === key) return;
+    openShareRef.current = key;
+    setSharedPayload(payload);
+  }, []);
+
+  // Colar o link à mão — o caminho de quem recebeu o `deskclock://` num lugar
+  // que não linkifica texto. O modal é de topo, como o de tarefa recebida.
+  const [pasteLinkOpen, setPasteLinkOpen] = useState(false);
+
+  const closeSharedTask = useCallback(() => {
+    openShareRef.current = null;
+    setSharedPayload(null);
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen<Record<string, string>>(
+      OVERLAY_EVENTS.DEEPLINK_SHARE_TASK,
+      ({ payload }) => handleSharedTask(payload)
+    );
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [handleSharedTask]);
+
+  useEffect(() => {
+    invoke<Record<string, string> | null>("get_pending_shared_task").then((params) => {
+      if (!params) return;
+      handleSharedTask(params);
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Live tray timer — atualiza tooltip do ícone da bandeja a cada segundo
   useEffect(() => {
     if (!runningTask) {
@@ -255,7 +307,7 @@ function MainContent({
         onOpenRequest={onOpenRequest}
       />
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        <Sidebar current={page} onChange={setPage} />
+        <Sidebar current={page} onChange={setPage} onOpenPasteLink={() => setPasteLinkOpen(true)} />
         <main className="flex-1 overflow-hidden">
           <PageContent
             page={page}
@@ -267,6 +319,8 @@ function MainContent({
         <IntegrationsRail />
       </div>
       <IntegrationsModalsHost />
+      {sharedPayload && <ShareTaskModal payload={sharedPayload} onClose={closeSharedTask} />}
+      {pasteLinkOpen && <PasteDeepLinkModal onClose={() => setPasteLinkOpen(false)} />}
     </div>
   );
 }

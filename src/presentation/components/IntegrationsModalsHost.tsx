@@ -15,12 +15,13 @@ import { MondayEntriesModal } from "@presentation/modals/MondayEntriesModal";
 import { MondayImportModal } from "@presentation/modals/MondayImportModal";
 import { MondaySendModal } from "@presentation/modals/MondaySendModal";
 import { SheetsSendModal } from "@presentation/modals/SheetsSendModal";
-import type { IntegrationWorkspaceKey } from "@shared/types/appConfig";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import type { IntegrationWorkspaceKey, WeekStart } from "@shared/types/appConfig";
 import { weekBoundsISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
-function defaultCalendarRangeISO() {
-  const { start, end } = weekBoundsISO();
+function defaultCalendarRangeISO(weekStartsOn: WeekStart) {
+  const { start, end } = weekBoundsISO(weekStartsOn);
   return {
     defaultFromISO: new Date(start + "T00:00:00").toISOString(),
     defaultToISO: new Date(end + "T23:59:59").toISOString(),
@@ -68,7 +69,11 @@ export function IntegrationsModalsHost() {
     [modal, factories]
   );
 
-  const { defaultFromISO, defaultToISO } = useMemo(defaultCalendarRangeISO, []);
+  const weekStartsOn = useWeekStart();
+  const { defaultFromISO, defaultToISO } = useMemo(
+    () => defaultCalendarRangeISO(weekStartsOn),
+    [weekStartsOn]
+  );
 
   if (!modal) return null;
 

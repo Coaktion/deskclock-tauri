@@ -219,7 +219,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
    * de 68px.
    */
   describe("Sidebar", () => {
-    const nav = shellOf(<Sidebar current="tasks" onChange={() => {}} />);
+    const nav = shellOf(<Sidebar current="tasks" onChange={() => {}} onOpenPasteLink={() => {}} />);
     const [items, feedback] = Array.from(nav.children);
     const active = items.children[0];
 

@@ -23,7 +23,7 @@ import {
 import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
-import { todayISO } from "@shared/utils/time";
+import { todayISO, weekBoundsOf } from "@shared/utils/time";
 import { emit } from "@tauri-apps/api/event";
 import {
   AlertCircle,
@@ -101,13 +101,15 @@ function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
   return map;
 }
 
+/**
+ * A segunda da semana do evento — a chave dos grupos da barra lateral.
+ *
+ * **Não segue a config `weekStartsOn`, de propósito:** esta tela é de segunda a
+ * sexta (o fim de semana é descartado na origem, e o `getWeekDays` conta cinco
+ * dias a partir daqui), então a chave precisa ser a segunda nos dois modos.
+ */
 function getMondayISO(dateISO: string): string {
-  const d = new Date(dateISO + "T12:00:00");
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  const fmt2 = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
+  return weekBoundsOf(dateISO, 1).start;
 }
 
 /** Segunda a sexta — a semana do planejamento não tem fim de semana (§5.3). */

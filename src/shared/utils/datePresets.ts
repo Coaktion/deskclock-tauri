@@ -1,3 +1,4 @@
+import type { WeekStart } from "@shared/types/appConfig";
 import { addDaysISO, startOfMonthISO, todayISO, weekBoundsISO } from "@shared/utils/time";
 
 /**
@@ -64,9 +65,9 @@ function monthBounds(dateISO: string): DateRange {
 }
 
 /** O período de um atalho, sempre relativo a hoje. */
-export function dateRangeFor(id: DateRangeId): DateRange {
+export function dateRangeFor(id: DateRangeId, weekStartsOn: WeekStart): DateRange {
   const today = todayISO();
-  const week = weekBoundsISO();
+  const week = weekBoundsISO(weekStartsOn);
 
   switch (id) {
     case "today":
@@ -95,10 +96,15 @@ export function dateRangeFor(id: DateRangeId): DateRange {
 }
 
 /** O atalho cujo período coincide com o par recebido, se houver algum. */
-export function matchDateRange(start: string, end: string, ids: DateRangeId[]): DateRangeId | null {
+export function matchDateRange(
+  start: string,
+  end: string,
+  ids: DateRangeId[],
+  weekStartsOn: WeekStart
+): DateRangeId | null {
   return (
     ids.find((id) => {
-      const range = dateRangeFor(id);
+      const range = dateRangeFor(id, weekStartsOn);
       return range.start === start && range.end === end;
     }) ?? null
   );

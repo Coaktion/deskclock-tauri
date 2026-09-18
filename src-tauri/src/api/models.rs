@@ -582,9 +582,9 @@ pub struct PeriodTotalsDto {
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WeekTotalsDto {
-    /// Segunda-feira, YYYY-MM-DD.
+    /// Primeiro dia da semana conforme `weekStartsOn`, YYYY-MM-DD.
     pub week_start: String,
-    /// Domingo, YYYY-MM-DD.
+    /// Último dia da semana conforme `weekStartsOn`, YYYY-MM-DD.
     pub week_end: String,
     pub total_seconds: i64,
     pub days_worked: i64,

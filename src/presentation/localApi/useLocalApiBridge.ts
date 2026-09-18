@@ -17,6 +17,7 @@ import { todayISO } from "@shared/utils/time";
 import { waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
 import { errorResult } from "./errors";
 import { claimRequestId, createSerialQueue, waitForSignal } from "./queue";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -40,6 +41,7 @@ export function useLocalApiBridge(): void {
   const running = useRunningTask();
   const { activeWorkspaceId, switchTo } = useWorkspaces();
   const { create, update, remove } = useWorkspaceAdmin();
+  const config = useAppConfig();
   const depsRef = useRef<LocalApiDeps | null>(null);
   const commitListeners = useRef(new Set<() => void>());
 
@@ -66,6 +68,7 @@ export function useLocalApiBridge(): void {
       notifyCustomFieldsChanged,
       nowISO: () => new Date().toISOString(),
       todayISO,
+      weekStartsOn: () => config.get("weekStartsOn"),
     };
     commitListeners.current.forEach((notify) => notify());
   });

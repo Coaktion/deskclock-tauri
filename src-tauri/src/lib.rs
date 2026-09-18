@@ -35,6 +35,24 @@ fn get_pending_start_task(
     state.0.lock().unwrap().take()
 }
 
+/**
+ * Mapa **cru** da query de `deskclock://task/share`, como chegou no link.
+ *
+ * Não há struct tipada aqui de propósito: a chave `cf.<rótulo>` e o casamento de
+ * projeto, categoria e campo personalizado contra os catálogos locais são regra
+ * de domínio, e ela vive no TS (`shared/utils/shareLink.ts` e
+ * `domain/utils/resolveSharedPayload.ts`). Interpretar o payload aqui criaria um
+ * segundo dono do contrato.
+ */
+struct PendingSharedTask(Mutex<Option<HashMap<String, String>>>);
+
+#[tauri::command]
+fn get_pending_shared_task(
+    state: tauri::State<PendingSharedTask>,
+) -> Option<HashMap<String, String>> {
+    state.0.lock().unwrap().take()
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DeepLinkRetroactivePrefill {
@@ -288,10 +306,14 @@ fn navigate_to(app: &tauri::AppHandle, page: &str) {
     let _ = app.emit("deeplink:navigate", serde_json::json!({ "page": page }));
 }
 
-fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
+/**
+ * Interpreta um `deskclock://…`. Devolve `Err` com mensagem **em português**
+ * para o que antes só virava `log::warn!`: quem cola o link à mão precisa ler o
+ * motivo na tela, e o callback do `on_open_url` continua só logando.
+ */
+fn handle_deep_link(app: &tauri::AppHandle, raw: &str) -> Result<(), String> {
     let Some(without_scheme) = raw.strip_prefix("deskclock://") else {
-        log::warn!("Deep link ignorado — esquema inesperado: {raw}");
-        return;
+        return Err("Link inválido — o endereço precisa começar com deskclock://".to_string());
     };
 
     let (path_part, query_part) = without_scheme
@@ -304,12 +326,12 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
     match action {
         "navigate" => {
             if !VALID_PAGES.contains(&sub_path) {
-                log::warn!("Deep link navigate: página desconhecida '{sub_path}'");
-                return;
+                return Err(format!("Página desconhecida no link: '{sub_path}'"));
             }
             navigate_to(app, sub_path);
             bring_main_to_front(app);
             log::info!("Deep link: navegando para '{sub_path}'");
+            Ok(())
         }
         "task" => match sub_path {
             "start" => {
@@ -329,8 +351,23 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
                     "Deep link: iniciando tarefa '{}'",
                     task_params.name.as_deref().unwrap_or("(sem nome)")
                 );
+                Ok(())
             }
-            _ => log::warn!("Deep link task: ação desconhecida '{sub_path}'"),
+            "share" => {
+                // O mapa cru sobe inteiro: quem o interpreta é o TS.
+                if let Some(state) = app.try_state::<PendingSharedTask>() {
+                    *state.0.lock().unwrap() = Some(params.clone());
+                }
+                let _ = app.emit("deeplink:share-task", &params);
+                navigate_to(app, "planning");
+                bring_main_to_front(app);
+                log::info!(
+                    "Deep link: tarefa compartilhada recebida ({} parâmetros)",
+                    params.len()
+                );
+                Ok(())
+            }
+            _ => Err(format!("Ação de tarefa desconhecida no link: '{sub_path}'")),
         },
         "retroactive" => {
             navigate_to(app, "retroactive");
@@ -350,9 +387,20 @@ fn handle_deep_link(app: &tauri::AppHandle, raw: &str) {
             }
             bring_main_to_front(app);
             log::info!("Deep link: lançamento retroativo");
+            Ok(())
         }
-        _ => log::warn!("Deep link: ação desconhecida '{action}'"),
+        _ => Err(format!("Ação desconhecida no link: '{action}'")),
     }
+}
+
+/**
+ * Abre um deep link vindo de dentro do app — é o que sustenta o campo de colar
+ * link. Propaga o erro de `handle_deep_link` para a tela dizer o motivo; o
+ * `on_open_url` do sistema continua ignorando o `Err` e só logando.
+ */
+#[tauri::command]
+fn open_deep_link(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    handle_deep_link(&app, &url)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -445,6 +493,7 @@ pub fn run() {
             app.manage(PendingDeepLinkPage(Mutex::new(None)));
             app.manage(PendingStartTask(Mutex::new(None)));
             app.manage(PendingRetroactivePrefill(Mutex::new(None)));
+            app.manage(PendingSharedTask(Mutex::new(None)));
             // A API local lê o mesmo banco: sem migração aplicada, ela serviria dados
             // de um schema que o resto do app já rejeitou.
             if db_ready {
@@ -458,7 +507,9 @@ pub fn run() {
             let app_handle = app.handle().clone();
             app.deep_link().on_open_url(move |event| {
                 for url in event.urls() {
-                    handle_deep_link(&app_handle, &url.to_string());
+                    if let Err(e) = handle_deep_link(&app_handle, &url.to_string()) {
+                        log::warn!("Deep link ignorado — {e}");
+                    }
                 }
             });
 
@@ -507,6 +558,8 @@ pub fn run() {
             get_pending_deep_link_page,
             get_pending_start_task,
             get_pending_retroactive_prefill,
+            get_pending_shared_task,
+            open_deep_link,
             log_frontend,
             backup_db_to_drive,
         ])

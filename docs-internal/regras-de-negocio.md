@@ -6,7 +6,19 @@
 
 ### 6.1 Tarefa em execução
 - Apenas uma tarefa pode estar em execução por vez.
-- Não é possível iniciar nova tarefa enquanto houver uma em execução — é necessário parar a atual primeiro.
+- **`startTask` não inicia nada havendo tarefa ativa** — com uma em execução ou pausada, ele devolve
+  `null` sem tocar no banco. É a guarda que protege todo caminho de início comum: o omnibox, o ▶ da
+  planejada, a reexecução de uma entrada. Para trocar pelo caminho comum, pare a atual primeiro.
+- **Existe o caminho explícito de troca, `switchToTask`**, e ele não é exceção à regra acima: é a
+  outra operação. Ele encerra a tarefa ativa no instante do clique **aplicando as regras de parada**
+  (`applyStopRules`: descarte da tarefa curta, arredondamento, conclusão da planejada de origem, envio
+  automático) e só então inicia a nova — a anterior fica salva como concluída; o único jeito de ela
+  sumir é ela mesma cair na regra da tarefa curta, que valeria igual se tivesse sido parada à mão. Os
+  dois compartilham a mesma trava de reentrância, então dois cliques seguidos não abrem duas tarefas.
+- Quem chama `switchToTask`: o rastreamento automático de reuniões (`useMeetingTracker`), o `start` da
+  API REST local — que sempre teve essa semântica — e o modal de tarefa recebida por link
+  (`ShareTaskModal`, em "Iniciar agora"). Nos três a troca é intencional e anunciada antes do clique —
+  nenhum deles pergunta "tem certeza?" (§1 do CLAUDE.md).
 - Timer começa imediatamente ao clicar "Iniciar", sem exigir dados.
 - Pausar preserva a duração acumulada. Retomar continua de onde parou.
 
@@ -91,6 +103,14 @@
 - Tarefas que cruzam meia-noite (início em um dia, fim no seguinte) pertencem ao dia de início.
 - Toda lógica de agrupamento por dia (histórico, lançamento retroativo) extrai a data no fuso local do usuário — nunca faz `.slice(0, 10)` direto no ISO UTC.
 - As funções `startOfDayISO(dateISO)` e `endOfDayISO(dateISO)` constroem limites UTC a partir do horário local: `new Date(dateISO + "T00:00:00").toISOString()`.
+
+### 6.6.1 Fronteira da semana
+- **Onde a semana começa é a config `weekStartsOn`** (Configurações → Geral → Jornada): `1` segunda, `0` domingo — os números do `Date.getDay()`. O padrão é segunda, que era o comportamento fixo até 2026-09-17.
+- Vale para o **app inteiro**, e não só para a grade do calendário: total e meta semanal da tela de Tarefas, os atalhos "Esta semana / Semana passada / Próxima semana", a vista semanal do Planejamento, a janela de importação do Monday e o `/totals/week` da API local.
+- Quem faz a conta é `weekBoundsOf(dateISO, weekStartsOn)`, e o parâmetro é **obrigatório de propósito**: com padrão, o chamador esquecido continuaria em segunda sem ninguém ver.
+- Nas telas o valor vem do hook `useWeekStart()`, que acompanha a troca feita em outra janela pelo `OVERLAY_CONFIG_CHANGED` — sem ele o overlay contaria a semana antiga até ser reaberto. O `useMondayItemTracker` e a ponte da API local leem direto do `config.get`, e **podem**: os dois vivem na janela principal, cujo cache do `ConfigContext` é atualizado pelo próprio `config.set`. Tracker hospedado num overlay precisaria do hook.
+- **A importação da Agenda é exceção deliberada**: o `getMondayISO` do `ImportCalendarModal` fixa a segunda porque aquela tela é de segunda a sexta, e a chave da semana alimenta um `getWeekDays` de cinco dias.
+- **Não confundir com `recurringDays`**, da tarefa recorrente: ali o índice é sempre 0=domingo, é dado gravado, e a config não o toca.
 
 ### 6.7 Workspaces
 - Todo registro nasce no **workspace ativo**, lido do `WorkspaceContext`. Nenhum hook recebe workspace por parâmetro — é isso que mantém as assinaturas públicas estáveis.

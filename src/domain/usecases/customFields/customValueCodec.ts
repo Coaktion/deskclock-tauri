@@ -34,3 +34,32 @@ export function formatCustomValue(field: CustomField, stored: string): string {
   }
   return stored;
 }
+
+/**
+ * O **par explícito de `formatCustomValue`**: texto legível → valor gravado.
+ *
+ * Existe porque o deeplink de compartilhamento carrega o texto legível, e
+ * `serializeCustomValue` não serve de volta: ele espera a entrada da UI — o id
+ * da opção no `select`, `"1"`/`"true"` no `checkbox` —, então uma caixa marcada
+ * chegava como `"Sim"` e voltava desmarcada, em silêncio.
+ *
+ * - `checkbox`: `"Sim"` (aparado, caixa indiferente) → `"1"`; qualquer outra
+ *   coisa → `""`, que é a ausência de valor de `serializeCustomValue`.
+ * - `select`: casa pelo **rótulo** da opção (aparado, caixa indiferente) e
+ *   devolve o id. **Dois rótulos iguais no mesmo campo: o primeiro vence** — o
+ *   texto não distingue os dois, e escolher o primeiro ao menos é estável.
+ *   Rótulo que não existe aqui → `""`.
+ * - `text` / `multiline`: passa por `serializeCustomValue`, para herdar o mesmo
+ *   aparo (colapsa espaços no `text`, preserva quebras no `multiline`).
+ */
+export function deserializeCustomValue(field: CustomField, text: string): string {
+  if (field.type === "checkbox") {
+    return text.trim().toLowerCase() === "sim" ? "1" : "";
+  }
+  if (field.type === "select") {
+    const wanted = text.trim().toLowerCase();
+    if (!wanted) return "";
+    return field.options.find((o) => o.label.trim().toLowerCase() === wanted)?.id ?? "";
+  }
+  return serializeCustomValue(field, text);
+}

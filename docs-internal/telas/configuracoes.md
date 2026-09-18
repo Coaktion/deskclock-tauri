@@ -11,6 +11,7 @@
 | Fechar ao perder foco | toggle | Janela principal fecha ao perder o foco (padrão: desativado); Pin/Unpin na title bar suspende temporariamente |
 | Descartar tarefas com menos de 1 minuto | toggle | Cancela automaticamente tarefas paradas em menos de 60 s (padrão: desativado) |
 | Arredondar duração ao parar | toggle + slots + tolerância | `roundingEnabled` (padrão: desativado), `roundingSlots` (múltiplos de 5 até 60) e `roundingTolerance` em minutos. Ao parar, `computeRoundedDuration` encaixa a duração no slot; dentro da tolerância acima do slot inferior ela **fica** nele, acima disso sobe para o próximo. Os slots repetem a cada 60 min |
+| Primeiro dia da semana | segmentado | `weekStartsOn` — Segunda (padrão) ou Domingo. Vale para o app inteiro, não só para o calendário: ver §6.6.1 em `regras-de-negocio.md` |
 | Mostrar rail de integrações | toggle | Faixa à direita com atalhos das integrações conectadas (padrão: ativo). Aparece em **todas** as telas, inclusive na de Integrações — a redundância com os tiles dali não incomodou na prática, e o rail sumindo numa tela só fazia a faixa parecer instável |
 
 > **O timer ao vivo do ícone da bandeja não é mais um toggle** (2026-08-27): saiu
@@ -73,5 +74,15 @@ integração. Eram 58KB desta seção.
 - Botão na **sidebar** (não dentro das configurações) que abre URL externa no navegador padrão para envio de feedbacks, bugs, sugestões.
 - Implementado via `tauri-plugin-opener` (`openUrl`).
 - Posição: rodapé da sidebar, ícone `MessageSquare` (Lucide).
+
+#### Itens da sidebar que não são página
+
+A sidebar deixou de ser só navegação: além do Feedback no rodapé, ela tem **"Receber"**
+(`ClipboardPaste`), entre Integrações e Configurações, que abre o `PasteDeepLinkModal` para colar
+um `deskclock://` à mão. A `Sidebar` distingue os dois tipos pela forma do item — `page` navega,
+`onSelect` age —, e **só o de página acende**: a ação nunca ganha o fundo de acento nem a barrinha
+da esquerda, ou ela pareceria uma tela em que se está. O item fica na lista, e não no rodapé com o
+Feedback, porque é caminho de entrada de trabalho e não meta-ação do app; o motivo de ele existir
+está em `docs-internal/specs/compartilhar-tarefa.md`.
 
 ---
