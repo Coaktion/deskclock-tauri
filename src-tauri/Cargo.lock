@@ -1106,7 +1106,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tower",
- "tower-http",
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",

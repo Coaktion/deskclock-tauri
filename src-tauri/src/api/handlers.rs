@@ -20,7 +20,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
+pub(crate) fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
     (
         status,
         Json(ErrorResponse {

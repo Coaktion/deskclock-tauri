@@ -1,5 +1,6 @@
 pub mod bridge;
 pub mod db;
+pub mod guard;
 pub mod handlers;
 pub mod models;
 pub mod openapi;
