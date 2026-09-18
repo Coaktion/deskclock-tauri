@@ -5,17 +5,35 @@ import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import { RepositoriesProvider, useRepositories } from "@presentation/contexts/RepositoriesContext";
 
-vi.mock("@infra/database/TaskRepository", () => ({ TaskRepository: vi.fn(() => ({})) }));
-vi.mock("@infra/database/PlannedTaskRepository", () => ({
-  PlannedTaskRepository: vi.fn(() => ({})),
+vi.mock("@infra/database/TaskRepository", () => ({
+  TaskRepository: vi.fn(function () {
+    return {};
+  }),
 }));
-vi.mock("@infra/database/CategoryRepository", () => ({ CategoryRepository: vi.fn(() => ({})) }));
-vi.mock("@infra/database/ProjectRepository", () => ({ ProjectRepository: vi.fn(() => ({})) }));
+vi.mock("@infra/database/PlannedTaskRepository", () => ({
+  PlannedTaskRepository: vi.fn(function () {
+    return {};
+  }),
+}));
+vi.mock("@infra/database/CategoryRepository", () => ({
+  CategoryRepository: vi.fn(function () {
+    return {};
+  }),
+}));
+vi.mock("@infra/database/ProjectRepository", () => ({
+  ProjectRepository: vi.fn(function () {
+    return {};
+  }),
+}));
 vi.mock("@infra/database/ExportProfileRepository", () => ({
-  ExportProfileRepository: vi.fn(() => ({})),
+  ExportProfileRepository: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/database/TaskIntegrationLogRepository", () => ({
-  TaskIntegrationLogRepository: vi.fn(() => ({})),
+  TaskIntegrationLogRepository: vi.fn(function () {
+    return {};
+  }),
 }));
 
 describe("RepositoriesContext", () => {

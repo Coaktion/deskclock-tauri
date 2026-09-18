@@ -5,22 +5,26 @@ import type { AutoSyncApi } from "@presentation/contexts/AutoSyncContext";
 import { AutoSyncProvider, useAutoSync } from "@presentation/contexts/AutoSyncContext";
 
 vi.mock("@infra/integrations/SheetsSyncStrategy", () => ({
-  SheetsSyncStrategy: vi.fn(() => ({
-    integrationName: "Google Sheets",
-    isPerTaskEnabled: () => false,
-    isDailyEnabled: () => false,
-    runPerTask: vi.fn(),
-    runDaily: vi.fn(),
-  })),
+  SheetsSyncStrategy: vi.fn(function () {
+    return {
+      integrationName: "Google Sheets",
+      isPerTaskEnabled: () => false,
+      isDailyEnabled: () => false,
+      runPerTask: vi.fn(),
+      runDaily: vi.fn(),
+    };
+  }),
 }));
 vi.mock("@infra/integrations/ClockifySyncStrategy", () => ({
-  ClockifySyncStrategy: vi.fn(() => ({
-    integrationName: "Clockify",
-    isPerTaskEnabled: () => false,
-    isDailyEnabled: () => false,
-    runPerTask: vi.fn(),
-    runDaily: vi.fn(),
-  })),
+  ClockifySyncStrategy: vi.fn(function () {
+    return {
+      integrationName: "Clockify",
+      isPerTaskEnabled: () => false,
+      isDailyEnabled: () => false,
+      runPerTask: vi.fn(),
+      runDaily: vi.fn(),
+    };
+  }),
 }));
 vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({

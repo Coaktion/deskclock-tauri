@@ -7,25 +7,39 @@ import { RepositoriesProvider } from "@presentation/contexts/RepositoriesContext
 import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
 
 vi.mock("@infra/integrations/GoogleCalendarImporter", () => ({
-  GoogleCalendarImporter: vi.fn(() => ({})),
+  GoogleCalendarImporter: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/integrations/GoogleSheetsTaskSender", () => ({
-  GoogleSheetsTaskSender: vi.fn(() => ({})),
+  GoogleSheetsTaskSender: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/integrations/ClockifyTaskSender", () => ({
-  ClockifyTaskSender: vi.fn(() => ({})),
+  ClockifyTaskSender: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/integrations/ZendeskTicketImporter", () => ({
-  ZendeskTicketImporter: vi.fn(() => ({})),
+  ZendeskTicketImporter: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/integrations/clockify/ClockifyClient", () => ({
-  ClockifyClient: vi.fn(() => ({})),
+  ClockifyClient: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/integrations/MondayTaskSender", () => ({
-  MondayTaskSender: vi.fn(() => ({})),
+  MondayTaskSender: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@infra/integrations/monday/MondayClient", () => ({
-  MondayClient: vi.fn(() => ({})),
+  MondayClient: vi.fn(function () {
+    return {};
+  }),
 }));
 vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({

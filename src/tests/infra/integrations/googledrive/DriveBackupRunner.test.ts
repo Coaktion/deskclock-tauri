@@ -11,9 +11,11 @@ vi.stubGlobal("fetch", mockFetch);
 // O token é problema do `GoogleTokenManager`, que tem teste próprio: aqui ele
 // sai pronto para o resto da execução ser observável sem rede de OAuth.
 vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
-  GoogleTokenManager: vi.fn().mockImplementation(() => ({
-    getValidAccessToken: vi.fn().mockResolvedValue("test-access-token"),
-  })),
+  GoogleTokenManager: vi.fn().mockImplementation(function () {
+    return {
+      getValidAccessToken: vi.fn().mockResolvedValue("test-access-token"),
+    };
+  }),
 }));
 
 // Quem decide dev/produção é o Rust, e o `db` inteiro viria junto num import real.

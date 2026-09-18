@@ -18,7 +18,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IClockifyConfigPort {
   return {
     get: vi.fn(<K extends keyof AppConfig>(key: K) => store[key] as AppConfig[K]),
     set: vi.fn(),
-  };
+  } as IClockifyConfigPort;
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {

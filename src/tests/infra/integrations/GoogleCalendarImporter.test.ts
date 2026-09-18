@@ -4,9 +4,11 @@ import type { IGoogleAuthPort } from "@domain/integrations/IGoogleAuthPort";
 
 // Mock do GoogleTokenManager para isolar da rede
 vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
-  GoogleTokenManager: vi.fn().mockImplementation(() => ({
-    getValidAccessToken: vi.fn().mockResolvedValue("test-token"),
-  })),
+  GoogleTokenManager: vi.fn().mockImplementation(function () {
+    return {
+      getValidAccessToken: vi.fn().mockResolvedValue("test-token"),
+    };
+  }),
 }));
 
 const mockFetch = vi.fn();
@@ -18,7 +20,7 @@ function makeConfig(): IGoogleAuthPort {
   return {
     get: vi.fn(<K extends keyof AppConfig>(_key: K) => "" as AppConfig[K]),
     set: vi.fn(),
-  };
+  } as IGoogleAuthPort;
 }
 
 type Importer = InstanceType<typeof GoogleCalendarImporter>;
