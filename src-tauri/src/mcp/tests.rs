@@ -148,9 +148,15 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
         names,
         [
             "get_status",
+            "get_totals",
+            "get_week_totals",
             "list_catalog",
             "list_planned_tasks",
+            "list_tasks",
+            "log_past_task",
+            "log_planned_task",
             "pause_task",
+            "plan_task",
             "resume_task",
             "start_planned_task",
             "start_task",
@@ -174,6 +180,13 @@ async fn anotacoes_separam_leitura_de_escrita_e_nenhuma_e_destrutiva() {
         ("resume_task", false, Some(true), false),
         ("stop_task", false, Some(true), true),
         ("start_planned_task", false, Some(true), false),
+        ("list_tasks", true, None, false),
+        ("get_totals", true, None, false),
+        ("get_week_totals", true, None, false),
+        // Gravar no Histórico não dispara o envio por tarefa (só o `stop` dispara).
+        ("plan_task", false, Some(false), false),
+        ("log_past_task", false, Some(false), false),
+        ("log_planned_task", false, Some(true), false),
     ];
     let tools = list_tools(state).await;
     for (name, read_only, idempotent, open_world) in expected {
@@ -216,7 +229,7 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
             "workspaceId"
         ]
     );
-    assert_eq!(start["required"], json!(["billable"]));
+    assert_eq!(sorted(&start["required"]), ["billable"]);
     assert_eq!(keys(&schema("stop_task")), ["completed"]);
     let planned = schema("start_planned_task");
     assert_eq!(keys(&planned), ["id"]);
@@ -229,6 +242,117 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
     assert_eq!(keys(&schema("list_catalog")), ["workspaceId"]);
     assert!(keys(&schema("pause_task")).is_empty());
     assert!(keys(&schema("resume_task")).is_empty());
+
+    let plan = schema("plan_task");
+    assert_eq!(
+        keys(&plan),
+        [
+            "billable",
+            "categoryId",
+            "categoryName",
+            "endTime",
+            "name",
+            "periodEnd",
+            "periodStart",
+            "projectId",
+            "projectName",
+            "recurringDays",
+            "scheduleDate",
+            "scheduleType",
+            "startTime",
+            "workspaceId"
+        ]
+    );
+    assert_eq!(
+        sorted(&plan["required"]),
+        ["billable", "name", "scheduleType"]
+    );
+    assert_eq!(
+        plan["properties"]["scheduleType"]["enum"],
+        json!(["specific_date", "recurring", "period"]),
+        "{plan}"
+    );
+
+    let past = schema("log_past_task");
+    assert_eq!(
+        keys(&past),
+        [
+            "billable",
+            "categoryId",
+            "categoryName",
+            "endTime",
+            "name",
+            "projectId",
+            "projectName",
+            "startTime",
+            "workspaceId"
+        ]
+    );
+    assert_eq!(
+        sorted(&past["required"]),
+        ["billable", "endTime", "startTime"]
+    );
+
+    let launch = schema("log_planned_task");
+    assert_eq!(keys(&launch), ["date", "endTime", "id", "startTime"]);
+    assert_eq!(sorted(&launch["required"]), ["id"]);
+
+    let tasks = schema("list_tasks");
+    assert_eq!(
+        keys(&tasks),
+        [
+            "billable",
+            "categoryId",
+            "from",
+            "name",
+            "projectId",
+            "to",
+            "workspaceId"
+        ]
+    );
+    assert_eq!(keys(&schema("get_totals")), ["from", "to", "workspaceId"]);
+    assert_eq!(keys(&schema("get_week_totals")), ["date", "workspaceId"]);
+    for read_only in ["list_tasks", "get_totals", "get_week_totals"] {
+        assert!(
+            schema(read_only)
+                .get("required")
+                .is_none_or(|r| r == &json!([])),
+            "{read_only} não tem argumento obrigatório"
+        );
+    }
+}
+
+/// Os campos comuns vêm de um struct com `#[serde(flatten)]`; o esquema tem de
+/// sair plano, sem `$ref`/`allOf`, que nem todo cliente MCP resolve.
+#[tokio::test]
+async fn esquemas_das_tools_que_criam_tarefa_saem_planos() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    for name in [
+        "start_task",
+        "plan_task",
+        "log_past_task",
+        "log_planned_task",
+    ] {
+        let schema = tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !schema.contains(indirection),
+                "{name} tem {indirection}: {schema}"
+            );
+        }
+    }
+}
+
+fn sorted(required: &Value) -> Vec<String> {
+    let mut names: Vec<String> = required
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|v| v.as_str().unwrap().to_string())
+        .collect();
+    names.sort_unstable();
+    names
 }
 
 #[tokio::test]
@@ -404,6 +528,12 @@ fn task_responder(op: &str) -> (u16, Value) {
     match op {
         "tasks.stop" => (200, json!({ "id": "t1", "status": "completed" })),
         "plannedTasks.list" => (200, json!([{ "id": "p1" }])),
+        "history.list" => (200, json!([{ "id": "t2" }, { "id": "t1" }])),
+        "totals.period" => (200, json!({ "from": "2026-09-01", "totalSeconds": 60 })),
+        "totals.week" => (
+            200,
+            json!({ "weekStart": "2026-09-14", "totalSeconds": 60 }),
+        ),
         _ => (201, json!({ "id": "t1", "status": "running" })),
     }
 }
@@ -590,6 +720,9 @@ async fn tools_sem_o_campo_arguments_funcionam() {
         ("list_planned_tasks", "plannedTasks.list"),
         ("stop_task", "tasks.stop"),
         ("pause_task", "tasks.pause"),
+        ("list_tasks", "history.list"),
+        ("get_totals", "totals.period"),
+        ("get_week_totals", "totals.week"),
     ] {
         let (state, calls) = fake_state(true, task_responder);
         let (status, body) = post(
@@ -605,4 +738,280 @@ async fn tools_sem_o_campo_arguments_funcionam() {
         assert_eq!(body["result"]["isError"], json!(false), "{tool}: {body}");
         assert_eq!(calls.lock().unwrap()[0].0, op);
     }
+}
+
+#[tokio::test]
+async fn plan_task_repassa_o_corpo_so_com_os_campos_enviados() {
+    let (result, calls) = forwarded(
+        "plan_task",
+        json!({
+            "name": "Daily", "billable": false, "scheduleType": "recurring",
+            "recurringDays": [1, 2, 3, 4, 5]
+        }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "plannedTasks.create".to_string(),
+            json!({ "body": {
+                "name": "Daily", "billable": false, "scheduleType": "recurring",
+                "recurringDays": [1, 2, 3, 4, 5]
+            } })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "id": "t1", "status": "running" })
+    );
+
+    let everything = json!({
+        "name": "Reunião", "projectId": "p", "projectName": "P", "categoryId": "c",
+        "categoryName": "C", "billable": true, "scheduleType": "period",
+        "scheduleDate": "2026-09-18", "recurringDays": [0], "periodStart": "2026-09-01",
+        "periodEnd": "2026-09-30", "startTime": "09:00", "endTime": "10:00",
+        "workspaceId": "w"
+    });
+    let (_, calls) = forwarded("plan_task", everything.clone()).await;
+    assert_eq!(calls[0].1, json!({ "body": everything }));
+}
+
+#[tokio::test]
+async fn plan_task_com_schedule_type_desconhecido_vira_is_error_sem_chamar_a_ponte() {
+    let (state, calls) = fake_state(true, task_responder);
+    let result = call_tool(
+        state,
+        "plan_task",
+        json!({ "name": "x", "billable": true, "scheduleType": "daily" }),
+    )
+    .await;
+    assert!(
+        error_text(&result).contains("unknown variant `daily`"),
+        "{result}"
+    );
+    assert!(calls.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn log_past_task_repassa_o_corpo_so_com_os_campos_enviados() {
+    let (result, calls) = forwarded(
+        "log_past_task",
+        json!({
+            "name": "Revisão", "billable": true,
+            "startTime": "2026-09-15T14:00:00-03:00", "endTime": "2026-09-15T15:30:00-03:00"
+        }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "history.create".to_string(),
+            json!({ "body": {
+                "name": "Revisão", "billable": true,
+                "startTime": "2026-09-15T14:00:00-03:00", "endTime": "2026-09-15T15:30:00-03:00"
+            } })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "id": "t1", "status": "running" })
+    );
+
+    let everything = json!({
+        "name": "x", "projectId": "p", "projectName": "P", "categoryId": "c",
+        "categoryName": "C", "billable": false, "startTime": "2026-09-15T14:00:00",
+        "endTime": "2026-09-15T15:00:00", "workspaceId": "w"
+    });
+    let (_, calls) = forwarded("log_past_task", everything.clone()).await;
+    assert_eq!(calls[0].1, json!({ "body": everything }));
+}
+
+#[tokio::test]
+async fn log_past_task_sem_horario_vira_is_error_sem_chamar_a_ponte() {
+    let (state, calls) = fake_state(true, task_responder);
+    let result = call_tool(
+        state,
+        "log_past_task",
+        json!({ "billable": true, "startTime": "2026-09-15T14:00:00-03:00" }),
+    )
+    .await;
+    assert!(
+        error_text(&result).contains("missing field `endTime`"),
+        "{result}"
+    );
+    assert!(calls.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn log_past_task_abaixo_de_1_minuto_vira_is_error_com_a_mensagem_do_dominio() {
+    fn too_short(_: &str) -> (u16, Value) {
+        (400, json!({ "error": "A duração mínima é 1 minuto." }))
+    }
+    let (state, _) = fake_state(true, too_short);
+    let result = call_tool(
+        state,
+        "log_past_task",
+        json!({
+            "billable": true,
+            "startTime": "2026-09-15T14:00:00-03:00", "endTime": "2026-09-15T14:00:30-03:00"
+        }),
+    )
+    .await;
+    assert_eq!(error_text(&result), "A duração mínima é 1 minuto.");
+}
+
+#[tokio::test]
+async fn log_planned_task_repassa_o_id_fora_do_corpo() {
+    let (result, calls) = forwarded(
+        "log_planned_task",
+        json!({
+            "id": "p1", "date": "2026-09-15",
+            "startTime": "2026-09-15T09:00:00-03:00", "endTime": "2026-09-15T10:00:00-03:00"
+        }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "plannedTasks.launchRetroactive".to_string(),
+            json!({ "id": "p1", "body": {
+                "date": "2026-09-15",
+                "startTime": "2026-09-15T09:00:00-03:00", "endTime": "2026-09-15T10:00:00-03:00"
+            } })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "id": "t1", "status": "running" })
+    );
+
+    // Só o id: corpo vazio, e o TS aplica hoje e o horário da planejada.
+    let (_, calls) = forwarded("log_planned_task", json!({ "id": "p1" })).await;
+    assert_eq!(calls[0].1, json!({ "id": "p1", "body": {} }));
+}
+
+#[tokio::test]
+async fn log_planned_task_sem_id_vira_is_error_sem_chamar_a_ponte() {
+    let (state, calls) = fake_state(true, task_responder);
+    let result = call_tool(state, "log_planned_task", json!({ "date": "2026-09-15" })).await;
+    assert_eq!(
+        error_text(&result),
+        "failed to deserialize parameters: missing field `id`"
+    );
+    assert!(calls.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn log_planned_task_ja_concluida_vira_is_error_com_a_mensagem() {
+    fn conflict(_: &str) -> (u16, Value) {
+        (
+            409,
+            json!({ "error": "A tarefa planejada 'p1' já foi concluída em 2026-09-15" }),
+        )
+    }
+    let (state, _) = fake_state(true, conflict);
+    let result = call_tool(
+        state,
+        "log_planned_task",
+        json!({ "id": "p1", "date": "2026-09-15" }),
+    )
+    .await;
+    assert_eq!(
+        error_text(&result),
+        "A tarefa planejada 'p1' já foi concluída em 2026-09-15"
+    );
+}
+
+#[tokio::test]
+async fn list_tasks_manda_as_sete_chaves_como_a_rest_e_embrulha_a_lista() {
+    let (result, calls) = forwarded(
+        "list_tasks",
+        json!({
+            "from": "2026-09-14", "to": "2026-09-18", "name": "revisão",
+            "projectId": "p", "categoryId": "c", "billable": false, "workspaceId": "w"
+        }),
+    )
+    .await;
+    // `billable` em texto: é como a query string do `GET /tasks` chega ao TS.
+    assert_eq!(
+        calls,
+        [(
+            "history.list".to_string(),
+            json!({
+                "from": "2026-09-14", "to": "2026-09-18", "name": "revisão",
+                "projectId": "p", "categoryId": "c", "billable": "false", "workspaceId": "w"
+            })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "tasks": [{ "id": "t2" }, { "id": "t1" }] })
+    );
+
+    let (_, calls) = forwarded("list_tasks", json!({ "billable": true })).await;
+    assert_eq!(
+        calls[0].1,
+        json!({
+            "from": null, "to": null, "name": null, "projectId": null,
+            "categoryId": null, "billable": "true", "workspaceId": null
+        })
+    );
+
+    let (_, calls) = forwarded("list_tasks", json!({})).await;
+    assert_eq!(
+        calls[0].1,
+        json!({
+            "from": null, "to": null, "name": null, "projectId": null,
+            "categoryId": null, "billable": null, "workspaceId": null
+        })
+    );
+}
+
+#[tokio::test]
+async fn get_totals_repassa_o_periodo_e_devolve_o_corpo_como_veio() {
+    let (result, calls) = forwarded(
+        "get_totals",
+        json!({ "from": "2026-09-01", "to": "2026-09-15", "workspaceId": "w" }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "totals.period".to_string(),
+            json!({ "from": "2026-09-01", "to": "2026-09-15", "workspaceId": "w" })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "from": "2026-09-01", "totalSeconds": 60 })
+    );
+
+    let (_, calls) = forwarded("get_totals", json!({})).await;
+    assert_eq!(
+        calls[0].1,
+        json!({ "from": null, "to": null, "workspaceId": null })
+    );
+}
+
+#[tokio::test]
+async fn get_week_totals_repassa_a_data_e_devolve_o_corpo_como_veio() {
+    let (result, calls) = forwarded(
+        "get_week_totals",
+        json!({ "date": "2026-09-16", "workspaceId": "w" }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "totals.week".to_string(),
+            json!({ "date": "2026-09-16", "workspaceId": "w" })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "weekStart": "2026-09-14", "totalSeconds": 60 })
+    );
+
+    let (_, calls) = forwarded("get_week_totals", json!({})).await;
+    assert_eq!(calls[0].1, json!({ "date": null, "workspaceId": null }));
 }

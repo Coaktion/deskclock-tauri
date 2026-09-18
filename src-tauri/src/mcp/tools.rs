@@ -3,7 +3,8 @@
 
 use crate::api::bridge::Bridge;
 use crate::mcp::ops::{
-    ops_of, OpCall, GET_STATUS, LIST_CATALOG, LIST_PLANNED_TASKS, PAUSE_TASK, RESUME_TASK,
+    ops_of, OpCall, GET_STATUS, GET_TOTALS, GET_WEEK_TOTALS, LIST_CATALOG, LIST_PLANNED_TASKS,
+    LIST_TASKS, LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK,
     START_PLANNED_TASK, START_TASK, STOP_TASK,
 };
 use crate::mcp::result::{body_or_error, success};
@@ -29,14 +30,11 @@ impl WorkspaceArgs {
     }
 }
 
-// Os corpos vão ao TS como o cliente mandou, como no repasse da REST: campo
-// omitido fica ausente, e o TS trata ausente e `null` do mesmo jeito.
+// Projeto, categoria, faturamento e workspace de uma tarefa nova: os mesmos
+// campos nas três tools que criam tarefa (iniciar, planejar, lançar retroativo).
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct StartTaskArgs {
-    /// Task name (free text). Optional.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+pub struct TaskFields {
     /// Project id (from list_catalog). Takes precedence over projectName.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
@@ -55,6 +53,18 @@ pub struct StartTaskArgs {
     /// Workspace id (from list_catalog). Omit to use the active workspace.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<String>,
+}
+
+// Os corpos vão ao TS como o cliente mandou, como no repasse da REST: campo
+// omitido fica ausente, e o TS trata ausente e `null` do mesmo jeito.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct StartTaskArgs {
+    /// Task name (free text). Optional.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(flatten)]
+    pub task: TaskFields,
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
@@ -96,6 +106,165 @@ impl ListPlannedTasksArgs {
             "to": self.to,
             "workspaceId": self.workspace_id,
         })
+    }
+}
+
+// Inline em vez de `$ref` para `$defs`: nem todo cliente MCP resolve referência
+// no esquema de entrada, e o enum é o que diz ao modelo os valores válidos.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum ScheduleType {
+    SpecificDate,
+    Recurring,
+    Period,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanTaskArgs {
+    /// Task name.
+    pub name: String,
+    #[serde(flatten)]
+    pub task: TaskFields,
+    /// How the task is scheduled: `specific_date` (one day, set scheduleDate),
+    /// `recurring` (weekly, set recurringDays) or `period` (every day from
+    /// periodStart to periodEnd).
+    pub schedule_type: ScheduleType,
+    /// The day, YYYY-MM-DD. Required with scheduleType `specific_date`; omit otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schedule_date: Option<String>,
+    /// Weekdays it repeats on, 0 = Sunday … 6 = Saturday. Required with scheduleType
+    /// `recurring`; omit otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recurring_days: Option<Vec<u8>>,
+    /// First day, YYYY-MM-DD. Required with scheduleType `period`; omit otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_start: Option<String>,
+    /// Last day (inclusive), YYYY-MM-DD, with scheduleType `period`. Omit for a
+    /// period with no end.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_end: Option<String>,
+    /// Scheduled start time of day, HH:MM (24h, local). Only for an appointment at a
+    /// fixed time; send it together with endTime, or neither.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<String>,
+    /// Scheduled end time of day, HH:MM (24h, local). An end earlier than or equal
+    /// to the start means it ends the next day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_time: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LogPastTaskArgs {
+    /// Task name (free text). Optional.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(flatten)]
+    pub task: TaskFields,
+    /// When the work started: an ISO 8601 datetime with the user's UTC offset from
+    /// get_status, e.g. 2026-09-15T14:00:00-03:00. Without an offset it is read as
+    /// the user's local time; a date alone is an error.
+    pub start_time: String,
+    /// When the work ended, same format as startTime; at least 1 minute after it.
+    pub end_time: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LogPlannedTaskArgs {
+    /// Planned task id, from list_planned_tasks.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: LogPlannedTaskBody,
+}
+
+/// O corpo do lançamento; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LogPlannedTaskBody {
+    /// The day the work was done, YYYY-MM-DD. Omit for today; cannot be in the
+    /// future. When retrying, send it explicitly: a retry without it after midnight
+    /// would target the next day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    /// Only for a planned task that does not have both `startTime` and `endTime`
+    /// in list_planned_tasks, and then required: when the work started, an ISO 8601
+    /// datetime on `date` with the user's UTC offset, e.g. 2026-09-15T14:00:00-03:00.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<String>,
+    /// Only for a planned task that does not have both `startTime` and `endTime`,
+    /// and then required: when the work ended, same format; at least 1 minute after
+    /// startTime.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end_time: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListTasksArgs {
+    /// First day, YYYY-MM-DD, in the user's local time. Omit for today.
+    pub from: Option<String>,
+    /// Last day (inclusive), YYYY-MM-DD. Omit for the same day as `from`.
+    pub to: Option<String>,
+    /// Only tasks whose name contains this text (case-insensitive).
+    pub name: Option<String>,
+    /// Only tasks of this project id (from list_catalog). Ids only, not names.
+    pub project_id: Option<String>,
+    /// Only tasks of this category id (from list_catalog). Ids only, not names.
+    pub category_id: Option<String>,
+    /// Only billable (true) or only non-billable (false) tasks. Omit for both.
+    pub billable: Option<bool>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+impl ListTasksArgs {
+    /// As chaves do `GET /tasks`: todas presentes, nulas quando omitidas, e
+    /// `billable` em texto, como a query string chega ao TS.
+    fn params(&self) -> Value {
+        json!({
+            "from": self.from,
+            "to": self.to,
+            "name": self.name,
+            "projectId": self.project_id,
+            "categoryId": self.category_id,
+            "billable": self.billable.map(|b| b.to_string()),
+            "workspaceId": self.workspace_id,
+        })
+    }
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTotalsArgs {
+    /// First day, YYYY-MM-DD, in the user's local time. Omit for today.
+    pub from: Option<String>,
+    /// Last day (inclusive), YYYY-MM-DD. Omit for the same day as `from`.
+    pub to: Option<String>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+impl GetTotalsArgs {
+    fn params(&self) -> Value {
+        json!({ "from": self.from, "to": self.to, "workspaceId": self.workspace_id })
+    }
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetWeekTotalsArgs {
+    /// Any day of the wanted week, YYYY-MM-DD. Omit for the current week.
+    pub date: Option<String>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+impl GetWeekTotalsArgs {
+    fn params(&self) -> Value {
+        json!({ "date": self.date, "workspaceId": self.workspace_id })
     }
 }
 
@@ -262,7 +431,7 @@ impl DeskClockMcp {
             included), or `from`/`to` for everything that may occur in a range; with \
             none of them, all planned tasks of the workspace. Dates are YYYY-MM-DD in the \
             user's local time (get_status gives today). Returns `plannedTasks`, each with \
-            `id` (for start_planned_task), `name`, `projectName`, `categoryName`, \
+            `id` (for start_planned_task and log_planned_task), `name`, `projectName`, `categoryName`, \
             `billable`, `scheduleType` (specific_date, recurring or period) with its \
             `scheduleDate`, `recurringDays` (0 = Sunday) or `periodStart`/`periodEnd`, \
             optional `startTime`/`endTime` (HH:MM) and `completedDates` (YYYY-MM-DD \
@@ -274,6 +443,134 @@ impl DeskClockMcp {
         Parameters(args): Parameters<ListPlannedTasksArgs>,
     ) -> CallToolResult {
         self.call_single(LIST_PLANNED_TASKS, args.params()).await
+    }
+
+    #[tool(
+        name = "plan_task",
+        description = "Add a task to the user's plan (the Planning screen) without \
+            timing anything: something to do on a given day, every week on some \
+            weekdays, or every day of a period. Use start_task to start working now and \
+            log_past_task for work already done. Set exactly the schedule fields of the \
+            chosen `scheduleType`. Dates are YYYY-MM-DD and times of day HH:MM, both in \
+            the user's local time (get_status gives today). Project and category are \
+            optional and must already exist in the workspace: call list_catalog for \
+            their exact names or ids (an unknown one is an error; nothing is created). \
+            Returns the planned task, with the `id` that start_planned_task and \
+            log_planned_task take.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn plan_task(&self, Parameters(args): Parameters<PlanTaskArgs>) -> CallToolResult {
+        self.call_single(PLAN_TASK, json!({ "body": args })).await
+    }
+
+    #[tool(
+        name = "log_past_task",
+        description = "Record work already done, with its start and end — e.g. \"from \
+            2pm to 3:30pm I worked on X\". It is saved directly to the history as a \
+            finished task; the running task is not touched. If the work corresponds to \
+            a planned task (see list_planned_tasks), use log_planned_task instead: it \
+            also marks the planned task as done that day and keeps its data. \
+            `startTime` and `endTime` are ISO 8601 datetimes, best with the user's UTC \
+            offset from get_status (e.g. 2026-09-15T14:00:00-03:00); without an offset \
+            they are read as the user's local time. The duration is end minus start and \
+            must be at least 1 minute. Project and category must already exist (see \
+            list_catalog). Returns the saved task (`id`, `startTime`/`endTime` in UTC, \
+            `durationSeconds`).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn log_past_task(&self, Parameters(args): Parameters<LogPastTaskArgs>) -> CallToolResult {
+        self.call_single(LOG_PAST_TASK, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "log_planned_task",
+        description = "Record a planned task as done on a day, like the Manual Entry \
+            screen: it saves a finished task with the planned task's name, project, \
+            category, billable and custom fields, and marks the planned task as done on \
+            that day. Get `id` from list_planned_tasks. `date` defaults to today and \
+            cannot be in the future; the planned task must be scheduled on that day and \
+            not already done on it. Times depend on the planned task: if it has \
+            both `startTime` and `endTime` (HH:MM) in list_planned_tasks, those are \
+            used and sending `startTime`/`endTime` here is an error; if it does not \
+            have both, both are required here — ISO 8601 datetimes with the user's UTC offset from get_status \
+            (e.g. 2026-09-15T14:00:00-03:00), the start on `date`, at least 1 minute \
+            long. When retrying, send `date` explicitly: without it a retry after \
+            midnight targets the next day. Returns the saved task.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn log_planned_task(
+        &self,
+        Parameters(args): Parameters<LogPlannedTaskArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            LOG_PLANNED_TASK,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "list_tasks",
+        description = "The user's finished tasks (the History screen) in a range of \
+            days, newest first. Days are YYYY-MM-DD in the user's local time \
+            (get_status gives today); with no dates, today. Filters combine: name \
+            text, project id, category id (ids from list_catalog) and billable. The \
+            running or paused task is not included (see get_status). Returns `tasks`, \
+            each with `id`, `name`, `projectName`, `categoryName`, `billable`, \
+            `startTime`/`endTime` (ISO datetimes in UTC) and `durationSeconds`.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn list_tasks(&self, Parameters(args): Parameters<ListTasksArgs>) -> CallToolResult {
+        self.call_single(LIST_TASKS, args.params()).await
+    }
+
+    #[tool(
+        name = "get_totals",
+        description = "Time totals of the finished tasks in a range of days, as the \
+            History screen sums them. Days are YYYY-MM-DD in the user's local time; \
+            with no dates, today. For a calendar week as the user's app defines it, use \
+            get_week_totals. Returns `from`, `to`, `totalSeconds`, `billableSeconds`, \
+            `nonBillableSeconds` and `count` (number of tasks).",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_totals(&self, Parameters(args): Parameters<GetTotalsArgs>) -> CallToolResult {
+        self.call_single(GET_TOTALS, args.params()).await
+    }
+
+    #[tool(
+        name = "get_week_totals",
+        description = "Total time recorded in the week that contains `date` \
+            (YYYY-MM-DD; default today), as the Tasks screen shows it. Unlike \
+            get_totals, it also counts the active (running or paused) task: the time it \
+            had up to its last pause, and its day in `daysWorked` — so while a task is \
+            active the two can differ for the same days. The week \
+            starts on the weekday set in the user's settings, not necessarily Monday — \
+            the result says which days it covers. Returns `weekStart`, `weekEnd`, \
+            `totalSeconds` and `daysWorked`. For any other range, or to split billable \
+            time, use get_totals.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_week_totals(
+        &self,
+        Parameters(args): Parameters<GetWeekTotalsArgs>,
+    ) -> CallToolResult {
+        self.call_single(GET_WEEK_TOTALS, args.params()).await
     }
 }
 

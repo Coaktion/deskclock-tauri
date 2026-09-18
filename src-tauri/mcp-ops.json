@@ -9,18 +9,19 @@
     "tasks.resume": "resume_task",
     "tasks.stop": "stop_task",
     "tasks.startPlanned": "start_planned_task",
-    "plannedTasks.list": "list_planned_tasks"
+    "plannedTasks.list": "list_planned_tasks",
+    "plannedTasks.create": "plan_task",
+    "history.create": "log_past_task",
+    "plannedTasks.launchRetroactive": "log_planned_task",
+    "history.list": "list_tasks",
+    "totals.period": "get_totals",
+    "totals.week": "get_week_totals"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",
     "tasks.cancel": "destrutiva: descarta a tarefa em execução sem registrar, fora da v1",
     "tasks.updateActive": "edição da tarefa em execução fora da v1",
-    "plannedTasks.create": "prevista na Fase 2 do MCP",
-    "history.create": "prevista na Fase 2 do MCP",
-    "history.list": "prevista na Fase 2 do MCP",
-    "totals.period": "prevista na Fase 2 do MCP",
-    "totals.week": "prevista na Fase 2 do MCP",
-    "history.get": "list_tasks já devolve cada registro, fora da v1 (Fase 2)",
+    "history.get": "list_tasks já devolve cada registro, fora da v1",
     "history.update": "edição do Histórico fora da v1",
     "history.delete": "destrutiva, fora da v1",
     "history.deleteMany": "destrutiva, fora da v1",
@@ -53,7 +54,6 @@
     "plannedTasks.delete": "destrutiva, fora da v1",
     "plannedTasks.complete": "edição do Planejamento fora da v1",
     "plannedTasks.uncomplete": "edição do Planejamento fora da v1",
-    "plannedTasks.duplicate": "edição do Planejamento fora da v1",
-    "plannedTasks.launchRetroactive": "lançar planejada no retroativo (conclui a planejada e copia customValues) — candidata à Fase 2, pendente de decisão; log_past_task cria registro avulso"
+    "plannedTasks.duplicate": "edição do Planejamento fora da v1"
   }
 }

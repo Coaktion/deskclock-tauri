@@ -39,10 +39,12 @@ Todas do usuário, em 2026-09-18.
 | `stop_task` | `tasks.stop` | `completed?` |
 | `start_planned_task` | `tasks.startPlanned` | 409 com tarefa ativa, como na API |
 | `plan_task` | `plannedTasks.create` | |
-| `log_past_task` | `history.create` | Retroativo |
+| `log_past_task` | `history.create` | Retroativo avulso |
+| `log_planned_task` | `plannedTasks.launchRetroactive` | Retroativo de uma planejada: conclui-a na data e copia os `customValues`. Aprovada pelo usuário na Fase 2 |
 | `list_planned_tasks` | `plannedTasks.list` | `date` ou `from`/`to`. Entra na Fase 1: é de onde vem o `id` do `start_planned_task` |
 | `list_tasks` | `history.list` | Filtros do Histórico |
-| `get_totals` | `totals.period` · `totals.week` | |
+| `get_totals` | `totals.period` | Totais de um período |
+| `get_week_totals` | `totals.week` | Total da semana que contém `date`. Separada da `get_totals` na Fase 2: tool só mapeia, uma `op` cada |
 
 Fora da v1: `tasks.cancel`, `tasks.toggle`, `tasks.updateActive`, edição/exclusão/unificação/movimentação do
 Histórico, CRUD de catálogo, workspaces e campos personalizados.
@@ -87,7 +89,7 @@ deskclock-dev http://127.0.0.1:27421/mcp` e pedir o status.
 esta veio da Fase 2 porque sem ela o modelo não tem de onde tirar o `id` que o `start_planned_task` exige.
 
 ### Fase 2 · Criar e consultar
-`plan_task`, `log_past_task`, `list_tasks`, `get_totals`.
+`plan_task`, `log_past_task`, `log_planned_task`, `list_tasks`, `get_totals`, `get_week_totals`.
 
 ### Fase 3 · Fechamento
 Bloco "Conectar ao Claude" em Configurações > API (`ApiTab.tsx`) com o comando `claude mcp add` pronto na
@@ -104,7 +106,7 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 |---|---|
 | 0 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421) |
 | 1 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421), as 8 tools |
-| 2 | pendente |
+| 2 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421), as 14 tools |
 | 3 | pendente |
 
 ### Decisões da Fase 0 que a spec não fixava
@@ -139,7 +141,8 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   qualquer processo local pode iniciar e parar tarefas pelo `/mcp`. Aceito, coerente com a REST.
 - **`plannedTasks.launchRetroactive` é candidata a tool da Fase 2**, pendente de decisão do
   usuário: ao contrário do `history.create` (`log_past_task`), ela conclui a planejada na data e
-  copia os `customValues` (Project Stage do Monday). Por ora está em `excluded`.
+  copia os `customValues` (Project Stage do Monday). Por ora está em `excluded`. *(Resolvida na
+  Fase 2: virou `log_planned_task`.)*
 
 ### Decisões da Fase 1 que a spec não fixava
 
@@ -180,3 +183,69 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   sempre gravado; descarte abaixo de 1 minuto e arredondamento só se ligados nas Configurações;
   `completed: true` (padrão) conclui a planejada de origem no dia e, em segundo plano, envia a
   tarefa às integrações configuradas para envio automático por tarefa, se houver; `false` grava o tempo sem concluir a planejada e sem envio.
+
+### Decisões da Fase 2 que a spec não fixava
+
+- **Seis tools, uma `op` cada.** `get_totals` (`totals.period`) e `get_week_totals` (`totals.week`)
+  em vez de uma tool que escolhe a `op` pelos argumentos — a tool só mapeia. `log_planned_task`
+  (`plannedTasks.launchRetroactive`) aprovada pelo usuário; a descrição do `log_past_task` manda
+  usá-la quando o trabalho é de uma planejada.
+- **Formatos de data e hora**, lidos do TS:
+  - `log_past_task` e `log_planned_task` (planejada sem horário): `startTime`/`endTime` passam pelo
+    `parseInstant` (`localApi/taskInput.ts`) — exige `T` e o `Date.parse` do JS, normaliza em UTC.
+    Com offset vale o offset; **sem offset o JS lê como hora local** da máquina (a do usuário);
+    `Z` é UTC; só a data é 400. As descrições pedem o `utcOffset` do `get_status` e avisam da leitura
+    local. A resposta traz `startTime`/`endTime` em UTC.
+  - Mínimo de 1 minuto: do domínio (`createRetroactiveTask`, `"A duração mínima é 1 minuto."`),
+    vale para os dois. Fim antes do início cai na mesma regra (duração negativa). O TS não recusa
+    instante no futuro no `history.create` — a descrição não promete nada sobre isso.
+  - `log_planned_task`: `date` YYYY-MM-DD, ausente = hoje, futura → 400; fora da agenda do dia ou já
+    concluída nele → 409. Planejada **com** `startTime`/`endTime` (HH:MM) usa o horário dela e
+    recusa os do corpo (400); **sem** horário exige os dois, com o início no dia `date`.
+  - `plan_task`: datas YYYY-MM-DD e horas do dia `HH:MM` locais; `recurringDays` 0 = domingo;
+    `periodEnd` ausente = período sem fim (o `findForDate` aceita `period_end IS NULL`).
+  - `list_tasks` e `get_totals`: dias locais, `from` ausente = hoje, `to` ausente = `from`
+    (`periodRange`). `get_week_totals`: semana do `weekStartsOn` das Configurações, `date` ausente =
+    hoje; a descrição avisa que não é necessariamente segunda.
+- **`openWorldHint: false` nas três de escrita.** O envio automático por tarefa
+  (`AutoSyncRunner.runPerTask`) só é chamado em `usePostStopLogic` (parar tarefa). `history.create`
+  e `plannedTasks.launchRetroactive` terminam em `notifyTasksChanged` (+ `notifyPlannedTasksChanged`
+  no lançamento), que só emitem `TASKS_CHANGED`/`PLANNED_TASKS_CHANGED` — os ouvintes (`useTasks`,
+  `useHistory`, `useCompletedTasksForDate`, `RetroactivePage`, `usePlannedTasks`…) só recarregam
+  listas. `plannedTasks.create` só emite `PLANNED_TASKS_CHANGED`. O envio diário (`runDaily`), se o
+  usuário o ligou, depois inclui esses registros como qualquer outro do Histórico — igual ao
+  Lançamento Manual da tela, e não é efeito da chamada.
+- **`idempotentHint`** pelo critério da Fase 1. `plan_task` e `log_past_task` → `false`: repetir
+  cria duplicata. `log_planned_task` → `true`: repetir com os mesmos argumentos só erra (409 "já foi
+  concluída" na data) e não grava nada — um retry depois de timeout não duplica o registro.
+- **`billable` obrigatório no `plan_task`**, como no `start_task`: o TS cai em `true` quando falta
+  (`body.billable ?? true`) e não herda o `defaultBillable` da categoria. No `log_past_task` o
+  próprio TS já exige (`requireBoolean`).
+- **`scheduleType` como enum** no esquema (`specific_date`, `recurring`, `period`), inline (sem
+  `$ref`). Valor fora dele é recusado pelo rmcp (`isError`, em inglês) antes da ponte. O resto da
+  coerência do agendamento **não é validado no TS** (`specific_date` sem `scheduleDate`, `HH:MM`
+  malformado, só um dos dois horários): a tool não inventa a regra; a descrição de cada campo diz
+  quando ele é obrigatório.
+- **Campos deixados de fora.** `customValues` em `plan_task` e `log_past_task` (mesmo motivo do
+  `start_task`: `customFields.list` fora da v1, o modelo não tem o id do campo — e quem precisa dos
+  valores de uma planejada usa `log_planned_task`, que os copia). `actions` (links/arquivos abertos
+  pelo card) e `sortOrder` (a UI não reordena; tudo grava 0) no `plan_task`. `list_tasks` filtra
+  projeto e categoria **só por id**, como o `GET /tasks` (`resolveProjectId(…, id, null)`); a
+  descrição diz para pegar o id no `list_catalog`.
+- **Params repassados como a REST.** `plan_task`/`log_past_task` mandam `{ body: {...} }` só com os
+  campos enviados. `log_planned_task` manda `{ id, body }` com o corpo só com o que veio — `{}` quando
+  só há `id`, onde a REST manda `body: null`; o TS faz `params.body ?? {}`, mesmo efeito.
+  `list_tasks` manda as sete chaves do `GET /tasks`, nulas quando omitidas, e `billable` **em texto**
+  (`"true"`/`"false"`), como a query string chega ao `billableFilter`. `get_totals` e
+  `get_week_totals` mandam as chaves de `PeriodQuery`/`WeekQuery`.
+- **`get_week_totals` não é `get_totals` da semana** (achado da revisão). O `getWeekTotal` soma o
+  `findByDateRange` **sem filtro de status**: a tarefa ativa (em execução ou pausada) entra com o
+  `durationSeconds` acumulado até a última pausa, e o dia dela conta em `daysWorked`. O
+  `totals.period` usa `searchTasks`, só concluídas. Com tarefa ativa, as duas tools divergem para os
+  mesmos dias — a descrição do `get_week_totals` diz isso; a regra é a da tela de Tarefas e não muda.
+- **Campos comuns num struct só.** Projeto (id/nome), categoria (id/nome), `billable` e `workspaceId`
+  estão em `TaskFields`, com `#[serde(flatten)]` em `start_task`, `plan_task` e `log_past_task`; o
+  corpo do `log_planned_task` é `LogPlannedTaskBody`, também achatado ao lado do `id`. O schemars
+  gera o esquema plano (mesmas propriedades e `required`, sem `$ref`/`allOf`) — há teste para isso.
+- **Resultados.** `list_tasks` embrulha em `{ tasks: [...] }` (da mais recente para a mais antiga,
+  só concluídas); as demais devolvem o corpo como veio (objeto).

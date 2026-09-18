@@ -10,6 +10,12 @@ pub const RESUME_TASK: &str = "resume_task";
 pub const STOP_TASK: &str = "stop_task";
 pub const START_PLANNED_TASK: &str = "start_planned_task";
 pub const LIST_PLANNED_TASKS: &str = "list_planned_tasks";
+pub const PLAN_TASK: &str = "plan_task";
+pub const LOG_PAST_TASK: &str = "log_past_task";
+pub const LOG_PLANNED_TASK: &str = "log_planned_task";
+pub const LIST_TASKS: &str = "list_tasks";
+pub const GET_TOTALS: &str = "get_totals";
+pub const GET_WEEK_TOTALS: &str = "get_week_totals";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -21,6 +27,12 @@ pub const OP_RESUME: &str = "tasks.resume";
 pub const OP_STOP: &str = "tasks.stop";
 pub const OP_START_PLANNED: &str = "tasks.startPlanned";
 pub const OP_PLANNED_LIST: &str = "plannedTasks.list";
+pub const OP_PLANNED_CREATE: &str = "plannedTasks.create";
+pub const OP_HISTORY_CREATE: &str = "history.create";
+pub const OP_LAUNCH_RETROACTIVE: &str = "plannedTasks.launchRetroactive";
+pub const OP_HISTORY_LIST: &str = "history.list";
+pub const OP_TOTALS_PERIOD: &str = "totals.period";
+pub const OP_TOTALS_WEEK: &str = "totals.week";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -59,6 +71,14 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         LIST_PLANNED_TASKS,
         &[under("plannedTasks", OP_PLANNED_LIST)],
     ),
+    (PLAN_TASK, &[pass_through(OP_PLANNED_CREATE)]),
+    (LOG_PAST_TASK, &[pass_through(OP_HISTORY_CREATE)]),
+    (LOG_PLANNED_TASK, &[pass_through(OP_LAUNCH_RETROACTIVE)]),
+    (LIST_TASKS, &[under("tasks", OP_HISTORY_LIST)]),
+    // Uma tool por `op`, em vez de uma que escolhe a `op` pelos argumentos: a
+    // tool só mapeia, e a escolha entre período e semana fica explícita no nome.
+    (GET_TOTALS, &[pass_through(OP_TOTALS_PERIOD)]),
+    (GET_WEEK_TOTALS, &[pass_through(OP_TOTALS_WEEK)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {
