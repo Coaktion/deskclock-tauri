@@ -1442,6 +1442,7 @@
         <thead><tr><th>Botão</th><th>O que faz</th></tr></thead>
         <tbody>
           <tr><td><strong>Play</strong></td><td>Inicia o timer com os dados da planejada. Desabilitado, com o motivo no tooltip, enquanto houver outra tarefa em execução.</td></tr>
+          <tr><td><strong>Compartilhar</strong></td><td>Copia um link da tarefa para a área de transferência, para mandar a outra pessoa. Veja <a onclick="show('deeplinks/compartilhar-tarefa')">Compartilhar uma tarefa</a>.</td></tr>
           <tr><td><strong>Concluir / Pendente</strong></td><td>Marca ou desmarca a conclusão no dia.</td></tr>
           <tr><td><strong>Duplicar</strong></td><td>Cria uma cópia da tarefa planejada.</td></tr>
           <tr><td><strong>Ações</strong></td><td>Expande e edita as ações associadas.</td></tr>
@@ -2107,6 +2108,20 @@
     <div class="callout success">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       <div class="callout-body"><strong>Horários preservados:</strong> ao importar, o início e fim do evento são salvos na tarefa planejada. Na tela de Lançamento manual, tarefas com horário definido podem ser lançadas com um clique, sem precisar preencher o formulário.</div>
+    </div>
+
+    <h3>Eventos ignorados</h3>
+    <p>Evento que é só lembrete — um recorrente que não é trabalho — pode ser ignorado pelo nome, para não virar tarefa planejada toda semana. Cada regra compara o nome do evento de um de dois jeitos, sem distinguir maiúsculas:</p>
+    <ul>
+      <li><strong>Igual:</strong> o nome do evento é exatamente o texto da regra.</li>
+      <li><strong>Contém:</strong> o nome do evento contém o texto da regra em qualquer ponto.</li>
+    </ul>
+    <p>Há dois lugares para criar uma regra: a lista <strong>"Eventos ignorados"</strong>, no card do Google, e o botão <strong>"Ignorar sempre"</strong> em cada evento do modal "Importar eventos", que cria uma regra <em>Igual</em> com o nome daquele evento. Para remover, clique no <strong>X</strong> ao lado da regra, na lista.</p>
+    <p>O evento ignorado some do rastreamento automático e, no "Importar eventos", aparece <strong>desmarcado</strong>, com o selo <strong>"Ignorado"</strong> — ainda dá para marcá-lo e importar naquela vez.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Regra nova não apaga o que já existe.</strong> Uma tarefa planejada que o rastreamento já criou hoje continua lá. Uma reunião ainda não iniciada deixa de ser acompanhada, e a que já está em andamento segue até você encerrar.</div>
     </div>
 
     <h3>Rastreamento automático de reuniões</h3>
@@ -3048,6 +3063,48 @@
     <div class="callout warning" style="margin-top:16px;">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
       <div class="callout-body"><strong>Nomes exatos:</strong> os campos <code>project</code> e <code>category</code> precisam corresponder exatamente ao nome cadastrado no DeskClock (incluindo acentos e capitalização). Se não houver correspondência, o campo é ignorado.</div>
+    </div>
+
+    <h2 id="compartilhar-tarefa">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
+      Compartilhar uma tarefa
+    </h2>
+
+    <p>Uma tarefa planejada vira um link <code>deskclock://task/share</code> que você manda para outra pessoa — pelo Slack, por exemplo. Quem abre o link vê a tarefa preenchida no próprio DeskClock e decide o que fazer com ela.</p>
+
+    <h3>Gerar o link</h3>
+    <p>No <a onclick="show('planning/lista-planejadas')">Planejamento</a>, passe o mouse sobre a tarefa e clique em <strong>Compartilhar</strong>, logo depois do Play. O link vai para a área de transferência e um aviso confirma a cópia.</p>
+
+    <div class="table-scroll">
+
+    
+      <table class="data-table">
+        <thead><tr><th>Viaja no link</th><th>Fica de fora</th></tr></thead>
+        <tbody>
+          <tr><td>Nome, projeto, categoria, faturamento, horário de início e fim, campos personalizados</td><td>Data, recorrência, período, ações e o estado de concluída</td></tr>
+        </tbody>
+      </table>
+
+    
+    </div>
+
+    <p>Projeto, categoria e campos personalizados viajam pelo <strong>nome</strong>, não por um identificador interno: o projeto "Portal" do seu app e o de quem recebe são registros diferentes, e é o nome que os liga. Recorrência e data ficam de fora porque são o jeito de planejar de quem recebe — um link não instala uma repetição no planejamento de outra pessoa. As ações ficam de fora porque carregam endereços e caminhos de arquivo, e um link vindo de fora não deve plantar isso no app de ninguém; se quiser mandar um link junto, mande no corpo da mensagem.</p>
+
+    <h3>Receber a tarefa</h3>
+    <p>Ao abrir o link, o DeskClock vai para o Planejamento e mostra o modal <strong>"Tarefa recebida por link"</strong>. Nada é gravado até você escolher — e tudo é editável antes:</p>
+    <ul>
+      <li><strong>Projeto, categoria ou campo que não existe no seu app:</strong> o campo fica vazio, com um aviso dizendo o que o link trouxe. Nada é criado por conta própria; cadastrar é decisão sua.</li>
+      <li><strong>Data:</strong> vem preenchida com hoje.</li>
+      <li><strong>Adicionar como planejada:</strong> grava a tarefa no Planejamento, na data do campo.</li>
+      <li><strong>Iniciar agora:</strong> começa o timer na hora. Se houver uma tarefa em execução ou pausada, o modal avisa que ela será encerrada — e o clique encerra, sem segunda confirmação.</li>
+    </ul>
+
+    <h3>Receber link: quando o link não é clicável</h3>
+    <p>O Slack transforma o <code>deskclock://</code> em link clicável, mas nem todo lugar faz isso — a descrição de um evento do Google Meet, por exemplo, mostra o endereço como texto comum. Para esses casos, use <strong>Receber</strong>, na barra lateral, entre Integrações e Configurações: cole o endereço no campo e clique em <strong>Abrir</strong>. O campo aceita qualquer deep link do DeskClock, não só o de tarefa.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Alternativa:</strong> passe o link por um encurtador, como o TinyURL. O endereço <code>https://</code> curto vira link clicável em qualquer lugar e, ao abrir, redireciona para o DeskClock.</div>
     </div>
   </section>
 
