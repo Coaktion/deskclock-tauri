@@ -20,6 +20,7 @@ export const OVERLAY_EVENTS = {
   DEEPLINK_NAVIGATE: "deeplink:navigate",
   DEEPLINK_START_TASK: "deeplink:start-task",
   DEEPLINK_RETROACTIVE_PREFILL: "deeplink:retroactive-prefill",
+  DEEPLINK_SHARE_TASK: "deeplink:share-task",
   OVERLAY_POPUP_CLOSED: "overlay-popup:closed",
   MEETING_PROMPT: "meeting-prompt",
   MEETING_PROMPT_RESPONSE: "meeting-prompt:response",

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   serializeCustomValue,
   formatCustomValue,
+  deserializeCustomValue,
 } from "@domain/usecases/customFields/customValueCodec";
 import type { CustomField } from "@domain/entities/CustomField";
 
@@ -60,5 +61,55 @@ describe("formatCustomValue", () => {
   it("traduz checkbox para Sim/Não", () => {
     expect(formatCustomValue(checkbox, "1")).toBe("Sim");
     expect(formatCustomValue(checkbox, "0")).toBe("Não");
+  });
+});
+
+describe("deserializeCustomValue", () => {
+  it("marca o checkbox a partir do texto legível, sem depender de caixa ou espaço", () => {
+    // É o defeito que motivou a função: `serializeCustomValue(checkbox, "Sim")`
+    // devolvia "" e a caixa chegava desmarcada em silêncio.
+    expect(deserializeCustomValue(checkbox, "Sim")).toBe("1");
+    expect(deserializeCustomValue(checkbox, "  sim ")).toBe("1");
+    expect(deserializeCustomValue(checkbox, "Não")).toBe("");
+    expect(deserializeCustomValue(checkbox, "true")).toBe("");
+  });
+
+  it("casa o select pelo rótulo da opção e devolve o id", () => {
+    expect(deserializeCustomValue(select, "Delivery")).toBe("o2");
+    expect(deserializeCustomValue(select, "  delivery ")).toBe("o2");
+    expect(deserializeCustomValue(select, "Rótulo que não existe")).toBe("");
+    expect(deserializeCustomValue(select, "")).toBe("");
+  });
+
+  it("com dois rótulos iguais no mesmo select, o primeiro vence", () => {
+    const duplicado = makeField({
+      type: "select",
+      options: [
+        { id: "o1", label: "Delivery" },
+        { id: "o2", label: "delivery" },
+      ],
+    });
+    expect(deserializeCustomValue(duplicado, "Delivery")).toBe("o1");
+  });
+
+  it("herda o aparo de serializeCustomValue em text e multiline", () => {
+    expect(deserializeCustomValue(makeField(), "  a   b  ")).toBe("a b");
+    expect(deserializeCustomValue(makeField({ type: "multiline" }), "  a\n  b  ")).toBe("a\n  b");
+  });
+
+  it("fecha a ida e volta com formatCustomValue nos quatro tipos", () => {
+    const text = makeField();
+    const multiline = makeField({ type: "multiline" });
+
+    const casos: [CustomField, string][] = [
+      [text, "a b"],
+      [multiline, "a\n  b"],
+      [select, "o2"],
+      [checkbox, "1"],
+    ];
+
+    for (const [field, stored] of casos) {
+      expect(deserializeCustomValue(field, formatCustomValue(field, stored))).toBe(stored);
+    }
   });
 });
