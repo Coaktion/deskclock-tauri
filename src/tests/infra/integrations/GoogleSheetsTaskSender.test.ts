@@ -12,9 +12,11 @@ vi.stubEnv("GCP_CLIENT_SECRET", "test-client-secret");
 
 // Mock do GoogleTokenManager para isolar os testes da camada de rede
 vi.mock("@infra/integrations/google/GoogleTokenManager", () => ({
-  GoogleTokenManager: vi.fn().mockImplementation(() => ({
-    getValidAccessToken: vi.fn().mockResolvedValue("test-token"),
-  })),
+  GoogleTokenManager: vi.fn().mockImplementation(function () {
+    return {
+      getValidAccessToken: vi.fn().mockResolvedValue("test-token"),
+    };
+  }),
 }));
 
 const { GoogleSheetsTaskSender, colLetter } =
@@ -38,7 +40,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): ISheetsConfigPort & IGo
   return {
     get: vi.fn(<K extends keyof AppConfig>(key: K) => store[key] as AppConfig[K]),
     set: vi.fn(),
-  };
+  } as ISheetsConfigPort & IGoogleAuthPort;
 }
 
 const projects: Project[] = [

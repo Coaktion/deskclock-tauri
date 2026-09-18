@@ -24,7 +24,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): IGoogleAuthPort {
     set: vi.fn(async <K extends keyof AppConfig>(key: K, value: AppConfig[K]) => {
       (store as Record<string, unknown>)[key as string] = value;
     }),
-  };
+  } as IGoogleAuthPort;
 }
 
 describe("GoogleTokenManager", () => {

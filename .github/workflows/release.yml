@@ -44,6 +44,7 @@ jobs:
             librsvg2-dev \
             patchelf \
             libxdo-dev \
+            libdbus-1-dev \
             libayatana-appindicator3-dev
 
       # ── Corrigir o AppImage no Arch/Fedora/Ubuntu 24.04+ (glib >= 2.80) ──
