@@ -107,7 +107,7 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 | 0 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421) |
 | 1 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421), as 8 tools |
 | 2 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421), as 14 tools |
-| 3 | pendente |
+| 3 | commitada; revisada; falta a verificação visual (2 modos × 4 acentos) |
 
 ### Decisões da Fase 0 que a spec não fixava
 
@@ -249,3 +249,25 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   gera o esquema plano (mesmas propriedades e `required`, sem `$ref`/`allOf`) — há teste para isso.
 - **Resultados.** `list_tasks` embrulha em `{ tasks: [...] }` (da mais recente para a mais antiga,
   só concluídas); as demais devolvem o corpo como veio (objeto).
+
+### Decisões da Fase 3 que a spec não fixava
+
+- **Cartão próprio, abaixo do "API local"** (`McpConnectCard.tsx`, na pasta das abas), montado só com
+  a API rodando e sem operação em curso (`running && port !== null && !localApiLoading`), com a porta
+  do **status**, não a do campo — a digitada ainda não vale até o servidor reiniciar nela.
+- **Host `127.0.0.1` no comando, não `localhost`** (`buildMcpAddCommand`, `shared/utils/mcpCommand.ts`):
+  a API só escuta em IPv4 loopback, e `localhost` pode resolver primeiro para `::1`.
+- **Mecanismo de cópia: `useCopyFeedback`** (`presentation/hooks/`). O `ExportModal` tinha o mesmo
+  `writeText` + `setCopied` + `setTimeout(2000)` duas vezes; virou o hook, usado pelos dois (o timer
+  agora é limpo ao desmontar e reinicia a cada cópia). O visual é o do botão Copiar da exportação
+  (`Button secondary`, `Copy`→`Check`, "Copiar"→"Copiado!"). O "Copiado!" dos dois usa `text-success!`
+  — a exportação usava `text-billable!`, trocado: "deu certo" é `success`, não faturamento (mesma
+  cor nos dois modos, sem diferença visual). Falha de escrita vira toast de
+  erro, como no compartilhar tarefa. O compartilhar tarefa (`PlannedTaskItem`) continua com o toast
+  de sucesso: é linha de lista, sem botão onde trocar o rótulo.
+- **Manual:** `<h2 id="api-mcp">` dentro de `#api`, antes de "API ou deep link?" (que ganhou a linha
+  MCP), e a aba API das Configurações no manual aponta para ele. A sidebar do manual não lista
+  subseções, então não há link novo lá.
+- **Índice:** linha nova na §5 do `CLAUDE.md` e aviso no topo de `api-local-nucleo.md` sobre
+  classificar `op` nova no `mcp-ops.json`. `docs-internal/integracoes/` ficou de fora — é o contrato
+  das integrações externas (Monday, Clockify, Google), e a API local não é uma.
