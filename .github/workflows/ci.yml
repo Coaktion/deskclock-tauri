@@ -32,3 +32,46 @@ jobs:
       # importância do que a execução tem a dizer. Falhando aqui, `pnpm format`
       # resolve.
       - run: pnpm format:check
+
+  rust:
+    name: Testes Rust
+    # Ubuntu mais novo que o do release de propósito: o 22.04 de lá existe para
+    # o AppImage rodar em glibc antiga, e teste não gera bundle nenhum.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # As mesmas do release.yml menos o `patchelf`, que só serve para empacotar
+      # o AppImage. Sem os headers do GTK/WebKit o crate nem compila — o
+      # `cargo test` precisa deles tanto quanto o build.
+      - name: Instalar dependências do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libdbus-1-dev \
+            libayatana-appindicator3-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      # Sem `dist/` e sem `pnpm build` de propósito: sem a feature
+      # `custom-protocol` o `generate_context!` compila em modo dev e aponta
+      # para o `devUrl`, sem embutir o frontend. É isso que deixa este job
+      # independente do Node.
+      - run: cargo test
+        working-directory: src-tauri
+
+      # Depois dos testes pelo mesmo motivo do `format:check` acima: arquivo
+      # desalinhado não deve esconder teste quebrado. Falhando aqui,
+      # `cargo fmt` em `src-tauri/` resolve.
+      - run: cargo fmt --check
+        working-directory: src-tauri
