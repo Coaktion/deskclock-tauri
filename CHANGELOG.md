@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.3.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.2.0...v2.3.0) (2026-09-18)
+
+
+### Features
+
+* **mcp:** use o DeskClock pelo Claude, em linguagem natural — com a API local ligada, peça para iniciar, pausar ou parar a tarefa, planejar, lançar trabalho passado e consultar o histórico e os totais, sem abrir o app
+* **mcp:** o MCP só lê e registra: não edita nem exclui histórico, projetos, categorias, workspaces ou campos personalizados, porque no app excluir é imediato
+* **configurações:** novo cartão "Conectar ao Claude" na aba API, com o comando pronto para ligar o Claude Code ao DeskClock na porta em uso e um botão para copiá-lo
+* **api:** o status da API local passa a informar a data de hoje, o dia da semana e o fuso
+
+
+### Bug Fixes
+
+* **api:** a API local recusa chamadas feitas por páginas abertas no navegador — antes, um site podia ler o histórico e iniciar ou parar tarefas enquanto a API estava ligada
+* **segurança:** Tauri atualizado para a 2.11, que corrige uma falha em que, no Windows, uma página remota podia chamar comandos do app
+
 ## [2.2.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.1.0...v2.2.0) (2026-09-18)
 
 
