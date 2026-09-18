@@ -104,7 +104,6 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   shortcutToggleWindow: string;
   // Overlay
   overlayAlwaysVisible: boolean;
-  overlayShowOnStart: boolean;
   overlayOpacity: number;
   overlaySnapToGrid: boolean;
   overlayPosition_execution: OverlayPosition;

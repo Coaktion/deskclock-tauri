@@ -40,7 +40,6 @@ const DEFAULTS: AppConfig = {
   shortcutToggleOverlay: "",
   shortcutToggleWindow: "",
   overlayAlwaysVisible: true,
-  overlayShowOnStart: true,
   overlayOpacity: 100,
   overlaySnapToGrid: false,
   overlayPosition_execution: { x: -1, y: -1 },

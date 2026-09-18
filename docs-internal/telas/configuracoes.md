@@ -41,9 +41,15 @@
 #### Overlay
 | Configuração | Tipo | Descrição |
 |---|---|---|
-| Mostrar ao iniciar tarefa | toggle | Popup Flyout aparece ao iniciar tarefa (`overlayShowOnStart`). O popup lê a chave de um ref alimentado pelo evento `OVERLAY_CONFIG_CHANGED` — a config dele é a do boot, e sem o evento a troca só valeria no próximo start |
+| Mostrar / Ocultar overlay | botão | Mesma ação do atalho `toggle-overlay` (comando `toggle_overlay`): mostra o compacto, ou esconde compacto e popup |
 | Opacidade em repouso | slider (%) | Opacidade do overlay quando não está em interação |
 | Snap to grid | toggle | Encaixa overlay em grade ao soltar arraste |
+
+> **O popup não abre mais sozinho** — nem ao iniciar tarefa (o toggle "Mostrar ao iniciar tarefa"
+> saiu, e com ele a chave `overlayShowOnStart`) nem ao parar, que era o `overlayAlwaysVisible`
+> abrindo o popup no idle. Aparecer por cima de quem acabou de agir na janela principal
+> atrapalhava. O `overlayAlwaysVisible` segue valendo só para exibir o compacto no boot, e a chave
+> `overlayShowOnStart` gravada fica órfã e inerte, como a `fontSize`.
 
 #### Acessibilidade
 | Configuração | Tipo | Status | Descrição |

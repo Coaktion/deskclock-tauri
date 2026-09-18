@@ -37,21 +37,7 @@ pub fn update_shortcuts(
                         "stop-task" => {
                             let _ = app_handle.emit("shortcut:stop-task", ());
                         }
-                        "toggle-overlay" => {
-                            if let Some(compact) = app_handle.get_webview_window("overlay-compact")
-                            {
-                                if compact.is_visible().unwrap_or(false) {
-                                    let _ = compact.hide();
-                                    if let Some(popup) =
-                                        app_handle.get_webview_window("overlay-popup")
-                                    {
-                                        let _ = popup.hide();
-                                    }
-                                } else {
-                                    let _ = compact.show();
-                                }
-                            }
-                        }
+                        "toggle-overlay" => toggle_overlay_windows(&app_handle),
                         "toggle-window" => {
                             if let Some(w) = app_handle.get_webview_window("main") {
                                 if w.is_visible().unwrap_or(false) {
@@ -71,4 +57,26 @@ pub fn update_shortcuts(
         }
     }
     Ok(failed)
+}
+
+/// Mesma ação do atalho `toggle-overlay`, para o botão de Configurações.
+#[tauri::command]
+pub fn toggle_overlay(app: tauri::AppHandle) {
+    toggle_overlay_windows(&app);
+}
+
+/// Esconder o compacto leva o popup junto: aberto sem o compacto, ele ficaria
+/// flutuando sem o botão que o ancora.
+fn toggle_overlay_windows(app: &tauri::AppHandle) {
+    let Some(compact) = app.get_webview_window("overlay-compact") else {
+        return;
+    };
+    if compact.is_visible().unwrap_or(false) {
+        let _ = compact.hide();
+        if let Some(popup) = app.get_webview_window("overlay-popup") {
+            let _ = popup.hide();
+        }
+    } else {
+        let _ = compact.show();
+    }
 }

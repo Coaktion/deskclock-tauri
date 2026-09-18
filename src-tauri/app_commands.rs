@@ -13,6 +13,7 @@ pub const SHARED_COMMANDS: &[&str] = &[
     "update_tray_tooltip",
     "update_tray_icon",
     "update_shortcuts",
+    "toggle_overlay",
     "start_oauth_server",
     "post_form_json",
     "get_bearer_json",

@@ -43,6 +43,7 @@
     "allow-update-tray-tooltip",
     "allow-update-tray-icon",
     "allow-update-shortcuts",
+    "allow-toggle-overlay",
     "allow-start-oauth-server",
     "allow-post-form-json",
     "allow-get-bearer-json",
