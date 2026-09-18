@@ -14,7 +14,7 @@ pub use local_api::{
     stop_local_api,
 };
 pub use oauth::start_oauth_server;
-pub use shortcuts::update_shortcuts;
+pub use shortcuts::{toggle_overlay, update_shortcuts};
 pub use system::{
     get_display_server, get_platform, log_frontend, open_in_browser, open_in_file_manager,
     save_file,

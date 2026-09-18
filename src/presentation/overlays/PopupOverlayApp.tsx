@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalSize, PhysicalPosition } from "@tauri-apps/api/dpi";
 import { emit, listen } from "@tauri-apps/api/event";
 import type { Task } from "@domain/entities/Task";
@@ -23,7 +22,7 @@ import {
   type TaskStoppedPayload,
 } from "@shared/types/overlayEvents";
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
-import { positionPopupNearCompact, POPUP_SIZE } from "@shared/utils/windowPosition";
+import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { PopupOverlayContent } from "./PopupOverlayContent";
 import { MeetingPromptView } from "./MeetingPromptView";
@@ -57,9 +56,6 @@ function PopupOverlayAppInner() {
   // levantam a marca de propósito — eles nada dizem sobre a origem, e abortar a
   // restauração por causa deles deixaria os chips de "Ações" vazios.
   const liveTaskStateRef = useRef(false);
-  /** Em ref, e não em `config.get`: esta janela carrega a config no boot, e a
-   *  troca feita na janela principal só chega por evento. */
-  const showOnStartRef = useRef(true);
   // Modal aberto no conteúdo do popup (hoje, a edição de planejada). Segura o
   // fechamento automático: perder o foco ou apertar ESC com o modal aberto
   // jogaria fora o que o usuário está editando.
@@ -117,7 +113,6 @@ function PopupOverlayAppInner() {
   useEffect(() => {
     if (!config.isLoaded) return;
     setOverlayOpacity(config.get("overlayOpacity") as number);
-    showOnStartRef.current = config.get("overlayShowOnStart");
     void appWindow.setMinSize(new LogicalSize(POPUP_W, 100));
     void appWindow.setMaxSize(new LogicalSize(POPUP_W, POPUP_H));
     // Load initial running task — RUNNING_TASK_CHANGED is only emitted on mutations,
@@ -147,7 +142,6 @@ function PopupOverlayAppInner() {
       OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED,
       ({ payload }) => {
         if (payload.key === "overlayOpacity") setOverlayOpacity(payload.value as number);
-        if (payload.key === "overlayShowOnStart") showOnStartRef.current = payload.value as boolean;
       }
     );
     return () => {
@@ -155,7 +149,8 @@ function PopupOverlayAppInner() {
     };
   }, []);
 
-  // Auto-show/hide based on running task changes
+  // O popup não abre sozinho ao iniciar nem ao parar tarefa: aparecer por cima
+  // de quem acabou de agir na janela principal atrapalhava. Ele abre pelo compacto.
   useEffect(() => {
     if (!config.isLoaded) return;
     const unlisten = listen<RunningTaskChangedPayload>(
@@ -181,36 +176,6 @@ function PopupOverlayAppInner() {
             setActivePlannedTaskActions(pt?.actions ?? []);
           } else {
             setActivePlannedTaskActions([]);
-          }
-        }
-        if (payload.task) {
-          if (showOnStartRef.current) {
-            const isVis = await appWindow.isVisible();
-            if (!isVis) {
-              const mainWin = await WebviewWindow.getByLabel("main");
-              const mainIsVisible = mainWin ? await mainWin.isVisible() : false;
-              if (!mainIsVisible) {
-                await positionPopupNearCompact(appWindow, {
-                  width: POPUP_W,
-                  height: POPUP_H,
-                });
-                await appWindow.show();
-                await appWindow.setFocus();
-              }
-            }
-          }
-        } else {
-          // Task stopped: show popup with idle state if overlayAlwaysVisible
-          if (config.get("overlayAlwaysVisible")) {
-            const isVis = await appWindow.isVisible();
-            if (!isVis) {
-              await positionPopupNearCompact(appWindow, {
-                width: POPUP_W,
-                height: POPUP_H,
-              });
-              await appWindow.show();
-              await appWindow.setFocus();
-            }
           }
         }
       }

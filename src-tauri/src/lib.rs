@@ -59,7 +59,7 @@ use commands::{
     get_display_server, get_local_api_status, get_platform, local_api_bridge_ready,
     local_api_respond, log_frontend, open_in_browser, open_in_file_manager, post_bearer_json,
     post_form_json, relaunch_app, save_file, start_local_api, start_oauth_server, stop_local_api,
-    update_shortcuts, update_tray_icon, update_tray_tooltip,
+    toggle_overlay, update_shortcuts, update_tray_icon, update_tray_tooltip,
 };
 use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -488,6 +488,7 @@ pub fn run() {
             update_tray_tooltip,
             update_tray_icon,
             update_shortcuts,
+            toggle_overlay,
             start_oauth_server,
             post_form_json,
             get_bearer_json,

@@ -1,4 +1,4 @@
-import { SectionCard, SectionRow, Toggle } from "@presentation/components/ui";
+import { Button, SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 import { invoke } from "@tauri-apps/api/core";
@@ -8,19 +8,17 @@ import { SliderRow } from "./SettingsShared";
 
 /**
  * O cartão é "Overlay", e não "Overlay compacto": a opacidade vale para as duas
- * janelas e o "mostrar ao iniciar" é do popup.
+ * janelas.
  */
 export function OverlayTab() {
   const config = useAppConfig();
 
-  const [overlayShowOnStart, setOverlayShowOnStart] = useState(true);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [overlaySnapToGrid, setOverlaySnapToGrid] = useState(false);
   const [displayServer, setDisplayServer] = useState("");
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    setOverlayShowOnStart(config.get("overlayShowOnStart"));
     setOverlayOpacity(config.get("overlayOpacity"));
     setOverlaySnapToGrid(config.get("overlaySnapToGrid"));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -30,15 +28,6 @@ export function OverlayTab() {
       .then(setDisplayServer)
       .catch(() => {});
   }, []);
-
-  async function handleShowOnStart(value: boolean) {
-    setOverlayShowOnStart(value);
-    await config.set("overlayShowOnStart", value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "overlayShowOnStart",
-      value,
-    } satisfies OverlayConfigChangedPayload);
-  }
 
   async function handleSlider(value: number) {
     setOverlayOpacity(value);
@@ -60,13 +49,11 @@ export function OverlayTab() {
 
   return (
     <SectionCard title="Overlay" divided>
-      <SectionRow>
-        <Toggle
-          label="Mostrar ao iniciar tarefa"
-          description="Abre o overlay assim que uma tarefa começa a rodar"
-          checked={overlayShowOnStart}
-          onChange={handleShowOnStart}
-        />
+      <SectionRow className="flex items-center justify-between gap-4">
+        <SettingLabel label="Visibilidade" description="Mesma ação do atalho de overlay" />
+        <Button onClick={() => invoke("toggle_overlay").catch(() => {})}>
+          Mostrar / Ocultar overlay
+        </Button>
       </SectionRow>
       <SectionRow>
         <SliderRow
