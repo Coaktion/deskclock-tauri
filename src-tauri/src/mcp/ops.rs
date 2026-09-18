@@ -4,11 +4,23 @@
 
 pub const GET_STATUS: &str = "get_status";
 pub const LIST_CATALOG: &str = "list_catalog";
+pub const START_TASK: &str = "start_task";
+pub const PAUSE_TASK: &str = "pause_task";
+pub const RESUME_TASK: &str = "resume_task";
+pub const STOP_TASK: &str = "stop_task";
+pub const START_PLANNED_TASK: &str = "start_planned_task";
+pub const LIST_PLANNED_TASKS: &str = "list_planned_tasks";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
 pub const OP_PROJECTS: &str = "projects.list";
 pub const OP_CATEGORIES: &str = "categories.list";
+pub const OP_START: &str = "tasks.start";
+pub const OP_PAUSE: &str = "tasks.pause";
+pub const OP_RESUME: &str = "tasks.resume";
+pub const OP_STOP: &str = "tasks.stop";
+pub const OP_START_PLANNED: &str = "tasks.startPlanned";
+pub const OP_PLANNED_LIST: &str = "plannedTasks.list";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -34,6 +46,18 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
             under("projects", OP_PROJECTS),
             under("categories", OP_CATEGORIES),
         ],
+    ),
+    (START_TASK, &[pass_through(OP_START)]),
+    (PAUSE_TASK, &[pass_through(OP_PAUSE)]),
+    (RESUME_TASK, &[pass_through(OP_RESUME)]),
+    // O descarte (< 1 min) responde 204 sem corpo: embrulhar dá sempre um objeto,
+    // com `task: null` para o descarte, em vez de um `structuredContent` nulo.
+    (STOP_TASK, &[under("task", OP_STOP)]),
+    (START_PLANNED_TASK, &[pass_through(OP_START_PLANNED)]),
+    // `structuredContent` tem de ser objeto; a lista vai numa chave.
+    (
+        LIST_PLANNED_TASKS,
+        &[under("plannedTasks", OP_PLANNED_LIST)],
     ),
 ];
 

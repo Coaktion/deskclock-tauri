@@ -40,7 +40,7 @@ Todas do usuário, em 2026-09-18.
 | `start_planned_task` | `tasks.startPlanned` | 409 com tarefa ativa, como na API |
 | `plan_task` | `plannedTasks.create` | |
 | `log_past_task` | `history.create` | Retroativo |
-| `list_planned_tasks` | `plannedTasks.list` | `date` ou `from`/`to` |
+| `list_planned_tasks` | `plannedTasks.list` | `date` ou `from`/`to`. Entra na Fase 1: é de onde vem o `id` do `start_planned_task` |
 | `list_tasks` | `history.list` | Filtros do Histórico |
 | `get_totals` | `totals.period` · `totals.week` | |
 
@@ -83,10 +83,11 @@ Host de fora recusado, ponte não pronta (503) vira `isError`. Verificação: `c
 deskclock-dev http://127.0.0.1:27421/mcp` e pedir o status.
 
 ### Fase 1 · Tarefa em execução
-`start_task`, `pause_task`, `resume_task`, `stop_task`, `start_planned_task`.
+`start_task`, `pause_task`, `resume_task`, `stop_task`, `start_planned_task` e `list_planned_tasks` —
+esta veio da Fase 2 porque sem ela o modelo não tem de onde tirar o `id` que o `start_planned_task` exige.
 
 ### Fase 2 · Criar e consultar
-`plan_task`, `log_past_task`, `list_planned_tasks`, `list_tasks`, `get_totals`.
+`plan_task`, `log_past_task`, `list_tasks`, `get_totals`.
 
 ### Fase 3 · Fechamento
 Bloco "Conectar ao Claude" em Configurações > API (`ApiTab.tsx`) com o comando `claude mcp add` pronto na
@@ -102,7 +103,7 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 | Fase | Estado |
 |---|---|
 | 0 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421) |
-| 1 | pendente |
+| 1 | commitada; revisada e verificada por curl JSON-RPC no app de dev (27421), as 8 tools |
 | 2 | pendente |
 | 3 | pendente |
 
@@ -139,3 +140,43 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 - **`plannedTasks.launchRetroactive` é candidata a tool da Fase 2**, pendente de decisão do
   usuário: ao contrário do `history.create` (`log_past_task`), ela conclui a planejada na data e
   copia os `customValues` (Project Stage do Monday). Por ora está em `excluded`.
+
+### Decisões da Fase 1 que a spec não fixava
+
+- **Anotações.** As cinco de escrita: `readOnlyHint: false` e `destructiveHint: false` — o único
+  apagamento é o descarte de tarefa com menos de 1 minuto, que o próprio usuário ligou nas
+  Configurações (e o arredondamento, também opcional, reescreve duração e fim); nada que o usuário
+  escolheu guardar se perde.
+  - `openWorldHint: true` em `start_task` e `stop_task`: parar como concluída (o `stop_task` com
+    `completed: true`, e a troca do `start_task`) dispara o envio automático por tarefa às
+    integrações configuradas para isso (Monday, Clockify, Sheets — `AutoSyncRunner.runPerTask`,
+    `isPerTaskEnabled`). As demais, `false`.
+  - `idempotentHint` segue a definição do MCP — repetir com os mesmos argumentos não tem efeito
+    **adicional** —, não o "responde igual". `pause_task`, `resume_task`, `stop_task` e
+    `start_planned_task` → `true`: a segunda chamada só erra (404 sem tarefa em
+    execução/pausada/ativa; 409 com tarefa ativa) e não muda nada — um retry depois de timeout não
+    faz estrago. `start_task` → `false`: repetir troca de novo, para a tarefa recém-criada e abre outra.
+  - `list_planned_tasks`: `readOnlyHint: true`, como as da Fase 0.
+- **`billable` obrigatório no `start_task`**, como no DTO do `POST /tasks/start`. O TS cai em `true`
+  quando falta e **não** herda o `defaultBillable` da categoria; obrigar faz o modelo escolher, e a
+  descrição do campo manda usar o `defaultBillable` do `list_catalog` quando o usuário não disser.
+- **`customValues` fora do `start_task`.** O TS aceita, mas a chave é o id do campo personalizado, e
+  `customFields.list` está fora da v1 — o modelo não teria de onde tirar o id.
+- **Corpo repassado como a REST repassa.** `start_task` e `stop_task` mandam `{ body: {...} }` só com
+  os campos enviados (omitido fica ausente; o TS trata ausente e `null` igual). `stop_task` sem
+  argumentos manda `{ body: {} }` onde a REST manda `{ body: null }` — o TS faz `params.body ?? {}`,
+  mesmo efeito. `list_planned_tasks` manda as quatro chaves (`date`, `from`, `to`, `workspaceId`),
+  nulas quando omitidas, como o `GET /planned-tasks`; a validação (`date` com `from`/`to` → 400,
+  formato, `from > to`) fica no TS.
+- **Resultados embrulhados onde o corpo não é objeto.** O `structuredContent` do MCP é objeto:
+  `list_planned_tasks` devolve `{ plannedTasks: [...] }`, e `stop_task` devolve `{ task: ... }` —
+  `task: null` quando a tarefa foi descartada (o TS responde 204 sem corpo). As demais devolvem a
+  tarefa como veio. Na tabela `TOOL_OPS` isso é o `under(chave, op)` que a Fase 0 já tinha.
+- **Argumento inválido** (ex.: `start_planned_task` sem `id`): o rmcp 3.4 devolve resultado com
+  `isError: true` e ``failed to deserialize parameters: missing field `id` `` — não erro JSON-RPC — e a
+  ponte não é chamada (idem `start_task` sem `billable`). Mensagem em inglês, do rmcp; aceito.
+  `tools/call` sem o campo `arguments` funciona: o rmcp o troca por `{}`.
+- **O que a descrição do `stop_task` promete**, lido do código (`usePostStopLogic`): o registro é
+  sempre gravado; descarte abaixo de 1 minuto e arredondamento só se ligados nas Configurações;
+  `completed: true` (padrão) conclui a planejada de origem no dia e, em segundo plano, envia a
+  tarefa às integrações configuradas para envio automático por tarefa, se houver; `false` grava o tempo sem concluir a planejada e sem envio.
