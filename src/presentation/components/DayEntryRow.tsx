@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import type { Category } from "@domain/entities/Category";
+import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
@@ -15,11 +15,11 @@ interface DayEntryRowProps {
   projects: Project[];
   categories: Category[];
   /**
-   * Marcas ao lado do chip de faturamento — hoje só o ⚡ do Histórico. Quem
-   * decide escondê-las no modo de seleção é a tela: aqui a linha não sabe o que
-   * a marca faz ao receber o clique.
+   * As ações da planejada que originou o lançamento, que o menu lista no fim
+   * (H1). Vêm da tela porque é ela que tem o índice de planejadas; aqui a linha
+   * só as repassa ao menu. O ⚡ que morava ao lado do chip saiu junto.
    */
-  badges?: ReactNode;
+  actions?: PlannedTaskAction[];
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
@@ -44,7 +44,7 @@ export function DayEntryRow({
   task,
   projects,
   categories,
-  badges,
+  actions = [],
   selectMode = false,
   selected = false,
   onToggleSelect,
@@ -60,6 +60,7 @@ export function DayEntryRow({
   const menu = useEntryRowMenu({
     onEdit: () => onEdit(task),
     onDelete: () => onDelete(task),
+    actions,
     disabled: selectMode,
   });
 
@@ -79,7 +80,6 @@ export function DayEntryRow({
           </span>
         }
         duration={formatHHMMSS(task.durationSeconds ?? 0)}
-        badges={badges}
         billable={task.billable}
         onToggleBillable={() => onToggleBillable(task)}
         dotColor={getProjectColor(project)}

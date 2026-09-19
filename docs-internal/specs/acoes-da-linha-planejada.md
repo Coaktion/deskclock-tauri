@@ -429,6 +429,61 @@ decisão tomada.
   disputava a mesma faixa com o chip e a duração. O `PlannedActionsFlyout` continua na **barra de
   título** (variante `icon`), que não é linha de lista.
 
+**Como ficou (H1):**
+
+- **Submenu no `ui/Menu`, aditivo:** `MenuItem` ganhou `children?: MenuItem[]` e o `onSelect`
+  passou a ser **opcional** — item com filhos não age, ele abre a lista. Nenhum call site existente
+  mudou. O item com filhos se anuncia com `aria-haspopup="menu"` e `aria-expanded`, e troca o lugar
+  do atalho por um chevron.
+- **Teclado:** `→`, `Enter` e `Espaço` no item pai abrem o submenu **com o foco no primeiro filho**;
+  `←` e `Esc` dentro dele voltam um nível, devolvendo o foco ao pai; `↑`/`↓`/`Home`/`End` andam
+  dentro do painel em que o foco está; `Tab` fecha tudo. O `Esc` do submenu é consumido e contido
+  como o do menu — ele não chega ao `document`, onde esconderia a janela do app. Andar no menu de
+  cima **fecha** o submenu: ele é do item que ficou para trás. O submenu **para** a propagação de
+  tudo o que trata, senão o `↓` andaria nas duas listas e a letra de atalho do menu dispararia com
+  o foco lá dentro.
+- **Mouse:** o hover do item pai abre o submenu e o hover de um item sem filhos fecha o que estiver
+  aberto. Aberto pelo mouse, o foco **fica no pai** — quem navega ali é o cursor; aberto pelo
+  teclado, o foco entra. As duas portas passam pela mesma trava do foco: o painel só foca depois de
+  ficar **visível**.
+- **Posição:** `placeMenu` ganhou uma terceira forma de âncora, `side`, e a mesma regra de virar na
+  borda — à direita do item, ou à esquerda quando não cabe; alinhado ao **topo** do item, ou subindo
+  pelo rodapé dele quando falta altura, que é o que o impede de cobrir quem o abriu.
+- **O arquivo foi partido em quatro**, porque o submenu passaria dos 350: `ui/menuTypes.ts` (o
+  contrato, reexportado por `ui/Menu` para que ninguém mude de import), `ui/menuPlacement.ts`
+  (`placeMenu`), `ui/MenuPanel.tsx` (a caixa — portal, medida, visibilidade, foco — e a lista de
+  botões, a mesma peça nos dois níveis) e `ui/Menu.tsx`, que ficou com o estado, os listeners de
+  fechar e o teclado.
+- **A seção de ações é uma função só**, `taskActionsMenuSection(actions)` em
+  `presentation/hooks/`: `[]` não soma nada; **uma ação vira o item** "Abrir <destino>", que executa
+  direto; **duas ou mais viram "Ações" com submenu**. O divisor vem junto, porque a seção é sempre a
+  última de um menu que já tem itens. `usePlannedRowMenu` e `useEntryRowMenu` ganharam a prop
+  `actions`, opcional, e a somam no fim.
+- **Executar virou `runAction`** (`components/taskActions.ts`), com o `singleAction` ao lado: era a
+  terceira grafia do mesmo `executeActions` + `openInBrowser`/`openInFileManager`. O `ActionChip` e
+  o `PlannedActionsFlyout` passaram a usá-la, e o rótulo continua sendo o `actionLabel` do chip.
+- **O ⚡ saiu de três linhas:** `PlannedTaskItem` (Planejamento), `PopupPlannedRow` (popup) e a linha
+  do Histórico — onde o `DayEntryRow` trocou a prop `badges`, que existia só para ele, por
+  `actions`. Nas três, a ação agora mora no ⋯ e no clique direito.
+- **Fica de pé o que não é linha de lista:** a barra de título (`PlannedActionsFlyout`
+  `variant="icon"`, no `TitleBarRunningTask`). A variante `pill` **não morreu**: ela é o ⚡ das
+  **concluídas do popup** (`CompletedTasksSection`), a única lista que ainda não tem menu de linha.
+  Tirá-lo de lá agora deixaria a ação sem porta nenhuma até a H3, que é justamente quem dá menu
+  àquela linha — então ele sai lá, com a seção de ações entrando no mesmo commit.
+- **Achado do caminho:** com o painel extraído, o React deixou de calcular adiantado o `setState` do
+  **chamador**, e o gatilho que lia `e.currentTarget` **dentro** do updater passou a lê-lo já
+  limpo. Nenhum call site faz isso — o `RowMenuTrigger` passa o `ref.current` —, mas a bancada do
+  `Menu` fazia, e o teste ficou com o elemento guardado antes do `setState`, como o app.
+- **`screenGeometry` continua passando sem exceção nova**: as travas montam o `TaskRow` elas
+  mesmas e o que mudou foi o **conteúdo** da célula `badges`, que o wireframe não mede.
+- **Impacto** (`gitnexus`, upstream): `PlannedActionsFlyout` → `PlannedTaskItem` e `PlannedRow` →
+  `WeekPlanningView`/`PopupOverlayContent` → `PlanningPage`, 6 símbolos, risco **LOW**. O `Menu` e o
+  `usePlannedRowMenu` não estão no índice (ele é anterior à F3), e o raio deles é o que a G2–G6
+  listou: as cinco superfícies de linha.
+- **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): o submenu abrindo sobre listas que
+  **rolam** e perto da borda direita da janela (onde ele vira), o chevron alinhado ao rótulo, e o
+  nome da tarefa mais largo agora que o ⚡ saiu da faixa do chip.
+
 ### H2 · O ⋯ é sempre visível, e é a primeira coluna da direita
 
 - Ele **não some mais no repouso** e **não se empilha sobre a duração**: hoje a duração apaga no

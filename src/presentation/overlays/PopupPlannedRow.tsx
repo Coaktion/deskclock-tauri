@@ -2,7 +2,6 @@ import type { Category } from "@domain/entities/Category";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { PlannedPlaySlot } from "@presentation/components/PlannedPlaySlot";
 import { copyPlannedTaskLink } from "@presentation/components/plannedShareLink";
 import { isPlayBlocked, type PlayBlock } from "@presentation/components/playAction";
@@ -80,6 +79,7 @@ export function PopupPlannedRow({
     onDuplicate: () => onDuplicate(task),
     onCopyLink: () => void handleCopyLink(),
     onDelete: () => onDelete(task),
+    actions: task.actions,
   });
 
   const handleCopyLink = () => copyPlannedTaskLink(task, projects, categories, customFields);
@@ -104,9 +104,6 @@ export function PopupPlannedRow({
         titleMarks={tracked ? <TrackedMeetingMark /> : undefined}
         subtitle={subtitle || undefined}
         dotColor={getProjectColor(project)}
-        /* O ⚡ executa a ação sem play e sem abrir o painel de edição. Ele fica na
-           célula do chip, que existe mesmo sem `billable`. */
-        badges={<PlannedActionsFlyout actions={task.actions} />}
         leading={<CompleteToggle completed={false} onToggle={() => onComplete(task)} />}
         onClick={() => onEdit(task)}
         onContextMenu={menu.openAtPointer}

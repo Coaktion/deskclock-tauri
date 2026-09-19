@@ -9,7 +9,6 @@ import {
   EditPlannedTaskModal,
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import {
   CompleteToggle,
@@ -102,6 +101,7 @@ export function PlannedTaskItem({
     onDuplicate: () => onDuplicate(task.id),
     onCopyLink: () => void handleShare(),
     onDelete: () => onDelete(task.id),
+    actions: task.actions,
     disabled: selectMode,
   });
 
@@ -128,9 +128,8 @@ export function PlannedTaskItem({
   });
 
   /*
-   * O ⚡ saiu daqui e virou o `PlannedActionsFlyout`, no slot `badges`. Com ele
-   * foi embora a última razão de a guarda olhar `task.actions`: mantida, a tarefa
-   * que só tem ações passaria a desenhar um subtítulo vazio.
+   * O ⚡ saiu da linha (H1) e a ação virou seção do menu: a guarda não olha
+   * `task.actions`, ou a tarefa que só tem ações desenharia um subtítulo vazio.
    */
   const subtitle = (project || category) && (
     <span className="inline-flex items-center gap-1.5">
@@ -159,15 +158,6 @@ export function PlannedTaskItem({
         }
         subtitle={subtitle || undefined}
         dotColor={getProjectColor(project)}
-        /* Ancorado **depois** da célula que cresce no hover, junto do chip de
-           faturamento: é a mesma posição que impede o chip de andar quando o ⋯
-           abre.
-
-           Some no modo de seleção pelo mesmo motivo que o Play e o ⋯: ali a
-           linha inteira é alvo de marcar, e um controle que engole o clique
-           faria a tarefa recusar a seleção justamente enquanto se escolhe o que
-           excluir em lote. */
-        badges={!selectMode && <PlannedActionsFlyout actions={task.actions} />}
         billable={task.billable}
         /* `onUpdate` é o `update` do usePlannedTasks: recarrega e emite
            PLANNED_TASKS_CHANGED, então o popup acompanha sem nada a mais. */

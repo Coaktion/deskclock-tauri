@@ -1,71 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 
-export interface MenuItem {
-  label: string;
-  icon?: ReactNode;
-  /** Rótulo do atalho **e** a tecla que o escolhe com o menu aberto: `"E"`, `"Del"`. */
-  shortcut?: string;
-  tone?: "danger";
-  disabled?: boolean;
-  onSelect: () => void;
-}
+import { MenuItemButtons, MenuPanel, menuItemsIn } from "./MenuPanel";
+import { MENU_DIVIDER, type MenuAnchor, type MenuEntry, type MenuItem } from "./menuTypes";
 
-/** Divisor entre grupos de itens. Literal, e não objeto, porque não carrega nada. */
-export const MENU_DIVIDER = "divider";
-export type MenuEntry = MenuItem | typeof MENU_DIVIDER;
-
-/**
- * O que o menu abre junto: o elemento do gatilho (o ⋯) ou o ponto do clique
- * direito. É também o estado de aberto — `null` é fechado —, então o chamador
- * guarda uma coisa só e não há como o menu estar aberto sem lugar para abrir.
- */
-export type MenuAnchor = HTMLElement | { x: number; y: number };
-
-interface Box {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-}
-
-/** Folga entre o gatilho e o menu. */
-const GAP = 4;
-/** Distância mínima da borda da janela. */
-const EDGE = 4;
-
-/**
- * Onde o menu cabe. O gatilho é o ⋯ no fim da linha, então o menu nasce com a
- * borda direita alinhada à dele e cresce para a esquerda, sobre a linha; do
- * ponto, nasce no cursor e cresce para a direita, como o menu de contexto do
- * sistema. Sem espaço, cada eixo vira para o outro lado, e o `clamp` final é a
- * rede para a janela menor que o próprio menu.
- */
-export function placeMenu(
-  anchor: { rect: Box } | { point: { x: number; y: number } },
-  size: { width: number; height: number },
-  viewport: { width: number; height: number }
-): { left: number; top: number } {
-  let left: number;
-  let top: number;
-  if ("rect" in anchor) {
-    const r = anchor.rect;
-    left = r.right - size.width < EDGE ? r.left : r.right - size.width;
-    top =
-      r.bottom + GAP + size.height > viewport.height - EDGE
-        ? r.top - GAP - size.height
-        : r.bottom + GAP;
-  } else {
-    const { x, y } = anchor.point;
-    left = x + size.width > viewport.width - EDGE ? x - size.width : x;
-    top = y + size.height > viewport.height - EDGE ? y - size.height : y;
-  }
-  const clamp = (v: number, max: number) => Math.max(EDGE, Math.min(v, max - EDGE));
-  return {
-    left: clamp(left, viewport.width - size.width),
-    top: clamp(top, viewport.height - size.height),
-  };
-}
+export { MENU_DIVIDER } from "./menuTypes";
+export type { MenuAnchor, MenuEntry, MenuItem } from "./menuTypes";
 
 const KEY_ALIASES: Record<string, string> = { Del: "Delete" };
 
@@ -89,6 +28,14 @@ function restoreTarget(anchor: MenuAnchor): HTMLElement | null {
   return document.activeElement instanceof HTMLElement ? document.activeElement : null;
 }
 
+/** O submenu aberto: qual item o abriu, por onde, e o botão dele. */
+interface OpenSubmenu {
+  item: MenuItem;
+  trigger: HTMLElement;
+  /** Aberto pelo teclado foca o primeiro filho; pelo hover, o foco fica no pai. */
+  byKeyboard: boolean;
+}
+
 interface MenuProps {
   anchor: MenuAnchor | null;
   items: MenuEntry[];
@@ -110,47 +57,34 @@ interface MenuProps {
  * **O gatilho não fecha por clique-fora**: o `mousedown` nele é ignorado, e é o
  * `onClick` do chamador que alterna. Fechar ali e o clique reabrir em seguida
  * faria o ⋯ nunca fechar o próprio menu.
+ *
+ * **Item com `children` abre submenu** (a seção de ações, H1): no hover do item
+ * e, pelo teclado, com `→`, `Enter` ou `Espaço`; `←` volta ao menu de cima e
+ * `Esc` ali dentro fecha só o submenu. O menu de cima **fica aberto** enquanto o
+ * submenu está; escolher um filho fecha os dois pelo mesmo `onClose`.
  */
 export function Menu({ anchor, items, onClose, label }: MenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const subPanelRef = useRef<HTMLDivElement>(null);
   const restoreRef = useRef<HTMLElement | null>(null);
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const [submenu, setSubmenu] = useState<OpenSubmenu | null>(null);
   // O `onClose` do chamador é quase sempre uma arrow nova a cada render; em ref,
   // os listeners não se refazem a cada render do pai.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   useLayoutEffect(() => {
+    // Reancorado ou fechado, o gatilho do submenu anterior já não está na tela.
+    // O `null` só volta quando há o que fechar: um `setState` a cada reancoragem
+    // tiraria do React o cálculo adiantado do estado do **chamador**, e o ⋯ que
+    // lê o gatilho do próprio evento reabriria com ele já limpo.
+    setSubmenu((open) => (open === null ? open : null));
     const panel = panelRef.current;
-    if (!anchor || !panel) {
-      setPosition(null);
-      return;
-    }
+    if (!anchor || !panel) return;
     // Reancorado com o menu já aberto, o foco está num item; guardá-lo mandaria
     // o foco, ao fechar, para um botão que acabou de sair do DOM.
     if (!panel.contains(document.activeElement)) restoreRef.current = restoreTarget(anchor);
-    const size = { width: panel.offsetWidth, height: panel.offsetHeight };
-    const viewport = { width: window.innerWidth, height: window.innerHeight };
-    const placement =
-      anchor instanceof HTMLElement ? { rect: anchor.getBoundingClientRect() } : { point: anchor };
-    setPosition(placeMenu(placement, size, viewport));
   }, [anchor]);
-
-  /*
-   * O foco espera o painel **aparecer**. Ele nasce em `visibility: hidden` até ser
-   * medido, e o navegador recusa foco em elemento invisível — sem erro, o
-   * `focus()` só não faz nada, e as setas e o Enter ficavam com a linha por baixo.
-   * O jsdom não aplica essa regra, por isso o teste afirma a visibilidade no
-   * instante do `focus()`. `preventScroll`: o foco não pode rolar a lista, ou o
-   * listener de rolagem fecharia o menu no mesmo instante em que ele abriu.
-   */
-  const visible = position !== null;
-  useLayoutEffect(() => {
-    const panel = panelRef.current;
-    if (!visible || !panel) return;
-    const first = panel.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])');
-    (first ?? panel).focus({ preventScroll: true });
-  }, [visible]);
 
   useEffect(() => {
     if (!anchor) return;
@@ -158,6 +92,9 @@ export function Menu({ anchor, items, onClose, label }: MenuProps) {
     function handleOutside(e: MouseEvent) {
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
+      // O submenu é outro portal: sem esta guarda, clicar numa ação fecharia o
+      // menu antes de o clique chegar ao item.
+      if (subPanelRef.current?.contains(target)) return;
       if (anchor instanceof HTMLElement && anchor.contains(target)) return;
       onCloseRef.current();
     }
@@ -190,34 +127,61 @@ export function Menu({ anchor, items, onClose, label }: MenuProps) {
     onCloseRef.current();
   }
 
-  // Fecha **antes** de executar: o item que abre um modal foca o campo dele, e
-  // devolver o foco ao gatilho depois disso o tiraria do modal.
-  function choose(item: MenuItem) {
-    if (item.disabled) return;
-    closeAndRestore();
-    item.onSelect();
+  /** Fecha só o submenu e devolve o foco ao item que o abriu. */
+  function closeSubmenu() {
+    submenu?.trigger.focus({ preventScroll: true });
+    setSubmenu(null);
   }
 
-  function move(e: React.KeyboardEvent, to: (index: number, count: number) => number) {
+  // Fecha **antes** de executar: o item que abre um modal foca o campo dele, e
+  // devolver o foco ao gatilho depois disso o tiraria do modal.
+  function choose(item: MenuItem, trigger: HTMLElement) {
+    if (item.disabled) return;
+    // Item com filhos não age: ele abre a lista, com o foco no primeiro filho.
+    if (item.children) return setSubmenu({ item, trigger, byKeyboard: true });
+    closeAndRestore();
+    item.onSelect?.();
+  }
+
+  function move(panel: HTMLElement | null, e: KeyboardEvent, to: (i: number, n: number) => number) {
     e.preventDefault();
-    const enabled = Array.from(
-      panelRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([disabled])') ?? []
-    );
+    const enabled = menuItemsIn(panel);
     if (enabled.length === 0) return;
     const current = enabled.indexOf(document.activeElement as HTMLElement);
     enabled[to(current, enabled.length)].focus({ preventScroll: true });
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
+  /** O item do menu de cima que está com o foco, se houver. */
+  function focusedItem(): { item: MenuItem; el: HTMLElement } | null {
+    const el = document.activeElement as HTMLElement | null;
+    const index = el?.dataset.menuIndex;
+    if (!el || index === undefined) return null;
+    const entry = items[Number(index)];
+    return entry && entry !== MENU_DIVIDER ? { item: entry, el } : null;
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    // Andar no menu de cima fecha o submenu: ele pertence ao item que ficou para
+    // trás, e aberto sobre outro item descreveria um pai que não é o dele.
+    const moveRoot = (to: (i: number, n: number) => number) => {
+      setSubmenu(null);
+      move(panelRef.current, e, to);
+    };
     switch (e.key) {
       case "ArrowDown":
-        return move(e, (i, n) => (i + 1) % n);
+        return moveRoot((i, n) => (i + 1) % n);
       case "ArrowUp":
-        return move(e, (i, n) => (i <= 0 ? n - 1 : i - 1));
+        return moveRoot((i, n) => (i <= 0 ? n - 1 : i - 1));
       case "Home":
-        return move(e, () => 0);
+        return moveRoot(() => 0);
       case "End":
-        return move(e, (_, n) => n - 1);
+        return moveRoot((_, n) => n - 1);
+      case "ArrowRight": {
+        const focused = focusedItem();
+        if (!focused?.item.children) return;
+        e.preventDefault();
+        return setSubmenu({ item: focused.item, trigger: focused.el, byKeyboard: true });
+      }
       case "Escape":
         // Consumido e contido (contratos nº1 e nº3): sem o `stopPropagation`,
         // o ESC chegaria ao `document`, onde `useGlobalShortcuts` esconde a
@@ -233,9 +197,8 @@ export function Menu({ anchor, items, onClose, label }: MenuProps) {
         // O `preventDefault` segura o clique nativo do `<button>` (que viria
         // em dobro) e avisa o `useSubmitOnEnter` do container por baixo.
         e.preventDefault();
-        const index = (document.activeElement as HTMLElement | null)?.dataset.menuIndex;
-        const entry = index === undefined ? undefined : items[Number(index)];
-        if (entry && entry !== MENU_DIVIDER) choose(entry);
+        const focused = focusedItem();
+        if (focused) choose(focused.item, focused.el);
         return;
       }
     }
@@ -246,70 +209,78 @@ export function Menu({ anchor, items, onClose, label }: MenuProps) {
     );
     if (hit && !hit.disabled) {
       e.preventDefault();
-      choose(hit);
+      choose(hit, document.activeElement as HTMLElement);
     }
   }
 
-  return createPortal(
-    <div
-      ref={panelRef}
-      role="menu"
-      aria-label={label}
-      tabIndex={-1}
-      /* O ESC já é contido acima; o atributo é a segunda guarda, para o ESC
-         que chegue ao `document` sem passar pelo menu — o foco que um `focus()`
-         não conseguiu pôr aqui dentro. É o mesmo sinal que o `Modal` usa. */
-      data-modal-open
-      onKeyDown={handleKeyDown}
-      /* O menu mora sobre uma linha clicável e, no portal, o evento sintético
-         ainda sobe pela árvore do React até ela: escolher um item também a
-         selecionaria ou abriria a edição. */
-      onClick={(e) => e.stopPropagation()}
-      onContextMenu={(e) => {
+  function handleSubmenuKeyDown(e: KeyboardEvent) {
+    /* O submenu é filho do painel de cima na árvore do React — o portal não muda
+       isso —, então tudo o que ele trata **para** de subir: senão o ↓ andaria nas
+       duas listas ao mesmo tempo e a letra de atalho do menu dispararia com o
+       foco aqui dentro. */
+    e.stopPropagation();
+    const children = submenu?.item.children ?? [];
+    switch (e.key) {
+      case "ArrowDown":
+        return move(subPanelRef.current, e, (i, n) => (i + 1) % n);
+      case "ArrowUp":
+        return move(subPanelRef.current, e, (i, n) => (i <= 0 ? n - 1 : i - 1));
+      case "Home":
+        return move(subPanelRef.current, e, () => 0);
+      case "End":
+        return move(subPanelRef.current, e, (_, n) => n - 1);
+      case "ArrowLeft":
+      case "Escape":
+        // O ESC aqui volta um nível, e é consumido igual: contido pelo
+        // `stopPropagation` acima, ele não chega ao `document` que esconde a janela.
         e.preventDefault();
-        e.stopPropagation();
-      }}
-      style={{
-        position: "fixed",
-        left: position?.left ?? 0,
-        top: position?.top ?? 0,
-        // Invisível até ser medido: o primeiro quadro, em 0,0, piscaria no canto.
-        visibility: position ? "visible" : "hidden",
-      }}
-      className="z-[9999] flex w-50 flex-col rounded-control border border-border-subtle bg-raised p-1 shadow-(--shadow-overlay) outline-none"
+        return closeSubmenu();
+      case "Tab":
+        e.preventDefault();
+        return closeAndRestore();
+      case "Enter":
+      case " ": {
+        e.preventDefault();
+        const el = document.activeElement as HTMLElement | null;
+        const index = el?.dataset.menuIndex;
+        const child = index === undefined ? undefined : children[Number(index)];
+        if (child && el) choose(child, el);
+        return;
+      }
+    }
+  }
+
+  return (
+    <MenuPanel
+      anchor={anchor}
+      label={label}
+      autoFocus
+      panelRef={panelRef}
+      onKeyDown={handleKeyDown}
     >
-      {items.map((entry, i) =>
-        entry === MENU_DIVIDER ? (
-          <div key={i} role="separator" className="my-1 border-t border-border-subtle" />
-        ) : (
-          <button
-            key={i}
-            type="button"
-            role="menuitem"
-            data-menu-index={i}
-            disabled={entry.disabled}
-            tabIndex={-1}
-            onClick={() => choose(entry)}
-            /* Mouse e teclado dividem um destaque só: o hover move o foco, e por
-               isso não há `hover:` — com ele, o mouse parado num item e a seta
-               em outro acenderiam dois. O destaque é `border`, e não `surface`:
-               sobre `raised`, `surface` é mais escuro por 0,025 de L no modo
-               escuro (o "não pinta nada" do `index.css`) e é branco no claro,
-               mais claro que o painel. `border-subtle` fica a 0,037 no claro,
-               no limite, e é o tom da própria borda e do divisor; `border`
-               abre 0,09/0,067 e é o que o `TagMultiSelect` já usa sobre `raised`. */
-            onMouseEnter={(e) => e.currentTarget.focus({ preventScroll: true })}
-            className={`flex w-full items-center gap-2 rounded-chip px-2 py-1.5 text-left text-sm font-medium outline-none focus:bg-border disabled:cursor-not-allowed disabled:opacity-40 ${entry.tone === "danger" ? "text-danger" : "text-fg"}`}
-          >
-            {entry.icon && <span className="inline-flex shrink-0">{entry.icon}</span>}
-            <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-            {entry.shortcut && (
-              <span className="shrink-0 font-mono text-micro text-fg-muted">{entry.shortcut}</span>
-            )}
-          </button>
-        )
+      <MenuItemButtons
+        entries={items}
+        onChoose={choose}
+        openIndex={submenu ? items.indexOf(submenu.item) : null}
+        /* O hover abre o submenu do item que tem filhos e fecha o que estiver
+           aberto ao passar por um que não tem — senão o painel ficaria pendurado
+           sobre o menu enquanto o cursor já está noutro item. */
+        onHover={(_, item, trigger) =>
+          setSubmenu(item.children ? { item, trigger, byKeyboard: false } : null)
+        }
+      />
+      {submenu && (
+        <MenuPanel
+          anchor={submenu.trigger}
+          side
+          label={submenu.item.label}
+          autoFocus={submenu.byKeyboard}
+          panelRef={subPanelRef}
+          onKeyDown={handleSubmenuKeyDown}
+        >
+          <MenuItemButtons entries={submenu.item.children ?? []} onChoose={choose} />
+        </MenuPanel>
       )}
-    </div>,
-    document.body
+    </MenuPanel>
   );
 }

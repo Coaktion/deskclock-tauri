@@ -135,9 +135,11 @@ describe("DayEntryRow — menu", () => {
     expect(screen.getByRole("button", { name: "Mais ações" })).toBeTruthy();
   });
 
-  it("as marcas do call site continuam na linha — o ⚡ do Histórico", () => {
-    renderRow({ badges: <span data-marca="">⚡</span> });
-    expect(row().querySelector("[data-marca]")).toBeTruthy();
+  it("as ações do call site viraram seção do menu, e não há mais ⚡ na linha (H1)", () => {
+    renderRow({ actions: [{ type: "open_url", value: "https://meet.google.com/abc" }] });
+    expect(screen.queryByRole("button", { name: /^Abrir/ })).toBeNull();
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: "Abrir Meet" })).toBeTruthy();
   });
 });
 

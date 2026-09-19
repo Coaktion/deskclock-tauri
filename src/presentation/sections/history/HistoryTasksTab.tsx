@@ -3,7 +3,6 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { actionsOfPlanned, type PlannedIndex } from "@domain/utils/plannedActions";
 import { DayEntryRow } from "@presentation/components/DayEntryRow";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { Button, SectionCard } from "@presentation/components/ui";
 import type { DayGroup } from "@presentation/hooks/useHistory";
@@ -26,8 +25,9 @@ interface HistoryTasksTabProps {
    */
   emptyMessage: string;
   /**
-   * As planejadas do workspace, por id. O ⚡ da linha lê a ação **atual** da
-   * origem — a `Task` não guarda cópia —, e a origem excluída não oferece nada.
+   * As planejadas do workspace, por id. A seção de ações do menu lê a ação
+   * **atual** da origem — a `Task` não guarda cópia —, e a origem excluída não
+   * oferece nada.
    */
   plannedIndex: PlannedIndex;
   onEnterSelectMode: () => void;
@@ -158,15 +158,10 @@ export function HistoryTasksTab({
                 task={task}
                 projects={projects}
                 categories={categories}
-                /* Some no modo de seleção pela mesma regra do `PlannedTaskItem`: a
-                   linha inteira é alvo de marcar, e o ⚡ engoliria o clique. */
-                badges={
-                  !selectMode && (
-                    <PlannedActionsFlyout
-                      actions={actionsOfPlanned(plannedIndex, task.plannedTaskId)}
-                    />
-                  )
-                }
+                /* As ações da planejada de origem, que o menu da linha lista no
+                   fim (H1). No modo de seleção o menu nem abre, então não há o
+                   que esconder aqui. */
+                actions={actionsOfPlanned(plannedIndex, task.plannedTaskId)}
                 selectMode={selectMode}
                 selected={selectedIds.has(task.id)}
                 onToggleSelect={onToggleSelectTask}

@@ -1,5 +1,7 @@
 import { Copy, Link, Pencil, Trash2 } from "lucide-react";
+import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { MENU_DIVIDER } from "@presentation/components/ui";
+import { taskActionsMenuSection } from "@presentation/hooks/taskActionsMenuSection";
 import { useRowMenu } from "@presentation/hooks/useRowMenu";
 
 interface PlannedRowMenuActions {
@@ -7,19 +9,23 @@ interface PlannedRowMenuActions {
   onDuplicate: () => void;
   onCopyLink: () => void;
   onDelete: () => void;
+  /** As ações da tarefa, que o menu lista no fim (H1). Sem elas, nada é somado. */
+  actions?: PlannedTaskAction[];
   /** O modo de seleção: o menu fecha e não abre (ver `useRowMenu`). */
   disabled?: boolean;
 }
 
 /**
  * O menu da linha planejada: a configuração dela no `useRowMenu`. Os atalhos
- * dos itens são os mesmos que a linha focada aceita (`PLANNED_ROW_KEYS`).
+ * dos itens são os mesmos que a linha focada aceita (`PLANNED_ROW_KEYS`); a
+ * seção de ações não tem atalho, porque o que ela lista é dado do usuário.
  */
 export function usePlannedRowMenu({
   onEdit,
   onDuplicate,
   onCopyLink,
   onDelete,
+  actions = [],
   disabled = false,
 }: PlannedRowMenuActions) {
   return useRowMenu({
@@ -35,6 +41,7 @@ export function usePlannedRowMenu({
         tone: "danger",
         onSelect: onDelete,
       },
+      ...taskActionsMenuSection(actions),
     ],
     disabled,
   });

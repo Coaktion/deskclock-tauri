@@ -153,16 +153,19 @@ describe("PopupPlannedRow — gestos", () => {
     expect(props.onEdit).not.toHaveBeenCalled();
   });
 
-  it("clique no ⚡ não edita", () => {
+  it("o ⚡ saiu da linha e as ações viraram submenu do ⋯ (H1)", () => {
     const { props } = renderRow({
       task: makeTask({
         actions: [
-          { type: "open_url", value: "https://a.com" },
-          { type: "open_url", value: "https://b.com" },
+          { type: "open_url", value: "https://meet.google.com/abc" },
+          { type: "open_file", value: "/home/eduardo/ata.md" },
         ],
       }),
     });
-    fireEvent.click(screen.getByRole("button", { name: "Abrir uma das 2 ações" }));
+    expect(screen.queryByRole("button", { name: /^Abrir/ })).toBeNull();
+    openMenu();
+    fireEvent.mouseEnter(screen.getByRole("menuitem", { name: "Ações" }));
+    expect(screen.getByRole("menuitem", { name: "ata.md" })).toBeTruthy();
     expect(props.onEdit).not.toHaveBeenCalled();
   });
 
