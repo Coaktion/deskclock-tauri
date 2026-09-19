@@ -149,7 +149,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | F5   | linha do Planejamento: `ui/CompleteToggle`, `ui/ClickBoundary`, `plannedRowKey`, `usePlannedRowMenu` | ✅ `302a8f0` — testada pelo usuário    |
 | G1   | desfazer genérico + lançamentos (`Task`)                                                             | ✅ `fe67e70`                           |
 | G2   | menu e teclado de linha genéricos                                                                    | ✅ `9e8c28b`                           |
-| G3   | popup: lista de planejadas                                                                           | a fazer                                |
+| G3   | popup: lista de planejadas                                                                           | ✅ `3081d6b`                           |
 | G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | a fazer                                |
 | G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | a fazer                                |
 | G6   | planejadas de hoje em Tarefas (`OmniboxIdle`)                                                        | a fazer                                |
@@ -288,3 +288,34 @@ se conclui — planejadas —, nunca em lançamento.
   `shouldHidePopupOnEscape` (`overlays/popupEscape.ts`), e ganhou a segunda guarda
   (`defaultPrevented` e `[data-modal-open]`), a mesma do `useGlobalShortcuts`.
 - `screenGeometry` não mede o popup (o spec do design não tem essa tela): nada a declarar.
+
+**Como ficou (G4):**
+
+- **Lançamento (`TaskCard`)**: os três botões do hover (▶ `sm`, Editar e Excluir, os dois últimos
+  `<button>` crus) viraram o ▶ fixo em `trailing` e o ⋯ em `actions`. O ▶ é o `PlannedPlaySlot`
+  da G3, que ganhou `idleTitle` para dizer "Iniciar com estes dados" em repouso — o texto do
+  bloqueio continua sendo o do `playTitle`, igual em toda tela. Menu por `useEntryRowMenu`
+  (Editar · — · Excluir em tom `danger`), teclado por `rowKeyDownHandler(ENTRY_ROW_KEYS, ...)`:
+  `Enter` inicia (nada, com o ▶ bloqueado), `E` edita, `Del` exclui, setas andam. Sem Espaço,
+  sem `D` e sem `L`: lançamento não se conclui, não duplica e não tem link. **Sem círculo.**
+- **Clique na linha edita**, e o chip, o ▶ e o ⋯ contêm o clique (`ClickBoundary`), senão cada um
+  deles abriria também o modal.
+- **Excluir já vinha pelo desfazer** desde a G1 (o `TodayEntriesSection` passa o `removeWithUndo`
+  como `onDelete`); a G4 só mudou por onde se chega nele.
+- **Grupo (`TaskGroupCard`)**: os mesmos três botões de hover — Mover para workspace, Editar grupo
+  e Unificar — viraram itens do ⋯ e do clique direito, **com as mesmas condições de antes** (sem
+  outro workspace não há "Mover"; entrada solta não tem "Editar grupo" nem "Unificar"). Nada se
+  perdeu e nada se inventou: o cabeçalho segue sem ação visível, e o clique na linha expande.
+  No modo de seleção o menu some por inteiro e o clique marca, como era. Teclado mínimo: só o `E`
+  do "Editar grupo" (`GROUP_ROW_KEYS`) — expandir por teclado não existia e o spec não o pede.
+- **A coluna do ▶ é reservada no cabeçalho** (`EmptyPlaySlot`, extraído do `empty` do
+  `PlannedPlaySlot`): ele divide a lista com linhas que têm ▶, e sem a coluna o chip dele ficaria
+  38 px fora do alinhamento do das filhas.
+- **`componentPrimitives`**: a baseline perdeu as duas entradas de `TaskCard` (2) e
+  `TaskGroupCard` (3) — os cinco `<button>` crus viraram `IconButton`/`RowMenuTrigger`.
+- **`screenGeometry` (3a, Tarefas)** continua passando sem exceção nova: a grade da linha não
+  mudou, só o conteúdo das células `actions` e `trailing`, que o wireframe não mede.
+- **Impacto** (`gitnexus`, upstream): `TaskCard` → `TaskGroupCard` → `TodayEntriesSection` →
+  `TasksPage`, risco **LOW**, tudo dentro da tela de Tarefas.
+- **Falta conferir no `pnpm tauri dev`**: o ▶ um degrau maior na linha das Entradas (2 modos × 4
+  acentos) e o alinhamento do chip entre cabeçalho, filha e entrada solta.

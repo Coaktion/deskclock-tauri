@@ -68,8 +68,6 @@ const BUTTON_BASELINE: Record<string, number> = {
   "src/presentation/components/RetroactiveEntryForm.tsx": 1,
   "src/presentation/components/Sidebar.tsx": 2,
   "src/presentation/components/TagMultiSelect.tsx": 1,
-  "src/presentation/components/TaskCard.tsx": 2,
-  "src/presentation/components/TaskGroupCard.tsx": 3,
   "src/presentation/components/WeekPlanningView.tsx": 3,
   "src/presentation/components/WorkspaceSwitcher.tsx": 4,
   "src/presentation/modals/ClockifyEntriesModal.tsx": 3,
