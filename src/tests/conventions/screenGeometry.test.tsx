@@ -308,6 +308,7 @@ describe("geometria: tela 3a contra o spec do design", () => {
         categories={[]}
         containerRef={createRef<HTMLDivElement>()}
         onToggleBillable={() => {}}
+        onCompletePlanned={() => {}}
         draft={draft}
         setDraft={() => {}}
         focused={false}

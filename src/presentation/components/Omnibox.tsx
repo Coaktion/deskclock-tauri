@@ -24,6 +24,8 @@ interface OmniboxProps {
   onOmniboxFocusHandled?: () => void;
   catalogsLoading?: boolean;
   onTogglePlannedBillable: (task: PlannedTask) => void;
+  /** Conclui a planejada do dia pelo círculo da lista de sugestões. */
+  onCompletePlanned: (task: PlannedTask) => void;
   onNavigatePlanning?: () => void;
 }
 
@@ -37,6 +39,7 @@ export function Omnibox({
   onOmniboxFocusHandled,
   catalogsLoading,
   onTogglePlannedBillable,
+  onCompletePlanned,
   onNavigatePlanning,
 }: OmniboxProps) {
   const {
@@ -110,6 +113,7 @@ export function Omnibox({
       categories={categories}
       containerRef={containerRef}
       onToggleBillable={onTogglePlannedBillable}
+      onCompletePlanned={onCompletePlanned}
       onNavigatePlanning={onNavigatePlanning}
     />
   );

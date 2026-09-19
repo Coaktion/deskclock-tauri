@@ -60,9 +60,15 @@ achado de relance.
   modo escuro, e a lista lia como mais uma seção da página. Ver a skill `design-system`.
 - Mostra **quatro tarefas inteiras** (236px de teto) e deixa a quinta assomar cortada, que é o que
   indica que a lista rola.
-- Cada linha é um `TaskRow`: ponto na cor do projeto, nome, `projeto · categoria` e o chip de
-  faturamento, que **continua alternando** (o `BillableChip` barra a propagação, então alterná-lo
-  não dispara a linha).
+- Cada linha é um `TaskRow`: círculo de concluir, ponto na cor do projeto, nome,
+  `projeto · categoria` e o chip de faturamento, que **continua alternando** (o `BillableChip`
+  barra a propagação, então alterná-lo não dispara a linha).
+- **O círculo de concluir é a única ação da linha** (2026-09-19, spec
+  `docs-internal/specs/acoes-da-linha-planejada.md`, G6): `ui/CompleteToggle` no slot `leading`,
+  que também barra a propagação — concluir não inicia a tarefa. **Não há ⋯ nem clique direito
+  aqui**: a lista existe para escolher o que iniciar, e Editar, Duplicar, Copiar link e Excluir
+  moram na linha do Planejamento e na do popup. Como a lista mostra só as **pendentes**, concluir
+  tira a tarefa dela; reabrir é pelo Planejamento ou pelo popup.
 - **Clicar na linha inicia a tarefa na hora**, com o vínculo (`plannedTaskId`) e os campos
   personalizados da planejada. Pelo teclado: ↑/↓ andam pela lista e Enter inicia a ativa; com a
   lista fechada ou vazia, Enter inicia o rascunho como tarefa avulsa. ESC fecha só a lista.

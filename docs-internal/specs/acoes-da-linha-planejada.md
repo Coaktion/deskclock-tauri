@@ -151,7 +151,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | G2   | menu e teclado de linha genéricos                                                                    | ✅ `9e8c28b`                           |
 | G3   | popup: lista de planejadas                                                                           | ✅ `3081d6b`                           |
 | G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | ✅ `06f0881`                           |
-| G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | a fazer                                |
+| G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | ✅ `b9455f8`                           |
 | G6   | planejadas de hoje em Tarefas (`OmniboxIdle`)                                                        | a fazer                                |
 | G7   | manual (`docs/index.html`) e docs com "Copiar link", `pnpm visual`, 2 modos × 4 acentos, PR          | a fazer                                |
 
@@ -357,3 +357,30 @@ se conclui — planejadas —, nunca em lançamento.
 - **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): o ⋯ no lugar da dupla de botões nas
   duas listas, o anel de foco da linha focável dentro do cartão do dia do Histórico e o menu
   abrindo sobre listas que **rolam** — as duas rolam, e o `Menu` fecha na rolagem.
+
+**Como ficou (G6):**
+
+- **Só o círculo**, no slot `leading` do `TaskRow` da lista suspensa do omnibox (`OmniboxIdle`):
+  o mesmo `ui/CompleteToggle` da linha do Planejamento, que **para a propagação por conta
+  própria** — clicar nele conclui sem iniciar a tarefa. **Sem ⋯, sem clique direito e sem
+  teclado de linha**: a lista existe para escolher o que iniciar, e o ↑/↓/Enter do campo já é o
+  teclado dela.
+- **O clique na linha continua iniciando**, com o vínculo e os campos personalizados da
+  planejada. Nada do que existia se perdeu: nem o chip de faturamento, nem o "Ver semana →".
+- **O círculo nunca reabre, e é consequência da consulta, não uma decisão à parte.** A lista é
+  `matchPlannedTasks`, que recorta as **pendentes** do dia: concluída, a tarefa sai da lista no
+  recarregamento e não há ali um círculo cheio para desmarcar. Quem reabre é o Planejamento ou o
+  popup. Por isso o `CompleteToggle` recebe `completed={false}` fixo e a prop é
+  `onCompletePlanned`, não um par completar/reabrir — um `onUncomplete` aqui seria código sem
+  chamador.
+- **A conclusão passa pelo `complete` do `usePlannedTasksForDate`**, o mesmo caminho das outras
+  superfícies: ele recarrega a lista e emite `PLANNED_TASKS_CHANGED`, então popup e Planejamento
+  acompanham sem nada a mais. A `TasksPage` só desce o handler, como já fazia com o billable.
+- **A grade não muda.** Com `leading`, o ponto de projeto deixa de abrir coluna própria e entra no
+  bloco do nome (regra do `TaskRow`), e as colunas continuam `auto 1fr auto auto`. O
+  `screenGeometry` (3a) mede o omnibox com a lista fechada, então **não há exceção nova a
+  declarar** — só o fixture do teste ganhou a prop.
+- **Impacto** (`gitnexus`, upstream): `OmniboxIdle` → `Omnibox` → `TasksPage` → `App`, risco
+  **LOW**, tudo dentro da tela de Tarefas.
+- **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): o círculo alinhado ao chip e à
+  duração ausente nas linhas da lista suspensa, e o nome que encurta 14 px + gap com a coluna nova.
