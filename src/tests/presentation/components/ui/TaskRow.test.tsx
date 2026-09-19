@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TaskRow } from "@presentation/components/ui/TaskRow";
 import { geometryOf } from "../../../helpers/tailwindGeometry";
 
@@ -258,5 +259,109 @@ describe("TaskRow", () => {
     expect([...grupo.children].indexOf(marca)).toBeLessThan(
       [...grupo.children].findIndex((c) => c.hasAttribute("data-marca"))
     );
+  });
+
+  /**
+   * Os call sites de hoje não passam `trailing`, e a grade deles não pode mudar
+   * nem de caractere: são as quatro formas do censo, afirmadas uma a uma — e,
+   * com `trailing`, cada uma com um `auto` a mais no fim.
+   */
+  const FORMAS: [string, { leading?: ReactNode; meta?: string; dotColor?: string }, string][] = [
+    ["chevron e faixa", { leading: <span />, meta: "09:00" }, "auto_88px_1fr_auto_auto"],
+    ["só a faixa", { meta: "09:00" }, "88px_1fr_auto_auto"],
+    ["só o ponto", { dotColor: "#fff" }, "auto_1fr_auto_auto"],
+    ["nada antes do nome", {}, "1fr_auto_auto"],
+  ];
+
+  const gradeDe = (el: Element) =>
+    el.className.split(/\s+/).find((c) => c.startsWith("grid-cols-"));
+
+  it.each(FORMAS)("sem `trailing`, %s: a grade é a de antes", (_, props, colunas) => {
+    const { container } = render(<TaskRow title="a" {...props} />);
+    expect(gradeDe(container.firstElementChild!)).toBe(`grid-cols-[${colunas}]`);
+  });
+
+  it.each(FORMAS)("com `trailing`, %s: a grade ganha uma coluna no fim", (_, props, colunas) => {
+    const { container } = render(<TaskRow title="a" {...props} trailing={<span data-play="" />} />);
+    expect(gradeDe(container.firstElementChild!)).toBe(`grid-cols-[${colunas}_auto]`);
+  });
+
+  it("com `collapseActions`, a ordem é ações → chip → `trailing`", () => {
+    const { container } = render(
+      <TaskRow
+        title="a"
+        billable
+        onToggleBillable={() => {}}
+        collapseActions
+        actions={<span data-acoes="" />}
+        trailing={<span data-play="" />}
+      />
+    );
+    const celulas = [...container.firstElementChild!.children];
+    const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
+    const chip = celulas.findIndex((c) => c.querySelector("button"));
+    const play = celulas.findIndex((c) => c.querySelector("[data-play]"));
+
+    expect(acoes).toBeGreaterThanOrEqual(0);
+    expect(chip).toBeGreaterThan(acoes);
+    expect(play).toBeGreaterThan(chip);
+    expect(play).toBe(celulas.length - 1);
+  });
+
+  it("com duração, `trailing` também vem depois do chip e da duração", () => {
+    const { container } = render(
+      <TaskRow
+        title="a"
+        duration="1h"
+        billable
+        onToggleBillable={() => {}}
+        trailing={<span data-play="" />}
+      />
+    );
+    const celulas = [...container.firstElementChild!.children];
+    const chip = celulas.findIndex((c) => c.querySelector("button"));
+    const play = celulas.findIndex((c) => c.querySelector("[data-play]"));
+
+    expect(play).toBeGreaterThan(chip);
+    expect(play).toBe(celulas.length - 1);
+  });
+
+  it("repassa o clique direito ao contêiner da linha", () => {
+    const onContextMenu = vi.fn();
+    const { container } = render(<TaskRow title="a" onContextMenu={onContextMenu} />);
+
+    fireEvent.contextMenu(container.firstElementChild!);
+    expect(onContextMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it("com `onKeyDown`, a linha é focável, recebe a tecla e mostra foco só no teclado", () => {
+    const onKeyDown = vi.fn();
+    const { container } = render(<TaskRow title="a" onKeyDown={onKeyDown} />);
+    const linha = container.firstElementChild as HTMLElement;
+
+    expect(linha.getAttribute("tabindex")).toBe("0");
+    fireEvent.keyDown(linha, { key: "Enter" });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+
+    const classes = linha.className.split(/\s+/);
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "focus-visible:ring-2",
+        "focus-visible:ring-inset",
+        "focus-visible:ring-accent",
+      ])
+    );
+    expect(classes.filter((c) => c.includes("ring") && !c.startsWith("focus-visible:"))).toEqual(
+      []
+    );
+  });
+
+  it("sem `onKeyDown`, a linha não é parada de Tab nem ganha anel", () => {
+    const { container } = render(<TaskRow title="a" duration="1h" />);
+    const linha = container.firstElementChild as HTMLElement;
+
+    expect(linha.hasAttribute("tabindex")).toBe(false);
+    expect(linha.className).not.toContain("ring");
+    expect(linha.className).not.toContain("outline-none");
   });
 });

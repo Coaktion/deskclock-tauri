@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { BillableChip } from "./BillableChip";
 import { ExecutionDot, type RowExecution } from "./ExecutionDot";
 
@@ -49,6 +49,17 @@ interface TaskRowBaseProps {
    */
   collapseActions?: boolean;
   /**
+   * Coluna sempre visível **depois** do chip de faturamento, a última da linha —
+   * a casa do ▶ da planejada. Só existe quando a prop vem: sem ela a grade é a de
+   * sempre, e os call sites que não a usam não mudam em nada.
+   *
+   * Reservá-la **vazia** é trabalho do chamador. A linha que não tem o que pôr ali
+   * (a concluída, o modo de seleção), mas vive numa lista em que as vizinhas têm,
+   * passa um elemento de largura fixa do tamanho do conteúdo — ou o chip das
+   * vizinhas saltaria a largura da coluna a cada linha que a perde.
+   */
+  trailing?: ReactNode;
+  /**
    * A linha pende da de cima — a tarefa dentro de um grupo aberto. Ela ganha o
    * trilho e um degrau de 12px à esquerda; o degrau sai do `1fr` do nome, então
    * chip e duração continuam onde estão nas linhas em volta.
@@ -65,6 +76,14 @@ interface TaskRowBaseProps {
   execution?: RowExecution;
   selected?: boolean;
   onClick?: () => void;
+  /** Repassado ao contêiner da linha — o menu no ponto do clique direito. */
+  onContextMenu?: (e: MouseEvent) => void;
+  /**
+   * Presente, a linha vira parada de Tab (`tabIndex=0`) e ganha anel de foco no
+   * `focus-visible`. Ausente, ela não é focável — é isso que deixa intocadas as
+   * telas que não operam a linha pelo teclado.
+   */
+  onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
 }
 
 type TaskRowProps = TaskRowBaseProps & BillableProps;
@@ -74,11 +93,24 @@ type TaskRowProps = TaskRowBaseProps & BillableProps;
  * carrega a faixa de horário ou a contagem do grupo, o `1fr` é o nome, e os dois
  * `auto` finais são o chip e o par duração↔ações.
  *
- * São quatro literais e não uma string montada porque **o Tailwind lê a classe
- * no código-fonte**: `grid-cols-[${...}]` não gera utilitário nenhum, e a linha
- * cairia para o `display:grid` sem colunas — que é flex mal desenhado.
+ * São literais e não uma string montada porque **o Tailwind lê a classe no
+ * código-fonte**: `grid-cols-[${...}]` não gera utilitário nenhum, e a linha
+ * cairia para o `display:grid` sem colunas — que é flex mal desenhado. Pelo
+ * mesmo motivo a forma com `trailing` é cada uma das quatro escrita de novo, com
+ * um `auto` a mais no fim, e não um sufixo concatenado.
  */
-function gridColumns(hasLeading: boolean, hasMeta: boolean, hasDot: boolean): string {
+function gridColumns(
+  hasLeading: boolean,
+  hasMeta: boolean,
+  hasDot: boolean,
+  hasTrailing: boolean
+): string {
+  if (hasTrailing) {
+    if (hasLeading && hasMeta) return "grid-cols-[auto_88px_1fr_auto_auto_auto]";
+    if (hasMeta) return "grid-cols-[88px_1fr_auto_auto_auto]";
+    if (hasLeading || hasDot) return "grid-cols-[auto_1fr_auto_auto_auto]";
+    return "grid-cols-[1fr_auto_auto_auto]";
+  }
   if (hasLeading && hasMeta) return "grid-cols-[auto_88px_1fr_auto_auto]";
   if (hasMeta) return "grid-cols-[88px_1fr_auto_auto]";
   if (hasLeading || hasDot) return "grid-cols-[auto_1fr_auto_auto]";
@@ -101,6 +133,17 @@ const PADDING_X = 12;
 const LEADING_WIDTH = 14;
 const RAIL_LEFT = PADDING_X + LEADING_WIDTH / 2;
 
+/**
+ * O foco da linha focável. **Inset** porque a linha é faixa de borda a borda
+ * dentro de um cartão com `overflow-hidden`: o anel por fora seria cortado nas
+ * laterais. **Só no `focus-visible`**: o clique também foca a linha, e um anel a
+ * cada clique de mouse seria ruído — ele é para quem navega pelo teclado. O tom
+ * é o acento cheio, e não o `accent/15` do `SearchInput`: lá o anel soma à borda
+ * que já muda de cor, aqui ele é o único sinal de onde o foco está.
+ */
+const FOCUS_RING =
+  "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
+
 /** `pl-6` é o dobro de `pl-3`: o degrau da filha é um padding a mais. */
 const PADDING_LEFT = { row: "pl-3", nested: "pl-6" } as const;
 
@@ -121,6 +164,9 @@ export function TaskRow(props: TaskRowProps) {
     execution,
     selected = false,
     onClick,
+    trailing,
+    onContextMenu,
+    onKeyDown,
   } = props;
 
   /**
@@ -135,6 +181,7 @@ export function TaskRow(props: TaskRowProps) {
 
   const hasLeading = Boolean(leading);
   const hasMeta = Boolean(meta);
+  const hasTrailing = Boolean(trailing);
 
   /**
    * Fechar em **largura** é o que a linha sem duração faz; com duração, quem
@@ -233,7 +280,7 @@ export function TaskRow(props: TaskRowProps) {
    * cancela exatamente esse gap em repouso e o devolve no hover, quando ele passa
    * a ser o respiro entre o último botão e o chip.
    */
-  const trailingCell = (
+  const actionsCell = (
     <div
       className={`grid items-center justify-items-end ${
         collapsesWidth ? "-mr-2.5 group-hover:mr-0 group-focus-within:mr-0" : ""
@@ -269,9 +316,12 @@ export function TaskRow(props: TaskRowProps) {
   return (
     <div
       onClick={onClick}
-      className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor))} gap-2.5 py-2.5 pr-3 border-b border-border-subtle last:border-b-0 transition-colors ${
+      onContextMenu={onContextMenu}
+      onKeyDown={onKeyDown}
+      tabIndex={onKeyDown ? 0 : undefined}
+      className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor), hasTrailing)} gap-2.5 py-2.5 pr-3 border-b border-border-subtle last:border-b-0 transition-colors ${
         nested ? `relative ${PADDING_LEFT.nested}` : PADDING_LEFT.row
-      } ${background} ${onClick ? "cursor-pointer" : ""}`}
+      } ${background} ${onClick ? "cursor-pointer" : ""}${onKeyDown ? ` ${FOCUS_RING}` : ""}`}
     >
       {/*
        * A coluna que abre o grupo, reservada pelo primitivo **mesmo vazia**: sem
@@ -315,15 +365,21 @@ export function TaskRow(props: TaskRowProps) {
        */}
       {collapsesWidth ? (
         <>
-          {trailingCell}
+          {actionsCell}
           {billableCell}
         </>
       ) : (
         <>
           {billableCell}
-          {trailingCell}
+          {actionsCell}
         </>
       )}
+
+      {/*
+       * Depois do chip e por último em qualquer das duas ordens acima: é a coluna
+       * que não pode andar, então nada que abra em largura fica à direita dela.
+       */}
+      {hasTrailing && <div className="flex items-center">{trailing}</div>}
 
       {/*
        * O trilho, no eixo do chevron de que ele desce (ver `RAIL_LEFT`). Fora do

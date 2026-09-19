@@ -278,6 +278,15 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > hover que diz se aquilo edita (`accent`), navega (`neutral`) ou apaga (`danger`). O `title` é
   > obrigatório porque é o nome acessível — sem texto, é a única coisa que o botão anuncia.
   >
+  > **`primary` é a única variante com cor em repouso**, e existe para uma peça: o ▶ da linha
+  > planejada. Ele é a ação que se usa o dia inteiro, e no meio de botões que nascem `fg-muted`
+  > precisa se ler como a principal antes do cursor chegar — fundo `accent/15` com glifo
+  > `accent-text` em repouso, `bg-accent` com `text-white` no hover (a exceção de texto sobre
+  > acento, abaixo). **Desabilitado, perde o acento inteiro** e cai no repouso neutro das outras,
+  > com a opacidade e o `cursor-not-allowed` de sempre: o Play bloqueado tem de se ler como
+  > bloqueado, e não como a ação principal um pouco apagada. Uma segunda peça pedindo cor em
+  > repouso é pergunta, não precedente.
+  >
   > **`Input`, `Select` e `Textarea` compartilham uma casca só** (`ui/controlStyles.ts`), e o que
   > eles travam é a **forma**: `boxed` desenha a própria caixa; `bare` abre mão dela para o `Field`
   > (ou o `boxClass`) em volta; `plain` não desenha casca **nem padding**, para o campo que mora
@@ -639,6 +648,23 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > **deixou de ser exceção** — a linha do Planejamento é o `TaskRow`, na forma de quatro colunas
   > com o ponto de projeto, como o spec da 3e desenha.
   >
+  > **`trailing` é a coluna que não anda**: sempre visível, **depois** do chip e a última da linha
+  > — a casa do ▶ da planejada. Com `collapseActions` a ordem fica nome → ações (fecha em largura)
+  > → chip → `trailing`, pela mesma razão que põe o chip depois das ações: nada que abra em
+  > largura à direita do que precisa ficar parado. Ela só existe quando a prop vem, e cada forma
+  > da grade tem a sua versão com um `auto` a mais **escrita por extenso** em `gridColumns()` —
+  > sem a prop, a classe é caractere por caractere a de antes. **Reservá-la vazia é do
+  > chamador**: a linha concluída ou em modo de seleção passa um elemento de largura fixa, ou o
+  > chip das vizinhas saltaria a largura do Play a cada linha que o perde.
+  >
+  > **A linha só é focável quando recebe `onKeyDown`** (`tabIndex=0`), e o foco é um anel
+  > `ring-2 ring-inset ring-accent` **só no `focus-visible`**. Inset porque a linha é faixa de
+  > borda a borda num cartão com `overflow-hidden`, que cortaria o anel por fora; só no
+  > `focus-visible` porque o clique também foca a linha, e o anel é de quem navega pelo teclado.
+  > Acento cheio, e não o `accent/15` do `SearchInput`: lá o anel soma a uma borda que já mudou
+  > de cor, aqui ele é o único sinal de onde o foco está. `onContextMenu` é repassado ao
+  > contêiner, para o menu abrir no ponto do clique.
+  >
   > Duas props nasceram com essa migração, e as duas existem porque o `<p>` do nome **trunca**:
   > `titleMarks` põe recorrência e sino **ao lado** do nome (dentro dele, o glifo seria o primeiro
   > a sumir num nome longo), e `completed` risca e apaga o nome — o `opacity-50` de linha inteira
@@ -704,10 +730,11 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > `MondayProjectsImport` —, e a substituição é o que resta da dívida. Fora dela ficam a paleta de
   > workspace e os quatro status do Zendesk, que são **cor de entidade**.
   >
-  > Botão primário preenchido usa `text-white` sobre `bg-accent`
-  > pelo mesmo buraco: não há token de texto sobre acento (`accent-text` é o acento claro, ilegível
-  > sobre ele). **É o único `text-white` que sobra**: onde ele estava sobre superfície comum — três
-  > `hover:text-white` e dois botões neutros — o texto sumia no modo claro, e virou `text-fg`.
+  > Botão primário preenchido — e o hover do `IconButton primary`, que enche de acento — usa
+  > `text-white` sobre `bg-accent` pelo mesmo buraco: não há token de texto sobre acento
+  > (`accent-text` é o acento claro, ilegível sobre ele). **São os únicos `text-white` que sobram**,
+  > e os dois sobre `bg-accent`: onde ele estava sobre superfície comum — três `hover:text-white` e
+  > dois botões neutros — o texto sumia no modo claro, e virou `text-fg`.
 
   > **A escala de três degraus colapsa pares, e é isso que a tradução tem de vigiar.** Seis tons de
   > cinza de texto viram três tokens, então `gray-400` envolvendo um `gray-200` — o padrão de

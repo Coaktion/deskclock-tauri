@@ -39,4 +39,37 @@ describe("IconButton", () => {
     render(<IconButton icon={<svg data-testid="lixeira" />} title="Excluir" onClick={vi.fn()} />);
     expect(screen.getByTestId("lixeira")).toBeTruthy();
   });
+
+  /**
+   * A única variante com cor em repouso — o ▶ da planejada. As outras nascem
+   * `fg-muted` e só o hover diz o destino.
+   */
+  it("`primary` tem acento em repouso e enche no hover", () => {
+    render(<IconButton icon={<svg />} title="Iniciar" variant="primary" />);
+    const classes = screen.getByRole("button").className.split(/\s+/);
+
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "bg-accent/15",
+        "text-accent-text",
+        "hover:bg-accent",
+        "hover:text-white",
+      ])
+    );
+    expect(classes).not.toContain("text-fg-muted");
+  });
+
+  it("`primary` desabilitado perde o acento e se lê como bloqueado", () => {
+    render(<IconButton icon={<svg />} title="Iniciar" variant="primary" disabled />);
+    const classes = screen.getByRole("button").className.split(/\s+/);
+
+    expect(classes.some((c) => c.includes("accent"))).toBe(false);
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "text-fg-muted",
+        "disabled:opacity-40",
+        "disabled:cursor-not-allowed",
+      ])
+    );
+  });
 });

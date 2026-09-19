@@ -27,8 +27,9 @@ Concluir, Duplicar e Excluir. O problema não era a quantidade, era a hierarquia
 
 - **Concluída:** o círculo fica cheio no acento com ✓, e o nome fica tachado em `fg-muted`, como já era.
 - **O Play é a ação principal, e o desenho diz isso.** Ele usa `IconButton variant="primary"`:
-  fundo de acento a 14% em repouso, cheio no hover. É a única variante com cor em repouso. Nas
-  outras a cor é o destino do hover.
+  fundo de acento a 15% em repouso (a série 5/10/15 do app), cheio no hover. É a única variante
+  com cor em repouso; nas outras a cor é o destino do hover. Tamanho `md` com ícone de 16, os
+  28 px do protótipo aprovado: um degrau acima dos outros botões da linha, que é o destaque.
 - **Play bloqueado** (`isPlayBlocked(playBlock)`): o botão continua visível e desabilitado, com
   aparência de desabilitado (sem o tom de acento, opacidade reduzida) e o motivo no `title`
   (`playTitle`). **Não há ícone de pausa.** A linha que está rodando continua dita pelo realce de
