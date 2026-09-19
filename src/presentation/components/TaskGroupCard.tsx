@@ -7,8 +7,18 @@ import type { TaskGroup } from "@domain/utils/groupTasks";
 import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { TaskRow, type RowExecution } from "@presentation/components/ui";
+import {
+  Menu,
+  RowMenuTrigger,
+  TaskRow,
+  type MenuItem,
+  type RowExecution,
+} from "@presentation/components/ui";
 import type { PlayBlock } from "@presentation/components/playAction";
+import { EmptyPlaySlot } from "@presentation/components/PlannedPlaySlot";
+import { GROUP_ROW_KEYS } from "@presentation/components/entryRowKey";
+import { rowKeyDownHandler } from "@presentation/components/rowKey";
+import { useRowMenu } from "@presentation/hooks/useRowMenu";
 import { TaskCard } from "./TaskCard";
 
 interface TaskGroupCardProps {
@@ -70,6 +80,43 @@ export function TaskGroupCard({
   const isGroup = tasks.length > 1;
   const allSent = sentIds ? tasks.every((t) => sentIds.has(t.id)) : false;
   const someSent = !allSent && (sentIds ? tasks.some((t) => sentIds.has(t.id)) : false);
+
+  /*
+   * Os mesmos três de antes, que eram a fileira do hover, e com as mesmas
+   * condições: sem workspace para onde mover, o item não existe; entrada solta
+   * (só no modo de seleção chega aqui) não tem grupo para editar nem unificar.
+   */
+  const menuItems: MenuItem[] = [];
+  if (isGroup) {
+    menuItems.push({
+      label: "Editar grupo",
+      icon: <Edit2 size={14} />,
+      shortcut: "E",
+      onSelect: () => onEditGroup?.(group),
+    });
+  }
+  if (onMoveToWorkspace) {
+    menuItems.push({
+      label: "Mover para workspace",
+      icon: <FolderInput size={14} />,
+      onSelect: () => onMoveToWorkspace(tasks),
+    });
+  }
+  if (isGroup) {
+    menuItems.push({
+      label: "Unificar",
+      icon: <Merge size={14} />,
+      onSelect: () => onMerge(group),
+    });
+  }
+  const hasMenu = !selectable && menuItems.length > 0;
+  const menu = useRowMenu({ items: menuItems, disabled: !hasMenu });
+
+  const handleKeyDown = rowKeyDownHandler(GROUP_ROW_KEYS, {
+    editGroup: () => {
+      if (isGroup) onEditGroup?.(group);
+    },
+  });
 
   function handleRowClick() {
     if (selectable) {
@@ -158,47 +205,21 @@ export function TaskGroupCard({
             </span>
           )
         }
-        actions={
-          <>
-            {onMoveToWorkspace && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMoveToWorkspace(tasks);
-                }}
-                title="Mover para workspace"
-                className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-              >
-                <FolderInput size={14} />
-              </button>
-            )}
-            {isGroup && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditGroup?.(group);
-                  }}
-                  title="Editar grupo"
-                  className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-                >
-                  <Edit2 size={14} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMerge(group);
-                  }}
-                  title="Unificar"
-                  className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-                >
-                  <Merge size={14} />
-                </button>
-              </>
-            )}
-          </>
-        }
+        onContextMenu={hasMenu ? menu.openAtPointer : undefined}
+        // Focável fora do modo de seleção, para as setas não pularem o
+        // cabeçalho ao andar entre as linhas das Entradas.
+        onKeyDown={selectable ? undefined : handleKeyDown}
+        actions={hasMenu && <RowMenuTrigger menu={menu} />}
+        /* O cabeçalho não tem ▶ (o spec o deixa sem ação visível), mas divide a
+           lista com lançamentos que têm: sem a coluna reservada, o chip dele
+           ficaria fora do alinhamento do das filhas e das entradas soltas. */
+        trailing={<EmptyPlaySlot />}
       />
+
+      {/* Irmão da linha, como no lançamento. Sem menu (modo de seleção, entrada
+          solta sem workspace) o `useRowMenu` fica `disabled` e a âncora nunca
+          abre, então não há o que condicionar aqui. */}
+      <Menu anchor={menu.anchor} items={menu.items} onClose={menu.close} label="Ações do grupo" />
 
       {/*
        * As filhas não são recuadas: recuar moveria todas as colunas delas, e

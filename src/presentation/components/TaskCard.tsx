@@ -1,11 +1,15 @@
-import { Play, Pencil, Trash2, CheckCheck } from "lucide-react";
+import { CheckCheck } from "lucide-react";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { formatDurationCompact, formatRegisteredTimeRange } from "@shared/utils/time";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
-import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
+import { Menu, RowMenuTrigger, TaskRow, type RowExecution } from "@presentation/components/ui";
+import { isPlayBlocked, type PlayBlock } from "@presentation/components/playAction";
+import { PlannedPlaySlot } from "@presentation/components/PlannedPlaySlot";
+import { ENTRY_ROW_KEYS } from "@presentation/components/entryRowKey";
+import { rowKeyDownHandler } from "@presentation/components/rowKey";
+import { useEntryRowMenu } from "@presentation/hooks/useEntryRowMenu";
 
 interface TaskCardProps {
   task: Task;
@@ -24,10 +28,17 @@ interface TaskCardProps {
   nested?: boolean;
   onPlay: (task: Task) => void;
   onEdit: (task: Task) => void;
+  /** A tela passa o `removeWithUndo` do `useTaskUndo`: excluir aqui se desfaz. */
   onDelete: (task: Task) => void;
   onToggleBillable: (task: Task) => void;
 }
 
+/**
+ * O lançamento nas Entradas de hoje, no desenho da linha planejada (spec
+ * `acoes-da-linha-planejada.md`, G4): o ▶ sempre visível na coluna que não anda,
+ * Editar e Excluir no ⋯ e no clique direito, clique na linha edita. Sem círculo
+ * — lançamento não se conclui.
+ */
 export function TaskCard({
   task,
   projects,
@@ -44,57 +55,67 @@ export function TaskCard({
   const project = projects.find((p) => p.id === task.projectId);
   const category = categories.find((c) => c.id === task.categoryId);
   const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
+  const menu = useEntryRowMenu({
+    onEdit: () => onEdit(task),
+    onDelete: () => onDelete(task),
+  });
+
+  const handleKeyDown = rowKeyDownHandler(ENTRY_ROW_KEYS, {
+    play: () => {
+      if (!isPlayBlocked(playBlock)) onPlay(task);
+    },
+    edit: () => onEdit(task),
+    delete: () => onDelete(task),
+  });
 
   return (
-    <TaskRow
-      title={task.name ?? "(sem nome)"}
-      subtitle={subtitle || undefined}
-      // A coluna que a linha do grupo usa para o chevron, aqui vazia: quem lhe
-      // dá largura é o primitivo, para as duas caírem no mesmo x.
-      leading={<span aria-hidden />}
-      execution={execution}
-      nested={nested}
-      meta={
-        <span className="text-micro font-mono tabular-nums text-fg-muted">
-          {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
-        </span>
-      }
-      duration={formatDurationCompact(task.durationSeconds ?? 0)}
-      billable={task.billable}
-      dotColor={getProjectColor(project)}
-      onToggleBillable={() => onToggleBillable(task)}
-      badges={
-        sent && (
-          <span title="Enviado para o Google Sheets" className="shrink-0 text-billable">
-            <CheckCheck size={14} />
+    <>
+      <TaskRow
+        title={task.name ?? "(sem nome)"}
+        subtitle={subtitle || undefined}
+        // A coluna que a linha do grupo usa para o chevron, aqui vazia: quem lhe
+        // dá largura é o primitivo, para as duas caírem no mesmo x.
+        leading={<span aria-hidden />}
+        execution={execution}
+        nested={nested}
+        meta={
+          <span className="text-micro font-mono tabular-nums text-fg-muted">
+            {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
           </span>
-        )
-      }
-      actions={
-        <>
-          <IconButton
-            icon={<Play size={14} />}
-            title={playTitle(playBlock, "Iniciar com estes dados")}
-            size="sm"
-            disabled={isPlayBlocked(playBlock)}
-            onClick={() => onPlay(task)}
+        }
+        duration={formatDurationCompact(task.durationSeconds ?? 0)}
+        billable={task.billable}
+        dotColor={getProjectColor(project)}
+        onToggleBillable={() => onToggleBillable(task)}
+        badges={
+          sent && (
+            <span title="Enviado para o Google Sheets" className="shrink-0 text-billable">
+              <CheckCheck size={14} />
+            </span>
+          )
+        }
+        onClick={() => onEdit(task)}
+        onContextMenu={menu.openAtPointer}
+        onKeyDown={handleKeyDown}
+        /* Com duração, o ⋯ entra no lugar dela no hover, como a fileira de
+           antes: a célula já está reservada e nada anda. */
+        actions={<RowMenuTrigger menu={menu} />}
+        trailing={
+          <PlannedPlaySlot
+            playBlock={playBlock}
+            idleTitle="Iniciar com estes dados"
+            onPlay={() => onPlay(task)}
           />
-          <button
-            onClick={() => onEdit(task)}
-            title="Editar"
-            className="p-1 text-fg-muted hover:text-accent-text hover:bg-accent/10 rounded-control transition-colors"
-          >
-            <Pencil size={14} />
-          </button>
-          <button
-            onClick={() => onDelete(task)}
-            title="Excluir"
-            className="p-1 text-fg-muted hover:text-danger hover:bg-danger/10 rounded-control transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
-        </>
-      }
-    />
+        }
+      />
+
+      {/* Irmão da linha, e não filho: os atalhos do menu não chegam à linha. */}
+      <Menu
+        anchor={menu.anchor}
+        items={menu.items}
+        onClose={menu.close}
+        label="Ações do lançamento"
+      />
+    </>
   );
 }
