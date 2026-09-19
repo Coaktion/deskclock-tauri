@@ -19,9 +19,7 @@ function setup(disabled = false) {
 }
 
 function pointer(x: number, y: number) {
-  return { preventDefault: vi.fn(), clientX: x, clientY: y } as unknown as MouseEvent & {
-    preventDefault: ReturnType<typeof vi.fn>;
-  };
+  return { preventDefault: vi.fn(), clientX: x, clientY: y } as unknown as MouseEvent;
 }
 
 describe("usePlannedRowMenu", () => {
@@ -47,42 +45,8 @@ describe("usePlannedRowMenu", () => {
     expect(actions.onDelete).toHaveBeenCalledTimes(1);
   });
 
-  it("nasce fechado", () => {
-    const { result } = setup();
-    expect(result.current.anchor).toBeNull();
-    expect(result.current.fromTrigger).toBe(false);
-  });
-
-  it("toggleFrom abre ancorado ao gatilho e, com o menu aberto, fecha", () => {
-    const { result } = setup();
-    const gatilho = document.createElement("span");
-
-    act(() => result.current.toggleFrom(gatilho));
-    expect(result.current.anchor).toBe(gatilho);
-    expect(result.current.fromTrigger).toBe(true);
-
-    act(() => result.current.toggleFrom(gatilho));
-    expect(result.current.anchor).toBeNull();
-  });
-
-  it("openAtPointer segura o menu do sistema e ancora no ponto, sem se dizer do gatilho", () => {
-    const { result } = setup();
-    const evento = pointer(40, 60);
-
-    act(() => result.current.openAtPointer(evento));
-    expect(evento.preventDefault).toHaveBeenCalledTimes(1);
-    expect(result.current.anchor).toEqual({ x: 40, y: 60 });
-    expect(result.current.fromTrigger).toBe(false);
-  });
-
-  it("close fecha", () => {
-    const { result } = setup();
-    act(() => result.current.openAtPointer(pointer(1, 2)));
-    act(() => result.current.close());
-    expect(result.current.anchor).toBeNull();
-  });
-
-  it("ao entrar no modo de seleção o menu fecha, e não reaparece ao sair", () => {
+  // O resto do comportamento (abrir, alternar, fechar) é do `useRowMenu` e é testado lá.
+  it("repassa o modo de seleção: o menu aberto fecha ao entrar nele", () => {
     const { result, rerender } = setup();
     act(() => result.current.openAtPointer(pointer(1, 2)));
 

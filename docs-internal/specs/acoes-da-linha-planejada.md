@@ -86,8 +86,8 @@ isso, cada clique neles abriria também o modal de edição.
 - **O handler só age com `event.target === event.currentTarget`.** Com o foco num botão _dentro_
   da linha, o Espaço já aciona aquele botão, e agir também na linha faria duas coisas com uma
   tecla.
-- A tradução de tecla em ação é uma função pura (`plannedRowKey`), testada à parte. Com
-  Ctrl/Meta/Alt ela devolve `null`: a linha não rouba `Ctrl+Z` nem atalho do sistema.
+- A tradução de tecla em ação é uma função pura (`rowKey` com o mapa `PLANNED_ROW_KEYS`),
+  testada à parte. Com Ctrl/Meta/Alt ela devolve `null`: a linha não rouba `Ctrl+Z` nem atalho do sistema.
 - **As setas andam dentro do cartão do dia** e param nas pontas; não atravessam para o dia
   seguinte. A vizinha é achada pelo `tabindex="0"` que o `TaskRow` só põe na linha focável.
 - **O menu é irmão da linha, não filho**: os atalhos dele nem chegam à linha, e a guarda de
@@ -147,7 +147,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | F3   | primitivo `ui/Menu`: âncora em elemento ou em ponto, teclado, portal                                 | ✅ `602d2b3` (+ fix de foco `013df5a`) |
 | F4   | props aditivas: `TaskRow.trailing`/`onContextMenu`/`onKeyDown` e `IconButton variant="primary"`      | ✅ `4347328`                           |
 | F5   | linha do Planejamento: `ui/CompleteToggle`, `ui/ClickBoundary`, `plannedRowKey`, `usePlannedRowMenu` | ✅ `302a8f0` — testada pelo usuário    |
-| G1   | desfazer genérico + lançamentos (`Task`)                                                             | ✅                                     |
+| G1   | desfazer genérico + lançamentos (`Task`)                                                             | ✅ `fe67e70`                           |
 | G2   | menu e teclado de linha genéricos                                                                    | a fazer                                |
 | G3   | popup: lista de planejadas                                                                           | a fazer                                |
 | G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | a fazer                                |
@@ -210,6 +210,21 @@ se conclui — planejadas —, nunca em lançamento.
 - `plannedRowKey` → tradução genérica de tecla em ação, com o mapa por tela (E/D/L/Del só onde o
   item existe). Mesmas regras: foco na própria linha, `preventDefault` só no mapeado, modificador
   e auto-repeat passam.
+
+**Como ficou (G2):**
+
+- **Menu: `useRowMenu({ items, disabled })`** (`presentation/hooks/useRowMenu.ts`), devolvendo
+  `{ anchor, fromTrigger, items, toggleFrom, openAtPointer, close }`. O `usePlannedRowMenu`
+  manteve a assinatura e só monta os quatro itens.
+- **Tecla: `rowKey(e, map)`** (`presentation/components/rowKey.ts`), com
+  `map: RowKeyMap<A>` (tecla → ação, letra em minúscula) e retorno `A | RowFocusAction | null`.
+  As setas (`focusNext`/`focusPrev`) ficam **fora** do mapa e valem em toda linha; modificador e
+  auto-repeat, exceto nas setas, dão `null`. O mapa da planejada é `PLANNED_ROW_KEYS`.
+- **Fiação: `rowKeyDownHandler(map, handlers)`**, no mesmo arquivo, devolve o `onKeyDown` da
+  linha: guarda `target === currentTarget`, `preventDefault` só no mapeado, setas movem o foco
+  entre irmãs `:scope > [tabindex="0"]`. `handlers: Record<A, () => void>`, então o tipo exige
+  um handler por ação do mapa. É o que G3–G5 usam; a superfície sem Duplicar e Copiar link
+  simplesmente não põe `d` e `l` no mapa.
 
 ### Por superfície
 

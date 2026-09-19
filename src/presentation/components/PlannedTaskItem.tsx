@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from "react";
+import { useRef, useState } from "react";
 import { Play, RefreshCw, Bell, MoreHorizontal } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
@@ -20,7 +20,8 @@ import {
   type RowExecution,
 } from "@presentation/components/ui";
 import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
-import { plannedRowKey } from "@presentation/components/plannedRowKey";
+import { PLANNED_ROW_KEYS } from "@presentation/components/plannedRowKey";
+import { rowKeyDownHandler } from "@presentation/components/rowKey";
 import { usePlannedRowMenu } from "@presentation/hooks/usePlannedRowMenu";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { plannedTaskToSharePayload } from "@domain/utils/sharePayload";
@@ -127,35 +128,16 @@ export function PlannedTaskItem({
     else onComplete(task.id, dateISO);
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    /* Só a tecla dirigida à **própria** linha. Com o foco num botão dela, o
-       Espaço já aciona aquele botão, e agir aqui também faria duas coisas com
-       uma tecla. */
-    if (e.target !== e.currentTarget) return;
-    const action = plannedRowKey(e);
-    if (!action) return;
-    // Contrato nº3: sem isto o Espaço rola a lista e o Enter chega a algum
-    // `useSubmitOnEnter` por cima.
-    e.preventDefault();
-    switch (action) {
-      case "play":
-        if (canPlay) onPlay(task);
-        return;
-      case "toggleComplete":
-        return toggleComplete();
-      case "edit":
-        return setShowModal(true);
-      case "duplicate":
-        return onDuplicate(task.id);
-      case "copyLink":
-        return void handleShare();
-      case "delete":
-        return onDelete(task.id);
-      case "focusNext":
-      case "focusPrev":
-        return focusSibling(e.currentTarget, action === "focusNext" ? 1 : -1);
-    }
-  }
+  const handleKeyDown = rowKeyDownHandler(PLANNED_ROW_KEYS, {
+    play: () => {
+      if (canPlay) onPlay(task);
+    },
+    toggleComplete,
+    edit: () => setShowModal(true),
+    duplicate: () => onDuplicate(task.id),
+    copyLink: () => void handleShare(),
+    delete: () => onDelete(task.id),
+  });
 
   /*
    * O ⚡ saiu daqui e virou o `PlannedActionsFlyout`, no slot `badges`. Com ele
@@ -283,17 +265,4 @@ export function PlannedTaskItem({
       )}
     </>
   );
-}
-
-/**
- * As setas andam entre as linhas **do mesmo dia**, que são irmãs no DOM; nas
- * pontas não fazem nada. A linha focável é a de `tabIndex=0` — o `TaskRow` só a
- * marca assim quando recebe `onKeyDown`, então o filtro pula o modal de edição
- * e qualquer outro irmão que não seja linha.
- */
-function focusSibling(row: HTMLElement, step: 1 | -1) {
-  const rows = Array.from(
-    row.parentElement?.querySelectorAll<HTMLElement>(':scope > [tabindex="0"]') ?? []
-  );
-  rows[rows.indexOf(row) + step]?.focus();
 }
