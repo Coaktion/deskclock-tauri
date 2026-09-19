@@ -23,3 +23,4 @@ export { PageHeader } from "./PageHeader";
 export { SectionCard, SectionRow } from "./SectionCard";
 export { SettingLabel } from "./SettingLabel";
 export { AddRow } from "./AddRow";
+export { Menu, MENU_DIVIDER, type MenuItem, type MenuEntry, type MenuAnchor } from "./Menu";
