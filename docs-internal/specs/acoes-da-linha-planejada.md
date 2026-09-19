@@ -147,7 +147,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | F3   | primitivo `ui/Menu`: âncora em elemento ou em ponto, teclado, portal                                 | ✅ `602d2b3` (+ fix de foco `013df5a`) |
 | F4   | props aditivas: `TaskRow.trailing`/`onContextMenu`/`onKeyDown` e `IconButton variant="primary"`      | ✅ `4347328`                           |
 | F5   | linha do Planejamento: `ui/CompleteToggle`, `ui/ClickBoundary`, `plannedRowKey`, `usePlannedRowMenu` | ✅ `302a8f0` — testada pelo usuário    |
-| G1   | desfazer genérico + lançamentos (`Task`)                                                             | a fazer                                |
+| G1   | desfazer genérico + lançamentos (`Task`)                                                             | ✅                                     |
 | G2   | menu e teclado de linha genéricos                                                                    | a fazer                                |
 | G3   | popup: lista de planejadas                                                                           | a fazer                                |
 | G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | a fazer                                |
@@ -178,6 +178,30 @@ se conclui — planejadas —, nunca em lançamento.
   restauro não pode ressuscitá-la rodando.
 - Os três pontos que apagam lançamento pela UI passam pelo hook: `TodayEntriesSection`,
   `useHistory` (inclusive o lote do modo de seleção), `RetroactivePage` (idem).
+
+**Como ficou (G1):**
+
+- **Hook genérico: `useUndoableDelete<T>(options)`**, com `remove`, `restore`,
+  `deletedMessage`, `undoEvent` e `onChanged`, devolvendo `{ removeWithUndo(ids) }`.
+  `usePlannedTaskUndo(onChanged)` e o novo `useTaskUndo(reload)` são configurações dele. O `useTaskUndo` emite `TASKS_CHANGED` ele
+  mesmo, ao apagar e ao restaurar — quem chama só passa o recarregar da própria tela.
+- **`findById` hidrata `customValues`** (`TaskRepository.hydrate`), e o `save` é `INSERT` com
+  todas as colunas do `Task`, `planned_task_id` inclusive: o snapshot já é completo. A coluna
+  legada `sent_to_sheets` não está no `Task` e volta com o default `0`; nada no código a lê — o
+  "enviado" vem do `task_integration_log`, que sobrevive.
+- **A tarefa em execução não pode ser excluída por nenhuma das três listas**: `useTasks`,
+  `searchTasks` (Histórico) e o `loadTasks` do Lançamento Manual filtram pelo status
+  `completed`. O snapshot é sempre de lançamento concluído, e o restauro não tem como
+  ressuscitar execução.
+- O `useHistory` trocou o `remove` (que remendava grupos e totais à mão) pelo `removeWithUndo`,
+  e recarrega a busca: o remendo teria de saber repor a tarefa no desfazer. Recarregar repete a
+  **última busca que rodou**, não o filtro editado e ainda não buscado.
+- Limitação aceita, a mesma das planejadas: sair da tela nos 6 s descarta o lote, e o Desfazer do
+  toast deixa de fazer efeito.
+- Sem porta de exclusão sem desfazer na UI: o `deleteTask` singular só é chamado pela API local.
+- Limitação aceita: duas instâncias com lote pendente ao mesmo tempo (ex.: Planejamento e popup,
+  cada uma apagou algo nos mesmos 6 s) restauram as duas com um clique no toast, porque o evento
+  é o mesmo. Cada uma restaura só o próprio lote, nunca o da outra.
 
 ### G2 · Menu e teclado genéricos
 

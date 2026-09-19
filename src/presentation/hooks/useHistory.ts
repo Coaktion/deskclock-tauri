@@ -5,13 +5,13 @@ import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { searchTasks } from "@domain/usecases/tasks/SearchTasks";
 import { getHistoryTotals, type HistoryTotals } from "@domain/usecases/tasks/GetHistoryTotals";
-import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { listen } from "@tauri-apps/api/event";
 import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import type { WeekStart } from "@shared/types/appConfig";
 import { dateRangeFor, type DateRangeId } from "@shared/utils/datePresets";
 import type { UUID } from "@shared/types";
@@ -134,9 +134,13 @@ export function useHistory() {
   // muda `filters.quick` sem buscar, e a mensagem de vazio descreve o resultado
   // que está à vista.
   const [searchedQuick, setSearchedQuick] = useState<QuickFilter>(INITIAL_FILTERS.quick);
+  // Pelo mesmo motivo, recarregar repete a busca que rodou: com `filters`, excluir
+  // uma linha com o campo Nome editado e não buscado trocaria a lista inteira.
+  const lastSearchedRef = useRef<HistoryFilters>(INITIAL_FILTERS);
 
   const search = useCallback(
     async (f: HistoryFilters) => {
+      lastSearchedRef.current = f;
       const range = await resolveRange(taskRepo, f, workspaceId, weekStartsOn);
       setSearchedQuick(f.quick);
       if (!range) {
@@ -172,46 +176,18 @@ export function useHistory() {
     setFilters((prev) => ({ ...prev, quick }));
   }, []);
 
-  const remove = useCallback(
-    async (id: UUID) => {
-      const task = groups.flatMap((g) => g.tasks).find((t) => t.id === id);
-      await deleteTask(taskRepo, id);
-      void notifyTasksChanged();
-      setGroups((prev) =>
-        prev
-          .map((g) => {
-            const tasks = g.tasks.filter((t) => t.id !== id);
-            return {
-              ...g,
-              tasks,
-              totalSeconds: tasks.reduce((sum, t) => sum + (t.durationSeconds ?? 0), 0),
-            };
-          })
-          .filter((g) => g.tasks.length > 0)
-      );
-      if (task) {
-        const s = task.durationSeconds ?? 0;
-        setTotals((prev) => ({
-          count: prev.count - 1,
-          totalSeconds: prev.totalSeconds - s,
-          billableSeconds: task.billable ? prev.billableSeconds - s : prev.billableSeconds,
-          nonBillableSeconds: !task.billable
-            ? prev.nonBillableSeconds - s
-            : prev.nonBillableSeconds,
-        }));
-      }
-    },
-    [taskRepo, groups]
-  );
+  const reload = useCallback(() => search(lastSearchedRef.current), [search]);
 
-  const reload = useCallback(() => search(filters), [search, filters]);
+  // Excluir e desfazer recarregam a busca, sem remendo local: o desfazer
+  // devolve a tarefa, e o remendo teria de saber repô-la no dia e nos totais.
+  const { removeWithUndo } = useTaskUndo(reload);
 
   /**
    * Alterna o faturamento da entrada e das irmãs do grupo dela — a mesma regra
    * da tela de Tarefas, e o recorte que `setGroupBillable` prevê para o dia
    * aberto no histórico.
    *
-   * Recarrega em vez de remendar o estado local, como faz o `remove`: a
+   * Recarrega em vez de remendar o estado local, como faz a exclusão: a
    * alternância mexe em N tarefas e move segundos entre os dois totais, e um
    * remendo que erre a conta fica na tela dizendo um total que o banco não tem.
    */
@@ -228,9 +204,8 @@ export function useHistory() {
   // recorte. Sem isto os resultados na tela continuam sendo os do workspace
   // anterior, já que a busca só roda quando o usuário a dispara.
   //
-  // O ref é o que permite declarar todas as dependências: `reload` muda a cada
-  // ajuste de filtro, e sem o guarda a busca dispararia a cada tecla digitada
-  // no campo Nome.
+  // O ref é o que permite declarar todas as dependências: `reload` muda com o
+  // workspace e com a semana, e o efeito só deve buscar na troca de workspace.
   const lastWorkspaceId = useRef(workspaceId);
   useEffect(() => {
     if (lastWorkspaceId.current === workspaceId) return;
@@ -257,7 +232,7 @@ export function useHistory() {
     search,
     updateFilter,
     setQuick,
-    remove,
+    removeWithUndo,
     toggleBillable,
     reload,
   };

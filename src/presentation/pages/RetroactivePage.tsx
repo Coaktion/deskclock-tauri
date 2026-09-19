@@ -3,7 +3,6 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
-import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
@@ -27,6 +26,7 @@ import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useResizablePanel } from "@presentation/hooks/useResizablePanel";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
+import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
@@ -262,10 +262,10 @@ export function RetroactivePage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const { removeWithUndo } = useTaskUndo(loadTasks);
+
   async function handleDelete(id: string) {
-    await deleteTask(taskRepo, id);
-    void notifyTasksChanged();
-    await loadTasks();
+    await removeWithUndo([id]);
   }
 
   /**
@@ -357,12 +357,9 @@ export function RetroactivePage() {
     setSelectedIds(new Set());
   }
 
+  // Um lote só: é o que dá um toast e um Desfazer para a seleção inteira.
   async function handleBulkDelete() {
-    for (const id of selectedIds) {
-      await deleteTask(taskRepo, id);
-    }
-    void notifyTasksChanged();
-    await loadTasks();
+    await removeWithUndo([...selectedIds]);
     exitSelectMode();
   }
 
