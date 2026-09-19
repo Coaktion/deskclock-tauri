@@ -1,8 +1,10 @@
 # Ações da linha planejada
 
-> **Estado: em execução**, na branch `feat/planned-row-actions`, uma fase por commit (tabela
-> abaixo). Decidido em 2026-09-18 a partir de um protótipo com duas variantes. Esta foi a
-> escolhida, e a outra (concluir como botão à direita) foi descartada.
+> **Estado: em execução**, uma fase por commit (tabela "Fases"). Decidido em 2026-09-18 a partir
+> de um protótipo com duas variantes. Esta foi a escolhida, e a outra (concluir como botão à
+> direita) foi descartada. **Duas branches:** `feat/planned-row-actions` termina na F5 (só o
+> Planejamento, testado e aprovado) e é o ponto de retorno; `feat/row-actions-lists` sai dela e
+> leva o padrão às outras listas (Parte 2). O PR final é o da segunda, que contém a primeira.
 
 A linha do Planejamento tinha seis botões de mesmo peso no hover: Play, Compartilhar, Editar,
 Concluir, Duplicar e Excluir. O problema não era a quantidade, era a hierarquia:
@@ -135,15 +137,70 @@ wireframe está desfazendo decisão tomada.
 
 ## Fases
 
-| Fase | Entrega                                                                                                     |
-| ---- | ----------------------------------------------------------------------------------------------------------- |
-| F0   | este spec e a atualização de `telas/planejamento.md`                                                        |
-| F1   | `deletePlannedTasks` (devolve os snapshots) e `restorePlannedTasks` (idempotente)                           |
-| F2   | hook `usePlannedTaskUndo`: toast com Desfazer, evento, `Ctrl+Z`, lote                                       |
-| F3   | primitivo `ui/Menu`: âncora em elemento ou em ponto, teclado, portal                                        |
-| F4   | props aditivas: `TaskRow.trailing`/`onContextMenu`/`onKeyDown` e `IconButton variant="primary"`             |
-| F5   | montagem no `PlannedTaskItem`/`WeekPlanningView`, `ui/CompleteToggle`, `plannedRowKey`, "Copiar link" na UI |
-| F6   | manual (`docs/index.html`) e docs com "Copiar link", `pnpm visual`, 2 modos × 4 acentos, PR                 |
+F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que sai dela (decisão do usuário, 2026-09-19: fica fácil voltar a só o Planejamento).
 
-**Fora do escopo:** as outras superfícies com linha de tarefa (a planejada de hoje em Tarefas, o
-popup, o Histórico). Elas devem reaproveitar `ui/Menu` e `ui/CompleteToggle` numa rodada própria.
+| Fase | Entrega                                                                                              | Estado                                 |
+| ---- | ---------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| F0   | este spec e a atualização de `telas/planejamento.md`                                                 | ✅ `e2f286c`                           |
+| F1   | `deletePlannedTasks` (devolve os snapshots) e `restorePlannedTasks` (idempotente)                    | ✅ `f458080`                           |
+| F2   | hook `usePlannedTaskUndo`: toast com Desfazer, evento, `Ctrl+Z`, lote                                | ✅ `ef69d5d`                           |
+| F3   | primitivo `ui/Menu`: âncora em elemento ou em ponto, teclado, portal                                 | ✅ `602d2b3` (+ fix de foco `013df5a`) |
+| F4   | props aditivas: `TaskRow.trailing`/`onContextMenu`/`onKeyDown` e `IconButton variant="primary"`      | ✅ `4347328`                           |
+| F5   | linha do Planejamento: `ui/CompleteToggle`, `ui/ClickBoundary`, `plannedRowKey`, `usePlannedRowMenu` | ✅ `302a8f0` — testada pelo usuário    |
+| G1   | desfazer genérico + lançamentos (`Task`)                                                             | a fazer                                |
+| G2   | menu e teclado de linha genéricos                                                                    | a fazer                                |
+| G3   | popup: lista de planejadas                                                                           | a fazer                                |
+| G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | a fazer                                |
+| G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | a fazer                                |
+| G6   | planejadas de hoje em Tarefas (`OmniboxIdle`)                                                        | a fazer                                |
+| G7   | manual (`docs/index.html`) e docs com "Copiar link", `pnpm visual`, 2 modos × 4 acentos, PR          | a fazer                                |
+
+## Parte 2 — as outras listas
+
+O padrão da linha planejada vale para toda lista de tarefa: **o que se usa sempre fica visível,
+o raro vai para o ⋯ (e o clique direito), e excluir se desfaz.** O círculo só existe onde algo
+se conclui — planejadas —, nunca em lançamento.
+
+### G1 · Desfazer genérico e lançamentos
+
+- **Lançamento se apaga como planejada**: `DELETE` de verdade; `task_custom_values` cai em
+  cascata; `task_integration_log`, `calendar_tracked_meetings.started_task_id` e os `task_ids` de
+  `monday_activity_items` **não têm FK** e sobrevivem. Então o mesmo desenho serve: snapshot por
+  `findById` (confirmar que hidrata `customValues`), restauro com o mesmo id, idempotente.
+- `deleteTasks`/`restoreTasks` em `domain/usecases/tasks/`, espelhando F1.
+- É a **segunda** ocorrência do desfazer: o `usePlannedTaskUndo` vira um hook genérico que recebe
+  as funções de apagar/restaurar, o rótulo ("Tarefa excluída" / "Lançamento excluído"…) e o evento
+  do toast. `usePlannedTaskUndo` passa a ser uma configuração dele. Evento novo para lançamentos
+  (`TASKS_UNDO_DELETE`) e o aviso às outras janelas pelo `TASKS_CHANGED` que já existe.
+- **Duas janelas podem montar o mesmo hook** (o Planejamento e o popup). Cada uma só guarda o lote
+  que **ela** apagou, então a que não apagou ignora o evento do toast — conferir com teste.
+- Verificar se a tarefa **em execução** pode ser excluída por alguma dessas listas; se puder, o
+  restauro não pode ressuscitá-la rodando.
+- Os três pontos que apagam lançamento pela UI passam pelo hook: `TodayEntriesSection`,
+  `useHistory` (inclusive o lote do modo de seleção), `RetroactivePage` (idem).
+
+### G2 · Menu e teclado genéricos
+
+- `usePlannedRowMenu` → hook de menu de linha que recebe os itens; o de planejada vira
+  configuração dele.
+- `plannedRowKey` → tradução genérica de tecla em ação, com o mapa por tela (E/D/L/Del só onde o
+  item existe). Mesmas regras: foco na própria linha, `preventDefault` só no mapeado, modificador
+  e auto-repeat passam.
+
+### Por superfície
+
+| Fase | Superfície                         | Visível                          | ⋯ e clique direito                             | Clique na linha                             | Desfazer            |
+| ---- | ---------------------------------- | -------------------------------- | ---------------------------------------------- | ------------------------------------------- | ------------------- |
+| G3   | popup, planejadas (`PlannedRow`)   | círculo, Play                    | Editar · Duplicar · Copiar link · Excluir      | edita                                       | sim                 |
+| G4   | entradas de Tarefas (`TaskCard`)   | Play ("Iniciar com estes dados") | Editar · Excluir                               | edita                                       | sim                 |
+| G4   | grupo de Tarefas (`TaskGroupCard`) | —                                | Editar grupo · Mover para workspace · Unificar | expande (como hoje)                         | —                   |
+| G5   | Histórico e Lançamento Manual      | —                                | Editar · Excluir                               | edita fora do modo de seleção; marca dentro | sim, inclusive lote |
+| G6   | planejadas de hoje (`OmniboxIdle`) | círculo                          | —                                              | **inicia** (como hoje)                      | —                   |
+
+- **Concluídas do popup ficam como estão**: dois botões (Editar, Repetir) num painel de 264 px;
+  o menu pesaria mais que ajudaria.
+- O popup tem 264 px úteis: conferir que círculo + Play + ⋯ + chip cabem sem truncar o nome.
+- Cada superfície que ganha `onKeyDown` fica focável; as regras de foco da F5 valem igual.
+- `screenGeometry` mede várias dessas telas (3a Tarefas, 3b Histórico, 3f Lançamento Manual):
+  mudança de grade que o wireframe não desenha é **exceção declarada** (`it`, como na 3e), não
+  `divergente`. Na dúvida, parar e perguntar.
