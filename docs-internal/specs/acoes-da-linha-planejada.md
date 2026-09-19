@@ -410,3 +410,48 @@ se conclui — planejadas —, nunca em lançamento.
   fica"), com a nota do que não foi renomeado. O contrato do link não mudou em nada.
 - Falta a **verificação visual** (`pnpm visual`, `pnpm tauri dev` nos 2 modos × 4 acentos) e o PR,
   que são do usuário.
+
+## Parte 3 — o que a revisão do usuário mudou (2026-09-19)
+
+O usuário revisou as seis telas no app e pediu três mudanças, que valem em **todas** elas. As três
+são decisão dele, não dívida de fidelidade: quem for "corrigi-las" de volta está desfazendo
+decisão tomada.
+
+### H1 · O menu lista as ações, e o ⚡ sai da linha
+
+- O menu ⋯ ganha um **divisor e uma seção de ações** — as `PlannedTaskAction` da tarefa, as mesmas
+  que o ⚡ executava.
+- **Uma ação só: ela é o item**, clicável direto, como o ⚡ já fazia ao executar sem abrir painel.
+- **Mais de uma: um item "Ações" com submenu**, que abre no **hover** do item (e pelo teclado, como
+  qualquer item).
+- **O ⚡ deixa de existir na linha.** A ação passa a morar só no menu. Custa um clique a mais em
+  quem usa a ação todo dia, e é o preço de devolver a largura ao nome: era o segundo controle que
+  disputava a mesma faixa com o chip e a duração. O `PlannedActionsFlyout` continua na **barra de
+  título** (variante `icon`), que não é linha de lista.
+
+### H2 · O ⋯ é sempre visível, e é a primeira coluna da direita
+
+- Ele **não some mais no repouso** e **não se empilha sobre a duração**: hoje a duração apaga no
+  hover para o ⋯ tomar o lugar dela, e é isso que faz o tempo sumir no Histórico e nas entradas de
+  hoje.
+- A ordem da direita passa a ser **⋯ · chip · duração · ▶**. O ⋯ primeiro é o que o mantém no mesmo
+  x em toda linha, tenha ela chip ou não — e é o que impede que ele cubra qualquer dado.
+- `collapseActions` perde o sentido nesse arranjo: a célula não fecha mais em largura.
+
+### H3 · As concluídas do popup entram no padrão
+
+Revoga a linha da Parte 2 que as deixava como estavam.
+
+| Peça            | Como fica                                              |
+| --------------- | ------------------------------------------------------ |
+| Repetir         | vira o **▶ fixo**, como nas entradas de Tarefas        |
+| ⋯               | Editar · Excluir (com desfazer), mais a seção de ações |
+| Clique na linha | edita                                                  |
+
+### Fases
+
+| Fase | Entrega                                                         | Estado  |
+| ---- | --------------------------------------------------------------- | ------- |
+| H1   | submenu no `ui/Menu` + seção de ações; ⚡ sai das linhas        | a fazer |
+| H2   | `TaskRow`: ⋯ sempre visível, primeira coluna da direita         | a fazer |
+| H3   | concluídas do popup no padrão + docs e manual das três mudanças | a fazer |
