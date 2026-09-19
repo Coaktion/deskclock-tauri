@@ -164,6 +164,31 @@ describe("Menu — teclado", () => {
     expect(focused()).toContain("Editar");
   });
 
+  /*
+   * O navegador recusa foco em elemento com `visibility: hidden`, e o jsdom não:
+   * sem esta trava, focar antes de o painel aparecer passa aqui e quebra no app —
+   * as setas e o Enter ficavam com a linha por baixo do menu.
+   */
+  it("só foca depois de o painel ficar visível", () => {
+    const visibilityAtFocus: string[] = [];
+    const original = HTMLElement.prototype.focus;
+    const spy = vi.spyOn(HTMLElement.prototype, "focus").mockImplementation(function (
+      this: HTMLElement,
+      options?: FocusOptions
+    ) {
+      const panel = this.closest<HTMLElement>('[role="menu"]');
+      if (panel) visibilityAtFocus.push(panel.style.visibility);
+      original.call(this, options);
+    });
+    try {
+      openByTrigger(makeItems().items);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(visibilityAtFocus.length).toBeGreaterThan(0);
+    expect(visibilityAtFocus.every((v) => v === "visible")).toBe(true);
+  });
+
   it("↓ e ↑ navegam com volta, pulando o desabilitado", () => {
     const { menu } = openByTrigger(makeItems({ disabledDuplicar: true }).items);
     fireEvent.keyDown(menu, { key: "ArrowDown" });

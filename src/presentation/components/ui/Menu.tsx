@@ -134,11 +134,23 @@ export function Menu({ anchor, items, onClose, label }: MenuProps) {
     const placement =
       anchor instanceof HTMLElement ? { rect: anchor.getBoundingClientRect() } : { point: anchor };
     setPosition(placeMenu(placement, size, viewport));
-    // `preventScroll`: o foco não pode rolar a lista, ou o listener de rolagem
-    // fecharia o menu no mesmo instante em que ele abriu.
+  }, [anchor]);
+
+  /*
+   * O foco espera o painel **aparecer**. Ele nasce em `visibility: hidden` até ser
+   * medido, e o navegador recusa foco em elemento invisível — sem erro, o
+   * `focus()` só não faz nada, e as setas e o Enter ficavam com a linha por baixo.
+   * O jsdom não aplica essa regra, por isso o teste afirma a visibilidade no
+   * instante do `focus()`. `preventScroll`: o foco não pode rolar a lista, ou o
+   * listener de rolagem fecharia o menu no mesmo instante em que ele abriu.
+   */
+  const visible = position !== null;
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!visible || !panel) return;
     const first = panel.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])');
     (first ?? panel).focus({ preventScroll: true });
-  }, [anchor]);
+  }, [visible]);
 
   useEffect(() => {
     if (!anchor) return;
