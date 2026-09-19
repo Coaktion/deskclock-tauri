@@ -150,7 +150,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | G1   | desfazer genérico + lançamentos (`Task`)                                                             | ✅ `fe67e70`                           |
 | G2   | menu e teclado de linha genéricos                                                                    | ✅ `9e8c28b`                           |
 | G3   | popup: lista de planejadas                                                                           | ✅ `3081d6b`                           |
-| G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | a fazer                                |
+| G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | ✅ `06f0881`                           |
 | G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | a fazer                                |
 | G6   | planejadas de hoje em Tarefas (`OmniboxIdle`)                                                        | a fazer                                |
 | G7   | manual (`docs/index.html`) e docs com "Copiar link", `pnpm visual`, 2 modos × 4 acentos, PR          | a fazer                                |
@@ -319,3 +319,41 @@ se conclui — planejadas —, nunca em lançamento.
   `TasksPage`, risco **LOW**, tudo dentro da tela de Tarefas.
 - **Falta conferir no `pnpm tauri dev`**: o ▶ um degrau maior na linha das Entradas (2 modos × 4
   acentos) e o alinhamento do chip entre cabeçalho, filha e entrada solta.
+
+**Como ficou (G5):**
+
+- **Uma linha só para as duas telas**: `components/DayEntryRow.tsx`. O Histórico e o Lançamento
+  Manual desenhavam a **mesma** linha em dois arquivos — mesma grade, mesmo par de botões no
+  hover, mesmo modo de seleção —, e a G5 mexia nos dois do mesmo jeito. É a segunda ocorrência que
+  a regra anti-DRY pede, então a linha privada do `RetroactivePage` (`DayTaskRow`) e o `TaskRow`
+  montado dentro do `map` do `HistoryTasksTab` viraram o mesmo componente. Quem se especializa é o
+  call site, por `badges` — só o Histórico tem o ⚡.
+- **Antes**, cada linha tinha dois botões no hover (Editar e Excluir, os dois `IconButton`) e o
+  clique na linha não fazia nada fora do modo de seleção. Nenhum dos dois se perdeu: são os itens
+  do ⋯ e do clique direito, e Editar ganhou também o clique na linha. **Nada além desses dois
+  existia** para sobreviver — o ⚡ do Histórico, o chip de faturamento e a caixa de seleção
+  continuam onde estavam.
+- **Sem ▶ e sem círculo**, e por isso **sem coluna `trailing`**: lançamento passado não se conclui,
+  e "iniciar com estes dados" é gesto das Entradas de hoje (G4), não de uma lista do passado. As
+  duas listas são homogêneas — nenhuma linha delas tem ▶ —, então não há coluna a reservar vazia,
+  que é o que o cabeçalho de grupo da G4 precisou fazer.
+- **Menu por `useEntryRowMenu`**, o mesmo da G4 (Editar · — · Excluir em tom `danger`), que ganhou
+  `disabled` para o modo de seleção. Teclado por `rowKeyDownHandler(DAY_ENTRY_ROW_KEYS, ...)`:
+  `E` edita, `Del` exclui, setas andam. É o `ENTRY_ROW_KEYS` **menos o Enter** — sem ▶, um Enter
+  consumido não corresponderia a ação nenhuma.
+- **No modo de seleção a linha volta a ser só alvo de marcar**: sem ⋯, sem clique direito, sem
+  foco de teclado (as setas pulam a linha que não tem o que acionar) e o `useRowMenu` `disabled`,
+  que **fecha** o que estiver aberto em vez de esconder.
+- **Excluir já vinha pelo desfazer** desde a G1 — `useHistory` e `RetroactivePage` passam o
+  `removeWithUndo`, a linha e o lote da seleção pelo mesmo caminho. A G5 só mudou por onde se
+  chega nele, e `tests/presentation/pages/entryDeletePaths.test.ts` trava as duas telas contra uma
+  segunda porta.
+- **`screenGeometry` (3b, Histórico; 3f, Lançamento Manual)** continua passando **sem exceção
+  nova**: as duas travas montam o `TaskRow` elas mesmas, a grade não mudou (nenhuma coluna entrou
+  ou saiu) e o que mudou foi o conteúdo da célula `actions`, que o wireframe não mede. A 3b afirma
+  também que a aba usa `<SectionCard`, e ela continua usando.
+- **Impacto** (`gitnexus`, upstream): `HistoryTasksTab` → `HistoryPage` → `App`, e
+  `RetroactivePage` → `App`; risco **LOW** nos dois, tudo dentro da própria tela.
+- **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): o ⋯ no lugar da dupla de botões nas
+  duas listas, o anel de foco da linha focável dentro do cartão do dia do Histórico e o menu
+  abrindo sobre listas que **rolam** — as duas rolam, e o `Menu` fecha na rolagem.

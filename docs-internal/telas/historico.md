@@ -110,7 +110,12 @@ busca nem desmarca o que estava marcado.**
 - **Totalizadores:** Total horas | Total billable | Total non-billable | Qtd registros — na aba KPIs.
 - **Agrupamento por dia:** Header do grupo = "Ter. 7 de abr de 2026 — 8:00" (dia da semana abreviado + data + total de horas do dia).
 - **Por grupo-dia:** Botão exportar individual.
-- **Por tarefa:** Botões Edit (modal) | Delete (sem confirmação).
+- **Por tarefa:** a linha é o `DayEntryRow` — **Editar** (modal) e **Excluir** no ⋯ e no clique
+  direito, clique na linha edita fora do modo de seleção e marca dentro dele, `E` e `Del` com o
+  foco na linha. Sem ▶ e sem círculo: lançamento passado não inicia nem se conclui. Excluir não
+  pede confirmação e **se desfaz** (toast com Desfazer e `Ctrl+Z`), a linha e o lote da seleção
+  pelo mesmo caminho. O desenho e o porquê estão em
+  `docs-internal/specs/acoes-da-linha-planejada.md` (G5).
 - **⚡ na linha:** a tarefa que veio de uma planejada mostra o `PlannedActionsFlyout` com a ação
   **atual** da origem (`actionsOfPlanned`, sobre as planejadas do workspace ativo) — a `Task` não
   guarda cópia, e a origem excluída não mostra nada. Some no modo de seleção, como no Planejamento.

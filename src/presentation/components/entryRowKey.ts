@@ -13,6 +13,16 @@ export const ENTRY_ROW_KEYS: RowKeyMap<"play" | "edit" | "delete"> = {
 };
 
 /**
+ * O teclado do lançamento **passado** — as linhas do Histórico e do Lançamento
+ * Manual (`DayEntryRow`). É o `ENTRY_ROW_KEYS` menos o Enter: ali não há ▶, e
+ * um Enter sem ação a que corresponder seria consumido por nada.
+ */
+export const DAY_ENTRY_ROW_KEYS: RowKeyMap<"edit" | "delete"> = {
+  e: "edit",
+  Delete: "delete",
+};
+
+/**
  * O cabeçalho do grupo nas Entradas (`TaskGroupCard`): só o `E` do "Editar
  * grupo", o único item do menu dele com atalho. Enter e Espaço **não** expandem
  * — expandir pelo teclado não existia, e o spec não o pede.

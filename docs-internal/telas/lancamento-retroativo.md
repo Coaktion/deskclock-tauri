@@ -29,7 +29,11 @@
 > cheio de reuniões voltam a valer no próximo dia cheio, mesmo tendo passado por dias de duas
 > planejadas.
 
-  - Botões por linha: Editar (abre `EditTaskModal`) | Excluir (sem confirmação).
+  - A linha é o `DayEntryRow`, o mesmo do Histórico: **Editar** (abre `EditTaskModal`) e
+    **Excluir** no ⋯ e no clique direito, clique na linha edita fora do modo de seleção e marca
+    dentro dele, `E` e `Del` com o foco na linha. Sem ▶ e sem círculo. Excluir não pede
+    confirmação e **se desfaz** (toast com Desfazer e `Ctrl+Z`), a linha e o lote pelo mesmo
+    `removeWithUndo`. Ver `docs-internal/specs/acoes-da-linha-planejada.md` (G5).
   - **Seleção múltipla** pela barra "Selecionar tarefas", acima da lista: excluir em massa e **Mover para workspace**, este só com mais de um workspace (`MoveToWorkspaceModal`, o mesmo do Histórico e das entradas de hoje). O mover estava nas outras duas listas de tarefas e faltava só aqui — a barra idêntica à do Histórico fazia a ausência parecer feature desativada.
 - **Total do dia:** Exibido no header quando há tarefas.
 
