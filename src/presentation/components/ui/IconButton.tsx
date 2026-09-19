@@ -9,9 +9,8 @@ import type { ReactNode } from "react";
  * `fg-muted`, e é o hover que diz se aquilo edita, navega ou apaga.
  *
  * `primary` é a exceção, e é uma só: o ▶ da linha planejada, a ação que se usa o
- * dia inteiro, tem cor **em repouso** — acento suave com glifo `accent-text` — e
- * enche no hover. O `text-white` do hover é a exceção documentada de texto sobre
- * `bg-accent`: não há token de texto sobre acento.
+ * dia inteiro, já nasce na cor do acento, **sem fundo** — o destaque é o glifo,
+ * que o chamador desenha preenchido. O hover é o mesmo `accent/10` do `accent`.
  */
 export type IconButtonVariant = "accent" | "neutral" | "danger" | "primary";
 export type IconButtonSize = "sm" | "md";
@@ -20,7 +19,7 @@ const VARIANT: Record<IconButtonVariant, string> = {
   accent: "text-fg-muted hover:text-accent-text hover:bg-accent/10",
   neutral: "text-fg-muted hover:text-fg hover:bg-raised",
   danger: "text-fg-muted hover:text-danger hover:bg-danger/10",
-  primary: "bg-accent/15 text-accent-text hover:bg-accent hover:text-white",
+  primary: "text-accent-text hover:bg-accent/10",
 };
 
 /**
@@ -30,7 +29,7 @@ const VARIANT: Record<IconButtonVariant, string> = {
  * e não pela ordem em que estão escritas aqui; trocar a string inteira não
  * disputa nada.
  *
- * Vale também para o `primary`, e ali é o ponto: sem o fundo de acento, o ▶
+ * Vale também para o `primary`, e ali é o ponto: sem a cor de acento, o ▶
  * bloqueado se lê como bloqueado, e não como a ação principal um pouco apagada.
  */
 const DISABLED = "text-fg-muted";

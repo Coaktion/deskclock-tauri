@@ -1,15 +1,5 @@
-import { useState } from "react";
-import {
-  Play,
-  Check,
-  Copy,
-  Trash2,
-  RotateCcw,
-  Pencil,
-  RefreshCw,
-  Bell,
-  Share2,
-} from "lucide-react";
+import { useRef, useState, type KeyboardEvent } from "react";
+import { Play, RefreshCw, Bell, MoreHorizontal } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -21,8 +11,17 @@ import {
 } from "@presentation/modals/EditPlannedTaskModal";
 import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
+import {
+  ClickBoundary,
+  CompleteToggle,
+  IconButton,
+  Menu,
+  TaskRow,
+  type RowExecution,
+} from "@presentation/components/ui";
 import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
+import { plannedRowKey } from "@presentation/components/plannedRowKey";
+import { usePlannedRowMenu } from "@presentation/hooks/usePlannedRowMenu";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { plannedTaskToSharePayload } from "@domain/utils/sharePayload";
 import { buildShareLink } from "@shared/utils/shareLink";
@@ -97,6 +96,15 @@ export function PlannedTaskItem({
   const project = projects.find((p) => p.id === task.projectId);
   const category = categories.find((c) => c.id === task.categoryId);
   const [showModal, setShowModal] = useState(false);
+  const moreRef = useRef<HTMLSpanElement>(null);
+  const canPlay = !isCompleted && !isPlayBlocked(playBlock);
+  const menu = usePlannedRowMenu({
+    onEdit: () => setShowModal(true),
+    onDuplicate: () => onDuplicate(task.id),
+    onCopyLink: () => void handleShare(),
+    onDelete: () => onDelete(task.id),
+    disabled: selectMode,
+  });
 
   async function handleSave(id: string, input: EditPlannedTaskInput) {
     await onUpdate(id, input);
@@ -111,6 +119,41 @@ export function PlannedTaskItem({
       await showToast("success", "Link copiado para a área de transferência.");
     } catch {
       await showToast("error", "Não foi possível copiar o link.");
+    }
+  }
+
+  function toggleComplete() {
+    if (isCompleted) onUncomplete(task.id, dateISO);
+    else onComplete(task.id, dateISO);
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    /* Só a tecla dirigida à **própria** linha. Com o foco num botão dela, o
+       Espaço já aciona aquele botão, e agir aqui também faria duas coisas com
+       uma tecla. */
+    if (e.target !== e.currentTarget) return;
+    const action = plannedRowKey(e);
+    if (!action) return;
+    // Contrato nº3: sem isto o Espaço rola a lista e o Enter chega a algum
+    // `useSubmitOnEnter` por cima.
+    e.preventDefault();
+    switch (action) {
+      case "play":
+        if (canPlay) onPlay(task);
+        return;
+      case "toggleComplete":
+        return toggleComplete();
+      case "edit":
+        return setShowModal(true);
+      case "duplicate":
+        return onDuplicate(task.id);
+      case "copyLink":
+        return void handleShare();
+      case "delete":
+        return onDelete(task.id);
+      case "focusNext":
+      case "focusPrev":
+        return focusSibling(e.currentTarget, action === "focusNext" ? 1 : -1);
     }
   }
 
@@ -154,13 +197,13 @@ export function PlannedTaskItem({
         subtitle={subtitle || undefined}
         dotColor={getProjectColor(project)}
         /* Ancorado **depois** da célula que cresce no hover, junto do chip de
-           faturamento: é a mesma posição que impede o chip de andar quando a
-           fileira de botões abre.
+           faturamento: é a mesma posição que impede o chip de andar quando o ⋯
+           abre.
 
-           Some no modo de seleção pelo mesmo motivo que os seis botões abaixo:
-           ali a linha inteira é alvo de marcar, e um controle que engole o
-           clique faria a tarefa recusar a seleção justamente enquanto se
-           escolhe o que excluir em lote. */
+           Some no modo de seleção pelo mesmo motivo que o Play e o ⋯: ali a
+           linha inteira é alvo de marcar, e um controle que engole o clique
+           faria a tarefa recusar a seleção justamente enquanto se escolhe o que
+           excluir em lote. */
         badges={!selectMode && <PlannedActionsFlyout actions={task.actions} />}
         billable={task.billable}
         /* `onUpdate` é o `update` do usePlannedTasks: recarrega e emite
@@ -175,64 +218,59 @@ export function PlannedTaskItem({
               onClick={(e) => e.stopPropagation()}
               className={selectionBoxClass}
             />
-          ) : undefined
+          ) : (
+            <CompleteToggle completed={isCompleted} onToggle={toggleComplete} />
+          )
         }
         selected={selected}
-        onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-        /* Sem hover os botões não ocupam largura nenhuma: reservados, o espaço
-           de seis botões sai do nome da tarefa, que trunca numa linha vazia à
-           direita (§5.3). */
+        onClick={selectMode ? () => onToggleSelect?.(task.id) : () => setShowModal(true)}
+        onContextMenu={selectMode ? undefined : menu.openAtPointer}
+        onKeyDown={selectMode ? undefined : handleKeyDown}
+        /* Sem hover o ⋯ não ocupa largura nenhuma: reservado, o espaço dele sai
+           do nome da tarefa, que trunca numa linha vazia à direita (§5.3). */
         collapseActions
         actions={
           !selectMode && (
-            <>
-              {!isCompleted && (
+            <ClickBoundary ref={moreRef}>
+              <IconButton
+                icon={<MoreHorizontal size={14} />}
+                title="Mais ações"
+                size="sm"
+                pressed={menu.fromTrigger}
+                onClick={() => menu.toggleFrom(moreRef.current)}
+              />
+            </ClickBoundary>
+          )
+        }
+        /* Sempre presente, e da largura do Play mesmo vazia: na concluída e no
+           modo de seleção a coluna fica, ou o chip saltaria a largura dela a
+           cada conclusão e a cada entrada no modo. */
+        trailing={
+          <span className="flex w-7 justify-center" data-play-slot>
+            {!selectMode && !isCompleted && (
+              <ClickBoundary>
                 <IconButton
-                  icon={<Play size={14} />}
+                  icon={<Play size={16} fill="currentColor" />}
                   title={playTitle(playBlock)}
-                  size="sm"
+                  variant="primary"
+                  size="md"
                   disabled={isPlayBlocked(playBlock)}
                   onClick={() => onPlay(task)}
                 />
-              )}
-              <IconButton
-                icon={<Share2 size={14} />}
-                title="Compartilhar"
-                size="sm"
-                onClick={() => void handleShare()}
-              />
-              <IconButton
-                icon={<Pencil size={14} />}
-                title="Editar"
-                size="sm"
-                onClick={() => setShowModal(true)}
-              />
-              <IconButton
-                icon={isCompleted ? <RotateCcw size={14} /> : <Check size={14} />}
-                title={isCompleted ? "Marcar como pendente" : "Concluir"}
-                size="sm"
-                onClick={() =>
-                  isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
-                }
-              />
-              <IconButton
-                icon={<Copy size={14} />}
-                title="Duplicar"
-                size="sm"
-                variant="neutral"
-                onClick={() => onDuplicate(task.id)}
-              />
-              <IconButton
-                icon={<Trash2 size={14} />}
-                title="Excluir"
-                size="sm"
-                variant="danger"
-                onClick={() => onDelete(task.id)}
-              />
-            </>
-          )
+              </ClickBoundary>
+            )}
+          </span>
         }
       />
+
+      {!selectMode && (
+        <Menu
+          anchor={menu.anchor}
+          items={menu.items}
+          onClose={menu.close}
+          label="Ações da tarefa"
+        />
+      )}
 
       {showModal && !selectMode && (
         <EditPlannedTaskModal
@@ -245,4 +283,17 @@ export function PlannedTaskItem({
       )}
     </>
   );
+}
+
+/**
+ * As setas andam entre as linhas **do mesmo dia**, que são irmãs no DOM; nas
+ * pontas não fazem nada. A linha focável é a de `tabIndex=0` — o `TaskRow` só a
+ * marca assim quando recebe `onKeyDown`, então o filtro pula o modal de edição
+ * e qualquer outro irmão que não seja linha.
+ */
+function focusSibling(row: HTMLElement, step: 1 | -1) {
+  const rows = Array.from(
+    row.parentElement?.querySelectorAll<HTMLElement>(':scope > [tabindex="0"]') ?? []
+  );
+  rows[rows.indexOf(row) + step]?.focus();
 }

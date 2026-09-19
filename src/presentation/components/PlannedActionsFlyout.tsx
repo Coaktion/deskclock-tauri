@@ -4,7 +4,7 @@ import { Zap } from "lucide-react";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
 import { executeActions } from "@domain/utils/actions";
 import { ActionChip, actionLabel } from "@presentation/components/ActionChip";
-import { FilterPill, IconButton } from "@presentation/components/ui";
+import { ClickBoundary, FilterPill, IconButton } from "@presentation/components/ui";
 import { useAnchoredPanel } from "@presentation/hooks/useAnchoredPanel";
 import { openInBrowser, openInFileManager } from "@shared/utils/shell";
 
@@ -67,17 +67,11 @@ export function PlannedActionsFlyout({ actions, variant = "pill" }: PlannedActio
 
   return (
     /*
-     * O `ref` e o `stopPropagation` moram no invólucro porque o `FilterPill` não
-     * expõe nem um nem outro — o `onClick` dele não recebe o evento.
-     *
-     * Hoje **nenhuma** das duas linhas que hospedam o ⚡ escuta clique enquanto
-     * ele existe: no Planejamento o `onClick` só aparece no modo de seleção, e
-     * ali o ⚡ nem é desenhado; no popup a linha não tem `onClick` nenhum. A
-     * parada é guarda, e não conserto de um caso vivo — a pílula não pode vazar
-     * clique para uma linha que venha a escutar depois, e quem descobriria isso
-     * seria o usuário, não o teste.
+     * O `ClickBoundary` dá o `ref` e segura o clique, que o `FilterPill` não
+     * expõe. A parada é necessária: a linha do Planejamento abre a edição ao
+     * clique, e o ⚡ não pode abri-la junto.
      */
-    <span ref={triggerRef} className="inline-flex" onClick={(e) => e.stopPropagation()}>
+    <ClickBoundary ref={triggerRef}>
       {variant === "icon" ? (
         <IconButton
           size="sm"
@@ -120,6 +114,6 @@ export function PlannedActionsFlyout({ actions, variant = "pill" }: PlannedActio
           </div>,
           document.body
         )}
-    </span>
+    </ClickBoundary>
   );
 }

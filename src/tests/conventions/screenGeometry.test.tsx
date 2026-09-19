@@ -4,8 +4,10 @@ import { resolve } from "node:path";
 import { createRef, type ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { FORM_COLUMN_WIDTH, formColumnClass } from "@presentation/components/fieldStyles";
 import { OmniboxIdle } from "@presentation/components/OmniboxIdle";
+import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { ProjectCard } from "@presentation/components/ProjectCard";
 import { Sidebar } from "@presentation/components/Sidebar";
 import { AddRow } from "@presentation/components/ui/AddRow";
@@ -1161,32 +1163,60 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * A linha planejada é a **forma A** do `TaskRow` — nada precede o nome, então
-     * o ponto de projeto abre coluna própria. Ela era flex e sem ponto: o
-     * faturamento e a cor do projeto eram as duas coisas que faltavam para a
-     * lista falar a mesma língua da 3a e da 3f.
+     * A linha planejada é medida **como a tela a monta**: o `PlannedTaskItem`,
+     * com o círculo de concluir em `leading` e a coluna do Play em `trailing`.
+     * Medir um `TaskRow` montado à mão aqui afirmaria uma forma que a tela não
+     * desenha mais.
+     *
+     * O que continua vindo do JSON: gap, padding e o ponto de projeto. O ponto
+     * já não abre coluna própria — com o círculo à frente ele entra no bloco do
+     * nome, a regra do primitivo —, mas mede o mesmo.
      */
-    it("a linha planejada é a grade de quatro colunas com o ponto do projeto", () => {
-      const row = shellOf(
-        <TaskRow
-          title="Revisão de PRs"
-          subtitle="Cliente A · Desenvolvimento"
-          dotColor="oklch(0.65 0.16 258)"
-          billable
-          onToggleBillable={() => {}}
-          collapseActions
-          actions={<span />}
+    function linhaPlanejada(): HTMLElement {
+      const task: PlannedTask = {
+        id: "t1",
+        workspaceId: "ws-1",
+        name: "Revisão de PRs",
+        projectId: null,
+        categoryId: null,
+        billable: true,
+        scheduleType: "specific_date",
+        scheduleDate: "2026-08-03",
+        recurringDays: null,
+        periodStart: null,
+        periodEnd: null,
+        completedDates: [],
+        actions: [],
+        sortOrder: 0,
+        createdAt: "2026-08-03T09:00:00.000Z",
+        customValues: {},
+      };
+      const noop = () => {};
+      return shellOf(
+        <PlannedTaskItem
+          task={task}
+          dateISO="2026-08-03"
+          projects={[]}
+          categories={[]}
+          customFields={[]}
+          onPlay={noop}
+          onUpdate={() => Promise.resolve()}
+          onComplete={noop}
+          onUncomplete={noop}
+          onDuplicate={noop}
+          onDelete={noop}
         />
       );
+    }
+
+    it("a linha planejada tem o gap, o padding e o ponto de projeto do spec", () => {
+      const row = linhaPlanejada();
       const actual = geometryOf(row.className);
 
-      expect(actual.gridTemplateColumns).toBe(
-        stringOf(SPEC_3E.linhaDia, "grid-template-columns").replace(/\s+/g, " ")
-      );
       expect(actual.gap).toBe(numberOf(SPEC_3E.linhaDia, "gap"));
       expectPadding(row, SPEC_3E.linhaDia);
 
-      const ponto = row.firstElementChild!;
+      const ponto = row.querySelector("span[aria-hidden].rounded-full")!;
       const dot = geometryOf(ponto.className);
       expect(dot.width).toBe(numberOf(SPEC_3E.pontoDia, "width"));
       expect(dot.height).toBe(numberOf(SPEC_3E.pontoDia, "height"));
@@ -1194,8 +1224,43 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * Com cinco botões, a coluna reservada sai do `1fr` do nome. `collapseActions`
-     * fecha a célula em **largura** até o hover — é a §5.3, agora no primitivo.
+     * **Exceção declarada (decisão do usuário, 2026-09-18), não dívida** — por
+     * isso `it`, e não `divergente`: não há correção por vir. O wireframe
+     * desenha `auto 1fr auto auto` (ponto · nome · chip · fileira de botões no
+     * hover) e nenhum círculo. A tela pôs o círculo de concluir na primeira
+     * coluna (o ponto foi para o bloco do nome), reduziu a fileira ao ⋯ e fixou
+     * o Play numa coluna a mais, depois do chip. O desenho e o porquê estão em
+     * `docs-internal/specs/acoes-da-linha-planejada.md`, "Divergências
+     * declaradas do wireframe 3e".
+     *
+     * A afirmação é a decisão, amarrada ao JSON: a grade é a do spec com **uma**
+     * coluna a mais no fim. Qualquer outra mudança na grade reprova aqui.
+     */
+    it("a grade é a do spec mais a coluna do Play — exceção declarada", () => {
+      const row = linhaPlanejada();
+      const spec = stringOf(SPEC_3E.linhaDia, "grid-template-columns").replace(/\s+/g, " ");
+
+      expect(geometryOf(row.className).gridTemplateColumns).toBe(`${spec} auto`);
+      expect(row.firstElementChild!.querySelector("button[aria-pressed]")).toBeTruthy();
+    });
+
+    /**
+     * A coluna do Play é reservada **na largura do Play**: é o que impede o chip
+     * de andar quando a tarefa é concluída e a coluna esvazia. O Play é
+     * `IconButton size="md"` com ícone de 16 — 6 + 16 + 6.
+     */
+    it("a coluna do Play reserva a largura do botão", () => {
+      const slot = linhaPlanejada().querySelector("[data-play-slot]")!;
+      const botao = slot.querySelector("button")!;
+      const padding = geometryOf(botao.className).paddingLeft ?? 0;
+
+      expect(geometryOf(slot.className).width).toBe(16 + 2 * padding);
+    });
+
+    /**
+     * Com o Play fora dela, a célula das ações guarda só o ⋯, e mesmo assim
+     * fecha em **largura** até o hover: reservada, a largura dela sairia do
+     * `1fr` do nome (§5.3).
      */
     it("as ações da linha planejada fecham em largura até o hover, no gap do spec", () => {
       const row = shellOf(

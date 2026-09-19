@@ -356,6 +356,41 @@ describe("TaskRow", () => {
     );
   });
 
+  /**
+   * O clique do mouse também foca a linha focável. Revelando por `focus-within`,
+   * a linha clicada ficava com o ⋯ aberto depois de o cursor sair; nela quem
+   * revela é o foco de teclado, na linha ou num botão dela.
+   */
+  it("com `onKeyDown`, as ações se revelam no hover e no foco de teclado, não no foco do clique", () => {
+    const { container } = render(
+      <TaskRow title="a" onKeyDown={() => {}} collapseActions actions={<span data-acoes="" />} />
+    );
+    const acoes = container.querySelector("[data-acoes]")!.parentElement!;
+    const classes = acoes.className.split(/\s+/);
+
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "group-hover:w-auto",
+        "group-focus-visible:w-auto",
+        "group-has-[:focus-visible]:w-auto",
+      ])
+    );
+    expect(classes.filter((c) => c.startsWith("group-focus-within:"))).toEqual([]);
+    expect(acoes.parentElement!.className).not.toContain("group-focus-within:");
+  });
+
+  it("sem `onKeyDown`, as ações seguem se revelando no `focus-within`", () => {
+    const { container } = render(
+      <TaskRow title="a" collapseActions actions={<span data-acoes="" />} />
+    );
+    const acoes = container.querySelector("[data-acoes]")!.parentElement!;
+
+    expect(acoes.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(["group-focus-within:w-auto", "group-focus-within:opacity-100"])
+    );
+    expect(acoes.className).not.toContain("focus-visible");
+  });
+
   it("sem `onKeyDown`, a linha não é parada de Tab nem ganha anel", () => {
     const { container } = render(<TaskRow title="a" duration="1h" />);
     const linha = container.firstElementChild as HTMLElement;

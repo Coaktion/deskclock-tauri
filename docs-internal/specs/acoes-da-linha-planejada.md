@@ -22,14 +22,15 @@ Concluir, Duplicar e Excluir. O problema não era a quantidade, era a hierarquia
 | --------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Círculo de concluir** (`ui/CompleteToggle`) | slot `leading`, 14 px                 | sempre, fora do modo de seleção                                                                                   |
 | **Play**                                      | coluna `trailing`, **depois** do chip | fora do modo de seleção, na tarefa pendente; na concluída e no modo de seleção a coluna fica vazia, mas reservada |
-| **⋯**                                         | célula `actions` (`collapseActions`)  | só no hover e no `focus-within`                                                                                   |
+| **⋯**                                         | célula `actions` (`collapseActions`)  | no hover e no foco de teclado                                                                                     |
 | ⚡ e chip de faturamento                      | onde já estavam                       | como antes                                                                                                        |
 
 - **Concluída:** o círculo fica cheio no acento com ✓, e o nome fica tachado em `fg-muted`, como já era.
 - **O Play é a ação principal, e o desenho diz isso.** Ele usa `IconButton variant="primary"`:
-  fundo de acento a 15% em repouso (a série 5/10/15 do app), cheio no hover. É a única variante
-  com cor em repouso; nas outras a cor é o destino do hover. Tamanho `md` com ícone de 16, os
-  28 px do protótipo aprovado: um degrau acima dos outros botões da linha, que é o destaque.
+  glifo ▶ **preenchido** na cor do acento, **sem fundo** em repouso, e o hover suave (`accent/10`)
+  dos outros botões. É a única variante com cor em repouso; nas outras a cor é o destino do hover.
+  Tamanho `md` com ícone de 16: um degrau acima dos outros botões da linha. Nasceu com fundo de
+  acento que enchia no hover, e no teste ficou exagerado (2026-09-19).
 - **Play bloqueado** (`isPlayBlocked(playBlock)`): o botão continua visível e desabilitado, com
   aparência de desabilitado (sem o tom de acento, opacidade reduzida) e o motivo no `title`
   (`playTitle`). **Não há ícone de pausa.** A linha que está rodando continua dita pelo realce de
@@ -83,7 +84,17 @@ isso, cada clique neles abriria também o modal de edição.
 - **O handler só age com `event.target === event.currentTarget`.** Com o foco num botão _dentro_
   da linha, o Espaço já aciona aquele botão, e agir também na linha faria duas coisas com uma
   tecla.
-- A tradução de tecla em ação é uma função pura (`plannedRowKey`), testada à parte.
+- A tradução de tecla em ação é uma função pura (`plannedRowKey`), testada à parte. Com
+  Ctrl/Meta/Alt ela devolve `null`: a linha não rouba `Ctrl+Z` nem atalho do sistema.
+- **As setas andam dentro do cartão do dia** e param nas pontas; não atravessam para o dia
+  seguinte. A vizinha é achada pelo `tabindex="0"` que o `TaskRow` só põe na linha focável.
+- **O menu é irmão da linha, não filho**: os atalhos dele nem chegam à linha, e a guarda de
+  `target` acima fica como segunda linha de defesa.
+- **Limitação conhecida:** excluir pelo teclado (`Del`) apaga a linha e o foco se perde, em vez de
+  ir para a vizinha.
+- **O ⋯ abre com hover ou foco de teclado, não com o clique.** A linha focável foca também no
+  clique do mouse, e `group-focus-within` deixaria o ⋯ aberto depois que o cursor sai. Por isso
+  o `TaskRow` troca, só na linha focável, para `group-focus-visible`/`group-has-[:focus-visible]`.
 - **Toda tecla que vira ação é consumida com `preventDefault`** (contrato de teclado nº 3). Sem
   isso o Espaço rolaria a lista e o Enter chegaria ao `useSubmitOnEnter` de algum container.
 

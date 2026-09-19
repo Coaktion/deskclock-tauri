@@ -9,6 +9,8 @@ export { ExecutionDot, type RowExecution } from "./ExecutionDot";
 export { FilterPill } from "./FilterPill";
 export { Badge, type BadgeTone } from "./Badge";
 export { BillableChip } from "./BillableChip";
+export { ClickBoundary } from "./ClickBoundary";
+export { CompleteToggle } from "./CompleteToggle";
 export { SearchInput } from "./SearchInput";
 export { Field } from "./Field";
 export { Calendar } from "./Calendar";

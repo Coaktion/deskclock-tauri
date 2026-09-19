@@ -44,19 +44,13 @@ describe("IconButton", () => {
    * A única variante com cor em repouso — o ▶ da planejada. As outras nascem
    * `fg-muted` e só o hover diz o destino.
    */
-  it("`primary` tem acento em repouso e enche no hover", () => {
+  it("`primary` tem acento em repouso, sem fundo, e o hover suave do `accent`", () => {
     render(<IconButton icon={<svg />} title="Iniciar" variant="primary" />);
     const classes = screen.getByRole("button").className.split(/\s+/);
 
-    expect(classes).toEqual(
-      expect.arrayContaining([
-        "bg-accent/15",
-        "text-accent-text",
-        "hover:bg-accent",
-        "hover:text-white",
-      ])
-    );
+    expect(classes).toEqual(expect.arrayContaining(["text-accent-text", "hover:bg-accent/10"]));
     expect(classes).not.toContain("text-fg-muted");
+    expect(classes.some((c) => /^bg-/.test(c))).toBe(false);
   });
 
   it("`primary` desabilitado perde o acento e se lê como bloqueado", () => {

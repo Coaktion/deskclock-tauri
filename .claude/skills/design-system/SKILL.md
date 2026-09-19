@@ -280,12 +280,13 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   >
   > **`primary` é a única variante com cor em repouso**, e existe para uma peça: o ▶ da linha
   > planejada. Ele é a ação que se usa o dia inteiro, e no meio de botões que nascem `fg-muted`
-  > precisa se ler como a principal antes do cursor chegar — fundo `accent/15` com glifo
-  > `accent-text` em repouso, `bg-accent` com `text-white` no hover (a exceção de texto sobre
-  > acento, abaixo). **Desabilitado, perde o acento inteiro** e cai no repouso neutro das outras,
-  > com a opacidade e o `cursor-not-allowed` de sempre: o Play bloqueado tem de se ler como
-  > bloqueado, e não como a ação principal um pouco apagada. Uma segunda peça pedindo cor em
-  > repouso é pergunta, não precedente.
+  > precisa se ler como a principal antes do cursor chegar — glifo **preenchido** em
+  > `accent-text`, **sem fundo** em repouso, e o `accent/10` do `accent` no hover. Nasceu com fundo
+  > `accent/15` que enchia no hover, e na tela ficou pesado demais ao lado do chip (decisão do
+  > usuário, 2026-09-19): o preenchimento do glifo já basta. **Desabilitado, perde o acento
+  > inteiro** e cai no repouso neutro das outras, com a opacidade e o `cursor-not-allowed` de
+  > sempre: o Play bloqueado tem de se ler como bloqueado, e não como a ação principal um pouco
+  > apagada. Uma segunda peça pedindo cor em repouso é pergunta, não precedente.
   >
   > **`Input`, `Select` e `Textarea` compartilham uma casca só** (`ui/controlStyles.ts`), e o que
   > eles travam é a **forma**: `boxed` desenha a própria caixa; `bare` abre mão dela para o `Field`
@@ -730,11 +731,11 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > `MondayProjectsImport` —, e a substituição é o que resta da dívida. Fora dela ficam a paleta de
   > workspace e os quatro status do Zendesk, que são **cor de entidade**.
   >
-  > Botão primário preenchido — e o hover do `IconButton primary`, que enche de acento — usa
-  > `text-white` sobre `bg-accent` pelo mesmo buraco: não há token de texto sobre acento
-  > (`accent-text` é o acento claro, ilegível sobre ele). **São os únicos `text-white` que sobram**,
-  > e os dois sobre `bg-accent`: onde ele estava sobre superfície comum — três `hover:text-white` e
-  > dois botões neutros — o texto sumia no modo claro, e virou `text-fg`.
+  > Botão primário preenchido e o ✓ do círculo de concluir (`CompleteToggle`) usam `text-white`
+  > sobre `bg-accent` pelo mesmo buraco: não há token de texto sobre acento (`accent-text` é o
+  > acento claro, ilegível sobre ele). **São os únicos `text-white` que sobram**, e os dois sobre
+  > `bg-accent`: onde ele estava sobre superfície comum — três `hover:text-white` e dois botões
+  > neutros — o texto sumia no modo claro, e virou `text-fg`.
 
   > **A escala de três degraus colapsa pares, e é isso que a tradução tem de vigiar.** Seis tons de
   > cinza de texto viram três tokens, então `gray-400` envolvendo um `gray-200` — o padrão de

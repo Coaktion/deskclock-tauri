@@ -144,6 +144,35 @@ const RAIL_LEFT = PADDING_X + LEADING_WIDTH / 2;
 const FOCUS_RING =
   "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
 
+/**
+ * O que revela as ações fora do hover. Na linha comum é o `focus-within`: o foco
+ * chega a um botão dela pelo Tab, e o botão invisível tem de aparecer.
+ *
+ * **Na linha focável isso não serve**, porque o clique do mouse também a foca:
+ * com `focus-within`, a linha clicada ficava com o ⋯ aberto depois de o cursor
+ * sair. Ali quem revela é o foco **de teclado** — na própria linha
+ * (`group-focus-visible`) ou num botão dentro dela (`group-has-[:focus-visible]`,
+ * porque `:has` não olha o próprio elemento).
+ *
+ * Literais e não montados pelo mesmo motivo do `gridColumns`: o Tailwind lê a
+ * classe no código-fonte. Sem `onKeyDown`, a classe é a de antes.
+ */
+const REVEAL = {
+  within: {
+    margin: "group-focus-within:mr-0",
+    fadeOut: "group-focus-within:opacity-0",
+    fadeIn: "group-focus-within:opacity-100 group-focus-within:pointer-events-auto",
+    open: "group-focus-within:w-auto group-focus-within:opacity-100",
+  },
+  keyboard: {
+    margin: "group-focus-visible:mr-0 group-has-[:focus-visible]:mr-0",
+    fadeOut: "group-focus-visible:opacity-0 group-has-[:focus-visible]:opacity-0",
+    fadeIn:
+      "group-focus-visible:opacity-100 group-focus-visible:pointer-events-auto group-has-[:focus-visible]:opacity-100 group-has-[:focus-visible]:pointer-events-auto",
+    open: "group-focus-visible:w-auto group-focus-visible:opacity-100 group-has-[:focus-visible]:w-auto group-has-[:focus-visible]:opacity-100",
+  },
+} as const;
+
 /** `pl-6` é o dobro de `pl-3`: o degrau da filha é um padding a mais. */
 const PADDING_LEFT = { row: "pl-3", nested: "pl-6" } as const;
 
@@ -191,6 +220,7 @@ export function TaskRow(props: TaskRowProps) {
    * ficaria com a ordem de uma e o comportamento da outra.
    */
   const collapsesWidth = collapseActions && !duration;
+  const reveal = onKeyDown ? REVEAL.keyboard : REVEAL.within;
 
   /**
    * O ponto abre coluna própria só quando **nada o precede**. Com o chevron ou a
@@ -283,14 +313,14 @@ export function TaskRow(props: TaskRowProps) {
   const actionsCell = (
     <div
       className={`grid items-center justify-items-end ${
-        collapsesWidth ? "-mr-2.5 group-hover:mr-0 group-focus-within:mr-0" : ""
+        collapsesWidth ? `-mr-2.5 group-hover:mr-0 ${reveal.margin}` : ""
       }`}
     >
       {duration && (
         <span
           className={`col-start-1 row-start-1 text-sm font-mono tabular-nums text-fg-secondary ${
             actions
-              ? "pointer-events-none transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
+              ? `pointer-events-none transition-opacity group-hover:opacity-0 ${reveal.fadeOut}`
               : ""
           }`}
         >
@@ -301,9 +331,9 @@ export function TaskRow(props: TaskRowProps) {
         <div
           className={`col-start-1 row-start-1 flex gap-0.5 ${
             duration
-              ? "opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
+              ? `opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto ${reveal.fadeIn}`
               : collapsesWidth
-                ? "w-0 overflow-hidden opacity-0 transition-opacity group-hover:w-auto group-hover:opacity-100 group-focus-within:w-auto group-focus-within:opacity-100"
+                ? `w-0 overflow-hidden opacity-0 transition-opacity group-hover:w-auto group-hover:opacity-100 ${reveal.open}`
                 : ""
           }`}
         >
