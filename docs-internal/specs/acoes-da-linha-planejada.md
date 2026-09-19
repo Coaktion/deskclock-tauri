@@ -104,6 +104,15 @@ excluída" ou "N tarefas excluídas" e traz o botão **Desfazer**. O `Ctrl+Z` fa
   modal aberto.
 - A exclusão em lote do modo de seleção passa pelo mesmo caminho.
 - A exclusão pela API local e pelo MCP **não** tem desfazer: não há ninguém olhando um toast.
+- **Falhas:** exclusão que falha mostra "Não foi possível excluir." e recarrega a lista. O lote
+  **não é atômico**: o que já tinha sido apagado antes da falha fica apagado e sem desfazer. O
+  restauro que falha mostra "Não foi possível desfazer." e recarrega; o lote já foi consumido
+  (é limpo antes do `await`, pela corrida acima), então não há segunda tentativa.
+- **O `usePlannedTasks*` não tem mais `remove`.** Excluir planejada pela UI passa pelo
+  `usePlannedTaskUndo`; uma segunda porta seria exclusão sem desfazer.
+- **Limitações conhecidas**, aceitas: desfeito pelo `Ctrl+Z`, o toast continua mostrando o
+  Desfazer até expirar, e clicar nele não faz nada. O mesmo vale se o usuário sair do
+  Planejamento durante os 6 s, porque quem ouve o evento é o Planejamento.
 
 ## Divergências declaradas do wireframe 3e
 

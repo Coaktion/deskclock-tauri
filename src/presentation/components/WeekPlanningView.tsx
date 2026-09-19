@@ -1,15 +1,14 @@
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
 import { PlannedTaskForm } from "@presentation/components/PlannedTaskForm";
 import { PlannedTaskItem } from "@presentation/components/PlannedTaskItem";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import { Badge, FilterPill, PageHeader, SectionCard } from "@presentation/components/ui";
-import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { usePlannedTasksForWeek } from "@presentation/hooks/usePlannedTasks";
+import { usePlannedTaskUndo } from "@presentation/hooks/usePlannedTaskUndo";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { runningPlannedTaskId } from "@domain/utils/plannedLink";
@@ -18,9 +17,7 @@ import { useTour } from "@presentation/hooks/useTour";
 import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import type { WeekStart } from "@shared/types/appConfig";
-import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { addDaysISO, todayISO, weekBoundsOf } from "@shared/utils/time";
-import { emit } from "@tauri-apps/api/event";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -68,7 +65,6 @@ function isTaskOnDate(task: PlannedTask, dateISO: string): boolean {
 type DayFilter = "all" | string;
 
 export function WeekPlanningView() {
-  const { plannedTaskRepo } = useRepositories();
   const weekStartsOn = useWeekStart();
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
@@ -83,8 +79,9 @@ export function WeekPlanningView() {
   // Uma carga por tela, não por linha: o catálogo é o mesmo para as sete
   // colunas do dia e é o `PlannedTaskItem` que o consome, um por tarefa.
   const { fields: customFields } = useCustomFields();
-  const { tasks, reload, create, update, remove, complete, uncomplete, duplicate } =
+  const { tasks, reload, syncAfterMutation, create, update, complete, uncomplete, duplicate } =
     usePlannedTasksForWeek(start, end);
+  const { removeWithUndo } = usePlannedTaskUndo(syncAfterMutation);
   const { startTask, runningTask, activePlannedTaskId } = useRunningTask();
   const { plannedIds: trackedIds, today: trackedToday } = useTrackedMeetingPlannedIds();
   const runningPlannedId = runningPlannedTaskId(activePlannedTaskId, runningTask);
@@ -142,11 +139,7 @@ export function WeekPlanningView() {
   }
 
   async function handleBulkDelete() {
-    for (const id of selectedIds) {
-      await deletePlannedTask(plannedTaskRepo, id);
-    }
-    await reload();
-    await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
+    await removeWithUndo([...selectedIds]);
     exitSelectMode();
   }
 
@@ -426,7 +419,7 @@ export function WeekPlanningView() {
                           onComplete={complete}
                           onUncomplete={uncomplete}
                           onDuplicate={duplicate}
-                          onDelete={remove}
+                          onDelete={(id) => void removeWithUndo([id])}
                           selectMode={selectMode}
                           selected={selectedIds.has(task.id)}
                           onToggleSelect={toggleSelectTask}

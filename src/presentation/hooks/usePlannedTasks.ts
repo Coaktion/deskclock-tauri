@@ -9,7 +9,6 @@ import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlanned
 import { getPlannedTasksForWeek } from "@domain/usecases/plannedTasks/GetPlannedTasksForWeek";
 import { createPlannedTask } from "@domain/usecases/plannedTasks/CreatePlannedTask";
 import { updatePlannedTask } from "@domain/usecases/plannedTasks/UpdatePlannedTask";
-import { deletePlannedTask } from "@domain/usecases/plannedTasks/DeletePlannedTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { uncompletePlannedTask } from "@domain/usecases/plannedTasks/UncompletePlannedTask";
 import { duplicatePlannedTask } from "@domain/usecases/plannedTasks/DuplicatePlannedTask";
@@ -79,15 +78,6 @@ function usePlannedTasksBase(
     [plannedTaskRepo, load, onMutate]
   );
 
-  const remove = useCallback(
-    async (id: UUID) => {
-      await deletePlannedTask(plannedTaskRepo, id);
-      await load();
-      onMutate?.();
-    },
-    [plannedTaskRepo, load, onMutate]
-  );
-
   const complete = useCallback(
     async (id: UUID, date: string) => {
       await completePlannedTask(plannedTaskRepo, id, date);
@@ -115,7 +105,24 @@ function usePlannedTasksBase(
     [plannedTaskRepo, load, onMutate]
   );
 
-  return { tasks, reload: load, create, update, remove, complete, uncomplete, duplicate };
+  // Para quem muta por fora destes métodos: recarrega e avisa as outras janelas
+  // do mesmo jeito que eles. Excluir não é método daqui de propósito — passa pelo
+  // `usePlannedTaskUndo`, e uma segunda porta seria exclusão sem desfazer.
+  const syncAfterMutation = useCallback(async () => {
+    await load();
+    onMutate?.();
+  }, [load, onMutate]);
+
+  return {
+    tasks,
+    reload: load,
+    syncAfterMutation,
+    create,
+    update,
+    complete,
+    uncomplete,
+    duplicate,
+  };
 }
 
 function emitPlannedTasksChanged() {
