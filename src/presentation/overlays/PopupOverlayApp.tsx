@@ -27,6 +27,7 @@ import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTas
 import { PopupOverlayContent } from "./PopupOverlayContent";
 import { MeetingPromptView } from "./MeetingPromptView";
 import { useMeetingPrompt } from "./useMeetingPrompt";
+import { shouldHidePopupOnEscape } from "./popupEscape";
 
 const POPUP_W = POPUP_SIZE.width;
 // A altura do popup em todo estado, e por isso também o teto do `setMaxSize`:
@@ -201,8 +202,14 @@ function PopupOverlayAppInner() {
   // ESC closes popup — desativado enquanto um prompt de reunião aguarda resposta.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key !== "Escape") return;
-      if (meetingPromptActiveRef.current || modalOpenRef.current) return;
+      const hide = shouldHidePopupOnEscape({
+        key: e.key,
+        defaultPrevented: e.defaultPrevented,
+        meetingPromptActive: meetingPromptActiveRef.current,
+        modalOpen: modalOpenRef.current,
+        modalMarkerPresent: document.querySelector("[data-modal-open]") !== null,
+      });
+      if (!hide) return;
       void emit(OVERLAY_EVENTS.OVERLAY_POPUP_CLOSED, {}).then(() => appWindow.hide());
     }
     document.addEventListener("keydown", onKey);

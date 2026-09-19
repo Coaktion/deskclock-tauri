@@ -148,7 +148,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | F4   | props aditivas: `TaskRow.trailing`/`onContextMenu`/`onKeyDown` e `IconButton variant="primary"`      | ✅ `4347328`                           |
 | F5   | linha do Planejamento: `ui/CompleteToggle`, `ui/ClickBoundary`, `plannedRowKey`, `usePlannedRowMenu` | ✅ `302a8f0` — testada pelo usuário    |
 | G1   | desfazer genérico + lançamentos (`Task`)                                                             | ✅ `fe67e70`                           |
-| G2   | menu e teclado de linha genéricos                                                                    | a fazer                                |
+| G2   | menu e teclado de linha genéricos                                                                    | ✅ `9e8c28b`                           |
 | G3   | popup: lista de planejadas                                                                           | a fazer                                |
 | G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | a fazer                                |
 | G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | a fazer                                |
@@ -243,3 +243,48 @@ se conclui — planejadas —, nunca em lançamento.
 - `screenGeometry` mede várias dessas telas (3a Tarefas, 3b Histórico, 3f Lançamento Manual):
   mudança de grade que o wireframe não desenha é **exceção declarada** (`it`, como na 3e), não
   `divergente`. Na dúvida, parar e perguntar.
+
+**Como ficou (G3):**
+
+- **A linha saiu do `PopupOverlayContent`** para `overlays/PopupPlannedRow.tsx`, no desenho do
+  `PlannedTaskItem`: `ui/CompleteToggle` em `leading`, `PlannedPlaySlot` em `trailing`, o ⋯ em
+  `actions` e `Menu` irmão da linha. Menu pelo `usePlannedRowMenu`, teclado por
+  `rowKeyDownHandler(PLANNED_ROW_KEYS, ...)`.
+- **O que as duas linhas repetiam virou peça comum**, usada pelo `PlannedTaskItem` e pelo
+  `PopupPlannedRow`, antes de a G4 copiar de novo:
+  - `ui/RowMenuTrigger`: o ⋯ genérico (`ClickBoundary` com `ref` próprio, `pressed` do
+    `fromTrigger`, `toggleFrom`), par de qualquer `useRowMenu` — é o que G4 e G5 usam.
+  - `components/PlannedPlaySlot`: a coluna `w-7` do Play `variant="primary"`, bloqueado visível
+    e desabilitado com o `playTitle`; `empty` deixa a coluna reservada sem o botão.
+  - `components/TrackedMeetingMark`: o sino do rastreamento, com a redação do `title`.
+  - `components/plannedShareLink.ts`: `copyPlannedTaskLink(...)`, o deeplink na área de
+    transferência com o toast de sucesso ou erro.
+- **Antes**, a linha tinha três botões no hover — Editar, Concluir e Play — e clique na linha
+  não fazia nada. Nenhum se perdeu: Editar foi para o clique na linha e para o menu, Concluir
+  para o círculo, Play para a coluna fixa. Duplicar, Copiar link e Excluir são novos no popup.
+- **Clique na linha abre o `PlannedTaskEditSheet`**, o painel do popup, e não o modal do
+  Planejamento: o popup não cresce (telas/overlays.md).
+- **Excluir passa pelo `usePlannedTaskUndo`**, montado também no popup; o toast e o `Ctrl+Z`
+  restauram só o lote que o popup apagou (G1).
+- **O que o popup não tem**: modo de seleção, planejada concluída na lista (a aba mostra só as
+  pendentes, então o círculo nunca reabre e a coluna do Play nunca fica vazia) e chip de
+  faturamento, que nunca esteve nesta linha e não entrou.
+- **Horário e `collapseActions` ficam como eram**: com hora, o ⋯ entra no lugar do horário; sem
+  hora, a célula fecha em largura.
+- **Largura do nome**, calculada das classes (janela de 288, borda de 1+1, `pl-3`/`pr-3`: 262 px
+  de grade; menos 5 px quando a lista rola). Antes → agora, texto do nome:
+
+  | Linha              | Antes | Agora | Com ⚡ (antes → agora) |
+  | ------------------ | ----- | ----- | ---------------------- |
+  | sem hora, repouso  | 236   | 176   | 214 → 154              |
+  | sem hora, no hover | 156   | 144   | 134 → 122              |
+  | com hora           | 156   | 129   | 134 → 107              |
+
+  O pior caso, com hora e ⚡, fica em ~107 px (~17 caracteres no degrau de 12,25 px). Falta
+  conferir no `pnpm tauri dev`.
+
+- **ESC**: o do menu é consumido e contido (`stopPropagation`), então não chega ao listener do
+  `PopupOverlayApp` que esconde a janela. A decisão desse listener virou função pura,
+  `shouldHidePopupOnEscape` (`overlays/popupEscape.ts`), e ganhou a segunda guarda
+  (`defaultPrevented` e `[data-modal-open]`), a mesma do `useGlobalShortcuts`.
+- `screenGeometry` não mede o popup (o spec do design não tem essa tela): nada a declarar.

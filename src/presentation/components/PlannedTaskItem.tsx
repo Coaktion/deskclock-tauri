@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { Play, RefreshCw, Bell, MoreHorizontal } from "lucide-react";
+import { useState } from "react";
+import { RefreshCw } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -12,21 +12,20 @@ import {
 import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import {
-  ClickBoundary,
   CompleteToggle,
-  IconButton,
   Menu,
+  RowMenuTrigger,
   TaskRow,
   type RowExecution,
 } from "@presentation/components/ui";
-import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
+import { PlannedPlaySlot } from "@presentation/components/PlannedPlaySlot";
+import { copyPlannedTaskLink } from "@presentation/components/plannedShareLink";
+import { TrackedMeetingMark } from "@presentation/components/TrackedMeetingMark";
+import { isPlayBlocked, type PlayBlock } from "@presentation/components/playAction";
 import { PLANNED_ROW_KEYS } from "@presentation/components/plannedRowKey";
 import { rowKeyDownHandler } from "@presentation/components/rowKey";
 import { usePlannedRowMenu } from "@presentation/hooks/usePlannedRowMenu";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { plannedTaskToSharePayload } from "@domain/utils/sharePayload";
-import { buildShareLink } from "@shared/utils/shareLink";
-import { showToast } from "@shared/utils/toast";
 
 interface PlannedTaskItemProps {
   task: PlannedTask;
@@ -97,7 +96,6 @@ export function PlannedTaskItem({
   const project = projects.find((p) => p.id === task.projectId);
   const category = categories.find((c) => c.id === task.categoryId);
   const [showModal, setShowModal] = useState(false);
-  const moreRef = useRef<HTMLSpanElement>(null);
   const canPlay = !isCompleted && !isPlayBlocked(playBlock);
   const menu = usePlannedRowMenu({
     onEdit: () => setShowModal(true),
@@ -111,17 +109,7 @@ export function PlannedTaskItem({
     await onUpdate(id, input);
   }
 
-  async function handleShare() {
-    const link = buildShareLink(
-      plannedTaskToSharePayload(task, projects, categories, customFields)
-    );
-    try {
-      await navigator.clipboard.writeText(link);
-      await showToast("success", "Link copiado para a área de transferência.");
-    } catch {
-      await showToast("error", "Não foi possível copiar o link.");
-    }
-  }
+  const handleShare = () => copyPlannedTaskLink(task, projects, categories, customFields);
 
   function toggleComplete() {
     if (isCompleted) onUncomplete(task.id, dateISO);
@@ -165,14 +153,7 @@ export function PlannedTaskItem({
                   <RefreshCw size={14} />
                 </span>
               )}
-              {tracked && (
-                <span
-                  className="shrink-0 flex items-center text-accent-text/80"
-                  title="Rastreada — o app vai lembrar de iniciar esta reunião"
-                >
-                  <Bell size={14} />
-                </span>
-              )}
+              {tracked && <TrackedMeetingMark />}
             </>
           )
         }
@@ -211,37 +192,16 @@ export function PlannedTaskItem({
         /* Sem hover o ⋯ não ocupa largura nenhuma: reservado, o espaço dele sai
            do nome da tarefa, que trunca numa linha vazia à direita (§5.3). */
         collapseActions
-        actions={
-          !selectMode && (
-            <ClickBoundary ref={moreRef}>
-              <IconButton
-                icon={<MoreHorizontal size={14} />}
-                title="Mais ações"
-                size="sm"
-                pressed={menu.fromTrigger}
-                onClick={() => menu.toggleFrom(moreRef.current)}
-              />
-            </ClickBoundary>
-          )
-        }
+        actions={!selectMode && <RowMenuTrigger menu={menu} />}
         /* Sempre presente, e da largura do Play mesmo vazia: na concluída e no
            modo de seleção a coluna fica, ou o chip saltaria a largura dela a
            cada conclusão e a cada entrada no modo. */
         trailing={
-          <span className="flex w-7 justify-center" data-play-slot>
-            {!selectMode && !isCompleted && (
-              <ClickBoundary>
-                <IconButton
-                  icon={<Play size={16} fill="currentColor" />}
-                  title={playTitle(playBlock)}
-                  variant="primary"
-                  size="md"
-                  disabled={isPlayBlocked(playBlock)}
-                  onClick={() => onPlay(task)}
-                />
-              </ClickBoundary>
-            )}
-          </span>
+          <PlannedPlaySlot
+            playBlock={playBlock}
+            onPlay={() => onPlay(task)}
+            empty={selectMode || isCompleted}
+          />
         }
       />
 
