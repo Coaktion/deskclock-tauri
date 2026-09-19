@@ -161,11 +161,17 @@ estado.
 `startTask` continua sendo no-op com tarefa ativa (§6.1 em `regras-de-negocio.md`) — o modal chama
 `switchToTask` justamente porque a troca é intencional e explícita.
 
-## Onde o botão fica
+## Onde a ação fica
 
-Na **linha da planejada** (`PlannedTaskItem`), entre o ▶ e o lápis: copia o link para a área de
-transferência e avisa por toast. Ele soma o sexto botão da fileira que só aparece no hover, e some
-no modo de seleção pelo mesmo motivo que os outros (`docs-internal/telas/planejamento.md`).
+Na **linha da planejada** (`PlannedTaskItem`) e na do popup (`PopupPlannedRow`), como o item
+**"Copiar link"** do menu ⋯ e do clique direito, com o atalho `L`: copia o link para a área de
+transferência e avisa por toast. Some no modo de seleção junto com o menu inteiro
+(`docs-internal/telas/planejamento.md`).
+
+> Até 2026-09-18 era o botão **"Compartilhar"**, o sexto da fileira que só aparecia no hover.
+> A fileira virou o menu ⋯ em `docs-internal/specs/acoes-da-linha-planejada.md`, e o rótulo foi
+> renomeado ali. **O esquema `deskclock://task/share`, os ids das âncoras do manual e o nome deste
+> arquivo não mudaram** — renomeá-los quebraria link já distribuído ou citação no código.
 
 ## O que já está travado por teste
 

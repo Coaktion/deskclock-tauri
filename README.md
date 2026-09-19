@@ -153,7 +153,7 @@ O app registra o esquema `deskclock://` e responde a quatro endereços:
 
 - `deskclock://navigate/<tela>` — abre uma das telas (`tasks`, `retroactive`, `planning`, `history`, `data`, `integrations`, `settings`)
 - `deskclock://task/start?name=…&project=…&category=…&billable=false` — inicia uma tarefa
-- `deskclock://task/share?name=…&project=…&category=…&start=HH:MM&end=HH:MM&cf.<campo>=<valor>` — abre uma tarefa compartilhada num modal de revisão, resolvida contra os catálogos locais; nada é gravado sem confirmar. Gerado pelo botão de compartilhar da linha da planejada
+- `deskclock://task/share?name=…&project=…&category=…&start=HH:MM&end=HH:MM&cf.<campo>=<valor>` — abre uma tarefa compartilhada num modal de revisão, resolvida contra os catálogos locais; nada é gravado sem confirmar. Gerado pelo item **Copiar link** do menu da linha da planejada
 - `deskclock://retroactive?date=…&name=…&project=…&category=…&start=HH:MM&end=HH:MM` — abre o lançamento manual já preenchido
 
 Onde o texto não vira link clicável, a barra lateral tem **Receber**, para colar o endereço à mão.

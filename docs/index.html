@@ -1060,7 +1060,7 @@
       </div>
     </div>
 
-    <p>Escolher uma planejada na lista inicia o timer já com nome, projeto, categoria e campos personalizados preenchidos. O chip de faturamento de cada linha continua alternando ali mesmo, sem iniciar a tarefa, e <strong>"Ver semana →"</strong> leva ao <a onclick="show('planning')">Planejamento</a>. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis durante a execução — no card da tarefa em execução, no <a onclick="show('tasks/barra-de-titulo')">chip da barra de título</a> e no <a onclick="show('overlays')">Popup Flyout</a>. Você dispara cada uma sob demanda, quando precisar.</p>
+    <p>Escolher uma planejada na lista inicia o timer já com nome, projeto, categoria e campos personalizados preenchidos. Cada linha tem também o <strong>círculo de concluir</strong>, à esquerda: clicar nele marca a tarefa como feita no dia sem iniciá-la — ela sai da lista, que mostra só as pendentes. O chip de faturamento continua alternando ali mesmo, sem iniciar a tarefa, e <strong>"Ver semana →"</strong> leva ao <a onclick="show('planning')">Planejamento</a>. Se a tarefa tiver ações configuradas (abrir URL, abrir arquivo), elas ficam disponíveis como chips clicáveis durante a execução — no card da tarefa em execução, no <a onclick="show('tasks/barra-de-titulo')">chip da barra de título</a> e no <a onclick="show('overlays')">Popup Flyout</a>. Você dispara cada uma sob demanda, quando precisar.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -1095,16 +1095,16 @@
       </div>
     </div>
 
-    <p>Cada linha exibe o ponto colorido do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o chip de faturamento e a duração. Os botões de ação aparecem no hover — em repouso a linha mostra apenas os seus dados.</p>
+    <p>Cada linha exibe o ponto colorido do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o chip de faturamento, a duração e o <strong>Play</strong>, sempre visível — ele inicia uma nova execução com estes dados. O <strong>clique na linha</strong> abre o modal de edição, e o menu <strong>⋯</strong>, que aparece no hover (ou pelo <strong>clique direito</strong>, em qualquer ponto da linha), traz <strong>Editar</strong> e <strong>Excluir</strong>. Com o foco na linha, <kbd>Enter</kbd> inicia, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam entre as linhas. Excluir continua sem confirmação — e <a onclick="show('shortcuts/teclado-listas')">dá para desfazer</a>.</p>
 
     <h3>Agrupamento de tarefas</h3>
-    <p>Tarefas com mesmo <strong>nome + projeto + categoria</strong> são agrupadas visualmente. O grupo exibe a duração total e a contagem de registros ao lado do nome. Dentro do grupo você pode:</p>
+    <p>Tarefas com mesmo <strong>nome + projeto + categoria</strong> são agrupadas visualmente. O grupo exibe a duração total e a contagem de registros ao lado do nome. O clique no cabeçalho <strong>expande</strong> o grupo, para ver e editar cada registro individualmente; as demais ações ficam no menu <strong>⋯</strong> do cabeçalho, que também abre pelo clique direito:</p>
     <ul>
-      <li><strong>Mesclar:</strong> une todos os registros em um único, somando as durações. O registro começa no início do primeiro e termina no fim do último.</li>
-      <li><strong>Editar grupo:</strong> altera nome, projeto, categoria e campos personalizados de todas as tarefas do grupo de uma vez.</li>
-      <li><strong>Expandir:</strong> vê e edita cada registro individualmente.</li>
-      <li><strong>Repetir:</strong> inicia uma nova execução com os mesmos dados.</li>
+      <li><strong>Editar grupo:</strong> altera nome, projeto, categoria e campos personalizados de todas as tarefas do grupo de uma vez. Com o foco no cabeçalho, a tecla <kbd>E</kbd> faz o mesmo.</li>
+      <li><strong>Mover para workspace:</strong> só aparece havendo mais de um workspace.</li>
+      <li><strong>Unificar:</strong> une todos os registros em um único, somando as durações. O registro começa no início do primeiro e termina no fim do último.</li>
     </ul>
+    <p>Para repetir o trabalho, use o <strong>Play</strong> de qualquer registro do grupo: ele inicia uma nova execução com os mesmos dados.</p>
 
     <div class="callout warning">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
@@ -1112,7 +1112,7 @@
     </div>
 
     <h3>Seleção múltipla</h3>
-    <p>A barra "Selecionar tarefas" liga as caixas de seleção da lista. Com tarefas marcadas você pode excluí-las em massa ou, havendo mais de um workspace, <strong>movê-las para outro workspace</strong>.</p>
+    <p>A barra "Selecionar tarefas" liga as caixas de seleção da lista. Com tarefas marcadas você pode excluí-las em massa — o lote também <a onclick="show('shortcuts/teclado-listas')">se desfaz</a> — ou, havendo mais de um workspace, <strong>movê-las para outro workspace</strong>.</p>
   </section>
 
   <!-- ──────────────────── RETROACTIVE ──────────────────── -->
@@ -1290,11 +1290,11 @@
       Apontamentos do dia
     </h2>
 
-    <p>A coluna da direita lista o que já foi registrado no dia selecionado, do mais recente para o mais antigo. Por linha: <strong>Editar</strong> (modal completo) e <strong>Excluir</strong> (sem confirmação).</p>
+    <p>A coluna da direita lista o que já foi registrado no dia selecionado, do mais recente para o mais antigo. O <strong>clique na linha</strong> abre o modal completo de edição. O menu <strong>⋯</strong>, no hover, e o <strong>clique direito</strong> trazem <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). Com o foco na linha, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam entre as linhas.</p>
 
-    <p>A barra <strong>"Selecionar tarefas"</strong>, acima da lista, liga as caixas de seleção e habilita duas ações em massa:</p>
+    <p>A barra <strong>"Selecionar tarefas"</strong>, acima da lista, liga as caixas de seleção e habilita duas ações em massa. No modo de seleção a linha volta a servir só para marcar: sem menu, sem clique direito.</p>
     <ul>
-      <li><strong>Excluir selecionadas</strong> — sem confirmação.</li>
+      <li><strong>Excluir selecionadas</strong> — sem confirmação, e o lote também se desfaz.</li>
       <li><strong>Mover para workspace</strong> — só aparece havendo mais de um workspace. Projeto e categoria de mesmo nome são reaproveitados no destino.</li>
     </ul>
   </section>
@@ -1433,25 +1433,45 @@
       A linha da tarefa planejada
     </h2>
 
-    <p>Em repouso, a linha mostra o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o <a onclick="show('planning/acoes-tarefa')">raio das ações</a> (quando há) e o chip de faturamento — que é controle, não rótulo: clicar nele alterna. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha. Os botões aparecem no hover (ou ao navegar pelo teclado) e não ocupam largura enquanto estão escondidos:</p>
+    <p>Em repouso, a linha mostra o <strong>círculo de concluir</strong>, o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o <a onclick="show('planning/acoes-tarefa')">raio das ações</a> (quando há), o chip de faturamento — que é controle, não rótulo: clicar nele alterna — e o <strong>Play</strong>, na ponta direita. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha.</p>
+
+    <p>O que se usa o dia inteiro fica sempre visível; o resto está no menu <strong>⋯</strong>, que aparece no hover (ou ao navegar pelo teclado) e não ocupa largura enquanto está escondido:</p>
 
     <div class="table-scroll">
 
-    
+
       <table class="data-table">
-        <thead><tr><th>Botão</th><th>O que faz</th></tr></thead>
+        <thead><tr><th>Peça</th><th>O que faz</th></tr></thead>
         <tbody>
+          <tr><td><strong>Círculo</strong></td><td>Marca ou desmarca a conclusão no dia. Concluída, o círculo fica cheio com um ✓ e o nome, tachado.</td></tr>
           <tr><td><strong>Play</strong></td><td>Inicia o timer com os dados da planejada. Desabilitado, com o motivo no tooltip, enquanto houver outra tarefa em execução.</td></tr>
-          <tr><td><strong>Compartilhar</strong></td><td>Copia um link da tarefa para a área de transferência, para mandar a outra pessoa. Veja <a onclick="show('deeplinks/compartilhar-tarefa')">Compartilhar uma tarefa</a>.</td></tr>
-          <tr><td><strong>Concluir / Pendente</strong></td><td>Marca ou desmarca a conclusão no dia.</td></tr>
-          <tr><td><strong>Duplicar</strong></td><td>Cria uma cópia da tarefa planejada.</td></tr>
-          <tr><td><strong>Ações</strong></td><td>Expande e edita as ações associadas.</td></tr>
-          <tr><td><strong>Excluir</strong></td><td>Remove a tarefa, sem confirmação.</td></tr>
+          <tr><td><strong>⋯</strong></td><td>Abre o menu da linha. O <strong>clique direito</strong> em qualquer ponto da linha abre o mesmo menu, ali onde o cursor está.</td></tr>
+          <tr><td><strong>Clique na linha</strong></td><td>Abre o modal de edição. No modo de seleção, marca ou desmarca a tarefa.</td></tr>
         </tbody>
       </table>
 
-    
+
     </div>
+
+    <p>O menu tem quatro itens, e cada um responde também a uma tecla quando a linha está em foco:</p>
+
+    <div class="table-scroll">
+
+
+      <table class="data-table">
+        <thead><tr><th>Item</th><th>Tecla</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Editar</strong></td><td><kbd>E</kbd></td><td>Abre o modal completo — o mesmo do clique na linha.</td></tr>
+          <tr><td><strong>Duplicar</strong></td><td><kbd>D</kbd></td><td>Cria uma cópia da tarefa planejada.</td></tr>
+          <tr><td><strong>Copiar link</strong></td><td><kbd>L</kbd></td><td>Copia um link da tarefa para a área de transferência, para mandar a outra pessoa. Veja <a onclick="show('deeplinks/compartilhar-tarefa')">Copiar o link de uma tarefa</a>.</td></tr>
+          <tr><td><strong>Excluir</strong></td><td><kbd>Del</kbd></td><td>Remove a tarefa, sem confirmação — mas dá para <a onclick="show('shortcuts/teclado-listas')">desfazer</a>.</td></tr>
+        </tbody>
+      </table>
+
+
+    </div>
+
+    <p>Com o foco na própria linha, <kbd>Enter</kbd> inicia, <kbd>Espaço</kbd> conclui ou reabre e <kbd>↑</kbd> <kbd>↓</kbd> andam para a linha vizinha, dentro do cartão do dia.</p>
 
     <h2 id="concluir-pendente">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1467,8 +1487,8 @@
     </div>
 
     <ul>
-      <li><strong>Concluir:</strong> marca a tarefa como feita no dia atual. Ela deixa de aparecer na lista de planejadas da tela de Tarefas, mas continua existindo no planejamento.</li>
-      <li><strong>Pendente:</strong> desfaz a conclusão. A tarefa volta a aparecer como planejada para o dia.</li>
+      <li><strong>Concluir:</strong> o círculo à esquerda da linha marca a tarefa como feita no dia atual. Ela deixa de aparecer na lista de planejadas da tela de Tarefas, mas continua existindo no planejamento.</li>
+      <li><strong>Pendente:</strong> clicar de novo no círculo desfaz a conclusão. A tarefa volta a aparecer como planejada para o dia.</li>
     </ul>
 
     <h2 id="importar-agenda">
@@ -1561,7 +1581,7 @@
 
     <p>Na aba Tarefas, cada dia fica num cartão. O cabeçalho de cada grupo exibe o dia da semana, a data e o total de horas do dia. Cada grupo pode ser exportado individualmente.</p>
 
-    <p>Por tarefa, os botões disponíveis são <strong>Editar</strong> (abre modal completo) e <strong>Excluir</strong> (sem confirmação). A entrada que veio de uma tarefa planejada com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre as ações da planejada de origem. A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa e, havendo mais de um workspace, <strong>Mover para workspace</strong>.</p>
+    <p>Por tarefa, o <strong>clique na linha</strong> abre o modal completo de edição, e o menu <strong>⋯</strong> — no hover ou pelo <strong>clique direito</strong> — traz <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). Com o foco na linha, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam dentro do cartão do dia. A entrada que veio de uma tarefa planejada com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre as ações da planejada de origem. A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa — que também se desfaz — e, havendo mais de um workspace, <strong>Mover para workspace</strong>; no modo de seleção a linha serve só para marcar.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -2619,7 +2639,7 @@
     </ul>
 
     <h3>Aba Planejadas</h3>
-    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. Por linha, no hover: <strong>Editar</strong>, <strong>Concluir</strong> e <strong>Iniciar</strong>. A tarefa com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre a ação sem precisar iniciar a tarefa.</p>
+    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. A linha é a mesma do <a onclick="show('planning/lista-planejadas')">Planejamento</a>: o <strong>círculo de concluir</strong> à esquerda, o <strong>Play</strong> à direita, e o menu <strong>⋯</strong> — no hover ou pelo <strong>clique direito</strong> — com <strong>Editar</strong>, <strong>Duplicar</strong>, <strong>Copiar link</strong> e <strong>Excluir</strong>. O clique na linha abre a edição aqui mesmo, no painel do popup. A tarefa com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre a ação sem precisar iniciar a tarefa.</p>
     <p>Concluir direto daqui é útil para a tarefa que você parou como "Pendente" mas que estava de fato terminada — não precisa abrir o planejamento para isso.</p>
 
     <h3>Aba Executadas</h3>
@@ -2663,7 +2683,7 @@
         <thead><tr><th>Painel</th><th>Abre por</th><th>Edita</th></tr></thead>
         <tbody>
           <tr><td><strong>Tarefa em execução</strong></td><td>O ✎ do card</td><td>Nome, projeto, categoria com billable, hora de início, campos personalizados e os chips das ações. Editar aqui <strong>também configura a planejada de origem</strong>.</td></tr>
-          <tr><td><strong>Tarefa planejada</strong></td><td>O ✎ da linha na aba Planejadas</td><td>Nome, projeto, categoria com billable, campos personalizados, agendamento e ações — os mesmos campos do modal completo.</td></tr>
+          <tr><td><strong>Tarefa planejada</strong></td><td>O clique na linha da aba Planejadas, ou <strong>Editar</strong> no menu ⋯</td><td>Nome, projeto, categoria com billable, campos personalizados, agendamento e ações — os mesmos campos do modal completo.</td></tr>
           <tr><td><strong>Tarefa executada</strong></td><td>O ✎ da linha na aba Executadas</td><td>Nome, projeto, categoria com billable e campos personalizados, para o grupo inteiro. Data, duração, início e fim aparecem só quando o grupo tem uma tarefa.</td></tr>
         </tbody>
       </table>
@@ -2944,6 +2964,62 @@
       <div class="callout-body">Há telas em que o <kbd>Enter</kbd> <strong>deliberadamente não submete</strong>: os modais que operam sobre uma seleção em lote (importar da Agenda, importar do Monday, enviar tarefas) e os painéis com duas ações igualmente primárias. Ali submeter por engano custaria caro.</div>
     </div>
 
+    <h2 id="teclado-listas">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h8"/></svg>
+      Linhas de tarefa
+    </h2>
+
+    <p>As listas de tarefa — <a onclick="show('planning/lista-planejadas')">Planejamento</a>, <a onclick="show('tasks/entradas-hoje')">Entradas de hoje</a>, <a onclick="show('history/resultados')">Histórico</a>, <a onclick="show('retroactive/lista-do-dia')">Lançamento manual</a> e o <a onclick="show('overlays/popup-flyout')">Popup Flyout</a> — respondem às mesmas teclas, com o foco <strong>na própria linha</strong>. Cada tela só responde ao que ela de fato tem: sem Play não há <kbd>Enter</kbd>, e só a planejada duplica e copia link.</p>
+
+    <div class="table-scroll">
+
+
+      <table class="data-table">
+        <thead><tr><th>Atalho</th><th>Ação</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><kbd>↑</kbd> <kbd>↓</kbd></td>
+            <td>Foco na linha vizinha, dentro da mesma lista</td>
+          </tr>
+          <tr>
+            <td><kbd>Enter</kbd></td>
+            <td>Iniciar a tarefa</td>
+          </tr>
+          <tr>
+            <td><kbd>Espaço</kbd></td>
+            <td>Concluir ou reabrir (só nas planejadas)</td>
+          </tr>
+          <tr>
+            <td><kbd>E</kbd></td>
+            <td>Editar</td>
+          </tr>
+          <tr>
+            <td><kbd>D</kbd></td>
+            <td>Duplicar (só nas planejadas)</td>
+          </tr>
+          <tr>
+            <td><kbd>L</kbd></td>
+            <td>Copiar link (só nas planejadas)</td>
+          </tr>
+          <tr>
+            <td><kbd>Del</kbd></td>
+            <td>Excluir</td>
+          </tr>
+          <tr>
+            <td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td>
+            <td>Desfazer a última exclusão, nos 6 segundos seguintes</td>
+          </tr>
+        </tbody>
+      </table>
+
+
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Excluir não pede confirmação, mas se desfaz.</strong> O aviso que aparece ao excluir — uma tarefa ou um lote inteiro do modo de seleção — traz o botão <strong>Desfazer</strong> por <strong>6 segundos</strong>; o <kbd>Ctrl</kbd> + <kbd>Z</kbd> faz o mesmo. A tarefa volta com os mesmos dados e na mesma posição. Só o último lote se desfaz, e sair da tela nesses 6 segundos abre mão dele.</div>
+    </div>
+
     <h2 id="atalhos-globais-config">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       Atalhos globais (configuráveis)
@@ -3067,13 +3143,13 @@
 
     <h2 id="compartilhar-tarefa">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/></svg>
-      Compartilhar uma tarefa
+      Copiar o link de uma tarefa
     </h2>
 
     <p>Uma tarefa planejada vira um link <code>deskclock://task/share</code> que você manda para outra pessoa — pelo Slack, por exemplo. Quem abre o link vê a tarefa preenchida no próprio DeskClock e decide o que fazer com ela.</p>
 
-    <h3>Gerar o link</h3>
-    <p>No <a onclick="show('planning/lista-planejadas')">Planejamento</a>, passe o mouse sobre a tarefa e clique em <strong>Compartilhar</strong>, logo depois do Play. O link vai para a área de transferência e um aviso confirma a cópia.</p>
+    <h3>Copiar o link</h3>
+    <p>No <a onclick="show('planning/lista-planejadas')">Planejamento</a> — ou na aba Planejadas do <a onclick="show('overlays/popup-flyout')">Popup Flyout</a> —, abra o menu <strong>⋯</strong> da tarefa (ou clique nela com o botão direito) e escolha <strong>Copiar link</strong>; com o foco na linha, a tecla <kbd>L</kbd> faz o mesmo. O link vai direto para a área de transferência e um aviso confirma a cópia — não abre nada.</p>
 
     <div class="table-scroll">
 

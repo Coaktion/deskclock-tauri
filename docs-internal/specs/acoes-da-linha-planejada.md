@@ -152,7 +152,7 @@ F0–F5 em `feat/planned-row-actions`; G1–G7 em `feat/row-actions-lists`, que 
 | G3   | popup: lista de planejadas                                                                           | ✅ `3081d6b`                           |
 | G4   | Tarefas: entradas (`TaskCard`) e grupo (`TaskGroupCard`)                                             | ✅ `06f0881`                           |
 | G5   | Histórico (`HistoryTasksTab`) e Lançamento Manual (`DayTaskRow`)                                     | ✅ `b9455f8`                           |
-| G6   | planejadas de hoje em Tarefas (`OmniboxIdle`)                                                        | a fazer                                |
+| G6   | planejadas de hoje em Tarefas (`OmniboxIdle`)                                                        | ✅ `e58f715`                           |
 | G7   | manual (`docs/index.html`) e docs com "Copiar link", `pnpm visual`, 2 modos × 4 acentos, PR          | a fazer                                |
 
 ## Parte 2 — as outras listas
@@ -384,3 +384,29 @@ se conclui — planejadas —, nunca em lançamento.
   **LOW**, tudo dentro da tela de Tarefas.
 - **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): o círculo alinhado ao chip e à
   duração ausente nas linhas da lista suspensa, e o nome que encurta 14 px + gap com a coluna nova.
+
+**Como ficou (G7):**
+
+- **O manual (`docs/index.html`) passou a descrever o menu, não a fileira.** As cinco superfícies
+  foram reescritas onde documentavam botões de hover: a linha da planejada (`#lista-planejadas`,
+  que trocou a tabela de seis botões por uma de peças — círculo, Play, ⋯, clique na linha — mais a
+  tabela dos quatro itens do menu com os atalhos), as Entradas de hoje e o grupo (`#entradas-hoje`),
+  o Histórico (`#resultados`), o Lançamento manual (`#lista-do-dia`), a aba Planejadas do popup e a
+  lista suspensa do omnibox (`#tarefas-planejadas`, que ganhou o círculo da G6).
+- **Âncora nova, `#teclado-listas`**, na página de Atalhos: a tabela única do teclado de linha
+  (`↑↓`, `Enter`, `Espaço`, `E`, `D`, `L`, `Del`, `Ctrl+Z`) e o aviso do desfazer de 6 s. As outras
+  telas linkam para ela em vez de repetirem a regra — o manual não tinha onde falar do `Ctrl+Z`.
+- **Renomeado para "Copiar link"** no manual (o item da tabela da linha, o título
+  `Compartilhar uma tarefa` → `Copiar o link de uma tarefa`, o `<h3>Gerar o link` → `Copiar o link`
+  e o texto de como copiar) e no `README.md` ("botão de compartilhar" → item **Copiar link** do
+  menu). O `docs-internal/telas/planejamento.md` já vinha renomeado da F5.
+- **Manteve o nome antigo, de propósito:** o esquema `deskclock://task/share`, o id da âncora
+  `#compartilhar-tarefa` (link já distribuído aponta para ele), o nome do arquivo
+  `docs-internal/specs/compartilhar-tarefa.md` e as entradas do `CHANGELOG.md`, que são registro
+  histórico do que foi publicado com aquele nome. O `docs-internal/specs/mcp.md` também cita
+  "compartilhar tarefa" numa nota de fase entregue, como referência ao recurso, não como rótulo
+  de UI.
+- **`compartilhar-tarefa.md` teve só a seção "Onde o botão fica"** atualizada (virou "Onde a ação
+  fica"), com a nota do que não foi renomeado. O contrato do link não mudou em nada.
+- Falta a **verificação visual** (`pnpm visual`, `pnpm tauri dev` nos 2 modos × 4 acentos) e o PR,
+  que são do usuário.
