@@ -2,7 +2,7 @@ import { Play } from "lucide-react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { Input, TaskRow } from "@presentation/components/ui";
+import { CompleteToggle, Input, TaskRow } from "@presentation/components/ui";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { Autocomplete } from "./Autocomplete";
 import {
@@ -50,6 +50,12 @@ interface OmniboxIdleProps extends DraftHookState {
   containerRef: React.RefObject<HTMLDivElement | null>;
   /** O chip de faturamento é controle em toda parte, inclusive na sugestão. */
   onToggleBillable: (task: PlannedTask) => void;
+  /**
+   * Concluir a planejada do dia pelo círculo. Só conclui, nunca reabre: a lista
+   * é a das **pendentes** (`matchPlannedTasks`), então a linha concluída sai
+   * dela no recarregamento e não há aqui um círculo cheio para desmarcar.
+   */
+  onCompletePlanned: (task: PlannedTask) => void;
   /** Destino do "Ver semana →" no rodapé da lista. */
   onNavigatePlanning?: () => void;
 }
@@ -59,6 +65,7 @@ export function OmniboxIdle({
   categories,
   containerRef,
   onToggleBillable,
+  onCompletePlanned,
   onNavigatePlanning,
   draft,
   setDraft,
@@ -190,8 +197,8 @@ export function OmniboxIdle({
        * abri-la a cada foco empurraria os KPIs e as Entradas tela abaixo — que é
        * metade da queixa que tirou a lista daqui em `86e3245`.
        *
-       * Escolher uma **inicia** a tarefa; o chip de faturamento barra a
-       * propagação por conta própria, então ele continua alternando sem
+       * Escolher uma **inicia** a tarefa; o chip de faturamento e o círculo de
+       * concluir barram a propagação por conta própria, então os dois agem sem
        * disparar a linha em volta.
        */}
       {showSuggestions && suggestions.length > 0 && (
@@ -215,6 +222,13 @@ export function OmniboxIdle({
                   billable={task.billable}
                   onToggleBillable={() => onToggleBillable(task)}
                   dotColor={getProjectColor(project)}
+                  /* O círculo é a única ação da linha aqui: sem ⋯ e sem clique
+                     direito, porque a lista existe para escolher o que iniciar
+                     e o resto das ações mora no Planejamento e no popup. Ele
+                     nasce vazio — só pendente chega nesta lista. */
+                  leading={
+                    <CompleteToggle completed={false} onToggle={() => onCompletePlanned(task)} />
+                  }
                   selected={idx === activeSuggIdx}
                   onClick={() => void startPlanned(task)}
                 />

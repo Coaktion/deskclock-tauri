@@ -60,14 +60,20 @@ achado de relance.
   modo escuro, e a lista lia como mais uma seção da página. Ver a skill `design-system`.
 - Mostra **quatro tarefas inteiras** (236px de teto) e deixa a quinta assomar cortada, que é o que
   indica que a lista rola.
-- Cada linha é um `TaskRow`: ponto na cor do projeto, nome, `projeto · categoria` e o chip de
-  faturamento, que **continua alternando** (o `BillableChip` barra a propagação, então alterná-lo
-  não dispara a linha).
+- Cada linha é um `TaskRow`: círculo de concluir, ponto na cor do projeto, nome,
+  `projeto · categoria` e o chip de faturamento, que **continua alternando** (o `BillableChip`
+  barra a propagação, então alterná-lo não dispara a linha).
+- **O círculo de concluir é a única ação da linha** (2026-09-19, spec
+  `docs-internal/specs/acoes-da-linha-planejada.md`, G6): `ui/CompleteToggle` no slot `leading`,
+  que também barra a propagação — concluir não inicia a tarefa. **Não há ⋯ nem clique direito
+  aqui**: a lista existe para escolher o que iniciar, e Editar, Duplicar, Copiar link e Excluir
+  moram na linha do Planejamento e na do popup. Como a lista mostra só as **pendentes**, concluir
+  tira a tarefa dela; reabrir é pelo Planejamento ou pelo popup.
 - **Clicar na linha inicia a tarefa na hora**, com o vínculo (`plannedTaskId`) e os campos
   personalizados da planejada. Pelo teclado: ↑/↓ andam pela lista e Enter inicia a ativa; com a
   lista fechada ou vazia, Enter inicia o rascunho como tarefa avulsa. ESC fecha só a lista.
 - Rodapé da lista: **"Ver semana →"**, que leva ao Planejamento.
-- **A lista suspensa do omnibox não oferece as ações** — o ⚡ que as executa está na linha do Planejamento e na lista de planejadas do popup, e ali ele dispensa dar play e abrir a edição. Durante a execução elas continuam como chips clicáveis no Popup Flyout (ver §6.5).
+- **A lista suspensa do omnibox não oferece as ações** — quem as executa sem dar play nem abrir a edição é o menu ⋯ (e o clique direito) da linha do Planejamento e da lista de planejadas do popup, na seção que abre o menu. Durante a execução elas continuam como chips clicáveis no Popup Flyout (ver §6.5).
 
 > **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
 
@@ -82,7 +88,12 @@ achado de relance.
 - **Header:** Título "Entradas de Hoje" + total de horas hoje.
 - **Lista de tarefas registradas hoje:**
   - Card exibe: Nome, Projeto, Categoria, indicador billable (clicável para alternar), duração.
-  - **Botões por card:** Play (inicia nova execução com os mesmos dados, se não houver tarefa em andamento) | Edit (modal completo) | Delete (sem confirmação).
+  - **Ações da linha** (2026-09-19, spec `docs-internal/specs/acoes-da-linha-planejada.md`, G4):
+    o ▶ "Iniciar com estes dados" é a única ação visível, na coluna fixa à direita (bloqueado
+    quando há tarefa em andamento, visível e desabilitado com o motivo no `title`); **Editar** e
+    **Excluir** ficam no ⋯ e no clique direito; o clique na linha edita. Com a linha focada,
+    `Enter` inicia, `E` edita, `Del` exclui e as setas andam entre as linhas. Excluir continua sem
+    confirmação, mas agora **se desfaz** pelo toast ou pelo `Ctrl+Z` (`useTaskUndo`).
 - **A linha da tarefa em execução se realça** (2026-09-15): ponto de 6px ao lado do nome — acento
   pulsando enquanto roda, `paused` parado quando pausada — e a faixa tingida no mesmo tom
   (`ExecutionDot` + a prop `execution` do `TaskRow`). A execução em curso é **outro registro**, sem
@@ -97,9 +108,12 @@ achado de relance.
   o realce não.
 - **Agrupamento:** Tarefas com mesmo Nome + Projeto + Categoria são agrupadas visualmente.
   - Grupo exibe duração total.
-  - Botão "Unificar" no grupo → mescla em registro único somando durações, sem confirmação (início e fim: §6.3).
-  - Edit no grupo → altera todas as tarefas do grupo.
-  - Expandir grupo → editar/excluir tarefa individual.
+  - O cabeçalho do grupo **não tem ação visível**: "Editar grupo", "Mover para workspace" e
+    "Unificar" ficam no ⋯ e no clique direito (`E` edita o grupo com a linha focada). O clique na
+    linha continua expandindo.
+  - "Unificar" mescla em registro único somando durações, sem confirmação (início e fim: §6.3).
+  - Editar grupo → altera todas as tarefas do grupo.
+  - Expandir grupo → editar/excluir tarefa individual, cada uma com o ▶ e o ⋯ próprios.
 
 ---
 

@@ -60,7 +60,7 @@ export function TitleBarRunningTask({ onStopRequest, onOpenRequest }: TitleBarRu
         </button>
         {/* O ⚡ fica do lado de Pausar e Parar, e não além do traço: ele age
             sobre a tarefa, não a descarta. Sem ações, não desenha nada. */}
-        <PlannedActionsFlyout variant="icon" actions={actions} />
+        <PlannedActionsFlyout actions={actions} />
         <IconButton
           size="sm"
           icon={isRunning ? <Pause size={14} /> : <Play size={14} />}

@@ -2,19 +2,11 @@ import type { Category } from "@domain/entities/Category";
 import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { actionsOfPlanned, type PlannedIndex } from "@domain/utils/plannedActions";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
+import { DayEntryRow } from "@presentation/components/DayEntryRow";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { Button, IconButton, SectionCard, TaskRow } from "@presentation/components/ui";
+import { Button, SectionCard } from "@presentation/components/ui";
 import type { DayGroup } from "@presentation/hooks/useHistory";
-import {
-  formatHHMM,
-  formatHHMMSS,
-  formatHistoryDayHeader,
-  formatRegisteredTimeRange,
-} from "@shared/utils/time";
-import { Pencil, Trash2 } from "lucide-react";
-
-import { projectColorOf } from "./projectColorOf";
+import { formatHHMM, formatHistoryDayHeader } from "@shared/utils/time";
 
 interface HistoryTasksTabProps {
   groups: DayGroup[];
@@ -33,8 +25,9 @@ interface HistoryTasksTabProps {
    */
   emptyMessage: string;
   /**
-   * As planejadas do workspace, por id. O ⚡ da linha lê a ação **atual** da
-   * origem — a `Task` não guarda cópia —, e a origem excluída não oferece nada.
+   * As planejadas do workspace, por id. A seção de ações do menu lê a ação
+   * **atual** da origem — a `Task` não guarda cópia —, e a origem excluída não
+   * oferece nada.
    */
   plannedIndex: PlannedIndex;
   onEnterSelectMode: () => void;
@@ -159,75 +152,24 @@ export function HistoryTasksTab({
               </span>
             }
           >
-            {group.tasks.map((task) => {
-              const project = projects.find((p) => p.id === task.projectId);
-              const category = categories.find((c) => c.id === task.categoryId);
-              const isSelected = selectedIds.has(task.id);
-              const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-
-              return (
-                <TaskRow
-                  key={task.id}
-                  title={task.name ?? "(sem nome)"}
-                  subtitle={subtitle || undefined}
-                  meta={
-                    <span className="text-micro font-mono tabular-nums text-fg-muted">
-                      {formatRegisteredTimeRange(
-                        task.startTime,
-                        task.durationSeconds,
-                        task.endTime
-                      )}
-                    </span>
-                  }
-                  duration={formatHHMMSS(task.durationSeconds ?? 0)}
-                  /* Some no modo de seleção pela mesma regra do `PlannedTaskItem`: a
-                     linha inteira é alvo de marcar, e o ⚡ engoliria o clique. */
-                  badges={
-                    !selectMode && (
-                      <PlannedActionsFlyout
-                        actions={actionsOfPlanned(plannedIndex, task.plannedTaskId)}
-                      />
-                    )
-                  }
-                  billable={task.billable}
-                  onToggleBillable={() => onToggleBillable(task)}
-                  dotColor={projectColorOf(projects, task.projectId)}
-                  selected={isSelected}
-                  onClick={selectMode ? () => onToggleSelectTask(task.id) : undefined}
-                  leading={
-                    selectMode ? (
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => onToggleSelectTask(task.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
-                        className={selectionBoxClass}
-                      />
-                    ) : undefined
-                  }
-                  actions={
-                    selectMode ? undefined : (
-                      <>
-                        <IconButton
-                          icon={<Pencil size={14} />}
-                          title="Editar"
-                          size="sm"
-                          onClick={() => onEditTask(task)}
-                        />
-                        <IconButton
-                          icon={<Trash2 size={14} />}
-                          title="Excluir"
-                          variant="danger"
-                          size="sm"
-                          onClick={() => onRemoveTask(task.id)}
-                        />
-                      </>
-                    )
-                  }
-                />
-              );
-            })}
+            {group.tasks.map((task) => (
+              <DayEntryRow
+                key={task.id}
+                task={task}
+                projects={projects}
+                categories={categories}
+                /* As ações da planejada de origem, que o menu da linha lista no
+                   fim (H1). No modo de seleção o menu nem abre, então não há o
+                   que esconder aqui. */
+                actions={actionsOfPlanned(plannedIndex, task.plannedTaskId)}
+                selectMode={selectMode}
+                selected={selectedIds.has(task.id)}
+                onToggleSelect={onToggleSelectTask}
+                onEdit={onEditTask}
+                onDelete={(t) => onRemoveTask(t.id)}
+                onToggleBillable={onToggleBillable}
+              />
+            ))}
           </SectionCard>
         );
       })}

@@ -110,9 +110,17 @@ busca nem desmarca o que estava marcado.**
 - **Totalizadores:** Total horas | Total billable | Total non-billable | Qtd registros — na aba KPIs.
 - **Agrupamento por dia:** Header do grupo = "Ter. 7 de abr de 2026 — 8:00" (dia da semana abreviado + data + total de horas do dia).
 - **Por grupo-dia:** Botão exportar individual.
-- **Por tarefa:** Botões Edit (modal) | Delete (sem confirmação).
-- **⚡ na linha:** a tarefa que veio de uma planejada mostra o `PlannedActionsFlyout` com a ação
-  **atual** da origem (`actionsOfPlanned`, sobre as planejadas do workspace ativo) — a `Task` não
-  guarda cópia, e a origem excluída não mostra nada. Some no modo de seleção, como no Planejamento.
+- **Por tarefa:** a linha é o `DayEntryRow` — **Editar** (modal) e **Excluir** no ⋯ e no clique
+  direito, clique na linha edita fora do modo de seleção e marca dentro dele, `E` e `Del` com o
+  foco na linha. Sem ▶ e sem círculo: lançamento passado não inicia nem se conclui. Excluir não
+  pede confirmação e **se desfaz** (toast com Desfazer e `Ctrl+Z`), a linha e o lote da seleção
+  pelo mesmo caminho. O desenho e o porquê estão em
+  `docs-internal/specs/acoes-da-linha-planejada.md` (G5).
+- **A ação da origem fica no menu, não na linha:** a tarefa que veio de uma planejada lista a ação
+  **atual** da origem (`actionsOfPlanned`, sobre as planejadas do workspace ativo) na seção que
+  abre o ⋯ e o clique direito — uma ação é o item, duas ou mais viram o submenu "Ações". A `Task`
+  não guarda cópia, e a origem excluída não mostra nada. Some no modo de seleção junto com o menu
+  inteiro. **O ⚡ que morava ao lado do chip saiu na H1** do spec
+  `acoes-da-linha-planejada.md`: era o segundo controle disputando a faixa com o chip e a duração.
 
 ---

@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TaskRow } from "@presentation/components/ui/TaskRow";
 import { geometryOf } from "../../../helpers/tailwindGeometry";
 
@@ -72,19 +73,21 @@ describe("TaskRow", () => {
   });
 
   /**
-   * Duração e ações dividem a mesma célula, e no hover a duração vai a
-   * `opacity-0` — que **cria contexto de empilhamento** e a joga para a camada de
-   * cima, acima das ações. Invisível ela continua sendo alvo de clique, e como
-   * está alinhada à direita, cobre justamente os últimos botões: era por isso que
-   * o "Excluir" da linha não respondia. O jsdom não faz hit-test, então o que dá
-   * para amarrar aqui é a classe que tira a duração do caminho.
+   * A H2 desempilhou as duas: a duração tinha uma classe que a apagava no hover
+   * (`group-hover:opacity-0`) para o ⋯ tomar o lugar dela, e era isso que fazia
+   * o tempo sumir no Histórico e nas entradas de hoje. Agora cada uma tem a sua
+   * célula, e a duração não ganha classe de estado nenhuma — nem de hover, nem
+   * de foco, nem o `pointer-events-none` que o empilhamento cobrava.
    */
-  it("a duração não intercepta o clique das ações que ela cobre", () => {
+  it("a duração não some no hover nem divide célula com o ⋯", () => {
     const { container } = render(
       <TaskRow title="a" duration="1h" actions={<button type="button">x</button>} />
     );
     const duracao = container.querySelector(".tabular-nums")!;
-    expect(duracao.className).toContain("pointer-events-none");
+
+    expect(duracao.className).not.toContain("opacity");
+    expect(duracao.className).not.toContain("pointer-events-none");
+    expect(duracao.parentElement).not.toBe(screen.getByText("x").parentElement);
   });
 
   /**
@@ -106,41 +109,42 @@ describe("TaskRow", () => {
   });
 
   /**
-   * Quem abre em largura paga com o `1fr` do nome, e arrasta para a esquerda
-   * tudo o que estiver à direita dele. Com o chip **antes** das ações ele andava
-   * ~118px no instante em que o cursor entrava na linha, e quem herdava o lugar
-   * dele era o último botão da fileira — o "Excluir" do Planejamento, que não
-   * pergunta. O jsdom não faz layout, então o que dá para amarrar é a ordem: nada
-   * que abra em largura pode ficar entre o nome e o chip.
+   * A ordem da direita é **⋯ · chip · duração** (H2), e é a mesma tenha a linha
+   * duração ou não: o ⋯ em primeiro é o que o põe no mesmo x em toda linha da
+   * lista, e o que o impede de cobrir qualquer dado. O jsdom não faz layout,
+   * então o que dá para amarrar é a ordem das células.
    */
-  it("o chip fica ancorado depois da célula que abre em largura", () => {
-    const { container } = render(
-      <TaskRow
-        title="a"
-        billable
-        onToggleBillable={() => {}}
-        collapseActions
-        actions={<span data-acoes="" />}
-      />
-    );
-    const celulas = [...container.firstElementChild!.children];
-    const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
-    const chip = celulas.findIndex((c) => c.querySelector("button"));
+  it("o ⋯ vem antes do chip, com duração ou sem ela", () => {
+    const ordem = (comDuracao: boolean) => {
+      const { container } = render(
+        <TaskRow
+          title="a"
+          duration={comDuracao ? "1h" : undefined}
+          billable
+          onToggleBillable={() => {}}
+          actions={<span data-acoes="" />}
+        />
+      );
+      const celulas = [...container.firstElementChild!.children];
+      return {
+        acoes: celulas.findIndex((c) => c.querySelector("[data-acoes]")),
+        chip: celulas.findIndex((c) => c.querySelector("button")),
+      };
+    };
 
-    expect(acoes).toBeGreaterThanOrEqual(0);
-    expect(chip).toBeGreaterThan(acoes);
-    // E a célula fechada não pode cobrar o `gap` da grade que ela não ocupa, ou
-    // o chip nasce 10px à direita de onde as outras linhas o põem.
-    expect(celulas[acoes].className).toMatch(/(?:^|\s)-mr-2\.5(?:\s|$)/);
-    expect(celulas[acoes].className).toMatch(/(?:^|\s)group-hover:mr-0(?:\s|$)/);
+    for (const comDuracao of [true, false]) {
+      const { acoes, chip } = ordem(comDuracao);
+      expect(acoes).toBeGreaterThanOrEqual(0);
+      expect(chip).toBeGreaterThan(acoes);
+    }
   });
 
   /**
-   * O outro lado da mesma regra: com duração a célula já está reservada, nada se
-   * move no hover, e ali o chip continua antes — que é o que o design desenha nas
-   * Entradas. Inverter as duas ordens seria mudar a linha que não tem o defeito.
+   * Chip e duração dividem **uma** célula, nessa ordem, e não duas colunas: a
+   * quarta coluna sairia do `1fr` do nome em toda linha que não mede tempo — a
+   * planejada, que é justamente onde o nome é mais caro.
    */
-  it("com duração, a célula já está reservada e o chip volta a vir antes", () => {
+  it("o chip e a duração dividem a última célula, o chip primeiro", () => {
     const { container } = render(
       <TaskRow
         title="a"
@@ -150,13 +154,13 @@ describe("TaskRow", () => {
         actions={<span data-acoes="" />}
       />
     );
-    const celulas = [...container.firstElementChild!.children];
-    const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
-    const chip = celulas.findIndex((c) => c.querySelector("button"));
+    const chip = screen.getByRole("button");
+    const duracao = container.querySelector(".tabular-nums")!;
 
-    expect(chip).toBeGreaterThanOrEqual(0);
-    expect(acoes).toBeGreaterThan(chip);
-    expect(celulas[acoes].className).not.toMatch(/-mr-2\.5/);
+    expect(duracao.parentElement).toBe(chip.parentElement);
+    expect([...chip.parentElement!.children].indexOf(chip)).toBeLessThan(
+      [...chip.parentElement!.children].indexOf(duracao)
+    );
   });
 
   it("alternar o faturamento não aciona a linha em volta", () => {
@@ -258,5 +262,138 @@ describe("TaskRow", () => {
     expect([...grupo.children].indexOf(marca)).toBeLessThan(
       [...grupo.children].findIndex((c) => c.hasAttribute("data-marca"))
     );
+  });
+
+  /**
+   * Os call sites de hoje não passam `trailing`, e a grade deles não pode mudar
+   * nem de caractere: são as quatro formas do censo, afirmadas uma a uma — e,
+   * com `trailing`, cada uma com um `auto` a mais no fim.
+   */
+  const FORMAS: [string, { leading?: ReactNode; meta?: string; dotColor?: string }, string][] = [
+    ["chevron e faixa", { leading: <span />, meta: "09:00" }, "auto_88px_1fr_auto_auto"],
+    ["só a faixa", { meta: "09:00" }, "88px_1fr_auto_auto"],
+    ["só o ponto", { dotColor: "#fff" }, "auto_1fr_auto_auto"],
+    ["nada antes do nome", {}, "1fr_auto_auto"],
+  ];
+
+  const gradeDe = (el: Element) =>
+    el.className.split(/\s+/).find((c) => c.startsWith("grid-cols-"));
+
+  it.each(FORMAS)("sem `trailing`, %s: a grade é a de antes", (_, props, colunas) => {
+    const { container } = render(<TaskRow title="a" {...props} />);
+    expect(gradeDe(container.firstElementChild!)).toBe(`grid-cols-[${colunas}]`);
+  });
+
+  it.each(FORMAS)("com `trailing`, %s: a grade ganha uma coluna no fim", (_, props, colunas) => {
+    const { container } = render(<TaskRow title="a" {...props} trailing={<span data-play="" />} />);
+    expect(gradeDe(container.firstElementChild!)).toBe(`grid-cols-[${colunas}_auto]`);
+  });
+
+  it("a ordem da direita é ⋯ → chip → duração → `trailing`", () => {
+    const { container } = render(
+      <TaskRow
+        title="a"
+        duration="1h"
+        billable
+        onToggleBillable={() => {}}
+        actions={<span data-acoes="" />}
+        trailing={<span data-play="" />}
+      />
+    );
+    const celulas = [...container.firstElementChild!.children];
+    const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
+    const chip = celulas.findIndex((c) => c.querySelector("button"));
+    const duracao = celulas.findIndex((c) => c.querySelector(".tabular-nums"));
+    const play = celulas.findIndex((c) => c.querySelector("[data-play]"));
+
+    expect(acoes).toBeGreaterThanOrEqual(0);
+    expect(chip).toBeGreaterThan(acoes);
+    expect(duracao).toBe(chip); // mesma célula, o chip antes (ver acima)
+    expect(play).toBeGreaterThan(chip);
+    expect(play).toBe(celulas.length - 1);
+  });
+
+  it("com duração, `trailing` também vem depois do chip e da duração", () => {
+    const { container } = render(
+      <TaskRow
+        title="a"
+        duration="1h"
+        billable
+        onToggleBillable={() => {}}
+        trailing={<span data-play="" />}
+      />
+    );
+    const celulas = [...container.firstElementChild!.children];
+    const chip = celulas.findIndex((c) => c.querySelector("button"));
+    const play = celulas.findIndex((c) => c.querySelector("[data-play]"));
+
+    expect(play).toBeGreaterThan(chip);
+    expect(play).toBe(celulas.length - 1);
+  });
+
+  it("repassa o clique direito ao contêiner da linha", () => {
+    const onContextMenu = vi.fn();
+    const { container } = render(<TaskRow title="a" onContextMenu={onContextMenu} />);
+
+    fireEvent.contextMenu(container.firstElementChild!);
+    expect(onContextMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it("com `onKeyDown`, a linha é focável, recebe a tecla e mostra foco só no teclado", () => {
+    const onKeyDown = vi.fn();
+    const { container } = render(<TaskRow title="a" onKeyDown={onKeyDown} />);
+    const linha = container.firstElementChild as HTMLElement;
+
+    expect(linha.getAttribute("tabindex")).toBe("0");
+    fireEvent.keyDown(linha, { key: "Enter" });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+
+    const classes = linha.className.split(/\s+/);
+    expect(classes).toEqual(
+      expect.arrayContaining([
+        "focus-visible:ring-2",
+        "focus-visible:ring-inset",
+        "focus-visible:ring-accent",
+      ])
+    );
+    expect(classes.filter((c) => c.includes("ring") && !c.startsWith("focus-visible:"))).toEqual(
+      []
+    );
+  });
+
+  /**
+   * A H2 apagou as três formas de revelar que a célula tinha — hover,
+   * `focus-within` e o par `focus-visible`/`has-[:focus-visible]` da linha
+   * focável. O ⋯ está sempre lá, e a única coisa que a classe dele ainda diz é o
+   * `gap` entre botões. Vale igual com e sem `onKeyDown`: o motivo de haver duas
+   * regras era justamente o clique do mouse deixar o ⋯ "aberto" depois de o
+   * cursor sair, e não há mais nada a abrir.
+   */
+  it.each([
+    ["com", () => {}],
+    ["sem", undefined],
+  ] as const)(
+    "%s `onKeyDown`, o ⋯ é sempre visível — sem classe de hover nem de foco",
+    (_, onKeyDown) => {
+      const { container } = render(
+        <TaskRow title="a" onKeyDown={onKeyDown} actions={<span data-acoes="" />} />
+      );
+      const acoes = container.querySelector("[data-acoes]")!.parentElement!;
+
+      expect(acoes.className).not.toContain("group-hover:");
+      expect(acoes.className).not.toContain("group-focus");
+      expect(acoes.className).not.toContain("group-has-");
+      expect(acoes.className).not.toContain("opacity-0");
+      expect(acoes.className).not.toMatch(/(?:^|\s)w-0(?:\s|$)/);
+    }
+  );
+
+  it("sem `onKeyDown`, a linha não é parada de Tab nem ganha anel", () => {
+    const { container } = render(<TaskRow title="a" duration="1h" />);
+    const linha = container.firstElementChild as HTMLElement;
+
+    expect(linha.hasAttribute("tabindex")).toBe(false);
+    expect(linha.className).not.toContain("ring");
+    expect(linha.className).not.toContain("outline-none");
   });
 });

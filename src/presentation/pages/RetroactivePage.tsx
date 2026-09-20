@@ -1,23 +1,19 @@
-import type { Category } from "@domain/entities/Category";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
-import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { getPlannedTasksForDate } from "@domain/usecases/plannedTasks/GetPlannedTasksForDate";
-import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { getTasksForDate } from "@domain/usecases/tasks/GetTasksForDate";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { launchPlannedTaskRetroactively } from "@domain/usecases/tasks/LaunchPlannedTaskRetroactively";
 import { CollapsibleFormColumn } from "@presentation/components/CollapsibleFormColumn";
+import { DayEntryRow } from "@presentation/components/DayEntryRow";
 import { ResizeHandle } from "@presentation/components/ResizeHandle";
 import { RetroactiveEntryForm } from "@presentation/components/RetroactiveEntryForm";
-import { selectionBoxClass } from "@presentation/components/selectionStyles";
 import {
   Button,
   DatePickerInput,
   IconButton,
   PageHeader,
   SectionCard,
-  TaskRow,
 } from "@presentation/components/ui";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId, useWorkspaces } from "@presentation/contexts/WorkspaceContext";
@@ -27,16 +23,17 @@ import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useResizablePanel } from "@presentation/hooks/useResizablePanel";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
+import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import { useTour } from "@presentation/hooks/useTour";
 import { EditTaskModal } from "@presentation/modals/EditTaskModal";
 import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
-import { addDaysISO, formatHHMMSS, formatRegisteredTimeRange, todayISO } from "@shared/utils/time";
+import { addDaysISO, formatHHMMSS, todayISO } from "@shared/utils/time";
 import { invoke } from "@tauri-apps/api/core";
 import { emit, listen } from "@tauri-apps/api/event";
-import { ChevronLeft, ChevronRight, ListChecks, Pencil, Play, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListChecks, Play } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 /**
@@ -46,83 +43,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
  * espaço, e quem não a quer tem o dia sem planejadas, em que ela não aparece.
  */
 const PLANNED_LIST_HEIGHT = { min: 72, max: 480, default: 144 } as const;
-
-interface DayTaskRowProps {
-  task: Task;
-  projects: Project[];
-  categories: Category[];
-  onEdit: (task: Task) => void;
-  onDelete: (id: string) => void;
-  onToggleBillable: (task: Task) => void;
-  selectMode?: boolean;
-  selected?: boolean;
-  onToggleSelect?: (id: string) => void;
-}
-
-function DayTaskRow({
-  task,
-  projects,
-  categories,
-  onEdit,
-  onDelete,
-  onToggleBillable,
-  selectMode = false,
-  selected = false,
-  onToggleSelect,
-}: DayTaskRowProps) {
-  const project = projects.find((p) => p.id === task.projectId);
-  const categoryName = categories.find((c) => c.id === task.categoryId)?.name;
-  const subtitle = [project?.name, categoryName].filter(Boolean).join(" · ");
-
-  return (
-    <TaskRow
-      title={task.name ?? "(sem nome)"}
-      subtitle={subtitle || undefined}
-      meta={
-        <span className="text-micro font-mono tabular-nums text-fg-muted">
-          {formatRegisteredTimeRange(task.startTime, task.durationSeconds, task.endTime)}
-        </span>
-      }
-      duration={formatHHMMSS(task.durationSeconds ?? 0)}
-      billable={task.billable}
-      onToggleBillable={() => onToggleBillable(task)}
-      dotColor={getProjectColor(project)}
-      selected={selected}
-      onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-      leading={
-        selectMode ? (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => onToggleSelect?.(task.id)}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Selecionar ${task.name ?? "(sem nome)"}`}
-            className={selectionBoxClass}
-          />
-        ) : undefined
-      }
-      actions={
-        selectMode ? undefined : (
-          <>
-            <IconButton
-              icon={<Pencil size={14} />}
-              title="Editar"
-              size="sm"
-              onClick={() => onEdit(task)}
-            />
-            <IconButton
-              icon={<Trash2 size={14} />}
-              title="Excluir"
-              variant="danger"
-              size="sm"
-              onClick={() => onDelete(task.id)}
-            />
-          </>
-        )
-      }
-    />
-  );
-}
 
 export function RetroactivePage() {
   const { taskRepo, plannedTaskRepo } = useRepositories();
@@ -262,10 +182,10 @@ export function RetroactivePage() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const { removeWithUndo } = useTaskUndo(loadTasks);
+
   async function handleDelete(id: string) {
-    await deleteTask(taskRepo, id);
-    void notifyTasksChanged();
-    await loadTasks();
+    await removeWithUndo([id]);
   }
 
   /**
@@ -357,12 +277,9 @@ export function RetroactivePage() {
     setSelectedIds(new Set());
   }
 
+  // Um lote só: é o que dá um toast e um Desfazer para a seleção inteira.
   async function handleBulkDelete() {
-    for (const id of selectedIds) {
-      await deleteTask(taskRepo, id);
-    }
-    void notifyTasksChanged();
-    await loadTasks();
+    await removeWithUndo([...selectedIds]);
     exitSelectMode();
   }
 
@@ -612,13 +529,13 @@ export function RetroactivePage() {
                 </p>
               ) : (
                 tasks.map((t) => (
-                  <DayTaskRow
+                  <DayEntryRow
                     key={t.id}
                     task={t}
                     projects={projects}
                     categories={categories}
                     onEdit={setEditingTask}
-                    onDelete={handleDelete}
+                    onDelete={(task) => void handleDelete(task.id)}
                     onToggleBillable={handleToggleBillable}
                     selectMode={selectMode}
                     selected={selectedIds.has(t.id)}

@@ -1,59 +1,34 @@
-import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
-import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import { taskGroupKey, type TaskGroup } from "@domain/utils/groupTasks";
 import { indexPlannedById } from "@domain/utils/plannedActions";
 import { groupPlannedBySchedule } from "@domain/utils/plannedSchedule";
 import { ActionChip } from "@presentation/components/ActionChip";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
-import {
-  executionOf,
-  isPlayBlocked,
-  playTitle,
-  resolvePlayBlock,
-  type PlayBlock,
-} from "@presentation/components/playAction";
-import {
-  Button,
-  ExecutionDot,
-  IconButton,
-  Input,
-  TaskRow,
-  type RowExecution,
-} from "@presentation/components/ui";
+import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
+import { Button, ExecutionDot, IconButton, Input } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { usePlannedTaskUndo } from "@presentation/hooks/usePlannedTaskUndo";
 import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
+import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { CompletedTaskEditSheet } from "@presentation/overlays/CompletedTaskEditSheet";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
 import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChip";
 import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
+import { PopupPlannedRow } from "@presentation/overlays/PopupPlannedRow";
 import { RunningTaskEditSheet } from "@presentation/overlays/RunningTaskEditSheet";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { getProjectColor } from "@shared/utils/projectColor";
 import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
 import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import { emit } from "@tauri-apps/api/event";
-import {
-  ArrowRight,
-  Bell,
-  CalendarDays,
-  Check,
-  CheckCircle2,
-  Clock,
-  Pen,
-  Play,
-  X,
-  Zap,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, Clock, Pen, Play, X, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 /*
@@ -424,100 +399,6 @@ function RunningCard({
   );
 }
 
-// ─── Planned list ────────────────────────────────────────────────────────────
-
-interface PlannedRowProps {
-  task: PlannedTask;
-  projects: Project[];
-  categories: Category[];
-  /** O rastreamento automático vai lembrar de iniciar esta reunião. */
-  tracked: boolean;
-  /** Se a execução em curso impede este ▶ — e, quando ela nasceu desta planejada, quem o diz. */
-  playBlock: PlayBlock;
-  /** O realce da execução em curso, derivado **pela tela**: aqui só há o id da planejada. */
-  execution?: RowExecution;
-  onEdit: (task: PlannedTask) => void;
-  onComplete: (task: PlannedTask) => void;
-  onPlay: (task: PlannedTask) => void;
-}
-
-/**
- * A linha da planejada no popup, no mesmo primitivo das demais telas.
- *
- * O horário ocupa o slot da **duração**, que é a célula que recua no hover para
- * as ações entrarem no lugar dela: em repouso a linha mostra o que ela é, e os
- * botões só aparecem quando o cursor chega. Sem horário não há o que recuar, e
- * aí quem fecha é a **largura** (`collapseActions`) — é o que dá o mesmo
- * comportamento às duas seções em vez de deixar metade da lista com três botões
- * permanentes comendo o `1fr` do nome.
- */
-function PlannedRow({
-  task,
-  projects,
-  categories,
-  tracked,
-  playBlock,
-  execution,
-  onEdit,
-  onComplete,
-  onPlay,
-}: PlannedRowProps) {
-  const project = projects.find((p) => p.id === task.projectId);
-  const category = categories.find((c) => c.id === task.categoryId);
-  const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-  // A mesma leitura de `groupPlannedBySchedule`, ou a linha em branco cairia na
-  // seção "sem hora" e ainda assim desenharia a célula do horário.
-  const startTime = task.startTime?.trim() || undefined;
-
-  return (
-    <TaskRow
-      title={task.name}
-      execution={execution}
-      titleMarks={
-        tracked ? (
-          <span
-            className="shrink-0 flex items-center text-accent-text/80"
-            title="Rastreada — o app vai lembrar de iniciar esta reunião"
-          >
-            <Bell size={14} />
-          </span>
-        ) : undefined
-      }
-      subtitle={subtitle || undefined}
-      dotColor={getProjectColor(project)}
-      /* O ⚡ executa a ação sem play e sem abrir o painel de edição. Ele fica na
-         célula do chip, que existe mesmo sem `billable`. */
-      badges={<PlannedActionsFlyout actions={task.actions} />}
-      duration={startTime}
-      collapseActions={!startTime}
-      actions={
-        <>
-          <IconButton
-            icon={<Pen size={14} />}
-            title="Editar"
-            size="sm"
-            variant="neutral"
-            onClick={() => onEdit(task)}
-          />
-          <IconButton
-            icon={<Check size={14} />}
-            title="Concluir"
-            size="sm"
-            onClick={() => onComplete(task)}
-          />
-          <IconButton
-            icon={<Play size={14} fill="currentColor" />}
-            title={playTitle(playBlock)}
-            size="sm"
-            disabled={isPlayBlocked(playBlock)}
-            onClick={() => onPlay(task)}
-          />
-        </>
-      }
-    />
-  );
-}
-
 // ─── Main popup content ───────────────────────────────────────────────────────
 
 export function PopupOverlayContent({
@@ -535,16 +416,25 @@ export function PopupOverlayContent({
   onUpdateTask,
 }: PopupOverlayContentProps) {
   const today = todayISO();
-  const { tasks, reload, complete, update } = usePlannedTasksForDate(today);
+  const { tasks, reload, syncAfterMutation, complete, update, duplicate } =
+    usePlannedTasksForDate(today);
+  // O popup monta o mesmo desfazer do Planejamento: cada instância guarda só o
+  // lote que ela apagou, então o toast de uma não restaura o da outra (G1).
+  const { removeWithUndo } = usePlannedTaskUndo(syncAfterMutation);
   const { plannedIds: trackedIds } = useTrackedMeetingPlannedIds();
   const {
     groups: completedGroups,
     totalSeconds: completedTotalSeconds,
+    reload: reloadCompleted,
     updateGroup: updateCompletedGroup,
   } = useCompletedTasksForDate(today);
+  // Excluir uma executada é a **única** porta de exclusão de lançamento do popup
+  // (H3), e ela é a mesma das outras telas: o `useTaskUndo` apaga com snapshot,
+  // levanta o toast com Desfazer e emite `TASKS_CHANGED` para as demais janelas.
+  const { removeWithUndo: removeTasksWithUndo } = useTaskUndo(reloadCompleted);
   const { projects } = useProjects();
   const { categories } = useCategories();
-  const { activeFields } = useCustomFields();
+  const { fields: customFields, activeFields } = useCustomFields();
   const pending = tasks.filter((t) => !t.completedDates.includes(today));
   // Sobre `tasks`, não `pending`: parar como "Concluída" tira a planejada do
   // `pending`, e é justo a origem dessa execução que o ⚡ das Executadas procura.
@@ -616,17 +506,20 @@ export function PopupOverlayContent({
   function plannedRow(task: PlannedTask) {
     const playBlock = resolvePlayBlock(runningPlannedId, task.id);
     return (
-      <PlannedRow
+      <PopupPlannedRow
         key={task.id}
         task={task}
         projects={projects}
         categories={categories}
+        customFields={customFields}
         tracked={trackedIds.has(task.id)}
         playBlock={playBlock}
         execution={executionOf(playBlock, runningTask)}
         onEdit={setEditingTask}
         onComplete={(t) => void complete(t.id, today)}
         onPlay={handlePlay}
+        onDuplicate={(t) => void duplicate(t.id)}
+        onDelete={(t) => void removeWithUndo([t.id])}
       />
     );
   }
@@ -711,6 +604,7 @@ export function PopupOverlayContent({
             plannedIndex={plannedIndex}
             onRepeat={handleRepeat}
             onEdit={setEditingCompleted}
+            onDelete={(g) => void removeTasksWithUndo(g.tasks.map((t) => t.id))}
           />
         )}
       </div>

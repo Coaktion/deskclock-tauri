@@ -70,7 +70,7 @@ export function HistoryPage() {
     search,
     updateFilter,
     setQuick,
-    remove,
+    removeWithUndo,
     toggleBillable,
     reload,
   } = useHistory();
@@ -144,10 +144,9 @@ export function HistoryPage() {
     setSelectedIds(new Set());
   }
 
+  // Um lote só: é o que dá um toast e um Desfazer para a seleção inteira.
   async function handleBulkDelete() {
-    for (const id of selectedIds) {
-      await remove(id);
-    }
+    await removeWithUndo([...selectedIds]);
     exitSelectMode();
   }
 
@@ -320,7 +319,7 @@ export function HistoryPage() {
                   }
                   onBulkDelete={() => void handleBulkDelete()}
                   onEditTask={setEditingTask}
-                  onRemoveTask={(id) => void remove(id)}
+                  onRemoveTask={(id) => void removeWithUndo([id])}
                   onToggleBillable={(task) => void toggleBillable(task)}
                 />
               ) : (

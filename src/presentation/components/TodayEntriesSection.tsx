@@ -12,11 +12,11 @@ import { MoveToWorkspaceModal } from "@presentation/modals/MoveToWorkspaceModal"
 import { SectionCard } from "@presentation/components/ui";
 import { useWorkspaces } from "@presentation/contexts/WorkspaceContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { deleteTask } from "@domain/usecases/tasks/DeleteTask";
 import { updateTaskGroup } from "@domain/usecases/tasks/UpdateTaskGroup";
 import { mergeTaskGroup } from "@domain/usecases/tasks/MergeTaskGroup";
 import { setGroupBillable } from "@domain/usecases/tasks/SetGroupBillable";
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
+import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import { formatHHMMSS, startOfDayISO, endOfDayISO, todayISO } from "@shared/utils/time";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 
@@ -69,10 +69,10 @@ export function TodayEntriesSection({
     });
   }
 
+  const { removeWithUndo } = useTaskUndo(reload);
+
   async function handleDelete(task: Task) {
-    await deleteTask(taskRepo, task.id);
-    void notifyTasksChanged();
-    reload();
+    await removeWithUndo([task.id]);
   }
 
   async function handleToggleBillable(task: Task) {

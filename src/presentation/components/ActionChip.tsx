@@ -1,7 +1,7 @@
 import { ArrowUpRight, FolderOpen, Globe } from "lucide-react";
 import type { PlannedTaskAction } from "@domain/entities/PlannedTask";
-import { actionDestinationLabel, executeActions } from "@domain/utils/actions";
-import { openInBrowser, openInFileManager } from "@shared/utils/shell";
+import { actionDestinationLabel } from "@domain/utils/actions";
+import { runAction } from "@presentation/components/taskActions";
 
 /**
  * O que o chip escreve, em três degraus: o nome dado à ação; o **destino** por
@@ -41,9 +41,7 @@ export function ActionChip({ action }: ActionChipProps) {
   return (
     <button
       type="button"
-      onClick={() =>
-        void executeActions([action], { openUrl: openInBrowser, openPath: openInFileManager })
-      }
+      onClick={() => runAction(action)}
       title={action.value}
       className="inline-flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-control border border-accent/25 bg-accent/5 text-accent-text hover:border-accent/50 hover:bg-accent/10 transition-colors"
     >

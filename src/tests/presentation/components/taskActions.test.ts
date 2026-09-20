@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { singleAction } from "@presentation/components/PlannedActionsFlyout";
+import { singleAction } from "@presentation/components/taskActions";
 
 /**
  * O ⚡ tem dois comportamentos, e é esta função que os separa: com uma ação só

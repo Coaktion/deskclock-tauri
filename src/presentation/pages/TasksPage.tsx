@@ -33,6 +33,7 @@ export function TasksPage({
     tasks: plannedTasks,
     reload: reloadPlanned,
     update: updatePlanned,
+    complete: completePlanned,
   } = usePlannedTasksForDate(today);
   const config = useAppConfig();
 
@@ -43,6 +44,15 @@ export function TasksPage({
   /** O `update` do hook já recarrega a lista e emite PLANNED_TASKS_CHANGED. */
   async function handleTogglePlannedBillable(task: PlannedTask) {
     await updatePlanned(task.id, { billable: !task.billable });
+  }
+
+  /**
+   * O `complete` do hook recarrega a lista e emite PLANNED_TASKS_CHANGED, como o
+   * `update`: concluída, a tarefa deixa de ser pendente e some da lista suspensa,
+   * e as outras janelas (popup, Planejamento) acompanham sem nada a mais.
+   */
+  async function handleCompletePlanned(task: PlannedTask) {
+    await completePlanned(task.id, today);
   }
 
   const { startTour, hasSeenTour } = useTour("tasks");
@@ -87,6 +97,7 @@ export function TasksPage({
             onOmniboxFocusHandled={onOmniboxFocusHandled}
             catalogsLoading={projectsLoading || categoriesLoading}
             onTogglePlannedBillable={handleTogglePlannedBillable}
+            onCompletePlanned={handleCompletePlanned}
             onNavigatePlanning={onNavigatePlanning}
           />
         </div>

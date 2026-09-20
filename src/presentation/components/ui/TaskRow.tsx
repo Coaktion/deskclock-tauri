@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { BillableChip } from "./BillableChip";
 import { ExecutionDot, type RowExecution } from "./ExecutionDot";
 
@@ -35,19 +35,25 @@ interface TaskRowBaseProps {
   leading?: ReactNode;
   /** Marcas ao lado do chip — "enviado", envio parcial. */
   badges?: ReactNode;
-  /** Dividem a última coluna com a duração: ela recua, elas aparecem. */
+  /**
+   * O ⋯ da linha, em **coluna própria e sempre visível**, a primeira da direita
+   * (H2 do spec `acoes-da-linha-planejada.md`). Ele não se empilha mais sobre a
+   * duração nem some no repouso: empilhado, apagava o tempo do Histórico e das
+   * entradas de hoje no instante em que o cursor entrava na linha; em primeiro
+   * lugar, ele fica no mesmo x em toda linha, tenha ela chip ou não.
+   */
   actions?: ReactNode;
   /**
-   * Sem duração para recuar, a célula das ações fecha em **largura** até o
-   * hover, em vez de ficar sempre aberta. É o que a linha planejada do
-   * Planejamento pede: com cinco botões, a coluna reservada sai do `1fr` do
-   * nome, que trunca numa linha vazia à direita (§5.3). Onde a ação é uma só —
-   * o ▶ das planejadas de hoje —, ela continua sempre visível (§7.5.3).
+   * Coluna sempre visível **depois** do chip de faturamento, a última da linha —
+   * a casa do ▶ da planejada. Só existe quando a prop vem: sem ela a grade é a de
+   * sempre, e os call sites que não a usam não mudam em nada.
    *
-   * A célula que cresce passa **à frente** do chip quando isto está ligado; o
-   * porquê está na ordem das colunas, mais abaixo.
+   * Reservá-la **vazia** é trabalho do chamador. A linha que não tem o que pôr ali
+   * (a concluída, o modo de seleção), mas vive numa lista em que as vizinhas têm,
+   * passa um elemento de largura fixa do tamanho do conteúdo — ou o chip das
+   * vizinhas saltaria a largura da coluna a cada linha que a perde.
    */
-  collapseActions?: boolean;
+  trailing?: ReactNode;
   /**
    * A linha pende da de cima — a tarefa dentro de um grupo aberto. Ela ganha o
    * trilho e um degrau de 12px à esquerda; o degrau sai do `1fr` do nome, então
@@ -65,6 +71,14 @@ interface TaskRowBaseProps {
   execution?: RowExecution;
   selected?: boolean;
   onClick?: () => void;
+  /** Repassado ao contêiner da linha — o menu no ponto do clique direito. */
+  onContextMenu?: (e: MouseEvent) => void;
+  /**
+   * Presente, a linha vira parada de Tab (`tabIndex=0`) e ganha anel de foco no
+   * `focus-visible`. Ausente, ela não é focável — é isso que deixa intocadas as
+   * telas que não operam a linha pelo teclado.
+   */
+  onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
 }
 
 type TaskRowProps = TaskRowBaseProps & BillableProps;
@@ -72,13 +86,30 @@ type TaskRowProps = TaskRowBaseProps & BillableProps;
 /**
  * As formas de grade do censo do design (§7.2 do handoff): a coluna de 88px
  * carrega a faixa de horário ou a contagem do grupo, o `1fr` é o nome, e os dois
- * `auto` finais são o chip e o par duração↔ações.
+ * `auto` finais são o ⋯ e a célula de dados (marcas, chip e duração).
  *
- * São quatro literais e não uma string montada porque **o Tailwind lê a classe
- * no código-fonte**: `grid-cols-[${...}]` não gera utilitário nenhum, e a linha
- * cairia para o `display:grid` sem colunas — que é flex mal desenhado.
+ * **A contagem de colunas não depende do conteúdo.** As duas células da direita
+ * são sempre emitidas, mesmo vazias, e por isso as formas abaixo continuam
+ * sendo as mesmas quatro do censo — a H2 trocou a **ordem** delas, não o número.
+ *
+ * São literais e não uma string montada porque **o Tailwind lê a classe no
+ * código-fonte**: `grid-cols-[${...}]` não gera utilitário nenhum, e a linha
+ * cairia para o `display:grid` sem colunas — que é flex mal desenhado. Pelo
+ * mesmo motivo a forma com `trailing` é cada uma das quatro escrita de novo, com
+ * um `auto` a mais no fim, e não um sufixo concatenado.
  */
-function gridColumns(hasLeading: boolean, hasMeta: boolean, hasDot: boolean): string {
+function gridColumns(
+  hasLeading: boolean,
+  hasMeta: boolean,
+  hasDot: boolean,
+  hasTrailing: boolean
+): string {
+  if (hasTrailing) {
+    if (hasLeading && hasMeta) return "grid-cols-[auto_88px_1fr_auto_auto_auto]";
+    if (hasMeta) return "grid-cols-[88px_1fr_auto_auto_auto]";
+    if (hasLeading || hasDot) return "grid-cols-[auto_1fr_auto_auto_auto]";
+    return "grid-cols-[1fr_auto_auto_auto]";
+  }
   if (hasLeading && hasMeta) return "grid-cols-[auto_88px_1fr_auto_auto]";
   if (hasMeta) return "grid-cols-[88px_1fr_auto_auto]";
   if (hasLeading || hasDot) return "grid-cols-[auto_1fr_auto_auto]";
@@ -101,6 +132,17 @@ const PADDING_X = 12;
 const LEADING_WIDTH = 14;
 const RAIL_LEFT = PADDING_X + LEADING_WIDTH / 2;
 
+/**
+ * O foco da linha focável. **Inset** porque a linha é faixa de borda a borda
+ * dentro de um cartão com `overflow-hidden`: o anel por fora seria cortado nas
+ * laterais. **Só no `focus-visible`**: o clique também foca a linha, e um anel a
+ * cada clique de mouse seria ruído — ele é para quem navega pelo teclado. O tom
+ * é o acento cheio, e não o `accent/15` do `SearchInput`: lá o anel soma à borda
+ * que já muda de cor, aqui ele é o único sinal de onde o foco está.
+ */
+const FOCUS_RING =
+  "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
+
 /** `pl-6` é o dobro de `pl-3`: o degrau da filha é um padding a mais. */
 const PADDING_LEFT = { row: "pl-3", nested: "pl-6" } as const;
 
@@ -116,11 +158,13 @@ export function TaskRow(props: TaskRowProps) {
     leading,
     badges,
     actions,
-    collapseActions = false,
     nested = false,
     execution,
     selected = false,
     onClick,
+    trailing,
+    onContextMenu,
+    onKeyDown,
   } = props;
 
   /**
@@ -135,15 +179,7 @@ export function TaskRow(props: TaskRowProps) {
 
   const hasLeading = Boolean(leading);
   const hasMeta = Boolean(meta);
-
-  /**
-   * Fechar em **largura** é o que a linha sem duração faz; com duração, quem
-   * some é a opacidade dentro de uma célula que já está reservada. A leitura
-   * mora aqui e não em duas condições soltas porque a ordem das colunas depende
-   * dela: separadas, a linha que pedisse `collapseActions` **com** duração
-   * ficaria com a ordem de uma e o comportamento da outra.
-   */
-  const collapsesWidth = collapseActions && !duration;
+  const hasTrailing = Boolean(trailing);
 
   /**
    * O ponto abre coluna própria só quando **nada o precede**. Com o chevron ou a
@@ -212,56 +248,31 @@ export function TaskRow(props: TaskRowProps) {
     </div>
   );
 
-  const billableCell = (
-    <div className="flex items-center gap-2">
-      {badges}
-      {billableChip}
-    </div>
-  );
+  /*
+   * O ⋯ tem célula só dele, **sempre visível**, e é a primeira da direita (H2).
+   * Antes ele dividia a célula com a duração, empilhado por `col-start-1
+   * row-start-1`: a duração recuava no hover e ele tomava o lugar dela — que é o
+   * que fazia o tempo sumir no Histórico e nas entradas de hoje no instante em
+   * que o cursor entrava na linha.
+   *
+   * A célula é emitida **mesmo sem ações**, porque é ela que mantém a contagem
+   * de colunas igual à do `gridColumns`. Vazia ela mede 0, e o que sobra é um
+   * `gap` da grade — o mesmo que a célula vazia já cobrava quando vinha no fim.
+   */
+  const actionsCell = <div className="flex items-center gap-0.5">{actions}</div>;
 
   /*
-   * Duração e ações ocupam a **mesma** célula, empilhadas: a duração recua no
-   * hover e as ações tomam o lugar dela. Empilhar em vez de trocar por `hidden`
-   * guarda duas coisas — a largura da célula não pula quando o cursor entra, e o
-   * botão continua alcançável pelo teclado, que é o que `display:none` tiraria.
-   * Sem duração (a planejada), a ação fica sempre visível: é a decisão §7.5.3 do
-   * handoff — a menos que `collapseActions` peça o contrário, e aí quem some é a
-   * **largura**, que é o que a coluna de cinco botões cobraria do nome.
-   *
-   * Fechada em largura, a célula **ainda consome um `gap` da grade**: sem o
-   * `-mr-2.5` o chip nasceria 10px à direita de onde está hoje. A margem negativa
-   * cancela exatamente esse gap em repouso e o devolve no hover, quando ele passa
-   * a ser o respiro entre o último botão e o chip.
+   * Marcas, chip e duração numa célula só, no `gap` da própria grade: são três
+   * dados que o wireframe desenha lado a lado, e juntá-los é o que deixa a
+   * duração **depois** do chip (H2) sem abrir uma quarta coluna à direita — que
+   * sairia do `1fr` do nome em toda linha que não mede tempo.
    */
-  const trailingCell = (
-    <div
-      className={`grid items-center justify-items-end ${
-        collapsesWidth ? "-mr-2.5 group-hover:mr-0 group-focus-within:mr-0" : ""
-      }`}
-    >
+  const dataCell = (
+    <div className="flex items-center gap-2.5">
+      {badges}
+      {billableChip}
       {duration && (
-        <span
-          className={`col-start-1 row-start-1 text-sm font-mono tabular-nums text-fg-secondary ${
-            actions
-              ? "pointer-events-none transition-opacity group-hover:opacity-0 group-focus-within:opacity-0"
-              : ""
-          }`}
-        >
-          {duration}
-        </span>
-      )}
-      {actions && (
-        <div
-          className={`col-start-1 row-start-1 flex gap-0.5 ${
-            duration
-              ? "opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto"
-              : collapsesWidth
-                ? "w-0 overflow-hidden opacity-0 transition-opacity group-hover:w-auto group-hover:opacity-100 group-focus-within:w-auto group-focus-within:opacity-100"
-                : ""
-          }`}
-        >
-          {actions}
-        </div>
+        <span className="text-sm font-mono tabular-nums text-fg-secondary">{duration}</span>
       )}
     </div>
   );
@@ -269,9 +280,12 @@ export function TaskRow(props: TaskRowProps) {
   return (
     <div
       onClick={onClick}
-      className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor))} gap-2.5 py-2.5 pr-3 border-b border-border-subtle last:border-b-0 transition-colors ${
+      onContextMenu={onContextMenu}
+      onKeyDown={onKeyDown}
+      tabIndex={onKeyDown ? 0 : undefined}
+      className={`group grid items-center ${gridColumns(hasLeading, hasMeta, Boolean(dotColor), hasTrailing)} gap-2.5 py-2.5 pr-3 border-b border-border-subtle last:border-b-0 transition-colors ${
         nested ? `relative ${PADDING_LEFT.nested}` : PADDING_LEFT.row
-      } ${background} ${onClick ? "cursor-pointer" : ""}`}
+      } ${background} ${onClick ? "cursor-pointer" : ""}${onKeyDown ? ` ${FOCUS_RING}` : ""}`}
     >
       {/*
        * A coluna que abre o grupo, reservada pelo primitivo **mesmo vazia**: sem
@@ -301,29 +315,18 @@ export function TaskRow(props: TaskRowProps) {
       )}
 
       {/*
-       * **O que cresce nunca fica entre o `1fr` e o chip.** Quem paga a largura
-       * que a célula das ações abre é sempre o nome, e tudo o que estiver à
-       * direita dele é puxado junto: com o chip antes das ações, ele andava
-       * ~118px para a esquerda no instante em que o cursor entrava na linha, e
-       * quem ocupava o lugar dele era o último botão da fileira — o "Excluir",
-       * que aqui não pergunta. Ancorado por último, o chip fica imóvel, e o único
-       * que encolhe é o nome, que não é alvo de clique.
-       *
-       * Vale só onde a célula fecha em largura: com duração ela já está
-       * reservada, nada se move, e ali o chip continua antes — que é o que o
-       * design desenha nas Entradas.
+       * A ordem da direita é **⋯ · chip · duração · ▶** (H2), e o ⋯ vem primeiro
+       * porque é o único que existe em toda linha: ancorado antes do chip, ele
+       * cai no mesmo x tenha a linha chip, duração, as duas coisas ou nenhuma —
+       * e, não crescendo mais no hover, nada à direita dele se move.
        */}
-      {collapsesWidth ? (
-        <>
-          {trailingCell}
-          {billableCell}
-        </>
-      ) : (
-        <>
-          {billableCell}
-          {trailingCell}
-        </>
-      )}
+      {actionsCell}
+      {dataCell}
+
+      {/*
+       * Depois da duração e por último: é a coluna que não pode andar.
+       */}
+      {hasTrailing && <div className="flex items-center">{trailing}</div>}
 
       {/*
        * O trilho, no eixo do chevron de que ele desce (ver `RAIL_LEFT`). Fora do

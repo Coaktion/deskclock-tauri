@@ -1,15 +1,5 @@
 import { useState } from "react";
-import {
-  Play,
-  Check,
-  Copy,
-  Trash2,
-  RotateCcw,
-  Pencil,
-  RefreshCw,
-  Bell,
-  Share2,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import type { PlannedTask, PlannedTaskAction, ScheduleType } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
@@ -19,14 +9,22 @@ import {
   EditPlannedTaskModal,
   type EditPlannedTaskInput,
 } from "@presentation/modals/EditPlannedTaskModal";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
 import { selectionBoxClass } from "@presentation/components/selectionStyles";
-import { IconButton, TaskRow, type RowExecution } from "@presentation/components/ui";
-import { isPlayBlocked, playTitle, type PlayBlock } from "@presentation/components/playAction";
+import {
+  CompleteToggle,
+  Menu,
+  RowMenuTrigger,
+  TaskRow,
+  type RowExecution,
+} from "@presentation/components/ui";
+import { PlannedPlaySlot } from "@presentation/components/PlannedPlaySlot";
+import { copyPlannedTaskLink } from "@presentation/components/plannedShareLink";
+import { TrackedMeetingMark } from "@presentation/components/TrackedMeetingMark";
+import { isPlayBlocked, type PlayBlock } from "@presentation/components/playAction";
+import { PLANNED_ROW_KEYS } from "@presentation/components/plannedRowKey";
+import { rowKeyDownHandler } from "@presentation/components/rowKey";
+import { usePlannedRowMenu } from "@presentation/hooks/usePlannedRowMenu";
 import { getProjectColor } from "@shared/utils/projectColor";
-import { plannedTaskToSharePayload } from "@domain/utils/sharePayload";
-import { buildShareLink } from "@shared/utils/shareLink";
-import { showToast } from "@shared/utils/toast";
 
 interface PlannedTaskItemProps {
   task: PlannedTask;
@@ -97,27 +95,41 @@ export function PlannedTaskItem({
   const project = projects.find((p) => p.id === task.projectId);
   const category = categories.find((c) => c.id === task.categoryId);
   const [showModal, setShowModal] = useState(false);
+  const canPlay = !isCompleted && !isPlayBlocked(playBlock);
+  const menu = usePlannedRowMenu({
+    onEdit: () => setShowModal(true),
+    onDuplicate: () => onDuplicate(task.id),
+    onCopyLink: () => void handleShare(),
+    onDelete: () => onDelete(task.id),
+    actions: task.actions,
+    disabled: selectMode,
+  });
 
   async function handleSave(id: string, input: EditPlannedTaskInput) {
     await onUpdate(id, input);
   }
 
-  async function handleShare() {
-    const link = buildShareLink(
-      plannedTaskToSharePayload(task, projects, categories, customFields)
-    );
-    try {
-      await navigator.clipboard.writeText(link);
-      await showToast("success", "Link copiado para a área de transferência.");
-    } catch {
-      await showToast("error", "Não foi possível copiar o link.");
-    }
+  const handleShare = () => copyPlannedTaskLink(task, projects, categories, customFields);
+
+  function toggleComplete() {
+    if (isCompleted) onUncomplete(task.id, dateISO);
+    else onComplete(task.id, dateISO);
   }
 
+  const handleKeyDown = rowKeyDownHandler(PLANNED_ROW_KEYS, {
+    play: () => {
+      if (canPlay) onPlay(task);
+    },
+    toggleComplete,
+    edit: () => setShowModal(true),
+    duplicate: () => onDuplicate(task.id),
+    copyLink: () => void handleShare(),
+    delete: () => onDelete(task.id),
+  });
+
   /*
-   * O ⚡ saiu daqui e virou o `PlannedActionsFlyout`, no slot `badges`. Com ele
-   * foi embora a última razão de a guarda olhar `task.actions`: mantida, a tarefa
-   * que só tem ações passaria a desenhar um subtítulo vazio.
+   * O ⚡ saiu da linha (H1) e a ação virou seção do menu: a guarda não olha
+   * `task.actions`, ou a tarefa que só tem ações desenharia um subtítulo vazio.
    */
   const subtitle = (project || category) && (
     <span className="inline-flex items-center gap-1.5">
@@ -140,28 +152,12 @@ export function PlannedTaskItem({
                   <RefreshCw size={14} />
                 </span>
               )}
-              {tracked && (
-                <span
-                  className="shrink-0 flex items-center text-accent-text/80"
-                  title="Rastreada — o app vai lembrar de iniciar esta reunião"
-                >
-                  <Bell size={14} />
-                </span>
-              )}
+              {tracked && <TrackedMeetingMark />}
             </>
           )
         }
         subtitle={subtitle || undefined}
         dotColor={getProjectColor(project)}
-        /* Ancorado **depois** da célula que cresce no hover, junto do chip de
-           faturamento: é a mesma posição que impede o chip de andar quando a
-           fileira de botões abre.
-
-           Some no modo de seleção pelo mesmo motivo que os seis botões abaixo:
-           ali a linha inteira é alvo de marcar, e um controle que engole o
-           clique faria a tarefa recusar a seleção justamente enquanto se
-           escolhe o que excluir em lote. */
-        badges={!selectMode && <PlannedActionsFlyout actions={task.actions} />}
         billable={task.billable}
         /* `onUpdate` é o `update` do usePlannedTasks: recarrega e emite
            PLANNED_TASKS_CHANGED, então o popup acompanha sem nada a mais. */
@@ -175,64 +171,37 @@ export function PlannedTaskItem({
               onClick={(e) => e.stopPropagation()}
               className={selectionBoxClass}
             />
-          ) : undefined
-        }
-        selected={selected}
-        onClick={selectMode ? () => onToggleSelect?.(task.id) : undefined}
-        /* Sem hover os botões não ocupam largura nenhuma: reservados, o espaço
-           de seis botões sai do nome da tarefa, que trunca numa linha vazia à
-           direita (§5.3). */
-        collapseActions
-        actions={
-          !selectMode && (
-            <>
-              {!isCompleted && (
-                <IconButton
-                  icon={<Play size={14} />}
-                  title={playTitle(playBlock)}
-                  size="sm"
-                  disabled={isPlayBlocked(playBlock)}
-                  onClick={() => onPlay(task)}
-                />
-              )}
-              <IconButton
-                icon={<Share2 size={14} />}
-                title="Compartilhar"
-                size="sm"
-                onClick={() => void handleShare()}
-              />
-              <IconButton
-                icon={<Pencil size={14} />}
-                title="Editar"
-                size="sm"
-                onClick={() => setShowModal(true)}
-              />
-              <IconButton
-                icon={isCompleted ? <RotateCcw size={14} /> : <Check size={14} />}
-                title={isCompleted ? "Marcar como pendente" : "Concluir"}
-                size="sm"
-                onClick={() =>
-                  isCompleted ? onUncomplete(task.id, dateISO) : onComplete(task.id, dateISO)
-                }
-              />
-              <IconButton
-                icon={<Copy size={14} />}
-                title="Duplicar"
-                size="sm"
-                variant="neutral"
-                onClick={() => onDuplicate(task.id)}
-              />
-              <IconButton
-                icon={<Trash2 size={14} />}
-                title="Excluir"
-                size="sm"
-                variant="danger"
-                onClick={() => onDelete(task.id)}
-              />
-            </>
+          ) : (
+            <CompleteToggle completed={isCompleted} onToggle={toggleComplete} />
           )
         }
+        selected={selected}
+        onClick={selectMode ? () => onToggleSelect?.(task.id) : () => setShowModal(true)}
+        onContextMenu={selectMode ? undefined : menu.openAtPointer}
+        onKeyDown={selectMode ? undefined : handleKeyDown}
+        /* Sempre visível e antes do chip (H2): escondido no repouso, ele era um
+           alvo que só aparecia depois de o cursor já estar sobre a linha. */
+        actions={!selectMode && <RowMenuTrigger menu={menu} />}
+        /* Sempre presente, e da largura do Play mesmo vazia: na concluída e no
+           modo de seleção a coluna fica, ou o chip saltaria a largura dela a
+           cada conclusão e a cada entrada no modo. */
+        trailing={
+          <PlannedPlaySlot
+            playBlock={playBlock}
+            onPlay={() => onPlay(task)}
+            empty={selectMode || isCompleted}
+          />
+        }
       />
+
+      {!selectMode && (
+        <Menu
+          anchor={menu.anchor}
+          items={menu.items}
+          onClose={menu.close}
+          label="Ações da tarefa"
+        />
+      )}
 
       {showModal && !selectMode && (
         <EditPlannedTaskModal

@@ -28,8 +28,8 @@ import { listSourceFiles } from "../helpers/sourceFiles";
  * `SubSection`/`MappingBox`/`IntegrationTile`, que são primitivos locais.
  *
  * O `PlannedTaskItem` **saiu** da lista: os cinco botões dele viraram
- * `IconButton` quando a linha migrou para `TaskRow`, e o que os fazia abrir por
- * largura passou a ser a prop `collapseActions` do primitivo.
+ * `IconButton` quando a linha migrou para `TaskRow`, e desde a G1–H2 restou o
+ * ⋯ do `RowMenuTrigger`, em coluna própria e sempre visível.
  */
 
 /** Onde os primitivos são definidos — desenhar a caixa ali é o trabalho deles. */
@@ -68,8 +68,6 @@ const BUTTON_BASELINE: Record<string, number> = {
   "src/presentation/components/RetroactiveEntryForm.tsx": 1,
   "src/presentation/components/Sidebar.tsx": 2,
   "src/presentation/components/TagMultiSelect.tsx": 1,
-  "src/presentation/components/TaskCard.tsx": 2,
-  "src/presentation/components/TaskGroupCard.tsx": 3,
   "src/presentation/components/WeekPlanningView.tsx": 3,
   "src/presentation/components/WorkspaceSwitcher.tsx": 4,
   "src/presentation/modals/ClockifyEntriesModal.tsx": 3,

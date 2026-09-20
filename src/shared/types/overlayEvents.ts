@@ -11,7 +11,11 @@ export const OVERLAY_EVENTS = {
   TOAST_MESSAGE: "toast-message",
   NAVIGATE_SETTINGS: "navigate-settings",
   PLANNED_TASKS_CHANGED: "planned-tasks-changed",
+  /** Botão "Desfazer" do toast (outra janela) → quem excluiu, no Planejamento. */
+  PLANNED_TASKS_UNDO_DELETE: "planned-tasks:undo-delete",
   TASKS_CHANGED: "tasks-changed",
+  /** Botão "Desfazer" do toast (outra janela) → a tela que excluiu o lançamento. */
+  TASKS_UNDO_DELETE: "tasks:undo-delete",
   PROJECTS_CHANGED: "projects-changed",
   CATEGORIES_CHANGED: "categories-changed",
   CUSTOM_FIELDS_CHANGED: "custom-fields-changed",
