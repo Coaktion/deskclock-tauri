@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.4.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.3.0...v2.4.0) (2026-09-20)
+
+
+### Features
+
+* **linhas de tarefa:** a linha foi reorganizada em todas as listas — um círculo à esquerda conclui ou reabre a tarefa com um clique, o ▶ fica sempre visível à direita, e o que se usa de vez em quando (Editar, Duplicar, Copiar link, Excluir) mora no menu ⋯, que também abre com o clique direito, no ponto onde você clicou
+* **linhas de tarefa:** o ⋯ e o ▶ não somem mais quando o cursor sai da linha, e a duração deixou de ser encoberta pelos botões no Histórico e nas entradas de hoje
+* **linhas de tarefa:** com o foco numa linha, o teclado opera tudo: Enter inicia, Espaço conclui ou reabre, E edita, D duplica, L copia o link, Del exclui, e ↑ ↓ andam entre as linhas do dia
+* **listas:** o nome de tarefa que não cabe na linha mostra o texto inteiro ao passar o cursor, sem precisar abrir a edição — vale também no popup, onde o espaço é menor
+* **tarefas:** a planejada de hoje pode ser concluída direto pelo círculo no campo de início, sem ir ao Planejamento
+* **planejamento:** exclusão de planejadas com desfazer — um aviso aparece logo após a exclusão, e Ctrl+Z também restaura
+* **planejamento:** exclusão em lote das planejadas selecionadas, com o mesmo desfazer
+* **tarefas:** a exclusão de lançamentos também pode ser desfeita
+* **planejamento:** "Exibir fim de semana" voltou às configurações — quem já tinha a opção ligada a encontra ligada
+* **compartilhar:** o que se chamava "Compartilhar" agora se chama "Copiar link", em todo o app — a ação sempre foi copiar um endereço, e o nome antigo sugeria que ela abria algo
+
+
+### Bug Fixes
+
+* **planejamento:** o primeiro dia da semana escolhido nas configurações agora vale também onde o fim de semana aparece
+* **menus:** o menu de ações não pula mais o primeiro item ao ser aberto pelo teclado
+
 ## [2.3.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.2.0...v2.3.0) (2026-09-18)
 
 

@@ -807,7 +807,7 @@
         <button type="button" data-a="ambar" aria-pressed="false" title="Âmbar"><span></span></button>
       </div>
     </div>
-    <div class="sidebar-version">v2.3.0 · DeskClock</div>
+    <div class="sidebar-version">v2.4.0 · DeskClock</div>
   </div>
 </nav>
 
@@ -1438,7 +1438,7 @@
       A linha da tarefa planejada
     </h2>
 
-    <p>A linha mostra o <strong>círculo de concluir</strong>, o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em> e, na direita, sempre nesta ordem: o menu <strong>⋯</strong>, o chip de faturamento — que é controle, não rótulo: clicar nele alterna —, a duração ou o horário e o <strong>Play</strong>. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha.</p>
+    <p>A linha mostra o <strong>círculo de concluir</strong>, o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em> e, na direita, sempre nesta ordem: o menu <strong>⋯</strong>, o chip de faturamento — que é controle, não rótulo: clicar nele alterna —, a duração ou o horário e o <strong>Play</strong>. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha. <strong>Nome longo não precisa da edição para ser lido</strong>: quando ele não cabe na linha, passar o cursor mostra o texto inteiro — e o mesmo vale para o subtítulo, em todas as listas do app e no <a onclick="show('overlays/popup-flyout')">popup</a>.</p>
 
     <p><strong>Nada ali aparece só ao passar o cursor.</strong> O ⋯ é a primeira coluna da direita e fica sempre visível, no mesmo lugar em toda linha, tenha ela chip ou não — e por isso não cobre mais a duração nem o horário. O que se usa o dia inteiro fica na própria linha; o resto está no menu:</p>
 
@@ -2669,6 +2669,8 @@
     </div>
 
     <p>Clicar no nome já abre a edição. Cancelar ficou longe de Parar de propósito: colado nele, o descarte ficava a um pixel da ação que salva.</p>
+
+    <p>O popup é estreito, então é nele que o nome mais corta. <strong>Quando o nome não cabe, passar o cursor sobre ele mostra o texto inteiro</strong> — sem abrir a edição. Vale igual nas duas abas, na tarefa planejada e na já executada.</p>
 
     <h3>As ações da tarefa</h3>
     <p>Quando a tarefa veio de uma planejada com ações configuradas, um <strong>raio</strong> aparece cavalgando a borda de cima do card. Passe o cursor sobre o card e uma faixa se abre com os chips — um clique em cada abre a URL ou o arquivo.</p>
