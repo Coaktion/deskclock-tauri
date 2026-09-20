@@ -423,6 +423,11 @@ decisão tomada.
 
 ### H1 · O menu lista as ações, e o ⚡ sai da linha
 
+**A ordem do menu é: ações · divisor · o que mexe na linha · divisor · Excluir.** A seção de ações
+**abre** o menu, e o **Excluir é sempre o último item**, em toda superfície (decisão do usuário,
+2026-09-19). A ação é o que se faz com a tarefa; o resto é o que se faz com a linha. E o item que
+não se desfaz fica longe do cursor que acabou de abrir o menu.
+
 - O menu ⋯ ganha um **divisor e uma seção de ações** — as `PlannedTaskAction` da tarefa, as mesmas
   que o ⚡ executava.
 - **Uma ação só: ela é o item**, clicável direto, como o ⚡ já fazia ao executar sem abrir painel.

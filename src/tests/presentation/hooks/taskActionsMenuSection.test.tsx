@@ -29,7 +29,8 @@ describe("taskActionsMenuSection", () => {
 
   it("com uma ação, o item é a própria ação e executa direto", () => {
     const entries = taskActionsMenuSection([url]);
-    expect(entries[0]).toBe(MENU_DIVIDER);
+    // A seção abre o menu, e o divisor fecha ela.
+    expect(entries[entries.length - 1]).toBe(MENU_DIVIDER);
     const [item] = items(entries);
     expect(item.label).toBe("Abrir Meet");
     expect(item.children).toBeUndefined();
@@ -40,7 +41,7 @@ describe("taskActionsMenuSection", () => {
 
   it("com mais de uma, o item é 'Ações' e as ações são os filhos", () => {
     const entries = taskActionsMenuSection([url, file]);
-    expect(entries[0]).toBe(MENU_DIVIDER);
+    expect(entries[entries.length - 1]).toBe(MENU_DIVIDER);
     const [item] = items(entries);
     expect(item.label).toBe("Ações");
     // O rótulo de cada filho é o do chip: destino por extenso, nome do arquivo.

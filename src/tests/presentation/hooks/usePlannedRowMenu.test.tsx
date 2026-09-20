@@ -51,16 +51,18 @@ describe("usePlannedRowMenu", () => {
     expect(setup().result.current.items).toHaveLength(5);
   });
 
-  it("com ações, elas entram no fim, depois de um divisor (H1)", () => {
+  it("com ações, elas abrem o menu, e o Excluir continua sendo o último", () => {
     const { result } = setup(false, [
       { type: "open_url", value: "https://meet.google.com/abc" },
       { type: "open_file", value: "/home/eduardo/ata.md" },
     ]);
     const { items } = result.current;
-    expect(items[5]).toBe(MENU_DIVIDER);
-    const acoes = items[6] as MenuItem;
+    const acoes = items[0] as MenuItem;
     expect(acoes.label).toBe("Ações");
     expect(acoes.children?.map((c) => c.label)).toEqual(["Meet", "ata.md"]);
+    expect(items[1]).toBe(MENU_DIVIDER);
+    // Excluir é sempre o último, com ações ou sem elas (decisão do usuário).
+    expect((items[items.length - 1] as MenuItem).label).toBe("Excluir");
   });
 
   // O resto do comportamento (abrir, alternar, fechar) é do `useRowMenu` e é testado lá.

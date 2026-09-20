@@ -8,7 +8,7 @@ interface EntryRowMenuActions {
   onEdit: () => void;
   onDelete: () => void;
   /**
-   * As ações da planejada que originou o lançamento, listadas no fim do menu
+   * As ações da planejada que originou o lançamento, listadas no topo do menu
    * (H1). O Histórico as tem; o Lançamento Manual, que não as busca, não passa
    * nada e o menu fica com o par de sempre.
    */
@@ -36,6 +36,7 @@ export function useEntryRowMenu({
   return useRowMenu({
     disabled,
     items: [
+      ...taskActionsMenuSection(actions),
       { label: "Editar", icon: <Pencil size={14} />, shortcut: "E", onSelect: onEdit },
       MENU_DIVIDER,
       {
@@ -45,7 +46,6 @@ export function useEntryRowMenu({
         tone: "danger",
         onSelect: onDelete,
       },
-      ...taskActionsMenuSection(actions),
     ],
   });
 }

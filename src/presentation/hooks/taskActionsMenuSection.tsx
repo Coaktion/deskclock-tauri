@@ -19,15 +19,15 @@ function actionItem(action: PlannedTaskAction, label: string): MenuItem {
  * item**, clicável direto, e é a partir de duas que há escolha a oferecer —, só
  * que a escolha agora é um submenu em vez de um painel.
  *
- * O divisor vem junto porque a seção é sempre a **última** de um menu que já tem
- * itens (Editar, Excluir…). Menu que fosse só ações abriria com um divisor no
- * topo, e não existe nenhum: a superfície que tem ação tem também edição.
+ * Ela abre o menu, e o divisor vem **depois** dela (decisão do usuário,
+ * 2026-09-19): a ação é o que se faz com a tarefa, o resto é o que se faz com a
+ * linha. Menu que fosse só ações fecharia com um divisor pendurado, e não
+ * existe nenhum: a superfície que tem ação tem também edição.
  */
 export function taskActionsMenuSection(actions: PlannedTaskAction[]): MenuEntry[] {
   if (actions.length === 0) return [];
   const only = singleAction(actions);
   return [
-    MENU_DIVIDER,
     only
       ? actionItem(only, `Abrir ${actionLabel(only)}`)
       : {
@@ -35,5 +35,6 @@ export function taskActionsMenuSection(actions: PlannedTaskAction[]): MenuEntry[
           icon: <Zap size={14} />,
           children: actions.map((action) => actionItem(action, actionLabel(action))),
         },
+    MENU_DIVIDER,
   ];
 }

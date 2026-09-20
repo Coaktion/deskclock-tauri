@@ -9,7 +9,7 @@ interface PlannedRowMenuActions {
   onDuplicate: () => void;
   onCopyLink: () => void;
   onDelete: () => void;
-  /** As ações da tarefa, que o menu lista no fim (H1). Sem elas, nada é somado. */
+  /** As ações da tarefa, que o menu lista no topo (H1). Sem elas, nada é somado. */
   actions?: PlannedTaskAction[];
   /** O modo de seleção: o menu fecha e não abre (ver `useRowMenu`). */
   disabled?: boolean;
@@ -30,6 +30,7 @@ export function usePlannedRowMenu({
 }: PlannedRowMenuActions) {
   return useRowMenu({
     items: [
+      ...taskActionsMenuSection(actions),
       { label: "Editar", icon: <Pencil size={14} />, shortcut: "E", onSelect: onEdit },
       { label: "Duplicar", icon: <Copy size={14} />, shortcut: "D", onSelect: onDuplicate },
       { label: "Copiar link", icon: <Link size={14} />, shortcut: "L", onSelect: onCopyLink },
@@ -41,7 +42,6 @@ export function usePlannedRowMenu({
         tone: "danger",
         onSelect: onDelete,
       },
-      ...taskActionsMenuSection(actions),
     ],
     disabled,
   });
