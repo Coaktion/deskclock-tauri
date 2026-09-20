@@ -9,6 +9,7 @@ import { BillableChip, DatePickerInput, Input } from "@presentation/components/u
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { weekdayOptions } from "@shared/utils/weekdays";
 import {
@@ -49,8 +50,7 @@ export function PlannedTaskEditSheet({
   onClose,
 }: PlannedTaskEditSheetProps) {
   const { activeFields } = useCustomFields();
-  const showWeekend = useShowWeekend();
-  const weekdays = weekdayOptions(showWeekend);
+  const weekdays = weekdayOptions(useShowWeekend(), useWeekStart());
   const editor = usePlannedTaskEditor({ task, projects, categories, onSave, onClose });
 
   useEscapeToClose(onClose);

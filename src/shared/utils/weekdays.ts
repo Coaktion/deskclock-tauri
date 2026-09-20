@@ -1,3 +1,5 @@
+import type { WeekStart } from "@shared/types/appConfig";
+
 /** Um dia oferecido pela recorrência da tarefa planejada. */
 export interface WeekdayOption {
   /**
@@ -12,52 +14,64 @@ export interface WeekdayOption {
   title: string;
 }
 
-/**
- * A semana como a recorrência a oferece: segunda a sexta, e o fim de semana
- * **no fim**.
- *
- * A ordem começa na segunda e **não** segue a config `weekStartsOn`, pelo mesmo
- * motivo que a semana do import da Agenda não a segue: ligar o fim de semana
- * acrescenta sábado e domingo à lista que já existia, e não a reordena. Quem
- * marcava "Seg, Qua, Sex" continua encontrando os três onde estavam.
- *
- * O `value` é a escala do `Date`, então a lista não está em ordem crescente —
- * domingo é 0 e fecha a fila.
- */
-const ALL_WEEKDAYS: WeekdayOption[] = [
+/** A semana de domingo a sábado, na ordem do `Date`. A rotação sai daqui. */
+const SUNDAY_FIRST: WeekdayOption[] = [
+  { value: 0, label: "Dom", title: "Domingo" },
   { value: 1, label: "Seg", title: "Segunda" },
   { value: 2, label: "Ter", title: "Terça" },
   { value: 3, label: "Qua", title: "Quarta" },
   { value: 4, label: "Qui", title: "Quinta" },
   { value: 5, label: "Sex", title: "Sexta" },
   { value: 6, label: "Sáb", title: "Sábado" },
-  { value: 0, label: "Dom", title: "Domingo" },
 ];
 
 /**
- * Os dias que a recorrência oferece. É a fonte única dos quatro editores de
- * tarefa planejada: com a lista copiada, ligar o fim de semana num deixaria os
- * outros três oferecendo cinco dias em silêncio.
+ * Os dias que a recorrência oferece, **na ordem que o usuário escolheu** para o
+ * começo da semana.
+ *
+ * É a fonte única dos quatro editores de tarefa planejada: com a lista copiada,
+ * ligar o fim de semana num deixaria os outros três oferecendo cinco dias em
+ * silêncio.
+ *
+ * A ordem segue `weekStartsOn` porque é a mesma semana que as pílulas do
+ * Planejamento desenham — duas ordens na mesma tela fariam a lista de dias
+ * parecer duas semanas diferentes. Com o fim de semana desligado a config não
+ * muda nada: rodar a lista e depois tirar sábado e domingo devolve segunda a
+ * sexta nos dois modos.
+ *
+ * O `value` é a escala do `Date`, então a lista não sai em ordem crescente.
  */
-export function weekdayOptions(showWeekend: boolean): WeekdayOption[] {
-  return showWeekend ? ALL_WEEKDAYS : ALL_WEEKDAYS.filter((d) => !isWeekendDay(d.value));
+export function weekdayOptions(showWeekend: boolean, weekStartsOn: WeekStart): WeekdayOption[] {
+  const rotated = SUNDAY_FIRST.map((_, i) => SUNDAY_FIRST[(i + weekStartsOn) % 7]);
+  return showWeekend ? rotated : rotated.filter((d) => !isWeekendDay(d.value));
 }
 
 /** Só os números, para quem filtra `recurringDays` sem desenhar pílula. */
-export function weekdayValues(showWeekend: boolean): number[] {
-  return weekdayOptions(showWeekend).map((d) => d.value);
+export function weekdayValues(showWeekend: boolean, weekStartsOn: WeekStart): number[] {
+  return weekdayOptions(showWeekend, weekStartsOn).map((d) => d.value);
 }
 
 /**
- * Quantos dias **corridos** a semana cobre a partir da segunda: 5 ou 7.
+ * Quantos dias **corridos** a semana cobre: 5 ou 7.
  *
  * Não é `weekdayValues(...).length` por acidente de igualdade. Aquilo conta
  * opções oferecidas, e as duas contas só coincidem enquanto a lista for
- * contígua a partir da segunda — uma semana futura de "Seg/Qua/Sex" daria três
- * dias corridos em silêncio, terminando na quarta.
+ * contígua — uma semana futura de "Seg/Qua/Sex" daria três dias corridos em
+ * silêncio.
  */
 export function weekSpan(showWeekend: boolean): number {
   return showWeekend ? 7 : 5;
+}
+
+/**
+ * Onde a semana **começa de fato** numa tela que pode estar sem fim de semana.
+ *
+ * Com sábado e domingo escondidos, a semana é de segunda a sexta e a escolha
+ * "domingo" não tem o que ordenar: começar num dia que não se vê deixaria a
+ * grade abrindo no vazio. Ligado o fim de semana, a escolha passa a valer.
+ */
+export function effectiveWeekStart(showWeekend: boolean, weekStartsOn: WeekStart): WeekStart {
+  return showWeekend ? weekStartsOn : 1;
 }
 
 /** Sábado e domingo na escala do `Date`. */

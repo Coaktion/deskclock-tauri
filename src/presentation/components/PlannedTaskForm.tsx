@@ -11,6 +11,7 @@ import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO } from "@shared/utils/time";
 import { weekdayOptions } from "@shared/utils/weekdays";
@@ -101,8 +102,7 @@ export function PlannedTaskForm({
     scheduleDate: defaultDate || todayISO(),
   });
   const { activeFields } = useCustomFields();
-  const showWeekend = useShowWeekend();
-  const weekdays = weekdayOptions(showWeekend);
+  const weekdays = weekdayOptions(useShowWeekend(), useWeekStart());
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, form.projectId);
   const [submitting, setSubmitting] = useState(false);

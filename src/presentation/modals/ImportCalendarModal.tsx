@@ -40,7 +40,9 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
-import { isWeekendDay, weekSpan, weekdayOptions, weekdayValues } from "@shared/utils/weekdays";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import type { WeekStart } from "@shared/types/appConfig";
+import { effectiveWeekStart, isWeekendDay, weekSpan, weekdayOptions } from "@shared/utils/weekdays";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 
@@ -52,8 +54,7 @@ function isWeekend(dateISO: string): boolean {
 
 /** Descarta o que a semana desta janela não mostra — nada, com o fim de semana ligado. */
 function onlyVisibleDays(days: number[], showWeekend: boolean): number[] {
-  const offered = weekdayValues(showWeekend);
-  return days.filter((d) => offered.includes(d));
+  return showWeekend ? days : days.filter((d) => !isWeekendDay(d));
 }
 
 interface EventEditState {
@@ -98,42 +99,56 @@ function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
 }
 
 /**
- * A segunda da semana do evento — a chave dos grupos da barra lateral.
+ * O primeiro dia da semana do evento — a chave dos grupos da barra lateral.
  *
- * **Não segue a config `weekStartsOn`, de propósito:** a semana desta tela
- * começa na segunda e conta dali (cinco dias, ou sete com "Exibir fim de
- * semana"), então a chave precisa ser a segunda nos dois modos.
+ * Com o fim de semana **desligado** a chave é sempre a segunda, e a escolha
+ * `weekStartsOn` não entra: a semana é de segunda a sexta, e abri-la num
+ * domingo que a tela não desenha deixaria o primeiro cartão vazio. Ligado, a
+ * escolha passa a valer aqui como vale nas pílulas do Planejamento — é a mesma
+ * semana, e duas origens diferentes agrupariam os mesmos eventos em cartões
+ * diferentes.
  */
-function getMondayISO(dateISO: string): string {
-  return weekBoundsOf(dateISO, 1).start;
+function getWeekKeyISO(dateISO: string, showWeekend: boolean, weekStartsOn: WeekStart): string {
+  return weekBoundsOf(dateISO, effectiveWeekStart(showWeekend, weekStartsOn)).start;
 }
 
-/** Segunda a sexta, ou a semana inteira com "Exibir fim de semana" ligada. */
-function getWeekDays(mondayISO: string, showWeekend: boolean): string[] {
+/** Cinco dias a partir da chave, ou a semana inteira com o fim de semana ligado. */
+function getWeekDays(weekKeyISO: string, showWeekend: boolean): string[] {
   const fmt2 = (n: number) => String(n).padStart(2, "0");
   return Array.from({ length: weekSpan(showWeekend) }, (_, i) => {
-    const d = new Date(mondayISO + "T12:00:00");
+    const d = new Date(weekKeyISO + "T12:00:00");
     d.setDate(d.getDate() + i);
     return `${d.getFullYear()}-${fmt2(d.getMonth() + 1)}-${fmt2(d.getDate())}`;
   });
 }
 
-/** O último dia rotulado: sexta, ou domingo com o fim de semana ligado. */
-function weekEndOf(mondayISO: string, showWeekend: boolean): Date {
-  const monday = new Date(mondayISO + "T12:00:00");
-  const last = new Date(monday);
-  last.setDate(monday.getDate() + weekSpan(showWeekend) - 1);
+/** O último dia rotulado, contado da chave da semana. */
+function weekEndOf(weekKeyISO: string, showWeekend: boolean): Date {
+  const first = new Date(weekKeyISO + "T12:00:00");
+  const last = new Date(first);
+  last.setDate(first.getDate() + weekSpan(showWeekend) - 1);
   return last;
 }
 
-function weekRangeLabel(mondayISO: string, showWeekend: boolean): string {
-  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-  return `${fmt(new Date(mondayISO + "T12:00:00"))} – ${fmt(weekEndOf(mondayISO, showWeekend))}`;
+/**
+ * "seg a sex", "seg a dom", "dom a sáb" — os extremos da semana que está à
+ * vista, lidos dos próprios dias em vez de escritos à mão: com três arranjos
+ * possíveis, um literal fica errado em dois deles.
+ */
+function weekSpanLabel(weekKeyISO: string, showWeekend: boolean): string {
+  const first = new Date(weekKeyISO + "T12:00:00").getDay();
+  const last = weekEndOf(weekKeyISO, showWeekend).getDay();
+  return `${DAY_LABELS[first].toLowerCase()} a ${DAY_LABELS[last].toLowerCase()}`;
 }
 
-function weekRangeLabelLong(mondayISO: string, showWeekend: boolean): string {
+function weekRangeLabel(weekKeyISO: string, showWeekend: boolean): string {
+  const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return `${fmt(new Date(weekKeyISO + "T12:00:00"))} – ${fmt(weekEndOf(weekKeyISO, showWeekend))}`;
+}
+
+function weekRangeLabelLong(weekKeyISO: string, showWeekend: boolean): string {
   const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
-  return `${fmt(new Date(mondayISO + "T12:00:00"))} a ${fmt(weekEndOf(mondayISO, showWeekend))}`;
+  return `${fmt(new Date(weekKeyISO + "T12:00:00"))} a ${fmt(weekEndOf(weekKeyISO, showWeekend))}`;
 }
 
 /* ── Editor inline por evento ── */
@@ -149,7 +164,7 @@ interface EventEditorProps {
 
 function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: EventEditorProps) {
   const showWeekend = useShowWeekend();
-  const weekdays = weekdayOptions(showWeekend);
+  const weekdays = weekdayOptions(showWeekend, useWeekStart());
 
   function toggleDay(day: number) {
     const next = state.recurringDays.includes(day)
@@ -398,6 +413,7 @@ export function ImportCalendarModal({
   // ativo — decisão registrada (§5.7), não descuido.
   const config = useAppConfig();
   const showWeekend = useShowWeekend();
+  const weekStartsOn = useWeekStart();
   const workspaceId = resolveIntegrationWorkspaceId(config.get("calendarDeskclockWorkspaceId"));
   // Uma consulta para o modal inteiro: um hook por linha viraria dezenas.
   const { categoriesFor } = useProjectCategoryMap();
@@ -469,7 +485,7 @@ export function ImportCalendarModal({
         setEditMap(map);
         if (evts.length > 0) {
           const firstDate = [...evts].sort((a, b) => a.date.localeCompare(b.date))[0].date;
-          setSelectedWeek(getMondayISO(firstDate));
+          setSelectedWeek(getWeekKeyISO(firstDate, showWeekend, weekStartsOn));
         }
       })
       .catch((err) => {
@@ -492,19 +508,30 @@ export function ImportCalendarModal({
   const grouped = useMemo(() => groupByDate(events), [events]);
 
   const allWeekKeys = useMemo(() => {
-    const weeks = new Set(events.map((e) => getMondayISO(e.date)));
+    const weeks = new Set(events.map((e) => getWeekKeyISO(e.date, showWeekend, weekStartsOn)));
     return [...weeks].sort();
-  }, [events]);
+  }, [events, showWeekend, weekStartsOn]);
+
+  /**
+   * A semana à vista, e não a que foi clicada.
+   *
+   * Trocar o primeiro dia da semana nas Configurações move a origem de todos os
+   * grupos, e a chave guardada no clique deixa de existir: sem este ajuste a
+   * barra lateral mostraria as semanas novas com nenhuma selecionada, e o painel
+   * ao lado ficaria vazio sem explicar por quê.
+   */
+  const activeWeek =
+    selectedWeek && allWeekKeys.includes(selectedWeek) ? selectedWeek : (allWeekKeys[0] ?? null);
 
   const selectedWeekDays = useMemo(() => {
-    if (!selectedWeek) return [];
-    return getWeekDays(selectedWeek, showWeekend).filter((d) => d >= fromDate && d <= toDate);
-  }, [selectedWeek, fromDate, toDate, showWeekend]);
+    if (!activeWeek) return [];
+    return getWeekDays(activeWeek, showWeekend).filter((d) => d >= fromDate && d <= toDate);
+  }, [activeWeek, fromDate, toDate, showWeekend]);
 
   const selectedWeekEvents = useMemo(() => {
-    if (!selectedWeek) return [];
-    return events.filter((e) => getMondayISO(e.date) === selectedWeek);
-  }, [events, selectedWeek]);
+    if (!activeWeek) return [];
+    return events.filter((e) => getWeekKeyISO(e.date, showWeekend, weekStartsOn) === activeWeek);
+  }, [events, activeWeek, showWeekend, weekStartsOn]);
 
   // Nome + horário, não o id da série do Google — ver `dedupeCalendarEvents`.
   const { dedupedIds: dedupedEventIds, daysById: mergedDaysById } = useMemo(
@@ -846,11 +873,14 @@ export function ImportCalendarModal({
               Semanas
             </div>
             {allWeekKeys.map((weekKey) => {
-              const count = events.filter((e) => getMondayISO(e.date) === weekKey).length;
-              const selCount = events.filter(
-                (e) => getMondayISO(e.date) === weekKey && selected.has(e.id)
+              const count = events.filter(
+                (e) => getWeekKeyISO(e.date, showWeekend, weekStartsOn) === weekKey
               ).length;
-              const isActive = selectedWeek === weekKey;
+              const selCount = events.filter(
+                (e) =>
+                  getWeekKeyISO(e.date, showWeekend, weekStartsOn) === weekKey && selected.has(e.id)
+              ).length;
+              const isActive = activeWeek === weekKey;
               return (
                 <button
                   key={weekKey}
@@ -866,7 +896,7 @@ export function ImportCalendarModal({
                       {weekRangeLabel(weekKey, showWeekend)}
                     </div>
                     <div className="text-xs text-fg-muted mt-0.5">
-                      {showWeekend ? "seg a dom" : "seg a sex"}
+                      {weekSpanLabel(weekKey, showWeekend)}
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-0.5 shrink-0 pt-0.5">
@@ -880,11 +910,11 @@ export function ImportCalendarModal({
 
           {/* Painel — dias e eventos da semana selecionada */}
           <div className="flex-1 overflow-y-auto flex flex-col">
-            {selectedWeek ? (
+            {activeWeek ? (
               <>
                 <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-2.5 bg-raised/90 backdrop-blur-sm border-b border-border-subtle shrink-0">
                   <span className="text-sm font-semibold text-fg flex-1 capitalize">
-                    {weekRangeLabelLong(selectedWeek, showWeekend)}
+                    {weekRangeLabelLong(activeWeek, showWeekend)}
                   </span>
                   <button
                     onClick={toggleWeekEvents}

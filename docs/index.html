@@ -1323,7 +1323,7 @@
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div class="callout-body"><strong>Só dias úteis, por padrão.</strong> Sábado e domingo não aparecem no planejamento, e a regra vale também na entrada: eventos de fim de semana são descartados na importação do Google Agenda, e a recorrência oferece apenas de segunda a sexta. Quem trabalha no fim de semana liga <strong>"Exibir fim de semana"</strong> em <a onclick="show('settings')">Configurações → Geral → Jornada</a>, e os dois dias voltam em todos esses lugares de uma vez.</div>
+      <div class="callout-body"><strong>Só dias úteis, por padrão.</strong> Sábado e domingo não aparecem no planejamento, e a regra vale também na entrada: eventos de fim de semana são descartados na importação do Google Agenda, e a recorrência oferece apenas de segunda a sexta. Quem trabalha no fim de semana liga <strong>"Exibir fim de semana"</strong> em <a onclick="show('settings')">Configurações → Geral → Jornada</a>, e os dois dias voltam em todos esses lugares de uma vez, na ordem que você escolheu em <strong>"Primeiro dia da semana"</strong>.</div>
     </div>
 
     <p>A coluna do formulário, à esquerda, <strong>recolhe e é arrastável</strong> exatamente como a do <a onclick="show('retroactive')">Lançamento manual</a> — as duas telas compartilham o mesmo arranjo, com preferências salvas independentes.</p>
@@ -2124,7 +2124,7 @@
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-      <div class="callout-body"><strong>Sábado e domingo não entram.</strong> O planejamento é só de dias úteis, então eventos de fim de semana são descartados já na busca — e a recorrência sugerida pelo Google é aparada pela mesma régua. Ligando <strong>"Exibir fim de semana"</strong> em <a onclick="show('settings')">Configurações → Geral → Jornada</a>, os dois dias passam a entrar também aqui, e a semana do accordion vira de segunda a domingo. Cada reunião vira <strong>uma</strong> tarefa planejada, mesmo quando o Google a devolve como parte de uma série.</div>
+      <div class="callout-body"><strong>Sábado e domingo não entram.</strong> O planejamento é só de dias úteis, então eventos de fim de semana são descartados já na busca — e a recorrência sugerida pelo Google é aparada pela mesma régua. Ligando <strong>"Exibir fim de semana"</strong> em <a onclick="show('settings')">Configurações → Geral → Jornada</a>, os dois dias passam a entrar também aqui, e a semana do accordion passa a ter sete dias, começando no dia que você escolheu em "Primeiro dia da semana". Cada reunião vira <strong>uma</strong> tarefa planejada, mesmo quando o Google a devolve como parte de uma série.</div>
     </div>
 
     <h3>Pré-mapeamento automático</h3>
@@ -2763,7 +2763,7 @@
     <h3>Jornada</h3>
     <p><strong>Meta diária</strong> e <strong>meta semanal</strong>, em horas. É contra elas que os totalizadores da tela de Tarefas mostram o progresso.</p>
     <p><strong>Primeiro dia da semana</strong> — segunda (padrão) ou domingo. A escolha vale para o app inteiro: o total e a meta semanal, os atalhos "Esta semana", "Semana passada" e "Próxima semana", a vista semanal do Planejamento e a grade dos calendários.</p>
-    <p><strong>Exibir fim de semana</strong> — desligado por padrão. Ligado, sábado e domingo aparecem na semana do <a onclick="show('planning')">Planejamento</a>, entram na importação do <a onclick="show('google')">Google Agenda</a> e são oferecidos nos dias da recorrência, nos quatro lugares onde ela se edita. Desligar esconde os dois dias de novo, sem apagar nada: tarefa recorrente marcada em sábado continua salva e volta a aparecer quando você religar. Esta opção existiu até a v2.0.0 e voltou na v2.4.0 — se você a tinha ligado naquela época, vai encontrá-la ligada, porque a preferência nunca foi apagada.</p>
+    <p><strong>Exibir fim de semana</strong> — desligado por padrão. Ligado, sábado e domingo aparecem na semana do <a onclick="show('planning')">Planejamento</a>, entram na importação do <a onclick="show('google')">Google Agenda</a> e são oferecidos nos dias da recorrência, nos quatro lugares onde ela se edita — tudo isso começando no dia que você escolheu em <strong>"Primeiro dia da semana"</strong>, que enquanto o fim de semana está escondido não tem efeito nenhum. Desligar esconde os dois dias de novo, sem apagar nada: tarefa recorrente marcada em sábado continua salva e volta a aparecer quando você religar. Esta opção existiu até a v2.0.0 e voltou na v2.4.0 — se você a tinha ligado naquela época, vai encontrá-la ligada, porque a preferência nunca foi apagada.</p>
 
     <h3>Janelas</h3>
     <p><strong>Redefinir posições salvas das janelas</strong> — devolve a janela principal e os overlays às posições padrão. Útil quando um overlay ficou fora da área visível depois de mudar de monitor.</p>

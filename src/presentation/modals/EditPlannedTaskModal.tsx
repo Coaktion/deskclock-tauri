@@ -8,6 +8,7 @@ import { boxClass } from "@presentation/components/fieldStyles";
 import { BillableChip, Button, DatePickerInput, Input, Modal } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
+import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import {
   usePlannedTaskEditor,
   type EditPlannedTaskInput,
@@ -33,8 +34,7 @@ export function EditPlannedTaskModal({
   onClose,
 }: EditPlannedTaskModalProps) {
   const { activeFields } = useCustomFields();
-  const showWeekend = useShowWeekend();
-  const weekdays = weekdayOptions(showWeekend);
+  const weekdays = weekdayOptions(useShowWeekend(), useWeekStart());
   const {
     name,
     setName,
