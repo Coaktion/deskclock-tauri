@@ -16,6 +16,7 @@ import { usePlannedTasksForDate } from "@presentation/hooks/usePlannedTasks";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
+import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import { CompletedTaskEditSheet } from "@presentation/overlays/CompletedTaskEditSheet";
 import { CompletedTasksSection } from "@presentation/overlays/CompletedTasksSection";
@@ -424,8 +425,13 @@ export function PopupOverlayContent({
   const {
     groups: completedGroups,
     totalSeconds: completedTotalSeconds,
+    reload: reloadCompleted,
     updateGroup: updateCompletedGroup,
   } = useCompletedTasksForDate(today);
+  // Excluir uma executada é a **única** porta de exclusão de lançamento do popup
+  // (H3), e ela é a mesma das outras telas: o `useTaskUndo` apaga com snapshot,
+  // levanta o toast com Desfazer e emite `TASKS_CHANGED` para as demais janelas.
+  const { removeWithUndo: removeTasksWithUndo } = useTaskUndo(reloadCompleted);
   const { projects } = useProjects();
   const { categories } = useCategories();
   const { fields: customFields, activeFields } = useCustomFields();
@@ -598,6 +604,7 @@ export function PopupOverlayContent({
             plannedIndex={plannedIndex}
             onRepeat={handleRepeat}
             onEdit={setEditingCompleted}
+            onDelete={(g) => void removeTasksWithUndo(g.tasks.map((t) => t.id))}
           />
         )}
       </div>

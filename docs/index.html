@@ -1095,7 +1095,7 @@
       </div>
     </div>
 
-    <p>Cada linha exibe o ponto colorido do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o chip de faturamento, a duração e o <strong>Play</strong>, sempre visível — ele inicia uma nova execução com estes dados. O <strong>clique na linha</strong> abre o modal de edição, e o menu <strong>⋯</strong>, que aparece no hover (ou pelo <strong>clique direito</strong>, em qualquer ponto da linha), traz <strong>Editar</strong> e <strong>Excluir</strong>. Com o foco na linha, <kbd>Enter</kbd> inicia, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam entre as linhas. Excluir continua sem confirmação — e <a onclick="show('shortcuts/teclado-listas')">dá para desfazer</a>.</p>
+    <p>Cada linha exibe o ponto colorido do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o chip de faturamento, a duração e o <strong>Play</strong>, sempre visível — ele inicia uma nova execução com estes dados. O <strong>clique na linha</strong> abre o modal de edição, e o menu <strong>⋯</strong> — sempre visível, na primeira coluna da direita, e também pelo <strong>clique direito</strong> em qualquer ponto da linha — traz as <a onclick="show('planning/acoes-tarefa')">ações da tarefa</a>, quando a entrada veio de uma planejada que tem alguma, mais <strong>Editar</strong> e <strong>Excluir</strong>, nesta ordem. Com o foco na linha, <kbd>Enter</kbd> inicia, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam entre as linhas. Excluir continua sem confirmação — e <a onclick="show('shortcuts/teclado-listas')">dá para desfazer</a>.</p>
 
     <h3>Agrupamento de tarefas</h3>
     <p>Tarefas com mesmo <strong>nome + projeto + categoria</strong> são agrupadas visualmente. O grupo exibe a duração total e a contagem de registros ao lado do nome. O clique no cabeçalho <strong>expande</strong> o grupo, para ver e editar cada registro individualmente; as demais ações ficam no menu <strong>⋯</strong> do cabeçalho, que também abre pelo clique direito:</p>
@@ -1290,7 +1290,7 @@
       Apontamentos do dia
     </h2>
 
-    <p>A coluna da direita lista o que já foi registrado no dia selecionado, do mais recente para o mais antigo. O <strong>clique na linha</strong> abre o modal completo de edição. O menu <strong>⋯</strong>, no hover, e o <strong>clique direito</strong> trazem <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). Com o foco na linha, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam entre as linhas.</p>
+    <p>A coluna da direita lista o que já foi registrado no dia selecionado, do mais recente para o mais antigo. O <strong>clique na linha</strong> abre o modal completo de edição. O menu <strong>⋯</strong> — sempre visível, na primeira coluna da direita — e o <strong>clique direito</strong> trazem <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). Com o foco na linha, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam entre as linhas.</p>
 
     <p>A barra <strong>"Selecionar tarefas"</strong>, acima da lista, liga as caixas de seleção e habilita duas ações em massa. No modo de seleção a linha volta a servir só para marcar: sem menu, sem clique direito.</p>
     <ul>
@@ -1388,20 +1388,25 @@
 
     <p>Cada tarefa planejada pode ter ações associadas a ela, configuradas no formulário de criação, no modal de edição ou no painel de edição do próprio overlay. Você dispara cada uma quando quiser, quantas vezes quiser. Elas <strong>não</strong> são executadas automaticamente ao iniciar.</p>
 
-    <h3>O raio (⚡)</h3>
-    <p>Toda tarefa que tem ações mostra um <strong>raio</strong> ao lado do chip de faturamento, com o número de ações. Ele não é só um rótulo — ele executa:</p>
+    <h3>Onde as ações ficam</h3>
+    <p>As ações de uma tarefa são a <strong>primeira seção do menu</strong> <strong>⋯</strong> da linha — o mesmo que o <strong>clique direito</strong> abre. Elas vêm no topo, antes de Editar e das demais:</p>
     <ul>
-      <li><strong>Com uma ação só</strong>, o clique abre a URL ou o arquivo direto.</li>
-      <li><strong>Com duas ou mais</strong>, o clique abre um painel com os chips, e você escolhe qual abrir.</li>
+      <li><strong>Com uma ação só</strong>, ela é o próprio item do menu (<em>Abrir …</em>): o clique abre a URL ou o arquivo direto.</li>
+      <li><strong>Com duas ou mais</strong>, o menu traz o item <strong>Ações</strong>, que abre um submenu com uma linha por ação.</li>
     </ul>
-    <p>Não é preciso dar play nem abrir a edição para disparar uma ação. O raio aparece em todo lugar onde a tarefa planejada — ou uma tarefa que veio dela — é exibida:</p>
+    <p>Não é preciso dar play nem abrir a edição para disparar uma ação. O menu com as ações aparece em todo lugar onde a tarefa planejada — ou uma tarefa que veio dela — é exibida:</p>
     <ul>
       <li>na linha da tarefa no <strong>Planejamento</strong>;</li>
       <li>nas abas <strong>Planejadas</strong> e <strong>Executadas</strong> do <a onclick="show('overlays/popup-flyout')">Popup Flyout</a>;</li>
       <li>nas entradas do <a onclick="show('history')">Histórico</a> que vieram de uma planejada;</li>
-      <li>no <a onclick="show('tasks/barra-de-titulo')">chip da barra de título</a>, enquanto a tarefa roda.</li>
+      <li>no <a onclick="show('tasks/barra-de-titulo')">chip da barra de título</a>, enquanto a tarefa roda — ali continua sendo um <strong>raio (⚡)</strong>, porque o chip não é linha de lista.</li>
     </ul>
-    <p>Nas tarefas já executadas, o raio oferece as ações <strong>atuais</strong> da planejada de origem: se você mudou as ações depois, valem as novas; se excluiu a planejada, o raio some. No modo de seleção ele também some, porque ali o clique na linha serve para marcar.</p>
+    <p>Nas tarefas já executadas, o menu oferece as ações <strong>atuais</strong> da planejada de origem: se você mudou as ações depois, valem as novas; se excluiu a planejada, a seção some. No modo de seleção some o menu inteiro, porque ali o clique na linha serve para marcar.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>O raio saiu das linhas.</strong> As ações ficavam num raio (⚡) ao lado do chip de faturamento, com o número de ações. Ele custava largura do nome da tarefa — era o segundo controle disputando a mesma faixa com o chip e a duração —, e agora mora no menu, a um clique a mais. O raio continua no chip da barra de título e no card da tarefa em execução do Popup Flyout.</div>
+    </div>
 
     <div class="table-scroll">
 
@@ -1433,9 +1438,9 @@
       A linha da tarefa planejada
     </h2>
 
-    <p>Em repouso, a linha mostra o <strong>círculo de concluir</strong>, o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em>, o <a onclick="show('planning/acoes-tarefa')">raio das ações</a> (quando há), o chip de faturamento — que é controle, não rótulo: clicar nele alterna — e o <strong>Play</strong>, na ponta direita. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha.</p>
+    <p>A linha mostra o <strong>círculo de concluir</strong>, o ponto do projeto, o nome, o subtítulo <em>Projeto · Categoria</em> e, na direita, sempre nesta ordem: o menu <strong>⋯</strong>, o chip de faturamento — que é controle, não rótulo: clicar nele alterna —, a duração ou o horário e o <strong>Play</strong>. A tarefa em execução ganha <a onclick="show('tasks/barra-de-titulo')">destaque</a> na própria linha.</p>
 
-    <p>O que se usa o dia inteiro fica sempre visível; o resto está no menu <strong>⋯</strong>, que aparece no hover (ou ao navegar pelo teclado) e não ocupa largura enquanto está escondido:</p>
+    <p><strong>Nada ali aparece só ao passar o cursor.</strong> O ⋯ é a primeira coluna da direita e fica sempre visível, no mesmo lugar em toda linha, tenha ela chip ou não — e por isso não cobre mais a duração nem o horário. O que se usa o dia inteiro fica na própria linha; o resto está no menu:</p>
 
     <div class="table-scroll">
 
@@ -1453,7 +1458,7 @@
 
     </div>
 
-    <p>O menu tem quatro itens, e cada um responde também a uma tecla quando a linha está em foco:</p>
+    <p>O menu abre pelas <a onclick="show('planning/acoes-tarefa')">ações da tarefa</a>, quando ela tem alguma, e depois traz estes quatro itens — <strong>Excluir é sempre o último</strong>, longe do cursor que acabou de abrir o menu. Cada um responde também a uma tecla quando a linha está em foco:</p>
 
     <div class="table-scroll">
 
@@ -1581,7 +1586,7 @@
 
     <p>Na aba Tarefas, cada dia fica num cartão. O cabeçalho de cada grupo exibe o dia da semana, a data e o total de horas do dia. Cada grupo pode ser exportado individualmente.</p>
 
-    <p>Por tarefa, o <strong>clique na linha</strong> abre o modal completo de edição, e o menu <strong>⋯</strong> — no hover ou pelo <strong>clique direito</strong> — traz <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). Com o foco na linha, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam dentro do cartão do dia. A entrada que veio de uma tarefa planejada com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre as ações da planejada de origem. A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa — que também se desfaz — e, havendo mais de um workspace, <strong>Mover para workspace</strong>; no modo de seleção a linha serve só para marcar.</p>
+    <p>Por tarefa, o <strong>clique na linha</strong> abre o modal completo de edição, e o menu <strong>⋯</strong> — sempre visível, na primeira coluna da direita, ou pelo <strong>clique direito</strong> — traz <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). Com o foco na linha, <kbd>E</kbd> edita, <kbd>Del</kbd> exclui e <kbd>↑</kbd> <kbd>↓</kbd> andam dentro do cartão do dia. Quando a entrada veio de uma tarefa planejada com ações, elas <a onclick="show('planning/acoes-tarefa')">abrem o próprio menu</a>, antes do Editar. A barra <strong>"Selecionar tarefas"</strong> habilita exclusão em massa — que também se desfaz — e, havendo mais de um workspace, <strong>Mover para workspace</strong>; no modo de seleção a linha serve só para marcar.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -2502,7 +2507,7 @@
 
     <p>Ao terminar, o modal fecha e um aviso confirma quantos tickets foram importados.</p>
 
-    <p>Cada ticket importado já vem com uma <a onclick="show('planning/acoes-tarefa')">ação</a> apontando para ele no Zendesk, rotulada como "Zendesk". O raio (⚡) da tarefa abre o ticket com um clique.</p>
+    <p>Cada ticket importado já vem com uma <a onclick="show('planning/acoes-tarefa')">ação</a> apontando para ele no Zendesk, rotulada como "Zendesk". O menu ⋯ da tarefa abre o ticket com um clique.</p>
   </section>
 
   <!-- ──────────────────── LLM ──────────────────── -->
@@ -2639,11 +2644,11 @@
     </ul>
 
     <h3>Aba Planejadas</h3>
-    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. A linha é a mesma do <a onclick="show('planning/lista-planejadas')">Planejamento</a>: o <strong>círculo de concluir</strong> à esquerda, o <strong>Play</strong> à direita, e o menu <strong>⋯</strong> — no hover ou pelo <strong>clique direito</strong> — com <strong>Editar</strong>, <strong>Duplicar</strong>, <strong>Copiar link</strong> e <strong>Excluir</strong>. O clique na linha abre a edição aqui mesmo, no painel do popup. A tarefa com ações mostra o <a onclick="show('planning/acoes-tarefa')">raio (⚡)</a>, que abre a ação sem precisar iniciar a tarefa.</p>
+    <p>As tarefas do dia, agrupadas por hora marcada: primeiro as <strong>com hora</strong>, em ordem de relógio; depois as <strong>sem hora</strong>. A linha é a mesma do <a onclick="show('planning/lista-planejadas')">Planejamento</a>: o <strong>círculo de concluir</strong> à esquerda, o <strong>Play</strong> à direita, e o menu <strong>⋯</strong> — sempre visível, na primeira coluna da direita, ou pelo <strong>clique direito</strong> — com <strong>Editar</strong>, <strong>Duplicar</strong>, <strong>Copiar link</strong> e <strong>Excluir</strong>. O clique na linha abre a edição aqui mesmo, no painel do popup. A tarefa com <a onclick="show('planning/acoes-tarefa')">ações</a> as lista no topo do mesmo menu, e dispará-las não exige iniciar a tarefa.</p>
     <p>Concluir direto daqui é útil para a tarefa que você parou como "Pendente" mas que estava de fato terminada — não precisa abrir o planejamento para isso.</p>
 
     <h3>Aba Executadas</h3>
-    <p>O que já foi registrado hoje, com <strong>Editar</strong> e <strong>Repetir</strong> por linha. A edição vale para o grupo inteiro: com duas ou mais tarefas iguais, o painel avisa quantas serão atualizadas. Quando o registro veio de uma planejada com ações, o raio (⚡) aparece aqui também — inclusive depois de a planejada ser concluída.</p>
+    <p>O que já foi registrado hoje, na mesma linha das outras listas: o <strong>Play</strong> na ponta direita <strong>repete</strong> o registro — inicia uma execução nova com estes dados — e o menu <strong>⋯</strong>, sempre visível, traz <strong>Editar</strong> e <strong>Excluir</strong> (sem confirmação, mas com <a onclick="show('shortcuts/teclado-listas')">desfazer</a>). O <strong>clique na linha</strong> e o <strong>clique direito</strong> fazem o mesmo que o Editar e o ⋯; com o foco na linha, <kbd>Enter</kbd> repete, <kbd>E</kbd> edita e <kbd>Del</kbd> exclui. Tudo vale para o <strong>grupo inteiro</strong>: com duas ou mais tarefas iguais, o painel de edição avisa quantas serão atualizadas, e excluir apaga todas. Quando o registro veio de uma planejada com <a onclick="show('planning/acoes-tarefa')">ações</a>, elas abrem o mesmo menu — inclusive depois de a planejada ser concluída.</p>
     <p>Nas duas abas, a tarefa em execução se destaca com fundo tingido e um ponto ao lado do nome.</p>
 
     <h3>O card da tarefa em execução</h3>
@@ -2684,7 +2689,7 @@
         <tbody>
           <tr><td><strong>Tarefa em execução</strong></td><td>O ✎ do card</td><td>Nome, projeto, categoria com billable, hora de início, campos personalizados e os chips das ações. Editar aqui <strong>também configura a planejada de origem</strong>.</td></tr>
           <tr><td><strong>Tarefa planejada</strong></td><td>O clique na linha da aba Planejadas, ou <strong>Editar</strong> no menu ⋯</td><td>Nome, projeto, categoria com billable, campos personalizados, agendamento e ações — os mesmos campos do modal completo.</td></tr>
-          <tr><td><strong>Tarefa executada</strong></td><td>O ✎ da linha na aba Executadas</td><td>Nome, projeto, categoria com billable e campos personalizados, para o grupo inteiro. Data, duração, início e fim aparecem só quando o grupo tem uma tarefa.</td></tr>
+          <tr><td><strong>Tarefa executada</strong></td><td>O clique na linha da aba Executadas, ou <strong>Editar</strong> no menu ⋯</td><td>Nome, projeto, categoria com billable e campos personalizados, para o grupo inteiro. Data, duração, início e fim aparecem só quando o grupo tem uma tarefa.</td></tr>
         </tbody>
       </table>
 
@@ -2983,7 +2988,7 @@
           </tr>
           <tr>
             <td><kbd>Enter</kbd></td>
-            <td>Iniciar a tarefa</td>
+            <td>Iniciar a tarefa — nas Executadas do Popup Flyout, repetir o registro</td>
           </tr>
           <tr>
             <td><kbd>Espaço</kbd></td>

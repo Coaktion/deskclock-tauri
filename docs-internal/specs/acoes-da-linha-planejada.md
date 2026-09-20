@@ -478,7 +478,9 @@ não se desfaz fica longe do cursor que acabou de abrir o menu.
   `variant="icon"`, no `TitleBarRunningTask`). A variante `pill` **não morreu**: ela é o ⚡ das
   **concluídas do popup** (`CompletedTasksSection`), a única lista que ainda não tem menu de linha.
   Tirá-lo de lá agora deixaria a ação sem porta nenhuma até a H3, que é justamente quem dá menu
-  àquela linha — então ele sai lá, com a seção de ações entrando no mesmo commit.
+  àquela linha — então ele sai lá, com a seção de ações entrando no mesmo commit. _(Cumprido na
+  H3: a variante `pill` ficou sem call site e foi apagada, e o `PlannedActionsFlyout` deixou de
+  ter variante.)_
 - **Achado do caminho:** com o painel extraído, o React deixou de calcular adiantado o `setState` do
   **chamador**, e o gatilho que lia `e.currentTarget` **dentro** do updater passou a lê-lo já
   limpo. Nenhum call site faz isso — o `RowMenuTrigger` passa o `ref.current` —, mas a bancada do
@@ -556,10 +558,57 @@ Revoga a linha da Parte 2 que as deixava como estavam.
 | ⋯               | Editar · Excluir (com desfazer), mais a seção de ações |
 | Clique na linha | edita                                                  |
 
+**Como ficou (H3):**
+
+- **A linha saiu do `CompletedTasksSection`** para `overlays/CompletedTaskRow.tsx`, no desenho das
+  Entradas de hoje (`TaskCard`, G4): `PlannedPlaySlot` em `trailing`, o ⋯ em `actions` e `Menu`
+  irmão da linha. Menu pelo `useEntryRowMenu` (seção de ações · Editar · — · Excluir em tom
+  `danger`), teclado por `rowKeyDownHandler(ENTRY_ROW_KEYS, ...)`. **Sem círculo** — lançamento
+  não se conclui —, e a seção continua com o cálculo do `PlayBlock` e do realce, que ela já fazia
+  uma vez por grupo.
+- **Antes**, a linha tinha dois `IconButton size="sm"` na célula `actions` — Editar (✎) e Repetir
+  (▶) — e clique na linha não fazia nada. Nenhum se perdeu: Editar foi para o clique na linha e
+  para o menu, Repetir virou o ▶ fixo da coluna `trailing`, `IconButton variant="primary"` de 16
+  px como em toda lista. O rótulo em repouso é **"Repetir com estes dados"** (o `idleTitle` do
+  `PlannedPlaySlot`, no lugar do antigo "Repetir tarefa"); o bloqueio segue com a redação única do
+  `playTitle`, e o que o ▶ faz é exatamente o que o botão fazia — `onRepeat(group)`, que inicia uma
+  execução nova com nome, projeto, categoria e billable da primeira irmã.
+- **Excluir é novo nesta lista.** Até a H3 **não havia como apagar lançamento pelo popup**: a aba
+  Executadas só editava e repetia. A porta nasceu já no desfazer — `useTaskUndo(reload)` montado no
+  `PopupOverlayContent`, que apaga com snapshot, levanta o toast com Desfazer e emite
+  `TASKS_CHANGED` —, e `entryDeletePaths.test.ts` passou a cobrar do popup o que já cobrava do
+  Histórico e do Lançamento Manual. **A linha é um grupo** (§6.3), então Excluir apaga **todas as
+  irmãs** de uma vez, como Editar já as editava: o lote vai inteiro para o `removeWithUndo`, e o
+  toast diz "N lançamentos excluídos".
+- **Duas janelas com lote pendente continuam sendo a limitação aceita da G1** — agora o popup pode
+  ter dois hooks montados ao mesmo tempo, o das planejadas e o dos lançamentos. São eventos
+  diferentes (`PLANNED_TASKS_UNDO_DELETE` e `TASKS_UNDO_DELETE`), então um toast não restaura o
+  lote do outro.
+- **O ⚡ saiu da última linha em que restava**, e com ele a variante `pill` do
+  `PlannedActionsFlyout`: ela não tinha mais call site. O componente ficou **sem prop de variante**
+  — é sempre o `IconButton` da **barra de título** (`TitleBarRunningTask`), que não é linha de
+  lista e não rola, então o `closeOnScroll` do `useAnchoredPanel` é `false` fixo. As ações da
+  origem continuam resolvidas por `actionsOfTasks` sobre o índice de **todas** as planejadas do
+  dia; o que mudou é que elas viram a seção do menu (`taskActionsMenuSection`) em vez do painel de
+  chips.
+- **`screenGeometry` não mede o popup** (o spec do design não tem essa tela): nada a declarar.
+- **Impacto** (`gitnexus`, upstream): `CompletedTasksSection` → `PopupOverlayContent` →
+  `PopupOverlayApp`, 3 símbolos, risco **HIGH** por ser o caminho único da janela — a mudança é
+  interna à aba. `PlannedActionsFlyout` volta 6 símbolos com risco **LOW**, mas o índice é
+  anterior à H1 e ainda lista as linhas planejadas como chamadoras; hoje o único call site é o
+  `TitleBarRunningTask`.
+- **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): a linha da aba Executadas nos 264
+  px úteis com ⋯ + duração + ▶ (o nome é o que cede largura, e o grupo ainda leva o `2x`), o ▶ um
+  degrau maior que o ⋯ ao lado, e o toast de "Lançamento excluído" levantado **pelo popup**, que
+  some no blur — confirmar que o Desfazer continua alcançável.
+
 ### Fases
 
 | Fase | Entrega                                                         | Estado       |
 | ---- | --------------------------------------------------------------- | ------------ |
 | H1   | submenu no `ui/Menu` + seção de ações; ⚡ sai das linhas        | ✅ `130100b` |
-| H2   | `TaskRow`: ⋯ sempre visível, primeira coluna da direita         | a fazer      |
+| H2   | `TaskRow`: ⋯ sempre visível, primeira coluna da direita         | ✅ `0167d7f` |
 | H3   | concluídas do popup no padrão + docs e manual das três mudanças | a fazer      |
+
+A **ordem do menu** — seção de ações no topo, Excluir sempre no fim — saiu depois da H1, no
+`7a85b66`: ela nasceu no fim do menu e foi a revisão do usuário que a levou para o começo.

@@ -116,8 +116,11 @@ busca nem desmarca o que estava marcado.**
   pede confirmação e **se desfaz** (toast com Desfazer e `Ctrl+Z`), a linha e o lote da seleção
   pelo mesmo caminho. O desenho e o porquê estão em
   `docs-internal/specs/acoes-da-linha-planejada.md` (G5).
-- **⚡ na linha:** a tarefa que veio de uma planejada mostra o `PlannedActionsFlyout` com a ação
-  **atual** da origem (`actionsOfPlanned`, sobre as planejadas do workspace ativo) — a `Task` não
-  guarda cópia, e a origem excluída não mostra nada. Some no modo de seleção, como no Planejamento.
+- **A ação da origem fica no menu, não na linha:** a tarefa que veio de uma planejada lista a ação
+  **atual** da origem (`actionsOfPlanned`, sobre as planejadas do workspace ativo) na seção que
+  abre o ⋯ e o clique direito — uma ação é o item, duas ou mais viram o submenu "Ações". A `Task`
+  não guarda cópia, e a origem excluída não mostra nada. Some no modo de seleção junto com o menu
+  inteiro. **O ⚡ que morava ao lado do chip saiu na H1** do spec
+  `acoes-da-linha-planejada.md`: era o segundo controle disputando a faixa com o chip e a duração.
 
 ---

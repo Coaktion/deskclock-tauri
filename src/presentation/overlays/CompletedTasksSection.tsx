@@ -3,18 +3,10 @@ import type { Project } from "@domain/entities/Project";
 import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import { actionsOfTasks, type PlannedIndex } from "@domain/utils/plannedActions";
-import { PlannedActionsFlyout } from "@presentation/components/PlannedActionsFlyout";
-import {
-  executionOf,
-  isPlayBlocked,
-  playTitle,
-  resolvePlayBlock,
-} from "@presentation/components/playAction";
-import { IconButton, TaskRow } from "@presentation/components/ui";
+import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
-import { getProjectColor } from "@shared/utils/projectColor";
+import { CompletedTaskRow } from "@presentation/overlays/CompletedTaskRow";
 import { formatDurationCompact } from "@shared/utils/time";
-import { Pen, Play } from "lucide-react";
 
 interface CompletedTasksSectionProps {
   groups: TaskGroup[];
@@ -34,15 +26,18 @@ interface CompletedTasksSectionProps {
    */
   runningTask: Task | null;
   /**
-   * As planejadas do dia por id, **concluídas inclusive**, para o ⚡ de cada
-   * grupo. A ação é lida da planejada agora, não da execução — a `Task` nunca a
-   * copiou —, então a origem excluída não deixa ⚡ e a editada mostra a nova.
+   * As planejadas do dia por id, **concluídas inclusive**, para a seção de ações
+   * do menu de cada grupo. A ação é lida da planejada agora, não da execução —
+   * a `Task` nunca a copiou —, então a origem excluída não deixa ação e a
+   * editada mostra a nova.
    */
   plannedIndex: PlannedIndex;
   /** Inicia uma nova execução com os dados da tarefa concluída (repetir). */
   onRepeat: (group: TaskGroup) => void;
   /** Abre a edição do grupo no painel que cobre o popup. */
   onEdit: (group: TaskGroup) => void;
+  /** O popup passa o `removeWithUndo` do `useTaskUndo`: excluir aqui se desfaz. */
+  onDelete: (group: TaskGroup) => void;
 }
 
 /**
@@ -60,6 +55,7 @@ export function CompletedTasksSection({
   plannedIndex,
   onRepeat,
   onEdit,
+  onDelete,
 }: CompletedTasksSectionProps) {
   if (groups.length === 0) {
     return (
@@ -84,53 +80,20 @@ export function CompletedTasksSection({
       {/* Lista agrupada */}
       <div className="flex-1 overflow-y-auto">
         {groups.map((group) => {
-          const first = group.tasks[0];
-          const project = projects.find((p) => p.id === first.projectId);
-          const category = categories.find((c) => c.id === first.categoryId);
-          const subtitle = [project?.name, category?.name].filter(Boolean).join(" · ");
-          const count = group.tasks.length;
           const block = resolvePlayBlock(runningGroupKey, group.key);
 
           return (
-            <TaskRow
+            <CompletedTaskRow
               key={group.key}
-              title={first.name || "(sem nome)"}
-              /* Quantas irmãs o grupo tem. Vai **ao lado** do nome e não dentro
-                 dele: a contagem é o que diz que aquela linha resume várias, e
-                 dentro do `<p>` ela era a primeira a sumir num nome longo. A
-                 coluna de 88px que a tela de Tarefas usa para isso não cabe nos
-                 288px do popup — sobrariam ~78px para o nome. */
-              titleMarks={
-                count > 1 ? (
-                  <span className="shrink-0 text-micro font-mono tabular-nums text-fg-muted">
-                    {count}x
-                  </span>
-                ) : undefined
-              }
-              subtitle={subtitle || undefined}
+              group={group}
+              projects={projects}
+              categories={categories}
+              actions={actionsOfTasks(plannedIndex, group.tasks)}
+              playBlock={block}
               execution={executionOf(block, runningTask)}
-              dotColor={getProjectColor(project)}
-              badges={<PlannedActionsFlyout actions={actionsOfTasks(plannedIndex, group.tasks)} />}
-              duration={formatDurationCompact(group.totalSeconds)}
-              /* Editar antes de repetir, a mesma ordem da linha planejada:
-                 primeiro o que ajusta o registro, depois o que age. */
-              actions={
-                <>
-                  <IconButton
-                    icon={<Pen size={14} />}
-                    title="Editar"
-                    size="sm"
-                    onClick={() => onEdit(group)}
-                  />
-                  <IconButton
-                    icon={<Play size={14} fill="currentColor" />}
-                    title={playTitle(block, "Repetir tarefa")}
-                    size="sm"
-                    disabled={isPlayBlocked(block)}
-                    onClick={() => onRepeat(group)}
-                  />
-                </>
-              }
+              onRepeat={onRepeat}
+              onEdit={onEdit}
+              onDelete={onDelete}
             />
           );
         })}

@@ -35,7 +35,17 @@ vi.mock("@presentation/hooks/useTrackedMeetingPlannedIds", () => ({
   useTrackedMeetingPlannedIds: () => ({ plannedIds: new Set<string>() }),
 }));
 vi.mock("@presentation/hooks/useCompletedTasksForDate", () => ({
-  useCompletedTasksForDate: () => ({ groups: [], totalSeconds: 0, updateGroup: vi.fn() }),
+  useCompletedTasksForDate: () => ({
+    groups: [],
+    totalSeconds: 0,
+    reload: vi.fn(),
+    updateGroup: vi.fn(),
+  }),
+}));
+// O desfazer das executadas (H3) mora no mesmo popup, e sem o repositório em
+// volta ele não monta — esta bancada é a da linha planejada.
+vi.mock("@presentation/hooks/useTaskUndo", () => ({
+  useTaskUndo: () => ({ removeWithUndo: vi.fn() }),
 }));
 vi.mock("@presentation/hooks/useProjects", () => ({ useProjects: () => ({ projects: [] }) }));
 vi.mock("@presentation/hooks/useCategories", () => ({
