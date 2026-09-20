@@ -58,6 +58,9 @@ export type WeekStart = 0 | 1;
 /** Segunda — o comportamento fixo que existia antes da config. */
 export const DEFAULT_WEEK_START: WeekStart = 1;
 
+/** Desligado — o planejamento é de dias úteis para quase todo mundo. */
+export const DEFAULT_SHOW_WEEKEND = false;
+
 export interface AppConfig extends IntegrationWorkspaceConfig {
   // Geral
   setupCompleted: boolean;
@@ -173,6 +176,13 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   dailyGoalHours: number;
   weeklyGoalHours: number;
   weekStartsOn: WeekStart;
+  /**
+   * Sábado e domingo aparecem no planejamento e em toda lista que hoje oferece
+   * segunda a sexta. Desligado por padrão: é recurso de exceção — quem trabalha
+   * no fim de semana, e quem está testando num sábado e não consegue ver nem
+   * alterar as planejadas do dia.
+   */
+  showWeekend: boolean;
   // Arredondamento de duração
   roundingEnabled: boolean;
   roundingSlots: RoundingSlot[];

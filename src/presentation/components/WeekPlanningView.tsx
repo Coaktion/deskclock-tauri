@@ -14,6 +14,8 @@ import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { runningPlannedTaskId } from "@domain/utils/plannedLink";
 import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { useTour } from "@presentation/hooks/useTour";
+import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
+import { isWeekendDay } from "@shared/utils/weekdays";
 import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import { useTrackedMeetingPlannedIds } from "@presentation/hooks/useTrackedMeetingPlannedIds";
 import type { WeekStart } from "@shared/types/appConfig";
@@ -66,6 +68,7 @@ type DayFilter = "all" | string;
 
 export function WeekPlanningView() {
   const weekStartsOn = useWeekStart();
+  const showWeekend = useShowWeekend();
   const [weekOffset, setWeekOffset] = useState(0);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [selectMode, setSelectMode] = useState(false);
@@ -88,13 +91,12 @@ export function WeekPlanningView() {
 
   const formColumn = usePersistedFlag("planningFormCollapsed");
 
-  // A semana é sempre útil: sábado e domingo saíram de vez, junto com a
-  // configuração que os ligava. Tarefas recorrentes gravadas no fim de semana
-  // continuam no banco, mas não têm mais dia onde aparecer.
-  const visibleDays = days.filter((d) => {
-    const dow = new Date(d + "T12:00:00Z").getUTCDay();
-    return dow !== 0 && dow !== 6;
-  });
+  // Sábado e domingo só aparecem com "Exibir fim de semana" ligada. Desligada —
+  // o padrão —, a tarefa recorrente gravada no fim de semana continua no banco
+  // mas não tem dia onde aparecer; ligar a config a traz de volta.
+  const visibleDays = showWeekend
+    ? days
+    : days.filter((d) => !isWeekendDay(new Date(d + "T12:00:00Z").getUTCDay()));
 
   // Stats: total task-day pairs + completed ones for the visible week
   const { totalCount, completedCount } = useMemo(() => {
@@ -262,11 +264,10 @@ export function WeekPlanningView() {
 
         <div className="flex-1 min-w-0 flex flex-col">
           {/* ── Dias da semana + seleção, na mesma linha ──────────────────────
-              Cabem juntos desde que o fim de semana saiu: cinco pílulas e
-              "Todos" deixam folga à direita, e a barra de seleção sozinha numa
-              linha custava altura que é da lista. A rolagem horizontal fica só
-              no grupo das pílulas — arrastando a linha inteira, os botões de
-              seleção sairiam da tela junto. */}
+              A barra de seleção sozinha numa linha custava altura que é da
+              lista. A rolagem horizontal fica só no grupo das pílulas — com o
+              fim de semana ligado são sete pílulas e a linha rola; arrastando a
+              linha inteira, os botões de seleção sairiam da tela junto. */}
           <div
             data-tour="planning-day-filter"
             className="border-b border-border-subtle shrink-0 flex items-center gap-3 px-5 py-2.5"

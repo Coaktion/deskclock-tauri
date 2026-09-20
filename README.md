@@ -30,7 +30,7 @@ publicado.
 
 ### Planejamento
 - Visão semanal em cartão por dia, com navegação ← →, pílula "Semana atual" e filtros rápidos por dia
-- Só dias úteis — sábado e domingo não aparecem, e a regra vale também na entrada (import da Agenda)
+- Só dias úteis por padrão — sábado e domingo não aparecem, e a regra vale também na entrada (import da Agenda); a config "Exibir fim de semana" traz os dois de volta no Planejamento, na recorrência e no import
 - Tipos de agendamento: `specific_date` (campo de data já preenchido), `recurring` (dias da semana), `period` (intervalo de datas)
 - Tarefas recorrentes sem data de término
 - Concluir/Pendente por dia (sem excluir a tarefa)
@@ -42,7 +42,7 @@ publicado.
 - Agrupamento por dia com accordion expansível
 - Seleção por dia ou individual por evento
 - Editor inline por evento: projeto, categoria, tipo de agendamento
-- Detecção automática de recorrência via RRULE, aparada para dias úteis
+- Detecção automática de recorrência via RRULE, aparada para os dias que a semana oferece
 - Uma planejada por reunião, e não por série do Google
 - Filtra eventos de local de trabalho e ausência; blocos de foco (focus time) **são** importados, pois costumam representar tarefas reais
 - Abre pelo rail de integrações e pela tela de Integrações — não pelo Planejamento, porque é lá que fica o seletor de workspace que governa o destino
@@ -658,7 +658,10 @@ mudaram debaixo de quem já usa o app:
 - **O command palette saiu**, e com ele o atalho global que o abria. O app passa a sempre abrir na
   janela principal.
 - **A configuração de tamanho do overlay saiu**; o overlay tem um tamanho só.
-- **`showWeekend` saiu**: o planejamento é só de dias úteis, sem volta.
+- **`showWeekend` saiu** — a config que trazia sábado e domingo ao planejamento. **Voltou na
+  v2.4.0**, nascendo desligada. Quem a tinha ligado antes da v2.0.0 a encontra **de volta como a
+  deixou**: a chave nunca foi apagada do banco, só deixou de ser lida, e o padrão só vale onde não
+  existe linha gravada.
 
 ### Como gerar uma nova versão
 

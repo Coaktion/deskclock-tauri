@@ -10,8 +10,10 @@ import { isPeriodInverted, isPeriodScheduleValid } from "@domain/utils/plannedPe
 import { formColumnClass } from "@presentation/components/fieldStyles";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { todayISO } from "@shared/utils/time";
+import { weekdayOptions } from "@shared/utils/weekdays";
 import { useRef, useState } from "react";
 
 interface FormState {
@@ -45,19 +47,6 @@ const INITIAL: FormState = {
   actions: [],
   customValues: {},
 };
-
-/**
- * Só dias úteis — o fim de semana saiu do planejamento. O número é o dia da
- * semana como o `Date` o entende (0=Dom … 6=Sáb) e **não** o índice do array:
- * `recurringDays` já tem valores gravados nessa escala.
- */
-const WEEKDAYS: { value: number; label: string }[] = [
-  { value: 1, label: "Seg" },
-  { value: 2, label: "Ter" },
-  { value: 3, label: "Qua" },
-  { value: 4, label: "Qui" },
-  { value: 5, label: "Sex" },
-];
 
 const SCHEDULE_LABELS: Record<ScheduleType, string> = {
   specific_date: "Data",
@@ -112,6 +101,8 @@ export function PlannedTaskForm({
     scheduleDate: defaultDate || todayISO(),
   });
   const { activeFields } = useCustomFields();
+  const showWeekend = useShowWeekend();
+  const weekdays = weekdayOptions(showWeekend);
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, form.projectId);
   const [submitting, setSubmitting] = useState(false);
@@ -291,7 +282,7 @@ export function PlannedTaskForm({
 
           {form.scheduleType === "recurring" && (
             <div className="flex gap-1">
-              {WEEKDAYS.map(({ value, label }) => (
+              {weekdays.map(({ value, label }) => (
                 <button
                   key={value}
                   type="button"

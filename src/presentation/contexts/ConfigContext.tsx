@@ -2,7 +2,7 @@ import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { DEFAULT_LLM_PROVIDER_ID } from "@infra/integrations/llm/providers";
 import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
-import { DEFAULT_WEEK_START } from "@shared/types/appConfig";
+import { DEFAULT_SHOW_WEEKEND, DEFAULT_WEEK_START } from "@shared/types/appConfig";
 import type {
   AppConfig,
   ConfigContextValue,
@@ -83,6 +83,7 @@ const DEFAULTS: AppConfig = {
   // Segunda é o padrão porque era o comportamento fixo até aqui: quem atualiza
   // não vê a semana do totalizador mudar de lugar sozinha.
   weekStartsOn: DEFAULT_WEEK_START,
+  showWeekend: DEFAULT_SHOW_WEEKEND,
   roundingEnabled: false,
   roundingSlots: [15, 30, 45, 60],
   roundingTolerance: 0,

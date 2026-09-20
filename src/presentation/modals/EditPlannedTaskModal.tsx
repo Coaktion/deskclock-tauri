@@ -7,11 +7,13 @@ import { PlannedActionsField } from "@presentation/components/PlannedActionsFiel
 import { boxClass } from "@presentation/components/fieldStyles";
 import { BillableChip, Button, DatePickerInput, Input, Modal } from "@presentation/components/ui";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
+import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
 import {
   usePlannedTaskEditor,
   type EditPlannedTaskInput,
 } from "@presentation/hooks/usePlannedTaskEditor";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import { weekdayOptions } from "@shared/utils/weekdays";
 
 export type { EditPlannedTaskInput };
 
@@ -23,20 +25,6 @@ interface EditPlannedTaskModalProps {
   onClose: () => void;
 }
 
-/**
- * Só dias úteis (§5.3) — sábado e domingo não existem no planejamento, e
- * marcá-los aqui criava uma recorrente que nunca aparecia na lista. Os valores
- * continuam na escala do `Date` (1=Seg…5=Sex): reindexar para 0..4 mudaria o
- * dia de toda tarefa recorrente já gravada.
- */
-const WEEKDAYS = [
-  { value: 1, label: "Seg", title: "Segunda" },
-  { value: 2, label: "Ter", title: "Terça" },
-  { value: 3, label: "Qua", title: "Quarta" },
-  { value: 4, label: "Qui", title: "Quinta" },
-  { value: 5, label: "Sex", title: "Sexta" },
-];
-
 export function EditPlannedTaskModal({
   task,
   projects,
@@ -45,6 +33,8 @@ export function EditPlannedTaskModal({
   onClose,
 }: EditPlannedTaskModalProps) {
   const { activeFields } = useCustomFields();
+  const showWeekend = useShowWeekend();
+  const weekdays = weekdayOptions(showWeekend);
   const {
     name,
     setName,
@@ -174,7 +164,7 @@ export function EditPlannedTaskModal({
 
         {scheduleType === "recurring" && (
           <div className="flex gap-2">
-            {WEEKDAYS.map((day) => (
+            {weekdays.map((day) => (
               <Button
                 key={day.value}
                 title={day.title}
