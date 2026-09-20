@@ -388,6 +388,25 @@ describe("TaskRow", () => {
     }
   );
 
+  /**
+   * O que a decisão de mostrar ou não a dica faz está em
+   * `titleWhenTruncated.test.ts`. O que se afirma aqui é só a ligação: nome e
+   * subtítulo truncam, então os dois têm de estar ligados ao handler — foi o
+   * subtítulo que ficou de fora na primeira passada.
+   */
+  it("nome e subtítulo cortados mostram o texto inteiro ao passar o cursor", () => {
+    render(<TaskRow title="Nome muito longo" subtitle="Projeto · Categoria muito longa" />);
+
+    for (const texto of ["Nome muito longo", "Projeto · Categoria muito longa"]) {
+      const el = screen.getByText(texto);
+      Object.defineProperty(el, "scrollWidth", { value: 420, configurable: true });
+      Object.defineProperty(el, "clientWidth", { value: 190, configurable: true });
+
+      fireEvent.mouseEnter(el);
+      expect(el.getAttribute("title")).toBe(texto);
+    }
+  });
+
   it("sem `onKeyDown`, a linha não é parada de Tab nem ganha anel", () => {
     const { container } = render(<TaskRow title="a" duration="1h" />);
     const linha = container.firstElementChild as HTMLElement;

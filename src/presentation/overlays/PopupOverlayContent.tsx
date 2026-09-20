@@ -8,6 +8,7 @@ import { ActionChip } from "@presentation/components/ActionChip";
 import { executionOf, resolvePlayBlock } from "@presentation/components/playAction";
 import { Button, ExecutionDot, IconButton, Input } from "@presentation/components/ui";
 import { SectionHeading } from "@presentation/components/ui/SectionHeading";
+import { titleWhenTruncated } from "@presentation/components/ui/titleWhenTruncated";
 import { useCategories } from "@presentation/hooks/useCategories";
 import { useCompletedTasksForDate } from "@presentation/hooks/useCompletedTasksForDate";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
@@ -68,6 +69,13 @@ const POPUP_W = POPUP_SIZE.width;
 const HEADER_H = 42;
 const FOOTER_H = 39;
 const TABS_H = 37;
+
+/**
+ * O nome da tarefa em execução para em 190 px, e o popup é onde ele mais corta.
+ * A dica cai de volta em "Editar tarefa" quando o nome cabe — é a dica que o
+ * botão sempre teve, e ela não pode sumir por causa disto.
+ */
+const SHOW_FULL_NAME = titleWhenTruncated("Editar tarefa");
 
 interface PopupOverlayContentProps {
   runningTask: Task | null;
@@ -267,6 +275,7 @@ function RunningCard({
         <button
           onClick={onEdit}
           title="Editar tarefa"
+          onMouseEnter={SHOW_FULL_NAME}
           className="min-w-0 text-left text-sm font-medium text-fg truncate"
         >
           {task.name ?? <span className="text-fg-muted italic">(sem nome)</span>}
