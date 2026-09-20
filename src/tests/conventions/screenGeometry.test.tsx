@@ -537,11 +537,31 @@ describe("geometria: tela 3a contra o spec do design", () => {
     });
 
     it("as ações ficam no gap de 2px do spec", () => {
-      // Pelo marcador, e não pelo primeiro `<button>` da linha: o chip de
-      // faturamento também é botão, e vem antes das ações no DOM.
+      // Pelo marcador, e não por um `<button>` da linha: o chip de faturamento
+      // também é botão, e desde a H2 é ele que vem **depois** das ações.
       const group = row.querySelector("[data-acoes]")?.parentElement;
       expect(group).not.toBeNull();
       expect(geometryOf(group!.className).gap).toBe(numberOf(SPEC.entriesActions, "gap"));
+    });
+
+    /**
+     * **Exceção declarada (decisão do usuário, 2026-09-19), não dívida** — por
+     * isso `it`, e não `divergente`. O wireframe desenha chip → fileira de
+     * botões, com a fileira aparecendo no hover; a H2 do spec
+     * `docs-internal/specs/acoes-da-linha-planejada.md` inverteu a ordem para
+     * **⋯ · chip · duração · ▶** e fixou o ⋯ como sempre visível. A grade não
+     * mudou de forma — continuam as mesmas colunas do censo, e as travas de
+     * `grid-template-columns` acima (3a, 3b, 3f) seguem cobrando o spec —, mas a
+     * ordem do conteúdo dentro delas é decisão tomada, e vale nas quatro telas
+     * que medem a linha.
+     */
+    it("o ⋯ vem antes do chip e da duração — exceção declarada", () => {
+      const celulas = [...row.children];
+      const acoes = celulas.findIndex((c) => c.querySelector("[data-acoes]"));
+      const chip = celulas.findIndex((c) => c.querySelector("button:not([data-acoes])"));
+
+      expect(acoes).toBeGreaterThanOrEqual(0);
+      expect(chip).toBeGreaterThan(acoes);
     });
 
     it("com chevron e faixa de horário, é a forma de cinco colunas", () => {
@@ -1259,19 +1279,26 @@ describe("geometria: as outras seis telas contra o spec do design", () => {
     });
 
     /**
-     * Com o Play fora dela, a célula das ações guarda só o ⋯, e mesmo assim
-     * fecha em **largura** até o hover: reservada, a largura dela sairia do
-     * `1fr` do nome (§5.3).
+     * **Exceção declarada (decisão do usuário, 2026-09-19), não dívida** — por
+     * isso `it`, e não `divergente`. O wireframe desenha a fileira de botões
+     * **depois** do chip e só no hover; a H2 do spec
+     * `docs-internal/specs/acoes-da-linha-planejada.md` ("Parte 3 · H2 · O ⋯ é
+     * sempre visível, e é a primeira coluna da direita") a autoriza a ficar
+     * sempre visível e a vir **antes** do chip, para não cobrir dado nenhum e
+     * cair no mesmo x em toda linha. Não há correção por vir.
+     *
+     * O que continua vindo do JSON é o `gap` entre botões da célula; o que a
+     * trava acrescenta é a decisão: nenhuma classe de hover ou de foco decide
+     * se o ⋯ existe.
      */
-    it("as ações da linha planejada fecham em largura até o hover, no gap do spec", () => {
-      const row = shellOf(
-        <TaskRow title="Revisão de PRs" collapseActions actions={<span data-acoes="" />} />
-      );
+    it("o ⋯ da linha planejada é sempre visível, no gap do spec — exceção declarada", () => {
+      const row = shellOf(<TaskRow title="Revisão de PRs" actions={<span data-acoes="" />} />);
       const acoes = row.querySelector("[data-acoes]")!.parentElement!;
 
       expect(geometryOf(acoes.className).gap).toBe(numberOf(SPEC_3E.acoesDia, "gap"));
-      expect(acoes.className).toMatch(/(?:^|\s)w-0(?:\s|$)/);
-      expect(acoes.className).toMatch(/(?:^|\s)group-hover:w-auto(?:\s|$)/);
+      expect(acoes.className).not.toContain("group-hover:");
+      expect(acoes.className).not.toContain("group-focus");
+      expect(acoes.className).not.toMatch(/(?:^|\s)w-0(?:\s|$)/);
     });
   });
 

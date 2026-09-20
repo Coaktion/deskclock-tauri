@@ -97,8 +97,8 @@ export function TaskCard({
         onClick={() => onEdit(task)}
         onContextMenu={menu.openAtPointer}
         onKeyDown={handleKeyDown}
-        /* Com duração, o ⋯ entra no lugar dela no hover, como a fileira de
-           antes: a célula já está reservada e nada anda. */
+        /* Em coluna própria e sempre visível (H2): empilhado sobre a duração,
+           o ⋯ apagava o tempo do lançamento a cada passagem do cursor. */
         actions={<RowMenuTrigger menu={menu} />}
         trailing={
           <PlannedPlaySlot

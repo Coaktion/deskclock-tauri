@@ -92,7 +92,8 @@ describe("TaskGroupCard — cabeçalho", () => {
   it("não tem ação visível: o ⋯ é o único botão além do chip, e a coluna do Play fica vazia", () => {
     renderGroup();
     const botoes = Array.from(header().querySelectorAll("button")).map((b) => b.title);
-    expect(botoes).toEqual([expect.stringMatching(/^Billable/), "Mais ações"]);
+    // O ⋯ antes do chip é a ordem da H2: ele é a primeira coluna da direita.
+    expect(botoes).toEqual(["Mais ações", expect.stringMatching(/^Billable/)]);
     const slot = header().querySelector("[data-play-slot]")!;
     expect(slot.className).toContain("w-7");
     expect(slot.children).toHaveLength(0);

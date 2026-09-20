@@ -28,8 +28,8 @@ import { listSourceFiles } from "../helpers/sourceFiles";
  * `SubSection`/`MappingBox`/`IntegrationTile`, que são primitivos locais.
  *
  * O `PlannedTaskItem` **saiu** da lista: os cinco botões dele viraram
- * `IconButton` quando a linha migrou para `TaskRow`, e o que os fazia abrir por
- * largura passou a ser a prop `collapseActions` do primitivo.
+ * `IconButton` quando a linha migrou para `TaskRow`, e desde a G1–H2 restou o
+ * ⋯ do `RowMenuTrigger`, em coluna própria e sempre visível.
  */
 
 /** Onde os primitivos são definidos — desenhar a caixa ali é o trabalho deles. */

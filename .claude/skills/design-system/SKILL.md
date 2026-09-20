@@ -636,23 +636,26 @@ description: Fonte da verdade visual do DeskClock — tokens semânticos de cor,
   > grupo — que é o que o wireframe faz, medido, e é desalinhamento e não recuo. Divergir dele aqui
   > é deliberado, e `TaskRow.test.tsx` amarra a conta ao que a classe de padding realmente rende.
   >
-  > **Duração e ações dividem a última coluna**, empilhadas por `col-start-1 row-start-1`: a duração
-  > recua no hover e as ações entram no lugar dela. Empilhar em vez de trocar por `hidden` guarda a
-  > largura da célula (que senão pularia com o cursor) e o acesso pelo teclado; em repouso as ações
-  > levam `pointer-events-none`, ou os botões invisíveis engoliriam o clique da linha. **Sem
-  > duração, a ação fica sempre visível** — é a linha planejada de hoje, que tem **uma** ação.
+  > **A ordem da direita é `⋯ · chip · duração · ▶`, e nada ali aparece só no hover** (H2 do spec
+  > `docs-internal/specs/acoes-da-linha-planejada.md`, 2026-09-19). O ⋯ tem célula própria e vem
+  > **primeiro**: é o único controle que existe em toda linha, então ancorado à frente ele cai no
+  > mesmo x tenha a linha chip, duração, as duas coisas ou nenhuma — e não cobre dado nenhum.
+  > Marcas (`badges`), chip e duração dividem a célula seguinte, no `gap` da própria grade.
   >
-  > **Com cinco ações, quem some é a largura, e é a prop `collapseActions`.** A linha do
-  > Planejamento tem play, editar, concluir, duplicar e excluir: deixada sempre visível, a coluna
-  > delas sai do `1fr` do nome, que trunca numa linha vazia à direita (§5.3). O `w-0` +
-  > `overflow-hidden` que vivia no `PlannedTaskItem` passou a morar aqui, e é por isso que ele
-  > **deixou de ser exceção** — a linha do Planejamento é o `TaskRow`, na forma de quatro colunas
-  > com o ponto de projeto, como o spec da 3e desenha.
+  > **O que morreu com isso**: o empilhamento `col-start-1 row-start-1` da duração com as ações (a
+  > duração ia a `opacity-0` no hover, e era o que apagava o tempo no Histórico e nas entradas de
+  > hoje), a prop `collapseActions` com o seu `w-0` + `overflow-hidden`, o `-mr-2.5` que cancelava
+  > o `gap` da célula fechada e as três formas de revelar — `group-hover`, `group-focus-within` e o
+  > par `group-focus-visible`/`group-has-[:focus-visible]` da linha focável.
   >
-  > **`trailing` é a coluna que não anda**: sempre visível, **depois** do chip e a última da linha
-  > — a casa do ▶ da planejada. Com `collapseActions` a ordem fica nome → ações (fecha em largura)
-  > → chip → `trailing`, pela mesma razão que põe o chip depois das ações: nada que abra em
-  > largura à direita do que precisa ficar parado. Ela só existe quando a prop vem, e cada forma
+  > **As duas células da direita são emitidas mesmo vazias**, e é o que mantém a contagem de
+  > colunas independente do conteúdo: as formas de `gridColumns()` continuam sendo as quatro do
+  > censo, e a H2 trocou a **ordem** delas, não o número. Pôr a duração numa quarta coluna própria
+  > custaria o `1fr` do nome em toda linha que não mede tempo — a planejada, onde o nome é mais
+  > caro.
+  >
+  > **`trailing` é a coluna que não anda**: sempre visível, **depois** do chip e da duração, a
+  > última da linha — a casa do ▶ da planejada. Ela só existe quando a prop vem, e cada forma
   > da grade tem a sua versão com um `auto` a mais **escrita por extenso** em `gridColumns()` —
   > sem a prop, a classe é caractere por caractere a de antes. **Reservá-la vazia é do
   > chamador**: a linha concluída ou em modo de seleção passa um elemento de largura fixa, ou o

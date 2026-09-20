@@ -17,14 +17,14 @@ Concluir, Duplicar e Excluir. O problema não era a quantidade, era a hierarquia
 
 ```
 [○] ● Nome da tarefa  ↻              [⋯]  [Billable]  [▶]
-      Projeto · Categoria            hover            sempre
+      Projeto · Categoria            sempre visíveis (H2)
 ```
 
 | Peça                                          | Onde                                  | Quando aparece                                                                                                    |
 | --------------------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Círculo de concluir** (`ui/CompleteToggle`) | slot `leading`, 14 px                 | sempre, fora do modo de seleção                                                                                   |
 | **Play**                                      | coluna `trailing`, **depois** do chip | fora do modo de seleção, na tarefa pendente; na concluída e no modo de seleção a coluna fica vazia, mas reservada |
-| **⋯**                                         | célula `actions` (`collapseActions`)  | no hover e no foco de teclado                                                                                     |
+| **⋯**                                         | célula `actions`, a 1ª da direita     | sempre, fora do modo de seleção (H2)                                                                              |
 | ⚡ e chip de faturamento                      | onde já estavam                       | como antes                                                                                                        |
 
 - **Concluída:** o círculo fica cheio no acento com ✓, e o nome fica tachado em `fg-muted`, como já era.
@@ -94,9 +94,11 @@ isso, cada clique neles abriria também o modal de edição.
   `target` acima fica como segunda linha de defesa.
 - **Limitação conhecida:** excluir pelo teclado (`Del`) apaga a linha e o foco se perde, em vez de
   ir para a vizinha.
-- **O ⋯ abre com hover ou foco de teclado, não com o clique.** A linha focável foca também no
-  clique do mouse, e `group-focus-within` deixaria o ⋯ aberto depois que o cursor sai. Por isso
-  o `TaskRow` troca, só na linha focável, para `group-focus-visible`/`group-has-[:focus-visible]`.
+- ~~**O ⋯ abre com hover ou foco de teclado, não com o clique.**~~ **Revogado pela H2**: o ⋯ é
+  sempre visível, e com ele caíram as três regras de revelar (`group-hover`,
+  `group-focus-within` e o par `group-focus-visible`/`group-has-[:focus-visible]` da linha
+  focável). Não há mais o que abrir, então o clique do mouse na linha focável não deixa nada
+  aberto para trás.
 - **Toda tecla que vira ação é consumida com `preventDefault`** (contrato de teclado nº 3). Sem
   isso o Espaço rolaria a lista e o Enter chegaria ao `useSubmitOnEnter` de algum container.
 
@@ -130,10 +132,11 @@ excluída" ou "N tarefas excluídas" e traz o botão **Desfazer**. O `Ctrl+Z` fa
 
 ## Divergências declaradas do wireframe 3e
 
-O wireframe desenha a fileira de botões no hover e nenhum círculo. As três mudanças abaixo são
-decisão do usuário (2026-09-18), **não** dívida de fidelidade: o círculo em `leading`, o Play
-fixo em `trailing` e a fileira de hover reduzida ao ⋯. Quem for "corrigi-las" de volta ao
-wireframe está desfazendo decisão tomada.
+O wireframe desenha a fileira de botões no hover, **depois** do chip, e nenhum círculo. As quatro
+mudanças abaixo são decisão do usuário, **não** dívida de fidelidade: o círculo em `leading`, o
+Play fixo em `trailing` e a fileira de hover reduzida ao ⋯ (2026-09-18), mais o ⋯ **sempre
+visível e antes do chip** (2026-09-19, H2). Quem for "corrigi-las" de volta ao wireframe está
+desfazendo decisão tomada.
 
 ## Fases
 
@@ -270,7 +273,8 @@ se conclui — planejadas —, nunca em lançamento.
   pendentes, então o círculo nunca reabre e a coluna do Play nunca fica vazia) e chip de
   faturamento, que nunca esteve nesta linha e não entrou.
 - **Horário e `collapseActions` ficam como eram**: com hora, o ⋯ entra no lugar do horário; sem
-  hora, a célula fecha em largura.
+  hora, a célula fecha em largura. _(Revogado pela H2: o ⋯ ganhou coluna própria e sempre visível,
+  e a prop `collapseActions` deixou de existir.)_
 - **Largura do nome**, calculada das classes (janela de 288, borda de 1+1, `pl-3`/`pr-3`: 262 px
   de grade; menos 5 px quando a lista rola). Antes → agora, texto do nome:
 
@@ -493,6 +497,50 @@ decisão tomada.
   x em toda linha, tenha ela chip ou não — e é o que impede que ele cubra qualquer dado.
 - `collapseActions` perde o sentido nesse arranjo: a célula não fecha mais em largura.
 
+**Como ficou (H2):**
+
+- **Duas células, não uma empilhada.** O ⋯ tem célula própria (`flex items-center gap-0.5`) e é a
+  primeira da direita; marcas, chip e duração dividem a seguinte (`flex items-center gap-2.5`,
+  o mesmo `gap` da grade). A duração deixou de levar classe de estado nenhuma — era o
+  `group-hover:opacity-0` dela que apagava o tempo no Histórico e nas entradas de hoje.
+- **A grade não mudou de forma.** As duas células da direita são emitidas **mesmo vazias**, então a
+  contagem de colunas continua independente do conteúdo e os oito literais de `gridColumns()` são
+  caractere por caractere os de antes. Pôr a duração numa quarta coluna própria custaria o `1fr` do
+  nome em toda linha que não mede tempo — a planejada, onde o nome é mais caro —, e quebraria as
+  travas de `grid-template-columns` das quatro telas medidas.
+- **O que morreu com o `collapseActions`:** a prop e os seus dois call sites (`PlannedTaskItem`,
+  `PopupPlannedRow`), o `w-0` + `overflow-hidden`, o `-mr-2.5`/`group-hover:mr-0` que cancelava o
+  `gap` da célula fechada, o empilhamento `col-start-1 row-start-1`, o `pointer-events-none` da
+  duração invisível, a inversão condicional da ordem das células e o objeto `REVEAL` inteiro (as
+  variantes `within` e `keyboard`). **Nada legítimo restou pedindo a prop.**
+- **O `FOCUS_RING` e a linha focável ficam intactos** (F5): `tabIndex=0` e anel só no
+  `focus-visible` continuam vindo do `onKeyDown`. O que o `REVEAL.keyboard` existia para resolver —
+  o clique do mouse focar a linha e deixar o ⋯ "aberto" — deixou de ser um problema, porque não há
+  mais nada a abrir.
+- **A coluna do ▶ (G3/G4) não mudou**: `PlannedPlaySlot`/`EmptyPlaySlot` seguem reservando os
+  `w-7` mesmo vazios, e `trailing` continua sendo a última célula.
+- **O `OmniboxIdle` não tinha ⋯ e continua sem**: a célula vazia que ele já pagava no fim da linha
+  passou a ficar antes do chip, e a largura do nome é a mesma.
+- **Efeito colateral declarado, nas concluídas do popup** (`CompletedTasksSection`): os dois botões
+  dela (Editar, Repetir) passam pela mesma célula `actions` e ficam **visíveis em repouso** até a
+  **H3** trocá-los pelo par ▶ + ⋯. É a única superfície que ainda não tem menu de linha, e a H3 é
+  quem a põe no padrão.
+- **`screenGeometry`:** duas **exceções declaradas** (`it`, nunca `divergente`), as duas
+  autorizadas pela Parte 3 desta spec — a 3a afirma que o ⋯ vem **antes** do chip e da duração
+  (o wireframe desenha chip → fileira de botões no hover), e a 3e trocou a trava de "as ações
+  fecham em largura até o hover" por "o ⋯ é sempre visível, no gap do spec". As travas de
+  `grid-template-columns` de 3a, 3b, 3e e 3f **continuam cobrando o spec sem exceção**, porque a
+  forma da grade não mudou.
+- **Impacto** (`gitnexus`, upstream): `TaskRow` tem 11 chamadores diretos e 24 símbolos no raio,
+  risco **CRITICAL** por alcance — toda lista de tarefa do app passa por ele. Nenhum call site
+  precisou mudar além de largar a prop: a mudança é interna ao primitivo.
+- **Falta conferir no `pnpm tauri dev`** (2 modos × 4 acentos): o ⋯ em repouso em todas as listas
+  (ele era invisível até agora, e o peso visual de uma coluna de ⋯ numa lista cheia só se julga na
+  tela), a largura do nome na linha **com hora** do popup — que perdeu a largura do ⋯, antes
+  empilhado sobre o horário —, o alinhamento do ⋯ entre cabeçalho de grupo, filha e entrada solta
+  em Tarefas, e os 2 px a mais entre as marcas (`badges`) e o chip, que passaram do `gap-2` para o
+  `gap-2.5` da célula de dados.
+
 ### H3 · As concluídas do popup entram no padrão
 
 Revoga a linha da Parte 2 que as deixava como estavam.
@@ -505,8 +553,8 @@ Revoga a linha da Parte 2 que as deixava como estavam.
 
 ### Fases
 
-| Fase | Entrega                                                         | Estado  |
-| ---- | --------------------------------------------------------------- | ------- |
-| H1   | submenu no `ui/Menu` + seção de ações; ⚡ sai das linhas        | a fazer |
-| H2   | `TaskRow`: ⋯ sempre visível, primeira coluna da direita         | a fazer |
-| H3   | concluídas do popup no padrão + docs e manual das três mudanças | a fazer |
+| Fase | Entrega                                                         | Estado       |
+| ---- | --------------------------------------------------------------- | ------------ |
+| H1   | submenu no `ui/Menu` + seção de ações; ⚡ sai das linhas        | ✅ `130100b` |
+| H2   | `TaskRow`: ⋯ sempre visível, primeira coluna da direita         | a fazer      |
+| H3   | concluídas do popup no padrão + docs e manual das três mudanças | a fazer      |

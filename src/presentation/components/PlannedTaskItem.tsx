@@ -179,9 +179,8 @@ export function PlannedTaskItem({
         onClick={selectMode ? () => onToggleSelect?.(task.id) : () => setShowModal(true)}
         onContextMenu={selectMode ? undefined : menu.openAtPointer}
         onKeyDown={selectMode ? undefined : handleKeyDown}
-        /* Sem hover o ⋯ não ocupa largura nenhuma: reservado, o espaço dele sai
-           do nome da tarefa, que trunca numa linha vazia à direita (§5.3). */
-        collapseActions
+        /* Sempre visível e antes do chip (H2): escondido no repouso, ele era um
+           alvo que só aparecia depois de o cursor já estar sobre a linha. */
         actions={!selectMode && <RowMenuTrigger menu={menu} />}
         /* Sempre presente, e da largura do Play mesmo vazia: na concluída e no
            modo de seleção a coluna fica, ou o chip saltaria a largura dela a

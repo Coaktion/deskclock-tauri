@@ -50,9 +50,10 @@ interface PopupPlannedRowProps {
  * seleção, tarefa concluída na lista (a aba mostra só as pendentes) e chip de
  * faturamento — este nunca esteve na linha do popup, e os 264 px não o pedem.
  *
- * O horário continua no slot da **duração**, que recua no hover para o ⋯ entrar
- * no lugar dele. Sem horário não há o que recuar, e quem fecha é a **largura**
- * (`collapseActions`) — o mesmo comportamento nas duas seções.
+ * O horário continua no slot da **duração**, e desde a H2 ele não recua mais: o
+ * ⋯ tem coluna própria, antes do chip, e o horário fica legível com o cursor
+ * sobre a linha. O que isso cobra nos 264 px úteis é largura do nome — o ⋯
+ * deixou de dividir a célula com o horário —, e é o preço declarado da H2.
  */
 export function PopupPlannedRow({
   task,
@@ -109,7 +110,6 @@ export function PopupPlannedRow({
         onContextMenu={menu.openAtPointer}
         onKeyDown={handleKeyDown}
         duration={startTime}
-        collapseActions={!startTime}
         actions={<RowMenuTrigger menu={menu} />}
         /* Da largura do Play, como no Planejamento. Aqui a coluna nunca fica
            vazia — não há concluída nem modo de seleção —, mas o bloqueado segue
