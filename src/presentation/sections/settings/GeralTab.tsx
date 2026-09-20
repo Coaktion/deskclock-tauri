@@ -11,7 +11,7 @@ import {
   SettingLabel,
   Toggle,
 } from "@presentation/components/ui";
-import { DEFAULT_WEEK_START, type WeekStart } from "@shared/types/appConfig";
+import { DEFAULT_SHOW_WEEKEND, DEFAULT_WEEK_START, type WeekStart } from "@shared/types/appConfig";
 import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
 import { emit } from "@tauri-apps/api/event";
 import { NumberInputWithCommit } from "./SettingsShared";
@@ -63,6 +63,7 @@ export function GeralTab() {
   const [dailyGoalHours, setDailyGoalHours] = useState(8);
   const [weeklyGoalHours, setWeeklyGoalHours] = useState(40);
   const [weekStartsOn, setWeekStartsOn] = useState<WeekStart>(DEFAULT_WEEK_START);
+  const [showWeekend, setShowWeekend] = useState(DEFAULT_SHOW_WEEKEND);
 
   useEffect(() => {
     if (!config.isLoaded) return;
@@ -76,6 +77,7 @@ export function GeralTab() {
     setDailyGoalHours(config.get("dailyGoalHours"));
     setWeeklyGoalHours(config.get("weeklyGoalHours"));
     setWeekStartsOn(config.get("weekStartsOn"));
+    setShowWeekend(config.get("showWeekend"));
     isEnabled()
       .then(setStartOnBoot)
       .catch(() => {});
@@ -96,6 +98,16 @@ export function GeralTab() {
     await config.set("weekStartsOn", value);
     await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
       key: "weekStartsOn",
+      value,
+    } satisfies OverlayConfigChangedPayload);
+  }
+
+  /** Também emite: o editor de planejada do popup lê esta config. */
+  async function handleShowWeekend(value: boolean) {
+    setShowWeekend(value);
+    await config.set("showWeekend", value);
+    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
+      key: "showWeekend",
       value,
     } satisfies OverlayConfigChangedPayload);
   }
@@ -272,6 +284,14 @@ export function GeralTab() {
             value={String(weekStartsOn)}
             onChange={(v) => handleWeekStart(Number(v) as WeekStart)}
             options={WEEK_START_OPTIONS}
+          />
+        </SectionRow>
+        <SectionRow>
+          <Toggle
+            label="Exibir fim de semana"
+            description="Sábado e domingo entram no Planejamento e nos dias da recorrência."
+            checked={showWeekend}
+            onChange={handleShowWeekend}
           />
         </SectionRow>
       </SectionCard>

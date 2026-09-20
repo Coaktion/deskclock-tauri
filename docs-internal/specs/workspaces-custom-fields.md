@@ -420,9 +420,12 @@ irrevisável. Os arquivos novos da fase estão todos em verde.
   planejamento (e a config `showWeekend` foi removida) sem migrar `recurringDays`: os valores 0 e
   6 continuam no banco e não têm mais dia onde aparecer. Ninguém avisa o usuário. Decidir entre
   limpeza pontual, migration que empurra para segunda, ou nada.
-- **`WeekPlanningView.tsx:179`** tem um warning de `react-hooks/exhaustive-deps` anterior a tudo
-  isto (`filteredDays` recriado a cada render alimentando um `useMemo`). `eslint .` sai com 0
-  erros, mas `--max-warnings=0` falha por causa dele.
+  **Resolvido em 2026-09-20:** a config `showWeekend` voltou (seção Jornada, desligada por padrão).
+  Ligada, esses valores voltam a ter dia onde aparecer, e nenhuma migration é necessária — nunca
+  houve reindexação, os valores sempre estiveram na escala do `Date`.
+- ~~**`WeekPlanningView.tsx:179`** tem um warning de `react-hooks/exhaustive-deps`~~ — **saiu**. O
+  único warning que o `eslint .` ainda acusa é o do `useOverlayDrag.ts:167` (`overlaySize`), e é
+  ele que faria `--max-warnings=0` falhar.
 - **Decisão pendente do usuário:** o botão de importar do Google Agenda só aparece com o Google
   conectado e é a única porta do `ImportCalendarModal`. O usuário cogitou removê-lo achando que
   estava sobrando. Nada foi feito — se for remover, saem botão, modal e o §5.3 do `CLAUDE.md`.
