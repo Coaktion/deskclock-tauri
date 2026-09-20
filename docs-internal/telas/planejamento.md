@@ -36,18 +36,20 @@
 > ajustando de 16 em 16 px (consumir a seta do eixo alheio roubaria a tecla de quem navega a tela),
 > `Home` e duplo clique voltando ao padrão.
 
-- **Só dias úteis.** Sábado e domingo não aparecem no planejamento, e não há configuração que os traga de volta — a antiga `showWeekend` foi removida. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia.
+- **Dias úteis por padrão, semana inteira sob configuração.** Sábado e domingo não aparecem no planejamento a menos que **Exibir fim de semana** (`showWeekend`, na seção Jornada das Configurações) esteja ligada — desligada é o padrão. `recurringDays` continua na escala do `Date` (0=Dom…6=Sáb): a lista de dias da recorrência oferece 1 a 5, ou 0 a 6 com a config ligada, mas **não** reindexe os valores, ou toda tarefa recorrente já gravada muda de dia. A lista sai de `weekdayOptions(showWeekend, weekStartsOn)` (`shared/utils/weekdays.ts`), fonte única dos quatro editores de planejada — copiá-la de volta deixa um deles oferecendo cinco dias em silêncio, e há trava de convenção (`weekdayLists.test.ts`) reprovando a quinta cópia. **A ordem segue `weekStartsOn`**, a mesma das pílulas de dia: duas ordens na mesma tela fariam a lista parecer duas semanas diferentes. Com o fim de semana desligado a escolha não muda nada — sem sábado e domingo, sobra segunda a sexta nos dois modos.
 
 > **A regra vale também na entrada, e o import da Agenda era o único lugar que ainda não a
 > cumpria.** Ele listava a semana inteira e oferecia os sete dias na recorrência, então o evento de
-> sábado nascia planejada sem dia onde aparecer. O descarte é **na origem** — a lista de eventos
+> sábado nascia planejada sem dia onde aparecer. Com **Exibir fim de semana** ligada o import passa
+> a cobrir os sete dias — a semana da barra lateral, o rótulo do período e o descarte na origem
+> leem a mesma config. O descarte é **na origem** — a lista de eventos
 > logo depois da busca —, não só na renderização dos dias: escondido mas presente na lista, o evento
 > continuava selecionado por padrão, entrava na contagem do botão e era importado do mesmo jeito. Os
 > dias sugeridos pela recorrência do Google são aparados pela mesma régua, ou a série que repete às
 > segundas e aos sábados guardaria um `6` que a lista de dias não mostra nem permite desmarcar.
 
-- **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex, no topo da coluna da direita. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
-- **Barra de seleção:** "Selecionar tarefas" fica na **mesma linha dos botões de dia**, encostado à direita (`ml-auto`) — não no header, e só aparece havendo ao menos uma tarefa. Cabe ali desde que o fim de semana saiu do planejamento; uma linha só para a barra custava altura que é da lista. A rolagem horizontal fica no grupo das pílulas, não na linha: na linha, os botões de seleção sairiam da tela junto com os dias.
+- **Botões rápidos de dia:** Todos | Seg | Ter | Qua | Qui | Sex — mais Sáb e Dom com o fim de semana ligado —, no topo da coluna da direita. Ao clicar em um dia, filtra a lista e preenche o campo Data do formulário automaticamente.
+- **Barra de seleção:** "Selecionar tarefas" fica na **mesma linha dos botões de dia**, encostado à direita (`ml-auto`) — não no header, e só aparece havendo ao menos uma tarefa. Uma linha só para a barra custava altura que é da lista. Com o fim de semana ligado são sete pílulas e o grupo rola horizontalmente; a rolagem fica no grupo das pílulas, não na linha: na linha, os botões de seleção sairiam da tela junto com os dias.
 - **Formulário inline:** Nome, Projeto (autocomplete), Categoria (autocomplete), Billable, campos personalizados, agendamento e ações — empilhados na coluna.
 - **Campo Data única já nasce preenchido, e não tem atalho "Hoje".** O botão dizia duas coisas ao mesmo tempo — "a data é hoje" e "leve a data para hoje" —, e aceso lia como filtro. No lugar dele, o campo abre com o dia navegado (ou com hoje, sem um) nesta coluna, e com hoje nos dois formulários de edição quando a tarefa não tem data gravada (`usePlannedTaskEditor`). **Data já gravada não é sobrescrita**: alternar para "Recorrente" e voltar devolve o dia escolhido.
 - **Tipos de agendamento:**
