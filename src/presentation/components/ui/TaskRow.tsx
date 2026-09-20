@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { BillableChip } from "./BillableChip";
 import { ExecutionDot, type RowExecution } from "./ExecutionDot";
+import { titleWhenTruncated } from "./titleWhenTruncated";
 
 /**
  * Faturamento é **par**, nunca prop solta: a linha que o informa é a linha que o
@@ -143,6 +144,12 @@ const RAIL_LEFT = PADDING_X + LEADING_WIDTH / 2;
 const FOCUS_RING =
   "outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent";
 
+/**
+ * Uma instância só para toda a lista: o handler não fecha sobre nada, então
+ * criá-lo por linha seria alocação por render sem diferença de comportamento.
+ */
+const SHOW_FULL_TEXT = titleWhenTruncated();
+
 /** `pl-6` é o dobro de `pl-3`: o degrau da filha é um padding a mais. */
 const PADDING_LEFT = { row: "pl-3", nested: "pl-6" } as const;
 
@@ -229,7 +236,10 @@ export function TaskRow(props: TaskRowProps) {
         : "hover:bg-surface";
 
   const name = (
-    <p className={`text-sm truncate ${completed ? "line-through text-fg-muted" : "text-fg"}`}>
+    <p
+      onMouseEnter={SHOW_FULL_TEXT}
+      className={`text-sm truncate ${completed ? "line-through text-fg-muted" : "text-fg"}`}
+    >
       {title}
     </p>
   );
@@ -244,7 +254,11 @@ export function TaskRow(props: TaskRowProps) {
       ) : (
         name
       )}
-      {subtitle && <p className="text-xs text-fg-muted truncate mt-px">{subtitle}</p>}
+      {subtitle && (
+        <p onMouseEnter={SHOW_FULL_TEXT} className="text-xs text-fg-muted truncate mt-px">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 
