@@ -7,8 +7,12 @@ import { localISO } from "../../../helpers/localTime";
 
 const NOW = localISO(2026, 8, 6, 9);
 
-function cached(schemaReadAtISO?: string, mondayBoardId = "b1") {
-  return { mondayBoardId, schemaReadAtISO };
+type Cached = Parameters<typeof shouldReadBoardSchema>[0]["cached"];
+
+// Overrides nomeados, e não posicionais: `statusLabels` tem três estados e o
+// `undefined` é um deles — um default o tornaria inexprimível pelo helper.
+function cached(overrides: Partial<NonNullable<Cached>> = {}): NonNullable<Cached> {
+  return { mondayBoardId: "b1", statusLabels: [], ...overrides };
 }
 
 describe("shouldReadBoardSchema", () => {
@@ -20,7 +24,7 @@ describe("shouldReadBoardSchema", () => {
     expect(
       shouldReadBoardSchema({
         boardId: "b1",
-        cached: cached(localISO(2026, 8, 5, 9)),
+        cached: cached({ schemaReadAtISO: localISO(2026, 8, 5, 9) }),
         nowISO: NOW,
       })
     ).toBe(false);
@@ -30,7 +34,7 @@ describe("shouldReadBoardSchema", () => {
     expect(
       shouldReadBoardSchema({
         boardId: "b1",
-        cached: cached(localISO(2026, 7, 29, 8)),
+        cached: cached({ schemaReadAtISO: localISO(2026, 7, 29, 8) }),
         nowISO: NOW,
       })
     ).toBe(true);
@@ -41,34 +45,80 @@ describe("shouldReadBoardSchema", () => {
   it("lê o board no instante em que o prazo fecha", () => {
     const readAt = new Date(Date.parse(NOW) - BOARD_SCHEMA_TTL_DAYS * 24 * 60 * 60 * 1000);
     expect(
-      shouldReadBoardSchema({ boardId: "b1", cached: cached(readAt.toISOString()), nowISO: NOW })
+      shouldReadBoardSchema({
+        boardId: "b1",
+        cached: cached({ schemaReadAtISO: readAt.toISOString() }),
+        nowISO: NOW,
+      })
     ).toBe(true);
   });
 
+  // Vínculo gravado antes do cache dos rótulos de Status volta sem eles, e sem
+  // eles o envio não sabe se "Completed" existe no board. A releitura é o
+  // conserto automático: a varredura diária de projetos regrava o mapeamento.
+  it("lê o vínculo sem os rótulos de Status, gravado antes deste cache", () => {
+    expect(
+      shouldReadBoardSchema({
+        boardId: "b1",
+        cached: cached({ schemaReadAtISO: NOW, statusLabels: undefined }),
+        nowISO: NOW,
+      })
+    ).toBe(true);
+  });
+
+  // Board sem coluna Status resolve para lista vazia, que é estado final: relê-lo
+  // por isso faria a leitura mais cara da integração voltar a ser diária.
+  it("não lê o board cujos rótulos de Status resolveram em lista vazia", () => {
+    expect(
+      shouldReadBoardSchema({
+        boardId: "b1",
+        cached: cached({ schemaReadAtISO: NOW, statusLabels: [] }),
+        nowISO: NOW,
+      })
+    ).toBe(false);
+  });
+
   it("lê o vínculo sem marca, gravado antes deste cache", () => {
-    expect(shouldReadBoardSchema({ boardId: "b1", cached: cached(undefined), nowISO: NOW })).toBe(
-      true
-    );
+    expect(
+      shouldReadBoardSchema({
+        boardId: "b1",
+        cached: cached({ schemaReadAtISO: undefined }),
+        nowISO: NOW,
+      })
+    ).toBe(true);
   });
 
   // `Date.parse` de lixo é `NaN`, e toda comparação com `NaN` é falsa: sem o teste
   // explícito, uma marca corrompida no JSON da config congelaria o board no cache
   // para sempre.
   it("lê o board cuja marca não é uma data", () => {
-    expect(shouldReadBoardSchema({ boardId: "b1", cached: cached("ontem"), nowISO: NOW })).toBe(
-      true
-    );
+    expect(
+      shouldReadBoardSchema({
+        boardId: "b1",
+        cached: cached({ schemaReadAtISO: "ontem" }),
+        nowISO: NOW,
+      })
+    ).toBe(true);
   });
 
   it("lê o board quando o destino mudou, por mais fresca que seja a marca", () => {
     expect(
-      shouldReadBoardSchema({ boardId: "b-novo", cached: cached(NOW, "b-antigo"), nowISO: NOW })
+      shouldReadBoardSchema({
+        boardId: "b-novo",
+        cached: cached({ schemaReadAtISO: NOW, mondayBoardId: "b-antigo" }),
+        nowISO: NOW,
+      })
     ).toBe(true);
   });
 
   it("lê tudo quando o import é forçado", () => {
     expect(
-      shouldReadBoardSchema({ boardId: "b1", cached: cached(NOW), nowISO: NOW, force: true })
+      shouldReadBoardSchema({
+        boardId: "b1",
+        cached: cached({ schemaReadAtISO: NOW }),
+        nowISO: NOW,
+        force: true,
+      })
     ).toBe(true);
   });
 

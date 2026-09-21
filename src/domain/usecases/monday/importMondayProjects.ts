@@ -84,6 +84,7 @@ export type MondayProjectDestination = Pick<
   | "projectStageLabels"
   | "projectStageTitle"
   | "nonBillableReasonLabels"
+  | "statusLabels"
   | "timelineColumnId"
   | "schemaReadAtISO"
 >;
@@ -98,6 +99,10 @@ export type MondayProjectDestination = Pick<
  *
  * `schemaReadAtISO` fica de fora pela mesma razão, na outra ponta: nada foi lido
  * com sucesso, então a varredura seguinte tem de tentar de novo.
+ *
+ * `statusLabels` fica de fora pelas duas razões ao mesmo tempo: `[]` afirmaria
+ * "o board não tem rótulo de Status", congelando o vínculo nessa resposta que
+ * ninguém leu.
  */
 export const NO_DESTINATION: MondayProjectDestination = {
   activitiesGroupId: "",
@@ -153,6 +158,11 @@ function buildDestination(
     reportTypeGroupIds: resolved.reportTypeGroupIds,
     columnIds: resolved.columnIds,
     activityTypeLabels: parseStatusLabels(columnById(resolved.columnIds.activityType)),
+    // É contra esta lista que o envio confere o rótulo antes de escrever a
+    // coluna Status. Board **com** a coluna e lista vazia é possível — rótulos
+    // ilegíveis no `settings_str` — e a contradição é aceita de propósito: a
+    // coluna deixa de ser escrita, que é o lado seguro do erro.
+    statusLabels: parseStatusLabels(columnById(resolved.columnIds.status)),
     projectStageLabels: parseStatusLabels(stageColumn),
     projectStageTitle: stageColumn?.title ?? "",
     // O motivo é `dropdown`, não `status`: o formato dos rótulos é outro e o
@@ -276,6 +286,7 @@ function cachedDestination(cached: MondayProjectMapping): MondayProjectDestinati
     projectStageLabels: cached.projectStageLabels,
     projectStageTitle: cached.projectStageTitle,
     nonBillableReasonLabels: cached.nonBillableReasonLabels,
+    statusLabels: cached.statusLabels,
     timelineColumnId: cached.timelineColumnId,
     schemaReadAtISO: cached.schemaReadAtISO,
   };

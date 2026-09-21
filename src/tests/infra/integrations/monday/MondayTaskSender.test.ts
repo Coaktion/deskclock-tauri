@@ -121,6 +121,7 @@ const MAPPING: MondayProjectMapping = {
   projectStageLabels: ["Execução", "Discovery"],
   projectStageTitle: "Project Stage",
   nonBillableReasonLabels: NON_BILLABLE_REASON_LABELS,
+  statusLabels: ["Done", "Working on it"],
   columnIds: COLUMN_IDS,
 };
 
@@ -384,7 +385,7 @@ describe("MondayTaskSender", () => {
           [COLUMN_IDS.billingType]: { label: "Billable" },
           [COLUMN_IDS.activityType]: { label: "Development" },
           [COLUMN_IDS.projectStage!]: { label: "Execução" },
-          [COLUMN_IDS.status]: { label: "Completed" },
+          [COLUMN_IDS.status]: { label: "Done" },
           [COLUMN_IDS.person]: { personsAndTeams: [{ id: 21181483, kind: "person" }] },
         }
       );
@@ -1159,6 +1160,111 @@ describe("MondayTaskSender", () => {
       expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
         [COLUMN_IDS.activityType]: { label: "Meeting" },
       });
+    });
+
+    // Board sem rótulo de conclusão nenhum: a coluna não vai, e o item nasce
+    // com o padrão do board. O rótulo fixo antigo derrubava a mutation inteira —
+    // todo o envio falhava, não só a coluna Status.
+    it("omite o Status quando o board não tem rótulo de conclusão", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig({
+          mondayProjectMapping: [
+            {
+              ...MAPPING,
+              statusLabels: ["DOing", "Canceled", "On Hold", "Backlog", "To-do", "In Review"],
+            },
+          ],
+        }),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      const result = await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(COLUMN_IDS.status);
+      expect(result.failed).toEqual([]);
+      expect(result.sentTaskIds).toEqual(["t1"]);
+    });
+
+    it("grava Done no board que tem o rótulo", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig(),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.status]: { label: "Done" },
+      });
+    });
+
+    // O template nasceu com "Completed" e os boards de cliente usam "Done": o
+    // board que só tem o antigo continua sendo atendido.
+    it("cai em Completed no board que não tem Done", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig({
+          mondayProjectMapping: [{ ...MAPPING, statusLabels: ["Completed", "Working on it"] }],
+        }),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.status]: { label: "Completed" },
+      });
+    });
+
+    // Board que tem os dois: "Done" ganha, porque é o rótulo dos boards vivos.
+    it("prefere Done quando o board tem os dois rótulos", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig({
+          mondayProjectMapping: [{ ...MAPPING, statusLabels: ["Completed", "Done"] }],
+        }),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.status]: { label: "Done" },
+      });
+    });
+
+    // Vínculo gravado antes deste cache: sem lista, não dá para afirmar que o
+    // rótulo existe, e o envio que sobe sem a coluna é melhor que o que falha
+    // inteiro. A varredura da abertura do app relê o schema e repovoa a lista.
+    it("omite o Status quando o mapeamento não tem os rótulos cacheados", async () => {
+      const client = makeClient();
+      const mappingSemRotulos = { ...MAPPING };
+      delete mappingSemRotulos.statusLabels;
+      const sender = new MondayTaskSender(
+        makeConfig({ mondayProjectMapping: [mappingSemRotulos] }),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).not.toHaveProperty(COLUMN_IDS.status);
     });
 
     it("omite Activity Type quando o nome da categoria não é rótulo do board", async () => {
