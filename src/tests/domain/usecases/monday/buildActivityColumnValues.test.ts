@@ -9,7 +9,7 @@ import {
   serializeDropdown,
   MONDAY_BILLABLE_LABEL,
   MONDAY_NON_BILLABLE_LABEL,
-  MONDAY_COMPLETED_LABEL,
+  MONDAY_DONE_LABELS,
 } from "@domain/usecases/monday/buildActivityColumnValues";
 import type { MondayActivityColumnIds } from "@shared/types/mondayConfig";
 import { localISO } from "../../../helpers/localTime";
@@ -78,7 +78,7 @@ describe("buildActivityColumnValues", () => {
     });
   });
 
-  // O default era `Completed`, e "Completed" não existe em todo board: o de
+  // O default era um `Completed` fixo, e ele não existe em todo board: o de
   // cliente que tem `DOing, Done, Canceled…` recusava a mutation inteira e o
   // envio parava. Quem sabe se o rótulo existe é o mapeamento, não esta função.
   it("não escreve o status quando o rótulo pretendido não veio", () => {
@@ -98,10 +98,10 @@ describe("buildActivityColumnValues", () => {
       hoursDecimal: 1.83,
       billable: true,
       userId: "21181483",
-      statusLabel: MONDAY_COMPLETED_LABEL,
+      statusLabel: MONDAY_DONE_LABELS[0],
     });
 
-    expect(values[COLUMNS.status]).toEqual({ label: MONDAY_COMPLETED_LABEL });
+    expect(values[COLUMNS.status]).toEqual({ label: MONDAY_DONE_LABELS[0] });
   });
 
   it("usa o rótulo Non Billable quando a tarefa não é faturável", () => {

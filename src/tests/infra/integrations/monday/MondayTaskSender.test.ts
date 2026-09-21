@@ -121,7 +121,7 @@ const MAPPING: MondayProjectMapping = {
   projectStageLabels: ["Execução", "Discovery"],
   projectStageTitle: "Project Stage",
   nonBillableReasonLabels: NON_BILLABLE_REASON_LABELS,
-  statusLabels: ["Completed", "Working on it"],
+  statusLabels: ["Done", "Working on it"],
   columnIds: COLUMN_IDS,
 };
 
@@ -385,7 +385,7 @@ describe("MondayTaskSender", () => {
           [COLUMN_IDS.billingType]: { label: "Billable" },
           [COLUMN_IDS.activityType]: { label: "Development" },
           [COLUMN_IDS.projectStage!]: { label: "Execução" },
-          [COLUMN_IDS.status]: { label: "Completed" },
+          [COLUMN_IDS.status]: { label: "Done" },
           [COLUMN_IDS.person]: { personsAndTeams: [{ id: 21181483, kind: "person" }] },
         }
       );
@@ -1162,25 +1162,17 @@ describe("MondayTaskSender", () => {
       });
     });
 
-    // O caso real: o board do cliente tem `DOing, Done, Canceled, On Hold,
-    // Backlog, To-do, In Review` e nenhum "Completed". O rótulo fixo derrubava a
-    // mutation inteira — todo o envio falhava, não só a coluna Status.
-    it("omite o Status quando o board não tem o rótulo Completed", async () => {
+    // Board sem rótulo de conclusão nenhum: a coluna não vai, e o item nasce
+    // com o padrão do board. O rótulo fixo antigo derrubava a mutation inteira —
+    // todo o envio falhava, não só a coluna Status.
+    it("omite o Status quando o board não tem rótulo de conclusão", async () => {
       const client = makeClient();
       const sender = new MondayTaskSender(
         makeConfig({
           mondayProjectMapping: [
             {
               ...MAPPING,
-              statusLabels: [
-                "DOing",
-                "Done",
-                "Canceled",
-                "On Hold",
-                "Backlog",
-                "To-do",
-                "In Review",
-              ],
+              statusLabels: ["DOing", "Canceled", "On Hold", "Backlog", "To-do", "In Review"],
             },
           ],
         }),
@@ -1197,7 +1189,7 @@ describe("MondayTaskSender", () => {
       expect(result.sentTaskIds).toEqual(["t1"]);
     });
 
-    it("grava Completed no board que tem o rótulo", async () => {
+    it("grava Done no board que tem o rótulo", async () => {
       const client = makeClient();
       const sender = new MondayTaskSender(
         makeConfig(),
@@ -1210,7 +1202,48 @@ describe("MondayTaskSender", () => {
       await sender.send([makeTask()]);
 
       expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.status]: { label: "Done" },
+      });
+    });
+
+    // O template nasceu com "Completed" e os boards de cliente usam "Done": o
+    // board que só tem o antigo continua sendo atendido.
+    it("cai em Completed no board que não tem Done", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig({
+          mondayProjectMapping: [{ ...MAPPING, statusLabels: ["Completed", "Working on it"] }],
+        }),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
         [COLUMN_IDS.status]: { label: "Completed" },
+      });
+    });
+
+    // Board que tem os dois: "Done" ganha, porque é o rótulo dos boards vivos.
+    it("prefere Done quando o board tem os dois rótulos", async () => {
+      const client = makeClient();
+      const sender = new MondayTaskSender(
+        makeConfig({
+          mondayProjectMapping: [{ ...MAPPING, statusLabels: ["Completed", "Done"] }],
+        }),
+        makeItemRepo(),
+        makeFieldRepo(),
+        makeCategoryRepo(),
+        client
+      );
+
+      await sender.send([makeTask()]);
+
+      expect(vi.mocked(client.createItem).mock.calls[0][3]).toMatchObject({
+        [COLUMN_IDS.status]: { label: "Done" },
       });
     });
 

@@ -22,7 +22,7 @@ import {
   buildActivityColumnValues,
   buildActivityDateColumns,
   secondsToDecimalHours,
-  MONDAY_COMPLETED_LABEL,
+  MONDAY_DONE_LABELS,
 } from "@domain/usecases/monday/buildActivityColumnValues";
 import { DEFAULT_REPORT_TYPE } from "@domain/usecases/monday/resolveBoardActivitiesColumns";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
@@ -288,13 +288,14 @@ export class MondayTaskSender implements ITaskSender {
     // "Completed" fixo, e nem todo board tem esse rótulo — o do cliente com
     // `DOing, Done, Canceled, On Hold, Backlog, To-do, In Review` fazia o Monday
     // recusar a mutation inteira ("This status label doesn't exist"), derrubando
-    // o envio todo por causa de uma coluna acessória. Sem a lista cacheada
-    // (vínculo anterior a este cache), o rótulo também não vai: a varredura
-    // diária de projetos — ou o botão "Atualizar" em Integrações — relê o
-    // schema e repovoa a lista.
-    const statusLabel = mapping.statusLabels?.includes(MONDAY_COMPLETED_LABEL)
-      ? MONDAY_COMPLETED_LABEL
-      : "";
+    // o envio todo por causa de uma coluna acessória. Hora enviada é trabalho
+    // terminado, então vale o primeiro rótulo de conclusão que o board tiver.
+    // Sem nenhum deles — ou sem a lista cacheada, em vínculo anterior a este
+    // cache — a coluna não vai, e o item nasce com o padrão do board (no dos
+    // clientes, "Backlog"). A varredura diária de projetos, ou o botão
+    // "Atualizar" em Integrações, relê o schema e repovoa a lista.
+    const statusLabel =
+      MONDAY_DONE_LABELS.find((label) => mapping.statusLabels?.includes(label)) ?? "";
 
     const reasonValue = chosen(fields.nonBillableReason);
     const nonBillableReasonLabel = mapping.nonBillableReasonLabels.includes(reasonValue)

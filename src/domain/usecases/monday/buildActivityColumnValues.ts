@@ -3,7 +3,18 @@ import { localDateISO } from "@shared/utils/time";
 
 export const MONDAY_BILLABLE_LABEL = "Billable";
 export const MONDAY_NON_BILLABLE_LABEL = "Non Billable";
-export const MONDAY_COMPLETED_LABEL = "Completed";
+/**
+ * Rótulos que significam "o trabalho terminou", em ordem de preferência: o
+ * envio escreve o **primeiro que existir** na coluna Status do board.
+ *
+ * É lista, e não um rótulo só, porque os boards não concordam entre si: o
+ * template nasceu com `"Completed"` e os boards de cliente usam `"Done"`. Foi
+ * um rótulo fixo por um tempo, e quando ele sumiu dos boards o Monday passou a
+ * recusar a mutation inteira — o envio do dia inteiro caía por causa de uma
+ * coluna acessória. Board que não tem nenhum deles fica sem a coluna no
+ * payload e o item nasce com o padrão do próprio board.
+ */
+export const MONDAY_DONE_LABELS = ["Done", "Completed"] as const;
 
 export interface BuildActivityColumnValuesInput {
   columnIds: MondayActivityColumnIds;

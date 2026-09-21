@@ -259,8 +259,13 @@
 > Backlog, To-do, In Review` recebia de volta *"This status label doesn't exist, possible statuses
 > are: …"* e **todo o envio falhava** — não a coluna, a mutation inteira, com as horas de todos os
 > grupos daquele dia. Hoje o mapeamento cacheia os rótulos da coluna Status (`statusLabels`, do mesmo
-> schema já lido, sem consulta nova) e o envio só escreve a coluna quando "Completed" está na lista,
-> exatamente como já fazia com Activity Type, Project Stage e o motivo de não faturável. Os três
+> schema já lido, sem consulta nova) e o envio só escreve a coluna quando o rótulo que ele pretende
+> está na lista, exatamente como já fazia com Activity Type, Project Stage e o motivo de não
+> faturável. **O rótulo pretendido é o primeiro de `MONDAY_DONE_LABELS`** — hoje `Done`, depois
+> `Completed` — porque hora enviada é trabalho terminado e os boards não concordam em como chamar
+> isso: o template nasceu com "Completed" e os de cliente usam "Done". Board sem nenhum dos dois fica
+> sem a coluna no payload, e o item nasce com o padrão do próprio board (nos de cliente, "Backlog").
+> Os três
 > estados são distintos, como no `timelineColumnId`: lista **ausente** é "nunca resolvido" e é o que
 > dispara a releitura do schema na varredura seguinte — o conserto automático dos vínculos gravados
 > antes desta mudança; lista **vazia** é "resolvido, o board não tem rótulo utilizável" e não relê
