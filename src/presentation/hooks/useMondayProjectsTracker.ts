@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { importMondayProjects } from "@domain/usecases/monday/importMondayProjects";
 import { seedMondayProjectCategories } from "@domain/usecases/monday/seedMondayProjectCategories";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
+import {
+  MONDAY_MAPPING_CACHE_VERSION,
+  shouldMigrateMondayMappingCache,
+} from "@domain/usecases/monday/mondayMappingCachePolicy";
 import { shouldSyncMondayProjects } from "@domain/usecases/monday/mondayProjectsSyncPolicy";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
@@ -46,7 +50,15 @@ export function useMondayProjectsTracker() {
     let disposed = false;
     let inFlight = false;
 
-    async function runSync(): Promise<void> {
+    interface RunSyncOptions {
+      /**
+       * Ignora a validade do cache de schema, como o botão "Atualizar". Só a
+       * migração de formato do cache usa — o ciclo normal respeita a validade.
+       */
+      forceSchemaRead?: boolean;
+    }
+
+    async function runSync({ forceSchemaRead }: RunSyncOptions = {}): Promise<void> {
       const deskclockWorkspaceId = resolveIntegrationWorkspaceId(
         config.get("mondayDeskclockWorkspaceId")
       );
@@ -63,8 +75,10 @@ export function useMondayProjectsTracker() {
         // board, com a marca que decide quais precisam ser relidos.
         existingMappings,
         nowISO: new Date().toISOString(),
-        // Sem `forceSchemaRead`: o ciclo automático respeita a validade do cache
-        // — quem quer o rótulo novo agora aperta "Atualizar" em Integrações.
+        // Falso no ciclo automático: ele respeita a validade do cache — quem
+        // quer o rótulo novo agora aperta "Atualizar" em Integrações. A migração
+        // de formato do cache é a única exceção, e força uma vez só.
+        forceSchemaRead,
       });
 
       await config.set("mondayProjectMapping", result.mappings);
@@ -91,18 +105,35 @@ export function useMondayProjectsTracker() {
 
     async function tick(): Promise<void> {
       if (disposed || inFlight) return;
-      const due = shouldSyncMondayProjects({
+
+      // A migração de formato do cache passa **na frente** do portão diário: é
+      // justamente o dia cuja varredura já rodou que ela existe para cobrir.
+      // Não é varredura paralela — é um motivo a mais para rodar esta.
+      const migrationDue = shouldMigrateMondayMappingCache({
+        storedVersion: config.get("mondayMappingCacheVersion"),
+        currentVersion: MONDAY_MAPPING_CACHE_VERSION,
         apiKey: config.get("mondayApiKey"),
         portfolioBoardId: config.get("mondayPortfolioBoardId"),
-        lastSyncDate: config.get("mondayProjectsSyncLastDate"),
-        todayISO: todayISO(),
       });
+      const due =
+        migrationDue ||
+        shouldSyncMondayProjects({
+          apiKey: config.get("mondayApiKey"),
+          portfolioBoardId: config.get("mondayPortfolioBoardId"),
+          lastSyncDate: config.get("mondayProjectsSyncLastDate"),
+          todayISO: todayISO(),
+        });
       if (!due) return;
 
       inFlight = true;
       let failure = "";
       try {
-        await runSync();
+        await runSync({ forceSchemaRead: migrationDue });
+        // Só depois do sucesso, pelo mesmo motivo da data: uma falha de rede
+        // tenta de novo no tique seguinte em vez de queimar a única migração.
+        if (migrationDue) {
+          await config.set("mondayMappingCacheVersion", MONDAY_MAPPING_CACHE_VERSION);
+        }
       } catch (err: unknown) {
         failure = truncateError(err instanceof Error ? err.message : String(err));
         console.error("[mondayProjectsTracker] falha ao reler os boards", err);

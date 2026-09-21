@@ -270,6 +270,30 @@
 > dispara a releitura do schema na varredura seguinte — o conserto automático dos vínculos gravados
 > antes desta mudança; lista **vazia** é "resolvido, o board não tem rótulo utilizável" e não relê
 > nada.
+>
+> **"Na varredura seguinte" é tarde demais no dia em que o usuário atualiza o app**, e isso aconteceu
+> de verdade: a varredura tem portão de uma vez por dia, então quem instalou a versão nova num dia
+> cujo ciclo já havia rodado ficou com o mapeamento antigo até a virada. O envio funcionava e o item
+> nascia com o rótulo padrão do board ("Backlog") em vez de "Done" — de novo o silêncio, e o único
+> conserto era o usuário clicar "Atualizar". Fechando essa janela, o mapeamento tem **versão de
+> formato** (`MONDAY_MAPPING_CACHE_VERSION`, em `mondayMappingCachePolicy.ts`, gravada em
+> `mondayMappingCacheVersion` na config): versão gravada atrás da constante ⇒ o rastreador roda
+> **uma** varredura com `forceSchemaRead`, antes do portão diário, e só grava a versão depois do
+> sucesso — falha de rede tenta de novo no tique seguinte, como o resto do ciclo. Depois disso o
+> portão diário volta a valer. Custo: uma varredura forçada a mais por instalação, as mesmas 3
+> requisições em lotes de 20 do botão "Atualizar".
+>
+> **Bumpar a constante é o procedimento quando o cache do mapeamento ganhar campo novo** — é o único
+> lugar a mexer, e é por isso que a condição é a versão, não os dados. "Algum vínculo sem
+> `statusLabels`" parece equivalente e não é: board que não abre nunca preenche o campo, e a condição
+> derivada ficaria verdadeira para sempre, forçando varredura a cada 30 minutos. Também não é a
+> versão do app, que mudaria a cada release sem nada de novo para ler. Quem voltou para um build
+> antigo tem gravada uma versão **à frente** e não migra: o cache dele já contém tudo o que aquele
+> build sabe ler.
+>
+> Fora do alcance da migração, de propósito: quem enviar horas nos **8 segundos** entre abrir o app e
+> o primeiro tique (`INITIAL_DELAY_MS`) ainda pega o mapeamento velho uma vez. É o preço de manter a
+> varredura fora do caminho da abertura.
 
 > **A lista de projetos se relê sozinha uma vez por dia** (`useMondayProjectsTracker`). Cliente novo
 > só virava Project quando alguém lembrava de apertar "Atualizar" em Integrações, e enquanto ninguém

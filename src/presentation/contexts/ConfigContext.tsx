@@ -132,6 +132,8 @@ const DEFAULTS: AppConfig = {
   mondayAutoImportEnabled: false,
   mondayProjectsSyncLastDate: "",
   mondayProjectsLastSyncError: "",
+  // 0, e não a constante: o default é o que quem nunca migrou tem gravado.
+  mondayMappingCacheVersion: 0,
   llmProviderId: DEFAULT_LLM_PROVIDER_ID,
   llmBaseUrl: "",
   llmModel: "",
