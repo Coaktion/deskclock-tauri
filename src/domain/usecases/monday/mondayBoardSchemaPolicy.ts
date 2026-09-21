@@ -26,7 +26,7 @@ export interface BoardSchemaReadState {
    * Vínculo já gravado do mesmo item de Portfólio. Ausente = projeto que aparece
    * pela primeira vez, e não há cache nenhum de que falar.
    */
-  cached?: Pick<MondayProjectMapping, "mondayBoardId" | "schemaReadAtISO">;
+  cached?: Pick<MondayProjectMapping, "mondayBoardId" | "schemaReadAtISO" | "statusLabels">;
   nowISO: string;
   /** O clique em "Atualizar": a intenção explícita ignora a validade. */
   force?: boolean;
@@ -43,7 +43,13 @@ export interface BoardSchemaReadState {
  *
  * Relê quando: o vínculo é novo, o board de destino mudou (inclusive o id
  * digitado à mão), a marca não existe (vínculo de uma versão anterior a este
- * cache, ou leitura que falhou) ou ela venceu.
+ * cache, ou leitura que falhou), ela venceu, ou os rótulos da coluna Status
+ * nunca foram resolvidos.
+ *
+ * **Os rótulos de Status ausentes relêem**, e é o conserto automático do vínculo
+ * gravado antes deles existirem: sem a lista, o envio não sabe se o rótulo que
+ * pretende escrever existe no board, e é justamente isso que derrubava a mutation
+ * inteira. `[]` é resposta — board sem a coluna — e não relê; só `undefined` relê.
  *
  * **Marca inválida relê.** `Date.parse` de lixo devolve `NaN`, e comparação com
  * `NaN` é sempre falsa: sem o teste explícito, uma marca corrompida no JSON da
@@ -61,6 +67,7 @@ export function shouldReadBoardSchema({
   if (force) return true;
   if (!cached || cached.mondayBoardId !== boardId) return true;
   if (!cached.schemaReadAtISO) return true;
+  if (cached.statusLabels === undefined) return true;
 
   const readAt = Date.parse(cached.schemaReadAtISO);
   const now = Date.parse(nowISO);

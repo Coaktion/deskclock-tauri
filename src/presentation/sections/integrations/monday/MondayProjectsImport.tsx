@@ -3,6 +3,7 @@ import {
   resolveProjectDestination,
 } from "@domain/usecases/monday/importMondayProjects";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
+import { MONDAY_MAPPING_CACHE_VERSION } from "@domain/usecases/monday/mondayMappingCachePolicy";
 import {
   seedMondayProjectCategories,
   type SeedMondayProjectCategoriesResult,
@@ -208,6 +209,10 @@ export function MondayProjectsImport({
       // releitura automática repita a mesma varredura horas depois, e limpar o
       // erro tira da tela uma falha que deixou de valer.
       await config.set("mondayProjectsSyncLastDate", todayISO());
+      // E fez também o da migração, com o mesmo `forceSchemaRead` sobre os mesmos
+      // boards: sem marcar a versão, quem consertou à mão pagaria a varredura
+      // forçada de novo no tique seguinte.
+      await config.set("mondayMappingCacheVersion", MONDAY_MAPPING_CACHE_VERSION);
       await config.set("mondayProjectsLastSyncError", "");
       setAutoError("");
       onImported(result.mappings);

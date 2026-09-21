@@ -275,6 +275,14 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
   mondayProjectsSyncLastDate: string;
   /** Falha do último ciclo da releitura, exibida no card de Projetos. */
   mondayProjectsLastSyncError: string;
+  /**
+   * Formato do `mondayProjectMapping` já gravado — ver `MONDAY_MAPPING_CACHE_VERSION`.
+   * Ausente/`0` = mapeamento anterior ao versionamento do cache. Atrás da
+   * constante, o rastreador roda **uma** varredura forçada e grava esta chave:
+   * sem ela, quem atualiza o app num dia cuja varredura já rodou ficaria com o
+   * mapeamento velho até a virada do dia, enviando as horas sem a coluna Status.
+   */
+  mondayMappingCacheVersion: number;
   // Provedor de LLM
   /**
    * Preset escolhido no catálogo (`src/infra/integrations/llm/providers.ts`), ou
