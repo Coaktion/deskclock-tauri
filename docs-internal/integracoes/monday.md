@@ -253,6 +253,18 @@
 > item" e responde **recriando**. Uma coluna a mais no payload viraria atividade duplicada no board a
 > cada ciclo, não um erro visível. No gerenciador de atividades, o botão de faturável só aparece para
 > board que tem a coluna: alternar um valor que nunca sairia dali é armadilha.
+>
+> **E o rótulo também é opcional, não só a coluna.** O Status ia com um `"Completed"` fixo, e
+> "Completed" não existe em todo board: o cliente cujo Status é `DOing, Done, Canceled, On Hold,
+> Backlog, To-do, In Review` recebia de volta *"This status label doesn't exist, possible statuses
+> are: …"* e **todo o envio falhava** — não a coluna, a mutation inteira, com as horas de todos os
+> grupos daquele dia. Hoje o mapeamento cacheia os rótulos da coluna Status (`statusLabels`, do mesmo
+> schema já lido, sem consulta nova) e o envio só escreve a coluna quando "Completed" está na lista,
+> exatamente como já fazia com Activity Type, Project Stage e o motivo de não faturável. Os três
+> estados são distintos, como no `timelineColumnId`: lista **ausente** é "nunca resolvido" e é o que
+> dispara a releitura do schema na varredura seguinte — o conserto automático dos vínculos gravados
+> antes desta mudança; lista **vazia** é "resolvido, o board não tem rótulo utilizável" e não relê
+> nada.
 
 > **A lista de projetos se relê sozinha uma vez por dia** (`useMondayProjectsTracker`). Cliente novo
 > só virava Project quando alguém lembrava de apertar "Atualizar" em Integrações, e enquanto ninguém

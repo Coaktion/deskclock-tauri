@@ -22,6 +22,7 @@ import {
   buildActivityColumnValues,
   buildActivityDateColumns,
   secondsToDecimalHours,
+  MONDAY_COMPLETED_LABEL,
 } from "@domain/usecases/monday/buildActivityColumnValues";
 import { DEFAULT_REPORT_TYPE } from "@domain/usecases/monday/resolveBoardActivitiesColumns";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
@@ -283,6 +284,18 @@ export class MondayTaskSender implements ITaskSender {
         ? stageValue
         : "";
 
+    // Mesma guarda, e a que faltava: a coluna Status era escrita com um
+    // "Completed" fixo, e nem todo board tem esse rótulo — o do cliente com
+    // `DOing, Done, Canceled, On Hold, Backlog, To-do, In Review` fazia o Monday
+    // recusar a mutation inteira ("This status label doesn't exist"), derrubando
+    // o envio todo por causa de uma coluna acessória. Sem a lista cacheada
+    // (vínculo anterior a este cache), o rótulo também não vai: a varredura
+    // diária de projetos — ou o botão "Atualizar" em Integrações — relê o
+    // schema e repovoa a lista.
+    const statusLabel = mapping.statusLabels?.includes(MONDAY_COMPLETED_LABEL)
+      ? MONDAY_COMPLETED_LABEL
+      : "";
+
     const reasonValue = chosen(fields.nonBillableReason);
     const nonBillableReasonLabel = mapping.nonBillableReasonLabels.includes(reasonValue)
       ? reasonValue
@@ -311,6 +324,7 @@ export class MondayTaskSender implements ITaskSender {
         ...(activityTypeLabel ? { activityTypeLabel } : {}),
         ...(projectStageLabel ? { projectStageLabel } : {}),
         ...(nonBillableReasonLabel ? { nonBillableReasonLabel } : {}),
+        ...(statusLabel ? { statusLabel } : {}),
       }),
       ...buildActivityDateColumns(mapping.columnIds, interval.startISO, interval.endISO),
     };

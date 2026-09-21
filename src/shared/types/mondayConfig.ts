@@ -103,6 +103,23 @@ export interface MondayProjectMapping {
   activityTypeLabels: string[];
   /** Rótulos da coluna Project Stage; semeiam o campo personalizado. */
   projectStageLabels: string[];
+  /**
+   * Rótulos da coluna Status, pelo mesmo motivo dos de Activity Type: o envio só
+   * grava a coluna quando o rótulo pretendido está nesta lista.
+   *
+   * Estava faltando, e custou o envio inteiro: a coluna era escrita com um
+   * `"Completed"` fixo, e board de cliente cujo Status é `DOing, Done, Canceled,
+   * On Hold, Backlog, To-do, In Review` recusava a mutation com "This status
+   * label doesn't exist" — não a coluna, o envio todo.
+   *
+   * **Os três estados são distintos**, como no `timelineColumnId` abaixo:
+   * `undefined` = nunca resolvido (vínculo gravado antes desta mudança) e **só
+   * ele** dispara a releitura do schema; `[]` = resolvido, e o board não tem
+   * rótulo utilizável, então a coluna não é escrita; preenchido = a lista contra
+   * a qual o rótulo é conferido. Por isso `normalizeProjectMappings` **não** lhe
+   * dá default: o default faria o vínculo antigo nunca mais ser relido.
+   */
+  statusLabels?: string[];
   /** Título da coluna Project Stage no board — nomeia o campo criado. */
   projectStageTitle: string;
   /**

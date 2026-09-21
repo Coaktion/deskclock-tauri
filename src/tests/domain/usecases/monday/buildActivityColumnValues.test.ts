@@ -74,9 +74,34 @@ describe("buildActivityColumnValues", () => {
     expect(values).toEqual({
       [COLUMNS.reportedHours]: "1.83",
       [COLUMNS.billingType]: { label: MONDAY_BILLABLE_LABEL },
-      [COLUMNS.status]: { label: MONDAY_COMPLETED_LABEL },
       [COLUMNS.person]: { personsAndTeams: [{ id: 21181483, kind: "person" }] },
     });
+  });
+
+  // O default era `Completed`, e "Completed" não existe em todo board: o de
+  // cliente que tem `DOing, Done, Canceled…` recusava a mutation inteira e o
+  // envio parava. Quem sabe se o rótulo existe é o mapeamento, não esta função.
+  it("não escreve o status quando o rótulo pretendido não veio", () => {
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 1.83,
+      billable: true,
+      userId: "21181483",
+    });
+
+    expect(values).not.toHaveProperty(COLUMNS.status);
+  });
+
+  it("escreve o status quando o rótulo pretendido veio", () => {
+    const values = buildActivityColumnValues({
+      columnIds: COLUMNS,
+      hoursDecimal: 1.83,
+      billable: true,
+      userId: "21181483",
+      statusLabel: MONDAY_COMPLETED_LABEL,
+    });
+
+    expect(values[COLUMNS.status]).toEqual({ label: MONDAY_COMPLETED_LABEL });
   });
 
   it("usa o rótulo Non Billable quando a tarefa não é faturável", () => {

@@ -71,6 +71,12 @@ export function secondsToDecimalHours(totalSeconds: number): number {
  * Monta o `column_values` de uma atividade do Monday. Colunas opcionais só
  * entram no payload quando há valor — gravar `null` num status limparia o campo.
  *
+ * **Isso vale também para a coluna Status**, que já teve `"Completed"` como
+ * default aqui dentro: board cujo Status não tem esse rótulo recusava a mutation
+ * inteira ("This status label doesn't exist"), e o envio falhava por completo.
+ * Quem sabe se o rótulo existe é o mapeamento do projeto, que cacheia os rótulos
+ * do board — então quem escolhe é quem chama, como já era com o Activity Type.
+ *
  * **Coluna que o board não tem também não entra**, e a omissão é o mecanismo de
  * segurança, não uma economia: mandar um id inexistente faz o Monday recusar a
  * mutation inteira (HTTP 200 com `InvalidColumnIdException`/
@@ -93,8 +99,8 @@ export function buildActivityColumnValues(
       input.billable ? MONDAY_BILLABLE_LABEL : MONDAY_NON_BILLABLE_LABEL
     );
   }
-  if (columnIds.status) {
-    values[columnIds.status] = serializeStatus(input.statusLabel ?? MONDAY_COMPLETED_LABEL);
+  if (columnIds.status && input.statusLabel) {
+    values[columnIds.status] = serializeStatus(input.statusLabel);
   }
   if (input.activityTypeLabel) {
     values[columnIds.activityType] = serializeStatus(input.activityTypeLabel);

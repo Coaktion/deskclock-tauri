@@ -130,6 +130,7 @@ function cachedMapping(overrides: Partial<MondayProjectMapping> = {}): MondayPro
     projectStageLabels: ["Discovery"],
     projectStageTitle: "Project Stage",
     nonBillableReasonLabels: ["Retrabalho"],
+    statusLabels: ["Completed"],
     timelineColumnId: "tl_cache",
     schemaReadAtISO: NOW,
     ...overrides,
@@ -404,6 +405,51 @@ describe("importMondayProjects", () => {
     });
   });
 
+  // O envio compara o rótulo pretendido com esta lista antes de escrever a
+  // coluna Status: rótulo que o board não tem derruba a mutation inteira.
+  it("cacheia os rótulos da coluna Status do board lido", async () => {
+    const api = makeApi([item()], {
+      b1: schema({
+        columns: [
+          ...schema().columns.filter((c) => c.id !== "status"),
+          {
+            id: "status",
+            title: "Status",
+            type: "status",
+            settingsStr: JSON.stringify({ labels: { "0": "DOing", "1": "Done" } }),
+          },
+        ],
+      }),
+    });
+
+    const result = await run(api);
+
+    expect(result.mappings[0].statusLabels).toEqual(["DOing", "Done"]);
+  });
+
+  // Lista vazia é "resolvido, nada a escrever", e não o `undefined` que manda
+  // reler o schema: o board foi lido e a resposta é que não há rótulo.
+  it("resolve os rótulos de Status em lista vazia quando o board não tem a coluna", async () => {
+    const api = makeApi([item()], {
+      b1: schema({ columns: schema().columns.filter((c) => c.id !== "status") }),
+    });
+
+    const result = await run(api);
+
+    expect(result.mappings[0].statusLabels).toEqual([]);
+    expect(result.mappings[0].columnIds.status).toBeUndefined();
+  });
+
+  // Ausente, e não `[]`: nada foi lido daquele board, então o estado tem de ser
+  // o que manda reler o schema — mesma disciplina do `timelineColumnId`.
+  it("deixa os rótulos de Status ausentes no projeto sem quadro de destino", async () => {
+    const api = makeApi([item({ projectBoardId: null })], {});
+
+    const result = await run(api);
+
+    expect(result.mappings[0].statusLabels).toBeUndefined();
+  });
+
   it("reaproveita projetos já existentes em vez de duplicar", async () => {
     const api = makeApi([item()], { b1: schema() });
     const projectRepo = makeProjectRepo([
@@ -498,6 +544,7 @@ describe("importMondayProjects", () => {
         activityTypeLabels: ["Development"],
         projectStageLabels: ["Discovery"],
         nonBillableReasonLabels: ["Retrabalho"],
+        statusLabels: ["Completed"],
         timelineColumnId: "tl_cache",
         schemaReadAtISO: localISO(2026, 8, 4, 9),
       });
