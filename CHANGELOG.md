@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.4.1](https://github.com/Coaktion/deskclock-tauri/compare/v2.4.0...v2.4.1) (2026-09-21)
+
+
+### Features
+
+* **monday:** depois de atualizar o app, os dados dos boards se repovoam sozinhos na primeira abertura — antes era preciso abrir Integrações e clicar em "Atualizar" para o envio voltar a preencher tudo
+
+
+### Bug Fixes
+
+* **monday:** o envio de horas voltou a funcionar nos boards cuja coluna Status mudou de rótulos — o app insistia num rótulo que não existe mais lá, e o Monday recusava o envio inteiro do dia, não só aquela coluna
+* **monday:** a atividade criada no Monday nasce como "Done" — o rótulo que os boards usam hoje; board que não tiver nenhum rótulo de conclusão recebe a atividade com o status padrão dele, em vez de ter o envio recusado
+
 ## [2.4.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.3.0...v2.4.0) (2026-09-20)
 
 
