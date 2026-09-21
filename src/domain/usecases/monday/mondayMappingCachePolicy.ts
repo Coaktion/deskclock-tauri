@@ -17,15 +17,22 @@
  * novo** — é o único lugar a mexer. Não é a versão do app: amarrada à release, ela
  * forçaria uma varredura a cada publicação sem nada de novo para ler.
  *
- * Histórico: `1` é o mapeamento sem `statusLabels`; `2` acrescentou os rótulos da
- * coluna Status, sem os quais o envio nasce com o rótulo padrão do board.
+ * Histórico: `0` — ausente, que é como todo vínculo anterior a esta chave volta
+ * da config — é o mapeamento sem `statusLabels`. O `2` acrescentou os rótulos da
+ * coluna Status, sem os quais o envio nasce com o rótulo padrão do board. O `1`
+ * nunca foi gravado por build nenhum: a numeração começa no 2 porque a primeira
+ * migração é a que ela descreve.
  */
 export const MONDAY_MAPPING_CACHE_VERSION = 2;
 
 export interface MondayMappingCacheMigrationState {
   /** Versão gravada na config. Ausente/0 = mapeamento anterior a esta migração. */
   storedVersion: number;
-  /** `MONDAY_MAPPING_CACHE_VERSION`, recebido em vez de importado para o teste poder fixá-lo. */
+  /**
+   * `MONDAY_MAPPING_CACHE_VERSION` na produção; recebido em vez de importado
+   * para o teste fixar o valor e continuar descrevendo "atrás", "igual" e "à
+   * frente" depois que a constante for bumpada.
+   */
   currentVersion: number;
   apiKey: string;
   /** Board de onde a lista de projetos é lida. Sem ele não há o que reler. */

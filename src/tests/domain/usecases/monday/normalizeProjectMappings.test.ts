@@ -26,6 +26,23 @@ describe("normalizeProjectMappings", () => {
     expect(mapping.projectStageTitle).toBe("");
   });
 
+  // A trava da exceção: um `statusLabels ?? []` acrescentado por simetria com os
+  // vizinhos desligaria de uma vez a releitura do schema e a migração do cache,
+  // e o envio nasceria com o rótulo padrão do board — sem nada reprovar.
+  it("deixa os rótulos de Status ausentes, que é o estado que manda reler", () => {
+    const [mapping] = normalizeProjectMappings([LEGACY]);
+
+    expect(mapping.statusLabels).toBeUndefined();
+  });
+
+  it("preserva os rótulos de Status já gravados", () => {
+    const [mapping] = normalizeProjectMappings([
+      { ...LEGACY, statusLabels: ["Done"] } as MondayProjectMapping,
+    ]);
+
+    expect(mapping.statusLabels).toEqual(["Done"]);
+  });
+
   it("dá ao mapeamento antigo o Activities como destino de Activity", () => {
     // Sem isso, todo projeto vinculado antes do roteamento por Report Type
     // recusaria o `Activity` que é o padrão de toda tarefa — o envio pararia

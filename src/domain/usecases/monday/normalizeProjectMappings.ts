@@ -13,6 +13,10 @@ import { DEFAULT_REPORT_TYPE } from "./resolveBoardActivitiesColumns";
  * O default é lista vazia, e não "manda assim mesmo": rótulo desconhecido faz o
  * Monday recusar a escrita. Reimportar os projetos repovoa o cache.
  *
+ * **Exceção: `statusLabels` não ganha default**, e acrescentá-lo aqui por
+ * simetria desligaria de uma vez a releitura automática do schema e a migração
+ * do cache — `undefined` é o estado que dispara as duas (ver `mondayConfig.ts`).
+ *
  * **`scope` ausente vira `cliente`**, e não uma terceira opção "desconhecido":
  * é a maioria (56 dos 62 itens do Portfólio) e é o palpite que erra alto.
  * Chutando `interno` num projeto de cliente, o Project Stage some do payload e
