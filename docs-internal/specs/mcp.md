@@ -376,6 +376,16 @@ Continuam fora, com motivo próprio: `tasks.toggle` (start/pause/resume cobrem),
 | **D** | Compartilhar tarefa: gerar o `deskclock://` e abrir um link | `sharePayload`, `PasteDeepLinkModal` |
 | **D** | Configurações (Geral, Overlay, Acessibilidade, Atalhos, fim de semana) — porta estreita por grupo, não key-value genérico | `IConfigRepository` |
 
+**Decisões da Fase C** (usuário, 2026-10-22):
+
+- **Envio = prévia + envio**, como o modal. Uma op lista os grupos do período por integração, com o estado de cada um
+  (já enviado, inválido e o motivo, pendente). A outra envia os ids escolhidos e devolve enviados, pulados, recusados
+  e falhos (`TaskSendOutcome`). A orquestração que hoje mora nos modais (`TaskSendModal` + os três adaptadores) sai
+  para um módulo único que o modal e a ponte usam, para não haver segunda cópia da regra.
+- **Exportação devolve o conteúdo** (texto CSV/JSON e um nome de arquivo sugerido), gerado com um perfil, mais o CRUD
+  de perfis. Salvar e copiar ficam com quem chama, e a API não escreve em disco.
+- Execução em duas etapas: **C1** envio e **C2** exportação.
+
 **Fora de propósito:** conectar integrações (OAuth e chaves exigem navegador e segredo; segredo pela API local
 amplia a superfície), desfazer (`Restore*`, gesto sobre o que acabou de acontecer na tela) e executar a ação ⚡
 (abre URL/arquivo na máquina). **Sem op própria:** editar grupo do Histórico (`UpdateTaskGroup`) e excluir várias
