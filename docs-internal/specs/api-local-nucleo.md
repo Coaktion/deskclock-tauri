@@ -39,7 +39,7 @@ Todas do usuário, em 2026-09-15.
 |---|---|---|
 | Arquitetura | **Ponte para o TS** — Rust só recebe HTTP e repassa à janela principal, que executa o caso de uso real | Os 8 defeitos são a mesma causa: duas implementações da regra. Estender a API a todo o núcleo em Rust dobraria a superfície que diverge. |
 | Workspace | `workspaceId` **opcional**; ausente = workspace ativo | É o que a UI faz (§6.7). Script simples não precisa saber de workspace. |
-| Escopo | **Núcleo de registro**: workspaces, tarefas/Histórico, planejadas, projetos, categorias, categorias por projeto, campos personalizados, totais | Integrações, exportação, IA, configurações e backup ficam fora. A ponte os tornaria baratos depois, mas não entram aqui. |
+| Escopo | **Núcleo de registro**: workspaces, tarefas/Histórico, planejadas, projetos, categorias, categorias por projeto, campos personalizados, totais | Integrações, exportação, IA, configurações e backup ficam fora. A ponte os tornaria baratos depois, mas não entram aqui. **Revisto em 2026-10-22:** tudo que a UI faz deve existir na API e no MCP; o que ficou fora é dívida, inventariada em `mcp.md` §7. |
 
 ### 2.1 Duas coisas que parecem descuido e são decisão
 

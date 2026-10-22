@@ -25,7 +25,7 @@ Todas do usuário, em 2026-09-18.
 | Onde roda | **Dentro do app**, rota `POST /mcp` no axum da API local, mesma porta | O usuário não instala nada além de ligar a API local. Processo Node separado (SDK TS) foi descartado por exigir Node na máquina. |
 | Protocolo | Crate **`rmcp`** (SDK oficial em Rust), `StreamableHttpService` aninhado no router | Negocia a versão do protocolo (o transporte HTTP mudou em 2026-07-28 e clientes falam revisões diferentes) e valida Host/Origin. Implementar JSON-RPC à mão viraria manutenção a cada revisão da spec. |
 | Onde ficam as regras | Tool em Rust **só mapeia** nome → `op` + params e chama `bridge.request` direto (sem voltar pelo HTTP) | Mesmo princípio da ponte: Rust transporta, o TS decide. |
-| Escopo da v1 | **Só leitura e registro** | O app exclui sem confirmação; um erro do modelo apagando ou reescrevendo o passado seria irreversível. |
+| Escopo da v1 | **Só leitura e registro** | O app exclui sem confirmação; um erro do modelo apagando ou reescrevendo o passado seria irreversível. **Revisto em 2026-10-22** (§7): tudo que a UI faz deve existir no MCP; o risco da exclusão se trata com `destructiveHint` e descrição, não com ausência. |
 | "Criar tarefa" | Três tools: iniciar agora, planejar, lançar retroativo | São três intenções distintas; uma tool com modo confundiria o modelo. |
 
 ## 3. Tools da v1
@@ -327,3 +327,44 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   `PUT` intacto. A tool chama o `patch` com `{ id, body: { customValues } }`, mesmo desenho, args (`id` +
   `SetRunningTaskCustomValuesArgs` achatado) e anotações das outras duas; `plannedTasks.update` segue em `excluded`
   como "edição completa; o MCP usa plannedTasks.patch".
+
+## 7. Paridade com a UI
+
+Decisão do usuário, 2026-10-22: **tudo que a interface faz precisa ser possível pela API e pelo MCP.** "Fora
+da v1" no `mcp-ops.json` é dívida, não limite. Varredura do mesmo dia — use cases chamados pela
+`presentation/` e docs de `telas/` contra as `op` da ponte e as tools.
+
+### 7.1 Camada 1 — a ponte já faz, falta a tool
+
+| Fase | O que entra |
+|---|---|
+| **A** | Edição completa: `update_planned_task` (`plannedTasks.patch`), `update_running_task` (`tasks.updateActive`), `update_task` (`history.update`) — **substituem** as três `set_*_custom_values` da Fase 5 (estreitas, agora redundantes). `actions` no `plan_task`. Planejamento: concluir, desmarcar, duplicar, excluir (`plannedTasks.complete/uncomplete/duplicate/delete`). `cancel_task` (`tasks.cancel`) |
+| **B** | Histórico: excluir um e vários, billable, unificar, mover (`history.delete/deleteMany/setBillable/merge/move`). Catálogo: projetos e categorias (CRUD, import, exclusão em massa) e `projectCategories.*`. Workspaces: CRUD e trocar o ativo |
+
+Continuam fora, com motivo próprio: `tasks.toggle` (start/pause/resume cobrem), `history.get`, `plannedTasks.get`,
+`workspaces.getActive` (as listas já devolvem), `plannedTasks.update` (o MCP usa o `patch`).
+
+### 7.2 Camada 2 — não há op na ponte (REST e MCP)
+
+| Fase | O que entra | Na UI |
+|---|---|---|
+| **C** | Enviar tarefas a Sheets, Clockify e Monday | `SendTasks`, `TaskSendModal` |
+| **C** | Exportação: CRUD de perfis e gerar CSV/JSON com um perfil | `exportProfiles/*`, `ExportModal` |
+| **D** | Resumo do dia por IA (ler e gerar) | `SummarizeWorkdays` |
+| **D** | Importar da Agenda, de tickets do Zendesk e do Monday (itens, projetos, categorias, catálogos) | `ImportCalendarEvents`, `ImportTickets`, `monday/import*` |
+| **D** | Ler lançamentos do Clockify e do Monday | `ClockifyEntriesModal`, `MondayEntriesModal` |
+| **D** | Backup no Drive: rodar agora e status | `IDriveBackupRunner` |
+| **D** | Compartilhar tarefa: gerar o `deskclock://` e abrir um link | `sharePayload`, `PasteDeepLinkModal` |
+| **D** | Configurações (Geral, Overlay, Acessibilidade, Atalhos, fim de semana) — porta estreita por grupo, não key-value genérico | `IConfigRepository` |
+
+**Fora de propósito:** conectar integrações (OAuth e chaves exigem navegador e segredo; segredo pela API local
+amplia a superfície), desfazer (`Restore*`, gesto sobre o que acabou de acontecer na tela) e executar a ação ⚡
+(abre URL/arquivo na máquina). **Sem op própria:** editar grupo do Histórico (`UpdateTaskGroup`) e excluir várias
+planejadas — N chamadas resolvem.
+
+### 7.3 Estado
+
+| Fase | Estado |
+|---|---|
+| A | em andamento |
+| B · C · D | pendentes |
