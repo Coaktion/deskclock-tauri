@@ -6,6 +6,12 @@ import type { ICategoryRepository } from "@domain/repositories/ICategoryReposito
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
 import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
+import type {
+  TaskSendAdapter,
+  TaskSendCatalogs,
+  TaskSendIntegrationId,
+} from "@presentation/integrations/taskSendAdapters";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 import type { WorkspaceContextValue } from "@presentation/contexts/WorkspaceContext";
 import type { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
@@ -53,6 +59,15 @@ export type WorkspaceOps = Pick<
   Pick<WorkspaceContextValue, "switchTo">;
 
 /**
+ * O envio manual às integrações, como o modal o monta (`taskSendAdapters.ts`).
+ * Porta estreita: a ponte não recebe a config nem as fábricas inteiras.
+ */
+export interface TaskSendPort {
+  workspaceIdFor(integration: TaskSendIntegrationId): string;
+  adapterFor(integration: TaskSendIntegrationId, catalogs: TaskSendCatalogs): TaskSendAdapter;
+}
+
+/**
  * Retrato do app no instante em que a requisição começa. É montado a cada
  * render: as operações do contexto fecham sobre a tarefa em execução daquele
  * render, e um retrato velho pausaria uma tarefa que já foi parada.
@@ -65,6 +80,8 @@ export interface LocalApiDeps {
   workspaceRepo: IWorkspaceRepository;
   projectCategoryRepo: IProjectCategoryRepository;
   customFieldRepo: ICustomFieldRepository;
+  taskLogRepo: ITaskIntegrationLogRepository;
+  taskSend: TaskSendPort;
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;

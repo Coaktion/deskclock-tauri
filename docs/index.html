@@ -3342,6 +3342,18 @@
       </table>
         </div>
 
+    <h3>Envio às integrações</h3>
+    <p>O mesmo envio da janela <strong>Enviar</strong> de cada integração. No lugar de <code>{integração}</code>, use <code>google_sheets</code>, <code>clockify</code> ou <code>monday</code>. As tarefas são as do workspace escolhido para a integração, não as do workspace ativo.</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/integrations/{integração}/send-preview</code></td><td>Lista os grupos do período, por dia, com o que já foi enviado, o que está pendente e o que falta preencher</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/{integração}/send</code></td><td>Envia os grupos das tarefas indicadas e devolve o que subiu, o que foi recusado e o que falhou</td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h2 id="api-mcp">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       Conectar ao Claude (MCP)
@@ -3379,8 +3391,10 @@
         <thead><tr><th>Grupo</th><th>O que faz</th></tr></thead>
         <tbody>
           <tr><td><strong>Consultar</strong></td><td>O estado atual (tarefa em execução, totais de hoje, a data de hoje), os projetos, categorias e workspaces cadastrados, as planejadas de um dia ou período, as tarefas concluídas de um período e os totais de um período ou da semana</td></tr>
-          <tr><td><strong>Tarefa em execução</strong></td><td>Iniciar uma tarefa (a ativa é parada antes), pausar, retomar, parar e salvar, e iniciar uma planejada, como o Play</td></tr>
+          <tr><td><strong>Tarefa em execução</strong></td><td>Iniciar uma tarefa (a ativa é parada antes), pausar, retomar, parar e salvar, descartar sem salvar, editar a tarefa em execução e iniciar uma planejada, como o Play</td></tr>
           <tr><td><strong>Criar</strong></td><td>Planejar uma tarefa (data específica, recorrente ou período), lançar trabalho passado com início e fim, e lançar uma planejada como concluída num dia, como no Lançamento Manual</td></tr>
+          <tr><td><strong>Editar e excluir</strong></td><td>Editar, concluir, desmarcar, duplicar e excluir planejadas; editar, excluir, unificar, mover de workspace e mudar o billable de registros do Histórico; cadastrar, editar, importar e excluir projetos, categorias, categorias por projeto, campos personalizados e workspaces, e trocar o workspace ativo</td></tr>
+          <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos</td></tr>
         </tbody>
       </table>
         </div>
@@ -3396,7 +3410,7 @@
 
     <div class="callout warning">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      <div class="callout-body"><strong>Ele não edita nem exclui.</strong> Pelo MCP não se altera nem se apaga o histórico, e não se mexe em projetos, categorias, workspaces ou campos personalizados. No app, excluir é imediato, sem confirmação; um pedido mal entendido numa conversa apagaria dados sem volta. Para isso, use a tela ou a API.</div>
+      <div class="callout-body"><strong>Ele exclui sem desfazer.</strong> Pelo MCP dá para fazer o mesmo que na tela, inclusive excluir. A exclusão é imediata e, ao contrário da tela, não tem Ctrl+Z. As ferramentas que apagam vêm marcadas como destrutivas, e o cliente MCP costuma pedir sua confirmação antes de usá-las — confira o pedido antes de aprovar.</div>
     </div>
 
     <div class="callout info">
@@ -3417,7 +3431,7 @@
         <tbody>
           <tr><td><strong><a onclick="show('deeplinks')">Deep link</a></strong></td><td>Você quer que o app <strong>apareça</strong> — abrir uma tela, pré-preencher um formulário. Um link basta, nada a configurar.</td></tr>
           <tr><td><strong>API local</strong></td><td>Você quer <strong>ler</strong> o estado ou agir sem trazer a janela à frente. É o caminho para barras de status, scripts e integrações caseiras.</td></tr>
-          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele consulta, cuida da tarefa em execução e cria registros, mas não edita nem exclui.</td></tr>
+          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui e envia às integrações.</td></tr>
         </tbody>
       </table>
 

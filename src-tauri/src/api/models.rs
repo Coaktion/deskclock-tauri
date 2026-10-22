@@ -665,3 +665,89 @@ pub struct WeekTotalsDto {
     pub total_seconds: i64,
     pub days_worked: i64,
 }
+
+// ---------------- Envio às integrações ----------------
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SendTasksRequest {
+    /// Ids de tarefas concluídas, da prévia. Cada id envia o grupo inteiro em que está.
+    pub task_ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum SendGroupState {
+    /// Todas as tarefas do grupo já foram enviadas a esta integração.
+    Sent,
+    /// Pode ser enviado — é o que a tela pré-seleciona.
+    Pending,
+    /// Falta dado (`missing`); não pode ser enviado.
+    Invalid,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SendPreviewGroupDto {
+    /// Chave de agrupamento (nome + projeto + categoria + valores personalizados).
+    pub key: String,
+    pub name: Option<String>,
+    pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_name: Option<String>,
+    pub category_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_name: Option<String>,
+    pub total_seconds: i64,
+    /// Todas as tarefas do grupo.
+    pub task_ids: Vec<String>,
+    /// As que já foram enviadas a esta integração.
+    pub sent_task_ids: Vec<String>,
+    pub state: SendGroupState,
+    /// Campos faltando (pt-BR), só em `invalid`.
+    pub missing: Vec<String>,
+    /// Parte do grupo já enviada; só em `pending`.
+    pub partially_sent: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SendPreviewDayDto {
+    /// Dia local, YYYY-MM-DD.
+    pub date: String,
+    pub total_seconds: i64,
+    pub groups: Vec<SendPreviewGroupDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SendPreviewDto {
+    pub integration: String,
+    /// Workspace do DeskClock da integração (Configurações → Integrações).
+    pub workspace_id: String,
+    pub from: String,
+    pub to: String,
+    /// Do dia mais recente para o mais antigo.
+    pub days: Vec<SendPreviewDayDto>,
+    /// O que barraria o envio dos grupos pendentes (ex.: projeto sem board no Monday), ou nulo.
+    pub send_warning: Option<String>,
+    /// O aviso da tela para reenvio do que já foi enviado. O reenvio é permitido.
+    pub resend_warning: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SendTasksResponse {
+    /// Ids marcados como enviados (já expandidos para o grupo).
+    pub sent_task_ids: Vec<String>,
+    /// Subconjunto de `sentTaskIds` que já estava igual no destino (só o Monday informa).
+    pub skipped_task_ids: Vec<String>,
+    /// Recusas do destino: o usuário precisa mudar algo na tarefa.
+    pub refused: Vec<String>,
+    /// Falhas técnicas: tentar de novo.
+    pub failed: Vec<String>,
+    /// Grupos confirmados por inteiro.
+    pub sent_groups: i64,
+    /// A frase que a tela mostraria.
+    pub message: String,
+}

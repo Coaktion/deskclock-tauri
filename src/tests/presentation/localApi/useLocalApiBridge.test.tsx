@@ -44,6 +44,7 @@ vi.mock("@presentation/contexts/WorkspaceContext", () => ({
 vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({ isLoaded: true, get: () => 1, set: vi.fn() }),
 }));
+vi.mock("@presentation/contexts/IntegrationsContext", () => ({ useIntegrations: () => ({}) }));
 vi.mock("@presentation/hooks/useWorkspaceAdmin", () => ({
   useWorkspaceAdmin: () => ({ create: vi.fn(), update: vi.fn(), remove: vi.fn() }),
 }));

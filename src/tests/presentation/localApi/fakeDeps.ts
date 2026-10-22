@@ -9,6 +9,7 @@ import type { ICategoryRepository } from "@domain/repositories/ICategoryReposito
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
 import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import type { Workspace } from "@domain/entities/Workspace";
@@ -158,6 +159,21 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     delete: vi.fn(async () => {}),
   } satisfies Record<keyof ICustomFieldRepository, unknown>;
 
+  const taskLogRepo = {
+    markSent: vi.fn(async (_ids: string[], _integration: string) => {}),
+    findSentIds: vi.fn(
+      async (_integration: string, _start?: string, _end?: string): Promise<string[]> => []
+    ),
+  } satisfies Record<keyof ITaskIntegrationLogRepository, unknown>;
+
+  // Sem adaptador por padrão: o teste de envio injeta o seu.
+  const taskSend = {
+    workspaceIdFor: vi.fn((_integration: string) => WS_ATIVO),
+    adapterFor: vi.fn((_integration: string, _catalogs: unknown): unknown => {
+      throw new Error("adapterFor não configurado no teste");
+    }),
+  };
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -178,6 +194,8 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     workspaceRepo,
     projectCategoryRepo,
     customFieldRepo,
+    taskLogRepo,
+    taskSend,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,

@@ -1,6 +1,8 @@
 use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
-use crate::api::handlers::{catalog, custom_fields, history, planned_tasks, totals, workspaces};
+use crate::api::handlers::{
+    catalog, custom_fields, history, integrations, planned_tasks, totals, workspaces,
+};
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
 use crate::mcp;
@@ -111,6 +113,11 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             "/planned-tasks/{id}/launch-retroactive",
             post(planned_tasks::post_planned_task_launch_retroactive),
         )
+        .route(
+            "/integrations/{id}/send-preview",
+            get(integrations::get_send_preview),
+        )
+        .route("/integrations/{id}/send", post(integrations::post_send))
         .with_state(state.clone());
 
     Router::new()
@@ -278,6 +285,38 @@ mod tests {
     async fn patch_da_planejada_com_tipo_errado_e_400_sem_chegar_a_ponte() {
         for body in ["", r#"{"name":5}"#, r#"{"recurringDays":"seg"}"#] {
             let (status, got) = send("PATCH", "/planned-tasks/abc", body).await;
+            assert_eq!(got, None, "{body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        }
+    }
+
+    #[tokio::test]
+    async fn envio_as_integracoes_chega_a_ponte_com_a_op_certa() {
+        let cases = [
+            (
+                "GET",
+                "/integrations/monday/send-preview?from=2026-09-14&to=2026-09-18",
+                "",
+                "integrations.sendPreview",
+            ),
+            (
+                "POST",
+                "/integrations/clockify/send",
+                r#"{"taskIds":["a","b"]}"#,
+                "integrations.send",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn envio_sem_corpo_ou_com_task_ids_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        for body in ["", "{}", r#"{"taskIds":"a"}"#, r#"{"taskIds":[1]}"#] {
+            let (status, got) = send("POST", "/integrations/monday/send", body).await;
             assert_eq!(got, None, "{body}");
             assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         }

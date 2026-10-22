@@ -95,6 +95,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Planejadas | as atuais + `workspaceId`, `startTime`/`endTime`, `customValues`, `label` da ação · `GET ?from&to` · `PATCH /{id}` (edição parcial, op `plannedTasks.patch`; o `PUT` segue substituindo tudo) · `POST /{id}/duplicate` · `POST /{id}/launch-retroactive` (reordenar ficou de fora — §6, Fase 3) |
 | Projetos · categorias | `GET/POST` · `PUT/DELETE /{id}` · `POST /import` · `POST /delete` · `GET/PUT /projects/{id}/categories` |
 | Campos personalizados | `GET/POST /custom-fields` · `PUT/DELETE /custom-fields/{id}` |
+| Envio às integrações (paridade, Fase C1) | `GET /integrations/{id}/send-preview?from&to` (op `integrations.sendPreview`) · `POST /integrations/{id}/send` (op `integrations.send`), `id` = `google_sheets` \| `clockify` \| `monday` |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
 projeto/categoria de outro workspace passa a 409; DTOs ganham campos (aditivo).
@@ -141,6 +142,33 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
   `period_start` NULL volta a aparecer.
 - `Bridge.ready` volta a `false` no `on_page_load` (`Started`) da janela `main` (`lib.rs`): recarregar o webview
   dá 503 até o ouvinte novo avisar prontidão, em vez de 504.
+
+**Envio às integrações (Fase C1 da paridade, `mcp.md` §7) — 2026-10-22.** Regras em
+`src/presentation/localApi/handlers/integrations.ts`; a orquestração é a do modal, num lugar só:
+`sendTaskGroups`/`sendBlockedReason`/`buildSendPayload` (`domain/usecases/tasks/SendTaskGroups.ts`),
+`loadTaskSendDays`/`groupSendStatus` (`domain/usecases/tasks/LoadTaskSendDays.ts`) e o adaptador por integração
+(`presentation/integrations/taskSendAdapters.ts`, `buildTaskSendAdapter`), que o `TaskSendModal` e a ponte usam. A ponte
+recebe o adaptador por uma porta estreita (`deps.taskSend`: `workspaceIdFor`/`adapterFor`), não a config inteira.
+- **Workspace é o da integração** (`taskSendWorkspaceId` → `resolveIntegrationWorkspaceId`), nunca o ativo; não há
+  `workspaceId` na rota. Catálogo do mesmo workspace, como o `useIntegrationCatalogs` do modal.
+- `id` fora das três → 404. Integração não configurada → **409** com o `notConfiguredMessage` do modal, nas duas ops.
+- **Prévia:** período como o `GET /tasks` (`periodRange`). Devolve `days[]` (mais recente primeiro) com `groups[]`: `key`,
+  nome, projeto/categoria (id e nome), `totalSeconds`, `taskIds`, `sentTaskIds`, `state` (`sent`/`pending`/`invalid`),
+  `missing` (da `validateTask`) e `partiallySent` (o "Parcial" da lista). `pending` é exatamente a pré-seleção do modal.
+  `sendWarning` = `validateBeforeSend` sobre a carga dos pendentes (null se não há pendente ou nada barra);
+  `resendWarning` = o aviso de reenvio do modal da integração.
+- **Envio recebe `taskIds`**, não chaves de grupo: id é o que as demais rotas usam, e a chave de grupo carrega nome e
+  valores personalizados em texto. Cada id seleciona **o grupo inteiro** do dia dele (a caixa do modal só marca grupo; mandar
+  só parte mudaria a carga, porque o representante leva a duração somada). `taskIds` vazio ou fora do formato → 400;
+  id inexistente → 404; tarefa ativa ou fora do workspace da integração → 409; grupo com dado faltando (`validateTask`) → 409
+  antes de enviar nada; `validateBeforeSend` barrando → 409 com a mensagem do modal. Reenvio do já enviado é permitido.
+- Resposta 200 mesmo com recusa/falha: `sentTaskIds` (expandidos pelo `resolveSentTasks`), `skippedTaskIds` (o do
+  Monday, já igual no destino), `refused`, `failed`, `sentGroups` e `message` (a frase do `buildResultMessage`).
+  `markSent` só do que subiu; timestamp do envio diário só sem recusa nem falha (`onSendSuccess`), como no modal.
+- Com algo marcado, `notifyTasksChanged`: o badge "Enviado" do `TodayEntriesSection` relê o log quando a lista de tarefas
+  recarrega. O modal aberto não escuta evento nenhum (relê só no próprio envio ou ao trocar o período) — igual a hoje.
+- As duas ops não esperam o render (`waitsForNextCommit`): não mexem na tarefa em execução nem no workspace.
+- O `AutoSyncRunner` (envio diário/por tarefa) não foi tocado; usa outro caminho (`runDailyTemplate`/estratégias).
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.

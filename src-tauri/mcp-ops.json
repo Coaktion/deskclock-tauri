@@ -48,7 +48,9 @@
     "workspaces.create": "create_workspace",
     "workspaces.update": "update_workspace",
     "workspaces.delete": "delete_workspace",
-    "workspaces.setActive": "set_active_workspace"
+    "workspaces.setActive": "set_active_workspace",
+    "integrations.sendPreview": "preview_send_to_integration",
+    "integrations.send": "send_tasks_to_integration"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",

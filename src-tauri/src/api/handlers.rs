@@ -97,6 +97,7 @@ fn scoped_params(id: String, q: &WorkspaceQuery) -> Value {
 pub mod catalog;
 pub mod custom_fields;
 pub mod history;
+pub mod integrations;
 pub mod planned_tasks;
 pub mod totals;
 pub mod workspaces;

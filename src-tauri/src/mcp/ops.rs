@@ -49,6 +49,8 @@ pub const CREATE_WORKSPACE: &str = "create_workspace";
 pub const UPDATE_WORKSPACE: &str = "update_workspace";
 pub const DELETE_WORKSPACE: &str = "delete_workspace";
 pub const SET_ACTIVE_WORKSPACE: &str = "set_active_workspace";
+pub const PREVIEW_SEND_TO_INTEGRATION: &str = "preview_send_to_integration";
+pub const SEND_TASKS_TO_INTEGRATION: &str = "send_tasks_to_integration";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -99,6 +101,8 @@ pub const OP_WORKSPACES_CREATE: &str = "workspaces.create";
 pub const OP_WORKSPACES_UPDATE: &str = "workspaces.update";
 pub const OP_WORKSPACES_DELETE: &str = "workspaces.delete";
 pub const OP_WORKSPACES_SET_ACTIVE: &str = "workspaces.setActive";
+pub const OP_INTEGRATIONS_SEND_PREVIEW: &str = "integrations.sendPreview";
+pub const OP_INTEGRATIONS_SEND: &str = "integrations.send";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -214,6 +218,15 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
     (
         SET_ACTIVE_WORKSPACE,
         &[pass_through(OP_WORKSPACES_SET_ACTIVE)],
+    ),
+    // Fase C1 da paridade: envio às integrações, prévia antes.
+    (
+        PREVIEW_SEND_TO_INTEGRATION,
+        &[pass_through(OP_INTEGRATIONS_SEND_PREVIEW)],
+    ),
+    (
+        SEND_TASKS_TO_INTEGRATION,
+        &[pass_through(OP_INTEGRATIONS_SEND)],
     ),
 ];
 

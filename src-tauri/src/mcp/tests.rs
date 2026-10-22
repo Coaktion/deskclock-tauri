@@ -179,7 +179,9 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "move_tasks_to_workspace",
             "pause_task",
             "plan_task",
+            "preview_send_to_integration",
             "resume_task",
+            "send_tasks_to_integration",
             "set_active_workspace",
             "set_project_categories",
             "set_task_billable",
@@ -260,6 +262,11 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("delete_workspace", false, Some(true), false),
         // Ativar o que já está ativo não muda nada; com tarefa ativa só erra (409).
         ("set_active_workspace", false, Some(true), false),
+        // Fase C1. A prévia só lê o banco local. O envio escreve no serviço
+        // externo; Sheets e Clockify acrescentam linha a cada envio, então
+        // repetir duplica (o Monday reescreve, mas a anotação vale para as três).
+        ("preview_send_to_integration", true, None, false),
+        ("send_tasks_to_integration", false, Some(false), true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -2095,5 +2102,112 @@ async fn esquemas_da_fase_b_declaram_os_campos_e_saem_planos() {
             .collect();
         fields.sort_unstable();
         assert_eq!(fields, ["kind", "name", "targetId"], "{moving}");
+    }
+}
+
+fn send_responder(op: &str) -> (u16, Value) {
+    match op {
+        "integrations.sendPreview" => (200, json!({ "integration": "monday", "days": [] })),
+        "integrations.send" => (
+            200,
+            json!({ "sentTaskIds": ["t1"], "refused": [], "failed": [] }),
+        ),
+        other => (500, json!({ "error": format!("inesperada: {other}") })),
+    }
+}
+
+#[tokio::test]
+async fn tools_de_envio_repassam_os_params_como_a_rest() {
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "preview_send_to_integration",
+            json!({ "integration": "google_sheets", "from": "2026-09-14" }),
+            "integrations.sendPreview",
+            json!({ "id": "google_sheets", "from": "2026-09-14", "to": null }),
+        ),
+        (
+            "send_tasks_to_integration",
+            json!({ "integration": "monday", "taskIds": ["t1", "t2"] }),
+            "integrations.send",
+            json!({ "id": "monday", "body": { "taskIds": ["t1", "t2"] } }),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, send_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn integracao_fora_do_enum_ou_sem_task_ids_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        (
+            "preview_send_to_integration",
+            json!({ "integration": "jira" }),
+        ),
+        ("preview_send_to_integration", json!({})),
+        (
+            "send_tasks_to_integration",
+            json!({ "integration": "clockify" }),
+        ),
+        (
+            "send_tasks_to_integration",
+            json!({ "integration": "Sheets", "taskIds": ["t1"] }),
+        ),
+    ] {
+        let (state, calls) = fake_state(true, send_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn envio_nao_configurado_vira_is_error_com_a_mensagem() {
+    fn conflict(_: &str) -> (u16, Value) {
+        (
+            409,
+            json!({ "error": "Monday não configurado. Verifique o token e o workspace." }),
+        )
+    }
+    let (state, _) = fake_state(true, conflict);
+    let result = call_tool(
+        state,
+        "send_tasks_to_integration",
+        json!({ "integration": "monday", "taskIds": ["t1"] }),
+    )
+    .await;
+    assert_eq!(
+        error_text(&result),
+        "Monday não configurado. Verifique o token e o workspace."
+    );
+}
+
+#[tokio::test]
+async fn esquemas_das_tools_de_envio_declaram_o_enum_e_saem_planos() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    for (name, required) in [
+        ("preview_send_to_integration", vec!["integration"]),
+        ("send_tasks_to_integration", vec!["integration", "taskIds"]),
+    ] {
+        let schema = tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].clone();
+        assert_eq!(sorted(&schema["required"]), required, "{name}");
+        assert_eq!(
+            schema["properties"]["integration"]["enum"],
+            json!(["google_sheets", "clockify", "monday"]),
+            "{schema}"
+        );
+        let text = schema.to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
     }
 }

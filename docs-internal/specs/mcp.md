@@ -68,6 +68,8 @@ Todas do usuário, em 2026-09-18.
 | `create_workspace` · `update_workspace` | `workspaces.create` · `workspaces.update` | `color` = slot da paleta, validado no TS (Fase B) |
 | `delete_workspace` | `workspaces.delete` | `destructiveHint: true`; `mode` `move`/`delete` obrigatório, a escolha do modal da tela (Fase B) |
 | `set_active_workspace` | `workspaces.setActive` | Com tarefa ativa erra (409) e não para a tarefa: o modelo pergunta e chama `stop_task`/`cancel_task` (Fase B) |
+| `preview_send_to_integration` | `integrations.sendPreview` | Grupos do período no workspace da integração, com estado `pending`/`sent`/`invalid`; `readOnlyHint` (Fase C1) |
+| `send_tasks_to_integration` | `integrations.send` | `taskIds` da prévia, cada um envia o grupo inteiro; `openWorldHint: true`, `idempotentHint: false` (Fase C1) |
 
 Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
 `workspaces.getActive`, `plannedTasks.update`). O que falta para a paridade não tem `op` na ponte (§7.2).
@@ -397,7 +399,26 @@ planejadas — N chamadas resolvem.
 |---|---|
 | A | implementada; falta revisão e verificação no app de dev |
 | B | implementada; falta verificação no app de dev |
-| C · D | pendentes |
+| C1 (envio) | implementada; falta verificação no app de dev |
+| C2 (exportação) · D | pendentes |
+
+### Decisões da Fase C1 que a spec não fixava
+
+- **Orquestração única.** Regra pura no domínio: `sendTaskGroups` (carga crua ou representante, validação antes,
+  `sendTasks`, `resolveSentTasks`, `markSent`, timestamp só sem recusa/falha), `sendBlockedReason`, `buildSendPayload`
+  (`SendTaskGroups.ts`) e `loadTaskSendDays`/`groupSendStatus` (`LoadTaskSendDays.ts`; `groupTasksByDay` saiu do hook
+  para `domain/utils/groupTasksByDay.ts`). A montagem por integração (sender, validações, mensagens, timestamp) saiu dos
+  três modais para `presentation/integrations/taskSendAdapters.ts` (`buildTaskSendAdapter`, função pura) e o hook
+  `useTaskSendAdapter`; os três modais viraram wrappers de 20 linhas. A ponte monta o mesmo adaptador por `deps.taskSend`.
+- **Ids das integrações:** as chaves do log de envio, `google_sheets`, `clockify`, `monday` — o enum inline da tool e o
+  `id` da rota REST.
+- **Envio por `taskIds`**, não por chave de grupo; cada id envia o grupo inteiro (detalhes em `api-local-nucleo.md` §6).
+- **Anotações.** Prévia: `readOnlyHint: true`, `openWorldHint: false` (só lê o banco; o sender não é chamado). Envio:
+  `readOnlyHint: false`, `destructiveHint: false`, `openWorldHint: true`, `idempotentHint: false` — Sheets e Clockify
+  acrescentam linha/lançamento a cada envio (só o Monday faz upsert), e a anotação é uma só para as três.
+- **Descrição do envio** manda chamar a prévia antes, mostrar ao usuário o que vai subir e só enviar com a confirmação.
+- **Resultado:** `pass_through`; os dois corpos já são objeto.
+- **Params como a REST:** prévia `{ id, from, to }` (nulos quando omitidos); envio `{ id, body: { taskIds } }`.
 
 ### Decisões da Fase A que a spec não fixava
 

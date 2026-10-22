@@ -18,6 +18,11 @@ import { waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
 import { errorResult } from "./errors";
 import { claimRequestId, createSerialQueue, waitForSignal } from "./queue";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import {
+  buildTaskSendAdapter,
+  taskSendWorkspaceId,
+} from "@presentation/integrations/taskSendAdapters";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -42,6 +47,7 @@ export function useLocalApiBridge(): void {
   const { activeWorkspaceId, switchTo } = useWorkspaces();
   const { create, update, remove } = useWorkspaceAdmin();
   const config = useAppConfig();
+  const factories = useIntegrations();
   const depsRef = useRef<LocalApiDeps | null>(null);
   const commitListeners = useRef(new Set<() => void>());
 
@@ -57,6 +63,12 @@ export function useLocalApiBridge(): void {
       workspaceRepo: repos.workspaceRepo,
       projectCategoryRepo: repos.projectCategoryRepo,
       customFieldRepo: repos.customFieldRepo,
+      taskLogRepo: repos.taskLogRepo,
+      taskSend: {
+        workspaceIdFor: (integration) => taskSendWorkspaceId(integration, config),
+        adapterFor: (integration, catalogs) =>
+          buildTaskSendAdapter(integration, config, factories, catalogs),
+      },
       activeWorkspaceId,
       running,
       workspaces: { create, update, remove, switchTo },

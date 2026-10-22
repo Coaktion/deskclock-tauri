@@ -46,6 +46,7 @@ import {
   moveHistoryTasks,
 } from "./handlers/historyBatch";
 import { getPeriodTotals, getWeekTotals } from "./handlers/totals";
+import { previewIntegrationSend, sendToIntegration } from "./handlers/integrations";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
@@ -126,6 +127,9 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "plannedTasks.uncomplete": uncompletePlannedTask,
   "plannedTasks.duplicate": duplicatePlannedTaskHandler,
   "plannedTasks.launchRetroactive": launchPlannedTaskRetroactiveHandler,
+  // Não mexem na tarefa em execução nem no workspace: não esperam o render.
+  "integrations.sendPreview": previewIntegrationSend,
+  "integrations.send": sendToIntegration,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */

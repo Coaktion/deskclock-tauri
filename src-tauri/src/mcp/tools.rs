@@ -645,6 +645,38 @@ pub struct TaskIdArgs {
     pub id: String,
 }
 
+// Inline pelo mesmo motivo do `ScheduleType`. Os valores são as chaves do log de
+// envio que o TS valida (`TASK_SEND_INTEGRATIONS`); fora delas o rmcp recusa antes.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum SendIntegration {
+    GoogleSheets,
+    Clockify,
+    Monday,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct PreviewSendArgs {
+    /// Destination: `google_sheets`, `clockify` or `monday`.
+    pub integration: SendIntegration,
+    /// First local day, YYYY-MM-DD. Omit for today.
+    pub from: Option<String>,
+    /// Last local day (inclusive), YYYY-MM-DD. Omit for the same day as `from`.
+    pub to: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SendTasksArgs {
+    /// Destination: `google_sheets`, `clockify` or `monday`.
+    #[serde(skip_serializing)]
+    pub integration: SendIntegration,
+    /// Task ids from the `taskIds` of groups in preview_send_to_integration. Any id
+    /// of a group sends the whole group. Not empty.
+    pub task_ids: Vec<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 pub struct TaskIdsArgs {
     /// Finished task ids, from list_tasks. Not empty.
@@ -2032,6 +2064,62 @@ impl DeskClockMcp {
     ) -> CallToolResult {
         self.call_single(SET_ACTIVE_WORKSPACE, json!({ "body": args }))
             .await
+    }
+
+    #[tool(
+        name = "preview_send_to_integration",
+        description = "List what can be sent to an integration (Google Sheets, Clockify or \
+            Monday), like the app's Send dialog: the finished tasks of the period in the \
+            DeskClock workspace configured for that integration (not necessarily the active \
+            one), by day and group, each with `state` — `pending` (can be sent; the app \
+            preselects these), `sent` (already sent; sending again is allowed but may \
+            duplicate, see `resendWarning`) or `invalid` (missing data listed in `missing`; \
+            cannot be sent). `sendWarning`, when not null, is what would block sending the \
+            pending groups. Call it before send_tasks_to_integration, show the user what \
+            will go up, and only send after they confirm. Errors if the integration is not \
+            configured. Reads only local data.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn preview_send_to_integration(
+        &self,
+        Parameters(args): Parameters<PreviewSendArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            PREVIEW_SEND_TO_INTEGRATION,
+            json!({ "id": args.integration, "from": args.from, "to": args.to }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "send_tasks_to_integration",
+        description = "Send tasks to Google Sheets, Clockify or Monday, like the Send button \
+            of the app's dialog. Call preview_send_to_integration first, show the user the \
+            groups that will go up, and call this only after they confirm. Pass `taskIds` \
+            from the preview; each id sends its whole group. Writes to the external service: \
+            Sheets and Clockify append a new row or entry on every send, so sending again \
+            duplicates; Monday rewrites the existing activity. Returns `sentTaskIds` (marked \
+            as sent), `skippedTaskIds` (already identical in Monday), `refused` (the \
+            destination rejected the data; the user must fix the task) and `failed` \
+            (technical errors; retry), plus `message`, the sentence the app would show. \
+            Errors without sending if a task is not finished, is outside the integration's \
+            workspace, misses required data, or the integration is not configured.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn send_tasks_to_integration(
+        &self,
+        Parameters(args): Parameters<SendTasksArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SEND_TASKS_TO_INTEGRATION,
+            json!({ "id": args.integration, "body": args }),
+        )
+        .await
     }
 }
 
