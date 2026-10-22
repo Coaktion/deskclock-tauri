@@ -3,9 +3,10 @@
 
 use crate::api::bridge::Bridge;
 use crate::mcp::ops::{
-    ops_of, OpCall, GET_STATUS, GET_TOTALS, GET_WEEK_TOTALS, LIST_CATALOG, LIST_PLANNED_TASKS,
-    LIST_TASKS, LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK,
-    START_PLANNED_TASK, START_TASK, STOP_TASK,
+    ops_of, OpCall, CREATE_CUSTOM_FIELD, DELETE_CUSTOM_FIELD, GET_STATUS, GET_TOTALS,
+    GET_WEEK_TOTALS, LIST_CATALOG, LIST_CUSTOM_FIELDS, LIST_PLANNED_TASKS, LIST_TASKS,
+    LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK, START_PLANNED_TASK,
+    START_TASK, STOP_TASK, UPDATE_CUSTOM_FIELD,
 };
 use crate::mcp::result::{body_or_error, success};
 use rmcp::{
@@ -268,6 +269,67 @@ impl GetWeekTotalsArgs {
     }
 }
 
+// Inline pelo mesmo motivo do `ScheduleType`.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum CustomFieldType {
+    Text,
+    Multiline,
+    Select,
+    Checkbox,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCustomFieldArgs {
+    /// Field label, unique among custom fields (an existing one is an error).
+    pub label: String,
+    /// `text` (one line), `multiline`, `select` (one option of a list) or `checkbox`.
+    /// It cannot be changed later.
+    #[serde(rename = "type")]
+    #[schemars(rename = "type")]
+    pub field_type: CustomFieldType,
+    /// Option labels, in display order. Required (at least one) for `select`; omit
+    /// for the other types.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub option_labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCustomFieldArgs {
+    /// Custom field id, from list_custom_fields.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: UpdateCustomFieldBody,
+}
+
+/// O corpo da edição; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCustomFieldBody {
+    /// New label. Omit to keep it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+    /// The final list of option labels of a `select` field, in the desired order
+    /// (at least one). An existing option is matched by its label and keeps its id,
+    /// and so the values already saved in tasks; an option left out of the list is
+    /// removed, and a new label becomes a new option. Omit to keep the options.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub option_labels: Option<Vec<String>>,
+    /// true archives the field (hidden from new entries, values kept), false
+    /// restores it. Omit to keep it as is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub archived: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct DeleteCustomFieldArgs {
+    /// Custom field id, from list_custom_fields.
+    pub id: String,
+}
+
 #[derive(Clone)]
 pub struct DeskClockMcp {
     bridge: Arc<Bridge>,
@@ -307,7 +369,8 @@ impl DeskClockMcp {
             workspace. Returns `workspaces` (all of them; `active` marks the one in use), \
             and `projects` and `categories` of the requested workspace (the active one \
             when `workspaceId` is omitted), each with `id` and `name`. Categories also \
-            carry `defaultBillable`, the billable value a task gets by default in them.",
+            carry `defaultBillable`, the billable value a task gets by default in them. Custom \
+            fields are not included: use list_custom_fields.",
         annotations(read_only_hint = true, open_world_hint = false)
     )]
     async fn list_catalog(&self, Parameters(args): Parameters<WorkspaceArgs>) -> CallToolResult {
@@ -572,6 +635,93 @@ impl DeskClockMcp {
     ) -> CallToolResult {
         self.call_single(GET_WEEK_TOTALS, args.params()).await
     }
+
+    #[tool(
+        name = "list_custom_fields",
+        description = "The user's custom fields: extra data a task can carry, defined \
+            once for all workspaces (archived ones included). Returns `customFields`, each \
+            with `id`, `label`, `type` (text, multiline, select or checkbox), `options`, \
+            `sortOrder` and `archived`. The field `id` is the key of a task's \
+            `customValues`. In a `select` field, each option has an `id` and a `label`, \
+            and the API accepts either of them when saving a value.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn list_custom_fields(&self) -> CallToolResult {
+        self.call_single(LIST_CUSTOM_FIELDS, json!({})).await
+    }
+
+    #[tool(
+        name = "create_custom_field",
+        description = "Create a custom field. `type` is text, multiline, select or \
+            checkbox and cannot be changed afterwards; a `select` needs `optionLabels` \
+            (at least one), the other types take none. The label must not already \
+            exist (an error otherwise). Returns the new field, with the `id` used as \
+            the key of `customValues`.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn create_custom_field(
+        &self,
+        Parameters(args): Parameters<CreateCustomFieldArgs>,
+    ) -> CallToolResult {
+        self.call_single(CREATE_CUSTOM_FIELD, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "update_custom_field",
+        description = "Rename a custom field, change the options of a `select`, or \
+            archive or restore it. Get `id` from list_custom_fields. Omitted fields are \
+            kept. `optionLabels` is the final list of options in the desired order: an \
+            existing option is matched by its label and keeps its id — and the values \
+            already saved in tasks — while an option left out is removed and a new label \
+            becomes a new option. The field type cannot be changed. Returns the updated \
+            field.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_custom_field(
+        &self,
+        Parameters(args): Parameters<UpdateCustomFieldArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_CUSTOM_FIELD,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_custom_field",
+        description = "Permanently delete a custom field. It erases that field's value \
+            in every task of the History and of the Planning, and it cannot be undone. \
+            Call it only when the user explicitly asked to delete the field. To just \
+            stop using it, archive it instead with update_custom_field \
+            (archived = true), which is reversible and keeps the values. Get `id` from \
+            list_custom_fields. Errors if the field does not exist (so a repeated call \
+            only errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_custom_field(
+        &self,
+        Parameters(args): Parameters<DeleteCustomFieldArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_CUSTOM_FIELD, json!({ "id": args.id }))
+            .await
+    }
 }
 
 impl DeskClockMcp {
@@ -584,6 +734,8 @@ impl DeskClockMcp {
         match body_or_error(self.bridge.request(op, params).await) {
             Ok(body) => match key {
                 Some(key) => success(json!({ *key: body })),
+                // 204 sem corpo (excluir): `structuredContent` tem de ser objeto.
+                None if body.is_null() => success(json!({})),
                 None => success(body),
             },
             Err(error) => error,

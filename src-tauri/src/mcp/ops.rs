@@ -16,6 +16,10 @@ pub const LOG_PLANNED_TASK: &str = "log_planned_task";
 pub const LIST_TASKS: &str = "list_tasks";
 pub const GET_TOTALS: &str = "get_totals";
 pub const GET_WEEK_TOTALS: &str = "get_week_totals";
+pub const LIST_CUSTOM_FIELDS: &str = "list_custom_fields";
+pub const CREATE_CUSTOM_FIELD: &str = "create_custom_field";
+pub const UPDATE_CUSTOM_FIELD: &str = "update_custom_field";
+pub const DELETE_CUSTOM_FIELD: &str = "delete_custom_field";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -33,6 +37,10 @@ pub const OP_LAUNCH_RETROACTIVE: &str = "plannedTasks.launchRetroactive";
 pub const OP_HISTORY_LIST: &str = "history.list";
 pub const OP_TOTALS_PERIOD: &str = "totals.period";
 pub const OP_TOTALS_WEEK: &str = "totals.week";
+pub const OP_CUSTOM_FIELDS_LIST: &str = "customFields.list";
+pub const OP_CUSTOM_FIELDS_CREATE: &str = "customFields.create";
+pub const OP_CUSTOM_FIELDS_UPDATE: &str = "customFields.update";
+pub const OP_CUSTOM_FIELDS_DELETE: &str = "customFields.delete";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -79,6 +87,24 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
     // tool só mapeia, e a escolha entre período e semana fica explícita no nome.
     (GET_TOTALS, &[pass_through(OP_TOTALS_PERIOD)]),
     (GET_WEEK_TOTALS, &[pass_through(OP_TOTALS_WEEK)]),
+    // A lista vai numa chave: `structuredContent` tem de ser objeto.
+    (
+        LIST_CUSTOM_FIELDS,
+        &[under("customFields", OP_CUSTOM_FIELDS_LIST)],
+    ),
+    (
+        CREATE_CUSTOM_FIELD,
+        &[pass_through(OP_CUSTOM_FIELDS_CREATE)],
+    ),
+    (
+        UPDATE_CUSTOM_FIELD,
+        &[pass_through(OP_CUSTOM_FIELDS_UPDATE)],
+    ),
+    // O TS responde 204 sem corpo: `call_single` devolve `{}` para corpo nulo.
+    (
+        DELETE_CUSTOM_FIELD,
+        &[pass_through(OP_CUSTOM_FIELDS_DELETE)],
+    ),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

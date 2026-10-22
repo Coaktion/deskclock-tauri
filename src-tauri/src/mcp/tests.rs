@@ -147,10 +147,13 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
     assert_eq!(
         names,
         [
+            "create_custom_field",
+            "delete_custom_field",
             "get_status",
             "get_totals",
             "get_week_totals",
             "list_catalog",
+            "list_custom_fields",
             "list_planned_tasks",
             "list_tasks",
             "log_past_task",
@@ -161,12 +164,13 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "start_planned_task",
             "start_task",
             "stop_task",
+            "update_custom_field",
         ]
     );
 }
 
 #[tokio::test]
-async fn anotacoes_separam_leitura_de_escrita_e_nenhuma_e_destrutiva() {
+async fn anotacoes_separam_leitura_de_escrita_e_so_a_exclusao_de_campo_e_destrutiva() {
     let (state, _) = fake_state(true, ok_responder);
     // (tool, readOnly, idempotent, openWorld) — idempotente = repetir não muda
     // mais nada: a segunda pausa, retomada, parada ou Play da planejada só erra.
@@ -187,6 +191,10 @@ async fn anotacoes_separam_leitura_de_escrita_e_nenhuma_e_destrutiva() {
         ("plan_task", false, Some(false), false),
         ("log_past_task", false, Some(false), false),
         ("log_planned_task", false, Some(true), false),
+        ("list_custom_fields", true, None, false),
+        ("create_custom_field", false, Some(false), false),
+        ("update_custom_field", false, Some(true), false),
+        ("delete_custom_field", false, Some(true), false),
     ];
     let tools = list_tools(state).await;
     for (name, read_only, idempotent, open_world) in expected {
@@ -195,7 +203,9 @@ async fn anotacoes_separam_leitura_de_escrita_e_nenhuma_e_destrutiva() {
         assert_eq!(annotations["readOnlyHint"], json!(read_only), "{tool}");
         assert_eq!(annotations["openWorldHint"], json!(open_world), "{tool}");
         if !read_only {
-            assert_eq!(annotations["destructiveHint"], json!(false), "{tool}");
+            // Só a exclusão de campo apaga algo que o usuário escolheu guardar.
+            let destructive = *name == "delete_custom_field";
+            assert_eq!(annotations["destructiveHint"], json!(destructive), "{tool}");
             assert_eq!(annotations["idempotentHint"], json!(idempotent), "{tool}");
         }
     }
@@ -312,6 +322,21 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
     );
     assert_eq!(keys(&schema("get_totals")), ["from", "to", "workspaceId"]);
     assert_eq!(keys(&schema("get_week_totals")), ["date", "workspaceId"]);
+    assert!(keys(&schema("list_custom_fields")).is_empty());
+    let create = schema("create_custom_field");
+    assert_eq!(keys(&create), ["label", "optionLabels", "type"]);
+    assert_eq!(sorted(&create["required"]), ["label", "type"]);
+    assert_eq!(
+        create["properties"]["type"]["enum"],
+        json!(["text", "multiline", "select", "checkbox"]),
+        "{create}"
+    );
+    let update = schema("update_custom_field");
+    assert_eq!(keys(&update), ["archived", "id", "label", "optionLabels"]);
+    assert_eq!(sorted(&update["required"]), ["id"]);
+    let delete = schema("delete_custom_field");
+    assert_eq!(keys(&delete), ["id"]);
+    assert_eq!(sorted(&delete["required"]), ["id"]);
     for read_only in ["list_tasks", "get_totals", "get_week_totals"] {
         assert!(
             schema(read_only)
@@ -333,6 +358,8 @@ async fn esquemas_das_tools_que_criam_tarefa_saem_planos() {
         "plan_task",
         "log_past_task",
         "log_planned_task",
+        "create_custom_field",
+        "update_custom_field",
     ] {
         let schema = tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].to_string();
         for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
@@ -534,6 +561,10 @@ fn task_responder(op: &str) -> (u16, Value) {
             200,
             json!({ "weekStart": "2026-09-14", "totalSeconds": 60 }),
         ),
+        "customFields.list" => (200, json!([{ "id": "f1", "type": "select" }])),
+        "customFields.create" => (201, json!({ "id": "f1", "label": "Etapa" })),
+        "customFields.update" => (200, json!({ "id": "f1", "archived": true })),
+        "customFields.delete" => (204, Value::Null),
         _ => (201, json!({ "id": "t1", "status": "running" })),
     }
 }
@@ -1014,4 +1045,118 @@ async fn get_week_totals_repassa_a_data_e_devolve_o_corpo_como_veio() {
 
     let (_, calls) = forwarded("get_week_totals", json!({})).await;
     assert_eq!(calls[0].1, json!({ "date": null, "workspaceId": null }));
+}
+
+#[tokio::test]
+async fn list_custom_fields_manda_params_vazios_e_embrulha_a_lista() {
+    let (result, calls) = forwarded("list_custom_fields", json!({})).await;
+    assert_eq!(calls, [("customFields.list".to_string(), json!({}))]);
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "customFields": [{ "id": "f1", "type": "select" }] })
+    );
+}
+
+#[tokio::test]
+async fn create_custom_field_repassa_o_corpo_so_com_os_campos_enviados() {
+    let (result, calls) = forwarded(
+        "create_custom_field",
+        json!({ "label": "Etapa", "type": "select", "optionLabels": ["A", "B"] }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "customFields.create".to_string(),
+            json!({ "body": { "label": "Etapa", "type": "select", "optionLabels": ["A", "B"] } })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "id": "f1", "label": "Etapa" })
+    );
+
+    let (_, calls) = forwarded(
+        "create_custom_field",
+        json!({ "label": "Nota", "type": "text" }),
+    )
+    .await;
+    assert_eq!(
+        calls[0].1,
+        json!({ "body": { "label": "Nota", "type": "text" } })
+    );
+}
+
+#[tokio::test]
+async fn create_custom_field_com_tipo_desconhecido_vira_is_error_sem_chamar_a_ponte() {
+    let (state, calls) = fake_state(true, task_responder);
+    let result = call_tool(
+        state,
+        "create_custom_field",
+        json!({ "label": "X", "type": "date" }),
+    )
+    .await;
+    assert_eq!(result["isError"], json!(true), "{result}");
+    assert!(calls.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn update_custom_field_repassa_o_id_fora_do_corpo() {
+    let (result, calls) = forwarded(
+        "update_custom_field",
+        json!({ "id": "f1", "label": "Fase", "optionLabels": ["B", "A"], "archived": false }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "customFields.update".to_string(),
+            json!({ "id": "f1", "body": { "label": "Fase", "optionLabels": ["B", "A"], "archived": false } })
+        )]
+    );
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "id": "f1", "archived": true })
+    );
+
+    // Só o id: corpo vazio, o TS preserva tudo.
+    let (_, calls) = forwarded("update_custom_field", json!({ "id": "f1" })).await;
+    assert_eq!(calls[0].1, json!({ "id": "f1", "body": {} }));
+}
+
+#[tokio::test]
+async fn update_e_delete_custom_field_sem_id_viram_is_error_sem_chamar_a_ponte() {
+    for tool in ["update_custom_field", "delete_custom_field"] {
+        let (state, calls) = fake_state(true, task_responder);
+        let result = call_tool(state, tool, json!({})).await;
+        assert_eq!(result["isError"], json!(true), "{tool}: {result}");
+        assert!(calls.lock().unwrap().is_empty(), "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn delete_custom_field_repassa_o_id_e_devolve_objeto_vazio_no_204() {
+    let (result, calls) = forwarded("delete_custom_field", json!({ "id": "f1" })).await;
+    assert_eq!(
+        calls,
+        [("customFields.delete".to_string(), json!({ "id": "f1" }))]
+    );
+    assert_eq!(result["structuredContent"], json!({}));
+}
+
+#[tokio::test]
+async fn delete_custom_field_inexistente_vira_is_error_com_a_mensagem() {
+    fn not_found(_: &str) -> (u16, Value) {
+        (
+            404,
+            json!({ "error": "Campo personalizado 'f9' não encontrado" }),
+        )
+    }
+    let (state, _) = fake_state(true, not_found);
+    let result = call_tool(state, "delete_custom_field", json!({ "id": "f9" })).await;
+    assert_eq!(result["isError"], json!(true));
+    assert_eq!(
+        error_text(&result),
+        "Campo personalizado 'f9' não encontrado"
+    );
 }

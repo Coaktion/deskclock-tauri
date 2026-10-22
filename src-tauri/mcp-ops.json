@@ -15,7 +15,11 @@
     "plannedTasks.launchRetroactive": "log_planned_task",
     "history.list": "list_tasks",
     "totals.period": "get_totals",
-    "totals.week": "get_week_totals"
+    "totals.week": "get_week_totals",
+    "customFields.list": "list_custom_fields",
+    "customFields.create": "create_custom_field",
+    "customFields.update": "update_custom_field",
+    "customFields.delete": "delete_custom_field"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",
@@ -45,10 +49,6 @@
     "categories.delete": "destrutiva, fora da v1",
     "categories.import": "CRUD de catálogo fora da v1",
     "categories.deleteMany": "destrutiva, fora da v1",
-    "customFields.list": "campos personalizados fora da v1",
-    "customFields.create": "campos personalizados fora da v1",
-    "customFields.update": "campos personalizados fora da v1",
-    "customFields.delete": "campos personalizados fora da v1",
     "plannedTasks.get": "list_planned_tasks já devolve cada planejada, fora da v1",
     "plannedTasks.update": "edição do Planejamento fora da v1",
     "plannedTasks.delete": "destrutiva, fora da v1",

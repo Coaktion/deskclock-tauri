@@ -45,9 +45,13 @@ Todas do usuário, em 2026-09-18.
 | `list_tasks` | `history.list` | Filtros do Histórico |
 | `get_totals` | `totals.period` | Totais de um período |
 | `get_week_totals` | `totals.week` | Total da semana que contém `date`. Separada da `get_totals` na Fase 2: tool só mapeia, uma `op` cada |
+| `list_custom_fields` | `customFields.list` | O `id` do campo é a chave de `customValues`; opção de `select` tem `id` e `label` |
+| `create_custom_field` | `customFields.create` | `type` enum inline; `optionLabels` obrigatório só em `select` |
+| `update_custom_field` | `customFields.update` | `optionLabels` é a lista final; opção existente casa pelo rótulo e mantém o id |
+| `delete_custom_field` | `customFields.delete` | `destructiveHint: true`: apaga o valor em todas as tarefas; arquivar é a alternativa |
 
 Fora da v1: `tasks.cancel`, `tasks.toggle`, `tasks.updateActive`, edição/exclusão/unificação/movimentação do
-Histórico, CRUD de catálogo, workspaces e campos personalizados.
+Histórico, CRUD de catálogo e workspaces.
 
 **Desenho das tools:** nome de intenção (`log_past_task`, não `post_tasks`); descrição diz *quando* usar e
 o formato de data/hora; projeto e categoria por **nome** (a API já resolve dentro do workspace e devolve
@@ -271,3 +275,21 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 - **Índice:** linha nova na §5 do `CLAUDE.md` e aviso no topo de `api-local-nucleo.md` sobre
   classificar `op` nova no `mcp-ops.json`. `docs-internal/integracoes/` ficou de fora — é o contrato
   das integrações externas (Monday, Clockify, Google), e a API local não é uma.
+
+### Fase 4 (custom fields)
+
+- **Quatro tools, uma `op` cada** (`list/create/update/delete_custom_field`); `list_catalog` não
+  inclui os campos (tool separada), só cita `list_custom_fields` na descrição.
+- **Anotações.** `list`: `readOnlyHint`. `create`: `destructiveHint: false`, `idempotentHint: false`
+  (repetir cria outro, ou erra 409 pelo rótulo). `update`: `destructiveHint: false`,
+  `idempotentHint: true`. Todas `openWorldHint: false` (só emitem o evento local de campos).
+- **`delete_custom_field` é a primeira tool destrutiva do MCP**: `destructiveHint: true`. A
+  exclusão apaga o valor do campo em todas as tarefas do Histórico e do Planejamento, e a
+  descrição manda chamá-la só se o usuário pediu a exclusão e oferece o arquivamento
+  (`update_custom_field` com `archived: true`) como alternativa reversível. `idempotentHint: true`
+  pela definição do MCP: a segunda chamada só erra (404) e não muda nada.
+- **Resultados.** `list` embrulha em `{ customFields: [...] }`. O `delete` responde 204 sem corpo e
+  a tool devolve `{}` (o `structuredContent` tem de ser objeto).
+- **`update`** manda `{ id, body }` com só os campos enviados (`{}` se só há `id`); o tipo do
+  campo não muda.
+- `customValues` continua fora do `start_task`/`plan_task`/`log_past_task` — muda na próxima fase.
