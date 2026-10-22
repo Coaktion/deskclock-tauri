@@ -15,7 +15,7 @@ import { ConflictError, NotFoundError } from "../errors";
 import { loadCatalogNames, plannedTaskDto, taskDto, toPlannedTaskDto } from "../dto";
 import { assertDate } from "../period";
 import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "../resolve";
-import { parseInstant } from "../taskInput";
+import { parseInstant, resolveCustomValues } from "../taskInput";
 import type { LocalApiDeps, LocalApiHandler, LocalApiParams } from "../types";
 
 interface PlannedTaskBody {
@@ -134,7 +134,7 @@ export const createPlannedTaskHandler: LocalApiHandler = async (deps, params) =>
       sortOrder: body.sortOrder ?? DEFAULT_SORT_ORDER,
       startTime: body.startTime ?? undefined,
       endTime: body.endTime ?? undefined,
-      customValues: body.customValues ?? {},
+      customValues: (await resolveCustomValues(deps, body.customValues)) ?? {},
     },
     deps.nowISO()
   );
@@ -144,7 +144,7 @@ export const createPlannedTaskHandler: LocalApiHandler = async (deps, params) =>
 
 // Campo ausente preserva; `null` explícito remove. Sem essa distinção, editar
 // pela API uma planejada importada apagava o horário dela (defeito 6 da spec).
-function keepUnlessSent<K extends "startTime" | "endTime" | "customValues">(
+function keepUnlessSent<K extends "startTime" | "endTime">(
   body: PlannedTaskBody,
   existing: PlannedTask,
   key: K,
@@ -152,6 +152,11 @@ function keepUnlessSent<K extends "startTime" | "endTime" | "customValues">(
 ): PlannedTask[K] {
   if (!(key in body)) return existing[key];
   return (body[key] ?? cleared) as PlannedTask[K];
+}
+
+async function customValuesPatch(deps: LocalApiDeps, body: PlannedTaskBody, existing: PlannedTask) {
+  if (!("customValues" in body)) return existing.customValues;
+  return (await resolveCustomValues(deps, body.customValues)) ?? {};
 }
 
 export const updatePlannedTaskHandler: LocalApiHandler = async (deps, params) => {
@@ -172,7 +177,7 @@ export const updatePlannedTaskHandler: LocalApiHandler = async (deps, params) =>
     sortOrder: body.sortOrder ?? existing.sortOrder,
     startTime: keepUnlessSent(body, existing, "startTime", undefined),
     endTime: keepUnlessSent(body, existing, "endTime", undefined),
-    customValues: keepUnlessSent(body, existing, "customValues", {}),
+    customValues: await customValuesPatch(deps, body, existing),
   });
   await deps.notifyPlannedTasksChanged();
   return { status: 200, body: await plannedTaskDto(deps, updated) };

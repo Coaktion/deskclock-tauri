@@ -420,7 +420,8 @@ pub async fn post_planned_task(State(state): State<Arc<ApiState>>, body: Bytes) 
         content = UpdatePlannedTaskRequest,
         description = "Substitui os campos atualizáveis da tarefa planejada. `completedDates` é preservado; \
             `sortOrder`, `startTime`, `endTime` e `customValues` ausentes também; \
-            `null` em `startTime`, `endTime` ou `customValues` limpa o campo.",
+            `null` em `startTime`, `endTime` ou `customValues` limpa o campo. \
+            `customValues` é validado: id de campo desconhecido ou valor inválido devolve 400; `select` aceita id ou rótulo da opção, `checkbox` aceita 1/true/Sim.",
         example = json!({
             "name": "Daily standup",
             "billable": false,

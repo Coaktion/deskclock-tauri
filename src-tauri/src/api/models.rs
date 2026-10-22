@@ -84,6 +84,7 @@ pub struct StartTaskRequest {
     #[serde(default)]
     pub category_name: Option<String>,
     pub billable: bool,
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }
@@ -114,6 +115,7 @@ pub struct ToggleTaskRequest {
     /// Padrão: true.
     #[serde(default)]
     pub billable: Option<bool>,
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }
@@ -396,6 +398,7 @@ pub struct CreatePlannedTaskRequest {
     pub start_time: Option<String>,
     #[serde(default)]
     pub end_time: Option<String>,
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }
@@ -433,7 +436,7 @@ pub struct UpdatePlannedTaskRequest {
     /// Ausente = preservado; `null` remove.
     #[serde(default)]
     pub end_time: Option<String>,
-    /// Ausente = preservado; `null` limpa.
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito. Ausente = preservado; `null` limpa.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }
@@ -484,6 +487,7 @@ pub struct CreateTaskRequest {
     pub start_time: String,
     /// Instante ISO 8601 com hora; ao menos 1 minuto depois do início.
     pub end_time: String,
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }
@@ -509,6 +513,7 @@ pub struct UpdateTaskRequest {
     pub start_time: Option<String>,
     #[serde(default)]
     pub end_time: Option<String>,
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }
@@ -532,6 +537,7 @@ pub struct UpdateActiveTaskRequest {
     /// Instante ISO 8601, não futuro.
     #[serde(default)]
     pub start_time: Option<String>,
+    /// Valores dos campos personalizados, por id do campo. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
     #[serde(default)]
     pub custom_values: Option<HashMap<String, String>>,
 }

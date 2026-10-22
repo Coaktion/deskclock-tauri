@@ -10,6 +10,7 @@ import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "..
 import {
   assertNotActive,
   buildTaskEditPatch,
+  resolveCustomValues,
   findTaskOrThrow,
   parseInstant,
   secondsBetween,
@@ -91,7 +92,7 @@ export const createHistoryTask: LocalApiHandler = async (deps, params) => {
       startTime,
       endTime,
       durationSeconds,
-      customValues: body.customValues ?? undefined,
+      customValues: await resolveCustomValues(deps, body.customValues),
     },
     deps.nowISO()
   );

@@ -1,5 +1,6 @@
 import type { Task } from "@domain/entities/Task";
 import type { CustomValues } from "@domain/entities/CustomField";
+import { normalizeCustomValues } from "@domain/usecases/customFields/normalizeCustomValues";
 import { DomainError } from "@shared/errors";
 import { ConflictError, NotFoundError } from "./errors";
 import { billableForCategoryChange, resolveCatalogPatch, type CatalogRefs } from "./resolve";
@@ -36,6 +37,20 @@ export function assertNotActive(task: Task) {
   }
 }
 
+/**
+ * `customValues` do corpo → o que se grava. `null` limpa (`{}`); `undefined`
+ * segue `undefined` para quem distingue "não enviado". Os valores passam pelo
+ * mesmo codec da UI, e id de campo ou valor inválido vira 400.
+ */
+export async function resolveCustomValues(
+  deps: LocalApiDeps,
+  values: CustomValues | null | undefined
+): Promise<CustomValues | undefined> {
+  if (values === undefined) return undefined;
+  if (values === null) return {};
+  return normalizeCustomValues(values, await deps.customFieldRepo.findAll());
+}
+
 export interface TaskEditBody extends CatalogRefs {
   name?: string | null;
   billable?: boolean | null;
@@ -53,6 +68,8 @@ export async function buildTaskEditPatch(deps: LocalApiDeps, task: Task, body: T
     ...(body.name !== undefined && { name: body.name?.trim() || null }),
     ...catalog,
     ...(await billableForCategoryChange(deps, task.workspaceId, body, catalog, task.categoryId)),
-    ...(body.customValues !== undefined && { customValues: body.customValues ?? {} }),
+    ...(body.customValues !== undefined && {
+      customValues: await resolveCustomValues(deps, body.customValues),
+    }),
   };
 }

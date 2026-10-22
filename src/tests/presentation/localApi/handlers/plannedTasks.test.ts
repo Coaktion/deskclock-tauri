@@ -3,7 +3,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Task } from "@domain/entities/Task";
 import { dispatchLocalApiRequest } from "@presentation/localApi/dispatch";
 import { localISO } from "../../../helpers/localTime";
-import { makeDeps, makePlanned, makeTask, TODAY, WS_ATIVO, WS_OUTRO } from "../fakeDeps";
+import { makeDeps, makePlanned, makeTask, NOW, TODAY, WS_ATIVO, WS_OUTRO } from "../fakeDeps";
 
 const BODY_MINIMO = {
   name: "Daily",
@@ -79,6 +79,17 @@ describe("plannedTasks.list", () => {
 describe("plannedTasks.create", () => {
   it("grava no workspace ativo com sortOrder 0, como o app, e avisa as janelas", async () => {
     const deps = makeDeps();
+    deps.customFieldRepo.findAll.mockResolvedValue([
+      {
+        id: "f",
+        label: "F",
+        type: "text",
+        options: [],
+        sortOrder: 0,
+        archived: false,
+        createdAt: NOW,
+      },
+    ]);
 
     const result = await dispatchLocalApiRequest(deps, "plannedTasks.create", {
       body: {
