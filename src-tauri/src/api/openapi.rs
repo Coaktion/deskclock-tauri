@@ -66,6 +66,7 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         handlers::get_planned_task,
         handlers::post_planned_task,
         handlers::put_planned_task,
+        handlers::patch_planned_task,
         handlers::delete_planned_task,
         handlers::post_planned_task_complete,
         handlers::delete_planned_task_complete,
@@ -88,6 +89,7 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         models::PlannedTaskActionDto,
         models::CreatePlannedTaskRequest,
         models::UpdatePlannedTaskRequest,
+        models::PatchPlannedTaskRequest,
         models::PlannedTaskCompleteRequest,
         models::LaunchPlannedTaskRetroactiveRequest,
         models::CreateProjectRequest,
@@ -131,7 +133,7 @@ unificação e mudança de workspace. Tarefa em execução ou pausada = 409."),
 `workspaceId` ausente = workspace ativo; id de outro workspace = 404."),
         (name = "custom-fields", description = "Campos personalizados (globais, sem workspace)"),
         (name = "planned-tasks", description = "Tarefas planejadas: listagem por dia, período ou todas; CRUD; \
-conclusão por dia; duplicar e lançar retroativo. Planejada por id vale em qualquer workspace.")
+edição completa (PUT) ou parcial (PATCH); conclusão por dia; duplicar e lançar retroativo. Planejada por id vale em qualquer workspace.")
     )
 )]
 pub struct ApiDoc;

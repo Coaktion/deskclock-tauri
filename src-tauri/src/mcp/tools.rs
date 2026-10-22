@@ -6,8 +6,8 @@ use crate::mcp::ops::{
     ops_of, OpCall, CREATE_CUSTOM_FIELD, DELETE_CUSTOM_FIELD, GET_STATUS, GET_TOTALS,
     GET_WEEK_TOTALS, LIST_CATALOG, LIST_CUSTOM_FIELDS, LIST_PLANNED_TASKS, LIST_TASKS,
     LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK,
-    SET_RUNNING_TASK_CUSTOM_VALUES, SET_TASK_CUSTOM_VALUES, START_PLANNED_TASK, START_TASK,
-    STOP_TASK, UPDATE_CUSTOM_FIELD,
+    SET_PLANNED_TASK_CUSTOM_VALUES, SET_RUNNING_TASK_CUSTOM_VALUES, SET_TASK_CUSTOM_VALUES,
+    START_PLANNED_TASK, START_TASK, STOP_TASK, UPDATE_CUSTOM_FIELD,
 };
 use crate::mcp::result::{body_or_error, success};
 use rmcp::{
@@ -318,6 +318,15 @@ pub struct SetRunningTaskCustomValuesArgs {
 #[serde(rename_all = "camelCase")]
 pub struct SetTaskCustomValuesArgs {
     /// Finished task id, from list_tasks.
+    pub id: String,
+    #[serde(flatten)]
+    pub values: SetRunningTaskCustomValuesArgs,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetPlannedTaskCustomValuesArgs {
+    /// Planned task id, from list_planned_tasks.
     pub id: String,
     #[serde(flatten)]
     pub values: SetRunningTaskCustomValuesArgs,
@@ -799,6 +808,35 @@ impl DeskClockMcp {
     ) -> CallToolResult {
         self.call_single(
             SET_TASK_CUSTOM_VALUES,
+            json!({ "id": args.id, "body": args.values }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "set_planned_task_custom_values",
+        description = "Set the custom field values of a planned task of the Planning; \
+            nothing else about it changes (name, schedule, project, actions stay). Get `id` \
+            from list_planned_tasks. The map you send REPLACES the planned task's whole map: \
+            to change one field, read the current values (list_planned_tasks) and send the \
+            complete map back; `{}` clears every value. Keys are field ids from \
+            list_custom_fields; values are plain strings (text, an option label or id for \
+            select, \"true\"/\"Sim\" for a checkbox). An unknown field id or an invalid \
+            value is an error. Starting or logging the planned task later copies these \
+            values to the task. Returns the planned task with its `customValues`.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_planned_task_custom_values(
+        &self,
+        Parameters(args): Parameters<SetPlannedTaskCustomValuesArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SET_PLANNED_TASK_CUSTOM_VALUES,
             json!({ "id": args.id, "body": args.values }),
         )
         .await

@@ -88,6 +88,7 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             "/planned-tasks/{id}",
             get(handlers::get_planned_task)
                 .put(handlers::put_planned_task)
+                .patch(handlers::patch_planned_task)
                 .delete(handlers::delete_planned_task),
         )
         .route(
@@ -236,6 +237,24 @@ mod tests {
             ),
             ("POST", "/planned-tasks/abc/start", "", "tasks.startPlanned"),
             (
+                "PATCH",
+                "/planned-tasks/abc",
+                r#"{"customValues":{"f":"x"}}"#,
+                "plannedTasks.patch",
+            ),
+            (
+                "PATCH",
+                "/planned-tasks/abc",
+                r#"{"startTime":null,"customValues":null,"actions":null}"#,
+                "plannedTasks.patch",
+            ),
+            (
+                "PUT",
+                "/planned-tasks/abc",
+                r#"{"name":"a","billable":true,"scheduleType":"recurring"}"#,
+                "plannedTasks.update",
+            ),
+            (
                 "POST",
                 "/planned-tasks/abc/launch-retroactive",
                 "",
@@ -252,6 +271,15 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
             assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn patch_da_planejada_com_tipo_errado_e_400_sem_chegar_a_ponte() {
+        for body in ["", r#"{"name":5}"#, r#"{"recurringDays":"seg"}"#] {
+            let (status, got) = send("PATCH", "/planned-tasks/abc", body).await;
+            assert_eq!(got, None, "{body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         }
     }
 

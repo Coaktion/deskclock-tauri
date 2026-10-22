@@ -92,7 +92,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Workspaces | `GET/POST /workspaces` · `PUT/DELETE /workspaces/{id}` (DELETE com `{mode: "move"\|"delete", toWorkspaceId?}`) · `GET/PUT /workspaces/active` (409 com tarefa em execução) |
 | Tarefa em execução | `POST /tasks/start\|pause\|resume\|stop\|toggle\|cancel` · `PATCH /tasks/active` · `POST /planned-tasks/{id}/start` |
 | Histórico | `GET /tasks?from&to&name&projectId&categoryId&billable` · `GET/PUT/DELETE /tasks/{id}` · `POST /tasks` (retroativo) · `POST /tasks/delete` · `PUT /tasks/{id}/billable` (grupo, §6.2) · `POST /tasks/merge` · `POST /tasks/move` |
-| Planejadas | as atuais + `workspaceId`, `startTime`/`endTime`, `customValues`, `label` da ação · `GET ?from&to` · `POST /{id}/duplicate` · `POST /{id}/launch-retroactive` (reordenar ficou de fora — §6, Fase 3) |
+| Planejadas | as atuais + `workspaceId`, `startTime`/`endTime`, `customValues`, `label` da ação · `GET ?from&to` · `PATCH /{id}` (edição parcial, op `plannedTasks.patch`; o `PUT` segue substituindo tudo) · `POST /{id}/duplicate` · `POST /{id}/launch-retroactive` (reordenar ficou de fora — §6, Fase 3) |
 | Projetos · categorias | `GET/POST` · `PUT/DELETE /{id}` · `POST /import` · `POST /delete` · `GET/PUT /projects/{id}/categories` |
 | Campos personalizados | `GET/POST /custom-fields` · `PUT/DELETE /custom-fields/{id}` |
 
@@ -141,6 +141,15 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
   `period_start` NULL volta a aparecer.
 - `Bridge.ready` volta a `false` no `on_page_load` (`Started`) da janela `main` (`lib.rs`): recarregar o webview
   dá 503 até o ouvinte novo avisar prontidão, em vez de 504.
+
+**`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
+agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.
+Regras em `patchPlannedTaskHandler`: ausente preserva; `null` limpa projeto, categoria, `startTime`/`endTime`,
+`customValues` (`{}`) e `actions` (`[]`); `name` nulo ou vazio e `scheduleType` nulo → 400. Trocar `scheduleType` exige
+os campos do novo tipo (`scheduleDate`; `recurringDays` não vazio; `periodStart` e `periodEnd`, todos YYYY-MM-DD) e
+zera os do anterior, como o formulário grava; campo de agendamento de outro tipo, ou o do tipo atual em `null`, → 400
+— regra só do `PATCH`, para a planejada não ficar sem dia. Projeto/categoria/billable como o `PUT /tasks/{id}`
+(`resolveCatalogPatch` + `billableForCategoryChange`); `customValues` por `resolveCustomValues`.
 
 **Decisões da Fase 3 — do usuário, 2026-09-15.** As regras vivem em `src/presentation/localApi/handlers/plannedTasks.ts`.
 - **Reordenar não é exposto.** A UI não reordena planejadas: `reorder` do repositório não tem chamador em

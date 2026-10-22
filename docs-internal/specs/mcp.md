@@ -51,6 +51,7 @@ Todas do usuário, em 2026-09-18.
 | `delete_custom_field` | `customFields.delete` | `destructiveHint: true`: apaga o valor em todas as tarefas; arquivar é a alternativa |
 | `set_running_task_custom_values` | `tasks.updateActive` | Só `customValues` no corpo; o mapa enviado **substitui** o da tarefa. Estreita de propósito (ver Fase 5) |
 | `set_task_custom_values` | `history.update` | Idem, para um registro concluído do Histórico (`id` de `list_tasks`) |
+| `set_planned_task_custom_values` | `plannedTasks.patch` | Idem, para uma planejada (`id` de `list_planned_tasks`). Usa o `PATCH /planned-tasks/{id}`; o `plannedTasks.update` (PUT) segue excluído |
 
 Fora da v1: `tasks.cancel`, `tasks.toggle`, edição (exceto dos valores personalizados), exclusão/unificação/movimentação do
 Histórico, edição do Planejamento, CRUD de catálogo e workspaces.
@@ -318,10 +319,11 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   descrição: `set_running_task_custom_values` leva os valores também à planejada de origem
   (`applyRunningTaskEditToPlanned`).
 - **Resultado:** `pass_through` — o corpo é o `TaskDto`.
-- **Fica de fora: `set_planned_task_custom_values`.** `plannedTasks.update` **não** faz edição parcial:
-  exige `name` e `scheduleType` (`scheduleType(body.scheduleType)` lança sem ele) e regrava
-  `scheduleDate`, `recurringDays`, `periodStart/End` e `actions` com `null`/`[]` quando ausentes
-  (só `startTime`/`endTime`/`customValues`/`billable`/`sortOrder` preservam). Uma tool que mandasse só
-  `customValues` daria erro; uma que montasse o corpo completo inventaria regra no adaptador. Para
-  entrar, o handler TS precisa ganhar edição parcial (decisão do usuário). `plannedTasks.update`
-  segue em `excluded`, com esse motivo.
+- **`set_planned_task_custom_values` (histórico, resolvido em 2026-10-22).** Ficou de fora de início:
+  `plannedTasks.update` não fazia edição parcial — exige `name` e `scheduleType` e regrava `scheduleDate`,
+  `recurringDays`, `periodStart/End` e `actions` com `null`/`[]` quando ausentes —, então uma tool que mandasse só
+  `customValues` daria erro, e uma que montasse o corpo completo inventaria regra no adaptador. Decisão do usuário:
+  nova op `plannedTasks.patch` (`PATCH /planned-tasks/{id}`, edição parcial; ver `api-local-nucleo.md` §4), com o
+  `PUT` intacto. A tool chama o `patch` com `{ id, body: { customValues } }`, mesmo desenho, args (`id` +
+  `SetRunningTaskCustomValuesArgs` achatado) e anotações das outras duas; `plannedTasks.update` segue em `excluded`
+  como "edição completa; o MCP usa plannedTasks.patch".

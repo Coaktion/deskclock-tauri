@@ -21,7 +21,8 @@
     "customFields.update": "update_custom_field",
     "customFields.delete": "delete_custom_field",
     "tasks.updateActive": "set_running_task_custom_values",
-    "history.update": "set_task_custom_values"
+    "history.update": "set_task_custom_values",
+    "plannedTasks.patch": "set_planned_task_custom_values"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",
@@ -50,7 +51,7 @@
     "categories.import": "CRUD de catálogo fora da v1",
     "categories.deleteMany": "destrutiva, fora da v1",
     "plannedTasks.get": "list_planned_tasks já devolve cada planejada, fora da v1",
-    "plannedTasks.update": "exige name e scheduleType e regrava o agendamento: não há edição parcial só de customValues",
+    "plannedTasks.update": "edição completa; o MCP usa plannedTasks.patch",
     "plannedTasks.delete": "destrutiva, fora da v1",
     "plannedTasks.complete": "edição do Planejamento fora da v1",
     "plannedTasks.uncomplete": "edição do Planejamento fora da v1",

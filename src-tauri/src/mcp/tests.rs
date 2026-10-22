@@ -161,6 +161,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "pause_task",
             "plan_task",
             "resume_task",
+            "set_planned_task_custom_values",
             "set_running_task_custom_values",
             "set_task_custom_values",
             "start_planned_task",
@@ -200,6 +201,7 @@ async fn anotacoes_separam_leitura_de_escrita_e_so_a_exclusao_de_campo_e_destrut
         // Editar valor não envia a integração: o envio por tarefa só roda no `stop`.
         ("set_running_task_custom_values", false, Some(true), false),
         ("set_task_custom_values", false, Some(true), false),
+        ("set_planned_task_custom_values", false, Some(true), false),
     ];
     let tools = list_tools(state).await;
     for (name, read_only, idempotent, open_world) in expected {
@@ -356,6 +358,9 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
     let set = schema("set_task_custom_values");
     assert_eq!(keys(&set), ["customValues", "id"]);
     assert_eq!(sorted(&set["required"]), ["customValues", "id"]);
+    let planned_set = schema("set_planned_task_custom_values");
+    assert_eq!(keys(&planned_set), ["customValues", "id"]);
+    assert_eq!(sorted(&planned_set["required"]), ["customValues", "id"]);
     for read_only in ["list_tasks", "get_totals", "get_week_totals"] {
         assert!(
             schema(read_only)
@@ -381,6 +386,7 @@ async fn esquemas_das_tools_que_criam_tarefa_saem_planos() {
         "update_custom_field",
         "set_running_task_custom_values",
         "set_task_custom_values",
+        "set_planned_task_custom_values",
     ] {
         let schema = tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].to_string();
         for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
@@ -588,6 +594,7 @@ fn task_responder(op: &str) -> (u16, Value) {
         "customFields.delete" => (204, Value::Null),
         "tasks.updateActive" => (200, json!({ "id": "t1", "customValues": { "f1": "A" } })),
         "history.update" => (200, json!({ "id": "t2", "customValues": {} })),
+        "plannedTasks.patch" => (200, json!({ "id": "p1", "customValues": {} })),
         _ => (201, json!({ "id": "t1", "status": "running" })),
     }
 }
@@ -1287,11 +1294,33 @@ async fn set_task_custom_values_manda_o_id_fora_do_corpo() {
 }
 
 #[tokio::test]
+async fn set_planned_task_custom_values_usa_o_patch_com_o_id_fora_do_corpo() {
+    let (result, calls) = forwarded(
+        "set_planned_task_custom_values",
+        json!({ "id": "p1", "customValues": { "f1": "A" } }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "plannedTasks.patch".to_string(),
+            json!({ "id": "p1", "body": { "customValues": { "f1": "A" } } })
+        )]
+    );
+    assert_eq!(result["structuredContent"]["id"], json!("p1"));
+}
+
+#[tokio::test]
 async fn set_custom_values_sem_argumento_obrigatorio_vira_is_error_sem_chamar_a_ponte() {
     for (tool, args) in [
         ("set_running_task_custom_values", json!({})),
         ("set_task_custom_values", json!({ "customValues": {} })),
         ("set_task_custom_values", json!({ "id": "t2" })),
+        (
+            "set_planned_task_custom_values",
+            json!({ "customValues": {} }),
+        ),
+        ("set_planned_task_custom_values", json!({ "id": "p1" })),
     ] {
         let (state, calls) = fake_state(true, task_responder);
         let result = call_tool(state, tool, args).await;

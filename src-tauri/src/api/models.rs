@@ -441,6 +441,60 @@ pub struct UpdatePlannedTaskRequest {
     pub custom_values: Option<HashMap<String, String>>,
 }
 
+/// Edição parcial de uma planejada: campo ausente é preservado. `null` limpa
+/// `projectId`/`projectName`, `categoryId`/`categoryName`, `startTime`, `endTime`,
+/// `customValues` (vira `{}`) e `actions` (vira `[]`); em `name` e `scheduleType`
+/// é recusado (400). Os `Option` simples bastam: o corpo vai à ponte como JSON
+/// cru, e é o TS que distingue ausente de `null`.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PatchPlannedTaskRequest {
+    /// Não aceita `null` nem texto vazio.
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub project_name: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    /// Ausente ao trocar a categoria = `defaultBillable` da nova.
+    #[serde(default)]
+    pub billable: Option<bool>,
+    /// "specific_date", "recurring" ou "period". Trocar o tipo exige os campos dele
+    /// (`scheduleDate`; `recurringDays` não vazio; `periodStart` e `periodEnd`) e limpa os do anterior.
+    #[serde(default)]
+    pub schedule_type: Option<String>,
+    /// YYYY-MM-DD, só em `specific_date`.
+    #[serde(default)]
+    pub schedule_date: Option<String>,
+    /// 0=Dom..6=Sáb, só em `recurring`.
+    #[serde(default)]
+    pub recurring_days: Option<Vec<i64>>,
+    /// YYYY-MM-DD, só em `period`.
+    #[serde(default)]
+    pub period_start: Option<String>,
+    /// YYYY-MM-DD, só em `period`.
+    #[serde(default)]
+    pub period_end: Option<String>,
+    /// Lista final de ações; `null` remove todas.
+    #[serde(default)]
+    pub actions: Option<Vec<PlannedTaskActionDto>>,
+    #[serde(default)]
+    pub sort_order: Option<i64>,
+    /// "HH:MM"; `null` remove.
+    #[serde(default)]
+    pub start_time: Option<String>,
+    /// "HH:MM"; `null` remove.
+    #[serde(default)]
+    pub end_time: Option<String>,
+    /// Valores dos campos personalizados, por id do campo; o mapa enviado **substitui** o atual e `null` ou `{}` limpa. Validados e normalizados como na UI: id de campo desconhecido, ou valor inválido, devolve 400 e nada é gravado. `select` aceita o id da opção ou o rótulo (sem diferenciar caixa); `checkbox` aceita `1`, `true` ou `Sim` para marcar e vazio, `false`, `0` ou `Não` para desmarcar (a chave deixa de existir); `text` e `multiline` têm as pontas aparadas. Valor vazio equivale a sem valor. Campo arquivado é aceito.
+    #[serde(default)]
+    pub custom_values: Option<HashMap<String, String>>,
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlannedTaskCompleteRequest {
