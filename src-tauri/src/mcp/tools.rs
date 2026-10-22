@@ -3,11 +3,12 @@
 
 use crate::api::bridge::Bridge;
 use crate::mcp::ops::{
-    ops_of, OpCall, CREATE_CUSTOM_FIELD, DELETE_CUSTOM_FIELD, GET_STATUS, GET_TOTALS,
-    GET_WEEK_TOTALS, LIST_CATALOG, LIST_CUSTOM_FIELDS, LIST_PLANNED_TASKS, LIST_TASKS,
-    LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK,
-    SET_PLANNED_TASK_CUSTOM_VALUES, SET_RUNNING_TASK_CUSTOM_VALUES, SET_TASK_CUSTOM_VALUES,
-    START_PLANNED_TASK, START_TASK, STOP_TASK, UPDATE_CUSTOM_FIELD,
+    ops_of, OpCall, CANCEL_TASK, COMPLETE_PLANNED_TASK, CREATE_CUSTOM_FIELD, DELETE_CUSTOM_FIELD,
+    DELETE_PLANNED_TASK, DUPLICATE_PLANNED_TASK, GET_STATUS, GET_TOTALS, GET_WEEK_TOTALS,
+    LIST_CATALOG, LIST_CUSTOM_FIELDS, LIST_PLANNED_TASKS, LIST_TASKS, LOG_PAST_TASK,
+    LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK, START_PLANNED_TASK, START_TASK,
+    STOP_TASK, UNCOMPLETE_PLANNED_TASK, UPDATE_CUSTOM_FIELD, UPDATE_PLANNED_TASK,
+    UPDATE_RUNNING_TASK, UPDATE_TASK,
 };
 use crate::mcp::result::{body_or_error, success};
 use rmcp::{
@@ -15,7 +16,7 @@ use rmcp::{
     model::{CallToolResult, Implementation, ServerCapabilities, ServerConfig},
     schemars, tool, tool_handler, tool_router, ServerHandler,
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -87,7 +88,7 @@ pub struct StopTaskArgs {
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
-pub struct StartPlannedTaskArgs {
+pub struct PlannedTaskIdArgs {
     /// Planned task id, from list_planned_tasks.
     pub id: String,
 }
@@ -129,6 +130,31 @@ pub enum ScheduleType {
     Period,
 }
 
+// Inline pelo mesmo motivo do `ScheduleType`.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum PlannedTaskActionType {
+    OpenUrl,
+    OpenFile,
+}
+
+/// Como o `PlannedTaskActionDto` da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub struct PlannedTaskAction {
+    /// `open_url` (a web address) or `open_file` (a file or folder path on the user's
+    /// machine).
+    #[serde(rename = "type")]
+    #[schemars(rename = "type")]
+    pub action_type: PlannedTaskActionType,
+    /// The URL or the path.
+    pub value: String,
+    /// Label shown on the chip. Omit to derive it from the value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlanTaskArgs {
@@ -162,6 +188,10 @@ pub struct PlanTaskArgs {
     /// to the start means it ends the next day.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub end_time: Option<String>,
+    /// Quick actions shown on the planned task's card: links or files the user opens
+    /// from it. Omit for none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actions: Option<Vec<PlannedTaskAction>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
@@ -304,32 +334,276 @@ pub struct CreateCustomFieldArgs {
     pub option_labels: Option<Vec<String>>,
 }
 
+/// Campo de edição parcial: `None` = ausente (o TS preserva), `Some(None)` = `null`
+/// explícito (o TS limpa, ou recusa onde limpar não vale). O serde, sozinho, lê
+/// `null` como ausente num `Option<Option<T>>`; o `present` mantém os dois.
+pub type Patch<T> = Option<Option<T>>;
+
+fn present<'de, D, T>(deserializer: D) -> Result<Patch<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
+
+// Projeto, categoria, faturamento e valores personalizados de uma edição: os
+// mesmos campos nas três tools de edição. Cada um vai ao TS como veio — ausente,
+// `null` ou valor —, como no repasse do corpo da REST.
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct SetRunningTaskCustomValuesArgs {
-    /// The complete map of custom field values for the task, replacing the current
-    /// one. Keys are field ids from list_custom_fields; values are plain strings
-    /// (text, an option label or id for select, "true"/"Sim" for a checkbox). `{}`
-    /// clears all values.
-    pub custom_values: HashMap<String, String>,
+pub struct EditFields {
+    /// New project id (from list_catalog); takes precedence over projectName.
+    /// null removes the project. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub project_id: Patch<String>,
+    /// New project by exact name (see list_catalog), in the task's own workspace.
+    /// null removes the project. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub project_name: Patch<String>,
+    /// New category id (from list_catalog); takes precedence over categoryName.
+    /// null removes the category. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub category_id: Patch<String>,
+    /// New category by exact name (see list_catalog), in the task's own workspace.
+    /// null removes the category. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub category_name: Patch<String>,
+    /// New billable value. Omit to keep it — except that changing the category
+    /// without sending billable applies the new category's `defaultBillable`, as
+    /// the app does; a billable sent always wins. null counts as omitted.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<bool>")]
+    pub billable: Patch<bool>,
+    /// The complete map of custom field values, REPLACING the current one: to change
+    /// one field, read the current `customValues` and send the whole map back. `{}`
+    /// or null clears every value; omit to keep them. Keys are field ids from
+    /// list_custom_fields; values are plain strings (text, an option label or id for
+    /// select, "true"/"Sim" for a checkbox). An unknown field id or an invalid value
+    /// is an error.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<HashMap<String, String>>")]
+    pub custom_values: Patch<HashMap<String, String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateRunningTaskArgs {
+    /// New task name. null or an empty string removes it. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub name: Patch<String>,
+    #[serde(flatten)]
+    pub fields: EditFields,
+    /// Corrected start instant: an ISO 8601 datetime with the user's UTC offset from
+    /// get_status (e.g. 2026-09-15T14:00:00-03:00); without an offset it is read as
+    /// the user's local time. Not in the future. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub start_time: Patch<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct SetTaskCustomValuesArgs {
+pub struct UpdateTaskArgs {
     /// Finished task id, from list_tasks.
     pub id: String,
     #[serde(flatten)]
-    pub values: SetRunningTaskCustomValuesArgs,
+    pub body: UpdateTaskBody,
+}
+
+/// O corpo da edição; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTaskBody {
+    /// New task name. null or an empty string removes it. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub name: Patch<String>,
+    #[serde(flatten)]
+    pub fields: EditFields,
+    /// New start: an ISO 8601 datetime with the user's UTC offset from get_status
+    /// (e.g. 2026-09-15T14:00:00-03:00); without an offset it is read as the user's
+    /// local time. Cannot be null. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub start_time: Patch<String>,
+    /// New end, same format as startTime; not before the start. Cannot be null. Omit
+    /// to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub end_time: Patch<String>,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct SetPlannedTaskCustomValuesArgs {
+pub struct UpdatePlannedTaskArgs {
     /// Planned task id, from list_planned_tasks.
     pub id: String,
     #[serde(flatten)]
-    pub values: SetRunningTaskCustomValuesArgs,
+    pub body: UpdatePlannedTaskBody,
+}
+
+/// O corpo do `PATCH`; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePlannedTaskBody {
+    /// New name; cannot be empty or null. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub name: Patch<String>,
+    #[serde(flatten)]
+    pub fields: EditFields,
+    /// New schedule type: `specific_date`, `recurring` or `period`; cannot be null.
+    /// Changing it requires the new type's fields in the same call (scheduleDate;
+    /// recurringDays; periodStart, with periodEnd optional) and clears the old type's.
+    /// Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<ScheduleType>")]
+    pub schedule_type: Patch<ScheduleType>,
+    /// The day, YYYY-MM-DD; only for `specific_date`. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub schedule_date: Patch<String>,
+    /// Weekdays, 0 = Sunday … 6 = Saturday, not empty; only for `recurring`. Omit to
+    /// keep them.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<Vec<u8>>")]
+    pub recurring_days: Patch<Vec<u8>>,
+    /// First day, YYYY-MM-DD; only for `period`. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub period_start: Patch<String>,
+    /// Last day (inclusive), YYYY-MM-DD; only for `period`. null makes the period
+    /// open-ended. Omit to keep it (or, when changing to `period`, to leave it open).
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub period_end: Patch<String>,
+    /// Scheduled start time of day, HH:MM (24h, local). null removes the fixed
+    /// time. Omit to keep it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub start_time: Patch<String>,
+    /// Scheduled end time of day, HH:MM (24h, local). null removes it. Omit to keep
+    /// it.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub end_time: Patch<String>,
+    /// The final list of quick actions (links or files opened from the card),
+    /// REPLACING the current one. `[]` or null removes all. Omit to keep them.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<Vec<PlannedTaskAction>>")]
+    pub actions: Patch<Vec<PlannedTaskAction>>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CompletePlannedTaskArgs {
+    /// Planned task id, from list_planned_tasks.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: CompletePlannedTaskBody,
+}
+
+/// O corpo da conclusão; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct CompletePlannedTaskBody {
+    /// The day to mark as done, YYYY-MM-DD. Omit for today. When retrying, send it
+    /// explicitly: a retry without it after midnight would target the next day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct UncompletePlannedTaskArgs {
+    /// Planned task id, from list_planned_tasks.
+    pub id: String,
+    /// The day to unmark, YYYY-MM-DD (one of its `completedDates`).
+    pub date: String,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -517,7 +791,7 @@ impl DeskClockMcp {
     )]
     async fn start_planned_task(
         &self,
-        Parameters(args): Parameters<StartPlannedTaskArgs>,
+        Parameters(args): Parameters<PlannedTaskIdArgs>,
     ) -> CallToolResult {
         self.call_single(START_PLANNED_TASK, json!({ "id": args.id }))
             .await
@@ -759,17 +1033,19 @@ impl DeskClockMcp {
             .await
     }
 
+    // Edição: nenhuma dispara o envio às integrações — só o `stop` dispara
+    // (`usePostStopLogic`); estas gravam no banco e emitem eventos locais.
     #[tool(
-        name = "set_running_task_custom_values",
-        description = "Set the custom field values of the running or paused task; \
-            nothing else about it changes. The map you send REPLACES the task's whole \
-            map: to change one field, read the current values (get_status) and send \
-            the complete map back; `{}` clears every value. Keys are field ids from \
-            list_custom_fields; values are plain strings (text, an option label or id \
-            for select, \"true\"/\"Sim\" for a checkbox). An unknown field id or an \
-            invalid value is an error. Errors if no task is active. If the task came \
-            from a planned task, the planned task gets the same values for its next \
-            occurrence. Returns the task with its `customValues`.",
+        name = "update_running_task",
+        description = "Edit the active task (running or paused): name, project, \
+            category, billable, start time and custom field values. Only what you send \
+            changes: an omitted field is kept, and null clears where the field says so. \
+            Project and category must exist in the task's workspace (see list_catalog). \
+            If the task was started from a planned task, the new name, project, \
+            category, billable and custom values also go to that planned task, so its \
+            next occurrences carry them; the start time and a removed name do not. \
+            Errors if no task is active. For a finished task use update_task. Returns \
+            the task.",
         annotations(
             read_only_hint = false,
             destructive_hint = false,
@@ -777,24 +1053,25 @@ impl DeskClockMcp {
             open_world_hint = false
         )
     )]
-    async fn set_running_task_custom_values(
+    async fn update_running_task(
         &self,
-        Parameters(args): Parameters<SetRunningTaskCustomValuesArgs>,
+        Parameters(args): Parameters<UpdateRunningTaskArgs>,
     ) -> CallToolResult {
-        self.call_single(SET_RUNNING_TASK_CUSTOM_VALUES, json!({ "body": args }))
+        self.call_single(UPDATE_RUNNING_TASK, json!({ "body": args }))
             .await
     }
 
     #[tool(
-        name = "set_task_custom_values",
-        description = "Set the custom field values of a finished task of the History; \
-            nothing else about it changes. Get `id` from list_tasks. The map you send \
-            REPLACES the task's whole map: to change one field, read the current values \
-            (list_tasks) and send the complete map back; `{}` clears every value. Keys \
-            are field ids from list_custom_fields; values are plain strings (text, an \
-            option label or id for select, \"true\"/\"Sim\" for a checkbox). An \
-            unknown field id or an invalid value is an error. For the running task use \
-            set_running_task_custom_values. Returns the task with its `customValues`.",
+        name = "update_task",
+        description = "Edit a finished task of the History: name, project, category, \
+            billable, start and end, custom field values. Get `id` from list_tasks. Only \
+            what you send changes: an omitted field is kept, and null clears where the \
+            field says so. Sending startTime or endTime recalculates the duration. \
+            Project and category must exist in the task's workspace (see list_catalog). \
+            The resulting billable value applies to the task's whole group — the \
+            finished tasks of the same day with the same name, project, category and \
+            custom values — as the app's edit dialog does. The active task cannot be \
+            edited here (an error): use update_running_task. Returns the task.",
         annotations(
             read_only_hint = false,
             destructive_hint = false,
@@ -802,28 +1079,50 @@ impl DeskClockMcp {
             open_world_hint = false
         )
     )]
-    async fn set_task_custom_values(
+    async fn update_task(&self, Parameters(args): Parameters<UpdateTaskArgs>) -> CallToolResult {
+        self.call_single(UPDATE_TASK, json!({ "id": args.id, "body": args.body }))
+            .await
+    }
+
+    #[tool(
+        name = "update_planned_task",
+        description = "Edit a planned task of the Planning: name, project, category, \
+            billable, schedule, time of day, quick actions and custom field values. Get \
+            `id` from list_planned_tasks. Only what you send changes: an omitted field \
+            is kept; null clears project, category, startTime/endTime, actions and \
+            customValues, and is an error in name and scheduleType. To change \
+            scheduleType, send in the same call the fields of the new type (scheduleDate; \
+            recurringDays; periodStart, periodEnd optional) — the old type's are cleared; a \
+            schedule field of another type is an error. `customValues` and `actions` \
+            replace the whole map or list. Project and category must exist in the \
+            planned task's workspace (see list_catalog); the workspace cannot change. \
+            Returns the planned task.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_planned_task(
         &self,
-        Parameters(args): Parameters<SetTaskCustomValuesArgs>,
+        Parameters(args): Parameters<UpdatePlannedTaskArgs>,
     ) -> CallToolResult {
         self.call_single(
-            SET_TASK_CUSTOM_VALUES,
-            json!({ "id": args.id, "body": args.values }),
+            UPDATE_PLANNED_TASK,
+            json!({ "id": args.id, "body": args.body }),
         )
         .await
     }
 
     #[tool(
-        name = "set_planned_task_custom_values",
-        description = "Set the custom field values of a planned task of the Planning; \
-            nothing else about it changes (name, schedule, project, actions stay). Get `id` \
-            from list_planned_tasks. The map you send REPLACES the planned task's whole map: \
-            to change one field, read the current values (list_planned_tasks) and send the \
-            complete map back; `{}` clears every value. Keys are field ids from \
-            list_custom_fields; values are plain strings (text, an option label or id for \
-            select, \"true\"/\"Sim\" for a checkbox). An unknown field id or an invalid \
-            value is an error. Starting or logging the planned task later copies these \
-            values to the task. Returns the planned task with its `customValues`.",
+        name = "complete_planned_task",
+        description = "Mark a planned task as done on a day without recording any \
+            time, like its check circle in the Planning. To also record the time worked, \
+            use log_planned_task instead. Get `id` from list_planned_tasks. `date` \
+            defaults to today; the day is not checked against the schedule. A day \
+            already marked stays as it is. Returns the planned task, with \
+            `completedDates`.",
         annotations(
             read_only_hint = false,
             destructive_hint = false,
@@ -831,15 +1130,102 @@ impl DeskClockMcp {
             open_world_hint = false
         )
     )]
-    async fn set_planned_task_custom_values(
+    async fn complete_planned_task(
         &self,
-        Parameters(args): Parameters<SetPlannedTaskCustomValuesArgs>,
+        Parameters(args): Parameters<CompletePlannedTaskArgs>,
     ) -> CallToolResult {
         self.call_single(
-            SET_PLANNED_TASK_CUSTOM_VALUES,
-            json!({ "id": args.id, "body": args.values }),
+            COMPLETE_PLANNED_TASK,
+            json!({ "id": args.id, "body": args.body }),
         )
         .await
+    }
+
+    #[tool(
+        name = "uncomplete_planned_task",
+        description = "Unmark a day on which a planned task was marked as done, so it \
+            is pending again that day. Get `id` and the day from `completedDates` in \
+            list_planned_tasks. Tasks already recorded in the History are not touched. \
+            A day that was not marked stays as it is. Returns the planned task.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn uncomplete_planned_task(
+        &self,
+        Parameters(args): Parameters<UncompletePlannedTaskArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UNCOMPLETE_PLANNED_TASK,
+            json!({ "id": args.id, "date": args.date }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "duplicate_planned_task",
+        description = "Copy a planned task, like Duplicate in the Planning: the copy has \
+            the same name, schedule, time of day, project, category, billable, actions \
+            and custom values, and no completed days. Get `id` from list_planned_tasks. \
+            Each call creates another copy. Returns the new planned task, with its own \
+            `id`.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn duplicate_planned_task(
+        &self,
+        Parameters(args): Parameters<PlannedTaskIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(DUPLICATE_PLANNED_TASK, json!({ "id": args.id }))
+            .await
+    }
+
+    #[tool(
+        name = "delete_planned_task",
+        description = "Permanently delete a planned task, with all its occurrences and \
+            completed days. The deletion is immediate and cannot be undone. Call it only \
+            when the user explicitly asked to delete the planned task. Tasks already \
+            recorded in the History are kept. Get `id` from list_planned_tasks. Errors \
+            if it does not exist (so a repeated call only errors). Returns an empty \
+            object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_planned_task(
+        &self,
+        Parameters(args): Parameters<PlannedTaskIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_PLANNED_TASK, json!({ "id": args.id }))
+            .await
+    }
+
+    #[tool(
+        name = "cancel_task",
+        description = "Discard the active task (running or paused) without saving it: \
+            its time is lost and nothing goes to the History. The discard is immediate \
+            and cannot be undone. Call it only when the user wants to throw the time \
+            away; to keep the time, use stop_task. Errors if there is no active task (so \
+            a repeated call only errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn cancel_task(&self) -> CallToolResult {
+        self.call_single(CANCEL_TASK, json!({})).await
     }
 }
 

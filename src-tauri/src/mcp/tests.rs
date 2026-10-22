@@ -147,8 +147,12 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
     assert_eq!(
         names,
         [
+            "cancel_task",
+            "complete_planned_task",
             "create_custom_field",
             "delete_custom_field",
+            "delete_planned_task",
+            "duplicate_planned_task",
             "get_status",
             "get_totals",
             "get_week_totals",
@@ -161,19 +165,20 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "pause_task",
             "plan_task",
             "resume_task",
-            "set_planned_task_custom_values",
-            "set_running_task_custom_values",
-            "set_task_custom_values",
             "start_planned_task",
             "start_task",
             "stop_task",
+            "uncomplete_planned_task",
             "update_custom_field",
+            "update_planned_task",
+            "update_running_task",
+            "update_task",
         ]
     );
 }
 
 #[tokio::test]
-async fn anotacoes_separam_leitura_de_escrita_e_so_a_exclusao_de_campo_e_destrutiva() {
+async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
     let (state, _) = fake_state(true, ok_responder);
     // (tool, readOnly, idempotent, openWorld) — idempotente = repetir não muda
     // mais nada: a segunda pausa, retomada, parada ou Play da planejada só erra.
@@ -198,10 +203,17 @@ async fn anotacoes_separam_leitura_de_escrita_e_so_a_exclusao_de_campo_e_destrut
         ("create_custom_field", false, Some(false), false),
         ("update_custom_field", false, Some(true), false),
         ("delete_custom_field", false, Some(true), false),
-        // Editar valor não envia a integração: o envio por tarefa só roda no `stop`.
-        ("set_running_task_custom_values", false, Some(true), false),
-        ("set_task_custom_values", false, Some(true), false),
-        ("set_planned_task_custom_values", false, Some(true), false),
+        // Editar não envia às integrações: o envio por tarefa só roda no `stop`.
+        ("update_running_task", false, Some(true), false),
+        ("update_task", false, Some(true), false),
+        ("update_planned_task", false, Some(true), false),
+        // Concluir de novo o mesmo dia, ou desmarcar um dia já desmarcado, não muda nada.
+        ("complete_planned_task", false, Some(true), false),
+        ("uncomplete_planned_task", false, Some(true), false),
+        ("duplicate_planned_task", false, Some(false), false),
+        // A segunda exclusão ou o segundo descarte só erra (404).
+        ("delete_planned_task", false, Some(true), false),
+        ("cancel_task", false, Some(true), false),
     ];
     let tools = list_tools(state).await;
     for (name, read_only, idempotent, open_world) in expected {
@@ -210,8 +222,9 @@ async fn anotacoes_separam_leitura_de_escrita_e_so_a_exclusao_de_campo_e_destrut
         assert_eq!(annotations["readOnlyHint"], json!(read_only), "{tool}");
         assert_eq!(annotations["openWorldHint"], json!(open_world), "{tool}");
         if !read_only {
-            // Só a exclusão de campo apaga algo que o usuário escolheu guardar.
-            let destructive = *name == "delete_custom_field";
+            // Só estas apagam algo que o usuário escolheu guardar.
+            let destructive =
+                ["delete_custom_field", "delete_planned_task", "cancel_task"].contains(name);
             assert_eq!(annotations["destructiveHint"], json!(destructive), "{tool}");
             assert_eq!(annotations["idempotentHint"], json!(idempotent), "{tool}");
         }
@@ -270,6 +283,7 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
     assert_eq!(
         keys(&plan),
         [
+            "actions",
             "billable",
             "categoryId",
             "categoryName",
@@ -296,6 +310,13 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
         json!(["specific_date", "recurring", "period"]),
         "{plan}"
     );
+    let action = &plan["properties"]["actions"]["items"];
+    assert_eq!(
+        action["properties"]["type"]["enum"],
+        json!(["open_url", "open_file"]),
+        "{plan}"
+    );
+    assert_eq!(sorted(&action["required"]), ["type", "value"]);
 
     let past = schema("log_past_task");
     assert_eq!(
@@ -352,15 +373,67 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
     let delete = schema("delete_custom_field");
     assert_eq!(keys(&delete), ["id"]);
     assert_eq!(sorted(&delete["required"]), ["id"]);
-    let running = schema("set_running_task_custom_values");
-    assert_eq!(keys(&running), ["customValues"]);
-    assert_eq!(sorted(&running["required"]), ["customValues"]);
-    let set = schema("set_task_custom_values");
-    assert_eq!(keys(&set), ["customValues", "id"]);
-    assert_eq!(sorted(&set["required"]), ["customValues", "id"]);
-    let planned_set = schema("set_planned_task_custom_values");
-    assert_eq!(keys(&planned_set), ["customValues", "id"]);
-    assert_eq!(sorted(&planned_set["required"]), ["customValues", "id"]);
+    let edit_fields = [
+        "billable",
+        "categoryId",
+        "categoryName",
+        "customValues",
+        "projectId",
+        "projectName",
+    ];
+    let with = |extra: &[&str]| {
+        let mut all: Vec<String> = edit_fields
+            .iter()
+            .chain(extra)
+            .map(|k| k.to_string())
+            .collect();
+        all.sort_unstable();
+        all
+    };
+    let running = schema("update_running_task");
+    assert_eq!(keys(&running), with(&["name", "startTime"]));
+    assert!(
+        running.get("required").is_none_or(|r| r == &json!([])),
+        "{running}"
+    );
+    let task = schema("update_task");
+    assert_eq!(keys(&task), with(&["endTime", "id", "name", "startTime"]));
+    assert_eq!(sorted(&task["required"]), ["id"]);
+    let planned_update = schema("update_planned_task");
+    assert_eq!(
+        keys(&planned_update),
+        with(&[
+            "actions",
+            "endTime",
+            "id",
+            "name",
+            "periodEnd",
+            "periodStart",
+            "recurringDays",
+            "scheduleDate",
+            "scheduleType",
+            "startTime",
+        ])
+    );
+    assert_eq!(sorted(&planned_update["required"]), ["id"]);
+    // O `null` é aceito no esquema: é como o modelo pede para limpar.
+    assert_eq!(
+        planned_update["properties"]["startTime"]["type"],
+        json!(["string", "null"]),
+        "{planned_update}"
+    );
+    let complete = schema("complete_planned_task");
+    assert_eq!(keys(&complete), ["date", "id"]);
+    assert_eq!(sorted(&complete["required"]), ["id"]);
+    let uncomplete = schema("uncomplete_planned_task");
+    assert_eq!(keys(&uncomplete), ["date", "id"]);
+    assert_eq!(sorted(&uncomplete["required"]), ["date", "id"]);
+    for by_id in ["duplicate_planned_task", "delete_planned_task"] {
+        let schema = schema(by_id);
+        assert_eq!(keys(&schema), ["id"], "{by_id}");
+        assert_eq!(sorted(&schema["required"]), ["id"], "{by_id}");
+    }
+    assert!(keys(&schema("cancel_task")).is_empty());
     for read_only in ["list_tasks", "get_totals", "get_week_totals"] {
         assert!(
             schema(read_only)
@@ -384,9 +457,10 @@ async fn esquemas_das_tools_que_criam_tarefa_saem_planos() {
         "log_planned_task",
         "create_custom_field",
         "update_custom_field",
-        "set_running_task_custom_values",
-        "set_task_custom_values",
-        "set_planned_task_custom_values",
+        "update_running_task",
+        "update_task",
+        "update_planned_task",
+        "complete_planned_task",
     ] {
         let schema = tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].to_string();
         for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
@@ -595,6 +669,11 @@ fn task_responder(op: &str) -> (u16, Value) {
         "tasks.updateActive" => (200, json!({ "id": "t1", "customValues": { "f1": "A" } })),
         "history.update" => (200, json!({ "id": "t2", "customValues": {} })),
         "plannedTasks.patch" => (200, json!({ "id": "p1", "customValues": {} })),
+        "plannedTasks.complete" | "plannedTasks.uncomplete" => {
+            (200, json!({ "id": "p1", "completedDates": [] }))
+        }
+        "plannedTasks.duplicate" => (201, json!({ "id": "p2" })),
+        "plannedTasks.delete" | "tasks.cancel" => (204, Value::Null),
         _ => (201, json!({ "id": "t1", "status": "running" })),
     }
 }
@@ -1252,75 +1331,230 @@ async fn log_planned_task_nao_tem_custom_values() {
 }
 
 #[tokio::test]
-async fn set_running_task_custom_values_manda_so_custom_values() {
+async fn update_running_task_repassa_so_o_enviado_e_mantem_o_null_explicito() {
     let (result, calls) = forwarded(
-        "set_running_task_custom_values",
-        json!({ "customValues": { "f1": "A" } }),
+        "update_running_task",
+        json!({ "name": null, "billable": false, "customValues": { "f1": "A" } }),
     )
     .await;
     assert_eq!(
         calls,
         [(
             "tasks.updateActive".to_string(),
-            json!({ "body": { "customValues": { "f1": "A" } } })
+            json!({ "body": { "name": null, "billable": false, "customValues": { "f1": "A" } } })
         )]
     );
     assert_eq!(result["structuredContent"]["id"], json!("t1"));
 
-    // `{}` limpa tudo: vai como objeto vazio, não some.
     let (_, calls) = forwarded(
-        "set_running_task_custom_values",
-        json!({ "customValues": {} }),
+        "update_running_task",
+        json!({ "projectName": "P", "categoryId": null, "startTime": "2026-09-15T09:00:00-03:00" }),
     )
     .await;
-    assert_eq!(calls[0].1, json!({ "body": { "customValues": {} } }));
+    assert_eq!(
+        calls[0].1,
+        json!({ "body": {
+            "projectName": "P", "categoryId": null, "startTime": "2026-09-15T09:00:00-03:00"
+        } })
+    );
+
+    // Sem argumentos o corpo vai vazio: nada muda, em vez de tudo virar `null`.
+    let (_, calls) = forwarded("update_running_task", json!({})).await;
+    assert_eq!(calls[0].1, json!({ "body": {} }));
 }
 
 #[tokio::test]
-async fn set_task_custom_values_manda_o_id_fora_do_corpo() {
+async fn update_task_manda_o_id_fora_do_corpo() {
     let (result, calls) = forwarded(
-        "set_task_custom_values",
-        json!({ "id": "t2", "customValues": {} }),
+        "update_task",
+        json!({
+            "id": "t2", "endTime": "2026-09-15T11:00:00-03:00", "projectId": null,
+            "customValues": {}
+        }),
     )
     .await;
     assert_eq!(
         calls,
         [(
             "history.update".to_string(),
-            json!({ "id": "t2", "body": { "customValues": {} } })
+            json!({ "id": "t2", "body": {
+                "endTime": "2026-09-15T11:00:00-03:00", "projectId": null, "customValues": {}
+            } })
         )]
     );
     assert_eq!(result["structuredContent"]["id"], json!("t2"));
 }
 
 #[tokio::test]
-async fn set_planned_task_custom_values_usa_o_patch_com_o_id_fora_do_corpo() {
+async fn update_planned_task_distingue_ausente_de_null() {
     let (result, calls) = forwarded(
-        "set_planned_task_custom_values",
-        json!({ "id": "p1", "customValues": { "f1": "A" } }),
+        "update_planned_task",
+        json!({
+            "id": "p1", "name": "Daily", "startTime": null, "endTime": "10:00",
+            "customValues": null,
+            "actions": [{ "type": "open_url", "value": "https://exemplo.com" }]
+        }),
     )
     .await;
     assert_eq!(
         calls,
         [(
             "plannedTasks.patch".to_string(),
-            json!({ "id": "p1", "body": { "customValues": { "f1": "A" } } })
+            json!({ "id": "p1", "body": {
+                "name": "Daily", "startTime": null, "endTime": "10:00", "customValues": null,
+                "actions": [{ "type": "open_url", "value": "https://exemplo.com" }]
+            } })
         )]
     );
     assert_eq!(result["structuredContent"]["id"], json!("p1"));
+
+    // Só o `id`: corpo vazio, a planejada fica como está.
+    let (_, calls) = forwarded("update_planned_task", json!({ "id": "p1" })).await;
+    assert_eq!(calls[0].1, json!({ "id": "p1", "body": {} }));
+
+    let (_, calls) = forwarded(
+        "update_planned_task",
+        json!({
+            "id": "p1", "scheduleType": "period", "periodStart": "2026-10-01",
+            "periodEnd": "2026-10-31", "scheduleDate": null, "actions": []
+        }),
+    )
+    .await;
+    assert_eq!(
+        calls[0].1,
+        json!({ "id": "p1", "body": {
+            "scheduleType": "period", "periodStart": "2026-10-01", "periodEnd": "2026-10-31",
+            "scheduleDate": null, "actions": []
+        } })
+    );
 }
 
 #[tokio::test]
-async fn set_custom_values_sem_argumento_obrigatorio_vira_is_error_sem_chamar_a_ponte() {
+async fn enums_das_acoes_e_do_agendamento_sao_conferidos_antes_da_ponte() {
     for (tool, args) in [
-        ("set_running_task_custom_values", json!({})),
-        ("set_task_custom_values", json!({ "customValues": {} })),
-        ("set_task_custom_values", json!({ "id": "t2" })),
         (
-            "set_planned_task_custom_values",
-            json!({ "customValues": {} }),
+            "update_planned_task",
+            json!({ "id": "p1", "scheduleType": "weekly" }),
         ),
-        ("set_planned_task_custom_values", json!({ "id": "p1" })),
+        (
+            "update_planned_task",
+            json!({ "id": "p1", "actions": [{ "type": "run", "value": "x" }] }),
+        ),
+        (
+            "plan_task",
+            json!({
+                "name": "x", "billable": true, "scheduleType": "specific_date",
+                "scheduleDate": "2026-10-22", "actions": [{ "type": "open_url" }]
+            }),
+        ),
+    ] {
+        let (state, calls) = fake_state(true, task_responder);
+        let result = call_tool(state, tool, args).await;
+        assert_eq!(result["isError"], json!(true), "{tool}: {result}");
+        assert!(calls.lock().unwrap().is_empty(), "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn plan_task_repassa_as_acoes() {
+    let actions = json!([
+        { "type": "open_url", "value": "https://exemplo.com" },
+        { "type": "open_file", "value": "/home/u/a.pdf", "label": "Pauta" }
+    ]);
+    let (_, calls) = forwarded(
+        "plan_task",
+        json!({
+            "name": "x", "billable": true, "scheduleType": "specific_date",
+            "scheduleDate": "2026-10-22", "actions": actions
+        }),
+    )
+    .await;
+    assert_eq!(calls[0].1["body"]["actions"], actions);
+}
+
+#[tokio::test]
+async fn complete_planned_task_manda_a_data_no_corpo_so_quando_enviada() {
+    let (result, calls) = forwarded("complete_planned_task", json!({ "id": "p1" })).await;
+    assert_eq!(
+        calls,
+        [(
+            "plannedTasks.complete".to_string(),
+            json!({ "id": "p1", "body": {} })
+        )]
+    );
+    assert_eq!(result["structuredContent"]["id"], json!("p1"));
+
+    let (_, calls) = forwarded(
+        "complete_planned_task",
+        json!({ "id": "p1", "date": "2026-10-21" }),
+    )
+    .await;
+    assert_eq!(
+        calls[0].1,
+        json!({ "id": "p1", "body": { "date": "2026-10-21" } })
+    );
+}
+
+#[tokio::test]
+async fn uncomplete_planned_task_manda_id_e_data_como_o_path_da_rest() {
+    let (_, calls) = forwarded(
+        "uncomplete_planned_task",
+        json!({ "id": "p1", "date": "2026-10-21" }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "plannedTasks.uncomplete".to_string(),
+            json!({ "id": "p1", "date": "2026-10-21" })
+        )]
+    );
+}
+
+#[tokio::test]
+async fn duplicate_planned_task_devolve_a_copia() {
+    let (result, calls) = forwarded("duplicate_planned_task", json!({ "id": "p1" })).await;
+    assert_eq!(
+        calls,
+        [("plannedTasks.duplicate".to_string(), json!({ "id": "p1" }))]
+    );
+    assert_eq!(result["structuredContent"], json!({ "id": "p2" }));
+}
+
+#[tokio::test]
+async fn delete_planned_task_e_cancel_task_devolvem_objeto_vazio_no_204() {
+    let (result, calls) = forwarded("delete_planned_task", json!({ "id": "p1" })).await;
+    assert_eq!(
+        calls,
+        [("plannedTasks.delete".to_string(), json!({ "id": "p1" }))]
+    );
+    assert_eq!(result["structuredContent"], json!({}));
+
+    let (result, calls) = forwarded("cancel_task", json!({})).await;
+    assert_eq!(calls, [("tasks.cancel".to_string(), json!({}))]);
+    assert_eq!(result["structuredContent"], json!({}));
+}
+
+#[tokio::test]
+async fn cancel_task_sem_tarefa_ativa_vira_is_error_com_a_mensagem() {
+    fn not_found(_: &str) -> (u16, Value) {
+        (404, json!({ "error": "Nenhuma tarefa ativa" }))
+    }
+    let (state, _) = fake_state(true, not_found);
+    let result = call_tool(state, "cancel_task", json!({})).await;
+    assert_eq!(error_text(&result), "Nenhuma tarefa ativa");
+}
+
+#[tokio::test]
+async fn tools_de_edicao_e_planejamento_sem_argumento_obrigatorio_viram_is_error() {
+    for (tool, args) in [
+        ("update_task", json!({ "name": "x" })),
+        ("update_planned_task", json!({ "name": "x" })),
+        ("complete_planned_task", json!({ "date": "2026-10-21" })),
+        ("uncomplete_planned_task", json!({ "id": "p1" })),
+        ("uncomplete_planned_task", json!({ "date": "2026-10-21" })),
+        ("duplicate_planned_task", json!({})),
+        ("delete_planned_task", json!({})),
     ] {
         let (state, calls) = fake_state(true, task_responder);
         let result = call_tool(state, tool, args).await;

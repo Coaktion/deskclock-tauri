@@ -49,12 +49,17 @@ Todas do usuário, em 2026-09-18.
 | `create_custom_field` | `customFields.create` | `type` enum inline; `optionLabels` obrigatório só em `select` |
 | `update_custom_field` | `customFields.update` | `optionLabels` é a lista final; opção existente casa pelo rótulo e mantém o id |
 | `delete_custom_field` | `customFields.delete` | `destructiveHint: true`: apaga o valor em todas as tarefas; arquivar é a alternativa |
-| `set_running_task_custom_values` | `tasks.updateActive` | Só `customValues` no corpo; o mapa enviado **substitui** o da tarefa. Estreita de propósito (ver Fase 5) |
-| `set_task_custom_values` | `history.update` | Idem, para um registro concluído do Histórico (`id` de `list_tasks`) |
-| `set_planned_task_custom_values` | `plannedTasks.patch` | Idem, para uma planejada (`id` de `list_planned_tasks`). Usa o `PATCH /planned-tasks/{id}`; o `plannedTasks.update` (PUT) segue excluído |
+| `update_running_task` | `tasks.updateActive` | Edição parcial da tarefa ativa; nome, projeto, categoria, billable e valores vão também à planejada de origem (Fase A) |
+| `update_task` | `history.update` | Edição parcial de um registro concluído (`id` de `list_tasks`); o billable vale para o grupo (Fase A) |
+| `update_planned_task` | `plannedTasks.patch` | Edição parcial de uma planejada: ausente preserva, `null` limpa. O `plannedTasks.update` (PUT) segue excluído (Fase A) |
+| `complete_planned_task` · `uncomplete_planned_task` | `plannedTasks.complete` · `plannedTasks.uncomplete` | Marca/desmarca um dia sem registrar tempo; `date` opcional (hoje) só no `complete` (Fase A) |
+| `duplicate_planned_task` | `plannedTasks.duplicate` | Cópia sem as conclusões (Fase A) |
+| `delete_planned_task` | `plannedTasks.delete` | `destructiveHint: true`: imediata, sem desfazer; só quando o usuário pediu (Fase A) |
+| `cancel_task` | `tasks.cancel` | `destructiveHint: true`: descarta a tarefa ativa sem registrar; para guardar o tempo, `stop_task` (Fase A) |
 
-Fora da v1: `tasks.cancel`, `tasks.toggle`, edição (exceto dos valores personalizados), exclusão/unificação/movimentação do
-Histórico, edição do Planejamento, CRUD de catálogo e workspaces.
+Ainda sem tool: o que a §7.1 põe na Fase B (exclusão, billable, unificação e movimentação do Histórico; CRUD de
+catálogo e workspaces) e as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
+`workspaces.getActive`, `plannedTasks.update`).
 
 **Desenho das tools:** nome de intenção (`log_past_task`, não `post_tasks`); descrição diz *quando* usar e
 o formato de data/hora; projeto e categoria por **nome** (a API já resolve dentro do workspace e devolve
@@ -327,6 +332,9 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   `PUT` intacto. A tool chama o `patch` com `{ id, body: { customValues } }`, mesmo desenho, args (`id` +
   `SetRunningTaskCustomValuesArgs` achatado) e anotações das outras duas; `plannedTasks.update` segue em `excluded`
   como "edição completa; o MCP usa plannedTasks.patch".
+- **Substituídas na Fase A (2026-10-22)** pelas largas `update_running_task`, `update_task` e
+  `update_planned_task`, nas mesmas `op`: com as duas famílias juntas, o modelo teria duas tools para a mesma
+  edição de valores. Decisão do usuário.
 
 ## 7. Paridade com a UI
 
@@ -366,5 +374,30 @@ planejadas — N chamadas resolvem.
 
 | Fase | Estado |
 |---|---|
-| A | em andamento |
+| A | implementada; falta revisão e verificação no app de dev |
 | B · C · D | pendentes |
+
+### Decisões da Fase A que a spec não fixava
+
+- **Ausente × `null`: `Patch<T>` = `Option<Option<T>>`** (`tools.rs`), com `deserialize_with = "present"` — o
+  serde sozinho lê `null` como ausente — e `skip_serializing_if = "Option::is_none"`. Ausente não vai ao corpo,
+  `null` vai como `null`, valor vai como veio: o mesmo repasse cru da REST. Vale para **todo** campo opcional das três
+  edições, inclusive onde o TS recusa `null` (`name` e `scheduleType` da planejada, `startTime`/`endTime` do
+  registro, `startTime` da ativa) ou o trata como ausente (`billable`): a regra fica no TS. `#[schemars(with =
+  "Option<T>")]` dá ao esquema `type: [T, "null"]`, plano. Teste: `update_planned_task_distingue_ausente_de_null`.
+- **Campos comuns em `EditFields`** (projeto id/nome, categoria id/nome, `billable`, `customValues`), achatado nas
+  três; `name` e horários ficam em cada struct porque a regra muda (a planejada não aceita nome vazio, a tarefa
+  aceita e o apaga). `workspaceId` e `sortOrder` não entram: o `patch` não muda workspace e a UI não reordena.
+- **`actions`** no `plan_task` e no `update_planned_task`: `{ type: open_url | open_file, value, label? }`, enum e
+  item inline. Valor fora do enum é recusado pelo rmcp antes da ponte.
+- **Anotações.** Edições, `complete` e `uncomplete`: `idempotentHint: true` (o repositório não duplica a data
+  concluída nem reclama da ausente). `duplicate`: `false`. `delete_planned_task` e `cancel_task`:
+  `destructiveHint: true`, `idempotentHint: true` (a segunda só erra, 404). Todas `openWorldHint: false`: nenhuma
+  passa pelo `usePostStopLogic`.
+- **Params como a REST.** `complete` manda `{ id, body }` com `date` só se veio (`{}` = hoje); `uncomplete` manda
+  `{ id, date }`, `date` obrigatória, como no path `DELETE /planned-tasks/{id}/complete/{date}`. `delete` e
+  `cancel` respondem 204 e a tool devolve `{}`.
+- **Achado no TS, corrigido na mesma fase:** o `patchPlannedTaskHandler` exigia `periodEnd` em `period` sempre que o
+  corpo tocava no agendamento, mas o formulário e o `plan_task` aceitam período sem fim — planejada de período aberto
+  não tinha as datas editáveis. Agora `periodEnd` ausente ou `null` é período sem fim (`OPTIONAL_SCHEDULE_FIELDS`), e o
+  teste que travava a recusa virou o contrário.

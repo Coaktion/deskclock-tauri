@@ -20,9 +20,14 @@ pub const LIST_CUSTOM_FIELDS: &str = "list_custom_fields";
 pub const CREATE_CUSTOM_FIELD: &str = "create_custom_field";
 pub const UPDATE_CUSTOM_FIELD: &str = "update_custom_field";
 pub const DELETE_CUSTOM_FIELD: &str = "delete_custom_field";
-pub const SET_RUNNING_TASK_CUSTOM_VALUES: &str = "set_running_task_custom_values";
-pub const SET_TASK_CUSTOM_VALUES: &str = "set_task_custom_values";
-pub const SET_PLANNED_TASK_CUSTOM_VALUES: &str = "set_planned_task_custom_values";
+pub const UPDATE_RUNNING_TASK: &str = "update_running_task";
+pub const UPDATE_TASK: &str = "update_task";
+pub const UPDATE_PLANNED_TASK: &str = "update_planned_task";
+pub const COMPLETE_PLANNED_TASK: &str = "complete_planned_task";
+pub const UNCOMPLETE_PLANNED_TASK: &str = "uncomplete_planned_task";
+pub const DUPLICATE_PLANNED_TASK: &str = "duplicate_planned_task";
+pub const DELETE_PLANNED_TASK: &str = "delete_planned_task";
+pub const CANCEL_TASK: &str = "cancel_task";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -47,6 +52,11 @@ pub const OP_CUSTOM_FIELDS_DELETE: &str = "customFields.delete";
 pub const OP_UPDATE_ACTIVE: &str = "tasks.updateActive";
 pub const OP_HISTORY_UPDATE: &str = "history.update";
 pub const OP_PLANNED_PATCH: &str = "plannedTasks.patch";
+pub const OP_PLANNED_COMPLETE: &str = "plannedTasks.complete";
+pub const OP_PLANNED_UNCOMPLETE: &str = "plannedTasks.uncomplete";
+pub const OP_PLANNED_DUPLICATE: &str = "plannedTasks.duplicate";
+pub const OP_PLANNED_DELETE: &str = "plannedTasks.delete";
+pub const OP_CANCEL: &str = "tasks.cancel";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -111,16 +121,22 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         DELETE_CUSTOM_FIELD,
         &[pass_through(OP_CUSTOM_FIELDS_DELETE)],
     ),
-    // As três `op` aceitam mais campos; a tool é estreita de propósito (só valores).
+    // Edição parcial: o corpo vai como o cliente mandou, ausente e `null` distintos.
+    (UPDATE_RUNNING_TASK, &[pass_through(OP_UPDATE_ACTIVE)]),
+    (UPDATE_TASK, &[pass_through(OP_HISTORY_UPDATE)]),
+    (UPDATE_PLANNED_TASK, &[pass_through(OP_PLANNED_PATCH)]),
+    (COMPLETE_PLANNED_TASK, &[pass_through(OP_PLANNED_COMPLETE)]),
     (
-        SET_RUNNING_TASK_CUSTOM_VALUES,
-        &[pass_through(OP_UPDATE_ACTIVE)],
+        UNCOMPLETE_PLANNED_TASK,
+        &[pass_through(OP_PLANNED_UNCOMPLETE)],
     ),
-    (SET_TASK_CUSTOM_VALUES, &[pass_through(OP_HISTORY_UPDATE)]),
     (
-        SET_PLANNED_TASK_CUSTOM_VALUES,
-        &[pass_through(OP_PLANNED_PATCH)],
+        DUPLICATE_PLANNED_TASK,
+        &[pass_through(OP_PLANNED_DUPLICATE)],
     ),
+    // As duas respondem 204 sem corpo: `call_single` devolve `{}`.
+    (DELETE_PLANNED_TASK, &[pass_through(OP_PLANNED_DELETE)]),
+    (CANCEL_TASK, &[pass_through(OP_CANCEL)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {
