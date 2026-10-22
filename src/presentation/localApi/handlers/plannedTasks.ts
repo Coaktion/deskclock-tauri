@@ -207,6 +207,8 @@ const SCHEDULE_FIELDS: Record<ScheduleType, ScheduleField[]> = {
   period: ["periodStart", "periodEnd"],
 };
 const ALL_SCHEDULE_FIELDS: ScheduleField[] = Object.values(SCHEDULE_FIELDS).flat();
+// `periodEnd` nulo é período sem fim, como o formulário e o `POST` aceitam.
+const OPTIONAL_SCHEDULE_FIELDS: ScheduleField[] = ["periodEnd"];
 
 function isBlank(value: string | number[] | null | undefined) {
   return value === null || value === undefined || value.length === 0;
@@ -237,7 +239,9 @@ function schedulePatch(body: PlannedTaskPatchBody, existing: PlannedTask): Parti
   for (const key of fields) {
     const value = key in body ? body[key] : keepCurrent ? existing[key] : null;
     if (isBlank(value)) {
-      throw new DomainError(`scheduleType '${type}' exige ${fields.join(" e ")}`);
+      if (OPTIONAL_SCHEDULE_FIELDS.includes(key)) continue;
+      const required = fields.filter((field) => !OPTIONAL_SCHEDULE_FIELDS.includes(field));
+      throw new DomainError(`scheduleType '${type}' exige ${required.join(" e ")}`);
     }
     if (typeof value === "string") assertDate(value, key);
     Object.assign(result, { [key]: value });

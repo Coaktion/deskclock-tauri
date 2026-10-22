@@ -146,7 +146,7 @@ Swagger e da seção "API local" do manual (`docs/index.html`), que hoje lista s
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.
 Regras em `patchPlannedTaskHandler`: ausente preserva; `null` limpa projeto, categoria, `startTime`/`endTime`,
 `customValues` (`{}`) e `actions` (`[]`); `name` nulo ou vazio e `scheduleType` nulo → 400. Trocar `scheduleType` exige
-os campos do novo tipo (`scheduleDate`; `recurringDays` não vazio; `periodStart` e `periodEnd`, todos YYYY-MM-DD) e
+os campos do novo tipo (`scheduleDate`; `recurringDays` não vazio; `periodStart`, todos YYYY-MM-DD; `periodEnd` opcional, ausente ou `null` = período sem fim) e
 zera os do anterior, como o formulário grava; campo de agendamento de outro tipo, ou o do tipo atual em `null`, → 400
 — regra só do `PATCH`, para a planejada não ficar sem dia. Projeto/categoria/billable como o `PUT /tasks/{id}`
 (`resolveCatalogPatch` + `billableForCategoryChange`); `customValues` por `resolveCustomValues`.

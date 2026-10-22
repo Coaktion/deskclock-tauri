@@ -324,6 +324,43 @@ describe("plannedTasks.patch", () => {
     });
   });
 
+  it("troca para period sem periodEnd grava período sem fim, como o formulário", async () => {
+    const deps = depsCom();
+
+    await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { scheduleType: "period", periodStart: "2026-09-14" },
+    });
+
+    expect(gravada(deps)).toMatchObject({
+      scheduleType: "period",
+      periodStart: "2026-09-14",
+      periodEnd: null,
+    });
+  });
+
+  it("em período sem fim, mexer só no início preserva o fim aberto; null abre o fim", async () => {
+    const aberto = makePlanned({
+      scheduleType: "period",
+      scheduleDate: null,
+      periodStart: "2026-09-01",
+      periodEnd: null,
+    });
+    const soInicio = depsCom(aberto);
+    await dispatchLocalApiRequest(soInicio, "plannedTasks.patch", {
+      id: "p-1",
+      body: { periodStart: "2026-09-07" },
+    });
+    expect(gravada(soInicio)).toMatchObject({ periodStart: "2026-09-07", periodEnd: null });
+
+    const comFim = depsCom({ ...aberto, periodEnd: "2026-09-30" });
+    await dispatchLocalApiRequest(comFim, "plannedTasks.patch", {
+      id: "p-1",
+      body: { periodEnd: null },
+    });
+    expect(gravada(comFim)).toMatchObject({ periodStart: "2026-09-01", periodEnd: null });
+  });
+
   it("campo do tipo atual sem scheduleType só ajusta o agendamento", async () => {
     const deps = depsCom();
 
@@ -342,7 +379,7 @@ describe("plannedTasks.patch", () => {
     ["scheduleType desconhecido", { scheduleType: "weekly" }],
     ["scheduleType vazio", { scheduleType: "" }],
     ["troca para specific_date sem scheduleDate", { scheduleType: "specific_date" }],
-    ["troca para period sem periodEnd", { scheduleType: "period", periodStart: "2026-09-14" }],
+    ["troca para period sem periodStart", { scheduleType: "period", periodEnd: "2026-09-18" }],
     ["dia da recorrência limpo", { recurringDays: null }],
     ["recorrência sem dias", { recurringDays: [] }],
     ["campo de outro tipo", { scheduleDate: TODAY }],
