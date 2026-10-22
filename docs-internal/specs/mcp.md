@@ -56,10 +56,21 @@ Todas do usuário, em 2026-09-18.
 | `duplicate_planned_task` | `plannedTasks.duplicate` | Cópia sem as conclusões (Fase A) |
 | `delete_planned_task` | `plannedTasks.delete` | `destructiveHint: true`: imediata, sem desfazer; só quando o usuário pediu (Fase A) |
 | `cancel_task` | `tasks.cancel` | `destructiveHint: true`: descarta a tarefa ativa sem registrar; para guardar o tempo, `stop_task` (Fase A) |
+| `delete_task` · `delete_tasks` | `history.delete` · `history.deleteMany` | `destructiveHint: true`; o lote é tudo ou nada. Sem o desfazer da tela (Fase B) |
+| `set_task_billable` | `history.setBillable` | Vale para o grupo do registro, como o indicador da lista (Fase B) |
+| `merge_tasks` | `history.merge` | `destructiveHint: true`: funde o grupo e apaga os originais; só registros de hoje (Fase B) |
+| `move_tasks_to_workspace` | `history.move` | `mode` `move`/`copy`; `project`/`category` com `kind` `match`/`create`/`unset` (Fase B) |
+| `create_project` · `update_project` · `delete_project` | `projects.create` · `projects.update` · `projects.delete` | `update` só renomeia; `delete` com `destructiveHint: true` (Fase B) |
+| `import_projects` · `delete_projects` | `projects.import` · `projects.deleteMany` | Um nome por linha, repetido é pulado; exclusão em lote destrutiva, tudo ou nada (Fase B) |
+| `create_category` · `update_category` · `delete_category` | `categories.create` · `categories.update` · `categories.delete` | `defaultBillable` padrão `true` na criação, preservado na edição; `delete` destrutiva (Fase B) |
+| `import_categories` · `delete_categories` | `categories.import` · `categories.deleteMany` | `!` no início da linha = non-billable; exclusão em lote destrutiva (Fase B) |
+| `list_project_categories` · `set_project_categories` | `projectCategories.list` · `projectCategories.set` | Lista vazia = o projeto oferece todas; o `set` substitui a seleção (Fase B) |
+| `create_workspace` · `update_workspace` | `workspaces.create` · `workspaces.update` | `color` = slot da paleta, validado no TS (Fase B) |
+| `delete_workspace` | `workspaces.delete` | `destructiveHint: true`; `mode` `move`/`delete` obrigatório, a escolha do modal da tela (Fase B) |
+| `set_active_workspace` | `workspaces.setActive` | Com tarefa ativa erra (409) e não para a tarefa: o modelo pergunta e chama `stop_task`/`cancel_task` (Fase B) |
 
-Ainda sem tool: o que a §7.1 põe na Fase B (exclusão, billable, unificação e movimentação do Histórico; CRUD de
-catálogo e workspaces) e as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
-`workspaces.getActive`, `plannedTasks.update`).
+Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
+`workspaces.getActive`, `plannedTasks.update`). O que falta para a paridade não tem `op` na ponte (§7.2).
 
 **Desenho das tools:** nome de intenção (`log_past_task`, não `post_tasks`); descrição diz *quando* usar e
 o formato de data/hora; projeto e categoria por **nome** (a API já resolve dentro do workspace e devolve
@@ -375,7 +386,8 @@ planejadas — N chamadas resolvem.
 | Fase | Estado |
 |---|---|
 | A | implementada; falta revisão e verificação no app de dev |
-| B · C · D | pendentes |
+| B | implementada; falta verificação no app de dev |
+| C · D | pendentes |
 
 ### Decisões da Fase A que a spec não fixava
 
@@ -401,3 +413,49 @@ planejadas — N chamadas resolvem.
   corpo tocava no agendamento, mas o formulário e o `plan_task` aceitam período sem fim — planejada de período aberto
   não tinha as datas editáveis. Agora `periodEnd` ausente ou `null` é período sem fim (`OPTIONAL_SCHEDULE_FIELDS`), e o
   teste que travava a recusa virou o contrário.
+
+### Decisões da Fase B que a spec não fixava
+
+- **21 tools, uma `op` cada**, e a lista bate com as 21 `op` que estavam em `excluded` como "Fase B" — nenhuma
+  esquecida. `list_project_categories` é tool própria (uma `op` por tool), e a descrição do `list_catalog` a cita.
+- **Sem `Patch<T>`.** Nenhum handler desta fase distingue ausente de `null`: `defaultBillable` da categoria e `color`
+  do workspace passam por `??` (ou `color()`, que trata os dois como ausente) e preservam; `toWorkspaceId` ausente ou
+  nulo dá o mesmo 400. Opcional é `Option<T>` simples, omitido do corpo.
+- **Params como a REST.** `id` do path fora do corpo; nas rotas de catálogo com `?workspaceId=` (`update`/`delete` de
+  projeto e categoria, `projectCategories.*`) o `workspaceId` vai no topo e **sempre presente**, nulo quando omitido,
+  como o `scoped_params`; nas que levam o workspace no corpo (`create`, `import`, `deleteMany`) ele vai no corpo, só se
+  veio. `set_active_workspace` manda `{ body: { id } }`, como o `PUT /workspaces/active`. Os 204 (as sete exclusões)
+  devolvem `{}`; `projectCategories.list/set` respondem lista e saem em `{ projectCategories: [...] }`.
+- **`CatalogResolution` como struct, não enum com tag.** `{ kind: match|create|unset, targetId?, name? }`, com `kind`
+  enum inline: o esquema sai plano (sem `oneOf`), e o casamento `kind` ↔ campo (`match` sem `targetId`, `create` sem
+  `name`) fica no `checkResolution` do TS, que já o valida. `mode` do move e do delete de workspace são enums inline;
+  valor fora deles é recusado pelo rmcp antes da ponte.
+- **`color` do workspace é texto**, com os oito slots listados na descrição. Enum em Rust copiaria `WORKSPACE_COLORS`
+  e divergiria dele calado; o TS já recusa com 400 e a mensagem lista a paleta.
+- **`importProjects`/`importCategories` recebem `text`**, como a REST e o textarea da tela; juntar uma lista em linhas
+  seria regra no adaptador.
+- **Anotações.** `destructiveHint: true` nas sete exclusões (uma e em lote), em `merge_tasks` (apaga os originais) e em
+  `delete_workspace`; a descrição de cada uma manda chamar só a pedido do usuário e diz que é imediata e sem desfazer —
+  a do `delete_task`/`delete_tasks` diz "ao contrário da tela", que desfaz pelo toast. `delete_workspace` manda
+  perguntar o destino dos dados quando o usuário não disse, como o modal exige.
+  - `move_tasks_to_workspace` → `destructiveHint: false`: não apaga nada; reatribui (ou copia), e o `create` só
+    acrescenta ao catálogo do destino. Trocar o projeto por `unset` é edição, como no `update_task`, e mover de volta
+    com `match` desfaz. `idempotentHint: false`: o `copy` repetido copia de novo (o `move` repetido só erra, 400).
+  - `set_active_workspace` → `destructiveHint: false`, `idempotentHint: true`: ativar o que já está ativo devolve 200
+    sem mudar nada, e com tarefa ativa só erra (409). O handler **não para a tarefa**; a tela pergunta
+    Concluída/Pendente e para. A descrição manda perguntar ao usuário e chamar `stop_task` (com o `completed` da
+    resposta) ou `cancel_task` antes.
+  - `idempotentHint: true` também nos `create_*` e `import_*`: o nome é único no workspace (`DuplicateNameError` → 409)
+    e a importação pula o repetido, então repetir não cria nada. Diverge do `create_custom_field` (Fase 4, `false`),
+    cuja razão escrita ("repetir cria outro") não bate com o rótulo único — não mexido aqui.
+  - `openWorldHint: false` em todas: nenhuma passa pelo `usePostStopLogic`; só gravam e emitem eventos locais
+    (`notifyTasksChanged`, `notifyProjectsChanged`, `WORKSPACE_CHANGED`…).
+- **O que a descrição promete, lido do código.** `set_task_billable` vale para o grupo (`setGroupBillable`: mesmo dia e
+  workspace, concluídas, mesma chave `taskGroupKey`, que inclui os valores personalizados). `merge_tasks`: ≥ 2 ids,
+  mesmo grupo, só hoje (regra só da API, para espelhar a tela). `delete_workspace` com `move` funde no destino o
+  projeto/categoria homônimo (`moveAll`), troca o ativo quando o excluído era ele (`useWorkspaceAdmin.remove`) e deixa
+  paradas as integrações presas ao workspace (o aviso do modal, §6.7 de `regras-de-negocio.md`).
+- **"Os registros ficam, sem o projeto"** na exclusão de projeto/categoria vem das FKs `ON DELETE SET NULL` das
+  migrations. O pragma vale por conexão, e a do app o tem ligado: o `tauri-plugin-sql` abre o banco pelo `sqlx` 0.8,
+  cujo `SqliteConnectOptions` liga `foreign_keys` por padrão — o `PRAGMA` da `001_initial_schema.sql` não é o que o
+  garante. É a mesma premissa do CASCADE do `delete_custom_field`.

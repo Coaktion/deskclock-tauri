@@ -28,6 +28,27 @@ pub const UNCOMPLETE_PLANNED_TASK: &str = "uncomplete_planned_task";
 pub const DUPLICATE_PLANNED_TASK: &str = "duplicate_planned_task";
 pub const DELETE_PLANNED_TASK: &str = "delete_planned_task";
 pub const CANCEL_TASK: &str = "cancel_task";
+pub const DELETE_TASK: &str = "delete_task";
+pub const DELETE_TASKS: &str = "delete_tasks";
+pub const SET_TASK_BILLABLE: &str = "set_task_billable";
+pub const MERGE_TASKS: &str = "merge_tasks";
+pub const MOVE_TASKS_TO_WORKSPACE: &str = "move_tasks_to_workspace";
+pub const CREATE_PROJECT: &str = "create_project";
+pub const UPDATE_PROJECT: &str = "update_project";
+pub const DELETE_PROJECT: &str = "delete_project";
+pub const IMPORT_PROJECTS: &str = "import_projects";
+pub const DELETE_PROJECTS: &str = "delete_projects";
+pub const CREATE_CATEGORY: &str = "create_category";
+pub const UPDATE_CATEGORY: &str = "update_category";
+pub const DELETE_CATEGORY: &str = "delete_category";
+pub const IMPORT_CATEGORIES: &str = "import_categories";
+pub const DELETE_CATEGORIES: &str = "delete_categories";
+pub const LIST_PROJECT_CATEGORIES: &str = "list_project_categories";
+pub const SET_PROJECT_CATEGORIES: &str = "set_project_categories";
+pub const CREATE_WORKSPACE: &str = "create_workspace";
+pub const UPDATE_WORKSPACE: &str = "update_workspace";
+pub const DELETE_WORKSPACE: &str = "delete_workspace";
+pub const SET_ACTIVE_WORKSPACE: &str = "set_active_workspace";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -57,6 +78,27 @@ pub const OP_PLANNED_UNCOMPLETE: &str = "plannedTasks.uncomplete";
 pub const OP_PLANNED_DUPLICATE: &str = "plannedTasks.duplicate";
 pub const OP_PLANNED_DELETE: &str = "plannedTasks.delete";
 pub const OP_CANCEL: &str = "tasks.cancel";
+pub const OP_HISTORY_DELETE: &str = "history.delete";
+pub const OP_HISTORY_DELETE_MANY: &str = "history.deleteMany";
+pub const OP_HISTORY_SET_BILLABLE: &str = "history.setBillable";
+pub const OP_HISTORY_MERGE: &str = "history.merge";
+pub const OP_HISTORY_MOVE: &str = "history.move";
+pub const OP_PROJECTS_CREATE: &str = "projects.create";
+pub const OP_PROJECTS_UPDATE: &str = "projects.update";
+pub const OP_PROJECTS_DELETE: &str = "projects.delete";
+pub const OP_PROJECTS_IMPORT: &str = "projects.import";
+pub const OP_PROJECTS_DELETE_MANY: &str = "projects.deleteMany";
+pub const OP_CATEGORIES_CREATE: &str = "categories.create";
+pub const OP_CATEGORIES_UPDATE: &str = "categories.update";
+pub const OP_CATEGORIES_DELETE: &str = "categories.delete";
+pub const OP_CATEGORIES_IMPORT: &str = "categories.import";
+pub const OP_CATEGORIES_DELETE_MANY: &str = "categories.deleteMany";
+pub const OP_PROJECT_CATEGORIES_LIST: &str = "projectCategories.list";
+pub const OP_PROJECT_CATEGORIES_SET: &str = "projectCategories.set";
+pub const OP_WORKSPACES_CREATE: &str = "workspaces.create";
+pub const OP_WORKSPACES_UPDATE: &str = "workspaces.update";
+pub const OP_WORKSPACES_DELETE: &str = "workspaces.delete";
+pub const OP_WORKSPACES_SET_ACTIVE: &str = "workspaces.setActive";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -137,6 +179,42 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
     // As duas respondem 204 sem corpo: `call_single` devolve `{}`.
     (DELETE_PLANNED_TASK, &[pass_through(OP_PLANNED_DELETE)]),
     (CANCEL_TASK, &[pass_through(OP_CANCEL)]),
+    // Fase B da paridade. As exclusões (uma e em lote) respondem 204 sem corpo:
+    // `call_single` devolve `{}`.
+    (DELETE_TASK, &[pass_through(OP_HISTORY_DELETE)]),
+    (DELETE_TASKS, &[pass_through(OP_HISTORY_DELETE_MANY)]),
+    (SET_TASK_BILLABLE, &[pass_through(OP_HISTORY_SET_BILLABLE)]),
+    (MERGE_TASKS, &[pass_through(OP_HISTORY_MERGE)]),
+    (MOVE_TASKS_TO_WORKSPACE, &[pass_through(OP_HISTORY_MOVE)]),
+    (CREATE_PROJECT, &[pass_through(OP_PROJECTS_CREATE)]),
+    (UPDATE_PROJECT, &[pass_through(OP_PROJECTS_UPDATE)]),
+    (DELETE_PROJECT, &[pass_through(OP_PROJECTS_DELETE)]),
+    (IMPORT_PROJECTS, &[pass_through(OP_PROJECTS_IMPORT)]),
+    (DELETE_PROJECTS, &[pass_through(OP_PROJECTS_DELETE_MANY)]),
+    (CREATE_CATEGORY, &[pass_through(OP_CATEGORIES_CREATE)]),
+    (UPDATE_CATEGORY, &[pass_through(OP_CATEGORIES_UPDATE)]),
+    (DELETE_CATEGORY, &[pass_through(OP_CATEGORIES_DELETE)]),
+    (IMPORT_CATEGORIES, &[pass_through(OP_CATEGORIES_IMPORT)]),
+    (
+        DELETE_CATEGORIES,
+        &[pass_through(OP_CATEGORIES_DELETE_MANY)],
+    ),
+    // As duas devolvem a lista de associações: vai numa chave.
+    (
+        LIST_PROJECT_CATEGORIES,
+        &[under("projectCategories", OP_PROJECT_CATEGORIES_LIST)],
+    ),
+    (
+        SET_PROJECT_CATEGORIES,
+        &[under("projectCategories", OP_PROJECT_CATEGORIES_SET)],
+    ),
+    (CREATE_WORKSPACE, &[pass_through(OP_WORKSPACES_CREATE)]),
+    (UPDATE_WORKSPACE, &[pass_through(OP_WORKSPACES_UPDATE)]),
+    (DELETE_WORKSPACE, &[pass_through(OP_WORKSPACES_DELETE)]),
+    (
+        SET_ACTIVE_WORKSPACE,
+        &[pass_through(OP_WORKSPACES_SET_ACTIVE)],
+    ),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

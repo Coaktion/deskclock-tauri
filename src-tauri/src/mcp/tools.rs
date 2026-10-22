@@ -2,14 +2,8 @@
 //! a regra fica no TS, como na API REST (`docs-internal/specs/mcp.md` §2).
 
 use crate::api::bridge::Bridge;
-use crate::mcp::ops::{
-    ops_of, OpCall, CANCEL_TASK, COMPLETE_PLANNED_TASK, CREATE_CUSTOM_FIELD, DELETE_CUSTOM_FIELD,
-    DELETE_PLANNED_TASK, DUPLICATE_PLANNED_TASK, GET_STATUS, GET_TOTALS, GET_WEEK_TOTALS,
-    LIST_CATALOG, LIST_CUSTOM_FIELDS, LIST_PLANNED_TASKS, LIST_TASKS, LOG_PAST_TASK,
-    LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK, START_PLANNED_TASK, START_TASK,
-    STOP_TASK, UNCOMPLETE_PLANNED_TASK, UPDATE_CUSTOM_FIELD, UPDATE_PLANNED_TASK,
-    UPDATE_RUNNING_TASK, UPDATE_TASK,
-};
+// Glob de propósito: `ops` só exporta os nomes das tools, as `op` e `ops_of`.
+use crate::mcp::ops::*;
 use crate::mcp::result::{body_or_error, success};
 use rmcp::{
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
@@ -640,6 +634,305 @@ pub struct DeleteCustomFieldArgs {
     pub id: String,
 }
 
+// ---------------- Fase B: Histórico ----------------
+//
+// Nenhuma `op` desta fase distingue ausente de `null` (o TS faz `??` em todo
+// opcional), então os opcionais são `Option<T>` simples, não `Patch<T>`.
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct TaskIdArgs {
+    /// Finished task id, from list_tasks.
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct TaskIdsArgs {
+    /// Finished task ids, from list_tasks. Not empty.
+    pub ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct SetTaskBillableArgs {
+    /// Finished task id, from list_tasks.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: SetTaskBillableBody,
+}
+
+/// O corpo; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct SetTaskBillableBody {
+    /// The new billable value, for the task and its whole group.
+    pub billable: bool,
+}
+
+// Inline pelo mesmo motivo do `ScheduleType`.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum MoveMode {
+    Move,
+    Copy,
+}
+
+// Inline pelo mesmo motivo do `ScheduleType`.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum CatalogResolutionKind {
+    Match,
+    Create,
+    Unset,
+}
+
+/// O `CatalogResolution` da REST como struct, não como enum com tag: o esquema
+/// sai plano (sem `oneOf`), e o casamento `kind` ↔ campo é checado no TS.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct CatalogResolution {
+    /// `match` uses an item that already exists in the destination workspace (set
+    /// targetId); `create` creates one there with `name`, or reuses the one that
+    /// already has that name; `unset` leaves it empty.
+    pub kind: CatalogResolutionKind,
+    /// With `match` only: the id of a project or category of the destination
+    /// workspace (list_catalog with that workspaceId).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_id: Option<String>,
+    /// With `create` only: the name to create in the destination workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveTasksArgs {
+    /// Finished task ids, from list_tasks. Not empty; none of them may already be in
+    /// the destination workspace.
+    pub ids: Vec<String>,
+    /// Destination workspace id, from list_catalog.
+    pub to_workspace_id: String,
+    /// What the tasks' project becomes in the destination (project ids do not cross
+    /// workspaces).
+    pub project: CatalogResolution,
+    /// What the tasks' category becomes in the destination (category ids do not
+    /// cross workspaces).
+    pub category: CatalogResolution,
+    /// `move` reassigns the tasks to the destination; `copy` creates copies there
+    /// and leaves the originals as they are.
+    pub mode: MoveMode,
+}
+
+// ---------------- Fase B: Projetos e categorias ----------------
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateProjectArgs {
+    /// Project name, unique in the workspace (an existing one is an error).
+    pub name: String,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
+/// Como o `scoped_params` da REST: `workspaceId` sempre presente, nulo quando omitido.
+fn scoped_id_params(id: &str, workspace_id: &Option<String>) -> Value {
+    json!({ "id": id, "workspaceId": workspace_id })
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectIdArgs {
+    /// Project id, from list_catalog.
+    pub id: String,
+    /// The project's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+impl ProjectIdArgs {
+    fn params(&self) -> Value {
+        scoped_id_params(&self.id, &self.workspace_id)
+    }
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateProjectArgs {
+    /// Project id, from list_catalog.
+    pub id: String,
+    /// The project's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+    #[serde(flatten)]
+    pub body: UpdateProjectBody,
+}
+
+/// O corpo; `id` e `workspaceId` vão fora dele, como no path e na query da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateProjectBody {
+    /// The new name, unique in the workspace.
+    pub name: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCatalogArgs {
+    /// One name per line; blank lines are ignored.
+    pub text: String,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteManyArgs {
+    /// Ids from list_catalog, all of the same workspace.
+    pub ids: Vec<String>,
+    /// Their workspace id (from list_catalog). Omit for the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCategoryArgs {
+    /// Category name, unique in the workspace (an existing one is an error).
+    pub name: String,
+    /// The billable value a task gets by default in this category. Default true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_billable: Option<bool>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryIdArgs {
+    /// Category id, from list_catalog.
+    pub id: String,
+    /// The category's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+impl CategoryIdArgs {
+    fn params(&self) -> Value {
+        scoped_id_params(&self.id, &self.workspace_id)
+    }
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCategoryArgs {
+    /// Category id, from list_catalog.
+    pub id: String,
+    /// The category's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+    #[serde(flatten)]
+    pub body: UpdateCategoryBody,
+}
+
+/// O corpo; `id` e `workspaceId` vão fora dele, como no path e na query da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCategoryBody {
+    /// The name, unique in the workspace. Required: send the current one to keep it.
+    pub name: String,
+    /// New default billable value. Omit to keep it. Tasks already recorded are not
+    /// changed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_billable: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetProjectCategoriesArgs {
+    /// Project id, from list_catalog.
+    pub id: String,
+    /// The project's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+    #[serde(flatten)]
+    pub body: SetProjectCategoriesBody,
+}
+
+/// O corpo; `id` e `workspaceId` vão fora dele, como no path e na query da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetProjectCategoriesBody {
+    /// The final list of category ids (from list_catalog, of the project's
+    /// workspace), REPLACING the current selection. `[]` removes the filter.
+    pub category_ids: Vec<String>,
+}
+
+// ---------------- Fase B: Workspaces ----------------
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct CreateWorkspaceArgs {
+    /// Workspace name, unique (an existing one is an error).
+    pub name: String,
+    /// A palette slot: rose, orange, amber, lime, teal, cyan, violet or fuchsia.
+    /// Omit to derive it from the name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct UpdateWorkspaceArgs {
+    /// Workspace id, from list_catalog.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: UpdateWorkspaceBody,
+}
+
+/// O corpo; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct UpdateWorkspaceBody {
+    /// The name, unique. Required: send the current one to keep it.
+    pub name: String,
+    /// A palette slot: rose, orange, amber, lime, teal, cyan, violet or fuchsia.
+    /// Omit to keep the current color.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+}
+
+// Inline pelo mesmo motivo do `ScheduleType`.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum WorkspaceDeletionMode {
+    Move,
+    Delete,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct DeleteWorkspaceArgs {
+    /// Workspace id, from list_catalog.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: DeleteWorkspaceBody,
+}
+
+/// O corpo; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteWorkspaceBody {
+    /// What happens to the workspace's data (tasks, planned tasks, projects,
+    /// categories, export profiles): `move` reassigns all of it to toWorkspaceId;
+    /// `delete` erases all of it.
+    pub mode: WorkspaceDeletionMode,
+    /// With `move` only, and then required: the workspace that receives the data,
+    /// from list_catalog; not the one being deleted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to_workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct SetActiveWorkspaceArgs {
+    /// Workspace id, from list_catalog.
+    pub id: String,
+}
+
 #[derive(Clone)]
 pub struct DeskClockMcp {
     bridge: Arc<Bridge>,
@@ -680,7 +973,8 @@ impl DeskClockMcp {
             and `projects` and `categories` of the requested workspace (the active one \
             when `workspaceId` is omitted), each with `id` and `name`. Categories also \
             carry `defaultBillable`, the billable value a task gets by default in them. Custom \
-            fields are not included: use list_custom_fields.",
+            fields are not included: use list_custom_fields. Which categories each project \
+            offers: list_project_categories.",
         annotations(read_only_hint = true, open_world_hint = false)
     )]
     async fn list_catalog(&self, Parameters(args): Parameters<WorkspaceArgs>) -> CallToolResult {
@@ -1226,6 +1520,518 @@ impl DeskClockMcp {
     )]
     async fn cancel_task(&self) -> CallToolResult {
         self.call_single(CANCEL_TASK, json!({})).await
+    }
+
+    // ---------------- Fase B: Histórico ----------------
+    // Nenhuma passa pelo `usePostStopLogic`: só gravam no banco e emitem eventos
+    // locais, então `openWorldHint: false` em todas as desta fase.
+
+    #[tool(
+        name = "delete_task",
+        description = "Permanently delete one finished task of the History. The deletion \
+            is immediate and, unlike in the app, cannot be undone. Call it only when the \
+            user explicitly asked to delete it. Get `id` from list_tasks. The active task \
+            cannot be deleted here (an error): use cancel_task. Errors if it does not \
+            exist (so a repeated call only errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_task(&self, Parameters(args): Parameters<TaskIdArgs>) -> CallToolResult {
+        self.call_single(DELETE_TASK, json!({ "id": args.id }))
+            .await
+    }
+
+    #[tool(
+        name = "delete_tasks",
+        description = "Permanently delete several finished tasks of the History at once. \
+            The deletion is immediate and, unlike in the app, cannot be undone. Call it \
+            only when the user explicitly asked to delete these tasks. Get the ids from \
+            list_tasks. All or nothing: if any id does not exist or is the active task, \
+            nothing is deleted and it errors (so a repeated call only errors). Returns an \
+            empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_tasks(&self, Parameters(args): Parameters<TaskIdsArgs>) -> CallToolResult {
+        self.call_single(DELETE_TASKS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "set_task_billable",
+        description = "Set whether a finished task is billable, like clicking its billable \
+            indicator in the app. The value applies to the task's whole group — the \
+            finished tasks of the same day and workspace with the same name, project, \
+            category and custom values. Get `id` from list_tasks. To change other fields \
+            too, use update_task. The active task cannot be changed here (an error): use \
+            update_running_task. Returns the task.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_task_billable(
+        &self,
+        Parameters(args): Parameters<SetTaskBillableArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SET_TASK_BILLABLE,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "merge_tasks",
+        description = "Merge a group of finished tasks into a single record, like Merge \
+            (Unificar) on a group in the app: the new record starts at the earliest \
+            start, ends at the latest end and has the summed duration, and the original \
+            records are deleted. It is immediate and cannot be undone. Call it only when \
+            the user asked to merge. Only today's tasks can be merged, as in the app. \
+            Send at least two ids (from list_tasks) of the same group: same day and \
+            workspace, same name, project, category and custom values; anything else is \
+            an error and nothing changes. The active task cannot be included. Returns \
+            the merged task, with its new `id`.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn merge_tasks(&self, Parameters(args): Parameters<TaskIdsArgs>) -> CallToolResult {
+        self.call_single(MERGE_TASKS, json!({ "body": args })).await
+    }
+
+    #[tool(
+        name = "move_tasks_to_workspace",
+        description = "Move or copy finished tasks to another workspace, like Move to \
+            workspace in the app. Projects and categories belong to a workspace, so for \
+            each one say what it becomes in the destination: `match` an existing one \
+            there (targetId), `create` one there by name (an existing one with that name \
+            is reused), or `unset`. The same choice applies to all the tasks sent; call \
+            list_catalog with the destination's workspaceId to find matches. Custom \
+            values go along unchanged. `mode` `move` reassigns the tasks; `copy` creates \
+            copies in the destination and keeps the originals, so each call copies them \
+            again. All or nothing: an unknown id, the active task, or a task already in \
+            the destination is an error and nothing changes. Returns `count`, the number \
+            of tasks moved or copied.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn move_tasks_to_workspace(
+        &self,
+        Parameters(args): Parameters<MoveTasksArgs>,
+    ) -> CallToolResult {
+        self.call_single(MOVE_TASKS_TO_WORKSPACE, json!({ "body": args }))
+            .await
+    }
+
+    // ---------------- Fase B: Projetos ----------------
+
+    #[tool(
+        name = "create_project",
+        description = "Create a project in a workspace (the active one when workspaceId is \
+            omitted). The name must not already exist there (an error otherwise, so a \
+            repeated call only errors); its color is assigned by the app. To create many \
+            at once, use import_projects. Returns the project (`id`, `workspaceId`, \
+            `name`, `colorIndex`).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn create_project(
+        &self,
+        Parameters(args): Parameters<CreateProjectArgs>,
+    ) -> CallToolResult {
+        self.call_single(CREATE_PROJECT, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "update_project",
+        description = "Rename a project. Get `id` from list_catalog; pass the project's \
+            workspaceId when it is not in the active workspace. The new name must not \
+            belong to another project of the workspace. Tasks and planned tasks keep \
+            pointing to it and show the new name. Returns the project.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_project(
+        &self,
+        Parameters(args): Parameters<UpdateProjectArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_PROJECT,
+            json!({
+                "id": args.id,
+                "workspaceId": args.workspace_id,
+                "body": args.body,
+            }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_project",
+        description = "Permanently delete a project from its workspace. The deletion is \
+            immediate and cannot be undone. Call it only when the user explicitly asked \
+            to delete the project. Recorded tasks and planned tasks are kept, without \
+            the project. Get `id` from list_catalog; pass the project's workspaceId when \
+            it is not in the active workspace. Errors if it does not exist there (so a \
+            repeated call only errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_project(&self, Parameters(args): Parameters<ProjectIdArgs>) -> CallToolResult {
+        self.call_single(DELETE_PROJECT, args.params()).await
+    }
+
+    #[tool(
+        name = "import_projects",
+        description = "Create many projects at once, like the bulk import of the Data \
+            screen: `text` has one project name per line; blank lines are ignored. A name \
+            that already exists in the workspace is skipped, not an error, so repeating \
+            the call creates nothing new. Returns `created` (how many) and `skipped` (the \
+            lines not imported).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn import_projects(
+        &self,
+        Parameters(args): Parameters<ImportCatalogArgs>,
+    ) -> CallToolResult {
+        self.call_single(IMPORT_PROJECTS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "delete_projects",
+        description = "Permanently delete several projects of one workspace at once. The \
+            deletion is immediate and cannot be undone. Call it only when the user \
+            explicitly asked to delete these projects. Recorded tasks and planned tasks \
+            are kept, without the project. All or nothing: if any id is not a project of \
+            the workspace, nothing is deleted and it errors (so a repeated call only \
+            errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_projects(
+        &self,
+        Parameters(args): Parameters<DeleteManyArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_PROJECTS, json!({ "body": args }))
+            .await
+    }
+
+    // ---------------- Fase B: Categorias ----------------
+
+    #[tool(
+        name = "create_category",
+        description = "Create a category in a workspace (the active one when workspaceId \
+            is omitted). The name must not already exist there (an error otherwise, so a \
+            repeated call only errors). `defaultBillable` (default true) is the billable \
+            value a task gets when this category is chosen. To create many at once, use \
+            import_categories. Returns the category (`id`, `workspaceId`, `name`, \
+            `defaultBillable`).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn create_category(
+        &self,
+        Parameters(args): Parameters<CreateCategoryArgs>,
+    ) -> CallToolResult {
+        self.call_single(CREATE_CATEGORY, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "update_category",
+        description = "Rename a category and/or change its default billable value. Get \
+            `id` from list_catalog; pass the category's workspaceId when it is not in the \
+            active workspace. `name` is always required (send the current one to keep \
+            it) and must not belong to another category of the workspace; an omitted \
+            `defaultBillable` is kept. Tasks already recorded keep their billable value. \
+            Returns the category.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_category(
+        &self,
+        Parameters(args): Parameters<UpdateCategoryArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_CATEGORY,
+            json!({ "id": args.id, "workspaceId": args.workspace_id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_category",
+        description = "Permanently delete a category from its workspace. The deletion is \
+            immediate and cannot be undone. Call it only when the user explicitly asked \
+            to delete the category. Recorded tasks and planned tasks are kept, without \
+            the category. Get `id` from list_catalog; pass the category's workspaceId \
+            when it is not in the active workspace. Errors if it does not exist there (so \
+            a repeated call only errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_category(
+        &self,
+        Parameters(args): Parameters<CategoryIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_CATEGORY, args.params()).await
+    }
+
+    #[tool(
+        name = "import_categories",
+        description = "Create many categories at once, like the bulk import of the Data \
+            screen: `text` has one category name per line; blank lines are ignored. A \
+            line starting with `!` creates the category as non-billable by default (e.g. \
+            `!Internal meetings`); without it, billable. A name that already exists in \
+            the workspace is skipped, not an error, so repeating the call creates nothing \
+            new. Returns `created` (how many) and `skipped` (the lines not imported).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn import_categories(
+        &self,
+        Parameters(args): Parameters<ImportCatalogArgs>,
+    ) -> CallToolResult {
+        self.call_single(IMPORT_CATEGORIES, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "delete_categories",
+        description = "Permanently delete several categories of one workspace at once. The \
+            deletion is immediate and cannot be undone. Call it only when the user \
+            explicitly asked to delete these categories. Recorded tasks and planned tasks \
+            are kept, without the category. All or nothing: if any id is not a category \
+            of the workspace, nothing is deleted and it errors (so a repeated call only \
+            errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_categories(
+        &self,
+        Parameters(args): Parameters<DeleteManyArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_CATEGORIES, json!({ "body": args }))
+            .await
+    }
+
+    // ---------------- Fase B: Categorias por projeto ----------------
+
+    #[tool(
+        name = "list_project_categories",
+        description = "The categories associated with a project (Categories per project \
+            on the Data screen). When a project has associated categories, the app \
+            offers only those for it; an empty list means the project offers every \
+            category of its workspace. Get `id` from list_catalog; pass the project's \
+            workspaceId when it is not in the active workspace. Returns \
+            `projectCategories`, each with `categoryId` (see list_catalog for the name), \
+            `source` (`manual`, or `monday` when it came from the Monday sync) and \
+            `createdAt`.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn list_project_categories(
+        &self,
+        Parameters(args): Parameters<ProjectIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(LIST_PROJECT_CATEGORIES, args.params())
+            .await
+    }
+
+    #[tool(
+        name = "set_project_categories",
+        description = "Set which categories a project offers. `categoryIds` is the final \
+            list, REPLACING the current one: a category left out is removed, including \
+            one that came from the Monday sync (it comes back at the next sync unless it \
+            is removed in the Monday board). `[]` removes the filter, so the project \
+            offers every category again. The categories must belong to the project's \
+            workspace (see list_catalog). To add one category, read the current list \
+            with list_project_categories and send it back with the new id. Returns \
+            `projectCategories`, as list_project_categories.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_project_categories(
+        &self,
+        Parameters(args): Parameters<SetProjectCategoriesArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SET_PROJECT_CATEGORIES,
+            json!({ "id": args.id, "workspaceId": args.workspace_id, "body": args.body }),
+        )
+        .await
+    }
+
+    // ---------------- Fase B: Workspaces ----------------
+
+    #[tool(
+        name = "create_workspace",
+        description = "Create a workspace. It does not become the active one: use \
+            set_active_workspace for that. The name must not already exist (an error \
+            otherwise, so a repeated call only errors). `color` is a palette slot (rose, \
+            orange, amber, lime, teal, cyan, violet, fuchsia); omitted, it is derived \
+            from the name. Returns the workspace (`id`, `name`, `color`, `createdAt`, \
+            `active`).",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn create_workspace(
+        &self,
+        Parameters(args): Parameters<CreateWorkspaceArgs>,
+    ) -> CallToolResult {
+        self.call_single(CREATE_WORKSPACE, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "update_workspace",
+        description = "Rename and/or recolor a workspace. Get `id` from list_catalog. \
+            `name` is always required (send the current one to keep it) and must not \
+            belong to another workspace; an omitted `color` is kept. Returns the \
+            workspace.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_workspace(
+        &self,
+        Parameters(args): Parameters<UpdateWorkspaceArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_WORKSPACE,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_workspace",
+        description = "Permanently delete a workspace. Call it only when the user \
+            explicitly asked to delete it AND said what to do with its data — if they \
+            did not, ask; the app also makes them choose. `mode` `move` moves all its \
+            data (tasks, planned tasks, projects, categories, export profiles) to \
+            `toWorkspaceId`, where a project or category with the same name is merged \
+            into the existing one; `delete` erases all of it — months of recorded hours \
+            may go with it. It is immediate and cannot be undone. Deleting the active \
+            workspace makes the destination (or, with `delete`, the first remaining one) \
+            active. Integrations set to use this workspace stop until another one is \
+            chosen for them in the app. Errors, changing nothing: the last workspace, a \
+            destination that does not exist, or an active task (running or paused) in \
+            this workspace — stop it with stop_task, or discard it with cancel_task, \
+            first. Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_workspace(
+        &self,
+        Parameters(args): Parameters<DeleteWorkspaceArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            DELETE_WORKSPACE,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "set_active_workspace",
+        description = "Switch the active workspace in every DeskClock window. New records \
+            are created in the active workspace, and tools called without workspaceId \
+            use it. Switching to another workspace while a task is active (running or \
+            paused) errors and does not switch: unlike the app, which asks whether the \
+            task was completed and stops it, this tool never stops it. Ask the user, \
+            stop it with stop_task (with \
+            `completed` as they answered) or discard it with cancel_task, then call \
+            again. Switching to the workspace that is already active changes nothing. \
+            Get `id` from list_catalog. Returns the workspace now active.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_active_workspace(
+        &self,
+        Parameters(args): Parameters<SetActiveWorkspaceArgs>,
+    ) -> CallToolResult {
+        self.call_single(SET_ACTIVE_WORKSPACE, json!({ "body": args }))
+            .await
     }
 }
 

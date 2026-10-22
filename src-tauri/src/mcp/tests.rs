@@ -149,30 +149,51 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
         [
             "cancel_task",
             "complete_planned_task",
+            "create_category",
             "create_custom_field",
+            "create_project",
+            "create_workspace",
+            "delete_categories",
+            "delete_category",
             "delete_custom_field",
             "delete_planned_task",
+            "delete_project",
+            "delete_projects",
+            "delete_task",
+            "delete_tasks",
+            "delete_workspace",
             "duplicate_planned_task",
             "get_status",
             "get_totals",
             "get_week_totals",
+            "import_categories",
+            "import_projects",
             "list_catalog",
             "list_custom_fields",
             "list_planned_tasks",
+            "list_project_categories",
             "list_tasks",
             "log_past_task",
             "log_planned_task",
+            "merge_tasks",
+            "move_tasks_to_workspace",
             "pause_task",
             "plan_task",
             "resume_task",
+            "set_active_workspace",
+            "set_project_categories",
+            "set_task_billable",
             "start_planned_task",
             "start_task",
             "stop_task",
             "uncomplete_planned_task",
+            "update_category",
             "update_custom_field",
             "update_planned_task",
+            "update_project",
             "update_running_task",
             "update_task",
+            "update_workspace",
         ]
     );
 }
@@ -214,7 +235,34 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         // A segunda exclusão ou o segundo descarte só erra (404).
         ("delete_planned_task", false, Some(true), false),
         ("cancel_task", false, Some(true), false),
+        // Fase B. Exclusões e unificação: a segunda chamada só erra (404) — os ids
+        // já não existem. Criar com nome repetido só erra (409); importar de novo
+        // pula tudo. `move` repetido erra (destino igual), mas `copy` copia de novo.
+        ("delete_task", false, Some(true), false),
+        ("delete_tasks", false, Some(true), false),
+        ("set_task_billable", false, Some(true), false),
+        ("merge_tasks", false, Some(true), false),
+        ("move_tasks_to_workspace", false, Some(false), false),
+        ("create_project", false, Some(true), false),
+        ("update_project", false, Some(true), false),
+        ("delete_project", false, Some(true), false),
+        ("import_projects", false, Some(true), false),
+        ("delete_projects", false, Some(true), false),
+        ("create_category", false, Some(true), false),
+        ("update_category", false, Some(true), false),
+        ("delete_category", false, Some(true), false),
+        ("import_categories", false, Some(true), false),
+        ("delete_categories", false, Some(true), false),
+        ("list_project_categories", true, None, false),
+        ("set_project_categories", false, Some(true), false),
+        ("create_workspace", false, Some(true), false),
+        ("update_workspace", false, Some(true), false),
+        ("delete_workspace", false, Some(true), false),
+        // Ativar o que já está ativo não muda nada; com tarefa ativa só erra (409).
+        ("set_active_workspace", false, Some(true), false),
     ];
+    // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
+    assert_eq!(expected.len(), TOOL_OPS.len());
     let tools = list_tools(state).await;
     for (name, read_only, idempotent, open_world) in expected {
         let tool = tools.iter().find(|t| t["name"] == *name).unwrap();
@@ -223,8 +271,20 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         assert_eq!(annotations["openWorldHint"], json!(open_world), "{tool}");
         if !read_only {
             // Só estas apagam algo que o usuário escolheu guardar.
-            let destructive =
-                ["delete_custom_field", "delete_planned_task", "cancel_task"].contains(name);
+            let destructive = [
+                "delete_custom_field",
+                "delete_planned_task",
+                "cancel_task",
+                "delete_task",
+                "delete_tasks",
+                "merge_tasks",
+                "delete_project",
+                "delete_projects",
+                "delete_category",
+                "delete_categories",
+                "delete_workspace",
+            ]
+            .contains(name);
             assert_eq!(annotations["destructiveHint"], json!(destructive), "{tool}");
             assert_eq!(annotations["idempotentHint"], json!(idempotent), "{tool}");
         }
@@ -1560,5 +1620,480 @@ async fn tools_de_edicao_e_planejamento_sem_argumento_obrigatorio_viram_is_error
         let result = call_tool(state, tool, args).await;
         assert_eq!(result["isError"], json!(true), "{tool}: {result}");
         assert!(calls.lock().unwrap().is_empty(), "{tool}");
+    }
+}
+
+// ---------------- Fase B da paridade ----------------
+
+fn phase_b_responder(op: &str) -> (u16, Value) {
+    match op {
+        "history.delete"
+        | "history.deleteMany"
+        | "projects.delete"
+        | "projects.deleteMany"
+        | "categories.delete"
+        | "categories.deleteMany"
+        | "workspaces.delete" => (204, Value::Null),
+        "history.setBillable" => (200, json!({ "id": "t1", "billable": false })),
+        "history.merge" => (201, json!({ "id": "t9" })),
+        "history.move" => (200, json!({ "count": 2 })),
+        "projects.import" | "categories.import" => (200, json!({ "created": 1, "skipped": ["B"] })),
+        "projectCategories.list" | "projectCategories.set" => (
+            200,
+            json!([{ "categoryId": "c1", "source": "manual", "createdAt": "x" }]),
+        ),
+        "workspaces.setActive" => (200, json!({ "id": "w2", "active": true })),
+        other => (201, json!({ "id": format!("{other}-1") })),
+    }
+}
+
+async fn forwarded_b(tool: &str, arguments: Value) -> (Value, Vec<(String, Value)>) {
+    let (state, calls) = fake_state(true, phase_b_responder);
+    let result = call_tool(state, tool, arguments).await;
+    assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+    let calls = calls.lock().unwrap().clone();
+    (result, calls)
+}
+
+/// (tool, argumentos, op esperada, params esperados) — os params são os que a
+/// rota REST equivalente monta: `id` do path, `workspaceId` da query (nulo quando
+/// ausente) e o corpo em `body` só com o que veio.
+#[tokio::test]
+async fn tools_da_fase_b_repassam_os_params_como_a_rest() {
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "delete_task",
+            json!({ "id": "t1" }),
+            "history.delete",
+            json!({ "id": "t1" }),
+        ),
+        (
+            "delete_tasks",
+            json!({ "ids": ["t1", "t2"] }),
+            "history.deleteMany",
+            json!({ "body": { "ids": ["t1", "t2"] } }),
+        ),
+        (
+            "set_task_billable",
+            json!({ "id": "t1", "billable": false }),
+            "history.setBillable",
+            json!({ "id": "t1", "body": { "billable": false } }),
+        ),
+        (
+            "merge_tasks",
+            json!({ "ids": ["t1", "t2"] }),
+            "history.merge",
+            json!({ "body": { "ids": ["t1", "t2"] } }),
+        ),
+        (
+            "move_tasks_to_workspace",
+            json!({
+                "ids": ["t1"], "toWorkspaceId": "w2", "mode": "copy",
+                "project": { "kind": "match", "targetId": "p9" },
+                "category": { "kind": "create", "name": "Reuniões" }
+            }),
+            "history.move",
+            json!({ "body": {
+                "ids": ["t1"], "toWorkspaceId": "w2", "mode": "copy",
+                "project": { "kind": "match", "targetId": "p9" },
+                "category": { "kind": "create", "name": "Reuniões" }
+            } }),
+        ),
+        (
+            "move_tasks_to_workspace",
+            json!({
+                "ids": ["t1"], "toWorkspaceId": "w2", "mode": "move",
+                "project": { "kind": "unset" }, "category": { "kind": "unset" }
+            }),
+            "history.move",
+            json!({ "body": {
+                "ids": ["t1"], "toWorkspaceId": "w2", "mode": "move",
+                "project": { "kind": "unset" }, "category": { "kind": "unset" }
+            } }),
+        ),
+        (
+            "create_project",
+            json!({ "name": "ACME" }),
+            "projects.create",
+            json!({ "body": { "name": "ACME" } }),
+        ),
+        (
+            "create_project",
+            json!({ "name": "ACME", "workspaceId": "w2" }),
+            "projects.create",
+            json!({ "body": { "name": "ACME", "workspaceId": "w2" } }),
+        ),
+        (
+            "update_project",
+            json!({ "id": "p1", "name": "ACME 2" }),
+            "projects.update",
+            json!({ "id": "p1", "workspaceId": null, "body": { "name": "ACME 2" } }),
+        ),
+        (
+            "update_project",
+            json!({ "id": "p1", "workspaceId": "w2", "name": "ACME 2" }),
+            "projects.update",
+            json!({ "id": "p1", "workspaceId": "w2", "body": { "name": "ACME 2" } }),
+        ),
+        (
+            "delete_project",
+            json!({ "id": "p1" }),
+            "projects.delete",
+            json!({ "id": "p1", "workspaceId": null }),
+        ),
+        (
+            "import_projects",
+            json!({ "text": "A\nB" }),
+            "projects.import",
+            json!({ "body": { "text": "A\nB" } }),
+        ),
+        (
+            "delete_projects",
+            json!({ "ids": ["p1"], "workspaceId": "w2" }),
+            "projects.deleteMany",
+            json!({ "body": { "ids": ["p1"], "workspaceId": "w2" } }),
+        ),
+        (
+            "create_category",
+            json!({ "name": "Reuniões", "defaultBillable": false }),
+            "categories.create",
+            json!({ "body": { "name": "Reuniões", "defaultBillable": false } }),
+        ),
+        (
+            "update_category",
+            json!({ "id": "c1", "name": "Reuniões" }),
+            "categories.update",
+            json!({ "id": "c1", "workspaceId": null, "body": { "name": "Reuniões" } }),
+        ),
+        (
+            "update_category",
+            json!({ "id": "c1", "workspaceId": "w2", "name": "R", "defaultBillable": true }),
+            "categories.update",
+            json!({ "id": "c1", "workspaceId": "w2", "body": { "name": "R", "defaultBillable": true } }),
+        ),
+        (
+            "delete_category",
+            json!({ "id": "c1", "workspaceId": "w2" }),
+            "categories.delete",
+            json!({ "id": "c1", "workspaceId": "w2" }),
+        ),
+        (
+            "import_categories",
+            json!({ "text": "Dev\n!Reuniões", "workspaceId": "w2" }),
+            "categories.import",
+            json!({ "body": { "text": "Dev\n!Reuniões", "workspaceId": "w2" } }),
+        ),
+        (
+            "delete_categories",
+            json!({ "ids": ["c1", "c2"] }),
+            "categories.deleteMany",
+            json!({ "body": { "ids": ["c1", "c2"] } }),
+        ),
+        (
+            "list_project_categories",
+            json!({ "id": "p1" }),
+            "projectCategories.list",
+            json!({ "id": "p1", "workspaceId": null }),
+        ),
+        (
+            "set_project_categories",
+            json!({ "id": "p1", "categoryIds": [] }),
+            "projectCategories.set",
+            json!({ "id": "p1", "workspaceId": null, "body": { "categoryIds": [] } }),
+        ),
+        (
+            "create_workspace",
+            json!({ "name": "Freelas" }),
+            "workspaces.create",
+            json!({ "body": { "name": "Freelas" } }),
+        ),
+        (
+            "update_workspace",
+            json!({ "id": "w2", "name": "Freelas", "color": "violet" }),
+            "workspaces.update",
+            json!({ "id": "w2", "body": { "name": "Freelas", "color": "violet" } }),
+        ),
+        (
+            "delete_workspace",
+            json!({ "id": "w2", "mode": "move", "toWorkspaceId": "w1" }),
+            "workspaces.delete",
+            json!({ "id": "w2", "body": { "mode": "move", "toWorkspaceId": "w1" } }),
+        ),
+        (
+            "delete_workspace",
+            json!({ "id": "w2", "mode": "delete" }),
+            "workspaces.delete",
+            json!({ "id": "w2", "body": { "mode": "delete" } }),
+        ),
+        (
+            "set_active_workspace",
+            json!({ "id": "w2" }),
+            "workspaces.setActive",
+            json!({ "body": { "id": "w2" } }),
+        ),
+    ];
+    for (tool, args, op, params) in cases {
+        let (_, calls) = forwarded_b(tool, args).await;
+        assert_eq!(calls, [(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn exclusoes_da_fase_b_devolvem_objeto_vazio_no_204() {
+    for (tool, args) in [
+        ("delete_task", json!({ "id": "t1" })),
+        ("delete_tasks", json!({ "ids": ["t1"] })),
+        ("delete_project", json!({ "id": "p1" })),
+        ("delete_projects", json!({ "ids": ["p1"] })),
+        ("delete_category", json!({ "id": "c1" })),
+        ("delete_categories", json!({ "ids": ["c1"] })),
+        ("delete_workspace", json!({ "id": "w2", "mode": "delete" })),
+    ] {
+        let (result, _) = forwarded_b(tool, args).await;
+        assert_eq!(result["structuredContent"], json!({}), "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn resultados_da_fase_b_saem_como_objeto() {
+    let (result, _) = forwarded_b("merge_tasks", json!({ "ids": ["t1", "t2"] })).await;
+    assert_eq!(result["structuredContent"], json!({ "id": "t9" }));
+    let (result, _) = forwarded_b(
+        "move_tasks_to_workspace",
+        json!({
+            "ids": ["t1"], "toWorkspaceId": "w2", "mode": "move",
+            "project": { "kind": "unset" }, "category": { "kind": "unset" }
+        }),
+    )
+    .await;
+    assert_eq!(result["structuredContent"], json!({ "count": 2 }));
+    let (result, _) = forwarded_b("import_projects", json!({ "text": "A\nB" })).await;
+    assert_eq!(
+        result["structuredContent"],
+        json!({ "created": 1, "skipped": ["B"] })
+    );
+    // A lista de associações vai numa chave: `structuredContent` tem de ser objeto.
+    let row = json!([{ "categoryId": "c1", "source": "manual", "createdAt": "x" }]);
+    for (tool, args) in [
+        ("list_project_categories", json!({ "id": "p1" })),
+        (
+            "set_project_categories",
+            json!({ "id": "p1", "categoryIds": ["c1"] }),
+        ),
+    ] {
+        let (result, _) = forwarded_b(tool, args).await;
+        assert_eq!(
+            result["structuredContent"],
+            json!({ "projectCategories": row }),
+            "{tool}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn set_active_workspace_com_tarefa_ativa_vira_is_error_com_a_mensagem() {
+    fn conflict(_: &str) -> (u16, Value) {
+        (
+            409,
+            json!({ "error": "Há uma tarefa ativa. Pare ou cancele a tarefa antes de trocar de workspace." }),
+        )
+    }
+    let (state, _) = fake_state(true, conflict);
+    let result = call_tool(state, "set_active_workspace", json!({ "id": "w2" })).await;
+    assert_eq!(
+        error_text(&result),
+        "Há uma tarefa ativa. Pare ou cancele a tarefa antes de trocar de workspace."
+    );
+}
+
+#[tokio::test]
+async fn tools_da_fase_b_sem_argumento_obrigatorio_viram_is_error_sem_chamar_a_ponte() {
+    let unset = json!({ "kind": "unset" });
+    for (tool, args) in [
+        ("delete_task", json!({})),
+        ("delete_tasks", json!({})),
+        ("set_task_billable", json!({ "id": "t1" })),
+        ("set_task_billable", json!({ "billable": true })),
+        ("merge_tasks", json!({})),
+        (
+            "move_tasks_to_workspace",
+            json!({ "ids": ["t1"], "toWorkspaceId": "w2", "project": unset, "category": unset }),
+        ),
+        (
+            "move_tasks_to_workspace",
+            json!({ "ids": ["t1"], "toWorkspaceId": "w2", "mode": "move", "project": unset }),
+        ),
+        (
+            "move_tasks_to_workspace",
+            json!({ "ids": ["t1"], "mode": "move", "project": unset, "category": unset }),
+        ),
+        ("create_project", json!({})),
+        ("update_project", json!({ "id": "p1" })),
+        ("update_project", json!({ "name": "x" })),
+        ("delete_project", json!({})),
+        ("import_projects", json!({})),
+        ("delete_projects", json!({})),
+        ("create_category", json!({ "defaultBillable": true })),
+        (
+            "update_category",
+            json!({ "id": "c1", "defaultBillable": true }),
+        ),
+        ("delete_category", json!({})),
+        ("import_categories", json!({})),
+        ("delete_categories", json!({})),
+        ("list_project_categories", json!({})),
+        ("set_project_categories", json!({ "id": "p1" })),
+        ("set_project_categories", json!({ "categoryIds": [] })),
+        ("create_workspace", json!({ "color": "violet" })),
+        ("update_workspace", json!({ "id": "w2" })),
+        // A escolha do destino dos dados é obrigatória, como no modal da tela.
+        ("delete_workspace", json!({ "id": "w2" })),
+        ("delete_workspace", json!({ "mode": "delete" })),
+        ("set_active_workspace", json!({})),
+    ] {
+        let (state, calls) = fake_state(true, phase_b_responder);
+        let result = call_tool(state, tool, args.clone()).await;
+        assert_eq!(result["isError"], json!(true), "{tool} {args}: {result}");
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {args}");
+    }
+}
+
+#[tokio::test]
+async fn enums_da_fase_b_sao_conferidos_antes_da_ponte() {
+    for (tool, args) in [
+        ("delete_workspace", json!({ "id": "w2", "mode": "archive" })),
+        (
+            "move_tasks_to_workspace",
+            json!({
+                "ids": ["t1"], "toWorkspaceId": "w2", "mode": "link",
+                "project": { "kind": "unset" }, "category": { "kind": "unset" }
+            }),
+        ),
+        (
+            "move_tasks_to_workspace",
+            json!({
+                "ids": ["t1"], "toWorkspaceId": "w2", "mode": "move",
+                "project": { "kind": "keep" }, "category": { "kind": "unset" }
+            }),
+        ),
+    ] {
+        let (state, calls) = fake_state(true, phase_b_responder);
+        let result = call_tool(state, tool, args).await;
+        assert_eq!(result["isError"], json!(true), "{tool}: {result}");
+        assert!(calls.lock().unwrap().is_empty(), "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn esquemas_da_fase_b_declaram_os_campos_e_saem_planos() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let schema =
+        |name: &str| tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].clone();
+    let keys = |schema: &Value| {
+        let mut keys: Vec<String> = schema["properties"]
+            .as_object()
+            .map(|p| p.keys().cloned().collect())
+            .unwrap_or_default();
+        keys.sort_unstable();
+        keys
+    };
+    // (tool, propriedades, obrigatórias)
+    let expected: &[(&str, &[&str], &[&str])] = &[
+        ("delete_task", &["id"], &["id"]),
+        ("delete_tasks", &["ids"], &["ids"]),
+        (
+            "set_task_billable",
+            &["billable", "id"],
+            &["billable", "id"],
+        ),
+        ("merge_tasks", &["ids"], &["ids"]),
+        (
+            "move_tasks_to_workspace",
+            &["category", "ids", "mode", "project", "toWorkspaceId"],
+            &["category", "ids", "mode", "project", "toWorkspaceId"],
+        ),
+        ("create_project", &["name", "workspaceId"], &["name"]),
+        (
+            "update_project",
+            &["id", "name", "workspaceId"],
+            &["id", "name"],
+        ),
+        ("delete_project", &["id", "workspaceId"], &["id"]),
+        ("import_projects", &["text", "workspaceId"], &["text"]),
+        ("delete_projects", &["ids", "workspaceId"], &["ids"]),
+        (
+            "create_category",
+            &["defaultBillable", "name", "workspaceId"],
+            &["name"],
+        ),
+        (
+            "update_category",
+            &["defaultBillable", "id", "name", "workspaceId"],
+            &["id", "name"],
+        ),
+        ("delete_category", &["id", "workspaceId"], &["id"]),
+        ("import_categories", &["text", "workspaceId"], &["text"]),
+        ("delete_categories", &["ids", "workspaceId"], &["ids"]),
+        ("list_project_categories", &["id", "workspaceId"], &["id"]),
+        (
+            "set_project_categories",
+            &["categoryIds", "id", "workspaceId"],
+            &["categoryIds", "id"],
+        ),
+        ("create_workspace", &["color", "name"], &["name"]),
+        (
+            "update_workspace",
+            &["color", "id", "name"],
+            &["id", "name"],
+        ),
+        (
+            "delete_workspace",
+            &["id", "mode", "toWorkspaceId"],
+            &["id", "mode"],
+        ),
+        ("set_active_workspace", &["id"], &["id"]),
+    ];
+    for (name, properties, required) in expected {
+        let schema = schema(name);
+        assert_eq!(keys(&schema), *properties, "{name}");
+        assert_eq!(sorted(&schema["required"]), *required, "{name}");
+        // Achatados (`flatten`) e enums inline: sem indireção, que nem todo cliente resolve.
+        let text = schema.to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
+    }
+
+    let delete = schema("delete_workspace");
+    assert_eq!(
+        delete["properties"]["mode"]["enum"],
+        json!(["move", "delete"]),
+        "{delete}"
+    );
+    let moving = schema("move_tasks_to_workspace");
+    assert_eq!(
+        moving["properties"]["mode"]["enum"],
+        json!(["move", "copy"]),
+        "{moving}"
+    );
+    for side in ["project", "category"] {
+        let resolution = &moving["properties"][side];
+        assert_eq!(
+            resolution["properties"]["kind"]["enum"],
+            json!(["match", "create", "unset"]),
+            "{moving}"
+        );
+        assert_eq!(sorted(&resolution["required"]), ["kind"], "{moving}");
+        let mut fields: Vec<&String> = resolution["properties"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .collect();
+        fields.sort_unstable();
+        assert_eq!(fields, ["kind", "name", "targetId"], "{moving}");
     }
 }
