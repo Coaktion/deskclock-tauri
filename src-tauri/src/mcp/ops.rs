@@ -20,6 +20,8 @@ pub const LIST_CUSTOM_FIELDS: &str = "list_custom_fields";
 pub const CREATE_CUSTOM_FIELD: &str = "create_custom_field";
 pub const UPDATE_CUSTOM_FIELD: &str = "update_custom_field";
 pub const DELETE_CUSTOM_FIELD: &str = "delete_custom_field";
+pub const SET_RUNNING_TASK_CUSTOM_VALUES: &str = "set_running_task_custom_values";
+pub const SET_TASK_CUSTOM_VALUES: &str = "set_task_custom_values";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -41,6 +43,8 @@ pub const OP_CUSTOM_FIELDS_LIST: &str = "customFields.list";
 pub const OP_CUSTOM_FIELDS_CREATE: &str = "customFields.create";
 pub const OP_CUSTOM_FIELDS_UPDATE: &str = "customFields.update";
 pub const OP_CUSTOM_FIELDS_DELETE: &str = "customFields.delete";
+pub const OP_UPDATE_ACTIVE: &str = "tasks.updateActive";
+pub const OP_HISTORY_UPDATE: &str = "history.update";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -105,6 +109,12 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         DELETE_CUSTOM_FIELD,
         &[pass_through(OP_CUSTOM_FIELDS_DELETE)],
     ),
+    // As duas `op` aceitam mais campos; a tool é estreita de propósito (só valores).
+    (
+        SET_RUNNING_TASK_CUSTOM_VALUES,
+        &[pass_through(OP_UPDATE_ACTIVE)],
+    ),
+    (SET_TASK_CUSTOM_VALUES, &[pass_through(OP_HISTORY_UPDATE)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

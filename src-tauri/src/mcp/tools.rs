@@ -5,8 +5,9 @@ use crate::api::bridge::Bridge;
 use crate::mcp::ops::{
     ops_of, OpCall, CREATE_CUSTOM_FIELD, DELETE_CUSTOM_FIELD, GET_STATUS, GET_TOTALS,
     GET_WEEK_TOTALS, LIST_CATALOG, LIST_CUSTOM_FIELDS, LIST_PLANNED_TASKS, LIST_TASKS,
-    LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK, START_PLANNED_TASK,
-    START_TASK, STOP_TASK, UPDATE_CUSTOM_FIELD,
+    LOG_PAST_TASK, LOG_PLANNED_TASK, PAUSE_TASK, PLAN_TASK, RESUME_TASK,
+    SET_RUNNING_TASK_CUSTOM_VALUES, SET_TASK_CUSTOM_VALUES, START_PLANNED_TASK, START_TASK,
+    STOP_TASK, UPDATE_CUSTOM_FIELD,
 };
 use crate::mcp::result::{body_or_error, success};
 use rmcp::{
@@ -16,6 +17,7 @@ use rmcp::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -54,6 +56,12 @@ pub struct TaskFields {
     /// Workspace id (from list_catalog). Omit to use the active workspace.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub workspace_id: Option<String>,
+    /// Custom field values: keys are custom field ids from list_custom_fields; values
+    /// are plain strings — the text for text/multiline, an option label (or id) for
+    /// select, "true" or "Sim" to check a checkbox. Omit fields without a value. Call
+    /// list_custom_fields first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_values: Option<HashMap<String, String>>,
 }
 
 // Os corpos vão ao TS como o cliente mandou, como no repasse da REST: campo
@@ -294,6 +302,25 @@ pub struct CreateCustomFieldArgs {
     /// for the other types.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub option_labels: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetRunningTaskCustomValuesArgs {
+    /// The complete map of custom field values for the task, replacing the current
+    /// one. Keys are field ids from list_custom_fields; values are plain strings
+    /// (text, an option label or id for select, "true"/"Sim" for a checkbox). `{}`
+    /// clears all values.
+    pub custom_values: HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetTaskCustomValuesArgs {
+    /// Finished task id, from list_tasks.
+    pub id: String,
+    #[serde(flatten)]
+    pub values: SetRunningTaskCustomValuesArgs,
 }
 
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
@@ -721,6 +748,60 @@ impl DeskClockMcp {
     ) -> CallToolResult {
         self.call_single(DELETE_CUSTOM_FIELD, json!({ "id": args.id }))
             .await
+    }
+
+    #[tool(
+        name = "set_running_task_custom_values",
+        description = "Set the custom field values of the running or paused task; \
+            nothing else about it changes. The map you send REPLACES the task's whole \
+            map: to change one field, read the current values (get_status) and send \
+            the complete map back; `{}` clears every value. Keys are field ids from \
+            list_custom_fields; values are plain strings (text, an option label or id \
+            for select, \"true\"/\"Sim\" for a checkbox). An unknown field id or an \
+            invalid value is an error. Errors if no task is active. If the task came \
+            from a planned task, the planned task gets the same values for its next \
+            occurrence. Returns the task with its `customValues`.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_running_task_custom_values(
+        &self,
+        Parameters(args): Parameters<SetRunningTaskCustomValuesArgs>,
+    ) -> CallToolResult {
+        self.call_single(SET_RUNNING_TASK_CUSTOM_VALUES, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "set_task_custom_values",
+        description = "Set the custom field values of a finished task of the History; \
+            nothing else about it changes. Get `id` from list_tasks. The map you send \
+            REPLACES the task's whole map: to change one field, read the current values \
+            (list_tasks) and send the complete map back; `{}` clears every value. Keys \
+            are field ids from list_custom_fields; values are plain strings (text, an \
+            option label or id for select, \"true\"/\"Sim\" for a checkbox). An \
+            unknown field id or an invalid value is an error. For the running task use \
+            set_running_task_custom_values. Returns the task with its `customValues`.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_task_custom_values(
+        &self,
+        Parameters(args): Parameters<SetTaskCustomValuesArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SET_TASK_CUSTOM_VALUES,
+            json!({ "id": args.id, "body": args.values }),
+        )
+        .await
     }
 }
 

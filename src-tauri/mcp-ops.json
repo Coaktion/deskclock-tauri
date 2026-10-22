@@ -19,14 +19,14 @@
     "customFields.list": "list_custom_fields",
     "customFields.create": "create_custom_field",
     "customFields.update": "update_custom_field",
-    "customFields.delete": "delete_custom_field"
+    "customFields.delete": "delete_custom_field",
+    "tasks.updateActive": "set_running_task_custom_values",
+    "history.update": "set_task_custom_values"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",
     "tasks.cancel": "destrutiva: descarta a tarefa em execução sem registrar, fora da v1",
-    "tasks.updateActive": "edição da tarefa em execução fora da v1",
     "history.get": "list_tasks já devolve cada registro, fora da v1",
-    "history.update": "edição do Histórico fora da v1",
     "history.delete": "destrutiva, fora da v1",
     "history.deleteMany": "destrutiva, fora da v1",
     "history.setBillable": "edição do Histórico fora da v1",
@@ -50,7 +50,7 @@
     "categories.import": "CRUD de catálogo fora da v1",
     "categories.deleteMany": "destrutiva, fora da v1",
     "plannedTasks.get": "list_planned_tasks já devolve cada planejada, fora da v1",
-    "plannedTasks.update": "edição do Planejamento fora da v1",
+    "plannedTasks.update": "exige name e scheduleType e regrava o agendamento: não há edição parcial só de customValues",
     "plannedTasks.delete": "destrutiva, fora da v1",
     "plannedTasks.complete": "edição do Planejamento fora da v1",
     "plannedTasks.uncomplete": "edição do Planejamento fora da v1",

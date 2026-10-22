@@ -49,9 +49,11 @@ Todas do usuário, em 2026-09-18.
 | `create_custom_field` | `customFields.create` | `type` enum inline; `optionLabels` obrigatório só em `select` |
 | `update_custom_field` | `customFields.update` | `optionLabels` é a lista final; opção existente casa pelo rótulo e mantém o id |
 | `delete_custom_field` | `customFields.delete` | `destructiveHint: true`: apaga o valor em todas as tarefas; arquivar é a alternativa |
+| `set_running_task_custom_values` | `tasks.updateActive` | Só `customValues` no corpo; o mapa enviado **substitui** o da tarefa. Estreita de propósito (ver Fase 5) |
+| `set_task_custom_values` | `history.update` | Idem, para um registro concluído do Histórico (`id` de `list_tasks`) |
 
-Fora da v1: `tasks.cancel`, `tasks.toggle`, `tasks.updateActive`, edição/exclusão/unificação/movimentação do
-Histórico, CRUD de catálogo e workspaces.
+Fora da v1: `tasks.cancel`, `tasks.toggle`, edição (exceto dos valores personalizados), exclusão/unificação/movimentação do
+Histórico, edição do Planejamento, CRUD de catálogo e workspaces.
 
 **Desenho das tools:** nome de intenção (`log_past_task`, não `post_tasks`); descrição diz *quando* usar e
 o formato de data/hora; projeto e categoria por **nome** (a API já resolve dentro do workspace e devolve
@@ -167,8 +169,9 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
 - **`billable` obrigatório no `start_task`**, como no DTO do `POST /tasks/start`. O TS cai em `true`
   quando falta e **não** herda o `defaultBillable` da categoria; obrigar faz o modelo escolher, e a
   descrição do campo manda usar o `defaultBillable` do `list_catalog` quando o usuário não disser.
-- **`customValues` fora do `start_task`.** O TS aceita, mas a chave é o id do campo personalizado, e
-  `customFields.list` está fora da v1 — o modelo não teria de onde tirar o id.
+- **`customValues` fora do `start_task` (histórico, resolvido na Fase 5).** O TS aceita, mas a chave é o
+  id do campo personalizado, e `customFields.list` estava fora da v1 — o modelo não tinha de onde tirar
+  o id. Com `list_custom_fields` (Fase 4), o `customValues` entrou no `TaskFields`.
 - **Corpo repassado como a REST repassa.** `start_task` e `stop_task` mandam `{ body: {...} }` só com
   os campos enviados (omitido fica ausente; o TS trata ausente e `null` igual). `stop_task` sem
   argumentos manda `{ body: {} }` onde a REST manda `{ body: null }` — o TS faz `params.body ?? {}`,
@@ -230,9 +233,9 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   coerência do agendamento **não é validado no TS** (`specific_date` sem `scheduleDate`, `HH:MM`
   malformado, só um dos dois horários): a tool não inventa a regra; a descrição de cada campo diz
   quando ele é obrigatório.
-- **Campos deixados de fora.** `customValues` em `plan_task` e `log_past_task` (mesmo motivo do
-  `start_task`: `customFields.list` fora da v1, o modelo não tem o id do campo — e quem precisa dos
-  valores de uma planejada usa `log_planned_task`, que os copia). `actions` (links/arquivos abertos
+- **Campos deixados de fora.** `customValues` em `plan_task` e `log_past_task` (na época, mesmo motivo do
+  `start_task`: sem `customFields.list` o modelo não tinha o id do campo; resolvido na Fase 5 —
+  `log_planned_task` continua sem o campo porque copia os valores da planejada). `actions` (links/arquivos abertos
   pelo card) e `sortOrder` (a UI não reordena; tudo grava 0) no `plan_task`. `list_tasks` filtra
   projeto e categoria **só por id**, como o `GET /tasks` (`resolveProjectId(…, id, null)`); a
   descrição diz para pegar o id no `list_catalog`.
@@ -292,4 +295,33 @@ testes dos handlers TS. Verificação manual por cliente MCP real na porta 27421
   a tool devolve `{}` (o `structuredContent` tem de ser objeto).
 - **`update`** manda `{ id, body }` com só os campos enviados (`{}` se só há `id`); o tipo do
   campo não muda.
-- `customValues` continua fora do `start_task`/`plan_task`/`log_past_task` — muda na próxima fase.
+- `customValues` continuava fora do `start_task`/`plan_task`/`log_past_task` — mudou na Fase 5.
+
+### Fase 5 (valores personalizados nas tarefas)
+
+- **Na criação.** `custom_values: Option<HashMap<String,String>>` no `TaskFields`, logo em
+  `start_task`, `plan_task` e `log_past_task`; o esquema continua plano (`additionalProperties` inline,
+  sem `$ref`; coberto por `esquemas_das_tools_que_criam_tarefa_saem_planos`). Chave = id de
+  `list_custom_fields`; valor sempre texto (select aceita rótulo ou id, checkbox `true`/`Sim`; a
+  normalização é a da API). **Não** entrou no `log_planned_task`: ele copia da planejada.
+- **Edição: tools estreitas.** `tasks.updateActive` e `history.update` aceitam nome, projeto,
+  categoria, billable e horário, mas as tools mandam **só** `customValues`: uma tool por `op`, com o
+  raio pequeno (o modelo não reescreve nome, projeto ou horário por engano). Pedido do usuário, por
+  paridade com a UI.
+- **Semântica de substituição:** o mapa enviado **substitui o mapa inteiro** (é o que a API faz). Para
+  mudar um campo, ler os valores atuais (`get_status`, `list_tasks`) e reenviar o mapa completo; `{}`
+  limpa tudo. Dito na descrição das tools. `list_tasks`, `list_planned_tasks` e `get_status` já devolvem
+  `customValues` (via `toTaskDto`/`toPlannedTaskDto`).
+- **Anotações:** `readOnly false`, `destructive false`, `idempotent true`, `openWorld false` nas duas.
+  O envio por tarefa às integrações só roda no `stop` (`usePostStopLogic`); `updateActiveTask` e
+  `editCompletedTask` só atualizam o banco e emitem eventos locais. Efeito colateral documentado na
+  descrição: `set_running_task_custom_values` leva os valores também à planejada de origem
+  (`applyRunningTaskEditToPlanned`).
+- **Resultado:** `pass_through` — o corpo é o `TaskDto`.
+- **Fica de fora: `set_planned_task_custom_values`.** `plannedTasks.update` **não** faz edição parcial:
+  exige `name` e `scheduleType` (`scheduleType(body.scheduleType)` lança sem ele) e regrava
+  `scheduleDate`, `recurringDays`, `periodStart/End` e `actions` com `null`/`[]` quando ausentes
+  (só `startTime`/`endTime`/`customValues`/`billable`/`sortOrder` preservam). Uma tool que mandasse só
+  `customValues` daria erro; uma que montasse o corpo completo inventaria regra no adaptador. Para
+  entrar, o handler TS precisa ganhar edição parcial (decisão do usuário). `plannedTasks.update`
+  segue em `excluded`, com esse motivo.

@@ -161,6 +161,8 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "pause_task",
             "plan_task",
             "resume_task",
+            "set_running_task_custom_values",
+            "set_task_custom_values",
             "start_planned_task",
             "start_task",
             "stop_task",
@@ -195,6 +197,9 @@ async fn anotacoes_separam_leitura_de_escrita_e_so_a_exclusao_de_campo_e_destrut
         ("create_custom_field", false, Some(false), false),
         ("update_custom_field", false, Some(true), false),
         ("delete_custom_field", false, Some(true), false),
+        // Editar valor não envia a integração: o envio por tarefa só roda no `stop`.
+        ("set_running_task_custom_values", false, Some(true), false),
+        ("set_task_custom_values", false, Some(true), false),
     ];
     let tools = list_tools(state).await;
     for (name, read_only, idempotent, open_world) in expected {
@@ -233,6 +238,7 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
             "billable",
             "categoryId",
             "categoryName",
+            "customValues",
             "name",
             "projectId",
             "projectName",
@@ -240,6 +246,11 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
         ]
     );
     assert_eq!(sorted(&start["required"]), ["billable"]);
+    assert_eq!(
+        start["properties"]["customValues"]["additionalProperties"]["type"],
+        json!("string"),
+        "{start}"
+    );
     assert_eq!(keys(&schema("stop_task")), ["completed"]);
     let planned = schema("start_planned_task");
     assert_eq!(keys(&planned), ["id"]);
@@ -260,6 +271,7 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
             "billable",
             "categoryId",
             "categoryName",
+            "customValues",
             "endTime",
             "name",
             "periodEnd",
@@ -290,6 +302,7 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
             "billable",
             "categoryId",
             "categoryName",
+            "customValues",
             "endTime",
             "name",
             "projectId",
@@ -337,6 +350,12 @@ async fn esquemas_de_entrada_declaram_os_campos_da_op() {
     let delete = schema("delete_custom_field");
     assert_eq!(keys(&delete), ["id"]);
     assert_eq!(sorted(&delete["required"]), ["id"]);
+    let running = schema("set_running_task_custom_values");
+    assert_eq!(keys(&running), ["customValues"]);
+    assert_eq!(sorted(&running["required"]), ["customValues"]);
+    let set = schema("set_task_custom_values");
+    assert_eq!(keys(&set), ["customValues", "id"]);
+    assert_eq!(sorted(&set["required"]), ["customValues", "id"]);
     for read_only in ["list_tasks", "get_totals", "get_week_totals"] {
         assert!(
             schema(read_only)
@@ -360,6 +379,8 @@ async fn esquemas_das_tools_que_criam_tarefa_saem_planos() {
         "log_planned_task",
         "create_custom_field",
         "update_custom_field",
+        "set_running_task_custom_values",
+        "set_task_custom_values",
     ] {
         let schema = tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].to_string();
         for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
@@ -565,6 +586,8 @@ fn task_responder(op: &str) -> (u16, Value) {
         "customFields.create" => (201, json!({ "id": "f1", "label": "Etapa" })),
         "customFields.update" => (200, json!({ "id": "f1", "archived": true })),
         "customFields.delete" => (204, Value::Null),
+        "tasks.updateActive" => (200, json!({ "id": "t1", "customValues": { "f1": "A" } })),
+        "history.update" => (200, json!({ "id": "t2", "customValues": {} })),
         _ => (201, json!({ "id": "t1", "status": "running" })),
     }
 }
@@ -1159,4 +1182,120 @@ async fn delete_custom_field_inexistente_vira_is_error_com_a_mensagem() {
         error_text(&result),
         "Campo personalizado 'f9' não encontrado"
     );
+}
+
+#[tokio::test]
+async fn custom_values_entra_no_corpo_das_tres_tools_que_criam_tarefa() {
+    let values = json!({ "f1": "Fase 2", "f2": "true" });
+    let (_, calls) = forwarded(
+        "start_task",
+        json!({ "billable": true, "customValues": values }),
+    )
+    .await;
+    assert_eq!(
+        calls[0].1,
+        json!({ "body": { "billable": true, "customValues": values } })
+    );
+    let (_, calls) = forwarded(
+        "plan_task",
+        json!({ "name": "x", "billable": true, "scheduleType": "recurring", "customValues": values }),
+    )
+    .await;
+    assert_eq!(calls[0].1["body"]["customValues"], values);
+    let (_, calls) = forwarded(
+        "log_past_task",
+        json!({
+            "billable": true, "customValues": values,
+            "startTime": "2026-09-15T14:00:00-03:00", "endTime": "2026-09-15T15:00:00-03:00"
+        }),
+    )
+    .await;
+    assert_eq!(calls[0].1["body"]["customValues"], values);
+
+    // Omitido, a chave nem vai no corpo.
+    let (_, calls) = forwarded("start_task", json!({ "billable": true })).await;
+    assert_eq!(calls[0].1, json!({ "body": { "billable": true } }));
+}
+
+#[tokio::test]
+async fn custom_values_nao_aceita_valor_que_nao_e_texto() {
+    let (state, calls) = fake_state(true, task_responder);
+    let result = call_tool(
+        state,
+        "start_task",
+        json!({ "billable": true, "customValues": { "f1": 3 } }),
+    )
+    .await;
+    assert_eq!(result["isError"], json!(true), "{result}");
+    assert!(calls.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn log_planned_task_nao_tem_custom_values() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let schema = &tools
+        .iter()
+        .find(|t| t["name"] == "log_planned_task")
+        .unwrap()["inputSchema"];
+    assert!(
+        schema["properties"].get("customValues").is_none(),
+        "{schema}"
+    );
+}
+
+#[tokio::test]
+async fn set_running_task_custom_values_manda_so_custom_values() {
+    let (result, calls) = forwarded(
+        "set_running_task_custom_values",
+        json!({ "customValues": { "f1": "A" } }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "tasks.updateActive".to_string(),
+            json!({ "body": { "customValues": { "f1": "A" } } })
+        )]
+    );
+    assert_eq!(result["structuredContent"]["id"], json!("t1"));
+
+    // `{}` limpa tudo: vai como objeto vazio, não some.
+    let (_, calls) = forwarded(
+        "set_running_task_custom_values",
+        json!({ "customValues": {} }),
+    )
+    .await;
+    assert_eq!(calls[0].1, json!({ "body": { "customValues": {} } }));
+}
+
+#[tokio::test]
+async fn set_task_custom_values_manda_o_id_fora_do_corpo() {
+    let (result, calls) = forwarded(
+        "set_task_custom_values",
+        json!({ "id": "t2", "customValues": {} }),
+    )
+    .await;
+    assert_eq!(
+        calls,
+        [(
+            "history.update".to_string(),
+            json!({ "id": "t2", "body": { "customValues": {} } })
+        )]
+    );
+    assert_eq!(result["structuredContent"]["id"], json!("t2"));
+}
+
+#[tokio::test]
+async fn set_custom_values_sem_argumento_obrigatorio_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, args) in [
+        ("set_running_task_custom_values", json!({})),
+        ("set_task_custom_values", json!({ "customValues": {} })),
+        ("set_task_custom_values", json!({ "id": "t2" })),
+    ] {
+        let (state, calls) = fake_state(true, task_responder);
+        let result = call_tool(state, tool, args).await;
+        assert_eq!(result["isError"], json!(true), "{tool}: {result}");
+        assert!(calls.lock().unwrap().is_empty(), "{tool}");
+    }
 }
