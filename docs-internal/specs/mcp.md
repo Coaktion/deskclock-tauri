@@ -417,7 +417,14 @@ planejadas — N chamadas resolvem.
 | C (C1 + C2) | concluída no código |
 | D1 (imports: Agenda, Zendesk, Monday) | implementada; falta verificação no app de dev |
 | D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada; falta verificação no app de dev |
+| D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | pendente |
 | D3 (deeplink, configurações) | pendente |
+
+**Decisões da D2b e da D3** (usuário, 2026-10-23): a escrita dos modais de lançamentos entra (D2b), com as exclusões
+marcadas `destructiveHint`. A D3 expõe os quatro grupos das Configurações — Geral, Overlay e Acessibilidade, Atalhos
+globais e os ajustes não secretos das integrações (envio automático, mapeamentos, workspace por integração, regras de
+ignorar da Agenda, backup automático e frequência, campos de Project Stage/Non Billable reason do Monday). Conectar
+integração (OAuth, chaves) segue fora.
 
 A Fase D segue o padrão da C: a lógica que mora em modal sai primeiro para um módulo compartilhado (commit `refactor`)
 e só então ganha op, endpoint e tool (commit `feat`); o que na tela é seleção vira **prévia + ação**. A verificação no
