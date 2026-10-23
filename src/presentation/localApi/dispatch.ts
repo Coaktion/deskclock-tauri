@@ -64,6 +64,9 @@ import {
   previewMondayImport,
   readMondayCatalogsHandler,
 } from "./handlers/mondayImport";
+import { generateDaySummaries, listDaySummaries } from "./handlers/daySummaries";
+import { getDriveBackupStatus, runDriveBackup } from "./handlers/driveBackup";
+import { listClockifyEntries, listMondayEntries } from "./handlers/integrationEntries";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
@@ -164,6 +167,14 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "monday.importProjects": importMondayProjectsHandler,
   "monday.importCategories": importMondayCategoriesHandler,
   "monday.readCatalogs": readMondayCatalogsHandler,
+  // Fase D2: lançamentos do Clockify e do Monday (leitura), resumo do dia por
+  // IA e backup no Drive. Não mexem na tarefa em execução: não esperam o render.
+  "clockify.entries": listClockifyEntries,
+  "monday.entries": listMondayEntries,
+  "daySummaries.list": listDaySummaries,
+  "daySummaries.generate": generateDaySummaries,
+  "driveBackup.status": getDriveBackupStatus,
+  "driveBackup.run": runDriveBackup,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */
@@ -198,4 +209,18 @@ const WORKSPACE_MUTATIONS = new Set([
  */
 export function waitsForNextCommit(op: string): boolean {
   return op.startsWith("tasks.") || WORKSPACE_MUTATIONS.has(op);
+}
+
+/**
+ * As `LONG_OPS` do `bridge.rs`: levam até minutos (provedor de IA, upload ao
+ * Drive). Na fila principal, quem chegasse atrás delas estouraria o prazo de
+ * 10 s do Rust e **ainda assim executaria** depois — um `tasks.start` daria 504
+ * e iniciaria a tarefa, e o retry a iniciaria de novo. Rodam numa fila própria:
+ * não leem nem mudam o que o retrato tira de contexto, como na tela, onde o
+ * botão de backup e a aba de resumo correm junto com o resto.
+ */
+const LONG_OPS = new Set(["daySummaries.generate", "driveBackup.run"]);
+
+export function runsInLongQueue(op: string): boolean {
+  return LONG_OPS.has(op);
 }

@@ -122,6 +122,42 @@ describe("useLocalApiBridge", () => {
     expect(vistas).toEqual(["antes", "depois"]);
   });
 
+  it("op longa não segura a fila principal: quem chega atrás dela responde antes", async () => {
+    let finishLong: (r: LocalApiResult) => void = () => {};
+    bus.dispatch.mockImplementation(async (_deps: LocalApiDeps, op: string) =>
+      op === "driveBackup.run" ? new Promise<LocalApiResult>((r) => (finishLong = r)) : OK
+    );
+    await mountReady();
+
+    await act(async () => {
+      request("longa", "driveBackup.run");
+      request("curta", "tasks.start");
+    });
+
+    await vi.waitFor(() => expect(responded("curta")).toBe(true));
+    expect(responded("longa")).toBe(false);
+
+    await act(async () => finishLong(OK));
+    await vi.waitFor(() => expect(responded("longa")).toBe(true));
+  });
+
+  it("duas ops longas rodam uma de cada vez", async () => {
+    const finish: ((r: LocalApiResult) => void)[] = [];
+    bus.dispatch.mockImplementation(async () => new Promise<LocalApiResult>((r) => finish.push(r)));
+    await mountReady();
+
+    await act(async () => {
+      request("b1", "driveBackup.run");
+      request("b2", "daySummaries.generate");
+    });
+    await vi.waitFor(() => expect(bus.dispatch).toHaveBeenCalledTimes(1));
+
+    await act(async () => finish[0](OK));
+    await vi.waitFor(() => expect(bus.dispatch).toHaveBeenCalledTimes(2));
+    await act(async () => finish[1](OK));
+    await vi.waitFor(() => expect(responded("b2")).toBe(true));
+  });
+
   it("uma op que falha não trava a fila", async () => {
     const erro = vi.spyOn(console, "error").mockImplementation(() => {});
     bus.dispatch.mockRejectedValueOnce(new Error("quebrou")).mockResolvedValueOnce(OK);

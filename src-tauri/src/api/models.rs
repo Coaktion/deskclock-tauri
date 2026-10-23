@@ -1175,3 +1175,231 @@ pub struct MondayFieldCatalogsDto {
     pub non_billable_reason: Vec<String>,
     pub report_type: Vec<String>,
 }
+
+// ================================================================
+// Fase D2 da paridade: lançamentos do Clockify e do Monday, resumo do dia
+// por IA e backup no Drive.
+// ================================================================
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntryProjectDto {
+    pub id: String,
+    /// `Cliente - Projeto` quando o projeto tem cliente, como o Clockify exibe.
+    pub name: String,
+    /// Cor hex do Clockify.
+    pub color: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntryTagDto {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntryDto {
+    pub id: String,
+    pub description: String,
+    /// Instante ISO 8601 (UTC).
+    pub start: String,
+    pub end: Option<String>,
+    pub duration_seconds: i64,
+    pub billable: bool,
+    pub project: Option<ClockifyEntryProjectDto>,
+    pub tags: Vec<ClockifyEntryTagDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntriesDayDto {
+    /// Dia local do início, YYYY-MM-DD.
+    pub date: String,
+    pub total_seconds: i64,
+    /// Do mais recente para o mais antigo.
+    pub entries: Vec<ClockifyEntryDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyWorkspaceRefDto {
+    pub id: String,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntriesDto {
+    pub integration: String,
+    /// O workspace **do Clockify** configurado, não um do DeskClock.
+    pub clockify_workspace: ClockifyWorkspaceRefDto,
+    pub from: String,
+    pub to: String,
+    /// O filtro "Apenas com tags padrão" aplicado.
+    pub only_default_tags: bool,
+    pub default_tag_ids: Vec<String>,
+    /// Havia apontamentos, mas nenhum com todas as tags padrão.
+    pub hidden_by_tags: bool,
+    /// Do dia mais recente para o mais antigo; sem os apontamentos em andamento.
+    pub days: Vec<ClockifyEntriesDayDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayEntryPeriodDto {
+    pub start_date: String,
+    pub end_date: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayEntryDto {
+    pub board_id: String,
+    pub board_name: String,
+    pub item_id: String,
+    pub name: String,
+    pub url: String,
+    /// Horas reportadas, em decimal.
+    pub hours: f64,
+    pub billable: bool,
+    pub activity_type: Option<String>,
+    pub project_stage: Option<String>,
+    pub status: Option<String>,
+    pub period: Option<MondayEntryPeriodDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayEntriesDayDto {
+    /// Dia de início, YYYY-MM-DD; `null` para a atividade sem data.
+    pub date: Option<String>,
+    pub total_hours: f64,
+    pub entries: Vec<MondayEntryDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayEntriesDto {
+    pub integration: String,
+    /// `today`, `7days`, `30days` ou `month`.
+    pub period: String,
+    pub from: String,
+    pub to: String,
+    /// Boards vinculados a projetos que têm board de destino.
+    pub board_count: i64,
+    pub total_hours: f64,
+    pub days: Vec<MondayEntriesDayDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredDaySummaryDto {
+    /// Dia resumido, YYYY-MM-DD.
+    pub date: String,
+    pub summary: String,
+    /// Instante da geração. O resumo de hoje pode estar defasado: o dia ainda corre.
+    pub generated_at: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaySummariesDto {
+    pub workspace_id: String,
+    pub from: String,
+    pub to: String,
+    /// Do dia mais recente para o mais antigo; dia sem resumo não vem.
+    pub summaries: Vec<StoredDaySummaryDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateDaySummariesRequest {
+    /// Primeiro dia local, YYYY-MM-DD. Ausente = hoje.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// Último dia local, YYYY-MM-DD. Ausente = `from`.
+    #[serde(default)]
+    pub to: Option<String>,
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    /// Os filtros da busca do Histórico, que escolhem os dias (não as tarefas do resumo).
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub billable: Option<bool>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum DaySummarySource {
+    /// Já estava guardado: não gastou requisição.
+    Cache,
+    Generated,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GeneratedDaySummaryDto {
+    pub date: String,
+    pub summary: String,
+    pub source: DaySummarySource,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DaySummaryErrorDto {
+    pub date: String,
+    /// Já traduzida, como a tela mostra.
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateDaySummariesResponse {
+    pub workspace_id: String,
+    pub from: String,
+    pub to: String,
+    /// Dias com tarefa concluída que a busca trouxe.
+    pub day_count: i64,
+    /// Os até 5 mais recentes, os que a geração cobre.
+    pub covered_days: Vec<String>,
+    /// O aviso da tela quando a busca trouxe mais de 5 dias.
+    pub scope_note: Option<String>,
+    pub summaries: Vec<GeneratedDaySummaryDto>,
+    pub errors: Vec<DaySummaryErrorDto>,
+    /// Dias não tentados porque o lote parou no limite de cota do provedor.
+    pub skipped: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DriveBackupStatusDto {
+    /// Google conectado (sem isso o backup não roda).
+    pub connected: bool,
+    /// Backup automático ligado.
+    pub enabled: bool,
+    /// `daily`, `weekly` ou `monthly`.
+    pub frequency: String,
+    /// Instante ISO do último backup que subiu; `null` = nunca.
+    pub last_run_at: Option<String>,
+    /// A falha mais recente, do botão ou do agendador.
+    pub last_error: Option<String>,
+    /// A falha pede reconectar o Google para conceder acesso ao Drive.
+    pub needs_reconnect: bool,
+    pub folder_name: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct DriveBackupRunResponse {
+    /// Id do arquivo no Drive.
+    pub file_id: String,
+    pub status: DriveBackupStatusDto,
+}

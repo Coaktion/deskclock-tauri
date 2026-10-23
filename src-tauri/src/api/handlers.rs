@@ -101,6 +101,7 @@ pub mod history;
 pub mod imports;
 pub mod integrations;
 pub mod planned_tasks;
+pub mod services;
 pub mod totals;
 pub mod workspaces;
 

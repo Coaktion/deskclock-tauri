@@ -68,6 +68,13 @@ pub const IMPORT_MONDAY_PROJECTS: &str = "import_monday_projects";
 pub const IMPORT_MONDAY_CATEGORIES: &str = "import_monday_categories";
 pub const READ_MONDAY_CATALOGS: &str = "read_monday_catalogs";
 
+pub const LIST_CLOCKIFY_ENTRIES: &str = "list_clockify_entries";
+pub const LIST_MONDAY_ENTRIES: &str = "list_monday_entries";
+pub const LIST_DAY_SUMMARIES: &str = "list_day_summaries";
+pub const GENERATE_DAY_SUMMARIES: &str = "generate_day_summaries";
+pub const GET_DRIVE_BACKUP_STATUS: &str = "get_drive_backup_status";
+pub const RUN_DRIVE_BACKUP: &str = "run_drive_backup";
+
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
 pub const OP_PROJECTS: &str = "projects.list";
@@ -134,6 +141,12 @@ pub const OP_MONDAY_IMPORT: &str = "monday.import";
 pub const OP_MONDAY_IMPORT_PROJECTS: &str = "monday.importProjects";
 pub const OP_MONDAY_IMPORT_CATEGORIES: &str = "monday.importCategories";
 pub const OP_MONDAY_READ_CATALOGS: &str = "monday.readCatalogs";
+pub const OP_CLOCKIFY_ENTRIES: &str = "clockify.entries";
+pub const OP_MONDAY_ENTRIES: &str = "monday.entries";
+pub const OP_DAY_SUMMARIES_LIST: &str = "daySummaries.list";
+pub const OP_DAY_SUMMARIES_GENERATE: &str = "daySummaries.generate";
+pub const OP_DRIVE_BACKUP_STATUS: &str = "driveBackup.status";
+pub const OP_DRIVE_BACKUP_RUN: &str = "driveBackup.run";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -309,6 +322,19 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         READ_MONDAY_CATALOGS,
         &[pass_through(OP_MONDAY_READ_CATALOGS)],
     ),
+    // Fase D2 da paridade: lançamentos (leitura), resumo do dia por IA e backup.
+    (LIST_CLOCKIFY_ENTRIES, &[pass_through(OP_CLOCKIFY_ENTRIES)]),
+    (LIST_MONDAY_ENTRIES, &[pass_through(OP_MONDAY_ENTRIES)]),
+    (LIST_DAY_SUMMARIES, &[pass_through(OP_DAY_SUMMARIES_LIST)]),
+    (
+        GENERATE_DAY_SUMMARIES,
+        &[pass_through(OP_DAY_SUMMARIES_GENERATE)],
+    ),
+    (
+        GET_DRIVE_BACKUP_STATUS,
+        &[pass_through(OP_DRIVE_BACKUP_STATUS)],
+    ),
+    (RUN_DRIVE_BACKUP, &[pass_through(OP_DRIVE_BACKUP_RUN)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

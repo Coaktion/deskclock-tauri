@@ -1,8 +1,8 @@
 use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
-    catalog, custom_fields, export, history, imports, integrations, planned_tasks, totals,
-    workspaces,
+    catalog, custom_fields, export, history, imports, integrations, planned_tasks, services,
+    totals, workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -168,6 +168,21 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             put(export::put_export_profile_default),
         )
         .route("/export", post(export::post_export))
+        .route(
+            "/integrations/clockify/entries",
+            get(services::get_clockify_entries),
+        )
+        .route(
+            "/integrations/monday/entries",
+            get(services::get_monday_entries),
+        )
+        .route("/day-summaries", get(services::get_day_summaries))
+        .route(
+            "/day-summaries/generate",
+            post(services::post_day_summaries_generate),
+        )
+        .route("/backup/drive", get(services::get_drive_backup))
+        .route("/backup/drive/run", post(services::post_drive_backup_run))
         .with_state(state.clone());
 
     Router::new()
@@ -518,6 +533,60 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
             assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fase_d2_chega_a_ponte_com_a_op_certa() {
+        let cases = [
+            (
+                "GET",
+                "/integrations/clockify/entries?from=2026-09-14&to=2026-09-18&onlyDefaultTags=false",
+                "",
+                "clockify.entries",
+            ),
+            (
+                "GET",
+                "/integrations/monday/entries?period=30days",
+                "",
+                "monday.entries",
+            ),
+            (
+                "GET",
+                "/day-summaries?from=2026-09-14&to=2026-09-18",
+                "",
+                "daySummaries.list",
+            ),
+            ("POST", "/day-summaries/generate", "", "daySummaries.generate"),
+            (
+                "POST",
+                "/day-summaries/generate",
+                r#"{"from":"2026-09-14","billable":true}"#,
+                "daySummaries.generate",
+            ),
+            ("GET", "/backup/drive", "", "driveBackup.status"),
+            ("POST", "/backup/drive/run", "", "driveBackup.run"),
+            // A rota fixa do Clockify convive com as de `{id}` do envio.
+            (
+                "GET",
+                "/integrations/clockify/send-preview",
+                "",
+                "integrations.sendPreview",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn geracao_de_resumos_com_filtro_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        for body in [r#"{"billable":"sim"}"#, r#"{"from":20260914}"#] {
+            let (status, got) = send("POST", "/day-summaries/generate", body).await;
+            assert_eq!(got, None, "{body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
         }
     }
 

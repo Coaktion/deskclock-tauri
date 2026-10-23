@@ -79,6 +79,10 @@ Todas do usuário, em 2026-09-18.
 | `preview_zendesk_import` · `import_zendesk_tickets` | `zendesk.importPreview` · `zendesk.import` | Tickets atribuídos em aberto; sem dedupe, como o modal (`idempotentHint: false`) (Fase D1) |
 | `preview_monday_import` · `import_monday_items` | `monday.importPreview` · `monday.import` | `period` enum; o já importado vem marcado e o import o recusa (`idempotentHint: true`) (Fase D1) |
 | `import_monday_projects` · `import_monday_categories` · `read_monday_catalogs` | `monday.importProjects` · `monday.importCategories` · `monday.readCatalogs` | Os três botões da "Importação de dados"; sem argumentos (Fase D1) |
+| `list_clockify_entries` · `list_monday_entries` | `clockify.entries` · `monday.entries` | Lançamentos já feitos, só leitura; `readOnlyHint`, `openWorldHint: true`. Clockify por `from`/`to` e `onlyDefaultTags`; Monday pelas quatro janelas do modal (Fase D2) |
+| `list_day_summaries` | `daySummaries.list` | Resumos já gerados do período, do banco local; `readOnlyHint`, `openWorldHint: false` (Fase D2) |
+| `generate_day_summaries` | `daySummaries.generate` | Regras da aba Resumo: até 5 dias, cache, hoje regerado, erro por dia, parada na cota; `openWorldHint: true`, `idempotentHint: false` (Fase D2) |
+| `get_drive_backup_status` · `run_drive_backup` | `driveBackup.status` · `driveBackup.run` | Estado (só config, `readOnlyHint`) e "Fazer backup agora" (`openWorldHint: true`, `idempotentHint: false`) (Fase D2) |
 
 Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
 `workspaces.getActive`, `plannedTasks.update`). O que falta para a paridade não tem `op` na ponte (§7.2).
@@ -412,7 +416,7 @@ planejadas — N chamadas resolvem.
 | C2 (exportação) | implementada; falta verificação no app de dev |
 | C (C1 + C2) | concluída no código |
 | D1 (imports: Agenda, Zendesk, Monday) | implementada; falta verificação no app de dev |
-| D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | pendente |
+| D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada; falta verificação no app de dev |
 | D3 (deeplink, configurações) | pendente |
 
 A Fase D segue o padrão da C: a lógica que mora em modal sai primeiro para um módulo compartilhado (commit `refactor`)
@@ -505,6 +509,72 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
   `notify*Changed` passou para dentro do `run*` compartilhado (a ponte também precisa dele) e roda antes do
   `onImported`/recarga do card, não depois; na Agenda, o `PLANNED_TASKS_CHANGED` sai depois do rastreio de reuniões, que
   nunca lança. O nome do ticket do Zendesk recebe `trim` na API; o modal não aparava.
+
+### Decisões da Fase D2 que a spec não fixava
+
+- **Inventário** (o que a UI faz, de onde, e o que grava):
+  - *Apontamentos do Clockify* (`ClockifyEntriesModal` + `useClockifyEntries`, aberto pelo `IntegrationsModalsHost`). Lê
+    `listTimeEntries` do usuário no workspace do Clockify configurado, num período (Hoje, 7 dias, 30 dias, Este mês ou
+    Personalizado; padrão Hoje), e a lista de projetos e tags. O usuário escolhe o período e liga/desliga "Apenas com tags
+    padrão" (ligado ao abrir quando há tag padrão). A lista esconde o apontamento em andamento. **O modal também cria,
+    edita e exclui apontamentos no Clockify** (`createTimeEntry`/`updateTimeEntry`/`deleteTimeEntry`).
+  - *Atividades no Monday* (`MondayEntriesModal` + `useMondayEntries`). Lê as atividades do usuário nos boards dos
+    projetos com board, uma busca só desde o piso (`searchFloorDayISO`), recortada por quatro janelas (padrão 7 dias). **O
+    modal também edita (nome, horas, billable, Activity Type, Project Stage) e exclui** a atividade no Monday — a exclusão
+    pede confirmação e limpa `monday_activity_items`.
+  - *Resumo por IA* (aba Resumo do Histórico, `useDaySummaries` chamado pelo `HistoryPage`). Lê as tarefas concluídas dos
+    dias do resultado da busca (com os filtros dela) e `day_summaries`; chama o provedor; grava `day_summaries` e a cota
+    (`llmLastLimits`/`llmLastLimitsAt`). O usuário escolhe só a busca e o "Tentar novamente". Sem provedor a aba não existe.
+  - *Backup no Drive* (subseção "Backup do banco" do card do Google). Mostra o último backup e a última falha (com o aviso
+    de reconectar no 403 do escopo); "Fazer backup agora" roda o `DriveBackupRunner` (snapshot sem os segredos, upload,
+    carimbo, poda além de `driveBackupKeepCount`). O toggle do automático e a frequência gravam config — ficam para a D3.
+    Restaurar não tem UI (`telas/dados.md`); não há op.
+- **Ops por frente, uma por ação de leitura ou execução:** `clockify.entries`, `monday.entries`, `daySummaries.list`,
+  `daySummaries.generate`, `driveBackup.status`, `driveBackup.run`. Nenhuma espera o render.
+- **Refatoração (sem mudar comportamento):** a rodada do resumo saiu do hook para `presentation/integrations/daySummaries.ts`
+  (`runDaySummaries`: o `summarizeWorkdays` com hoje como `unfinishedDayISO` e o erro traduzido por `describeLlmError`;
+  `saveLlmLimits`; `llmConnected`). As regras de lote continuam todas no `summarizeWorkdays`; a aba e a ponte chamam o mesmo
+  `runDaySummaries`. O que a aba tem de próprio — a chave `workspace|dias`, o `runId` contra corrida, o `enabled` — é estado
+  de tela e ficou no hook. A lista do Clockify (filtro, agrupamento, duração, `projectDisplayName`) foi para
+  `domain/usecases/clockify/clockifyEntries.ts`; a busca e a montagem das atividades do Monday (`loadMondayEntries`,
+  `mondayEntriesInRange`, janelas, agrupamento) para `domain/usecases/monday/mondayEntries.ts`. O aviso de reconectar do
+  backup virou `driveBackupNeedsReconnect`.
+- **Workspace do resumo é o pedido, ausente = ativo** — o resumo segue o workspace ativo, não um da integração (exceção
+  declarada em `integracoes/llm.md`); a API aceita `workspaceId` como as demais rotas com escopo.
+- **Dias da geração = os da busca do Histórico** (`searchHistory`, extraída do `listHistory`): período e os filtros nome,
+  projeto, categoria e billable, como a aba recebe da página. Os filtros escolhem os dias; o resumo de cada dia cobre todas as
+  tarefas nomeadas dele, como na tela.
+- **Leitura dos resumos** pede o mesmo provedor configurado (409 sem ele), por paridade: sem provedor a aba nem aparece. O
+  período da leitura tem teto de 366 dias (400 acima) — regra só da API, porque a consulta é dia a dia.
+- **Prazo maior na ponte para `daySummaries.generate` e `driveBackup.run`** (12× o padrão: 2 min). Cinco chamadas em série
+  ao provedor, ou o `VACUUM INTO` + upload, passam fácil dos 10 s; com o prazo padrão o cliente recebia 504 com o trabalho
+  seguindo, e um retry faria outro backup. **E elas rodam numa fila própria no TS** (`runsInLongQueue`, `dispatch.ts`;
+  achado da revisão): na fila principal, quem chegasse atrás estouraria os 10 s e ainda executaria depois — um
+  `tasks.start` daria 504 e iniciaria a tarefa mesmo assim, e o retry a iniciaria de novo. Entre si as duas seguem uma por
+  vez; com o resto correm em paralelo, como na tela, onde o backup e a aba de resumo não travam o app.
+- **A janela `month` dos lançamentos do Monday** sai do `todayISO` (`YYYY-MM-01`), não de um segundo `new Date()`: só
+  difere se o mês virar entre as duas leituras, e assim o período fica coerente com o "hoje" da mesma chamada.
+- **Falha do backup → 502** com a mensagem que o runner gravou (a mesma da linha de falha da tela). Google não conectado → 409
+  (frase da API: a subseção só fica apagada). O estado responde 200 sempre, com `connected`.
+- **Clockify/Monday não configurado → 409** com o aviso do modal sem o "antes de abrir esta janela". Monday sem projeto com
+  board também é 409, como o aviso.
+- **Anotações.** `list_clockify_entries`/`list_monday_entries`: `readOnlyHint`, `openWorldHint: true`. `list_day_summaries` e
+  `get_drive_backup_status`: `readOnlyHint`, `openWorldHint: false` (banco local e config). `generate_day_summaries`:
+  `destructiveHint: false` (só substitui o resumo cacheado de hoje), `idempotentHint: false` (repetir regera hoje — outra
+  requisição paga), `openWorldHint: true`. `run_drive_backup`: `destructiveHint: false` (a poda apaga só o que passa da
+  quantidade que o usuário escolheu guardar — a descrição diz), `idempotentHint: false` (cada chamada sobe um arquivo),
+  `openWorldHint: true`.
+- **Nada de segredo na resposta.** As fontes guardam o cliente já montado pela fábrica; os DTOs são montados campo a campo
+  (sem chave, token, `apiKey`, refresh token). O resumo manda ao provedor só o que a aba manda (nome, projeto, duração).
+- **Params como a REST.** `list_clockify_entries` manda `{ from, to, onlyDefaultTags }` com o booleano em texto, como a query;
+  `list_monday_entries` `{ period }`; `list_day_summaries` `{ from, to, workspaceId }`; `generate_day_summaries` `{ body }`
+  só com o que veio; as do backup `{}`.
+- **Fora (com motivo):** criar, editar e excluir apontamento do Clockify e editar e excluir atividade do Monday — os modais
+  fazem, mas o pedido desta fase foi a leitura; são escrita em sistema externo, a exclusão do Monday pede confirmação contra o
+  §1, e o desenho (anotações, guarda dos rótulos de `buildActivityColumnValues`, limpeza do rastreio) pede decisão do
+  usuário. Ficam como dívida da paridade. O toggle e a frequência do backup automático são configuração (D3).
+- **Diferença conhecida:** depois de um backup pela API, a subseção aberta continua mostrando o "Último backup" que leu ao
+  montar (ela semeia da config só no `isLoaded`); reabrir a tela atualiza. Igual ao agendador automático.
 
 ### Decisões da Fase A que a spec não fixava
 

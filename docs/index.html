@@ -3373,6 +3373,22 @@
       </table>
         </div>
 
+    <h3>Lançamentos, resumo por IA e backup</h3>
+    <p>A leitura dos lançamentos que já estão no Clockify e no Monday, como as janelas <strong>Apontamentos do Clockify</strong> e <strong>Atividades no Monday</strong>; o resumo do dia por IA, como a aba <strong>Resumo</strong> do Histórico; e o backup do banco no Google Drive, como a subseção <strong>Backup do banco</strong> do card do Google. Integração ou provedor de IA não configurado responde 409: conectar continua sendo pela tela. Restaurar um backup não tem rota — é feito à mão, com o app fechado (veja <a onclick="show('google')">Google</a>).</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/integrations/clockify/entries</code></td><td>Lista os seus apontamentos no Clockify do período (<code>from</code>/<code>to</code>; ausentes = hoje), por dia, sem o que está em andamento; <code>onlyDefaultTags</code> liga ou desliga o filtro de tags padrão</td></tr>
+          <tr><td><code>GET</code></td><td><code>/integrations/monday/entries</code></td><td>Lista as suas atividades nos boards vinculados (<code>period</code>: <code>today</code>, <code>7days</code>, <code>30days</code> ou <code>month</code>), por dia</td></tr>
+          <tr><td><code>GET</code></td><td><code>/day-summaries</code></td><td>Lê os resumos por IA já gerados do período, sem chamar o provedor</td></tr>
+          <tr><td><code>POST</code></td><td><code>/day-summaries/generate</code></td><td>Gera os resumos dos dias com tarefa no período (até os 5 mais recentes), com as regras da aba: dia já resumido não é refeito, hoje é sempre refeito, erro vem por dia e o lote para no limite do provedor</td></tr>
+          <tr><td><code>GET</code></td><td><code>/backup/drive</code></td><td>Mostra o estado do backup: se o Google está conectado, se o automático está ligado, o último backup e a última falha</td></tr>
+          <tr><td><code>POST</code></td><td><code>/backup/drive/run</code></td><td>Faz o backup agora, como o botão <strong>Fazer backup agora</strong></td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h3>Exportação</h3>
     <p>Os perfis e o conteúdo da janela <strong>Exportar</strong> do Histórico. Os perfis são do workspace (<code>workspaceId</code> ausente = o ativo). A API não grava arquivo: o texto CSV ou JSON vem na resposta, com um nome sugerido, e salvar ou copiar fica com quem chamou.</p>
     <div class="table-scroll">
@@ -3427,7 +3443,8 @@
           <tr><td><strong>Tarefa em execução</strong></td><td>Iniciar uma tarefa (a ativa é parada antes), pausar, retomar, parar e salvar, descartar sem salvar, editar a tarefa em execução e iniciar uma planejada, como o Play</td></tr>
           <tr><td><strong>Criar</strong></td><td>Planejar uma tarefa (data específica, recorrente ou período), lançar trabalho passado com início e fim, e lançar uma planejada como concluída num dia, como no Lançamento Manual</td></tr>
           <tr><td><strong>Editar e excluir</strong></td><td>Editar, concluir, desmarcar, duplicar e excluir planejadas; editar, excluir, unificar, mover de workspace e mudar o billable de registros do Histórico; cadastrar, editar, importar e excluir projetos, categorias, categorias por projeto, campos personalizados e workspaces, e trocar o workspace ativo</td></tr>
-          <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos; mostrar e importar como planejadas os eventos do Google Agenda, os tickets do Zendesk e os itens do Monday; importar do Monday os projetos, as categorias e os catálogos</td></tr>
+          <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos; mostrar e importar como planejadas os eventos do Google Agenda, os tickets do Zendesk e os itens do Monday; importar do Monday os projetos, as categorias e os catálogos; mostrar os lançamentos que já estão no Clockify e no Monday</td></tr>
+          <tr><td><strong>Resumo e backup</strong></td><td>Ler e gerar o resumo por IA dos seus dias de trabalho, como a aba Resumo do Histórico; ver o estado do backup no Google Drive e fazer um backup agora</td></tr>
           <tr><td><strong>Exportar</strong></td><td>Gerar o CSV ou JSON das tarefas de um período com um perfil de exportação, e criar, editar, excluir e escolher o padrão entre os perfis. O texto vem na conversa; o assistente o entrega a você ou o salva, se você pedir um arquivo</td></tr>
         </tbody>
       </table>
@@ -3465,7 +3482,7 @@
         <tbody>
           <tr><td><strong><a onclick="show('deeplinks')">Deep link</a></strong></td><td>Você quer que o app <strong>apareça</strong> — abrir uma tela, pré-preencher um formulário. Um link basta, nada a configurar.</td></tr>
           <tr><td><strong>API local</strong></td><td>Você quer <strong>ler</strong> o estado ou agir sem trazer a janela à frente. É o caminho para barras de status, scripts e integrações caseiras.</td></tr>
-          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui, envia às integrações, importa delas e exporta.</td></tr>
+          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui, envia às integrações, importa delas, resume o dia, faz backup e exporta.</td></tr>
         </tbody>
       </table>
 

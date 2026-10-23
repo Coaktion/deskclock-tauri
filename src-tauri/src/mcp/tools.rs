@@ -1316,6 +1316,77 @@ pub struct ImportMondayItemsArgs {
     pub add_open_url_action: Option<bool>,
 }
 
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListClockifyEntriesArgs {
+    /// First local day, YYYY-MM-DD. Default today.
+    pub from: Option<String>,
+    /// Last local day, YYYY-MM-DD (inclusive). Default `from`.
+    pub to: Option<String>,
+    /// Only entries that carry all the default tags. Default: on when default tags are
+    /// configured, as the app's dialog opens.
+    pub only_default_tags: Option<bool>,
+}
+
+// Inline pelo mesmo motivo do `ScheduleType`. Os nomes são os do modal.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub enum MondayEntriesPeriodArg {
+    #[serde(rename = "today")]
+    Today,
+    #[serde(rename = "7days")]
+    Last7Days,
+    #[serde(rename = "30days")]
+    Last30Days,
+    #[serde(rename = "month")]
+    Month,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct ListMondayEntriesArgs {
+    /// `today`, `7days` (the default; today and the 6 days before), `30days` or `month`
+    /// (from the 1st to today).
+    pub period: Option<MondayEntriesPeriodArg>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ListDaySummariesArgs {
+    /// First local day, YYYY-MM-DD. Default today.
+    pub from: Option<String>,
+    /// Last local day, YYYY-MM-DD (inclusive). Default `from`. At most 366 days.
+    pub to: Option<String>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateDaySummariesArgs {
+    /// First local day, YYYY-MM-DD. Default today.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    /// Last local day, YYYY-MM-DD (inclusive). Default `from`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+    /// History filter that picks the days: only days with a finished task whose name
+    /// contains this. Each day's summary still covers all its tasks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// History filter that picks the days, by project id (from list_catalog).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    /// History filter that picks the days, by category id (from list_catalog).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category_id: Option<String>,
+    /// History filter that picks the days, by billable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub billable: Option<bool>,
+}
+
 #[tool_router]
 impl DeskClockMcp {
     pub fn new(bridge: Arc<Bridge>) -> Self {
@@ -2779,6 +2850,126 @@ impl DeskClockMcp {
     )]
     async fn read_monday_catalogs(&self) -> CallToolResult {
         self.call_single(READ_MONDAY_CATALOGS, json!({})).await
+    }
+    #[tool(
+        name = "list_clockify_entries",
+        description = "List the time entries already in Clockify for the user, in the \
+            configured Clockify workspace, like the app's Clockify entries dialog: grouped \
+            by local day (most recent first) with each entry's description, start/end \
+            (UTC), duration, billable, project and tags. The running entry is left out. By \
+            default only entries with all the default tags are listed when default tags are \
+            configured (`hiddenByTags` true = there were entries, none with those tags; call \
+            again with onlyDefaultTags false). Errors if Clockify is not configured. Reads \
+            Clockify; changes nothing.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn list_clockify_entries(
+        &self,
+        Parameters(args): Parameters<ListClockifyEntriesArgs>,
+    ) -> CallToolResult {
+        // Em texto, como a query string chega ao TS.
+        let only_default_tags = args.only_default_tags.map(|v| v.to_string());
+        self.call_single(
+            LIST_CLOCKIFY_ENTRIES,
+            json!({ "from": args.from, "to": args.to, "onlyDefaultTags": only_default_tags }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "list_monday_entries",
+        description = "List the user's activities already sent to Monday (only theirs, on the \
+            boards linked to DeskClock projects) that overlap a window, like the app's Monday \
+            activities dialog: grouped by start day (most recent first; `date` null = no \
+            dates) with hours, billable, Activity Type, Project Stage and status. Only the \
+            app's four windows exist. Errors if Monday is not connected or no project has a \
+            board. Reads Monday; changes nothing.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn list_monday_entries(
+        &self,
+        Parameters(args): Parameters<ListMondayEntriesArgs>,
+    ) -> CallToolResult {
+        self.call_single(LIST_MONDAY_ENTRIES, json!({ "period": args.period }))
+            .await
+    }
+
+    #[tool(
+        name = "list_day_summaries",
+        description = "Read the AI day summaries already generated for a period, from the \
+            app's local storage (no call to the AI provider), most recent first; a day \
+            without a summary is absent. Today's summary, if stored, may be outdated — \
+            generate_day_summaries regenerates it. Errors if no AI provider is configured.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn list_day_summaries(
+        &self,
+        Parameters(args): Parameters<ListDaySummariesArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            LIST_DAY_SUMMARIES,
+            json!({ "from": args.from, "to": args.to, "workspaceId": args.workspace_id }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "generate_day_summaries",
+        description = "Generate the AI summary of each workday in a period, like opening the \
+            Summary tab of the app's History: one paragraph per day with finished tasks, at \
+            most the 5 most recent days (`scopeNote` says when more were found). A day already \
+            summarized comes from storage without calling the provider (`source: cache`); \
+            today is always regenerated, since it is not over. Days run one at a time; a \
+            failed day comes in `errors` with a message for the user, and on the provider's \
+            rate limit the run stops and the rest come in `skipped`. Sends task names, \
+            project names and durations to the user's AI provider. Can take up to a couple of \
+            minutes. Errors if no AI provider is configured.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn generate_day_summaries(
+        &self,
+        Parameters(args): Parameters<GenerateDaySummariesArgs>,
+    ) -> CallToolResult {
+        self.call_single(GENERATE_DAY_SUMMARIES, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_drive_backup_status",
+        description = "State of the database backup to Google Drive, as Integrations → Google \
+            shows it: whether Google is connected, whether the automatic backup is on and how \
+            often, the last successful backup (`lastRunAt`, ISO, null = never), the latest \
+            failure and whether it needs reconnecting Google, and the Drive folder name. Reads \
+            local settings only.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_drive_backup_status(&self) -> CallToolResult {
+        self.call_single(GET_DRIVE_BACKUP_STATUS, json!({})).await
+    }
+
+    #[tool(
+        name = "run_drive_backup",
+        description = "Back up the database to Google Drive now, like the \"Back up now\" \
+            button: uploads a copy of the database without the integration keys, then deletes \
+            the oldest backups beyond the number the user chose to keep. Every call uploads a \
+            new file. Restoring is a manual procedure outside the app, not a tool. Can take up \
+            to a couple of minutes. Errors if Google is not connected, or with the message the \
+            app shows when Drive fails (e.g. reconnect Google). Returns the file id and the \
+            new status.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn run_drive_backup(&self) -> CallToolResult {
+        self.call_single(RUN_DRIVE_BACKUP, json!({})).await
     }
 }
 

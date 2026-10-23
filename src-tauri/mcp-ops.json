@@ -65,7 +65,13 @@
     "monday.import": "import_monday_items",
     "monday.importProjects": "import_monday_projects",
     "monday.importCategories": "import_monday_categories",
-    "monday.readCatalogs": "read_monday_catalogs"
+    "monday.readCatalogs": "read_monday_catalogs",
+    "clockify.entries": "list_clockify_entries",
+    "monday.entries": "list_monday_entries",
+    "daySummaries.list": "list_day_summaries",
+    "daySummaries.generate": "generate_day_summaries",
+    "driveBackup.status": "get_drive_backup_status",
+    "driveBackup.run": "run_drive_backup"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",

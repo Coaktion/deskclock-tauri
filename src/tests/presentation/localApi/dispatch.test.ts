@@ -1,8 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { dispatchLocalApiRequest, waitsForNextCommit } from "@presentation/localApi/dispatch";
+import {
+  dispatchLocalApiRequest,
+  LOCAL_API_OPS,
+  runsInLongQueue,
+  waitsForNextCommit,
+} from "@presentation/localApi/dispatch";
 import { toErrorResult, NotFoundError, ConflictError } from "@presentation/localApi/errors";
 import { DomainError, DuplicateNameError } from "@shared/errors";
 import { makeDeps, makeTask } from "./fakeDeps";
+import longOps from "../../../../src-tauri/long-ops.json";
 
 describe("dispatchLocalApiRequest", () => {
   it("devolve 404 para operação desconhecida", async () => {
@@ -56,5 +62,15 @@ describe("waitsForNextCommit", () => {
     expect(waitsForNextCommit("plannedTasks.duplicate")).toBe(false);
     expect(waitsForNextCommit("history.update")).toBe(false);
     expect(waitsForNextCommit("totals.week")).toBe(false);
+  });
+});
+
+// O Rust confere a `LONG_OPS` dele contra o mesmo arquivo (`bridge.rs`).
+describe("runsInLongQueue", () => {
+  it("vale exatamente para as ops de src-tauri/long-ops.json", () => {
+    expect(longOps.every((op) => LOCAL_API_OPS.includes(op))).toBe(true);
+    for (const op of LOCAL_API_OPS) {
+      expect(runsInLongQueue(op), op).toBe(longOps.includes(op));
+    }
   });
 });

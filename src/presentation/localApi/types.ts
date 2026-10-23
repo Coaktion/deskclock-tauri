@@ -20,6 +20,13 @@ import type {
   MondayImportSource,
   ZendeskImportSource,
 } from "@presentation/integrations/importSources";
+import type { IDaySummaryRepository } from "@domain/repositories/IDaySummaryRepository";
+import type { DaySummarySource } from "@presentation/integrations/daySummaries";
+import type { DriveBackupSource } from "@presentation/integrations/driveBackup";
+import type {
+  ClockifyEntriesSource,
+  MondayEntriesSource,
+} from "@presentation/integrations/entriesSources";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 import type { WorkspaceContextValue } from "@presentation/contexts/WorkspaceContext";
 import type { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
@@ -35,8 +42,13 @@ export interface LocalApiParams {
   projectId?: string | null;
   categoryId?: string | null;
   billable?: string | null;
-  /** Recorte do import do Monday: `today`, `week` ou `next30`. */
+  /**
+   * Recorte do Monday: no import, `today`, `week` ou `next30`; nas atividades,
+   * `today`, `7days`, `30days` ou `month`.
+   */
   period?: string | null;
+  /** Filtro de tags padrão dos apontamentos do Clockify, em texto (`true`/`false`). */
+  onlyDefaultTags?: string | null;
   body?: unknown;
 }
 
@@ -89,6 +101,15 @@ export interface IntegrationImportPort {
 }
 
 /**
+ * Os lançamentos já feitos no Clockify e no Monday, como os modais de leitura
+ * os buscam (`entriesSources.ts`). Porta estreita, montada na hora.
+ */
+export interface IntegrationEntriesPort {
+  clockify(): ClockifyEntriesSource;
+  monday(): MondayEntriesSource;
+}
+
+/**
  * Retrato do app no instante em que a requisição começa. É montado a cada
  * render: as operações do contexto fecham sobre a tarefa em execução daquele
  * render, e um retrato velho pausaria uma tarefa que já foi parada.
@@ -107,6 +128,11 @@ export interface LocalApiDeps {
   trackedMeetingRepo: ITrackedMeetingRepository;
   mondayImportedItemRepo: ITrackedMondayItemRepository;
   imports: IntegrationImportPort;
+  daySummaryRepo: IDaySummaryRepository;
+  /** O provedor de IA do resumo do dia — sem a chave, que fica na fábrica. */
+  llm: () => DaySummarySource;
+  driveBackup: () => DriveBackupSource;
+  entries: IntegrationEntriesPort;
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;

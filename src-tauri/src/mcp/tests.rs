@@ -166,6 +166,8 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "delete_workspace",
             "duplicate_planned_task",
             "export_tasks",
+            "generate_day_summaries",
+            "get_drive_backup_status",
             "get_status",
             "get_totals",
             "get_week_totals",
@@ -177,8 +179,11 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "import_projects",
             "import_zendesk_tickets",
             "list_catalog",
+            "list_clockify_entries",
             "list_custom_fields",
+            "list_day_summaries",
             "list_export_profiles",
+            "list_monday_entries",
             "list_planned_tasks",
             "list_project_categories",
             "list_tasks",
@@ -194,6 +199,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "preview_zendesk_import",
             "read_monday_catalogs",
             "resume_task",
+            "run_drive_backup",
             "send_tasks_to_integration",
             "set_active_workspace",
             "set_default_export_profile",
@@ -303,6 +309,16 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("import_monday_projects", false, Some(true), true),
         ("import_monday_categories", false, Some(true), false),
         ("read_monday_catalogs", false, Some(true), true),
+        // Fase D2. Os lançamentos leem Clockify e Monday. Os resumos já gerados
+        // são do banco local; gerar chama o provedor de IA, e repetir regera hoje
+        // (outra requisição paga). Cada backup sobe um arquivo novo; o estado só
+        // lê a config.
+        ("list_clockify_entries", true, None, true),
+        ("list_monday_entries", true, None, true),
+        ("list_day_summaries", true, None, false),
+        ("generate_day_summaries", false, Some(false), true),
+        ("get_drive_backup_status", true, None, false),
+        ("run_drive_backup", false, Some(false), true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -2616,4 +2632,169 @@ async fn esquemas_dos_imports_declaram_os_enums_e_saem_planos() {
         schema("preview_monday_import")["properties"]["period"]["enum"],
         json!(["today", "week", "next30", null])
     );
+}
+
+fn phase_d2_responder(op: &str) -> (u16, Value) {
+    match op {
+        "clockify.entries" | "monday.entries" => (200, json!({ "days": [] })),
+        "daySummaries.list" => (200, json!({ "summaries": [] })),
+        "daySummaries.generate" => (200, json!({ "summaries": [], "errors": [], "skipped": [] })),
+        "driveBackup.status" => (200, json!({ "connected": true })),
+        "driveBackup.run" => (200, json!({ "fileId": "f1", "status": {} })),
+        other => (500, json!({ "error": format!("inesperada: {other}") })),
+    }
+}
+
+#[tokio::test]
+async fn tools_da_fase_d2_repassam_os_params_como_a_rest() {
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "list_clockify_entries",
+            json!({ "from": "2026-09-14", "onlyDefaultTags": false }),
+            "clockify.entries",
+            json!({ "from": "2026-09-14", "to": null, "onlyDefaultTags": "false" }),
+        ),
+        (
+            "list_clockify_entries",
+            json!({}),
+            "clockify.entries",
+            json!({ "from": null, "to": null, "onlyDefaultTags": null }),
+        ),
+        (
+            "list_monday_entries",
+            json!({ "period": "30days" }),
+            "monday.entries",
+            json!({ "period": "30days" }),
+        ),
+        (
+            "list_monday_entries",
+            json!({}),
+            "monday.entries",
+            json!({ "period": null }),
+        ),
+        (
+            "list_day_summaries",
+            json!({ "from": "2026-09-14", "to": "2026-09-18" }),
+            "daySummaries.list",
+            json!({ "from": "2026-09-14", "to": "2026-09-18", "workspaceId": null }),
+        ),
+        (
+            "generate_day_summaries",
+            json!({ "from": "2026-09-14", "billable": true }),
+            "daySummaries.generate",
+            json!({ "body": { "from": "2026-09-14", "billable": true } }),
+        ),
+        (
+            "generate_day_summaries",
+            json!({}),
+            "daySummaries.generate",
+            json!({ "body": {} }),
+        ),
+        (
+            "get_drive_backup_status",
+            json!({}),
+            "driveBackup.status",
+            json!({}),
+        ),
+        ("run_drive_backup", json!({}), "driveBackup.run", json!({})),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, phase_d2_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn fase_d2_com_argumento_fora_do_esquema_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        ("list_monday_entries", json!({ "period": "week" })),
+        ("list_clockify_entries", json!({ "onlyDefaultTags": "sim" })),
+        ("generate_day_summaries", json!({ "billable": "sim" })),
+    ] {
+        let (state, calls) = fake_state(true, phase_d2_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn sem_provedor_de_ia_ou_backup_falho_vira_is_error_com_a_mensagem() {
+    fn conflict(op: &str) -> (u16, Value) {
+        match op {
+            "driveBackup.run" => (
+                502,
+                json!({ "error": "Reconecte o Google para conceder acesso ao Drive e refazer o backup." }),
+            ),
+            _ => (
+                409,
+                json!({ "error": "Provedor de IA não configurado. Conecte um provedor em Integrações." }),
+            ),
+        }
+    }
+    let (state, _) = fake_state(true, conflict);
+    let result = call_tool(state.clone(), "generate_day_summaries", json!({})).await;
+    assert_eq!(
+        error_text(&result),
+        "Provedor de IA não configurado. Conecte um provedor em Integrações."
+    );
+    let result = call_tool(state, "run_drive_backup", json!({})).await;
+    assert_eq!(
+        error_text(&result),
+        "Reconecte o Google para conceder acesso ao Drive e refazer o backup."
+    );
+}
+
+#[tokio::test]
+async fn esquemas_da_fase_d2_declaram_os_enums_e_saem_planos() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let schema =
+        |name: &str| tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].clone();
+    for name in [
+        "list_clockify_entries",
+        "list_monday_entries",
+        "list_day_summaries",
+        "generate_day_summaries",
+        "get_drive_backup_status",
+        "run_drive_backup",
+    ] {
+        let schema = schema(name);
+        assert!(
+            schema["required"]
+                .as_array()
+                .is_none_or(|required| required.is_empty()),
+            "{name}: {schema}"
+        );
+        let text = schema.to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
+    }
+    assert_eq!(
+        schema("list_monday_entries")["properties"]["period"]["enum"],
+        json!(["today", "7days", "30days", "month", null])
+    );
+    let generate = schema("generate_day_summaries");
+    for field in [
+        "from",
+        "to",
+        "workspaceId",
+        "name",
+        "projectId",
+        "categoryId",
+        "billable",
+    ] {
+        assert!(
+            generate["properties"][field].is_object(),
+            "{field}: {generate}"
+        );
+    }
 }

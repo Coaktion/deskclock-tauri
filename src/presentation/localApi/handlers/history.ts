@@ -17,7 +17,7 @@ import {
   type TaskEditBody,
 } from "../taskInput";
 import { periodRange } from "../period";
-import type { LocalApiHandler } from "../types";
+import type { LocalApiDeps, LocalApiHandler, LocalApiParams } from "../types";
 
 interface TaskBody extends TaskEditBody {
   workspaceId?: string | null;
@@ -37,23 +37,33 @@ function requireBoolean(value: unknown): boolean {
   return value;
 }
 
-export const listHistory: LocalApiHandler = async (deps, params) => {
+/**
+ * A busca do Histórico (`GET /tasks`): concluídas do período, com os filtros da
+ * tela. Também é de onde o resumo por IA tira os dias, como a aba Resumo tira
+ * do resultado da busca.
+ */
+export async function searchHistory(deps: LocalApiDeps, params: LocalApiParams) {
   const workspaceId = await resolveRequestWorkspace(deps, params.workspaceId);
-  const { startISO, endISO } = periodRange(deps, params);
+  const range = periodRange(deps, params);
   const billable = billableFilter(params.billable);
   const [projectId, categoryId] = await Promise.all([
     params.projectId ? resolveProjectId(deps, workspaceId, params.projectId, null) : undefined,
     params.categoryId ? resolveCategoryId(deps, workspaceId, params.categoryId, null) : undefined,
   ]);
   const tasks = await searchTasks(deps.taskRepo, {
-    startISO,
-    endISO,
+    startISO: range.startISO,
+    endISO: range.endISO,
     name: params.name || undefined,
     projectId: projectId ?? undefined,
     categoryId: categoryId ?? undefined,
     billable,
     workspaceId,
   });
+  return { workspaceId, from: range.from, to: range.to, tasks };
+}
+
+export const listHistory: LocalApiHandler = async (deps, params) => {
+  const { workspaceId, tasks } = await searchHistory(deps, params);
   const catalog = await loadCatalogNames(deps, workspaceId);
   const nowISO = deps.nowISO();
   return {

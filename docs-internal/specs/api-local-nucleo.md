@@ -97,6 +97,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Campos personalizados | `GET/POST /custom-fields` · `PUT/DELETE /custom-fields/{id}` |
 | Envio às integrações (paridade, Fase C1) | `GET /integrations/{id}/send-preview?from&to` (op `integrations.sendPreview`) · `POST /integrations/{id}/send` (op `integrations.send`), `id` = `google_sheets` \| `clockify` \| `monday` |
 | Imports das integrações (paridade, Fase D1) | `GET /integrations/google_calendar/import-preview?from&to` · `POST /integrations/google_calendar/import` (ops `calendar.importPreview`/`calendar.import`) · `GET /integrations/zendesk/import-preview` · `POST /integrations/zendesk/import` (`zendesk.importPreview`/`zendesk.import`) · `GET /integrations/monday/import-preview?period` · `POST /integrations/monday/import` (`monday.importPreview`/`monday.import`) · `POST /integrations/monday/import-projects` · `POST /integrations/monday/import-categories` · `POST /integrations/monday/read-catalogs` (`monday.importProjects`/`importCategories`/`readCatalogs`) |
+| Lançamentos, resumo por IA e backup (paridade, Fase D2) | `GET /integrations/clockify/entries?from&to&onlyDefaultTags` (op `clockify.entries`) · `GET /integrations/monday/entries?period` (`monday.entries`) · `GET /day-summaries?from&to&workspaceId` (`daySummaries.list`) · `POST /day-summaries/generate` (`daySummaries.generate`) · `GET /backup/drive` (`driveBackup.status`) · `POST /backup/drive/run` (`driveBackup.run`) |
 | Exportação (paridade, Fase C2) | `GET/POST /export-profiles` · `PUT/DELETE /export-profiles/{id}` · `PUT /export-profiles/{id}/default` (ops `exportProfiles.list/create/update/delete/setDefault`, `?workspaceId=` nas rotas por id) · `POST /export` (op `export.generate`) |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
@@ -244,6 +245,34 @@ A ponte recebe cada integração por uma porta estreita (`deps.imports`: `calend
   projetos e categorias por projeto), `importCategories` (uma categoria por Activity Type; avisa categorias) e
   `readCatalogs` (o "Ler catálogos"; grava `mondayFieldCatalogs`). O que desabilitaria o botão vira 409: sem Portfólio, sem
   Activity Type ("Leia os catálogos ou importe os projetos."), sem board de Report.
+
+**Lançamentos, resumo por IA e backup (Fase D2 da paridade, `mcp.md` §7) — 2026-10-23.** Regras em
+`src/presentation/localApi/handlers/{integrationEntries,daySummaries,driveBackup}.ts`; a lógica é a dos modais, da aba e da
+subseção, num lugar só: `clockifyEntries.ts` e `mondayEntries.ts` (domínio), `runDaySummaries`/`saveLlmLimits`
+(`presentation/integrations/daySummaries.ts`) e `driveBackupNeedsReconnect`/`buildDriveBackupSource`
+(`presentation/integrations/driveBackup.ts`). Portas estreitas: `deps.entries.clockify()/monday()`, `deps.llm()`,
+`deps.driveBackup()` — sem a config nem as chaves.
+- **Clockify.** `from`/`to` em dias locais (ausentes = hoje, o padrão do modal), limites do dia como o hook. Workspace e usuário
+  **do Clockify** da config. Sem o apontamento em andamento. `onlyDefaultTags` (`true`/`false`, texto) = o "Apenas com tags
+  padrão"; ausente = ligado quando há tag padrão, como o modal abre; `hiddenByTags` = o estado "Mostrar todos". Dias do mais
+  recente para o mais antigo, apontamentos idem, `durationSeconds` e `totalSeconds` como a tela. Sem API Key, workspace ou
+  usuário → 409.
+- **Monday.** `period` `today`/`7days` (padrão)/`30days`/`month` (do dia 1 a hoje) — só as janelas do modal, porque a busca
+  não filtra por data e tem piso (`searchFloorDayISO`); outro valor → 400. Só as atividades do usuário, nos boards de projetos
+  com board; recorte por `periodOverlaps`, agrupamento pelo dia de início. Sem chave, usuário ou projeto com board → 409.
+- **Resumos — leitura.** `GET /day-summaries`: período como o `GET /tasks`, no máximo 366 dias (400); `workspaceId` ausente =
+  ativo. Só o banco local; dia sem resumo não vem; o de hoje pode estar defasado (`generatedAt` diz quando). Sem provedor → 409.
+- **Resumos — geração.** `POST /day-summaries/generate`, corpo opcional `{ from, to, workspaceId, name, projectId, categoryId,
+  billable }`: os dias são os da busca do Histórico (`searchHistory`), do mais recente para o mais antigo; a geração é a da aba
+  (`runDaySummaries`): os 5 mais recentes, dia já em `day_summaries` volta como `source: "cache"`, hoje sempre regerado, erro
+  por dia já traduzido em `errors`, parada no primeiro limite de cota com o resto em `skipped`. A cota medida vai a
+  `llmLastLimits`/`llmLastLimitsAt`, como a aba. Resposta com `dayCount`, `coveredDays` e o `scopeNote` da tela. Sem provedor →
+  409, antes de buscar tarefa. Prazo da ponte: 2 min, numa fila própria (não segura as outras requisições).
+- **Backup.** `GET /backup/drive`: `connected`, `enabled`, `frequency`, `lastRunAt` (ISO, `null` = nunca), `lastError`,
+  `needsReconnect`, `folderName` — sempre 200. `POST /backup/drive/run`: o "Fazer backup agora" (`DriveBackupRunner.run`);
+  200 com `fileId` e o estado novo; Google não conectado → 409; falha do Drive → **502** com a mensagem que o runner gravou.
+  Prazo da ponte: 2 min, numa fila própria (não segura as outras requisições). Restaurar não tem rota (procedimento manual, `telas/dados.md`).
+- Nenhuma emite evento nem espera o render.
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.

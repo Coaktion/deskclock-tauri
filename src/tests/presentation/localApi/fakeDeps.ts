@@ -16,6 +16,8 @@ import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMee
 import type { ITrackedMondayItemRepository } from "@domain/integrations/ITrackedMondayItemRepository";
 import type { TrackedMeeting } from "@domain/integrations/TrackedMeeting";
 import type { TrackedMondayItem } from "@domain/integrations/TrackedMondayItem";
+import type { DaySummary } from "@domain/entities/DaySummary";
+import type { IDaySummaryRepository } from "@domain/repositories/IDaySummaryRepository";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import type { Workspace } from "@domain/entities/Workspace";
@@ -216,6 +218,18 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     monday: notConfigured("monday"),
   };
 
+  const daySummaryRepo = {
+    findByDays: vi.fn(async (_ws: string, _days: string[]): Promise<DaySummary[]> => []),
+    save: vi.fn(async (_summary: DaySummary) => {}),
+  } satisfies Record<keyof IDaySummaryRepository, unknown>;
+
+  const llm = notConfigured("llm");
+  const driveBackup = notConfigured("driveBackup");
+  const entries = {
+    clockify: notConfigured("entries.clockify"),
+    monday: notConfigured("entries.monday"),
+  };
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -242,6 +256,10 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     trackedMeetingRepo,
     mondayImportedItemRepo,
     imports,
+    daySummaryRepo,
+    llm,
+    driveBackup,
+    entries,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,
