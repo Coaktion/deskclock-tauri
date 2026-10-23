@@ -1,8 +1,8 @@
 use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
-    catalog, custom_fields, export, history, imports, integrations, planned_tasks, services,
-    totals, workspaces,
+    catalog, custom_fields, entry_writes, export, history, imports, integrations, planned_tasks,
+    services, totals, workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -170,11 +170,19 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
         .route("/export", post(export::post_export))
         .route(
             "/integrations/clockify/entries",
-            get(services::get_clockify_entries),
+            get(services::get_clockify_entries).post(entry_writes::post_clockify_entry),
+        )
+        .route(
+            "/integrations/clockify/entries/{id}",
+            put(entry_writes::put_clockify_entry).delete(entry_writes::delete_clockify_entry),
         )
         .route(
             "/integrations/monday/entries",
             get(services::get_monday_entries),
+        )
+        .route(
+            "/integrations/monday/entries/{id}",
+            put(entry_writes::put_monday_entry).delete(entry_writes::delete_monday_entry),
         )
         .route("/day-summaries", get(services::get_day_summaries))
         .route(
@@ -578,6 +586,94 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
             assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fase_d2b_chega_a_ponte_com_a_op_certa() {
+        let clockify = r#"{"description":"Revisão","projectName":"ACME - Site","date":"2026-09-15","start":"09:00","end":"10:30"}"#;
+        let cases = [
+            (
+                "POST",
+                "/integrations/clockify/entries",
+                clockify,
+                "clockify.createEntry",
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/entries/e1",
+                clockify,
+                "clockify.updateEntry",
+            ),
+            (
+                "DELETE",
+                "/integrations/clockify/entries/e1",
+                "",
+                "clockify.deleteEntry",
+            ),
+            (
+                "PUT",
+                "/integrations/monday/entries/123",
+                r#"{"hours":2.5,"activityType":null}"#,
+                "monday.updateEntry",
+            ),
+            // Corpo vazio na edição do Monday: nada muda, como Salvar sem mexer.
+            (
+                "PUT",
+                "/integrations/monday/entries/123",
+                "",
+                "monday.updateEntry",
+            ),
+            (
+                "DELETE",
+                "/integrations/monday/entries/123",
+                "",
+                "monday.deleteEntry",
+            ),
+            // A leitura continua no mesmo caminho do POST.
+            (
+                "GET",
+                "/integrations/clockify/entries",
+                "",
+                "clockify.entries",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn escrita_nos_lancamentos_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        let cases = [
+            ("POST", "/integrations/clockify/entries", ""),
+            (
+                "POST",
+                "/integrations/clockify/entries",
+                r#"{"description":"x","date":"2026-09-15","start":"09:00"}"#,
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/entries/e1",
+                r#"{"description":"x","date":"2026-09-15","start":"09:00","end":"10:00","tagIds":"t1"}"#,
+            ),
+            (
+                "PUT",
+                "/integrations/monday/entries/123",
+                r#"{"hours":"duas"}"#,
+            ),
+            (
+                "PUT",
+                "/integrations/monday/entries/123",
+                r#"{"billable":"sim"}"#,
+            ),
+        ];
+        for (method, uri, body) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got, None, "{method} {uri} {body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{method} {uri} {body}");
         }
     }
 

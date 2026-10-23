@@ -98,6 +98,11 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         handlers::services::post_day_summaries_generate,
         handlers::services::get_drive_backup,
         handlers::services::post_drive_backup_run,
+        handlers::entry_writes::post_clockify_entry,
+        handlers::entry_writes::put_clockify_entry,
+        handlers::entry_writes::delete_clockify_entry,
+        handlers::entry_writes::put_monday_entry,
+        handlers::entry_writes::delete_monday_entry,
     ),
     components(schemas(
         models::StatusResponse,
@@ -201,6 +206,9 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         models::GenerateDaySummariesResponse,
         models::DriveBackupStatusDto,
         models::DriveBackupRunResponse,
+        models::ClockifyEntryWriteRequest,
+        models::ClockifyWrittenEntryDto,
+        models::MondayEntryUpdateRequest,
     )),
     tags(
         (name = "status", description = "Consulta de estado"),
@@ -216,7 +224,8 @@ unificação e mudança de workspace. Tarefa em execução ou pausada = 409."),
 edição completa (PUT) ou parcial (PATCH); conclusão por dia; duplicar e lançar retroativo. Planejada por id vale em qualquer workspace."),
         (name = "integrations", description = "Envio manual de tarefas ao Google Sheets, Clockify e Monday: prévia e envio, \
 como o modal Enviar; e imports do Google Agenda, do Zendesk e do Monday: prévia e import, como os modais Importar, \
-e os botões de Projetos, Categorias e Catálogos do Monday; e a leitura dos lançamentos já feitos no Clockify e no Monday. \
+e os botões de Projetos, Categorias e Catálogos do Monday; e os lançamentos no Clockify (ler, criar, editar, excluir) \
+e no Monday (ler, editar, excluir). \
 Usa o workspace configurado para cada integração, não o ativo \
 (o rastreio automático de reuniões da Agenda, que cria no ativo, não passa por aqui). Integração não conectada = 409."),
         (name = "day-summaries", description = "Resumo do dia por IA, como a aba Resumo do Histórico: ler os já gerados \

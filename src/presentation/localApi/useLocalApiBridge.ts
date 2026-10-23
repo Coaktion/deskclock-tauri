@@ -103,6 +103,7 @@ export function useLocalApiBridge(): void {
         clockify: () => buildClockifyEntriesSource(config, factories),
         monday: () => buildMondayEntriesSource(config, factories),
       },
+      mondayActivityItemRepo: repos.mondayActivityItemRepo,
       activeWorkspaceId,
       running,
       workspaces: { create, update, remove, switchTo },

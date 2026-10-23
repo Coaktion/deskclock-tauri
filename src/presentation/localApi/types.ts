@@ -15,6 +15,7 @@ import type {
 } from "@presentation/integrations/taskSendAdapters";
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { ITrackedMondayItemRepository } from "@domain/integrations/ITrackedMondayItemRepository";
+import type { IMondayActivityItemRepository } from "@domain/repositories/IMondayActivityItemRepository";
 import type {
   CalendarImportSource,
   MondayImportSource,
@@ -101,8 +102,8 @@ export interface IntegrationImportPort {
 }
 
 /**
- * Os lançamentos já feitos no Clockify e no Monday, como os modais de leitura
- * os buscam (`entriesSources.ts`). Porta estreita, montada na hora.
+ * Os lançamentos no Clockify e no Monday, como os modais os buscam e gravam
+ * (`entriesSources.ts`). Porta estreita, montada na hora.
  */
 export interface IntegrationEntriesPort {
   clockify(): ClockifyEntriesSource;
@@ -133,6 +134,8 @@ export interface LocalApiDeps {
   llm: () => DaySummarySource;
   driveBackup: () => DriveBackupSource;
   entries: IntegrationEntriesPort;
+  /** O rastreio dos itens enviados ao Monday, que a exclusão de atividade limpa. */
+  mondayActivityItemRepo: Pick<IMondayActivityItemRepository, "deleteItem">;
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;

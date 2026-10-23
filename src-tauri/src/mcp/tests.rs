@@ -150,14 +150,17 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "cancel_task",
             "complete_planned_task",
             "create_category",
+            "create_clockify_entry",
             "create_custom_field",
             "create_export_profile",
             "create_project",
             "create_workspace",
             "delete_categories",
             "delete_category",
+            "delete_clockify_entry",
             "delete_custom_field",
             "delete_export_profile",
+            "delete_monday_entry",
             "delete_planned_task",
             "delete_project",
             "delete_projects",
@@ -210,8 +213,10 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "stop_task",
             "uncomplete_planned_task",
             "update_category",
+            "update_clockify_entry",
             "update_custom_field",
             "update_export_profile",
+            "update_monday_entry",
             "update_planned_task",
             "update_project",
             "update_running_task",
@@ -319,6 +324,13 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("generate_day_summaries", false, Some(false), true),
         ("get_drive_backup_status", true, None, false),
         ("run_drive_backup", false, Some(false), true),
+        // Fase D2b. Escrevem no Clockify e no Monday. Criar repete o apontamento;
+        // editar regrava o mesmo valor; a segunda exclusão só erra.
+        ("create_clockify_entry", false, Some(false), true),
+        ("update_clockify_entry", false, Some(true), true),
+        ("delete_clockify_entry", false, Some(true), true),
+        ("update_monday_entry", false, Some(true), true),
+        ("delete_monday_entry", false, Some(true), true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -343,6 +355,8 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
                 "delete_categories",
                 "delete_workspace",
                 "delete_export_profile",
+                "delete_clockify_entry",
+                "delete_monday_entry",
             ]
             .contains(name);
             assert_eq!(annotations["destructiveHint"], json!(destructive), "{tool}");
@@ -2797,4 +2811,194 @@ async fn esquemas_da_fase_d2_declaram_os_enums_e_saem_planos() {
             "{field}: {generate}"
         );
     }
+}
+
+fn phase_d2b_responder(op: &str) -> (u16, Value) {
+    match op {
+        "clockify.createEntry" => (201, json!({ "id": "novo" })),
+        "clockify.updateEntry" => (200, json!({ "id": "e1" })),
+        "monday.updateEntry" => (200, json!({ "itemId": "123" })),
+        "clockify.deleteEntry" | "monday.deleteEntry" => (204, Value::Null),
+        other => (500, json!({ "error": format!("inesperada: {other}") })),
+    }
+}
+
+#[tokio::test]
+async fn tools_da_fase_d2b_repassam_os_params_como_a_rest() {
+    let fields = json!({
+        "description": "Revisão",
+        "projectName": "ACME - Site",
+        "date": "2026-09-15",
+        "start": "09:00",
+        "end": "10:30"
+    });
+    let mut create_tags = fields.clone();
+    create_tags["tagNames"] = json!(["Dev"]);
+    let mut update = fields.clone();
+    update["id"] = json!("e1");
+    update["billable"] = json!(true);
+    update["tagIds"] = json!([]);
+    let mut update_body = update.clone();
+    update_body.as_object_mut().unwrap().remove("id");
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "create_clockify_entry",
+            fields.clone(),
+            "clockify.createEntry",
+            json!({ "body": fields }),
+        ),
+        (
+            "create_clockify_entry",
+            create_tags.clone(),
+            "clockify.createEntry",
+            json!({ "body": create_tags }),
+        ),
+        (
+            "update_clockify_entry",
+            update,
+            "clockify.updateEntry",
+            json!({ "id": "e1", "body": update_body }),
+        ),
+        (
+            "delete_clockify_entry",
+            json!({ "id": "e1" }),
+            "clockify.deleteEntry",
+            json!({ "id": "e1" }),
+        ),
+        (
+            "update_monday_entry",
+            json!({ "id": "123", "hours": 2.5, "activityType": null }),
+            "monday.updateEntry",
+            json!({ "id": "123", "body": { "hours": 2.5, "activityType": null } }),
+        ),
+        (
+            "update_monday_entry",
+            json!({ "id": "123" }),
+            "monday.updateEntry",
+            json!({ "id": "123", "body": {} }),
+        ),
+        (
+            "delete_monday_entry",
+            json!({ "id": "123" }),
+            "monday.deleteEntry",
+            json!({ "id": "123" }),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, phase_d2b_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn fase_d2b_com_argumento_fora_do_esquema_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        (
+            "create_clockify_entry",
+            json!({ "description": "x", "date": "2026-09-15" }),
+        ),
+        (
+            "update_clockify_entry",
+            json!({ "id": "e1", "description": "x", "date": "2026-09-15", "start": "09:00", "end": "10:00" }),
+        ),
+        (
+            "update_monday_entry",
+            json!({ "id": "123", "hours": "duas" }),
+        ),
+        ("delete_monday_entry", json!({})),
+    ] {
+        let (state, calls) = fake_state(true, phase_d2b_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn escrita_nos_lancamentos_com_erro_da_ponte_vira_is_error_com_a_mensagem() {
+    fn refuse(op: &str) -> (u16, Value) {
+        match op {
+            "monday.deleteEntry" => (
+                404,
+                json!({ "error": "Atividade '9' não encontrada entre as suas nos boards vinculados." }),
+            ),
+            _ => (
+                409,
+                json!({ "error": "Configure o Clockify (API Key + workspace) na tela de Integrações." }),
+            ),
+        }
+    }
+    let (state, _) = fake_state(true, refuse);
+    let result = call_tool(
+        state.clone(),
+        "delete_clockify_entry",
+        json!({ "id": "e1" }),
+    )
+    .await;
+    assert_eq!(
+        error_text(&result),
+        "Configure o Clockify (API Key + workspace) na tela de Integrações."
+    );
+    let result = call_tool(state, "delete_monday_entry", json!({ "id": "9" })).await;
+    assert_eq!(
+        error_text(&result),
+        "Atividade '9' não encontrada entre as suas nos boards vinculados."
+    );
+}
+
+#[tokio::test]
+async fn esquemas_da_fase_d2b_saem_planos_e_as_exclusoes_pedem_confirmacao() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let tool = |name: &str| tools.iter().find(|t| t["name"] == name).unwrap().clone();
+    let required = |name: &str| {
+        let mut list: Vec<String> = tool(name)["inputSchema"]["required"]
+            .as_array()
+            .map(|r| r.iter().map(|v| v.as_str().unwrap().to_string()).collect())
+            .unwrap_or_default();
+        list.sort();
+        list
+    };
+    for name in [
+        "create_clockify_entry",
+        "update_clockify_entry",
+        "delete_clockify_entry",
+        "update_monday_entry",
+        "delete_monday_entry",
+    ] {
+        let text = tool(name)["inputSchema"].to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
+        let description = tool(name)["description"].as_str().unwrap().to_string();
+        assert!(description.contains("list_"), "{name}: {description}");
+    }
+    assert_eq!(
+        required("create_clockify_entry"),
+        vec!["date", "description", "end", "start"]
+    );
+    assert_eq!(
+        required("update_clockify_entry"),
+        vec!["billable", "date", "description", "end", "id", "start"]
+    );
+    assert_eq!(required("update_monday_entry"), vec!["id"]);
+    for name in ["delete_clockify_entry", "delete_monday_entry"] {
+        let description = tool(name)["description"].as_str().unwrap().to_string();
+        assert!(
+            description.contains("only when the user explicitly asked"),
+            "{name}: {description}"
+        );
+    }
+    let monday = tool("delete_monday_entry")["description"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(monday.contains("confirm with the user first"), "{monday}");
 }

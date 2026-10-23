@@ -67,6 +67,13 @@ import {
 import { generateDaySummaries, listDaySummaries } from "./handlers/daySummaries";
 import { getDriveBackupStatus, runDriveBackup } from "./handlers/driveBackup";
 import { listClockifyEntries, listMondayEntries } from "./handlers/integrationEntries";
+import {
+  createClockifyEntry,
+  deleteClockifyEntry,
+  deleteMondayEntryHandler,
+  updateClockifyEntry,
+  updateMondayEntryHandler,
+} from "./handlers/integrationEntryWrites";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
@@ -175,6 +182,13 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "daySummaries.generate": generateDaySummaries,
   "driveBackup.status": getDriveBackupStatus,
   "driveBackup.run": runDriveBackup,
+  // Fase D2b: escrita nos lançamentos. Gravam no Clockify e no Monday (e, na
+  // exclusão do Monday, no rastreio local); não esperam o render.
+  "clockify.createEntry": createClockifyEntry,
+  "clockify.updateEntry": updateClockifyEntry,
+  "clockify.deleteEntry": deleteClockifyEntry,
+  "monday.updateEntry": updateMondayEntryHandler,
+  "monday.deleteEntry": deleteMondayEntryHandler,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */

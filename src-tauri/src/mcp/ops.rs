@@ -75,6 +75,12 @@ pub const GENERATE_DAY_SUMMARIES: &str = "generate_day_summaries";
 pub const GET_DRIVE_BACKUP_STATUS: &str = "get_drive_backup_status";
 pub const RUN_DRIVE_BACKUP: &str = "run_drive_backup";
 
+pub const CREATE_CLOCKIFY_ENTRY: &str = "create_clockify_entry";
+pub const UPDATE_CLOCKIFY_ENTRY: &str = "update_clockify_entry";
+pub const DELETE_CLOCKIFY_ENTRY: &str = "delete_clockify_entry";
+pub const UPDATE_MONDAY_ENTRY: &str = "update_monday_entry";
+pub const DELETE_MONDAY_ENTRY: &str = "delete_monday_entry";
+
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
 pub const OP_PROJECTS: &str = "projects.list";
@@ -147,6 +153,11 @@ pub const OP_DAY_SUMMARIES_LIST: &str = "daySummaries.list";
 pub const OP_DAY_SUMMARIES_GENERATE: &str = "daySummaries.generate";
 pub const OP_DRIVE_BACKUP_STATUS: &str = "driveBackup.status";
 pub const OP_DRIVE_BACKUP_RUN: &str = "driveBackup.run";
+pub const OP_CLOCKIFY_CREATE_ENTRY: &str = "clockify.createEntry";
+pub const OP_CLOCKIFY_UPDATE_ENTRY: &str = "clockify.updateEntry";
+pub const OP_CLOCKIFY_DELETE_ENTRY: &str = "clockify.deleteEntry";
+pub const OP_MONDAY_UPDATE_ENTRY: &str = "monday.updateEntry";
+pub const OP_MONDAY_DELETE_ENTRY: &str = "monday.deleteEntry";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -335,6 +346,21 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         &[pass_through(OP_DRIVE_BACKUP_STATUS)],
     ),
     (RUN_DRIVE_BACKUP, &[pass_through(OP_DRIVE_BACKUP_RUN)]),
+    // Fase D2b: escrita nos lançamentos do Clockify e do Monday.
+    (
+        CREATE_CLOCKIFY_ENTRY,
+        &[pass_through(OP_CLOCKIFY_CREATE_ENTRY)],
+    ),
+    (
+        UPDATE_CLOCKIFY_ENTRY,
+        &[pass_through(OP_CLOCKIFY_UPDATE_ENTRY)],
+    ),
+    (
+        DELETE_CLOCKIFY_ENTRY,
+        &[pass_through(OP_CLOCKIFY_DELETE_ENTRY)],
+    ),
+    (UPDATE_MONDAY_ENTRY, &[pass_through(OP_MONDAY_UPDATE_ENTRY)]),
+    (DELETE_MONDAY_ENTRY, &[pass_through(OP_MONDAY_DELETE_ENTRY)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

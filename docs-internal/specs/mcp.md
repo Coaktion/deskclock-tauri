@@ -80,6 +80,8 @@ Todas do usuário, em 2026-09-18.
 | `preview_monday_import` · `import_monday_items` | `monday.importPreview` · `monday.import` | `period` enum; o já importado vem marcado e o import o recusa (`idempotentHint: true`) (Fase D1) |
 | `import_monday_projects` · `import_monday_categories` · `read_monday_catalogs` | `monday.importProjects` · `monday.importCategories` · `monday.readCatalogs` | Os três botões da "Importação de dados"; sem argumentos (Fase D1) |
 | `list_clockify_entries` · `list_monday_entries` | `clockify.entries` · `monday.entries` | Lançamentos já feitos, só leitura; `readOnlyHint`, `openWorldHint: true`. Clockify por `from`/`to` e `onlyDefaultTags`; Monday pelas quatro janelas do modal (Fase D2) |
+| `create_clockify_entry` · `update_clockify_entry` · `delete_clockify_entry` | `clockify.createEntry` · `clockify.updateEntry` · `clockify.deleteEntry` | O formulário de "Apontamentos do Clockify"; editar regrava tudo (`billable` e tags obrigatórios); excluir com `destructiveHint`, só a pedido. `openWorldHint: true`; criar `idempotentHint: false` (Fase D2b) |
+| `update_monday_entry` · `delete_monday_entry` | `monday.updateEntry` · `monday.deleteEntry` | Só as atividades do usuário que `list_monday_entries` acha; editar com ausente = atual e só rótulos do board; excluir `destructiveHint`, confirmando com o usuário antes, e limpa `monday_activity_items` (Fase D2b) |
 | `list_day_summaries` | `daySummaries.list` | Resumos já gerados do período, do banco local; `readOnlyHint`, `openWorldHint: false` (Fase D2) |
 | `generate_day_summaries` | `daySummaries.generate` | Regras da aba Resumo: até 5 dias, cache, hoje regerado, erro por dia, parada na cota; `openWorldHint: true`, `idempotentHint: false` (Fase D2) |
 | `get_drive_backup_status` · `run_drive_backup` | `driveBackup.status` · `driveBackup.run` | Estado (só config, `readOnlyHint`) e "Fazer backup agora" (`openWorldHint: true`, `idempotentHint: false`) (Fase D2) |
@@ -417,7 +419,7 @@ planejadas — N chamadas resolvem.
 | C (C1 + C2) | concluída no código |
 | D1 (imports: Agenda, Zendesk, Monday) | implementada; falta verificação no app de dev |
 | D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada; falta verificação no app de dev |
-| D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | pendente |
+| D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | implementada; falta verificação no app de dev |
 | D3 (deeplink, configurações) | pendente |
 
 **Decisões da D2b e da D3** (usuário, 2026-10-23): a escrita dos modais de lançamentos entra (D2b), com as exclusões
@@ -579,9 +581,44 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
 - **Fora (com motivo):** criar, editar e excluir apontamento do Clockify e editar e excluir atividade do Monday — os modais
   fazem, mas o pedido desta fase foi a leitura; são escrita em sistema externo, a exclusão do Monday pede confirmação contra o
   §1, e o desenho (anotações, guarda dos rótulos de `buildActivityColumnValues`, limpeza do rastreio) pede decisão do
-  usuário. Ficam como dívida da paridade. O toggle e a frequência do backup automático são configuração (D3).
+  usuário. Ficaram como dívida da paridade — entraram na D2b (abaixo). O toggle e a frequência do backup automático são configuração (D3).
 - **Diferença conhecida:** depois de um backup pela API, a subseção aberta continua mostrando o "Último backup" que leu ao
   montar (ela semeia da config só no `isLoaded`); reabrir a tela atualiza. Igual ao agendador automático.
+
+### Decisões da Fase D2b que a spec não fixava
+
+- **Inventário das escritas.** *Clockify* (`ClockifyEntriesModal` + `useClockifyEntries`): "Novo apontamento" (descrição,
+  projeto pelo autocomplete, tags, billable, dia, início e fim `HH:MM`; abre com as tags padrão, billable desligado, agora
+  → +1h), o lápis (o mesmo formulário com os valores da linha, regravando tudo pelo `PUT`) e a lixeira (imediata). O Salvar só
+  habilita com descrição e projeto. *Monday* (`MondayEntriesModal` + `useMondayEntries`): o lápis (nome, horas, billable só
+  com a coluna Billing type, Activity Type e Project Stage pelos rótulos do board; datas não editáveis) e a lixeira com
+  confirmação na linha, que apaga o item e o rastreio em `monday_activity_items`.
+- **Refatoração (sem mudar comportamento):** `domain/usecases/clockify/clockifyEntryPayload.ts` (a validação do Salvar, o
+  casamento do projeto pelo nome exibido e o payload, com a virada da meia-noite) e `domain/usecases/monday/mondayEntryWrite.ts`
+  (`MondayEntryPatch` saiu do hook; a validação, o `column_values` com a guarda dos rótulos e as duas gravações). Modal e hook
+  chamam os mesmos; os toasts, o estado de edição e a lista sem rebusca seguem na tela.
+- **Ops por integração e ação**, cinco, sem esperar o render. REST sob as rotas da leitura: `POST` na coleção do Clockify,
+  `PUT`/`DELETE` em `/{id}`; no Monday, `id` = `itemId`. Os handlers Rust ficam em `handlers/entry_writes.rs`.
+- **Clockify editar regrava tudo** (sem "ausente mantém"): o `IClockifyApi` não lê apontamento por id, e o formulário também
+  manda o payload inteiro. `billable` e as tags são obrigatórios na edição, para um campo esquecido não apagar as tags.
+- **Projeto e tags do Clockify por id ou por nome** (o id vence), resolvidos contra `listProjects`/`listTags` do workspace do
+  Clockify: o princípio "por nome" das tools (§3), e o modelo só tem os ids que a leitura mostrou. Inexistente → 409.
+- **Monday editar é parcial** (ausente = atual), porque a atividade já é carregada para achar board e mapeamento — e só entre as
+  do usuário, como a tela (fora delas → 404). O que a tela não deixa escolher vira 400 em vez de sumir calado: rótulo fora dos
+  do board (a mensagem lista as opções) e `billable` em board sem Billing type. `null` nos rótulos = a opção vazia do select
+  (não escreve a coluna; o board mantém o valor — a tela não limpa Activity Type nem Project Stage).
+- **Mensagens de validação são da API**: a tela não as tem (desabilita o botão). Constantes ao lado da regra
+  (`CLOCKIFY_ENTRY_*`, `MONDAY_ENTRY_*`).
+- **Respostas.** Clockify: o que foi gravado (`id`, horários ISO, `projectId`, `tagIds`) — o `PUT` do Clockify não devolve
+  projeto nem tags hidratados. Monday: o DTO da leitura com a atividade como ficou, sem rebuscar (a exclusão e a edição do
+  Monday demoram a aparecer na consulta, ver `useMondayEntries`). Exclusões: 204 → `{}` na tool.
+- **Anotações.** Todas `readOnlyHint: false`, `openWorldHint: true`. `create_clockify_entry`: `idempotentHint: false`.
+  Edições: `idempotentHint: true`. Exclusões: `destructiveHint: true`, `idempotentHint: true` (a segunda só erra); a descrição
+  manda chamar só a pedido explícito, e a do Monday manda confirmar com o usuário antes, nomeando atividade, board e horas.
+- **Erros do serviço**: como na D2, sobem e viram 500 com a mensagem. Não configurado: 409 com o aviso da leitura.
+- **Achado, não mexido:** a edição do Monday reescreve o Status com o rótulo que a atividade já tem (`entry.statusLabel`), sem
+  conferir contra `statusLabels` como o envio faz. Se o rótulo tiver saído do board, o Monday pode recusar a edição inteira — a
+  armadilha que a guarda do envio fechou. Mantido igual à tela (a API usa a mesma função); corrigir é decisão do usuário.
 
 ### Decisões da Fase A que a spec não fixava
 

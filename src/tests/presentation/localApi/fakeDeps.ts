@@ -230,6 +230,10 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     monday: notConfigured("entries.monday"),
   };
 
+  const mondayActivityItemRepo = {
+    deleteItem: vi.fn(async (_boardId: string, _itemId: string) => {}),
+  };
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -260,6 +264,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     llm,
     driveBackup,
     entries,
+    mondayActivityItemRepo,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,

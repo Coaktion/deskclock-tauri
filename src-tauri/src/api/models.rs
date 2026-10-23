@@ -1403,3 +1403,71 @@ pub struct DriveBackupRunResponse {
     pub file_id: String,
     pub status: DriveBackupStatusDto,
 }
+
+/// Corpo de criar e de editar um apontamento do Clockify: os campos do formulário
+/// de "Apontamentos do Clockify". Editar regrava o apontamento inteiro.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntryWriteRequest {
+    /// Não vazia.
+    pub description: String,
+    /// Projeto do workspace do Clockify. Tem precedência sobre `projectName`.
+    #[serde(default)]
+    pub project_id: Option<String>,
+    /// Nome exibido do projeto, exato: "Cliente - Projeto" quando há cliente.
+    #[serde(default)]
+    pub project_name: Option<String>,
+    /// Tags do workspace do Clockify. Tem precedência sobre `tagNames`. Na criação,
+    /// ausentes = as tags padrão; na edição, obrigatórias (lista vazia = sem tags).
+    #[serde(default)]
+    pub tag_ids: Option<Vec<String>>,
+    /// Nomes exatos das tags.
+    #[serde(default)]
+    pub tag_names: Option<Vec<String>>,
+    /// Na criação, ausente = `false`; na edição, obrigatório.
+    #[serde(default)]
+    pub billable: Option<bool>,
+    /// Dia local, YYYY-MM-DD.
+    pub date: String,
+    /// Hora local, HH:MM.
+    pub start: String,
+    /// Hora local, HH:MM. Antes de `start` = no dia seguinte.
+    pub end: String,
+}
+
+/// O apontamento como foi gravado.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyWrittenEntryDto {
+    pub id: String,
+    pub description: String,
+    /// Instante ISO 8601 (UTC).
+    pub start: String,
+    pub end: String,
+    pub duration_seconds: i64,
+    pub billable: bool,
+    pub project_id: Option<String>,
+    pub tag_ids: Vec<String>,
+}
+
+/// Corpo de editar uma atividade do Monday: os campos do formulário de
+/// "Atividades no Monday". Ausente = o valor atual.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayEntryUpdateRequest {
+    /// Não vazio.
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Horas reportadas, decimal ≥ 0.
+    #[serde(default)]
+    pub hours: Option<f64>,
+    /// Só em board com a coluna Billing type.
+    #[serde(default)]
+    pub billable: Option<bool>,
+    /// Um dos rótulos de Activity Type do board; `null` = a opção vazia (não escreve).
+    #[serde(default)]
+    pub activity_type: Option<String>,
+    /// Um dos rótulos de Project Stage do board; `null` = a opção vazia (não escreve).
+    #[serde(default)]
+    pub project_stage: Option<String>,
+}

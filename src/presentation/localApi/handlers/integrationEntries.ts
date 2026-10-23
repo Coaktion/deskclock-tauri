@@ -23,8 +23,8 @@ import type { LocalApiHandler } from "../types";
 
 // Os lançamentos já feitos no Clockify e no Monday pela API local (`mcp.md` §7,
 // Fase D2): a leitura do período, como "Apontamentos do Clockify" e
-// "Atividades no Monday" a mostram. Criar, editar e excluir lançamento, que os
-// modais também fazem, não entram nesta fase.
+// "Atividades no Monday" a mostram. A escrita (Fase D2b) está em
+// `integrationEntryWrites.ts`.
 
 function clockifyEntryDto(entry: ClockifyTimeEntryFull) {
   return {
@@ -97,7 +97,7 @@ function mondayWindowParam(value: string | null | undefined): MondayEntriesWindo
   );
 }
 
-function mondayEntryDto(entry: MondayEntry) {
+export function mondayEntryDto(entry: MondayEntry) {
   return {
     boardId: entry.boardId,
     boardName: entry.boardName,

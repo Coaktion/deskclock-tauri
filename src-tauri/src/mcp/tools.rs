@@ -1387,6 +1387,125 @@ pub struct GenerateDaySummariesArgs {
     pub billable: Option<bool>,
 }
 
+// Fase D2b. Os campos do formulário de "Apontamentos do Clockify", comuns a
+// criar e editar; vão no corpo, como na REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyEntryFields {
+    /// Entry description (not empty).
+    pub description: String,
+    /// Clockify project id (from list_clockify_entries). Takes precedence over projectName.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    /// Exact Clockify project name as the app shows it: "Client - Project" when the
+    /// project has a client. One of projectId/projectName is required.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_name: Option<String>,
+    /// Local day, YYYY-MM-DD.
+    pub date: String,
+    /// Local start time, HH:MM.
+    pub start: String,
+    /// Local end time, HH:MM. Earlier than start = the next day.
+    pub end: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateClockifyEntryArgs {
+    #[serde(flatten)]
+    pub fields: ClockifyEntryFields,
+    /// Clockify tag ids. Takes precedence over tagNames. Omit both for the default
+    /// tags, as the app's form starts; [] = no tags.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_ids: Option<Vec<String>>,
+    /// Exact Clockify tag names.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_names: Option<Vec<String>>,
+    /// Default false, as the app's form starts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub billable: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateClockifyEntryArgs {
+    /// Clockify entry id, from list_clockify_entries.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: UpdateClockifyEntryBody,
+}
+
+/// O corpo; o `id` vai fora dele, como no path da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateClockifyEntryBody {
+    #[serde(flatten)]
+    pub fields: ClockifyEntryFields,
+    /// Clockify tag ids. Takes precedence over tagNames. One of the two is required
+    /// ([] = no tags): the edit rewrites the whole entry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_ids: Option<Vec<String>>,
+    /// Exact Clockify tag names.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tag_names: Option<Vec<String>>,
+    pub billable: bool,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct ClockifyEntryIdArgs {
+    /// Clockify entry id, from list_clockify_entries.
+    pub id: String,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMondayEntryArgs {
+    /// The activity's `itemId`, from list_monday_entries.
+    pub id: String,
+    #[serde(flatten)]
+    pub body: UpdateMondayEntryBody,
+}
+
+/// Ausente mantém o atual; `null` nos dois rótulos é a opção vazia do select.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMondayEntryBody {
+    /// Activity name (not empty). Omit to keep it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Reported hours, decimal (e.g. 1.5), 0 or more. Omit to keep them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hours: Option<f64>,
+    /// Billable. Only on boards with the Billing type column (an error otherwise).
+    /// Omit to keep it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub billable: Option<bool>,
+    /// One of the board's Activity Type labels (an error lists them). Omit to keep it;
+    /// null leaves the column untouched.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub activity_type: Patch<String>,
+    /// One of the board's Project Stage labels (an error lists them). Omit to keep it;
+    /// null leaves the column untouched.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub project_stage: Patch<String>,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct MondayEntryIdArgs {
+    /// The activity's `itemId`, from list_monday_entries.
+    pub id: String,
+}
+
 #[tool_router]
 impl DeskClockMcp {
     pub fn new(bridge: Arc<Bridge>) -> Self {
@@ -2970,6 +3089,134 @@ impl DeskClockMcp {
     )]
     async fn run_drive_backup(&self) -> CallToolResult {
         self.call_single(RUN_DRIVE_BACKUP, json!({})).await
+    }
+    #[tool(
+        name = "create_clockify_entry",
+        description = "Create a time entry in Clockify, in the configured Clockify workspace, \
+            like \"New entry\" in the app's Clockify entries dialog. Needs a description, a \
+            Clockify project (projectId from list_clockify_entries, or its exact name as the \
+            app shows it, \"Client - Project\"), the local day (YYYY-MM-DD) and start/end \
+            (HH:MM, local; an end earlier than the start is the next day). Tags default to the \
+            configured default tags and billable to false, as the form starts. This writes to \
+            Clockify, not to DeskClock's history; to log work in DeskClock use log_past_task. \
+            Every call creates another entry. Errors if Clockify is not configured or the \
+            project or a tag does not exist there. Returns the entry as written.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn create_clockify_entry(
+        &self,
+        Parameters(args): Parameters<CreateClockifyEntryArgs>,
+    ) -> CallToolResult {
+        self.call_single(CREATE_CLOCKIFY_ENTRY, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "update_clockify_entry",
+        description = "Edit a Clockify time entry, like saving its edit form in the app's \
+            Clockify entries dialog: the entry is rewritten whole, so pass every field — \
+            description, project, day, start/end (HH:MM, local), billable and the tags ([] = \
+            none) — repeating the current values from list_clockify_entries for what should \
+            stay (the tags there have ids and names; the project, its id; start/end there are \
+            UTC, so convert them to the local time zone from get_status). Get `id` from \
+            list_clockify_entries. Errors if Clockify is not configured or the project or a \
+            tag does not exist there. Returns the entry as written.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn update_clockify_entry(
+        &self,
+        Parameters(args): Parameters<UpdateClockifyEntryArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_CLOCKIFY_ENTRY,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_clockify_entry",
+        description = "Permanently delete a time entry from Clockify, like the trash button \
+            in the app's Clockify entries dialog. The deletion is immediate and cannot be \
+            undone. Call it only when the user explicitly asked to delete that entry. Get `id` \
+            from list_clockify_entries. Errors if Clockify is not configured, or with \
+            Clockify's message if the entry no longer exists. Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn delete_clockify_entry(
+        &self,
+        Parameters(args): Parameters<ClockifyEntryIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_CLOCKIFY_ENTRY, json!({ "id": args.id }))
+            .await
+    }
+
+    #[tool(
+        name = "update_monday_entry",
+        description = "Edit one of the user's activities on Monday, like the pencil in the \
+            app's Monday activities dialog: name, reported hours, billable (only on boards \
+            with the Billing type column), Activity Type and Project Stage (only labels the \
+            board offers; an error lists them). Omitted fields keep their current value. The \
+            dates cannot be edited: they come from the DeskClock task. Get `id` (the \
+            `itemId`) from list_monday_entries; only the user's own activities found there can \
+            be edited. Errors if Monday is not connected. Returns the activity as it is now on \
+            the board.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn update_monday_entry(
+        &self,
+        Parameters(args): Parameters<UpdateMondayEntryArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_MONDAY_ENTRY,
+            json!({ "id": args.id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_monday_entry",
+        description = "Permanently delete one of the user's activities from the Monday \
+            board, and DeskClock's record that it was sent. The board is shared with the \
+            user's team and the deletion cannot be undone from here. The app asks for \
+            confirmation before deleting: call this only when the user explicitly asked to \
+            delete that activity, and confirm with the user first, naming the activity, its \
+            board and hours. Get `id` (the `itemId`) from list_monday_entries; only the user's \
+            own activities found there can be deleted (an error otherwise, so a repeated call \
+            only errors). Errors if Monday is not connected. Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn delete_monday_entry(
+        &self,
+        Parameters(args): Parameters<MondayEntryIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_MONDAY_ENTRY, json!({ "id": args.id }))
+            .await
     }
 }
 

@@ -98,6 +98,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Envio às integrações (paridade, Fase C1) | `GET /integrations/{id}/send-preview?from&to` (op `integrations.sendPreview`) · `POST /integrations/{id}/send` (op `integrations.send`), `id` = `google_sheets` \| `clockify` \| `monday` |
 | Imports das integrações (paridade, Fase D1) | `GET /integrations/google_calendar/import-preview?from&to` · `POST /integrations/google_calendar/import` (ops `calendar.importPreview`/`calendar.import`) · `GET /integrations/zendesk/import-preview` · `POST /integrations/zendesk/import` (`zendesk.importPreview`/`zendesk.import`) · `GET /integrations/monday/import-preview?period` · `POST /integrations/monday/import` (`monday.importPreview`/`monday.import`) · `POST /integrations/monday/import-projects` · `POST /integrations/monday/import-categories` · `POST /integrations/monday/read-catalogs` (`monday.importProjects`/`importCategories`/`readCatalogs`) |
 | Lançamentos, resumo por IA e backup (paridade, Fase D2) | `GET /integrations/clockify/entries?from&to&onlyDefaultTags` (op `clockify.entries`) · `GET /integrations/monday/entries?period` (`monday.entries`) · `GET /day-summaries?from&to&workspaceId` (`daySummaries.list`) · `POST /day-summaries/generate` (`daySummaries.generate`) · `GET /backup/drive` (`driveBackup.status`) · `POST /backup/drive/run` (`driveBackup.run`) |
+| Escrita nos lançamentos (paridade, Fase D2b) | `POST /integrations/clockify/entries` (op `clockify.createEntry`) · `PUT/DELETE /integrations/clockify/entries/{id}` (`clockify.updateEntry`/`clockify.deleteEntry`) · `PUT/DELETE /integrations/monday/entries/{id}` (`monday.updateEntry`/`monday.deleteEntry`), `id` = o `itemId` |
 | Exportação (paridade, Fase C2) | `GET/POST /export-profiles` · `PUT/DELETE /export-profiles/{id}` · `PUT /export-profiles/{id}/default` (ops `exportProfiles.list/create/update/delete/setDefault`, `?workspaceId=` nas rotas por id) · `POST /export` (op `export.generate`) |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
@@ -273,6 +274,36 @@ subseção, num lugar só: `clockifyEntries.ts` e `mondayEntries.ts` (domínio),
   200 com `fileId` e o estado novo; Google não conectado → 409; falha do Drive → **502** com a mensagem que o runner gravou.
   Prazo da ponte: 2 min, numa fila própria (não segura as outras requisições). Restaurar não tem rota (procedimento manual, `telas/dados.md`).
 - Nenhuma emite evento nem espera o render.
+
+**Escrita nos lançamentos (Fase D2b da paridade, `mcp.md` §7) — 2026-10-23.** Regras em
+`src/presentation/localApi/handlers/integrationEntryWrites.ts`; as do formulário são as dos modais, num lugar só:
+`clockifyEntryPayload.ts` (`clockifyEntryDraftError`, `buildClockifyEntryPayload`, `clockifyProjectIdByName`) e
+`mondayEntryWrite.ts` (`mondayEntryPatchError`, `buildMondayEntryUpdate` com a guarda dos rótulos, `updateMondayEntry`,
+`deleteMondayEntry`). Mesmas portas da leitura (`deps.entries`), mais `deps.mondayActivityItemRepo` (só `deleteItem`).
+- **Clockify — criar.** `POST /integrations/clockify/entries` → 201 com o que foi gravado (`id`, `description`, `start`/`end`
+  ISO, `durationSeconds`, `billable`, `projectId`, `tagIds`). Corpo: `description` (aparada; vazia → 400), projeto por
+  `projectId` ou `projectName` (o nome exibido, "Cliente - Projeto"; `projectId` vence), `date` (dia local) e `start`/`end`
+  (`HH:MM` locais; fim antes do início = dia seguinte, como o formulário). Tags por `tagIds` ou `tagNames` (`tagIds` vence);
+  ausentes = as tags padrão; `billable` ausente = `false` — os padrões com que o formulário abre. Sem projeto → 400 (a tela
+  desabilita o botão; a frase é da API). Projeto ou tag fora do workspace do Clockify → 409 (lê `listProjects`/`listTags`
+  só quando o corpo os cita).
+- **Clockify — editar.** `PUT /integrations/clockify/entries/{id}`: o mesmo corpo, e **regrava o apontamento inteiro**, como o
+  Salvar do formulário (o `IClockifyApi` não lê um apontamento por id, então não há "ausente mantém"). Por isso `billable` e
+  as tags (lista vazia = sem tags) são obrigatórios (400). 200 com o que foi gravado.
+- **Clockify — excluir.** `DELETE /integrations/clockify/entries/{id}` → 204, imediata, como a lixeira da linha (sem
+  confirmação na tela).
+- **Monday — editar.** `PUT /integrations/monday/entries/{id}` (`id` = `itemId`), corpo opcional `{ name, hours, billable,
+  activityType, projectStage }`, **ausente = o valor atual**. A atividade é procurada entre as do usuário que a tela lista
+  (mesma busca e piso, `loadMondayEntries`); fora delas → 404. Nome vazio ou horas negativas → 400. O que o formulário não
+  deixa escolher também é 400 (regra só da API): rótulo de Activity Type/Project Stage fora dos do board (a mensagem lista as
+  opções) e `billable` em board sem a coluna Billing type. `null` nos rótulos = a opção vazia do select, que não escreve a
+  coluna. O payload é o do modal (`buildMondayEntryUpdate`): Status com o rótulo que a atividade já tem. 200 com a atividade
+  como ficou (o DTO da leitura), sem rebuscar no Monday.
+- **Monday — excluir.** `DELETE /integrations/monday/entries/{id}` → 204: apaga o item e o rastreio em
+  `monday_activity_items` (`deleteMondayEntry`; falha no Monday não limpa o rastreio). A tela pede confirmação; a API não
+  pergunta — quem confirma é o cliente (a tool do MCP manda).
+- Não configurado → 409 com o aviso da leitura. Erro do Clockify ou do Monday: o tratamento da leitura (D2) — sobe e vira
+  500 com a mensagem do serviço. Nenhuma emite evento nem espera o render; nenhuma resposta leva chave.
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.
