@@ -234,6 +234,20 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     deleteItem: vi.fn(async (_boardId: string, _itemId: string) => {}),
   };
 
+  // Sem porta por padrão: o teste de configurações injeta a sua.
+  const settings = {
+    general: notConfigured("settings.general"),
+    updateGeneral: notConfigured("settings.updateGeneral"),
+    overlay: notConfigured("settings.overlay"),
+    updateOverlay: notConfigured("settings.updateOverlay"),
+    accessibility: notConfigured("settings.accessibility"),
+    updateAccessibility: notConfigured("settings.updateAccessibility"),
+    shortcuts: notConfigured("settings.shortcuts"),
+    updateShortcuts: notConfigured("settings.updateShortcuts"),
+    toggleOverlay: notConfigured("settings.toggleOverlay"),
+    resetWindowPositions: notConfigured("settings.resetWindowPositions"),
+  };
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -265,6 +279,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     driveBackup,
     entries,
     mondayActivityItemRepo,
+    settings,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,

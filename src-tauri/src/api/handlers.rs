@@ -103,6 +103,8 @@ pub mod imports;
 pub mod integrations;
 pub mod planned_tasks;
 pub mod services;
+pub mod settings;
+pub mod share;
 pub mod totals;
 pub mod workspaces;
 

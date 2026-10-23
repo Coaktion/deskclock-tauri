@@ -147,6 +147,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
     assert_eq!(
         names,
         [
+            "accept_shared_task",
             "cancel_task",
             "complete_planned_task",
             "create_category",
@@ -170,8 +171,13 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "duplicate_planned_task",
             "export_tasks",
             "generate_day_summaries",
+            "get_accessibility_settings",
             "get_drive_backup_status",
+            "get_general_settings",
+            "get_overlay_settings",
+            "get_shortcut_settings",
             "get_status",
+            "get_task_share_link",
             "get_totals",
             "get_week_totals",
             "import_calendar_events",
@@ -199,8 +205,10 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "preview_calendar_import",
             "preview_monday_import",
             "preview_send_to_integration",
+            "preview_shared_task",
             "preview_zendesk_import",
             "read_monday_catalogs",
+            "reset_window_positions",
             "resume_task",
             "run_drive_backup",
             "send_tasks_to_integration",
@@ -211,15 +219,20 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "start_planned_task",
             "start_task",
             "stop_task",
+            "toggle_overlay",
             "uncomplete_planned_task",
+            "update_accessibility_settings",
             "update_category",
             "update_clockify_entry",
             "update_custom_field",
             "update_export_profile",
+            "update_general_settings",
             "update_monday_entry",
+            "update_overlay_settings",
             "update_planned_task",
             "update_project",
             "update_running_task",
+            "update_shortcut_settings",
             "update_task",
             "update_workspace",
         ]
@@ -331,6 +344,24 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("delete_clockify_entry", false, Some(true), true),
         ("update_monday_entry", false, Some(true), true),
         ("delete_monday_entry", false, Some(true), true),
+        // Fase D3a. Configurações gravam o mesmo valor de novo sem efeito a mais;
+        // nada sai da máquina (autostart, atalhos e tema são do sistema local).
+        // Alternar o overlay de novo desfaz. Aceitar o link cria outra planejada
+        // ou inicia de novo, e o `start` encerra a ativa, o que pode disparar o
+        // envio automático por tarefa, como o `start_task`.
+        ("get_general_settings", true, None, false),
+        ("update_general_settings", false, Some(true), false),
+        ("get_overlay_settings", true, None, false),
+        ("update_overlay_settings", false, Some(true), false),
+        ("get_accessibility_settings", true, None, false),
+        ("update_accessibility_settings", false, Some(true), false),
+        ("get_shortcut_settings", true, None, false),
+        ("update_shortcut_settings", false, Some(true), false),
+        ("reset_window_positions", false, Some(true), false),
+        ("toggle_overlay", false, Some(false), false),
+        ("get_task_share_link", true, None, false),
+        ("preview_shared_task", true, None, false),
+        ("accept_shared_task", false, Some(false), true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -3001,4 +3032,230 @@ async fn esquemas_da_fase_d2b_saem_planos_e_as_exclusoes_pedem_confirmacao() {
         .unwrap()
         .to_string();
     assert!(monday.contains("confirm with the user first"), "{monday}");
+}
+
+fn phase_d3a_responder(op: &str) -> (u16, Value) {
+    match op {
+        "settings.resetWindowPositions" => (204, Value::Null),
+        "overlay.toggle" => (200, json!({ "visible": true })),
+        "share.apply" => (201, json!({ "mode": "plan" })),
+        other if other.starts_with("settings.") || other.starts_with("share.") => {
+            (200, json!({ "ok": other }))
+        }
+        other => (500, json!({ "error": format!("inesperada: {other}") })),
+    }
+}
+
+#[tokio::test]
+async fn tools_da_fase_d3a_repassam_os_params_como_a_rest() {
+    let link = "deskclock://task/share?name=Revisar";
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "get_general_settings",
+            json!({}),
+            "settings.getGeneral",
+            json!({}),
+        ),
+        (
+            "update_general_settings",
+            json!({ "showWeekend": true, "weekStartsOn": "sunday", "roundingSlots": [15, 30] }),
+            "settings.updateGeneral",
+            json!({ "body": { "showWeekend": true, "weekStartsOn": "sunday", "roundingSlots": [15, 30] } }),
+        ),
+        // Sem argumentos: corpo vazio, nada muda.
+        (
+            "update_general_settings",
+            json!({}),
+            "settings.updateGeneral",
+            json!({ "body": {} }),
+        ),
+        (
+            "get_overlay_settings",
+            json!({}),
+            "settings.getOverlay",
+            json!({}),
+        ),
+        (
+            "update_overlay_settings",
+            json!({ "opacity": 70 }),
+            "settings.updateOverlay",
+            json!({ "body": { "opacity": 70 } }),
+        ),
+        (
+            "get_accessibility_settings",
+            json!({}),
+            "settings.getAccessibility",
+            json!({}),
+        ),
+        (
+            "update_accessibility_settings",
+            json!({ "mode": "claro", "accent": "ambar" }),
+            "settings.updateAccessibility",
+            json!({ "body": { "mode": "claro", "accent": "ambar" } }),
+        ),
+        (
+            "get_shortcut_settings",
+            json!({}),
+            "settings.getShortcuts",
+            json!({}),
+        ),
+        (
+            "update_shortcut_settings",
+            json!({ "toggleTask": "CmdOrCtrl+Shift+P", "stopTask": "" }),
+            "settings.updateShortcuts",
+            json!({ "body": { "toggleTask": "CmdOrCtrl+Shift+P", "stopTask": "" } }),
+        ),
+        (
+            "reset_window_positions",
+            json!({}),
+            "settings.resetWindowPositions",
+            json!({}),
+        ),
+        ("toggle_overlay", json!({}), "overlay.toggle", json!({})),
+        (
+            "get_task_share_link",
+            json!({ "plannedTaskId": "p-1" }),
+            "share.link",
+            json!({ "body": { "plannedTaskId": "p-1" } }),
+        ),
+        (
+            "preview_shared_task",
+            json!({ "link": link }),
+            "share.preview",
+            json!({ "body": { "link": link } }),
+        ),
+        (
+            "accept_shared_task",
+            json!({ "link": link, "mode": "plan", "date": "2026-09-20" }),
+            "share.apply",
+            json!({ "body": { "link": link, "mode": "plan", "date": "2026-09-20" } }),
+        ),
+        (
+            "accept_shared_task",
+            json!({ "link": link, "mode": "start" }),
+            "share.apply",
+            json!({ "body": { "link": link, "mode": "start" } }),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, phase_d3a_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn fase_d3a_com_argumento_fora_do_esquema_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        (
+            "update_general_settings",
+            json!({ "weekStartsOn": "tuesday" }),
+        ),
+        (
+            "update_general_settings",
+            json!({ "dailyGoalHours": "oito" }),
+        ),
+        ("update_overlay_settings", json!({ "opacity": -5 })),
+        ("update_accessibility_settings", json!({ "accent": "rosa" })),
+        ("update_shortcut_settings", json!({ "toggleTask": 5 })),
+        ("get_task_share_link", json!({})),
+        (
+            "accept_shared_task",
+            json!({ "link": "deskclock://task/share?name=x" }),
+        ),
+        (
+            "accept_shared_task",
+            json!({ "link": "deskclock://task/share?name=x", "mode": "later" }),
+        ),
+    ] {
+        let (state, calls) = fake_state(true, phase_d3a_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn fase_d3a_com_erro_da_ponte_vira_is_error_com_a_mensagem() {
+    fn refuse(op: &str) -> (u16, Value) {
+        match op {
+            "share.preview" => (
+                400,
+                json!({ "error": "Este link de tarefa não traz o nome da tarefa." }),
+            ),
+            _ => (
+                400,
+                json!({ "error": "O atalho \"Alt+O\" já está em \"Parar\" — escolha outro para \"Mostrar / Ocultar overlay\"." }),
+            ),
+        }
+    }
+    let (state, _) = fake_state(true, refuse);
+    let result = call_tool(
+        state.clone(),
+        "preview_shared_task",
+        json!({ "link": "deskclock://task/share" }),
+    )
+    .await;
+    assert_eq!(
+        error_text(&result),
+        "Este link de tarefa não traz o nome da tarefa."
+    );
+    let result = call_tool(
+        state,
+        "update_shortcut_settings",
+        json!({ "toggleOverlay": "Alt+O" }),
+    )
+    .await;
+    assert!(error_text(&result).contains("já está em"));
+}
+
+#[tokio::test]
+async fn esquemas_da_fase_d3a_saem_planos_e_o_de_atalhos_avisa_que_e_global() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let tool = |name: &str| tools.iter().find(|t| t["name"] == name).unwrap().clone();
+    for name in [
+        "update_general_settings",
+        "update_overlay_settings",
+        "update_accessibility_settings",
+        "update_shortcut_settings",
+        "get_task_share_link",
+        "preview_shared_task",
+        "accept_shared_task",
+    ] {
+        let text = tool(name)["inputSchema"].to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
+    }
+    let general = tool("update_general_settings");
+    assert_eq!(
+        general["inputSchema"]["properties"]["weekStartsOn"]["enum"],
+        json!(["monday", "sunday", null])
+    );
+    let accessibility = tool("update_accessibility_settings");
+    assert_eq!(
+        accessibility["inputSchema"]["properties"]["accent"]["enum"],
+        json!(["azul", "verde", "roxo", "ambar", null])
+    );
+    let accept = tool("accept_shared_task");
+    assert_eq!(
+        accept["inputSchema"]["properties"]["mode"]["enum"],
+        json!(["plan", "start"])
+    );
+    assert_eq!(sorted(&accept["inputSchema"]["required"]), ["link", "mode"]);
+    let shortcuts = tool("update_shortcut_settings")["description"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        shortcuts.contains("GLOBAL in the operating system"),
+        "{shortcuts}"
+    );
 }

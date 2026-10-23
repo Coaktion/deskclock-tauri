@@ -62,6 +62,12 @@ describe("waitsForNextCommit", () => {
     expect(waitsForNextCommit("plannedTasks.duplicate")).toBe(false);
     expect(waitsForNextCommit("history.update")).toBe(false);
     expect(waitsForNextCommit("totals.week")).toBe(false);
+    // Fase D3a: "Iniciar agora" do link troca a tarefa; configurações não.
+    expect(waitsForNextCommit("share.apply")).toBe(true);
+    expect(waitsForNextCommit("share.preview")).toBe(false);
+    expect(waitsForNextCommit("settings.updateGeneral")).toBe(false);
+    expect(waitsForNextCommit("settings.updateAccessibility")).toBe(false);
+    expect(waitsForNextCommit("overlay.toggle")).toBe(false);
   });
 });
 

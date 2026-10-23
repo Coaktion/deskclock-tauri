@@ -76,6 +76,19 @@ import {
 } from "./handlers/integrationEntryWrites";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
+  getAccessibilitySettings,
+  getGeneralSettings,
+  getOverlaySettings,
+  getShortcutSettings,
+  resetWindowPositionsHandler,
+  toggleOverlayHandler,
+  updateAccessibilitySettings,
+  updateGeneralSettings,
+  updateOverlaySettings,
+  updateShortcutSettings,
+} from "./handlers/settings";
+import { applyShareHandler, previewShareHandler, shareLinkHandler } from "./handlers/share";
+import {
   cancelTask,
   getStatus,
   pauseTask,
@@ -189,6 +202,22 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "clockify.deleteEntry": deleteClockifyEntry,
   "monday.updateEntry": updateMondayEntryHandler,
   "monday.deleteEntry": deleteMondayEntryHandler,
+  // Fase D3a: configurações por grupo e o link de compartilhar tarefa. Nenhuma
+  // de configuração espera o render: a ponte lê a config por função, na hora.
+  "settings.getGeneral": getGeneralSettings,
+  "settings.updateGeneral": updateGeneralSettings,
+  "settings.getOverlay": getOverlaySettings,
+  "settings.updateOverlay": updateOverlaySettings,
+  "settings.getAccessibility": getAccessibilitySettings,
+  "settings.updateAccessibility": updateAccessibilitySettings,
+  "settings.getShortcuts": getShortcutSettings,
+  "settings.updateShortcuts": updateShortcutSettings,
+  "settings.resetWindowPositions": resetWindowPositionsHandler,
+  "overlay.toggle": toggleOverlayHandler,
+  "share.link": shareLinkHandler,
+  "share.preview": previewShareHandler,
+  // Inicia a tarefa em execução no modo `start`: espera o render (abaixo).
+  "share.apply": applyShareHandler,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */
@@ -209,11 +238,14 @@ export async function dispatchLocalApiRequest(
   }
 }
 
-const WORKSPACE_MUTATIONS = new Set([
+const CONTEXT_MUTATIONS = new Set([
   "workspaces.create",
   "workspaces.update",
   "workspaces.delete",
   "workspaces.setActive",
+  // "Iniciar agora" do link recebido troca a tarefa em execução. No modo
+  // `plan` a espera só custa o teto de `COMMIT_WAIT_MS`.
+  "share.apply",
 ]);
 
 /**
@@ -222,7 +254,7 @@ const WORKSPACE_MUTATIONS = new Set([
  * esperar o render.
  */
 export function waitsForNextCommit(op: string): boolean {
-  return op.startsWith("tasks.") || WORKSPACE_MUTATIONS.has(op);
+  return op.startsWith("tasks.") || CONTEXT_MUTATIONS.has(op);
 }
 
 /**

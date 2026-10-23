@@ -82,6 +82,13 @@ Todas do usuário, em 2026-09-18.
 | `list_clockify_entries` · `list_monday_entries` | `clockify.entries` · `monday.entries` | Lançamentos já feitos, só leitura; `readOnlyHint`, `openWorldHint: true`. Clockify por `from`/`to` e `onlyDefaultTags`; Monday pelas quatro janelas do modal (Fase D2) |
 | `create_clockify_entry` · `update_clockify_entry` · `delete_clockify_entry` | `clockify.createEntry` · `clockify.updateEntry` · `clockify.deleteEntry` | O formulário de "Apontamentos do Clockify"; editar regrava tudo (`billable` e tags obrigatórios); excluir com `destructiveHint`, só a pedido. `openWorldHint: true`; criar `idempotentHint: false` (Fase D2b) |
 | `update_monday_entry` · `delete_monday_entry` | `monday.updateEntry` · `monday.deleteEntry` | Só as atividades do usuário que `list_monday_entries` acha; editar com ausente = atual e só rótulos do board; excluir `destructiveHint`, confirmando com o usuário antes, e limpa `monday_activity_items` (Fase D2b) |
+| `get_general_settings` · `update_general_settings` | `settings.getGeneral` · `settings.updateGeneral` | Configurações → Geral; update parcial com os efeitos da aba (autostart, aviso às janelas); `idempotentHint: true` (Fase D3a) |
+| `get_overlay_settings` · `update_overlay_settings` | `settings.getOverlay` · `settings.updateOverlay` | Opacidade e snap (Fase D3a) |
+| `get_accessibility_settings` · `update_accessibility_settings` | `settings.getAccessibility` · `settings.updateAccessibility` | Modo e acento; o tema muda em todas as janelas (Fase D3a) |
+| `get_shortcut_settings` · `update_shortcut_settings` | `settings.getShortcuts` · `settings.updateShortcuts` | A descrição do update avisa que o atalho é global no SO e manda confirmar a combinação (Fase D3a) |
+| `toggle_overlay` · `reset_window_positions` | `overlay.toggle` · `settings.resetWindowPositions` | As duas ações das abas; o toggle devolve `visible`, `idempotentHint: false` (Fase D3a) |
+| `get_task_share_link` | `share.link` | O "Copiar link" de uma planejada: `link` + o que viaja (Fase D3a) |
+| `preview_shared_task` · `accept_shared_task` | `share.preview` · `share.apply` | O modal da tarefa recebida: prévia sem gravar; aceitar com `mode` `plan`/`start`, `openWorldHint: true` (o `start` encerra a ativa) (Fase D3a) |
 | `list_day_summaries` | `daySummaries.list` | Resumos já gerados do período, do banco local; `readOnlyHint`, `openWorldHint: false` (Fase D2) |
 | `generate_day_summaries` | `daySummaries.generate` | Regras da aba Resumo: até 5 dias, cache, hoje regerado, erro por dia, parada na cota; `openWorldHint: true`, `idempotentHint: false` (Fase D2) |
 | `get_drive_backup_status` · `run_drive_backup` | `driveBackup.status` · `driveBackup.run` | Estado (só config, `readOnlyHint`) e "Fazer backup agora" (`openWorldHint: true`, `idempotentHint: false`) (Fase D2) |
@@ -420,7 +427,8 @@ planejadas — N chamadas resolvem.
 | D1 (imports: Agenda, Zendesk, Monday) | implementada; falta verificação no app de dev |
 | D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada; falta verificação no app de dev |
 | D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | implementada; falta verificação no app de dev |
-| D3 (deeplink, configurações) | pendente |
+| D3a (link de compartilhar tarefa; Configurações: Geral, Overlay, Acessibilidade, Atalhos) | implementada; falta verificação no app de dev |
+| D3b (ajustes não secretos das integrações) | pendente |
 
 **Decisões da D2b e da D3** (usuário, 2026-10-23): a escrita dos modais de lançamentos entra (D2b), com as exclusões
 marcadas `destructiveHint`. A D3 expõe os quatro grupos das Configurações — Geral, Overlay e Acessibilidade, Atalhos
@@ -619,6 +627,45 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
 - **Achado, não mexido:** a edição do Monday reescreve o Status com o rótulo que a atividade já tem (`entry.statusLabel`), sem
   conferir contra `statusLabels` como o envio faz. Se o rótulo tiver saído do board, o Monday pode recusar a edição inteira — a
   armadilha que a guarda do envio fechou. Mantido igual à tela (a API usa a mesma função); corrigir é decisão do usuário.
+
+### Decisões da Fase D3a que a spec não fixava
+
+- **Inventário.** *Geral* (`GeralTab`): nome (blur → `userName`), iniciar com o computador (`startOnBoot` + autostart do SO;
+  a leitura vem de `isEnabled`), fechar ao perder foco, rail de integrações, descartar < 1 min, arredondamento (toggle, fichas
+  de slot, fichas de tolerância), metas diária (1–24) e semanal (1–168), primeiro dia da semana e exibir fim de semana (os dois
+  emitem `OVERLAY_CONFIG_CHANGED`), e o botão "Redefinir posições salvas das janelas" (quatro posições para `{-1,-1}`).
+  *Overlay* (`OverlayTab`): botão Mostrar/Ocultar (`toggle_overlay`), opacidade 20–100 e snap (os dois emitem). *Aparência*
+  (`AparenciaTab`): modo e acento (repinta, grava, emite). *Atalhos* (`AtalhosTab`): os quatro atalhos, gravados pelo teclado
+  (`buildAccelerator`), registrados todos de uma vez por `update_shortcuts`, gravados os quatro, e os avisos de Wayland e de
+  recusa. *Link*: "Copiar link" da linha planejada (`copyPlannedTaskLink`), o `ShareTaskModal` (prévia editável, "Adicionar
+  como planejada", "Iniciar agora" com aviso) e o `PasteDeepLinkModal` (valida a forma e entrega ao `open_deep_link` do Rust).
+- **Refatoração (sem mudar a tela):** `settingsRules.ts` e `shortcuts.ts` (domínio: faixas, opções, `toggleRoundingSlot`,
+  tabela dos atalhos, `shortcutRegistrations`, os textos dos avisos), `settingsEffects.ts` (presentation: os efeitos de cada
+  chave, chamados pelas quatro abas e pelo `useGlobalShortcuts`), `plannedTaskShareLink` e `sharedTaskStartWarning`
+  (`sharePayload.ts`) e `planSharedTask` (domínio), usados pela linha e pelo modal.
+- **Uma porta por grupo, não key-value**: `SettingsPort` com `get`/`update` de cada grupo e as duas ações. A validação por chave
+  fica no handler; chave fora do grupo é 400.
+- **`weekStartsOn` por nome** (`monday`/`sunday`) na API e na tool, e não o `0`/`1` da config: enum de inteiro confunde o modelo.
+- **Atalho recusado pelo SO não é 400.** A tela grava o recusado e avisa; a API faz o mesmo (200 com `failedShortcuts` e o
+  `warning` da tela). 400 só para o que a tela não deixa acontecer: forma fora do gravador e — regra só da API — o mesmo atalho
+  em duas ações. Recusar com 400 exigiria desfazer o registro já feito pelo `update_shortcuts`, que a tela não faz.
+  O conflito é checado antes de registrar, então o 400 não deixa nada pela metade — e **só conta o conflito que o PATCH
+  cria** (achado da revisão): a tela deixa gravar o mesmo atalho em duas ações, e um conflito já gravado não pode barrar
+  a edição de uma terceira (`shortcutConflictError(values, changed)`).
+- **Nenhuma configuração espera o render** (`waitsForNextCommit`): a ponte lê a config por função (`weekStartsOn: () => …`), e
+  tema e fim de semana não entram no retrato. `share.apply` espera (o `start` troca a tarefa em execução).
+- **`toggle_overlay` devolve a visibilidade** (`bool`), para a tool dizer se mostrou ou escondeu; a tela ignora o retorno.
+- **Link só de planejada.** O Histórico não tem "Copiar link"; nada foi inventado para ele. A prévia e o aceite leem só
+  `task/share`: `navigate` e `retroactive` só mexem na tela, e `task/start` é o `start_task`.
+- **Aceitar grava o que o link resolveu**; o modal deixa editar antes, a tool manda editar depois (`update_planned_task`,
+  `update_running_task`). Sem argumentos-união de edição na tool.
+- **Anotações.** Leituras: `readOnlyHint`, `openWorldHint: false`. Updates de configuração e `reset_window_positions`:
+  `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` (autostart, atalhos e tema são do sistema local).
+  `toggle_overlay`: `idempotentHint: false`. `accept_shared_task`: `destructiveHint: false` (o `start` encerra a ativa pelas
+  regras de parada, como `start_task`), `idempotentHint: false`, `openWorldHint: true` (encerrar dispara o envio por tarefa).
+- **Params como a REST:** GETs e ações `{}`; updates e as três do link `{ body }` só com o que veio.
+- **Diferença conhecida:** a aba aberta não relê a config depois de um `PATCH` pela API (ela semeia no `isLoaded`), como no
+  backup da D2; reabrir a tela atualiza. As outras janelas recebem o `OVERLAY_CONFIG_CHANGED` das chaves que o emitem.
 
 ### Decisões da Fase A que a spec não fixava
 

@@ -1471,3 +1471,255 @@ pub struct MondayEntryUpdateRequest {
     #[serde(default)]
     pub project_stage: Option<String>,
 }
+
+// ---------------- Fase D3a: configurações por grupo ----------------
+
+/// Configurações → Geral.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GeneralSettingsDto {
+    /// "Seu nome", no cabeçalho da tela de Tarefas.
+    pub user_name: String,
+    /// Iniciar na inicialização do computador (lido do sistema).
+    pub start_on_boot: bool,
+    pub close_on_focus_loss: bool,
+    pub show_integrations_rail: bool,
+    pub discard_tasks_under_one_minute: bool,
+    pub rounding_enabled: bool,
+    /// Slots ativos, em minutos (múltiplos de 5 até 60).
+    pub rounding_slots: Vec<u32>,
+    /// Tolerância em minutos: 0, 1, 2, 5, 10 ou 15.
+    pub rounding_tolerance: u32,
+    /// 1 a 24.
+    pub daily_goal_hours: u32,
+    /// 1 a 168.
+    pub weekly_goal_hours: u32,
+    /// `monday` ou `sunday`.
+    pub week_starts_on: String,
+    pub show_weekend: bool,
+}
+
+/// Edição parcial do Geral: ausente mantém; `null` é 400.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GeneralSettingsPatch {
+    #[serde(default)]
+    pub user_name: Option<String>,
+    #[serde(default)]
+    pub start_on_boot: Option<bool>,
+    #[serde(default)]
+    pub close_on_focus_loss: Option<bool>,
+    #[serde(default)]
+    pub show_integrations_rail: Option<bool>,
+    #[serde(default)]
+    pub discard_tasks_under_one_minute: Option<bool>,
+    #[serde(default)]
+    pub rounding_enabled: Option<bool>,
+    #[serde(default)]
+    pub rounding_slots: Option<Vec<u32>>,
+    #[serde(default)]
+    pub rounding_tolerance: Option<u32>,
+    #[serde(default)]
+    pub daily_goal_hours: Option<u32>,
+    #[serde(default)]
+    pub weekly_goal_hours: Option<u32>,
+    #[serde(default)]
+    pub week_starts_on: Option<String>,
+    #[serde(default)]
+    pub show_weekend: Option<bool>,
+}
+
+/// Configurações → Overlay.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OverlaySettingsDto {
+    /// Opacidade em repouso, em %: 20 a 100.
+    pub opacity: u32,
+    pub snap_to_grid: bool,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OverlaySettingsPatch {
+    #[serde(default)]
+    pub opacity: Option<u32>,
+    #[serde(default)]
+    pub snap_to_grid: Option<bool>,
+}
+
+/// "Mostrar / Ocultar overlay".
+#[derive(Debug, Serialize, ToSchema)]
+pub struct OverlayToggleResponse {
+    /// Se o overlay ficou visível.
+    pub visible: bool,
+}
+
+/// Configurações → Aparência (acessibilidade).
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AccessibilitySettingsDto {
+    /// `escuro` ou `claro`.
+    pub mode: String,
+    /// `azul`, `verde`, `roxo` ou `ambar`.
+    pub accent: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct AccessibilitySettingsPatch {
+    #[serde(default)]
+    pub mode: Option<String>,
+    #[serde(default)]
+    pub accent: Option<String>,
+}
+
+/// Configurações → Atalhos. `""` = sem atalho.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutSettingsDto {
+    /// Iniciar / Pausar / Retomar.
+    pub toggle_task: String,
+    /// Parar.
+    pub stop_task: String,
+    /// Mostrar / Ocultar overlay.
+    pub toggle_overlay: String,
+    /// Mostrar / Ocultar janela.
+    pub toggle_window: String,
+}
+
+/// Edição parcial dos atalhos: ausente mantém; `""` remove.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutSettingsPatch {
+    #[serde(default)]
+    pub toggle_task: Option<String>,
+    #[serde(default)]
+    pub stop_task: Option<String>,
+    #[serde(default)]
+    pub toggle_overlay: Option<String>,
+    #[serde(default)]
+    pub toggle_window: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShortcutsUpdateResponse {
+    pub shortcuts: ShortcutSettingsDto,
+    /// Os que o sistema recusou registrar (em uso por outro aplicativo): ficam gravados, como na tela.
+    pub failed_shortcuts: Vec<String>,
+    /// O aviso que a tela mostraria (Wayland ou falha de registro).
+    pub warning: Option<String>,
+}
+
+// ---------------- Fase D3a: compartilhar tarefa ----------------
+
+/// O que viaja no `deskclock://task/share` — nada além disso.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SharedTaskPayloadDto {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_name: Option<String>,
+    pub billable: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_time: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_time: Option<String>,
+    /// Pelo **rótulo** do campo; `select` pelo rótulo da opção.
+    pub custom_values: HashMap<String, String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareLinkRequest {
+    /// Id da planejada.
+    pub planned_task_id: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ShareLinkResponse {
+    pub link: String,
+    pub payload: SharedTaskPayloadDto,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SharePreviewRequest {
+    /// O `deskclock://task/share?…` colado.
+    pub link: String,
+    /// Catálogos de onde resolver. Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+}
+
+/// O que o link não encontrou aqui.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct UnresolvedShareDto {
+    pub projects: Vec<String>,
+    pub categories: Vec<String>,
+    pub custom_fields: Vec<String>,
+}
+
+/// A tarefa como o modal a abriria, resolvida contra os catálogos locais.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolvedSharedTaskDto {
+    pub name: String,
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+    pub billable: bool,
+    /// `""` sem horário.
+    pub start_time: String,
+    pub end_time: String,
+    /// Pelo id do campo, como a tarefa grava.
+    pub custom_values: HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ActiveTaskRefDto {
+    pub id: String,
+    pub name: Option<String>,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SharePreviewResponse {
+    pub payload: SharedTaskPayloadDto,
+    pub workspace_id: String,
+    pub task: ResolvedSharedTaskDto,
+    pub unresolved: UnresolvedShareDto,
+    /// A data com que o modal abre (hoje): a data não viaja no link.
+    pub date: String,
+    pub active_task: Option<ActiveTaskRefDto>,
+    /// O aviso do modal: "Iniciar agora encerra a tarefa…". `null` sem tarefa ativa.
+    pub start_warning: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareApplyRequest {
+    pub link: String,
+    /// `plan` (Adicionar como planejada) ou `start` (Iniciar agora).
+    pub mode: String,
+    /// Só em `plan`, YYYY-MM-DD. Ausente = hoje.
+    #[serde(default)]
+    pub date: Option<String>,
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ShareApplyResponse {
+    pub mode: String,
+    /// Em `plan`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub planned_task: Option<PlannedTaskDto>,
+    /// Em `start`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub task: Option<TaskDto>,
+    pub unresolved: UnresolvedShareDto,
+}

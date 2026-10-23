@@ -81,6 +81,20 @@ pub const DELETE_CLOCKIFY_ENTRY: &str = "delete_clockify_entry";
 pub const UPDATE_MONDAY_ENTRY: &str = "update_monday_entry";
 pub const DELETE_MONDAY_ENTRY: &str = "delete_monday_entry";
 
+pub const GET_GENERAL_SETTINGS: &str = "get_general_settings";
+pub const UPDATE_GENERAL_SETTINGS: &str = "update_general_settings";
+pub const GET_OVERLAY_SETTINGS: &str = "get_overlay_settings";
+pub const UPDATE_OVERLAY_SETTINGS: &str = "update_overlay_settings";
+pub const GET_ACCESSIBILITY_SETTINGS: &str = "get_accessibility_settings";
+pub const UPDATE_ACCESSIBILITY_SETTINGS: &str = "update_accessibility_settings";
+pub const GET_SHORTCUT_SETTINGS: &str = "get_shortcut_settings";
+pub const UPDATE_SHORTCUT_SETTINGS: &str = "update_shortcut_settings";
+pub const RESET_WINDOW_POSITIONS: &str = "reset_window_positions";
+pub const TOGGLE_OVERLAY: &str = "toggle_overlay";
+pub const GET_TASK_SHARE_LINK: &str = "get_task_share_link";
+pub const PREVIEW_SHARED_TASK: &str = "preview_shared_task";
+pub const ACCEPT_SHARED_TASK: &str = "accept_shared_task";
+
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
 pub const OP_PROJECTS: &str = "projects.list";
@@ -158,6 +172,19 @@ pub const OP_CLOCKIFY_UPDATE_ENTRY: &str = "clockify.updateEntry";
 pub const OP_CLOCKIFY_DELETE_ENTRY: &str = "clockify.deleteEntry";
 pub const OP_MONDAY_UPDATE_ENTRY: &str = "monday.updateEntry";
 pub const OP_MONDAY_DELETE_ENTRY: &str = "monday.deleteEntry";
+pub const OP_SETTINGS_GET_GENERAL: &str = "settings.getGeneral";
+pub const OP_SETTINGS_UPDATE_GENERAL: &str = "settings.updateGeneral";
+pub const OP_SETTINGS_GET_OVERLAY: &str = "settings.getOverlay";
+pub const OP_SETTINGS_UPDATE_OVERLAY: &str = "settings.updateOverlay";
+pub const OP_SETTINGS_GET_ACCESSIBILITY: &str = "settings.getAccessibility";
+pub const OP_SETTINGS_UPDATE_ACCESSIBILITY: &str = "settings.updateAccessibility";
+pub const OP_SETTINGS_GET_SHORTCUTS: &str = "settings.getShortcuts";
+pub const OP_SETTINGS_UPDATE_SHORTCUTS: &str = "settings.updateShortcuts";
+pub const OP_SETTINGS_RESET_WINDOW_POSITIONS: &str = "settings.resetWindowPositions";
+pub const OP_OVERLAY_TOGGLE: &str = "overlay.toggle";
+pub const OP_SHARE_LINK: &str = "share.link";
+pub const OP_SHARE_PREVIEW: &str = "share.preview";
+pub const OP_SHARE_APPLY: &str = "share.apply";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -361,6 +388,47 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
     ),
     (UPDATE_MONDAY_ENTRY, &[pass_through(OP_MONDAY_UPDATE_ENTRY)]),
     (DELETE_MONDAY_ENTRY, &[pass_through(OP_MONDAY_DELETE_ENTRY)]),
+    // Fase D3a: configurações por grupo e o link de compartilhar tarefa.
+    (
+        GET_GENERAL_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_GENERAL)],
+    ),
+    (
+        UPDATE_GENERAL_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_GENERAL)],
+    ),
+    (
+        GET_OVERLAY_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_OVERLAY)],
+    ),
+    (
+        UPDATE_OVERLAY_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_OVERLAY)],
+    ),
+    (
+        GET_ACCESSIBILITY_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_ACCESSIBILITY)],
+    ),
+    (
+        UPDATE_ACCESSIBILITY_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_ACCESSIBILITY)],
+    ),
+    (
+        GET_SHORTCUT_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_SHORTCUTS)],
+    ),
+    (
+        UPDATE_SHORTCUT_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_SHORTCUTS)],
+    ),
+    (
+        RESET_WINDOW_POSITIONS,
+        &[pass_through(OP_SETTINGS_RESET_WINDOW_POSITIONS)],
+    ),
+    (TOGGLE_OVERLAY, &[pass_through(OP_OVERLAY_TOGGLE)]),
+    (GET_TASK_SHARE_LINK, &[pass_through(OP_SHARE_LINK)]),
+    (PREVIEW_SHARED_TASK, &[pass_through(OP_SHARE_PREVIEW)]),
+    (ACCEPT_SHARED_TASK, &[pass_through(OP_SHARE_APPLY)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

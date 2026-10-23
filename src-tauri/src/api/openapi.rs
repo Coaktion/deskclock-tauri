@@ -9,7 +9,7 @@ use crate::api::models;
         title = "DeskClock Local API",
         description = "API REST local do DeskClock: controle do timer, Histórico, tarefas planejadas, \
 workspaces, projetos, categorias, campos personalizados, totais, envio às integrações, imports das integrações, lançamentos do Clockify e do Monday, resumo do dia por IA, \
-backup no Drive e exportação, para integrar com ferramentas externas \
+backup no Drive, exportação, configurações e o link de compartilhar tarefa, para integrar com ferramentas externas \
 (Alfred, Raycast, scripts, automações). Cada chamada é executada pelo próprio app, com as mesmas regras da tela.\n\n\
 **Base URL:** `http://localhost:{porta}` (padrão: 27420)\n\n\
 **Workspace:** onde houver escopo, `workspaceId` ausente = workspace ativo. Recursos buscados por id no path \
@@ -103,6 +103,19 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         handlers::entry_writes::delete_clockify_entry,
         handlers::entry_writes::put_monday_entry,
         handlers::entry_writes::delete_monday_entry,
+        handlers::settings::get_general,
+        handlers::settings::patch_general,
+        handlers::settings::get_overlay,
+        handlers::settings::patch_overlay,
+        handlers::settings::get_accessibility,
+        handlers::settings::patch_accessibility,
+        handlers::settings::get_shortcuts,
+        handlers::settings::patch_shortcuts,
+        handlers::settings::post_reset_window_positions,
+        handlers::settings::post_overlay_toggle,
+        handlers::share::post_share_link,
+        handlers::share::post_share_preview,
+        handlers::share::post_share_apply,
     ),
     components(schemas(
         models::StatusResponse,
@@ -209,6 +222,26 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         models::ClockifyEntryWriteRequest,
         models::ClockifyWrittenEntryDto,
         models::MondayEntryUpdateRequest,
+        models::GeneralSettingsDto,
+        models::GeneralSettingsPatch,
+        models::OverlaySettingsDto,
+        models::OverlaySettingsPatch,
+        models::OverlayToggleResponse,
+        models::AccessibilitySettingsDto,
+        models::AccessibilitySettingsPatch,
+        models::ShortcutSettingsDto,
+        models::ShortcutSettingsPatch,
+        models::ShortcutsUpdateResponse,
+        models::SharedTaskPayloadDto,
+        models::ShareLinkRequest,
+        models::ShareLinkResponse,
+        models::SharePreviewRequest,
+        models::UnresolvedShareDto,
+        models::ResolvedSharedTaskDto,
+        models::ActiveTaskRefDto,
+        models::SharePreviewResponse,
+        models::ShareApplyRequest,
+        models::ShareApplyResponse,
     )),
     tags(
         (name = "status", description = "Consulta de estado"),
@@ -234,7 +267,9 @@ Usa o workspace configurado para cada integração, não o ativo \
 nem endpoint: é procedimento manual, com o app fechado."),
         (name = "export", description = "Exportação de tarefas: perfis (por workspace; `workspaceId` ausente = ativo; \
 id de outro workspace = 404) e o CSV/JSON gerado com um perfil, como o modal Exportar. A API não grava arquivo: \
-o conteúdo vem na resposta.")
+o conteúdo vem na resposta."),
+        (name = "settings", description = "Configurações por grupo — Geral, Overlay, Acessibilidade (Aparência) e Atalhos globais —, com leitura e edição parcial e os mesmos efeitos da tela (início com o sistema, registro dos atalhos no sistema operacional, tema em todas as janelas, overlay). Não é key-value: só as chaves das abas; integrações, segredos e chaves internas ficam de fora. E as ações das abas: mostrar/ocultar o overlay e redefinir as posições."),
+        (name = "share", description = "Compartilhar tarefa por link (`deskclock://task/share`): gerar o link de uma planejada, como o \"Copiar link\"; e, para um link recebido, a prévia e a ação do modal (adicionar como planejada ou iniciar agora). Só o que o contrato do link carrega viaja.")
     )
 )]
 pub struct ApiDoc;

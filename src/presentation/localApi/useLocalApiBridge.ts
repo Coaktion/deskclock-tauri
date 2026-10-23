@@ -34,6 +34,8 @@ import {
   buildClockifyEntriesSource,
   buildMondayEntriesSource,
 } from "@presentation/integrations/entriesSources";
+import { buildSettingsPort } from "@presentation/settings/settingsGroups";
+import { tauriSettingsSystem } from "@presentation/settings/settingsEffects";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -104,6 +106,7 @@ export function useLocalApiBridge(): void {
         monday: () => buildMondayEntriesSource(config, factories),
       },
       mondayActivityItemRepo: repos.mondayActivityItemRepo,
+      settings: buildSettingsPort(config, tauriSettingsSystem),
       activeWorkspaceId,
       running,
       workspaces: { create, update, remove, switchTo },

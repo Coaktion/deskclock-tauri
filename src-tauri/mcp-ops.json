@@ -76,7 +76,20 @@
     "clockify.updateEntry": "update_clockify_entry",
     "clockify.deleteEntry": "delete_clockify_entry",
     "monday.updateEntry": "update_monday_entry",
-    "monday.deleteEntry": "delete_monday_entry"
+    "monday.deleteEntry": "delete_monday_entry",
+    "settings.getGeneral": "get_general_settings",
+    "settings.updateGeneral": "update_general_settings",
+    "settings.getOverlay": "get_overlay_settings",
+    "settings.updateOverlay": "update_overlay_settings",
+    "settings.getAccessibility": "get_accessibility_settings",
+    "settings.updateAccessibility": "update_accessibility_settings",
+    "settings.getShortcuts": "get_shortcut_settings",
+    "settings.updateShortcuts": "update_shortcut_settings",
+    "settings.resetWindowPositions": "reset_window_positions",
+    "overlay.toggle": "toggle_overlay",
+    "share.link": "get_task_share_link",
+    "share.preview": "preview_shared_task",
+    "share.apply": "accept_shared_task"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",

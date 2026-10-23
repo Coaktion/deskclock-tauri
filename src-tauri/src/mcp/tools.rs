@@ -1506,6 +1506,157 @@ pub struct MondayEntryIdArgs {
     pub id: String,
 }
 
+// Fase D3a. Configurações por grupo: tudo opcional, ausente mantém; vão no
+// corpo, como na REST. Enums inline para o esquema sair plano.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum WeekStartArg {
+    Monday,
+    Sunday,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateGeneralSettingsArgs {
+    /// "Your name", shown in the Tasks screen header.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_name: Option<String>,
+    /// Start DeskClock with the computer (registers it in the OS startup).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_on_boot: Option<bool>,
+    /// Hide the main window when it loses focus.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub close_on_focus_loss: Option<bool>,
+    /// Show the narrow integrations rail on the right.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_integrations_rail: Option<bool>,
+    /// Discard tasks stopped with less than 1 minute.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub discard_tasks_under_one_minute: Option<bool>,
+    /// Round the duration to the active slots when a task stops.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rounding_enabled: Option<bool>,
+    /// Active rounding slots in minutes: multiples of 5 up to 60 ([] = none). The
+    /// whole list, not a diff.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rounding_slots: Option<Vec<u32>>,
+    /// Rounding tolerance in minutes: one of 0, 1, 2, 5, 10, 15.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rounding_tolerance: Option<u32>,
+    /// Daily goal in whole hours, 1 to 24.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub daily_goal_hours: Option<u32>,
+    /// Weekly goal in whole hours, 1 to 168.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weekly_goal_hours: Option<u32>,
+    /// First day of the week, for the whole app (weekly totals, period shortcuts,
+    /// Planning, calendar).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub week_starts_on: Option<WeekStartArg>,
+    /// Show Saturday and Sunday in Planning and in the recurrence days.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_weekend: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateOverlaySettingsArgs {
+    /// Overlay opacity at rest, in percent: 20 to 100.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opacity: Option<u32>,
+    /// Snap the overlay to a grid when dragging ends (no effect on Wayland).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snap_to_grid: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum ModeArg {
+    Escuro,
+    Claro,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum AccentArg {
+    Azul,
+    Verde,
+    Roxo,
+    Ambar,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct UpdateAccessibilitySettingsArgs {
+    /// `escuro` (dark) or `claro` (light).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mode: Option<ModeArg>,
+    /// Accent color: `azul` (blue), `verde` (green), `roxo` (purple), `ambar` (amber).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub accent: Option<AccentArg>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateShortcutSettingsArgs {
+    /// Start / pause / resume the task. "" removes the shortcut.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toggle_task: Option<String>,
+    /// Stop the task. "" removes the shortcut.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stop_task: Option<String>,
+    /// Show / hide the overlay. "" removes the shortcut.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toggle_overlay: Option<String>,
+    /// Show / hide the main window. "" removes the shortcut.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub toggle_window: Option<String>,
+}
+
+// Compartilhar tarefa: o contrato do link é do TS.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetTaskShareLinkArgs {
+    /// Planned task id, from list_planned_tasks.
+    pub planned_task_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewSharedTaskArgs {
+    /// The pasted deskclock://task/share?… link.
+    pub link: String,
+    /// Workspace whose projects, categories and fields the link is matched against
+    /// (from list_catalog). Omit for the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum ShareModeArg {
+    Plan,
+    Start,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AcceptSharedTaskArgs {
+    /// The pasted deskclock://task/share?… link.
+    pub link: String,
+    /// `plan` = add as a planned task on `date`; `start` = start it now.
+    pub mode: ShareModeArg,
+    /// Only with `plan`: the day, YYYY-MM-DD. Omit for today.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    /// Workspace to create it in (from list_catalog). Omit for the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
 #[tool_router]
 impl DeskClockMcp {
     pub fn new(bridge: Arc<Bridge>) -> Self {
@@ -3216,6 +3367,231 @@ impl DeskClockMcp {
         Parameters(args): Parameters<MondayEntryIdArgs>,
     ) -> CallToolResult {
         self.call_single(DELETE_MONDAY_ENTRY, json!({ "id": args.id }))
+            .await
+    }
+
+    #[tool(
+        name = "get_general_settings",
+        description = "Read DeskClock's general settings (Settings > General): your name, start \
+            with the computer, hide on focus loss, integrations rail, discard tasks under 1 \
+            minute, duration rounding (enabled, slots, tolerance), daily and weekly goals, first \
+            day of the week and whether the weekend is shown.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_general_settings(&self) -> CallToolResult {
+        self.call_single(GET_GENERAL_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_general_settings",
+        description = "Change DeskClock's general settings, like Settings > General. Pass only \
+            what changes; omitted fields keep their value. Applies the same side effects as the \
+            screen: startOnBoot registers or removes the app from the OS startup; weekStartsOn \
+            and showWeekend update every open window. Values the screen does not offer (goals \
+            out of range, a slot that is not a multiple of 5 up to 60, another tolerance) are \
+            an error. Returns the whole group as it is now.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_general_settings(
+        &self,
+        Parameters(args): Parameters<UpdateGeneralSettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_GENERAL_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_overlay_settings",
+        description = "Read the overlay settings (Settings > Overlay): opacity at rest (%) and \
+            snap to grid.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_overlay_settings(&self) -> CallToolResult {
+        self.call_single(GET_OVERLAY_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_overlay_settings",
+        description = "Change the overlay settings, like Settings > Overlay: opacity at rest \
+            (20 to 100%) and snap to grid. Omitted fields keep their value; the open overlay \
+            applies the change at once. To show or hide the overlay, use toggle_overlay. \
+            Returns the group as it is now.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_overlay_settings(
+        &self,
+        Parameters(args): Parameters<UpdateOverlaySettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_OVERLAY_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_accessibility_settings",
+        description = "Read the appearance settings (Settings > Appearance): mode (escuro/claro) \
+            and accent color.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_accessibility_settings(&self) -> CallToolResult {
+        self.call_single(GET_ACCESSIBILITY_SETTINGS, json!({}))
+            .await
+    }
+
+    #[tool(
+        name = "update_accessibility_settings",
+        description = "Change the appearance, like Settings > Appearance: mode (escuro = dark, \
+            claro = light) and accent color. Omitted fields keep their value. The theme changes \
+            in every window at once. Returns the appearance as it is now.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_accessibility_settings(
+        &self,
+        Parameters(args): Parameters<UpdateAccessibilitySettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_ACCESSIBILITY_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_shortcut_settings",
+        description = "Read DeskClock's global keyboard shortcuts (Settings > Shortcuts): \
+            start/pause/resume, stop, show/hide overlay, show/hide window. \"\" = no shortcut.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_shortcut_settings(&self) -> CallToolResult {
+        self.call_single(GET_SHORTCUT_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_shortcut_settings",
+        description = "Change DeskClock's keyboard shortcuts, like Settings > Shortcuts. These \
+            shortcuts are GLOBAL in the operating system: they are registered at once and fire \
+            in any application, even with DeskClock in the background, so a common combination \
+            (e.g. CmdOrCtrl+C) would take it from every other app — confirm the combination \
+            with the user. Format: modifiers CmdOrCtrl, Shift, Alt, then one key, joined by \"+\" \
+            (e.g. CmdOrCtrl+Shift+P, Alt+F5); \"\" removes a shortcut; omitted ones keep their \
+            value. The same combination on two actions is an error. A shortcut the OS refuses \
+            (in use by another app) is still saved, as in the screen, and comes back in \
+            failedShortcuts with the screen's warning; on Wayland global shortcuts do not \
+            work. Returns the four shortcuts.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_shortcut_settings(
+        &self,
+        Parameters(args): Parameters<UpdateShortcutSettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_SHORTCUT_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "toggle_overlay",
+        description = "Show or hide DeskClock's floating overlay, like the Show / Hide overlay \
+            button and shortcut: shows the compact overlay when hidden, hides it (and its popup) \
+            when visible. Calling it again reverts. Returns `visible`, the state after the call.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn toggle_overlay(&self) -> CallToolResult {
+        self.call_single(TOGGLE_OVERLAY, json!({})).await
+    }
+
+    #[tool(
+        name = "reset_window_positions",
+        description = "Forget the saved positions of the main window and the overlays, like \
+            \"Reset saved window positions\" in Settings > General. Call it only when the user \
+            asked. Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn reset_window_positions(&self) -> CallToolResult {
+        self.call_single(RESET_WINDOW_POSITIONS, json!({})).await
+    }
+
+    #[tool(
+        name = "get_task_share_link",
+        description = "Get the deskclock://task/share link of a planned task, like \"Copy link\" \
+            on its row, to send to someone else. Returns `link` and `payload`, exactly what \
+            travels in it: name, project and category by name, billable, start/end time and \
+            custom fields by label. Schedule, recurrence, date, actions and ids never travel. \
+            Get `plannedTaskId` from list_planned_tasks.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_task_share_link(
+        &self,
+        Parameters(args): Parameters<GetTaskShareLinkArgs>,
+    ) -> CallToolResult {
+        self.call_single(GET_TASK_SHARE_LINK, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "preview_shared_task",
+        description = "Read a deskclock://task/share link someone sent, like the \"Task received \
+            by link\" dialog, without saving anything: the task matched against this workspace's \
+            projects, categories and custom fields, what did not match (`unresolved`, nothing \
+            is created) and, when a task is active, the warning that starting this one ends it. \
+            Show it to the user before calling accept_shared_task. Only task/share links are \
+            read; an invalid link is an error with the app's message.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn preview_shared_task(
+        &self,
+        Parameters(args): Parameters<PreviewSharedTaskArgs>,
+    ) -> CallToolResult {
+        self.call_single(PREVIEW_SHARED_TASK, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "accept_shared_task",
+        description = "Act on a deskclock://task/share link, like the two buttons of the \
+            \"Task received by link\" dialog: `plan` adds it as a planned task on one date \
+            (`date`, default today; never recurring), `start` starts it now — which ends the \
+            active task, if any, by the normal stop rules (call preview_shared_task first and \
+            tell the user). Saves what the link matched; to change name, project or the rest, \
+            edit afterwards with update_planned_task or update_running_task. Every call \
+            creates another planned task or starts again.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn accept_shared_task(
+        &self,
+        Parameters(args): Parameters<AcceptSharedTaskArgs>,
+    ) -> CallToolResult {
+        self.call_single(ACCEPT_SHARED_TASK, json!({ "body": args }))
             .await
     }
 }

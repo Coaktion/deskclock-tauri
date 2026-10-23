@@ -99,6 +99,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Imports das integrações (paridade, Fase D1) | `GET /integrations/google_calendar/import-preview?from&to` · `POST /integrations/google_calendar/import` (ops `calendar.importPreview`/`calendar.import`) · `GET /integrations/zendesk/import-preview` · `POST /integrations/zendesk/import` (`zendesk.importPreview`/`zendesk.import`) · `GET /integrations/monday/import-preview?period` · `POST /integrations/monday/import` (`monday.importPreview`/`monday.import`) · `POST /integrations/monday/import-projects` · `POST /integrations/monday/import-categories` · `POST /integrations/monday/read-catalogs` (`monday.importProjects`/`importCategories`/`readCatalogs`) |
 | Lançamentos, resumo por IA e backup (paridade, Fase D2) | `GET /integrations/clockify/entries?from&to&onlyDefaultTags` (op `clockify.entries`) · `GET /integrations/monday/entries?period` (`monday.entries`) · `GET /day-summaries?from&to&workspaceId` (`daySummaries.list`) · `POST /day-summaries/generate` (`daySummaries.generate`) · `GET /backup/drive` (`driveBackup.status`) · `POST /backup/drive/run` (`driveBackup.run`) |
 | Escrita nos lançamentos (paridade, Fase D2b) | `POST /integrations/clockify/entries` (op `clockify.createEntry`) · `PUT/DELETE /integrations/clockify/entries/{id}` (`clockify.updateEntry`/`clockify.deleteEntry`) · `PUT/DELETE /integrations/monday/entries/{id}` (`monday.updateEntry`/`monday.deleteEntry`), `id` = o `itemId` |
+| Configurações e link de tarefa (paridade, Fase D3a) | `GET/PATCH /settings/general` · `/settings/overlay` · `/settings/accessibility` · `/settings/shortcuts` (ops `settings.getGeneral`/`updateGeneral`, `getOverlay`/`updateOverlay`, `getAccessibility`/`updateAccessibility`, `getShortcuts`/`updateShortcuts`) · `POST /settings/reset-window-positions` (`settings.resetWindowPositions`) · `POST /overlay/toggle` (`overlay.toggle`) · `POST /share/link` · `POST /share/preview` · `POST /share/apply` (`share.link`/`share.preview`/`share.apply`) |
 | Exportação (paridade, Fase C2) | `GET/POST /export-profiles` · `PUT/DELETE /export-profiles/{id}` · `PUT /export-profiles/{id}/default` (ops `exportProfiles.list/create/update/delete/setDefault`, `?workspaceId=` nas rotas por id) · `POST /export` (op `export.generate`) |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
@@ -304,6 +305,41 @@ subseção, num lugar só: `clockifyEntries.ts` e `mondayEntries.ts` (domínio),
   pergunta — quem confirma é o cliente (a tool do MCP manda).
 - Não configurado → 409 com o aviso da leitura. Erro do Clockify ou do Monday: o tratamento da leitura (D2) — sobe e vira
   500 com a mensagem do serviço. Nenhuma emite evento nem espera o render; nenhuma resposta leva chave.
+
+**Configurações e link de tarefa (Fase D3a da paridade, `mcp.md` §7) — 2026-10-23.** Regras em
+`src/presentation/localApi/handlers/{settings,share}.ts`. Os efeitos são os das abas, num lugar só:
+`presentation/settings/settingsEffects.ts` (`saveStartOnBoot`, `saveWeekStartsOn`, `saveShowWeekend`, `saveAppearance`,
+`saveOverlayOpacity`, `saveOverlaySnapToGrid`, `saveShortcuts`, `resetWindowPositions`, com o `SettingsSystem` que embrulha
+autostart, `update_shortcuts`, `toggle_overlay`, `get_display_server`, o `OVERLAY_CONFIG_CHANGED` e o `applyAppearance`),
+que `GeralTab`, `OverlayTab`, `AparenciaTab`, `AtalhosTab` e a ponte chamam; as faixas e opções em
+`domain/usecases/settings/settingsRules.ts`; os atalhos em `domain/usecases/settings/shortcuts.ts`. A ponte recebe uma porta
+por grupo (`deps.settings`, `presentation/settings/settingsGroups.ts`), não a config.
+- **Grupos e chaves.** Geral: `userName`, `startOnBoot`, `closeOnFocusLoss`, `showIntegrationsRail`,
+  `discardTasksUnderOneMinute`, `roundingEnabled`, `roundingSlots`, `roundingTolerance`, `dailyGoalHours`, `weeklyGoalHours`,
+  `weekStartsOn` (`monday`/`sunday`) e `showWeekend`. Overlay: `opacity`, `snapToGrid`. Acessibilidade (a aba Aparência):
+  `mode`, `accent`. Atalhos: `toggleTask`, `stopTask`, `toggleOverlay`, `toggleWindow`. Fora: as chaves órfãs (`fontSize`,
+  `overlayShowOnStart`), `overlayAlwaysVisible` (sem controle na tela), posições e larguras (estado de janela) e tudo de
+  integração (D3b).
+- **`PATCH` parcial:** ausente mantém; `null` → 400; chave fora do grupo → 400 com a lista das válidas (um erro de digitação não
+  passa por gravado). Valor que a tela não oferece → 400: metas inteiras de 1–24 e 1–168, slot múltiplo de 5 até 60 (a lista é a
+  final e sai ordenada, como as fichas), tolerância 0/1/2/5/10/15, opacidade inteira de 20–100, modo e acento das opções.
+- **Efeitos:** `startOnBoot` liga/desliga o autostart; `weekStartsOn`, `showWeekend`, `opacity`, `snapToGrid`, `mode` e `accent`
+  emitem `OVERLAY_CONFIG_CHANGED`; a aparência repinta a janela principal. A leitura de `startOnBoot` é a do sistema
+  (`isEnabled`), como a aba; sem o plugin, a chave gravada. Nenhuma op de configuração espera o render: a ponte lê
+  `weekStartsOn` por função.
+- **Atalhos.** O `PATCH` mescla com os atuais e grava os quatro pelo `update_shortcuts`, como a aba. Forma fora do que o gravador
+  produz (modificadores `CmdOrCtrl`/`Shift`/`Alt` + uma tecla) e o mesmo atalho em duas ações → 400 antes de registrar (regra só
+  da API: a tela grava pelo teclado e não confere repetição). **O que o sistema recusa fica gravado**, como na tela, e volta em
+  `failedShortcuts` com o `warning` da tela (o do Wayland, se for o caso) — 200, não 400.
+- `POST /overlay/toggle` → `{ visible }`: o `toggle_overlay` do Rust passou a devolver a visibilidade final (a tela ignora).
+- **Link de tarefa.** `POST /share/link { plannedTaskId }`: o link do "Copiar link" (catálogos do workspace da planejada, campos
+  arquivados inclusive) e `payload` = o que o outro lado lê do link (`parseShareLink`), nada além. Não há link do Histórico: a
+  tela só copia link de planejada. `POST /share/preview { link, workspaceId? }`: o que o `ShareTaskModal` abriria — a tarefa
+  resolvida (`resolveSharedPayload`, campos ativos), `unresolved`, a data de hoje e o aviso de tarefa ativa. Link inválido → 400
+  com a mensagem do "Receber link" (`readDeepLinkInput`); deeplink que não é `task/share` → 400 (os outros só navegam na tela).
+  `POST /share/apply { link, mode, date?, workspaceId? }`: `plan` grava `specific_date` na `date` (hoje se ausente,
+  `planSharedTask`) e avisa as planejadas; `start` usa o `switchToTask` (encerra a ativa pelas regras de parada; envio
+  automático em segundo plano) e espera o render. Grava o que o link resolveu; editar é depois, pelas rotas de edição. 201.
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.

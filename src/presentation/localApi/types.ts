@@ -28,6 +28,7 @@ import type {
   ClockifyEntriesSource,
   MondayEntriesSource,
 } from "@presentation/integrations/entriesSources";
+import type { SettingsPort } from "@presentation/settings/settingsGroups";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 import type { WorkspaceContextValue } from "@presentation/contexts/WorkspaceContext";
 import type { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
@@ -136,6 +137,11 @@ export interface LocalApiDeps {
   entries: IntegrationEntriesPort;
   /** O rastreio dos itens enviados ao Monday, que a exclusão de atividade limpa. */
   mondayActivityItemRepo: Pick<IMondayActivityItemRepository, "deleteItem">;
+  /**
+   * Configurações por grupo (Geral, Overlay, Acessibilidade, Atalhos), com os
+   * efeitos das abas. Porta estreita: a ponte não recebe a config inteira.
+   */
+  settings: SettingsPort;
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;

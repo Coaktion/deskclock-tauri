@@ -2,7 +2,7 @@ use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
     catalog, custom_fields, entry_writes, export, history, imports, integrations, planned_tasks,
-    services, totals, workspaces,
+    services, settings, share, totals, workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -191,6 +191,30 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
         )
         .route("/backup/drive", get(services::get_drive_backup))
         .route("/backup/drive/run", post(services::post_drive_backup_run))
+        .route(
+            "/settings/general",
+            get(settings::get_general).patch(settings::patch_general),
+        )
+        .route(
+            "/settings/overlay",
+            get(settings::get_overlay).patch(settings::patch_overlay),
+        )
+        .route(
+            "/settings/accessibility",
+            get(settings::get_accessibility).patch(settings::patch_accessibility),
+        )
+        .route(
+            "/settings/shortcuts",
+            get(settings::get_shortcuts).patch(settings::patch_shortcuts),
+        )
+        .route(
+            "/settings/reset-window-positions",
+            post(settings::post_reset_window_positions),
+        )
+        .route("/overlay/toggle", post(settings::post_overlay_toggle))
+        .route("/share/link", post(share::post_share_link))
+        .route("/share/preview", post(share::post_share_preview))
+        .route("/share/apply", post(share::post_share_apply))
         .with_state(state.clone());
 
     Router::new()
@@ -642,6 +666,97 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
             assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fase_d3a_chega_a_ponte_com_a_op_certa() {
+        let link = r#"{"link":"deskclock://task/share?name=x"}"#;
+        let cases = [
+            ("GET", "/settings/general", "", "settings.getGeneral"),
+            (
+                "PATCH",
+                "/settings/general",
+                r#"{"showWeekend":true,"roundingSlots":[15,30]}"#,
+                "settings.updateGeneral",
+            ),
+            // Corpo vazio: nada muda, e o TS devolve o grupo.
+            ("PATCH", "/settings/general", "", "settings.updateGeneral"),
+            ("GET", "/settings/overlay", "", "settings.getOverlay"),
+            (
+                "PATCH",
+                "/settings/overlay",
+                r#"{"opacity":70}"#,
+                "settings.updateOverlay",
+            ),
+            (
+                "GET",
+                "/settings/accessibility",
+                "",
+                "settings.getAccessibility",
+            ),
+            (
+                "PATCH",
+                "/settings/accessibility",
+                r#"{"mode":"claro"}"#,
+                "settings.updateAccessibility",
+            ),
+            ("GET", "/settings/shortcuts", "", "settings.getShortcuts"),
+            (
+                "PATCH",
+                "/settings/shortcuts",
+                r#"{"toggleTask":""}"#,
+                "settings.updateShortcuts",
+            ),
+            (
+                "POST",
+                "/settings/reset-window-positions",
+                "",
+                "settings.resetWindowPositions",
+            ),
+            ("POST", "/overlay/toggle", "", "overlay.toggle"),
+            (
+                "POST",
+                "/share/link",
+                r#"{"plannedTaskId":"p-1"}"#,
+                "share.link",
+            ),
+            ("POST", "/share/preview", link, "share.preview"),
+            (
+                "POST",
+                "/share/apply",
+                r#"{"link":"deskclock://task/share?name=x","mode":"plan"}"#,
+                "share.apply",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fase_d3a_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        let cases = [
+            ("PATCH", "/settings/general", r#"{"dailyGoalHours":"oito"}"#),
+            ("PATCH", "/settings/general", r#"{"roundingSlots":15}"#),
+            ("PATCH", "/settings/overlay", r#"{"opacity":-1}"#),
+            ("PATCH", "/settings/accessibility", r#"{"mode":1}"#),
+            ("PATCH", "/settings/shortcuts", r#"{"stopTask":true}"#),
+            ("POST", "/share/link", ""),
+            ("POST", "/share/link", r#"{}"#),
+            ("POST", "/share/preview", r#"{"workspaceId":"w"}"#),
+            (
+                "POST",
+                "/share/apply",
+                r#"{"link":"deskclock://task/share?name=x"}"#,
+            ),
+        ];
+        for (method, uri, body) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got, None, "{method} {uri} {body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{method} {uri} {body}");
         }
     }
 

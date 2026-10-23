@@ -3394,6 +3394,25 @@
       </table>
         </div>
 
+    <h3>Configurações e link de tarefa</h3>
+    <p>Os grupos <strong>Geral</strong>, <strong>Overlay</strong>, <strong>Aparência</strong> e <strong>Atalhos</strong> de Configurações, cada um com leitura e edição parcial (o que não vier fica como está), com o mesmo efeito da tela: iniciar com o computador registra o app no sistema, os atalhos são registrados no sistema operacional na hora, e o tema, o início da semana e o overlay mudam em todas as janelas. Valor que a tela não oferece responde 400. Os ajustes das integrações e as chaves de conexão não passam por aqui. E o link de compartilhar tarefa: gerar o <code>deskclock://</code> de uma planejada e, para um link recebido, ver o que ele traz e adicioná-lo como planejada ou iniciá-lo (veja <a onclick="show('deeplinks/compartilhar-tarefa')">Copiar o link de uma tarefa</a>).</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/general</code></td><td>Seu nome, iniciar com o computador, fechar ao perder foco, rail de integrações, descartar tarefas com menos de 1 minuto, arredondamento (slots e tolerância), metas diária e semanal, primeiro dia da semana (<code>monday</code>/<code>sunday</code>) e exibir fim de semana</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/overlay</code></td><td>Opacidade em repouso (20 a 100%) e snap to grid</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/accessibility</code></td><td>Modo (<code>escuro</code>/<code>claro</code>) e cor de destaque</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/shortcuts</code></td><td>Os quatro atalhos globais; <code>""</code> remove. O mesmo atalho em duas ações responde 400; o que o sistema recusar fica gravado e volta com o aviso da tela</td></tr>
+          <tr><td><code>POST</code></td><td><code>/overlay/toggle</code></td><td>Mostra ou oculta o overlay, como o botão da aba Overlay, e diz se ele ficou visível</td></tr>
+          <tr><td><code>POST</code></td><td><code>/settings/reset-window-positions</code></td><td>Esquece as posições salvas das janelas, como <strong>Redefinir posições salvas das janelas</strong></td></tr>
+          <tr><td><code>POST</code></td><td><code>/share/link</code></td><td>O link de uma planejada, como o <strong>Copiar link</strong>, e o que viaja nele</td></tr>
+          <tr><td><code>POST</code></td><td><code>/share/preview</code></td><td>O que um link recebido traz, resolvido contra os seus projetos, categorias e campos, sem gravar nada</td></tr>
+          <tr><td><code>POST</code></td><td><code>/share/apply</code></td><td>Adiciona o link como planejada (<code>mode: "plan"</code>, numa data) ou o inicia agora (<code>mode: "start"</code>, que encerra a tarefa ativa)</td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h3>Exportação</h3>
     <p>Os perfis e o conteúdo da janela <strong>Exportar</strong> do Histórico. Os perfis são do workspace (<code>workspaceId</code> ausente = o ativo). A API não grava arquivo: o texto CSV ou JSON vem na resposta, com um nome sugerido, e salvar ou copiar fica com quem chamou.</p>
     <div class="table-scroll">
@@ -3451,6 +3470,7 @@
           <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos; mostrar e importar como planejadas os eventos do Google Agenda, os tickets do Zendesk e os itens do Monday; importar do Monday os projetos, as categorias e os catálogos; mostrar os lançamentos que já estão no Clockify e no Monday, criar, editar e excluir apontamentos do Clockify e editar e excluir as suas atividades do Monday — antes de excluir no Monday, o assistente confirma com você</td></tr>
           <tr><td><strong>Resumo e backup</strong></td><td>Ler e gerar o resumo por IA dos seus dias de trabalho, como a aba Resumo do Histórico; ver o estado do backup no Google Drive e fazer um backup agora</td></tr>
           <tr><td><strong>Exportar</strong></td><td>Gerar o CSV ou JSON das tarefas de um período com um perfil de exportação, e criar, editar, excluir e escolher o padrão entre os perfis. O texto vem na conversa; o assistente o entrega a você ou o salva, se você pedir um arquivo</td></tr>
+          <tr><td><strong>Configurações e link</strong></td><td>Ler e mudar as configurações Geral, Overlay, Aparência e Atalhos — os atalhos são globais no sistema, e o assistente confirma a combinação com você —, mostrar ou ocultar o overlay; gerar o link de compartilhar de uma planejada e, para um link recebido, mostrar o que ele traz e adicioná-lo como planejada ou iniciá-lo</td></tr>
         </tbody>
       </table>
         </div>
