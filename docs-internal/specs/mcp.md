@@ -70,6 +70,11 @@ Todas do usuário, em 2026-09-18.
 | `set_active_workspace` | `workspaces.setActive` | Com tarefa ativa erra (409) e não para a tarefa: o modelo pergunta e chama `stop_task`/`cancel_task` (Fase B) |
 | `preview_send_to_integration` | `integrations.sendPreview` | Grupos do período no workspace da integração, com estado `pending`/`sent`/`invalid`; `readOnlyHint` (Fase C1) |
 | `send_tasks_to_integration` | `integrations.send` | `taskIds` da prévia, cada um envia o grupo inteiro; `openWorldHint: true`, `idempotentHint: false` (Fase C1) |
+| `list_export_profiles` | `exportProfiles.list` | Perfis do workspace, em `{ exportProfiles: [...] }` (Fase C2) |
+| `create_export_profile` · `update_export_profile` | `exportProfiles.create` · `exportProfiles.update` | Enums inline de formato, separador, duração e data; `columns` plano; o `update` muda só o que veio (Fase C2) |
+| `delete_export_profile` | `exportProfiles.delete` | `destructiveHint: true`; o único perfil do workspace não sai (409) (Fase C2) |
+| `set_default_export_profile` | `exportProfiles.setDefault` | (Fase C2) |
+| `export_tasks` | `export.generate` | Devolve o texto CSV/JSON, não grava arquivo; `readOnlyHint: true`, `openWorldHint: false` (Fase C2) |
 
 Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
 `workspaces.getActive`, `plannedTasks.update`). O que falta para a paridade não tem `op` na ponte (§7.2).
@@ -400,7 +405,9 @@ planejadas — N chamadas resolvem.
 | A | implementada; falta revisão e verificação no app de dev |
 | B | implementada; falta verificação no app de dev |
 | C1 (envio) | implementada; falta verificação no app de dev |
-| C2 (exportação) · D | pendentes |
+| C2 (exportação) | implementada; falta verificação no app de dev |
+| C (C1 + C2) | concluída no código |
+| D | pendente |
 
 ### Decisões da Fase C1 que a spec não fixava
 
@@ -419,6 +426,32 @@ planejadas — N chamadas resolvem.
 - **Descrição do envio** manda chamar a prévia antes, mostrar ao usuário o que vai subir e só enviar com a confirmação.
 - **Resultado:** `pass_through`; os dois corpos já são objeto.
 - **Params como a REST:** prévia `{ id, from, to }` (nulos quando omitidos); envio `{ id, body: { taskIds } }`.
+
+### Decisões da Fase C2 que a spec não fixava
+
+- **Geração num lugar só.** `GenerateTaskExport.ts` (domínio): `resolveExportProfile` (escolhido → padrão → primeiro, o
+  `activeProfile` do modal), `loadTasksForExport` (o "Carregar tarefas": `searchTasks` nos limites do dia),
+  `mergeTasksForExport` (grupos somados) e `generateTaskExport` (rows + CSV/JSON + `fileName`/`mimeType`/`rowCount`).
+  `withCustomColumns` saiu do modal para `exportFormatter.ts`. O modal foi de 653 para 284 linhas: `ProfileForm` foi para
+  `ExportProfileForm.tsx`, e a aba Perfis e a lista de seleção para `ExportProfileList.tsx`/`ExportTaskSelection.tsx`,
+  com a mesma marcação.
+- **Seis tools, uma `op` cada.** Nomes de intenção: `export_tasks` (não `generate_export`). Ops `exportProfiles.*` e
+  `export.generate`.
+- **Anotações.** `list_export_profiles` e `export_tasks`: `readOnlyHint: true`, `openWorldHint: false` — gerar só lê o
+  banco e devolve texto. `create`: `idempotentHint: false` (nome não é único; repetir cria outro). `update` e
+  `set_default`: `idempotentHint: true`. `delete`: `destructiveHint: true`, `idempotentHint: true` (a segunda só erra,
+  404), descrição manda chamar só a pedido. Todas `openWorldHint: false`.
+- **Esquema plano:** enums `#[schemars(inline)]` (`hh:mm:ss` e `dd/mm/yyyy` por `serde(rename)`), coluna
+  `ExportColumnArg` inline, campos comuns de criação e edição em `ExportProfileFields` achatado. Teste
+  `esquemas_da_exportacao_declaram_os_enums_e_saem_planos`.
+- **Params como a REST.** `list` manda `{ workspaceId }`; `create` `{ body }` com o `workspaceId` no corpo; `update`
+  `{ id, workspaceId, body }`; `delete`/`set_default` `{ id, workspaceId }` (`scoped_id_params`); `export_tasks`
+  `{ body }` só com o que veio (`{}` = hoje, perfil padrão, workspace ativo).
+- **Workspace da geração.** A ponte escopa as tarefas pelo workspace pedido (ausente = ativo), como o `history.list`.
+  **O modal não escopa**: o `searchTasks` dele nunca recebeu `workspaceId` (vem de antes dos workspaces) e exporta as
+  concluídas de **todos** os workspaces, com projeto/categoria resolvidos só no catálogo do ativo (os de outro workspace
+  saem em branco). A refatoração manteve isso (`loadTasksForExport` sem `workspaceId`); para tarefas do workspace ativo o
+  conteúdo é idêntico. Corrigir o modal fica para decisão do usuário.
 
 ### Decisões da Fase A que a spec não fixava
 

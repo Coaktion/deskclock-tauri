@@ -3354,6 +3354,20 @@
       </table>
         </div>
 
+    <h3>Exportação</h3>
+    <p>Os perfis e o conteúdo da janela <strong>Exportar</strong> do Histórico. Os perfis são do workspace (<code>workspaceId</code> ausente = o ativo). A API não grava arquivo: o texto CSV ou JSON vem na resposta, com um nome sugerido, e salvar ou copiar fica com quem chamou.</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code> · <code>POST</code></td><td><code>/export-profiles</code></td><td>Lista os perfis do workspace, ou cria um</td></tr>
+          <tr><td><code>PUT</code> · <code>DELETE</code></td><td><code>/export-profiles/{id}</code></td><td>Edita um perfil (só o que vier), ou o exclui — o único perfil do workspace não pode ser excluído</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/export-profiles/{id}/default</code></td><td>Torna o perfil o padrão do workspace</td></tr>
+          <tr><td><code>POST</code></td><td><code>/export</code></td><td>Gera o CSV ou JSON das tarefas concluídas de um período (<code>from</code>/<code>to</code>; ausente = hoje) com um perfil (ausente = o padrão), de todas ou só das indicadas em <code>taskIds</code>. Tarefas agrupadas viram um registro com a duração somada</td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h2 id="api-mcp">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
       Conectar ao Claude (MCP)
@@ -3395,6 +3409,7 @@
           <tr><td><strong>Criar</strong></td><td>Planejar uma tarefa (data específica, recorrente ou período), lançar trabalho passado com início e fim, e lançar uma planejada como concluída num dia, como no Lançamento Manual</td></tr>
           <tr><td><strong>Editar e excluir</strong></td><td>Editar, concluir, desmarcar, duplicar e excluir planejadas; editar, excluir, unificar, mover de workspace e mudar o billable de registros do Histórico; cadastrar, editar, importar e excluir projetos, categorias, categorias por projeto, campos personalizados e workspaces, e trocar o workspace ativo</td></tr>
           <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos</td></tr>
+          <tr><td><strong>Exportar</strong></td><td>Gerar o CSV ou JSON das tarefas de um período com um perfil de exportação, e criar, editar, excluir e escolher o padrão entre os perfis. O texto vem na conversa; o assistente o entrega a você ou o salva, se você pedir um arquivo</td></tr>
         </tbody>
       </table>
         </div>
@@ -3431,7 +3446,7 @@
         <tbody>
           <tr><td><strong><a onclick="show('deeplinks')">Deep link</a></strong></td><td>Você quer que o app <strong>apareça</strong> — abrir uma tela, pré-preencher um formulário. Um link basta, nada a configurar.</td></tr>
           <tr><td><strong>API local</strong></td><td>Você quer <strong>ler</strong> o estado ou agir sem trazer a janela à frente. É o caminho para barras de status, scripts e integrações caseiras.</td></tr>
-          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui e envia às integrações.</td></tr>
+          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui, envia às integrações e exporta.</td></tr>
         </tbody>
       </table>
 

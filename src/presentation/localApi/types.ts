@@ -7,6 +7,7 @@ import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceReposi
 import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
+import type { IExportProfileRepository } from "@domain/repositories/IExportProfileRepository";
 import type {
   TaskSendAdapter,
   TaskSendCatalogs,
@@ -81,6 +82,7 @@ export interface LocalApiDeps {
   projectCategoryRepo: IProjectCategoryRepository;
   customFieldRepo: ICustomFieldRepository;
   taskLogRepo: ITaskIntegrationLogRepository;
+  exportProfileRepo: IExportProfileRepository;
   taskSend: TaskSendPort;
   activeWorkspaceId: string;
   running: RunningTaskOps;

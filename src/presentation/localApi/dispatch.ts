@@ -47,6 +47,14 @@ import {
 } from "./handlers/historyBatch";
 import { getPeriodTotals, getWeekTotals } from "./handlers/totals";
 import { previewIntegrationSend, sendToIntegration } from "./handlers/integrations";
+import {
+  createExportProfileHandler,
+  deleteExportProfileHandler,
+  generateExportHandler,
+  listExportProfiles,
+  setDefaultExportProfileHandler,
+  updateExportProfileHandler,
+} from "./handlers/exportProfiles";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
@@ -130,6 +138,12 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   // Não mexem na tarefa em execução nem no workspace: não esperam o render.
   "integrations.sendPreview": previewIntegrationSend,
   "integrations.send": sendToIntegration,
+  "exportProfiles.list": listExportProfiles,
+  "exportProfiles.create": createExportProfileHandler,
+  "exportProfiles.update": updateExportProfileHandler,
+  "exportProfiles.delete": deleteExportProfileHandler,
+  "exportProfiles.setDefault": setDefaultExportProfileHandler,
+  "export.generate": generateExportHandler,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */

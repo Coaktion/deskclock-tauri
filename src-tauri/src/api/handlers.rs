@@ -96,6 +96,7 @@ fn scoped_params(id: String, q: &WorkspaceQuery) -> Value {
 // `WorkspaceQuery` sem que eles precisem sair do escopo privado deste módulo.
 pub mod catalog;
 pub mod custom_fields;
+pub mod export;
 pub mod history;
 pub mod integrations;
 pub mod planned_tasks;

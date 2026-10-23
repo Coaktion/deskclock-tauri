@@ -1,7 +1,7 @@
 use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
-    catalog, custom_fields, history, integrations, planned_tasks, totals, workspaces,
+    catalog, custom_fields, export, history, integrations, planned_tasks, totals, workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -118,6 +118,19 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             get(integrations::get_send_preview),
         )
         .route("/integrations/{id}/send", post(integrations::post_send))
+        .route(
+            "/export-profiles",
+            get(export::get_export_profiles).post(export::post_export_profile),
+        )
+        .route(
+            "/export-profiles/{id}",
+            put(export::put_export_profile).delete(export::delete_export_profile),
+        )
+        .route(
+            "/export-profiles/{id}/default",
+            put(export::put_export_profile_default),
+        )
+        .route("/export", post(export::post_export))
         .with_state(state.clone());
 
     Router::new()
@@ -319,6 +332,77 @@ mod tests {
             let (status, got) = send("POST", "/integrations/monday/send", body).await;
             assert_eq!(got, None, "{body}");
             assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+        }
+    }
+
+    #[tokio::test]
+    async fn exportacao_chega_a_ponte_com_a_op_certa() {
+        let cases = [
+            ("GET", "/export-profiles", "", "exportProfiles.list"),
+            (
+                "GET",
+                "/export-profiles?workspaceId=w",
+                "",
+                "exportProfiles.list",
+            ),
+            (
+                "POST",
+                "/export-profiles",
+                r#"{"name":"Cliente","columns":[{"field":"name","label":"Nome","visible":true,"order":0}]}"#,
+                "exportProfiles.create",
+            ),
+            (
+                "PUT",
+                "/export-profiles/abc",
+                r#"{"format":"json"}"#,
+                "exportProfiles.update",
+            ),
+            (
+                "DELETE",
+                "/export-profiles/abc",
+                "",
+                "exportProfiles.delete",
+            ),
+            (
+                "PUT",
+                "/export-profiles/abc/default",
+                "",
+                "exportProfiles.setDefault",
+            ),
+            ("POST", "/export", "", "export.generate"),
+            (
+                "POST",
+                "/export",
+                r#"{"from":"2026-10-01","to":"2026-10-31","taskIds":["a"]}"#,
+                "export.generate",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn exportacao_com_corpo_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        let cases = [
+            ("POST", "/export-profiles", ""),
+            ("POST", "/export-profiles", "{}"),
+            (
+                "POST",
+                "/export-profiles",
+                r#"{"name":"a","columns":[{"field":"name"}]}"#,
+            ),
+            ("PUT", "/export-profiles/abc", ""),
+            ("PUT", "/export-profiles/abc", r#"{"isDefault":"sim"}"#),
+            ("POST", "/export", r#"{"taskIds":"a"}"#),
+            ("POST", "/export", r#"{"from":20261001}"#),
+        ];
+        for (method, uri, body) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got, None, "{method} {uri} {body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{method} {uri} {body}");
         }
     }
 

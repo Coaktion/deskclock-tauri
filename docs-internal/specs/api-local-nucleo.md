@@ -96,6 +96,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Projetos · categorias | `GET/POST` · `PUT/DELETE /{id}` · `POST /import` · `POST /delete` · `GET/PUT /projects/{id}/categories` |
 | Campos personalizados | `GET/POST /custom-fields` · `PUT/DELETE /custom-fields/{id}` |
 | Envio às integrações (paridade, Fase C1) | `GET /integrations/{id}/send-preview?from&to` (op `integrations.sendPreview`) · `POST /integrations/{id}/send` (op `integrations.send`), `id` = `google_sheets` \| `clockify` \| `monday` |
+| Exportação (paridade, Fase C2) | `GET/POST /export-profiles` · `PUT/DELETE /export-profiles/{id}` · `PUT /export-profiles/{id}/default` (ops `exportProfiles.list/create/update/delete/setDefault`, `?workspaceId=` nas rotas por id) · `POST /export` (op `export.generate`) |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
 projeto/categoria de outro workspace passa a 409; DTOs ganham campos (aditivo).
@@ -169,6 +170,34 @@ recebe o adaptador por uma porta estreita (`deps.taskSend`: `workspaceIdFor`/`ad
   recarrega. O modal aberto não escuta evento nenhum (relê só no próprio envio ou ao trocar o período) — igual a hoje.
 - As duas ops não esperam o render (`waitsForNextCommit`): não mexem na tarefa em execução nem no workspace.
 - O `AutoSyncRunner` (envio diário/por tarefa) não foi tocado; usa outro caminho (`runDailyTemplate`/estratégias).
+
+**Exportação (Fase C2 da paridade, `mcp.md` §7) — 2026-10-22.** Regras em
+`src/presentation/localApi/handlers/exportProfiles.ts`; a geração é a do modal, num lugar só:
+`resolveExportProfile`/`loadTasksForExport`/`mergeTasksForExport`/`generateTaskExport`
+(`domain/usecases/exportProfiles/GenerateTaskExport.ts`) e `withCustomColumns` (`domain/utils/exportFormatter.ts`), que o
+`ExportModal` e a ponte usam. **A API não grava em disco**: devolve o texto.
+- **Perfis por workspace**, como o catálogo: `workspaceId` ausente = ativo; nas rotas por id vai em `?workspaceId=` e
+  id de outro workspace é 404. Workspace inexistente → 409.
+- **Criar:** `name` obrigatório e não vazio (o botão Salvar da tela fica desabilitado sem nome; o use case não checa) → 400.
+  Ausente vale o formulário novo: `csv`, `comma`, `hh:mm:ss`, `iso`, `isDefault: false`, as 7 colunas de sistema. Valor
+  fora das opções → 400. Nome **não** é único (nem no banco nem na tela).
+- **`columns`:** lista de `{ field, label, visible, order }`; `field` = campo de sistema ou `custom:<id>` de campo que
+  existe (arquivado vale, como na exportação); coluna desconhecida ou repetida → 400. Os campos personalizados **ativos**
+  que faltarem entram invisíveis no fim (`withCustomColumns`), como o formulário faz ao abrir — na criação e na edição.
+- **Editar:** só o que veio (`null` = ausente). O `updateExportProfile` espalha o patch sobre o perfil, então o handler tira
+  as chaves `undefined` antes. `isDefault: false` no padrão deixa o workspace sem padrão, como desmarcar na tela.
+- **Excluir o único perfil do workspace → 409** (regra só da API: a tela desabilita a lixeira; o use case não barra).
+- **Gerar (`POST /export`, corpo opcional):** `from`/`to` como o `GET /tasks` (`periodRange`); perfil = `profileId` (de outro
+  workspace → 404) ou `resolveExportProfile` (padrão, senão o primeiro, como o seletor do modal); sem perfil → 409. Só
+  concluídas (`searchTasks`), **do workspace pedido**. `taskIds` (a seleção individual do modal) filtra a lista carregada e
+  mantém a ordem dela; vazio → 400; id fora das concluídas do período no workspace → 409. Agrupa e formata como o modal.
+  Resposta `{ content, fileName, format, mimeType, rowCount, profileId, workspaceId, from, to }`; `fileName` é o
+  `export.csv`/`export.json` fixo do diálogo de salvar; período sem tarefa dá `content` `""` (CSV) ou `[]` e `rowCount` 0
+  (a tela nem mostra os botões; a API não erra por isso).
+- **Sem filtros do Histórico** (nome, projeto, categoria, billable): o modal não os recebe — faz a própria busca só por
+  período. Entrar com eles seria regra nova.
+- Nenhuma emite evento: o modal carrega os perfis ao abrir e não escuta mudança (a lista aberta só atualiza ao reabrir).
+  Nenhuma espera o render.
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.

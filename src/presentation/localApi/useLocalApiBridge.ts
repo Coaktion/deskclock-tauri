@@ -64,6 +64,7 @@ export function useLocalApiBridge(): void {
       projectCategoryRepo: repos.projectCategoryRepo,
       customFieldRepo: repos.customFieldRepo,
       taskLogRepo: repos.taskLogRepo,
+      exportProfileRepo: repos.exportProfileRepo,
       taskSend: {
         workspaceIdFor: (integration) => taskSendWorkspaceId(integration, config),
         adapterFor: (integration, catalogs) =>

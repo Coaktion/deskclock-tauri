@@ -50,7 +50,13 @@
     "workspaces.delete": "delete_workspace",
     "workspaces.setActive": "set_active_workspace",
     "integrations.sendPreview": "preview_send_to_integration",
-    "integrations.send": "send_tasks_to_integration"
+    "integrations.send": "send_tasks_to_integration",
+    "exportProfiles.list": "list_export_profiles",
+    "exportProfiles.create": "create_export_profile",
+    "exportProfiles.update": "update_export_profile",
+    "exportProfiles.delete": "delete_export_profile",
+    "exportProfiles.setDefault": "set_default_export_profile",
+    "export.generate": "export_tasks"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",

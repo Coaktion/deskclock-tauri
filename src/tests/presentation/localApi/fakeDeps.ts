@@ -10,6 +10,8 @@ import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceReposi
 import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
+import type { IExportProfileRepository } from "@domain/repositories/IExportProfileRepository";
+import type { ExportProfile } from "@domain/entities/ExportProfile";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import type { Workspace } from "@domain/entities/Workspace";
@@ -166,6 +168,16 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     ),
   } satisfies Record<keyof ITaskIntegrationLogRepository, unknown>;
 
+  const exportProfileRepo = {
+    findAll: vi.fn(async (_ws?: string): Promise<ExportProfile[]> => []),
+    findById: vi.fn(async (_id: string): Promise<ExportProfile | null> => null),
+    findDefault: vi.fn(async (_ws: string): Promise<ExportProfile | null> => null),
+    save: vi.fn(async (_profile: ExportProfile) => {}),
+    update: vi.fn(async (_profile: ExportProfile) => {}),
+    setDefault: vi.fn(async (_id: string) => {}),
+    delete: vi.fn(async (_id: string) => {}),
+  } satisfies Record<keyof IExportProfileRepository, unknown>;
+
   // Sem adaptador por padrão: o teste de envio injeta o seu.
   const taskSend = {
     workspaceIdFor: vi.fn((_integration: string) => WS_ATIVO),
@@ -195,6 +207,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     projectCategoryRepo,
     customFieldRepo,
     taskLogRepo,
+    exportProfileRepo,
     taskSend,
     activeWorkspaceId: WS_ATIVO,
     running,

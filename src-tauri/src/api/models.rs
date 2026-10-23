@@ -751,3 +751,113 @@ pub struct SendTasksResponse {
     /// A frase que a tela mostraria.
     pub message: String,
 }
+
+// ---------------- Exportação ----------------
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportColumnDto {
+    /// `name`, `project`, `category`, `billable`, `startTime`, `endTime`, `durationSeconds`
+    /// ou `custom:<id do campo personalizado>`.
+    pub field: String,
+    /// Cabeçalho da coluna (CSV) ou chave do objeto (JSON).
+    pub label: String,
+    pub visible: bool,
+    /// Posição; a saída segue a ordem crescente.
+    pub order: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportProfileDto {
+    pub id: String,
+    pub workspace_id: String,
+    pub name: String,
+    /// No máximo um padrão por workspace.
+    pub is_default: bool,
+    /// `csv` ou `json`.
+    pub format: String,
+    /// `comma` ou `semicolon` (só vale no CSV).
+    pub separator: String,
+    /// `hh:mm:ss`, `decimal` (horas) ou `minutes`.
+    pub duration_format: String,
+    /// `iso` (AAAA-MM-DD) ou `dd/mm/yyyy`.
+    pub date_format: String,
+    pub columns: Vec<ExportColumnDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateExportProfileRequest {
+    pub name: String,
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    #[serde(default)]
+    pub is_default: Option<bool>,
+    #[serde(default)]
+    pub format: Option<String>,
+    #[serde(default)]
+    pub separator: Option<String>,
+    #[serde(default)]
+    pub duration_format: Option<String>,
+    #[serde(default)]
+    pub date_format: Option<String>,
+    #[serde(default)]
+    pub columns: Option<Vec<ExportColumnDto>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateExportProfileRequest {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub is_default: Option<bool>,
+    #[serde(default)]
+    pub format: Option<String>,
+    #[serde(default)]
+    pub separator: Option<String>,
+    #[serde(default)]
+    pub duration_format: Option<String>,
+    #[serde(default)]
+    pub date_format: Option<String>,
+    #[serde(default)]
+    pub columns: Option<Vec<ExportColumnDto>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerateExportRequest {
+    /// Ausente = o perfil padrão do workspace (sem padrão, o primeiro).
+    #[serde(default)]
+    pub profile_id: Option<String>,
+    /// Primeiro dia local, YYYY-MM-DD. Ausente = hoje.
+    #[serde(default)]
+    pub from: Option<String>,
+    /// Último dia local, YYYY-MM-DD. Ausente = o mesmo de `from`.
+    #[serde(default)]
+    pub to: Option<String>,
+    /// Exporta só estas tarefas concluídas do período. Ausente = todas.
+    #[serde(default)]
+    pub task_ids: Option<Vec<String>>,
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskExportDto {
+    /// O texto CSV ou JSON, como o botão Copiar do modal o copia.
+    pub content: String,
+    /// Nome sugerido: `export.csv` ou `export.json`.
+    pub file_name: String,
+    pub format: String,
+    /// `text/csv` ou `application/json`.
+    pub mime_type: String,
+    /// Registros gerados, já com as tarefas agrupadas somadas.
+    pub row_count: i64,
+    pub profile_id: String,
+    pub workspace_id: String,
+    pub from: String,
+    pub to: String,
+}

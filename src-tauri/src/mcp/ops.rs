@@ -51,6 +51,12 @@ pub const DELETE_WORKSPACE: &str = "delete_workspace";
 pub const SET_ACTIVE_WORKSPACE: &str = "set_active_workspace";
 pub const PREVIEW_SEND_TO_INTEGRATION: &str = "preview_send_to_integration";
 pub const SEND_TASKS_TO_INTEGRATION: &str = "send_tasks_to_integration";
+pub const LIST_EXPORT_PROFILES: &str = "list_export_profiles";
+pub const CREATE_EXPORT_PROFILE: &str = "create_export_profile";
+pub const UPDATE_EXPORT_PROFILE: &str = "update_export_profile";
+pub const DELETE_EXPORT_PROFILE: &str = "delete_export_profile";
+pub const SET_DEFAULT_EXPORT_PROFILE: &str = "set_default_export_profile";
+pub const EXPORT_TASKS: &str = "export_tasks";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -103,6 +109,12 @@ pub const OP_WORKSPACES_DELETE: &str = "workspaces.delete";
 pub const OP_WORKSPACES_SET_ACTIVE: &str = "workspaces.setActive";
 pub const OP_INTEGRATIONS_SEND_PREVIEW: &str = "integrations.sendPreview";
 pub const OP_INTEGRATIONS_SEND: &str = "integrations.send";
+pub const OP_EXPORT_PROFILES_LIST: &str = "exportProfiles.list";
+pub const OP_EXPORT_PROFILES_CREATE: &str = "exportProfiles.create";
+pub const OP_EXPORT_PROFILES_UPDATE: &str = "exportProfiles.update";
+pub const OP_EXPORT_PROFILES_DELETE: &str = "exportProfiles.delete";
+pub const OP_EXPORT_PROFILES_SET_DEFAULT: &str = "exportProfiles.setDefault";
+pub const OP_EXPORT_GENERATE: &str = "export.generate";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -228,6 +240,28 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         SEND_TASKS_TO_INTEGRATION,
         &[pass_through(OP_INTEGRATIONS_SEND)],
     ),
+    // Fase C2 da paridade: perfis de exportação e o conteúdo gerado.
+    (
+        LIST_EXPORT_PROFILES,
+        &[under("exportProfiles", OP_EXPORT_PROFILES_LIST)],
+    ),
+    (
+        CREATE_EXPORT_PROFILE,
+        &[pass_through(OP_EXPORT_PROFILES_CREATE)],
+    ),
+    (
+        UPDATE_EXPORT_PROFILE,
+        &[pass_through(OP_EXPORT_PROFILES_UPDATE)],
+    ),
+    (
+        DELETE_EXPORT_PROFILE,
+        &[pass_through(OP_EXPORT_PROFILES_DELETE)],
+    ),
+    (
+        SET_DEFAULT_EXPORT_PROFILE,
+        &[pass_through(OP_EXPORT_PROFILES_SET_DEFAULT)],
+    ),
+    (EXPORT_TASKS, &[pass_through(OP_EXPORT_GENERATE)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

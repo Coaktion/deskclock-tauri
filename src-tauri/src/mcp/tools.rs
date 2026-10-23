@@ -965,6 +965,160 @@ pub struct SetActiveWorkspaceArgs {
     pub id: String,
 }
 
+// ---------------- Fase C2: Exportação ----------------
+//
+// Enums inline pelo mesmo motivo do `ScheduleType`; valor fora deles é recusado
+// pelo rmcp antes da ponte. Os valores são os do `ExportProfile` do TS.
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum ExportFormatArg {
+    Csv,
+    Json,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum CsvSeparatorArg {
+    Comma,
+    Semicolon,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub enum DurationFormatArg {
+    #[serde(rename = "hh:mm:ss")]
+    HhMmSs,
+    #[serde(rename = "decimal")]
+    Decimal,
+    #[serde(rename = "minutes")]
+    Minutes,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub enum DateFormatArg {
+    #[serde(rename = "iso")]
+    Iso,
+    #[serde(rename = "dd/mm/yyyy")]
+    DdMmYyyy,
+}
+
+/// Uma coluna do perfil, inline para o esquema sair plano.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub struct ExportColumnArg {
+    /// `name`, `project`, `category`, `billable`, `startTime`, `endTime`,
+    /// `durationSeconds`, or `custom:<custom field id>` (ids from list_custom_fields).
+    /// Each field at most once.
+    pub field: String,
+    /// The column header (CSV) or object key (JSON).
+    pub label: String,
+    /// Whether the column appears in the output.
+    pub visible: bool,
+    /// Position; the output follows ascending order.
+    pub order: i64,
+}
+
+/// Formato e colunas de um perfil: os mesmos campos na criação e na edição.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportProfileFields {
+    /// true makes it the workspace's default profile (the previous default stops
+    /// being one); false on the default leaves the workspace without a default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_default: Option<bool>,
+    /// `csv` or `json`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub format: Option<ExportFormatArg>,
+    /// CSV separator: `comma` or `semicolon`. Ignored by JSON.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub separator: Option<CsvSeparatorArg>,
+    /// Duration: `hh:mm:ss`, `decimal` (hours, two decimals) or `minutes`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_format: Option<DurationFormatArg>,
+    /// Dates: `iso` (YYYY-MM-DD) or `dd/mm/yyyy`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date_format: Option<DateFormatArg>,
+    /// The final list of columns. Active custom fields left out are added as
+    /// invisible columns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub columns: Option<Vec<ExportColumnArg>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateExportProfileArgs {
+    /// Profile name (not empty; names may repeat).
+    pub name: String,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+    #[serde(flatten)]
+    pub fields: ExportProfileFields,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportProfileIdArgs {
+    /// Export profile id, from list_export_profiles.
+    pub id: String,
+    /// The profile's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+}
+
+impl ExportProfileIdArgs {
+    fn params(&self) -> Value {
+        scoped_id_params(&self.id, &self.workspace_id)
+    }
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateExportProfileArgs {
+    /// Export profile id, from list_export_profiles.
+    pub id: String,
+    /// The profile's workspace id (from list_catalog). Omit for the active workspace.
+    pub workspace_id: Option<String>,
+    #[serde(flatten)]
+    pub body: UpdateExportProfileBody,
+}
+
+/// O corpo; `id` e `workspaceId` vão fora dele, como no path e na query da REST.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateExportProfileBody {
+    /// New name (not empty). Omit to keep it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(flatten)]
+    pub fields: ExportProfileFields,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportTasksArgs {
+    /// Export profile id, from list_export_profiles. Omit to use the workspace's
+    /// default profile (or its first one when none is default).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_id: Option<String>,
+    /// First local day, YYYY-MM-DD. Omit for today.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    /// Last local day (inclusive), YYYY-MM-DD. Omit for the same day as `from`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+    /// Export only these finished tasks (ids from list_tasks for the same period and
+    /// workspace). Omit to export all of them. Not empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_ids: Option<Vec<String>>,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct DeskClockMcp {
     bridge: Arc<Bridge>,
@@ -2120,6 +2274,134 @@ impl DeskClockMcp {
             json!({ "id": args.integration, "body": args }),
         )
         .await
+    }
+
+    // ---------------- Fase C2: Exportação ----------------
+    // Nenhuma grava arquivo nem fala com serviço externo: perfis ficam no banco
+    // local, e o export_tasks só lê.
+
+    #[tool(
+        name = "list_export_profiles",
+        description = "The export profiles of a workspace (the active one when \
+            workspaceId is omitted), default first. Returns `exportProfiles`, each with \
+            `id`, `name`, `isDefault`, `format` (csv or json), `separator`, \
+            `durationFormat`, `dateFormat` and `columns` ({ field, label, visible, \
+            order }). Use an `id` as profileId in export_tasks.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn list_export_profiles(
+        &self,
+        Parameters(args): Parameters<WorkspaceArgs>,
+    ) -> CallToolResult {
+        self.call_single(LIST_EXPORT_PROFILES, args.params()).await
+    }
+
+    #[tool(
+        name = "create_export_profile",
+        description = "Create an export profile, like the app's Export dialog > Profiles > \
+            New profile. Omitted fields take the form's defaults: csv, comma, hh:mm:ss, iso, \
+            not default, and the seven system columns visible (name, project, category, \
+            billable, startTime, endTime, durationSeconds); active custom fields are added as \
+            invisible columns. Names may repeat, so calling again creates another profile. \
+            Returns the profile.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = false
+        )
+    )]
+    async fn create_export_profile(
+        &self,
+        Parameters(args): Parameters<CreateExportProfileArgs>,
+    ) -> CallToolResult {
+        self.call_single(CREATE_EXPORT_PROFILE, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "update_export_profile",
+        description = "Edit an export profile: name, default flag, format, separator, \
+            duration and date formats, or columns. Get `id` from list_export_profiles; pass \
+            the profile's workspaceId when it is not in the active workspace. Omitted fields \
+            are kept. `columns` is the final list (to change one column, send them all, as \
+            listed). Returns the profile.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_export_profile(
+        &self,
+        Parameters(args): Parameters<UpdateExportProfileArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            UPDATE_EXPORT_PROFILE,
+            json!({ "id": args.id, "workspaceId": args.workspace_id, "body": args.body }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "delete_export_profile",
+        description = "Permanently delete an export profile. The deletion is immediate and \
+            cannot be undone. Call it only when the user explicitly asked to delete the \
+            profile. The only profile of a workspace cannot be deleted (an error). Get `id` \
+            from list_export_profiles; pass the profile's workspaceId when it is not in the \
+            active workspace. Errors if it does not exist there (so a repeated call only \
+            errors). Returns an empty object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn delete_export_profile(
+        &self,
+        Parameters(args): Parameters<ExportProfileIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(DELETE_EXPORT_PROFILE, args.params()).await
+    }
+
+    #[tool(
+        name = "set_default_export_profile",
+        description = "Make an export profile the default of its workspace; the previous \
+            default stops being one. export_tasks uses the default when no profileId is \
+            given. Get `id` from list_export_profiles. Returns the profile.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn set_default_export_profile(
+        &self,
+        Parameters(args): Parameters<ExportProfileIdArgs>,
+    ) -> CallToolResult {
+        self.call_single(SET_DEFAULT_EXPORT_PROFILE, args.params())
+            .await
+    }
+
+    #[tool(
+        name = "export_tasks",
+        description = "Export the finished tasks of a period as CSV or JSON with an export \
+            profile, like the app's Export dialog. Tasks with the same name, project, \
+            category and custom field values become one record with the summed duration. \
+            Nothing is saved: the file content comes in the response — `content` (the text), \
+            `fileName` (suggested: export.csv or export.json), `format`, `mimeType` and \
+            `rowCount` (0 gives an empty CSV or `[]`). Give the text to the user, or save it \
+            with your own tools if they asked for a file. Uses the workspace's default \
+            profile when profileId is omitted, and all tasks of the period unless taskIds is \
+            given.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn export_tasks(&self, Parameters(args): Parameters<ExportTasksArgs>) -> CallToolResult {
+        self.call_single(EXPORT_TASKS, json!({ "body": args }))
+            .await
     }
 }
 

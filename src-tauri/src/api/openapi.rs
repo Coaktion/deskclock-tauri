@@ -8,7 +8,7 @@ use crate::api::models;
     info(
         title = "DeskClock Local API",
         description = "API REST local do DeskClock: controle do timer, Histórico, tarefas planejadas, \
-workspaces, projetos, categorias, campos personalizados, totais e envio às integrações, para integrar com ferramentas externas \
+workspaces, projetos, categorias, campos personalizados, totais, envio às integrações e exportação, para integrar com ferramentas externas \
 (Alfred, Raycast, scripts, automações). Cada chamada é executada pelo próprio app, com as mesmas regras da tela.\n\n\
 **Base URL:** `http://localhost:{porta}` (padrão: 27420)\n\n\
 **Workspace:** onde houver escopo, `workspaceId` ausente = workspace ativo. Recursos buscados por id no path \
@@ -75,6 +75,12 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         handlers::planned_tasks::post_planned_task_launch_retroactive,
         handlers::integrations::get_send_preview,
         handlers::integrations::post_send,
+        handlers::export::get_export_profiles,
+        handlers::export::post_export_profile,
+        handlers::export::put_export_profile,
+        handlers::export::delete_export_profile,
+        handlers::export::put_export_profile_default,
+        handlers::export::post_export,
     ),
     components(schemas(
         models::StatusResponse,
@@ -129,6 +135,12 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         models::SendPreviewDayDto,
         models::SendPreviewDto,
         models::SendTasksResponse,
+        models::ExportColumnDto,
+        models::ExportProfileDto,
+        models::CreateExportProfileRequest,
+        models::UpdateExportProfileRequest,
+        models::GenerateExportRequest,
+        models::TaskExportDto,
     )),
     tags(
         (name = "status", description = "Consulta de estado"),
@@ -143,7 +155,10 @@ unificação e mudança de workspace. Tarefa em execução ou pausada = 409."),
         (name = "planned-tasks", description = "Tarefas planejadas: listagem por dia, período ou todas; CRUD; \
 edição completa (PUT) ou parcial (PATCH); conclusão por dia; duplicar e lançar retroativo. Planejada por id vale em qualquer workspace."),
         (name = "integrations", description = "Envio manual de tarefas ao Google Sheets, Clockify e Monday: prévia e envio, \
-como o modal Enviar. Usa o workspace configurado para cada integração, não o ativo.")
+como o modal Enviar. Usa o workspace configurado para cada integração, não o ativo."),
+        (name = "export", description = "Exportação de tarefas: perfis (por workspace; `workspaceId` ausente = ativo; \
+id de outro workspace = 404) e o CSV/JSON gerado com um perfil, como o modal Exportar. A API não grava arquivo: \
+o conteúdo vem na resposta.")
     )
 )]
 pub struct ApiDoc;

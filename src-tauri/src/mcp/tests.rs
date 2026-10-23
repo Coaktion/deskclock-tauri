@@ -151,11 +151,13 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "complete_planned_task",
             "create_category",
             "create_custom_field",
+            "create_export_profile",
             "create_project",
             "create_workspace",
             "delete_categories",
             "delete_category",
             "delete_custom_field",
+            "delete_export_profile",
             "delete_planned_task",
             "delete_project",
             "delete_projects",
@@ -163,6 +165,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "delete_tasks",
             "delete_workspace",
             "duplicate_planned_task",
+            "export_tasks",
             "get_status",
             "get_totals",
             "get_week_totals",
@@ -170,6 +173,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "import_projects",
             "list_catalog",
             "list_custom_fields",
+            "list_export_profiles",
             "list_planned_tasks",
             "list_project_categories",
             "list_tasks",
@@ -183,6 +187,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "resume_task",
             "send_tasks_to_integration",
             "set_active_workspace",
+            "set_default_export_profile",
             "set_project_categories",
             "set_task_billable",
             "start_planned_task",
@@ -191,6 +196,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "uncomplete_planned_task",
             "update_category",
             "update_custom_field",
+            "update_export_profile",
             "update_planned_task",
             "update_project",
             "update_running_task",
@@ -267,6 +273,14 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         // repetir duplica (o Monday reescreve, mas a anotação vale para as três).
         ("preview_send_to_integration", true, None, false),
         ("send_tasks_to_integration", false, Some(false), true),
+        // Fase C2. Perfis ficam no banco local; o nome não é único, então criar de
+        // novo cria outro. A exclusão repetida só erra (404). Gerar só lê.
+        ("list_export_profiles", true, None, false),
+        ("create_export_profile", false, Some(false), false),
+        ("update_export_profile", false, Some(true), false),
+        ("delete_export_profile", false, Some(true), false),
+        ("set_default_export_profile", false, Some(true), false),
+        ("export_tasks", true, None, false),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -290,6 +304,7 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
                 "delete_category",
                 "delete_categories",
                 "delete_workspace",
+                "delete_export_profile",
             ]
             .contains(name);
             assert_eq!(annotations["destructiveHint"], json!(destructive), "{tool}");
@@ -2209,5 +2224,175 @@ async fn esquemas_das_tools_de_envio_declaram_o_enum_e_saem_planos() {
                 "{name} tem {indirection}: {text}"
             );
         }
+    }
+}
+
+fn export_responder(op: &str) -> (u16, Value) {
+    match op {
+        "exportProfiles.list" => (200, json!([{ "id": "p1", "isDefault": true }])),
+        "exportProfiles.delete" => (204, Value::Null),
+        "export.generate" => (
+            200,
+            json!({ "content": "Nome\nA", "fileName": "export.csv", "rowCount": 1 }),
+        ),
+        _ => (200, json!({ "id": "p1" })),
+    }
+}
+
+#[tokio::test]
+async fn tools_de_exportacao_repassam_os_params_como_a_rest() {
+    let columns = json!([{ "field": "name", "label": "Nome", "visible": true, "order": 0 }]);
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "list_export_profiles",
+            json!({}),
+            "exportProfiles.list",
+            json!({ "workspaceId": null }),
+        ),
+        (
+            "create_export_profile",
+            json!({ "name": "Cliente", "durationFormat": "hh:mm:ss", "dateFormat": "dd/mm/yyyy", "columns": columns }),
+            "exportProfiles.create",
+            json!({ "body": { "name": "Cliente", "durationFormat": "hh:mm:ss", "dateFormat": "dd/mm/yyyy", "columns": columns } }),
+        ),
+        (
+            "update_export_profile",
+            json!({ "id": "p1", "format": "json", "isDefault": true }),
+            "exportProfiles.update",
+            json!({ "id": "p1", "workspaceId": null, "body": { "format": "json", "isDefault": true } }),
+        ),
+        (
+            "delete_export_profile",
+            json!({ "id": "p1", "workspaceId": "w2" }),
+            "exportProfiles.delete",
+            json!({ "id": "p1", "workspaceId": "w2" }),
+        ),
+        (
+            "set_default_export_profile",
+            json!({ "id": "p1" }),
+            "exportProfiles.setDefault",
+            json!({ "id": "p1", "workspaceId": null }),
+        ),
+        (
+            "export_tasks",
+            json!({ "from": "2026-10-01", "to": "2026-10-31", "taskIds": ["t1"] }),
+            "export.generate",
+            json!({ "body": { "from": "2026-10-01", "to": "2026-10-31", "taskIds": ["t1"] } }),
+        ),
+        (
+            "export_tasks",
+            json!({}),
+            "export.generate",
+            json!({ "body": {} }),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, export_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn resultados_da_exportacao_saem_em_objeto() {
+    let (state, _) = fake_state(true, export_responder);
+    let listed = call_tool(state, "list_export_profiles", json!({})).await;
+    assert_eq!(
+        listed["structuredContent"],
+        json!({ "exportProfiles": [{ "id": "p1", "isDefault": true }] })
+    );
+    let (state, _) = fake_state(true, export_responder);
+    let deleted = call_tool(state, "delete_export_profile", json!({ "id": "p1" })).await;
+    assert_eq!(deleted["structuredContent"], json!({}));
+    let (state, _) = fake_state(true, export_responder);
+    let exported = call_tool(state, "export_tasks", json!({})).await;
+    assert_eq!(exported["structuredContent"]["content"], "Nome\nA");
+}
+
+#[tokio::test]
+async fn opcao_fora_do_enum_da_exportacao_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        (
+            "create_export_profile",
+            json!({ "name": "a", "format": "xlsx" }),
+        ),
+        (
+            "create_export_profile",
+            json!({ "name": "a", "durationFormat": "HH:MM" }),
+        ),
+        (
+            "update_export_profile",
+            json!({ "id": "p1", "separator": "tab" }),
+        ),
+        (
+            "update_export_profile",
+            json!({ "id": "p1", "columns": [{ "field": "name" }] }),
+        ),
+        ("create_export_profile", json!({})),
+        ("delete_export_profile", json!({})),
+    ] {
+        let (state, calls) = fake_state(true, export_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn esquemas_da_exportacao_declaram_os_enums_e_saem_planos() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let schema =
+        |name: &str| tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].clone();
+    for (name, required) in [
+        ("list_export_profiles", vec![]),
+        ("create_export_profile", vec!["name"]),
+        ("update_export_profile", vec!["id"]),
+        ("delete_export_profile", vec!["id"]),
+        ("set_default_export_profile", vec!["id"]),
+        ("export_tasks", vec![]),
+    ] {
+        let s = schema(name);
+        let got = if s["required"].is_array() {
+            sorted(&s["required"])
+        } else {
+            vec![]
+        };
+        assert_eq!(got, required, "{name}");
+        let text = s.to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
+    }
+    for name in ["create_export_profile", "update_export_profile"] {
+        let props = schema(name)["properties"].clone();
+        assert!(props["format"].to_string().contains("\"csv\""), "{props}");
+        assert!(
+            props["durationFormat"].to_string().contains("hh:mm:ss"),
+            "{props}"
+        );
+        assert!(
+            props["dateFormat"].to_string().contains("dd/mm/yyyy"),
+            "{props}"
+        );
+        let item = &props["columns"]["items"];
+        let mut fields: Vec<&str> = item["properties"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        fields.sort_unstable();
+        assert_eq!(
+            fields,
+            ["field", "label", "order", "visible"],
+            "{name}: {item}"
+        );
     }
 }
