@@ -3,7 +3,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { plannedTaskToSharePayload } from "@domain/utils/sharePayload";
+import { plannedTaskToSharePayload, sharedTaskStartWarning } from "@domain/utils/sharePayload";
 
 function makeTask(overrides: Partial<PlannedTask> = {}): PlannedTask {
   return {
@@ -190,5 +190,22 @@ describe("plannedTaskToSharePayload", () => {
       "projectName",
       "startTime",
     ]);
+  });
+});
+
+describe("sharedTaskStartWarning", () => {
+  it("nomeia a tarefa ativa e o estado dela", () => {
+    expect(sharedTaskStartWarning({ name: " Daily ", status: "running" })).toBe(
+      "Iniciar agora encerra a tarefa em execução “Daily”."
+    );
+    expect(sharedTaskStartWarning({ name: "Daily", status: "paused" })).toBe(
+      "Iniciar agora encerra a tarefa pausada “Daily”."
+    );
+  });
+
+  it("sem nome, diz (sem nome)", () => {
+    expect(sharedTaskStartWarning({ name: null, status: "running" })).toBe(
+      "Iniciar agora encerra a tarefa em execução “(sem nome)”."
+    );
   });
 });

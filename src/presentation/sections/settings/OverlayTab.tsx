@@ -1,8 +1,11 @@
 import { Button, SectionCard, SectionRow, SettingLabel, Toggle } from "@presentation/components/ui";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
-import { invoke } from "@tauri-apps/api/core";
-import { emit } from "@tauri-apps/api/event";
+import { OVERLAY_OPACITY_RANGE } from "@domain/usecases/settings/settingsRules";
+import {
+  saveOverlayOpacity,
+  saveOverlaySnapToGrid,
+  tauriSettingsSystem,
+} from "@presentation/settings/settingsEffects";
 import { useEffect, useState } from "react";
 import { SliderRow } from "./SettingsShared";
 
@@ -24,34 +27,27 @@ export function OverlayTab() {
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    invoke<string>("get_display_server")
+    tauriSettingsSystem
+      .displayServer()
       .then(setDisplayServer)
       .catch(() => {});
   }, []);
 
   async function handleSlider(value: number) {
     setOverlayOpacity(value);
-    await config.set("overlayOpacity", value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "overlayOpacity",
-      value,
-    } satisfies OverlayConfigChangedPayload);
+    await saveOverlayOpacity(config, tauriSettingsSystem, value);
   }
 
   async function handleSnapToGrid(value: boolean) {
     setOverlaySnapToGrid(value);
-    await config.set("overlaySnapToGrid", value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "overlaySnapToGrid",
-      value,
-    } satisfies OverlayConfigChangedPayload);
+    await saveOverlaySnapToGrid(config, tauriSettingsSystem, value);
   }
 
   return (
     <SectionCard title="Overlay" divided>
       <SectionRow className="flex items-center justify-between gap-4">
         <SettingLabel label="Visibilidade" description="Mesma ação do atalho de overlay" />
-        <Button onClick={() => invoke("toggle_overlay").catch(() => {})}>
+        <Button onClick={() => tauriSettingsSystem.toggleOverlay().catch(() => {})}>
           Mostrar / Ocultar overlay
         </Button>
       </SectionRow>
@@ -60,8 +56,8 @@ export function OverlayTab() {
           label="Opacidade em repouso"
           description="Opacidade quando o cursor não está sobre o overlay"
           value={overlayOpacity}
-          min={20}
-          max={100}
+          min={OVERLAY_OPACITY_RANGE.min}
+          max={OVERLAY_OPACITY_RANGE.max}
           unit="%"
           onChange={handleSlider}
         />
