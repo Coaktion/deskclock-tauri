@@ -3,6 +3,7 @@ import type {
   DurationFormat,
   DateFormat,
   CsvSeparator,
+  ExportColumn,
 } from "@domain/entities/ExportProfile";
 import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
@@ -15,6 +16,24 @@ export const CUSTOM_COLUMN_PREFIX = "custom:";
 
 export function customColumnField(fieldId: string): string {
   return `${CUSTOM_COLUMN_PREFIX}${fieldId}`;
+}
+
+/**
+ * Garante uma coluna por campo personalizado ativo. As novas entram
+ * **invisíveis**: um campo criado depois do perfil não pode mudar em silêncio o
+ * formato de um CSV que alguém já consome.
+ */
+export function withCustomColumns(columns: ExportColumn[], fields: CustomField[]): ExportColumn[] {
+  const existing = new Set(columns.map((c) => c.field));
+  const missing = fields
+    .filter((f) => !existing.has(customColumnField(f.id)))
+    .map((f, i) => ({
+      field: customColumnField(f.id),
+      label: f.label,
+      visible: false,
+      order: columns.length + i,
+    }));
+  return [...columns, ...missing];
 }
 
 export function formatDuration(seconds: number, format: DurationFormat): string {
