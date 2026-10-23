@@ -23,6 +23,11 @@ import {
   buildTaskSendAdapter,
   taskSendWorkspaceId,
 } from "@presentation/integrations/taskSendAdapters";
+import {
+  buildCalendarImportSource,
+  buildMondayImportSource,
+  buildZendeskImportSource,
+} from "@presentation/integrations/importSources";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -69,6 +74,21 @@ export function useLocalApiBridge(): void {
         workspaceIdFor: (integration) => taskSendWorkspaceId(integration, config),
         adapterFor: (integration, catalogs) =>
           buildTaskSendAdapter(integration, config, factories, catalogs),
+      },
+      trackedMeetingRepo: repos.trackedMeetingRepo,
+      mondayImportedItemRepo: repos.mondayImportedItemRepo,
+      imports: {
+        calendar: () => buildCalendarImportSource(config, factories),
+        zendesk: () => buildZendeskImportSource(config, factories),
+        monday: () =>
+          buildMondayImportSource(config, factories, {
+            projectRepo: repos.projectRepo,
+            categoryRepo: repos.categoryRepo,
+            projectCategoryRepo: repos.projectCategoryRepo,
+            notifyProjectsChanged,
+            notifyProjectCategoriesChanged,
+            notifyCategoriesChanged,
+          }),
       },
       activeWorkspaceId,
       running,

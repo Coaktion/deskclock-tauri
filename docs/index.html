@@ -3354,6 +3354,25 @@
       </table>
         </div>
 
+    <h3>Imports das integrações</h3>
+    <p>Os mesmos imports das janelas <strong>Importar</strong> do Google Agenda, do Zendesk e do Monday, e os botões de <strong>Importação de dados</strong> do Monday. Onde a janela tem uma lista para marcar, há duas rotas: a prévia, que mostra o que existe e o que viria marcado, e o import, que recebe os escolhidos. As planejadas nascem no workspace escolhido para cada integração. A integração precisa estar conectada no app: conectar continua sendo pela tela.</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/integrations/google_calendar/import-preview</code></td><td>Lista os eventos do período (<code>from</code>/<code>to</code>; ausentes = a semana atual) com o projeto, a categoria e o agendamento sugeridos, e quais já existem como planejada ou casam com um evento ignorado</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/google_calendar/import</code></td><td>Importa os eventos indicados, com o que você mudar em cada um; pode rastrear as reuniões (<code>trackMeetings</code>)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/integrations/zendesk/import-preview</code></td><td>Lista os tickets atribuídos a você em aberto</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/zendesk/import</code></td><td>Importa os tickets indicados como planejadas</td></tr>
+          <tr><td><code>GET</code></td><td><code>/integrations/monday/import-preview</code></td><td>Lista os seus itens nos boards vinculados (<code>period</code>: <code>today</code>, <code>week</code> ou <code>next30</code>), com a categoria e a etapa sugeridas e o que já foi importado</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/monday/import</code></td><td>Importa os itens indicados como planejadas; o que já tem planejada é recusado</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/monday/import-projects</code></td><td>Importa ou atualiza os projetos a partir do Portfólio, como o botão de Projetos</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/monday/import-categories</code></td><td>Cria uma categoria por Activity Type, como o botão de Categorias</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/monday/read-catalogs</code></td><td>Lê os catálogos do board de Report de Horas, como o botão de Catálogos</td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h3>Exportação</h3>
     <p>Os perfis e o conteúdo da janela <strong>Exportar</strong> do Histórico. Os perfis são do workspace (<code>workspaceId</code> ausente = o ativo). A API não grava arquivo: o texto CSV ou JSON vem na resposta, com um nome sugerido, e salvar ou copiar fica com quem chamou.</p>
     <div class="table-scroll">
@@ -3408,7 +3427,7 @@
           <tr><td><strong>Tarefa em execução</strong></td><td>Iniciar uma tarefa (a ativa é parada antes), pausar, retomar, parar e salvar, descartar sem salvar, editar a tarefa em execução e iniciar uma planejada, como o Play</td></tr>
           <tr><td><strong>Criar</strong></td><td>Planejar uma tarefa (data específica, recorrente ou período), lançar trabalho passado com início e fim, e lançar uma planejada como concluída num dia, como no Lançamento Manual</td></tr>
           <tr><td><strong>Editar e excluir</strong></td><td>Editar, concluir, desmarcar, duplicar e excluir planejadas; editar, excluir, unificar, mover de workspace e mudar o billable de registros do Histórico; cadastrar, editar, importar e excluir projetos, categorias, categorias por projeto, campos personalizados e workspaces, e trocar o workspace ativo</td></tr>
-          <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos</td></tr>
+          <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos; mostrar e importar como planejadas os eventos do Google Agenda, os tickets do Zendesk e os itens do Monday; importar do Monday os projetos, as categorias e os catálogos</td></tr>
           <tr><td><strong>Exportar</strong></td><td>Gerar o CSV ou JSON das tarefas de um período com um perfil de exportação, e criar, editar, excluir e escolher o padrão entre os perfis. O texto vem na conversa; o assistente o entrega a você ou o salva, se você pedir um arquivo</td></tr>
         </tbody>
       </table>
@@ -3446,7 +3465,7 @@
         <tbody>
           <tr><td><strong><a onclick="show('deeplinks')">Deep link</a></strong></td><td>Você quer que o app <strong>apareça</strong> — abrir uma tela, pré-preencher um formulário. Um link basta, nada a configurar.</td></tr>
           <tr><td><strong>API local</strong></td><td>Você quer <strong>ler</strong> o estado ou agir sem trazer a janela à frente. É o caminho para barras de status, scripts e integrações caseiras.</td></tr>
-          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui, envia às integrações e exporta.</td></tr>
+          <tr><td><strong><a onclick="show('api/api-mcp')">MCP</a></strong></td><td>Você quer <strong>pedir em palavras</strong> a um assistente de IA, como o Claude, em vez de escrever a chamada. Ele faz o mesmo que a tela: consulta, cuida da tarefa em execução, cria, edita, exclui, envia às integrações, importa delas e exporta.</td></tr>
         </tbody>
       </table>
 

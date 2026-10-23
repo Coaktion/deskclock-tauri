@@ -12,6 +12,10 @@ import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRe
 import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
 import type { IExportProfileRepository } from "@domain/repositories/IExportProfileRepository";
 import type { ExportProfile } from "@domain/entities/ExportProfile";
+import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
+import type { ITrackedMondayItemRepository } from "@domain/integrations/ITrackedMondayItemRepository";
+import type { TrackedMeeting } from "@domain/integrations/TrackedMeeting";
+import type { TrackedMondayItem } from "@domain/integrations/TrackedMondayItem";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import type { Workspace } from "@domain/entities/Workspace";
@@ -186,6 +190,32 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     }),
   };
 
+  const trackedMeetingRepo = {
+    listForDate: vi.fn(async (_date: string): Promise<TrackedMeeting[]> => []),
+    upsert: vi.fn(async (_meeting: TrackedMeeting) => {}),
+    setPlannedTaskId: vi.fn(async () => {}),
+    setStartedTaskId: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
+    pruneBefore: vi.fn(async () => {}),
+  } satisfies Record<keyof ITrackedMeetingRepository, unknown>;
+
+  const mondayImportedItemRepo = {
+    listForWorkspace: vi.fn(async (_ws: string): Promise<TrackedMondayItem[]> => []),
+    upsert: vi.fn(async (_item: TrackedMondayItem) => {}),
+    remove: vi.fn(async () => {}),
+  } satisfies Record<keyof ITrackedMondayItemRepository, unknown>;
+
+  // Sem fonte por padrão: o teste de import injeta a sua.
+  const notConfigured = (name: string) =>
+    vi.fn((): unknown => {
+      throw new Error(`imports.${name} não configurado no teste`);
+    });
+  const imports = {
+    calendar: notConfigured("calendar"),
+    zendesk: notConfigured("zendesk"),
+    monday: notConfigured("monday"),
+  };
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -209,6 +239,9 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     taskLogRepo,
     exportProfileRepo,
     taskSend,
+    trackedMeetingRepo,
+    mondayImportedItemRepo,
+    imports,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,

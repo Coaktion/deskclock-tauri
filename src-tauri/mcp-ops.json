@@ -56,7 +56,16 @@
     "exportProfiles.update": "update_export_profile",
     "exportProfiles.delete": "delete_export_profile",
     "exportProfiles.setDefault": "set_default_export_profile",
-    "export.generate": "export_tasks"
+    "export.generate": "export_tasks",
+    "calendar.importPreview": "preview_calendar_import",
+    "calendar.import": "import_calendar_events",
+    "zendesk.importPreview": "preview_zendesk_import",
+    "zendesk.import": "import_zendesk_tickets",
+    "monday.importPreview": "preview_monday_import",
+    "monday.import": "import_monday_items",
+    "monday.importProjects": "import_monday_projects",
+    "monday.importCategories": "import_monday_categories",
+    "monday.readCatalogs": "read_monday_catalogs"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",

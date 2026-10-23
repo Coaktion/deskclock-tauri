@@ -861,3 +861,317 @@ pub struct TaskExportDto {
     pub from: String,
     pub to: String,
 }
+
+// ---------------- Imports das integrações ----------------
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarImportEventDto {
+    /// Id do evento no Google; é o que o import recebe.
+    pub id: String,
+    pub title: String,
+    /// Dia local, YYYY-MM-DD.
+    pub date: String,
+    /// "HH:MM"; nulo em evento de dia inteiro.
+    pub start_time: Option<String>,
+    pub end_time: Option<String>,
+    pub all_day: bool,
+    /// Ocorrência de uma série do Google.
+    pub recurring: bool,
+    /// Videoconferência, senão o próprio evento — o que a ação de abrir URL abre.
+    pub link: Option<String>,
+    /// Sugestão (metadados "Projeto:"/"Categoria:" da descrição); é o que vai sem edição.
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+    /// `recurring` para ocorrência de série, senão `specific_date`.
+    pub schedule_type: String,
+    /// Dias sugeridos (0 = domingo); sem sábado e domingo com o fim de semana desligado.
+    pub recurring_days: Vec<i64>,
+    /// Já há planejada de mesmo nome no workspace de destino, no período.
+    pub already_exists: bool,
+    /// Casa com uma regra de "Eventos ignorados".
+    pub ignored: bool,
+    /// Vem marcado na tela: nem `alreadyExists` nem `ignored`.
+    pub preselected: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarImportPreviewDto {
+    pub integration: String,
+    /// Workspace de destino (Configurações → Integrações → Google Agenda).
+    pub workspace_id: String,
+    pub from: String,
+    pub to: String,
+    pub events: Vec<CalendarImportEventDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarImportEventRequest {
+    /// Id do evento, da prévia.
+    pub id: String,
+    /// Sobrescreve a sugestão; `null` deixa sem projeto. Trocar o projeto sem mandar a
+    /// categoria a limpa, como a tela.
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub project_name: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    /// `specific_date` ou `recurring`.
+    #[serde(default)]
+    pub schedule_type: Option<String>,
+    /// Dias da recorrência, 0 (domingo) a 6.
+    #[serde(default)]
+    pub recurring_days: Option<Vec<i64>>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarImportRequest {
+    /// O mesmo período da prévia. Ausentes = a semana corrente.
+    #[serde(default)]
+    pub from: Option<String>,
+    #[serde(default)]
+    pub to: Option<String>,
+    pub events: Vec<CalendarImportEventRequest>,
+    /// Ação de abrir o link do evento. Ausente = `true`, como a tela.
+    #[serde(default)]
+    pub add_open_url_action: Option<bool>,
+    /// Rastrear as reuniões (avisar no início e no fim). Ausente = `false`, como a tela.
+    #[serde(default)]
+    pub track_meetings: Option<bool>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarImportedEventDto {
+    pub event_id: String,
+    pub planned_task: PlannedTaskDto,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarImportResponse {
+    pub workspace_id: String,
+    pub created: Vec<CalendarImportedEventDto>,
+    /// Recorrentes de mesmo nome e horário absorvidas por outro evento do lote.
+    pub merged_event_ids: Vec<String>,
+    pub tracked_meetings: i64,
+    /// Falhas do rastreamento; as planejadas foram gravadas mesmo assim.
+    pub track_errors: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskTicketPreviewDto {
+    pub id: i64,
+    pub subject: String,
+    /// `new`, `open`, `pending` ou `hold`.
+    pub status: String,
+    pub web_url: String,
+    /// O que a linha abre: nome `#id - assunto`, recorrente, data de hoje, ação ligada.
+    pub name: String,
+    pub schedule_type: String,
+    pub schedule_date: String,
+    pub add_open_url_action: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskImportPreviewDto {
+    pub integration: String,
+    pub workspace_id: String,
+    /// Atribuídos a você, em aberto.
+    pub tickets: Vec<ZendeskTicketPreviewDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskImportTicketRequest {
+    pub id: i64,
+    /// Ausente ou em branco = `#id - assunto`.
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub project_id: Option<String>,
+    #[serde(default)]
+    pub project_name: Option<String>,
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    /// Ausente = `true`.
+    #[serde(default)]
+    pub add_open_url_action: Option<bool>,
+    /// `recurring` (todos os dias; padrão) ou `specific_date`.
+    #[serde(default)]
+    pub schedule_type: Option<String>,
+    /// YYYY-MM-DD, só em `specific_date`. Ausente = hoje.
+    #[serde(default)]
+    pub schedule_date: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskImportRequest {
+    pub tickets: Vec<ZendeskImportTicketRequest>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskImportResponse {
+    pub workspace_id: String,
+    pub imported: i64,
+    pub ticket_ids: Vec<i64>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayItemPeriodDto {
+    pub start: String,
+    pub end: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayImportItemDto {
+    /// Id do item no Monday; é o que o import recebe.
+    pub id: String,
+    pub name: String,
+    pub board_id: String,
+    pub url: String,
+    /// Projeto do DeskClock vinculado ao board.
+    pub project_id: String,
+    pub project_name: String,
+    /// Timeline do item; nulo = sem cronograma (nasce hoje).
+    pub period: Option<MondayItemPeriodDto>,
+    pub activity_type: Option<String>,
+    pub project_stage: Option<String>,
+    /// Sugestão pela Activity Type, com o billable acompanhando a categoria.
+    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+    pub billable: bool,
+    /// Etapa sugerida pela coluna Project Stage, no campo de `stageField`.
+    pub custom_values: HashMap<String, String>,
+    /// Já tem planejada viva: o import recusa.
+    pub already_imported: bool,
+    /// Já há planejada de mesmo nome (o chip "já existe"); o import aceita.
+    pub already_exists: bool,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayStageFieldDto {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayImportPreviewDto {
+    pub integration: String,
+    pub workspace_id: String,
+    /// `today`, `week` ou `next30`.
+    pub period: String,
+    pub from: String,
+    pub to: String,
+    /// Boards vinculados com projeto no workspace da integração.
+    pub boards: i64,
+    /// Boards vinculados a projetos de outro workspace, fora da lista.
+    pub unavailable_boards: i64,
+    /// Campo personalizado da etapa; nulo enquanto não configurado.
+    pub stage_field: Option<MondayStageFieldDto>,
+    pub items: Vec<MondayImportItemDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayImportItemRequest {
+    pub id: String,
+    /// Sobrescreve a sugestão; o billable passa a ser o padrão da categoria. `null` limpa.
+    #[serde(default)]
+    pub category_id: Option<String>,
+    #[serde(default)]
+    pub category_name: Option<String>,
+    /// Rótulo (ou id) de uma opção do campo de etapa; vazio limpa.
+    #[serde(default)]
+    pub project_stage: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayImportRequest {
+    pub items: Vec<MondayImportItemRequest>,
+    /// Ação de abrir o item no Monday. Ausente = `true`, como a tela.
+    #[serde(default)]
+    pub add_open_url_action: Option<bool>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayImportedItemDto {
+    pub item_id: String,
+    pub planned_task: PlannedTaskDto,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayImportResponse {
+    pub workspace_id: String,
+    pub created: Vec<MondayImportedItemDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondaySkippedBoardDto {
+    pub portfolio_item_id: String,
+    pub board_name: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondaySeededCategoriesDto {
+    /// Associações projeto ↔ categoria gravadas.
+    pub seeded: i64,
+    pub projects: i64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayProjectsImportResponse {
+    pub workspace_id: String,
+    /// Projetos vinculados ao Portfólio.
+    pub projects: i64,
+    /// Deles, sem "ID Quadro Projeto": as horas não sobem.
+    pub without_board: i64,
+    /// Boards fora do template, com o motivo; o projeto existe mesmo assim.
+    pub skipped: Vec<MondaySkippedBoardDto>,
+    /// Itens do Portfólio sem "Oferta", que não viram projeto.
+    pub ignored: i64,
+    pub seeded_categories: MondaySeededCategoriesDto,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayCategoriesImportResponse {
+    pub workspace_id: String,
+    pub created: Vec<String>,
+    /// Já existiam; não são alteradas.
+    pub existing: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayFieldCatalogsDto {
+    pub activity_type: Vec<String>,
+    pub project_stage: Vec<String>,
+    pub non_billable_reason: Vec<String>,
+    pub report_type: Vec<String>,
+}

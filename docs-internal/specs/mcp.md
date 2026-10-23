@@ -75,6 +75,10 @@ Todas do usuário, em 2026-09-18.
 | `delete_export_profile` | `exportProfiles.delete` | `destructiveHint: true`; o único perfil do workspace não sai (409) (Fase C2) |
 | `set_default_export_profile` | `exportProfiles.setDefault` | (Fase C2) |
 | `export_tasks` | `export.generate` | Devolve o texto CSV/JSON, não grava arquivo; `readOnlyHint: true`, `openWorldHint: false` (Fase C2) |
+| `preview_calendar_import` · `import_calendar_events` | `calendar.importPreview` · `calendar.import` | Eventos do período com a sugestão e `alreadyExists`/`ignored`/`preselected`; o import não confere duplicata (`idempotentHint: false`) (Fase D1) |
+| `preview_zendesk_import` · `import_zendesk_tickets` | `zendesk.importPreview` · `zendesk.import` | Tickets atribuídos em aberto; sem dedupe, como o modal (`idempotentHint: false`) (Fase D1) |
+| `preview_monday_import` · `import_monday_items` | `monday.importPreview` · `monday.import` | `period` enum; o já importado vem marcado e o import o recusa (`idempotentHint: true`) (Fase D1) |
+| `import_monday_projects` · `import_monday_categories` · `read_monday_catalogs` | `monday.importProjects` · `monday.importCategories` · `monday.readCatalogs` | Os três botões da "Importação de dados"; sem argumentos (Fase D1) |
 
 Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
 `workspaces.getActive`, `plannedTasks.update`). O que falta para a paridade não tem `op` na ponte (§7.2).
@@ -407,7 +411,7 @@ planejadas — N chamadas resolvem.
 | C1 (envio) | implementada; falta verificação no app de dev |
 | C2 (exportação) | implementada; falta verificação no app de dev |
 | C (C1 + C2) | concluída no código |
-| D1 (imports: Agenda, Zendesk, Monday) | pendente |
+| D1 (imports: Agenda, Zendesk, Monday) | implementada; falta verificação no app de dev |
 | D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | pendente |
 | D3 (deeplink, configurações) | pendente |
 
@@ -458,6 +462,49 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
   concluídas de **todos** os workspaces, com projeto/categoria resolvidos só no catálogo do ativo (os de outro workspace
   saem em branco). A refatoração manteve isso (`loadTasksForExport` sem `workspaceId`); para tarefas do workspace ativo o
   conteúdo é idêntico. Corrigir o modal fica para decisão do usuário.
+
+### Decisões da Fase D1 que a spec não fixava
+
+- **Inventário** (o que a UI importa, de onde, e o que grava):
+  - *Google Agenda* — "Importar eventos" (rail e Integrações → Google). Lê `getEvents` do período e as planejadas do
+    destino; o usuário marca eventos e edita projeto, categoria, agendamento e dias; chaves "ação de abrir URL" e
+    "rastrear reuniões". Grava planejadas (`importCalendarEvents`) e, com a chave, `calendar_tracked_meetings`.
+  - *Zendesk* — "Importar tickets" (rail e Integrações → Zendesk). Lê os tickets atribuídos em aberto; o usuário marca e
+    edita nome, projeto, categoria, ação e agendamento. Grava planejadas (`importTickets`).
+  - *Monday, itens* — "Importar itens como planejadas" (rail e card do Monday). Lê itens do usuário nos boards
+    vinculados, as planejadas da janela e `monday_imported_items`; o usuário filtra o período, marca e edita categoria e
+    etapa. Grava planejadas e o vínculo.
+  - *Monday, Importação de dados* (Integrações → Monday): Projetos (Portfólio → projetos, vínculos na config, categorias
+    por projeto), Catálogos (board de Report → `mondayFieldCatalogs`) e Categorias (Activity Types → categorias). Sem
+    seleção: uma op cada.
+- **Ops por integração, não uma op genérica com `id`.** Os corpos não têm nada em comum (período e dias na Agenda, nome e
+  data no Zendesk, etapa no Monday), e uma tool por op com argumentos-união confundiria o modelo. Prefixos `calendar.`,
+  `zendesk.`, `monday.`; nenhum espera o render. Na REST, rotas fixas sob `/integrations/<id>/…` com os ids
+  `google_calendar`, `zendesk`, `monday`; convivem com as `{id}` do envio (teste de rota cobre `/integrations/monday/send`).
+- **Refatoração (sem mudar comportamento):** a busca, a sugestão, os sinais e a gravação saíram dos três modais para o
+  domínio; os três cards do Monday passaram a chamar `mondayCatalogImports.ts`. O `ImportCalendarModal` foi de 941 para
+  ~590 linhas (a linha e o editor de evento foram para `ImportCalendarEventRow.tsx`, mesma marcação; o baseline de
+  `<button>` do `componentPrimitives` acompanhou a mudança de arquivo). O `useMondayProjectsTracker` não foi tocado: a
+  varredura diária difere do botão (sem `forceSchemaRead` fora da migração, sem limpar o erro) e segue com cópia própria.
+- **Anotações.** Prévias: `readOnlyHint: true`, `openWorldHint: true` (leem Google, Zendesk e Monday). Imports:
+  `readOnlyHint: false`, `destructiveHint: false` (só criam), `openWorldHint: true` (releem o serviço para achar os ids).
+  `idempotentHint`: `false` na Agenda e no Zendesk (nenhum dos dois confere duplicata — repetir cria outra planejada);
+  `true` em `import_monday_items` (o já importado dá 409) e nos três botões do Monday (projeto e categoria existentes são
+  reaproveitados; a semeadura pula o que não mudou; reler catálogos regrava o mesmo). `import_monday_categories` é
+  `openWorldHint: false`: usa só os rótulos já guardados.
+- **Ausente × `null`** no projeto e na categoria das linhas: `Patch<T>` com `present`, como na Fase A — ausente mantém a
+  sugestão, `null` deixa sem. Linhas são structs inline com `#[serde(flatten)]` dos campos de catálogo; enums inline
+  (`ImportScheduleType`, `TicketScheduleType`, `MondayImportPeriodArg`) — o esquema sai plano, com `null` no enum dos
+  opcionais (teste `esquemas_dos_imports_declaram_os_enums_e_saem_planos`).
+- **Params como a REST.** Prévias: `{ from, to }` (nulos quando omitidos), `{}`, `{ period }`. Imports: `{ body }` com o
+  que veio. Os três botões: `{}`.
+- **Fora (com motivo):** "Ignorar sempre" do import da Agenda (grava regra de ignorar — é configuração da integração, D3);
+  `MondayCatalogField` (criar/vincular o campo personalizado de Project Stage e Non Billable reason — configuração, D3);
+  "Buscar itens agora" e "Buscar eventos agora" (disparam os rastreadores automáticos, não os imports manuais).
+- **Diferenças de ordem do refactor, aceitas na revisão:** nos cards de projetos e categorias do Monday, o
+  `notify*Changed` passou para dentro do `run*` compartilhado (a ponte também precisa dele) e roda antes do
+  `onImported`/recarga do card, não depois; na Agenda, o `PLANNED_TASKS_CHANGED` sai depois do rastreio de reuniões, que
+  nunca lança. O nome do ticket do Zendesk recebe `trim` na API; o modal não aparava.
 
 ### Decisões da Fase A que a spec não fixava
 

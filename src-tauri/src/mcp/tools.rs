@@ -1125,6 +1125,197 @@ pub struct DeskClockMcp {
     tool_router: ToolRouter<Self>,
 }
 
+// ---------------- Imports das integrações (Fase D1) ----------------
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarPeriodArgs {
+    /// First local day, YYYY-MM-DD. Omit both from and to for the current week.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    /// Last local day (inclusive), YYYY-MM-DD. With only `from`, that single day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+}
+
+// Inline pelo mesmo motivo do `ScheduleType`: o esquema sai plano.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum ImportScheduleType {
+    SpecificDate,
+    Recurring,
+}
+
+// Projeto e categoria que sobrescrevem a sugestão: ausente mantém a sugestão,
+// `null` deixa sem — o TS distingue os dois, então o `Patch` os preserva.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCatalogFields {
+    /// Project id (from list_catalog, in the integration's workspace); takes precedence
+    /// over projectName. null = no project. Omit to keep the suggestion. Changing the
+    /// project without sending a category clears the category, as the app does.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub project_id: Patch<String>,
+    /// Exact project name in the integration's workspace. null = no project.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub project_name: Patch<String>,
+    /// Category id; takes precedence over categoryName. null = no category. Omit to keep
+    /// the suggestion.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub category_id: Patch<String>,
+    /// Exact category name in the integration's workspace. null = no category.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub category_name: Patch<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct CalendarEventChoice {
+    /// Event id from preview_calendar_import.
+    pub id: String,
+    #[serde(flatten)]
+    pub catalog: ImportCatalogFields,
+    /// `specific_date` (one planned task on the event's day) or `recurring`. Omit
+    /// for the preview's suggestion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schedule_type: Option<ImportScheduleType>,
+    /// Weekdays for `recurring`, 0 = Sunday … 6 = Saturday. Omit for the suggestion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recurring_days: Option<Vec<u8>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportCalendarEventsArgs {
+    /// The same period used in preview_calendar_import. Omit both for the current week.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+    /// The events to import, by id from the preview. Not empty.
+    pub events: Vec<CalendarEventChoice>,
+    /// Add an "open URL" action with the meeting link (or the event). Default true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub add_open_url_action: Option<bool>,
+    /// Track the meetings (the app prompts at their start and end). Default false.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub track_meetings: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum TicketScheduleType {
+    Recurring,
+    SpecificDate,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct ZendeskTicketChoice {
+    /// Ticket id (a number) from preview_zendesk_import.
+    pub id: i64,
+    /// Planned task name. Omit or blank for "#<id> - <subject>".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(flatten)]
+    pub catalog: ImportCatalogFields,
+    /// Add an "open ticket" action. Default true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub add_open_url_action: Option<bool>,
+    /// `recurring` (every day; the default) or `specific_date`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schedule_type: Option<TicketScheduleType>,
+    /// YYYY-MM-DD, used with `specific_date`. Default today.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub schedule_date: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct ImportZendeskTicketsArgs {
+    /// The tickets to import, by id from the preview. Not empty.
+    pub tickets: Vec<ZendeskTicketChoice>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum MondayImportPeriodArg {
+    Today,
+    Week,
+    Next30,
+}
+
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub struct PreviewMondayImportArgs {
+    /// `today`, `week` (the default; the week by the user's first weekday) or
+    /// `next30` (today and the next 30 days). Items without a timeline always appear.
+    pub period: Option<MondayImportPeriodArg>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub struct MondayItemChoice {
+    /// Item id from preview_monday_import.
+    pub id: String,
+    /// Category id (from list_catalog, in the integration's workspace); billable then
+    /// follows the category's `defaultBillable`. null = no category. Omit for the
+    /// suggestion.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub category_id: Patch<String>,
+    /// Exact category name. null = no category.
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    #[schemars(with = "Option<String>")]
+    pub category_name: Patch<String>,
+    /// Project Stage: an option label (or id) of the preview's `stageField`; "" clears
+    /// it. Omit for the suggestion. Errors when no stage field is configured.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_stage: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportMondayItemsArgs {
+    /// The items to import, by id from the preview. Not empty.
+    pub items: Vec<MondayItemChoice>,
+    /// Add an "open in Monday" action. Default true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub add_open_url_action: Option<bool>,
+}
+
 #[tool_router]
 impl DeskClockMcp {
     pub fn new(bridge: Arc<Bridge>) -> Self {
@@ -2402,6 +2593,192 @@ impl DeskClockMcp {
     async fn export_tasks(&self, Parameters(args): Parameters<ExportTasksArgs>) -> CallToolResult {
         self.call_single(EXPORT_TASKS, json!({ "body": args }))
             .await
+    }
+
+    #[tool(
+        name = "preview_calendar_import",
+        description = "List the Google Calendar events of a period that can be imported as \
+            planned tasks, like the app's Import events dialog: each with the suggestion that \
+            is imported if left unchanged (project/category from the event description, \
+            `recurring` for a series with the suggested weekdays) and the app's flags — \
+            `alreadyExists` (a planned task with the same name is already in the period), \
+            `ignored` (matches an ignore rule) and `preselected` (neither; what the app \
+            preselects). The planned tasks go to the DeskClock workspace configured for the \
+            calendar import (not necessarily the active one). Weekend events are left out \
+            when the app hides the weekend. Show the user this list before importing. Errors \
+            if Google is not connected. Reads Google Calendar.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn preview_calendar_import(
+        &self,
+        Parameters(args): Parameters<CalendarPeriodArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            PREVIEW_CALENDAR_IMPORT,
+            json!({ "from": args.from, "to": args.to }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "import_calendar_events",
+        description = "Import Google Calendar events as planned tasks, like the Import \
+            button of the app's dialog. Call preview_calendar_import first, show the user the \
+            events and import only what they confirm, with the same `from`/`to`. Each event \
+            takes the preview's suggestion unless you override it. Recurring events with the \
+            same name and time become one planned task with their weekdays merged \
+            (`mergedEventIds`). It does not check duplicates: importing an event again creates \
+            another planned task (see `alreadyExists`). Returns the created planned tasks and \
+            how many meetings are now tracked.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn import_calendar_events(
+        &self,
+        Parameters(args): Parameters<ImportCalendarEventsArgs>,
+    ) -> CallToolResult {
+        self.call_single(IMPORT_CALENDAR_EVENTS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "preview_zendesk_import",
+        description = "List the open Zendesk tickets assigned to the user that can be \
+            imported as planned tasks, like the app's Import tickets dialog, each with what \
+            is imported if left unchanged: name \"#<id> - <subject>\", recurring every day, an \
+            \"open ticket\" action. The planned tasks go to the DeskClock workspace configured \
+            for Zendesk. Show the user this list before importing. The app does not mark \
+            tickets already imported. Errors if Zendesk is not connected. Reads Zendesk.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn preview_zendesk_import(&self) -> CallToolResult {
+        self.call_single(PREVIEW_ZENDESK_IMPORT, json!({})).await
+    }
+
+    #[tool(
+        name = "import_zendesk_tickets",
+        description = "Import Zendesk tickets as planned tasks, like the Import button of the \
+            app's dialog. Call preview_zendesk_import first, show the user the tickets and \
+            import only what they confirm. Each ticket takes the app's defaults unless you \
+            override them. It does not check duplicates: importing a ticket again creates \
+            another planned task. Returns how many were created.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn import_zendesk_tickets(
+        &self,
+        Parameters(args): Parameters<ImportZendeskTicketsArgs>,
+    ) -> CallToolResult {
+        self.call_single(IMPORT_ZENDESK_TICKETS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "preview_monday_import",
+        description = "List the user's Monday items (outside the Activities group, on the \
+            boards linked to DeskClock projects) that can be imported as planned tasks, like \
+            the app's Import items dialog: each with its project, timeline, the suggested \
+            category (from Activity Type, billable following it) and Project Stage, and \
+            `alreadyImported` (it already has a live planned task — importing it again is \
+            refused) and `alreadyExists` (a planned task with the same name exists). The \
+            planned tasks go to the DeskClock workspace configured for Monday. Show the user \
+            this list before importing. Errors if Monday is not configured, no board is \
+            linked, or the linked boards point to another workspace. Reads Monday.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn preview_monday_import(
+        &self,
+        Parameters(args): Parameters<PreviewMondayImportArgs>,
+    ) -> CallToolResult {
+        self.call_single(PREVIEW_MONDAY_IMPORT, json!({ "period": args.period }))
+            .await
+    }
+
+    #[tool(
+        name = "import_monday_items",
+        description = "Import Monday items as planned tasks, like the Import button of the \
+            app's dialog. Call preview_monday_import first, show the user the items and \
+            import only what they confirm. The schedule comes from the item's timeline (no \
+            timeline = today); category and Project Stage take the suggestion unless you \
+            override them. Records the link the automatic Monday import uses, so the item is \
+            not created again. Errors without importing if an item already has a planned task \
+            or is not among the user's items.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn import_monday_items(
+        &self,
+        Parameters(args): Parameters<ImportMondayItemsArgs>,
+    ) -> CallToolResult {
+        self.call_single(IMPORT_MONDAY_ITEMS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "import_monday_projects",
+        description = "Import or update the DeskClock projects from the Monday Portfolio \
+            board, like the Projects \"Import\"/\"Update\" button in Integrations → Monday: \
+            every classified Portfolio item becomes a project in the workspace configured for \
+            Monday, with the board where its hours go, and the board's Activity Types become \
+            the categories the project offers. Existing projects are reused, not duplicated. \
+            Reads every linked board's schema, so it can take a while. Returns how many \
+            projects, those without a board, the boards outside the template and why.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn import_monday_projects(&self) -> CallToolResult {
+        self.call_single(IMPORT_MONDAY_PROJECTS, json!({})).await
+    }
+
+    #[tool(
+        name = "import_monday_categories",
+        description = "Create one DeskClock category per Monday Activity Type, like the \
+            Categories \"Import\" button in Integrations → Monday, in the workspace configured \
+            for Monday. Uses the labels already read (read_monday_catalogs and \
+            import_monday_projects); does not call Monday. Existing categories are left \
+            unchanged. Returns the created and the existing names.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn import_monday_categories(&self) -> CallToolResult {
+        self.call_single(IMPORT_MONDAY_CATEGORIES, json!({})).await
+    }
+
+    #[tool(
+        name = "read_monday_catalogs",
+        description = "Read the label catalogs (Activity Type, Project Stage, Non Billable \
+            reason, Report Type) from the Monday time report board and keep them in the app, \
+            like the Catalogs \"Read\" button in Integrations → Monday. They seed \
+            import_monday_categories. Returns the four lists.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn read_monday_catalogs(&self) -> CallToolResult {
+        self.call_single(READ_MONDAY_CATALOGS, json!({})).await
     }
 }
 

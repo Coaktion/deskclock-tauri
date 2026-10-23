@@ -55,6 +55,15 @@ import {
   setDefaultExportProfileHandler,
   updateExportProfileHandler,
 } from "./handlers/exportProfiles";
+import { importCalendarEventsHandler, previewCalendarImport } from "./handlers/calendarImport";
+import { importZendeskTicketsHandler, previewZendeskImport } from "./handlers/zendeskImport";
+import {
+  importMondayCategoriesHandler,
+  importMondayItemsHandler,
+  importMondayProjectsHandler,
+  previewMondayImport,
+  readMondayCatalogsHandler,
+} from "./handlers/mondayImport";
 import { listProjectCategories, setProjectCategories } from "./handlers/projectCategories";
 import {
   cancelTask,
@@ -144,6 +153,17 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "exportProfiles.delete": deleteExportProfileHandler,
   "exportProfiles.setDefault": setDefaultExportProfileHandler,
   "export.generate": generateExportHandler,
+  // Imports das integrações (Fase D1): prévia + import onde a tela seleciona.
+  // Não mexem na tarefa em execução nem no workspace: não esperam o render.
+  "calendar.importPreview": previewCalendarImport,
+  "calendar.import": importCalendarEventsHandler,
+  "zendesk.importPreview": previewZendeskImport,
+  "zendesk.import": importZendeskTicketsHandler,
+  "monday.importPreview": previewMondayImport,
+  "monday.import": importMondayItemsHandler,
+  "monday.importProjects": importMondayProjectsHandler,
+  "monday.importCategories": importMondayCategoriesHandler,
+  "monday.readCatalogs": readMondayCatalogsHandler,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */

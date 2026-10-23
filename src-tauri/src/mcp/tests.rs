@@ -169,8 +169,13 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "get_status",
             "get_totals",
             "get_week_totals",
+            "import_calendar_events",
             "import_categories",
+            "import_monday_categories",
+            "import_monday_items",
+            "import_monday_projects",
             "import_projects",
+            "import_zendesk_tickets",
             "list_catalog",
             "list_custom_fields",
             "list_export_profiles",
@@ -183,7 +188,11 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "move_tasks_to_workspace",
             "pause_task",
             "plan_task",
+            "preview_calendar_import",
+            "preview_monday_import",
             "preview_send_to_integration",
+            "preview_zendesk_import",
+            "read_monday_catalogs",
             "resume_task",
             "send_tasks_to_integration",
             "set_active_workspace",
@@ -281,6 +290,19 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("delete_export_profile", false, Some(true), false),
         ("set_default_export_profile", false, Some(true), false),
         ("export_tasks", true, None, false),
+        // Fase D1. As prévias leem o serviço externo. Agenda e Zendesk não
+        // conferem duplicata (repetir cria outra planejada); o Monday recusa o
+        // item que já tem planejada, e os três botões do Monday reaproveitam o
+        // que existe. Categorias só lê os rótulos já guardados.
+        ("preview_calendar_import", true, None, true),
+        ("import_calendar_events", false, Some(false), true),
+        ("preview_zendesk_import", true, None, true),
+        ("import_zendesk_tickets", false, Some(false), true),
+        ("preview_monday_import", true, None, true),
+        ("import_monday_items", false, Some(true), true),
+        ("import_monday_projects", false, Some(true), true),
+        ("import_monday_categories", false, Some(true), false),
+        ("read_monday_catalogs", false, Some(true), true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -2395,4 +2417,203 @@ async fn esquemas_da_exportacao_declaram_os_enums_e_saem_planos() {
             "{name}: {item}"
         );
     }
+}
+
+fn import_responder(op: &str) -> (u16, Value) {
+    match op {
+        "calendar.importPreview" | "zendesk.importPreview" | "monday.importPreview" => {
+            (200, json!({ "integration": "x", "workspaceId": "w" }))
+        }
+        "calendar.import" | "monday.import" => (200, json!({ "created": [] })),
+        "zendesk.import" => (200, json!({ "imported": 1 })),
+        "monday.importProjects" => (200, json!({ "projects": 2 })),
+        "monday.importCategories" => (200, json!({ "created": [], "existing": [] })),
+        "monday.readCatalogs" => (200, json!({ "activityType": [] })),
+        other => (500, json!({ "error": format!("inesperada: {other}") })),
+    }
+}
+
+#[tokio::test]
+async fn tools_de_import_repassam_os_params_como_a_rest() {
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "preview_calendar_import",
+            json!({ "from": "2026-09-14" }),
+            "calendar.importPreview",
+            json!({ "from": "2026-09-14", "to": null }),
+        ),
+        (
+            "import_calendar_events",
+            json!({
+                "events": [
+                    { "id": "e1" },
+                    { "id": "e2", "projectId": null, "categoryName": "Reuniões",
+                      "scheduleType": "recurring", "recurringDays": [1, 3] }
+                ],
+                "trackMeetings": true
+            }),
+            "calendar.import",
+            json!({ "body": {
+                "events": [
+                    { "id": "e1" },
+                    { "id": "e2", "projectId": null, "categoryName": "Reuniões",
+                      "scheduleType": "recurring", "recurringDays": [1, 3] }
+                ],
+                "trackMeetings": true
+            } }),
+        ),
+        (
+            "preview_zendesk_import",
+            json!({}),
+            "zendesk.importPreview",
+            json!({}),
+        ),
+        (
+            "import_zendesk_tickets",
+            json!({ "tickets": [{ "id": 42, "scheduleType": "specific_date", "scheduleDate": "2026-09-20" }] }),
+            "zendesk.import",
+            json!({ "body": { "tickets": [{ "id": 42, "scheduleType": "specific_date", "scheduleDate": "2026-09-20" }] } }),
+        ),
+        (
+            "preview_monday_import",
+            json!({ "period": "next30" }),
+            "monday.importPreview",
+            json!({ "period": "next30" }),
+        ),
+        (
+            "preview_monday_import",
+            json!({}),
+            "monday.importPreview",
+            json!({ "period": null }),
+        ),
+        (
+            "import_monday_items",
+            json!({ "items": [{ "id": "123", "categoryId": null, "projectStage": "UAT" }], "addOpenUrlAction": false }),
+            "monday.import",
+            json!({ "body": { "items": [{ "id": "123", "categoryId": null, "projectStage": "UAT" }], "addOpenUrlAction": false } }),
+        ),
+        (
+            "import_monday_projects",
+            json!({}),
+            "monday.importProjects",
+            json!({}),
+        ),
+        (
+            "import_monday_categories",
+            json!({}),
+            "monday.importCategories",
+            json!({}),
+        ),
+        (
+            "read_monday_catalogs",
+            json!({}),
+            "monday.readCatalogs",
+            json!({}),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, import_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn import_com_argumento_fora_do_esquema_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        ("import_calendar_events", json!({})),
+        (
+            "import_calendar_events",
+            json!({ "events": [{ "id": "e1", "scheduleType": "period" }] }),
+        ),
+        (
+            "import_calendar_events",
+            json!({ "events": [{ "id": "e1", "recurringDays": [-1] }] }),
+        ),
+        (
+            "import_zendesk_tickets",
+            json!({ "tickets": [{ "id": "42" }] }),
+        ),
+        ("preview_monday_import", json!({ "period": "all" })),
+        (
+            "import_monday_items",
+            json!({ "items": [{ "name": "sem id" }] }),
+        ),
+    ] {
+        let (state, calls) = fake_state(true, import_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn import_nao_conectado_vira_is_error_com_a_mensagem() {
+    fn conflict(_: &str) -> (u16, Value) {
+        (
+            409,
+            json!({ "error": "Google Agenda não conectado. Conecte o Google em Integrações." }),
+        )
+    }
+    let (state, _) = fake_state(true, conflict);
+    let result = call_tool(state, "preview_calendar_import", json!({})).await;
+    assert_eq!(
+        error_text(&result),
+        "Google Agenda não conectado. Conecte o Google em Integrações."
+    );
+}
+
+#[tokio::test]
+async fn esquemas_dos_imports_declaram_os_enums_e_saem_planos() {
+    let (state, _) = fake_state(true, ok_responder);
+    let tools = list_tools(state).await;
+    let schema =
+        |name: &str| tools.iter().find(|t| t["name"] == name).unwrap()["inputSchema"].clone();
+    for (name, required) in [
+        ("preview_calendar_import", vec![]),
+        ("import_calendar_events", vec!["events"]),
+        ("preview_zendesk_import", vec![]),
+        ("import_zendesk_tickets", vec!["tickets"]),
+        ("preview_monday_import", vec![]),
+        ("import_monday_items", vec!["items"]),
+        ("import_monday_projects", vec![]),
+        ("import_monday_categories", vec![]),
+        ("read_monday_catalogs", vec![]),
+    ] {
+        let schema = schema(name);
+        let got: Vec<String> = schema["required"]
+            .as_array()
+            .map(|r| r.iter().map(|v| v.as_str().unwrap().to_string()).collect())
+            .unwrap_or_default();
+        assert_eq!(got, required, "{name}: {schema}");
+        let text = schema.to_string();
+        for indirection in ["$ref", "$defs", "allOf", "anyOf", "oneOf"] {
+            assert!(
+                !text.contains(indirection),
+                "{name} tem {indirection}: {text}"
+            );
+        }
+    }
+    let event = &schema("import_calendar_events")["properties"]["events"]["items"];
+    assert_eq!(
+        event["properties"]["scheduleType"]["enum"],
+        json!(["specific_date", "recurring", null]),
+        "{event}"
+    );
+    assert!(event["properties"]["projectId"].is_object(), "{event}");
+    assert_eq!(event["required"], json!(["id"]), "{event}");
+    let ticket = &schema("import_zendesk_tickets")["properties"]["tickets"]["items"];
+    assert_eq!(
+        ticket["properties"]["id"]["type"],
+        json!("integer"),
+        "{ticket}"
+    );
+    assert!(ticket["properties"]["categoryName"].is_object(), "{ticket}");
+    assert_eq!(
+        schema("preview_monday_import")["properties"]["period"]["enum"],
+        json!(["today", "week", "next30", null])
+    );
 }

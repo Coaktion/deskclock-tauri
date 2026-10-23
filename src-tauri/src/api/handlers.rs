@@ -98,6 +98,7 @@ pub mod catalog;
 pub mod custom_fields;
 pub mod export;
 pub mod history;
+pub mod imports;
 pub mod integrations;
 pub mod planned_tasks;
 pub mod totals;

@@ -13,6 +13,13 @@ import type {
   TaskSendCatalogs,
   TaskSendIntegrationId,
 } from "@presentation/integrations/taskSendAdapters";
+import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
+import type { ITrackedMondayItemRepository } from "@domain/integrations/ITrackedMondayItemRepository";
+import type {
+  CalendarImportSource,
+  MondayImportSource,
+  ZendeskImportSource,
+} from "@presentation/integrations/importSources";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 import type { WorkspaceContextValue } from "@presentation/contexts/WorkspaceContext";
 import type { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
@@ -28,6 +35,8 @@ export interface LocalApiParams {
   projectId?: string | null;
   categoryId?: string | null;
   billable?: string | null;
+  /** Recorte do import do Monday: `today`, `week` ou `next30`. */
+  period?: string | null;
   body?: unknown;
 }
 
@@ -69,6 +78,17 @@ export interface TaskSendPort {
 }
 
 /**
+ * Os imports das integrações, como os modais e os cards os montam
+ * (`importSources.ts`). Porta estreita, como a do envio: uma fonte por
+ * integração, montada na hora da requisição.
+ */
+export interface IntegrationImportPort {
+  calendar(): CalendarImportSource;
+  zendesk(): ZendeskImportSource;
+  monday(): MondayImportSource;
+}
+
+/**
  * Retrato do app no instante em que a requisição começa. É montado a cada
  * render: as operações do contexto fecham sobre a tarefa em execução daquele
  * render, e um retrato velho pausaria uma tarefa que já foi parada.
@@ -84,6 +104,9 @@ export interface LocalApiDeps {
   taskLogRepo: ITaskIntegrationLogRepository;
   exportProfileRepo: IExportProfileRepository;
   taskSend: TaskSendPort;
+  trackedMeetingRepo: ITrackedMeetingRepository;
+  mondayImportedItemRepo: ITrackedMondayItemRepository;
+  imports: IntegrationImportPort;
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;

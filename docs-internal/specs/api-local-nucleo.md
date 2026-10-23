@@ -96,6 +96,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Projetos · categorias | `GET/POST` · `PUT/DELETE /{id}` · `POST /import` · `POST /delete` · `GET/PUT /projects/{id}/categories` |
 | Campos personalizados | `GET/POST /custom-fields` · `PUT/DELETE /custom-fields/{id}` |
 | Envio às integrações (paridade, Fase C1) | `GET /integrations/{id}/send-preview?from&to` (op `integrations.sendPreview`) · `POST /integrations/{id}/send` (op `integrations.send`), `id` = `google_sheets` \| `clockify` \| `monday` |
+| Imports das integrações (paridade, Fase D1) | `GET /integrations/google_calendar/import-preview?from&to` · `POST /integrations/google_calendar/import` (ops `calendar.importPreview`/`calendar.import`) · `GET /integrations/zendesk/import-preview` · `POST /integrations/zendesk/import` (`zendesk.importPreview`/`zendesk.import`) · `GET /integrations/monday/import-preview?period` · `POST /integrations/monday/import` (`monday.importPreview`/`monday.import`) · `POST /integrations/monday/import-projects` · `POST /integrations/monday/import-categories` · `POST /integrations/monday/read-catalogs` (`monday.importProjects`/`importCategories`/`readCatalogs`) |
 | Exportação (paridade, Fase C2) | `GET/POST /export-profiles` · `PUT/DELETE /export-profiles/{id}` · `PUT /export-profiles/{id}/default` (ops `exportProfiles.list/create/update/delete/setDefault`, `?workspaceId=` nas rotas por id) · `POST /export` (op `export.generate`) |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
@@ -198,6 +199,51 @@ recebe o adaptador por uma porta estreita (`deps.taskSend`: `workspaceIdFor`/`ad
   período. Entrar com eles seria regra nova.
 - Nenhuma emite evento: o modal carrega os perfis ao abrir e não escuta mudança (a lista aberta só atualiza ao reabrir).
   Nenhuma espera o render.
+
+**Imports das integrações (Fase D1 da paridade, `mcp.md` §7) — 2026-10-23.** Regras em
+`src/presentation/localApi/handlers/{calendarImport,zendeskImport,mondayImport}.ts`; a lógica é a dos modais e dos cards,
+num lugar só: `loadCalendarImportCandidates`/`calendarEventDefaults` e `planCalendarImport`/`importCalendarSelection`
+(`domain/usecases/calendar/`), `ticketImportDefaults`/`toImportTicketInput` (`ImportTickets.ts`),
+`mondayImportBoards`/`loadMondayImportCandidates`/`mondayImportWindow`/`rowsInWindow`/`importMondaySelection`
+(`domain/usecases/monday/manualMondayImport.ts`) e os três botões do Monday em `presentation/integrations/mondayCatalogImports.ts`.
+A ponte recebe cada integração por uma porta estreita (`deps.imports`: `calendar()`/`zendesk()`/`monday()`, montadas em
+`presentation/integrations/importSources.ts`), não a config inteira.
+- **Workspace é o da integração** (`calendarDeskclockWorkspaceId`, `zendeskDeskclockWorkspaceId`,
+  `mondayDeskclockWorkspaceId`, por `resolveIntegrationWorkspaceId`), como os modais; não há `workspaceId` na rota. A
+  exceção da Agenda (o rastreio **automático** cria no ativo) não passa por aqui: o import manual sempre usou a chave dela.
+  Projeto e categoria do corpo resolvem nesse workspace (`resolveProjectId`/`resolveCategoryId`, 409 se não existir).
+- **Não conectada → 409.** Os modais nem abrem (o botão some), então a frase é da API: Google sem `googleRefreshToken`,
+  Zendesk sem `zendeskAccessToken`, Monday sem `mondayApiKey` (esta, a mesma do envio). Conectar segue fora (§7.2 de `mcp.md`).
+- **Prévia = a lista do modal**, sem gravar nada; **import = ids escolhidos**, cada linha com o que a tela deixa editar
+  (ausente = a sugestão da prévia). Lista vazia ou malformada → 400; id fora da lista que a prévia mostraria → 404.
+  Ids repetidos valem uma vez. Com algo criado, `PLANNED_TASKS_CHANGED`. Nenhuma espera o render.
+- **Agenda.** Período em dias locais; sem `from`/`to`, a semana corrente pelo `weekStartsOn` (o padrão do modal); só `from`,
+  o próprio dia. Cada evento traz a sugestão (`projectId/Name`, `categoryId/Name` dos metadados da descrição,
+  `scheduleType`, `recurringDays`) e `alreadyExists` (planejada homônima no período, no destino), `ignored` (regra de
+  "Eventos ignorados") e `preselected` (nem um nem outro). Fim de semana sai na origem com "Exibir fim de semana"
+  desligado. No import, trocar o projeto sem mandar categoria a limpa (o autocomplete da tela faz isso);
+  `scheduleType` `specific_date`/`recurring`; `recurringDays` 0–6; `addOpenUrlAction` padrão `true`, `trackMeetings`
+  padrão `false`. Recorrentes de mesmo nome e horário viram uma planejada com os dias unidos (`mergedEventIds`). Falha do
+  rastreio volta em `trackErrors` com 200 — as planejadas já estão gravadas. **Não há dedupe** contra o que já existe: o
+  modal só desmarca o `alreadyExists`, e a API importa o que vier.
+- **Zendesk.** A prévia são os tickets atribuídos em aberto com a linha padrão (`#id - assunto`, recorrente, data de hoje,
+  ação ligada). Id numérico. No import, nome em branco volta ao padrão e `scheduleDate` (YYYY-MM-DD) só vale em
+  `specific_date`. **O modal não confere o que já foi importado, e a API também não.** A resposta traz a contagem e os ids
+  (o `importTickets` não devolve as planejadas).
+- **Monday — itens.** `period` `today`/`week` (padrão)/`next30`, as pílulas do modal; item sem cronograma entra em todas.
+  Os 409 dos estados vazios do modal: nenhum board vinculado, boards de projetos de outro workspace, falta o usuário da
+  conta. Cada item traz projeto, Timeline, a sugestão (`resolveItemDefaults`: categoria pelo Activity Type, billable dela,
+  etapa pelo Project Stage) e `alreadyImported` (planejada viva, `findImportedMondayItems`) e `alreadyExists` (homônimo).
+  **O modal esconde o já importado; a prévia o lista marcado**, e o import o recusa com 409. O import aceita qualquer item
+  da busca, não só os da janela (o "importa só o visível" do modal protege a seleção escondida, que aqui não existe).
+  Editáveis os mesmos da linha: categoria (o billable passa a ser o padrão dela; `null` limpa e mantém o sugerido) e
+  `projectStage` (rótulo ou id da opção, via `normalizeCustomValues`; sem campo de etapa configurado → 409). Grava o vínculo
+  de `monday_imported_items` como o modal.
+- **Monday — os três botões**, cada um uma op sem corpo: `importProjects` (o "Importar/Atualizar" de Projetos, com
+  `forceSchemaRead`, a semeadura das categorias por projeto, a data do dia, a versão do cache e o erro limpo; avisa
+  projetos e categorias por projeto), `importCategories` (uma categoria por Activity Type; avisa categorias) e
+  `readCatalogs` (o "Ler catálogos"; grava `mondayFieldCatalogs`). O que desabilitaria o botão vira 409: sem Portfólio, sem
+  Activity Type ("Leia os catálogos ou importe os projetos."), sem board de Report.
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.

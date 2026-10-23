@@ -1,7 +1,8 @@
 use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
-    catalog, custom_fields, export, history, integrations, planned_tasks, totals, workspaces,
+    catalog, custom_fields, export, history, imports, integrations, planned_tasks, totals,
+    workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -118,6 +119,42 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
             get(integrations::get_send_preview),
         )
         .route("/integrations/{id}/send", post(integrations::post_send))
+        .route(
+            "/integrations/google_calendar/import-preview",
+            get(imports::get_calendar_import_preview),
+        )
+        .route(
+            "/integrations/google_calendar/import",
+            post(imports::post_calendar_import),
+        )
+        .route(
+            "/integrations/zendesk/import-preview",
+            get(imports::get_zendesk_import_preview),
+        )
+        .route(
+            "/integrations/zendesk/import",
+            post(imports::post_zendesk_import),
+        )
+        .route(
+            "/integrations/monday/import-preview",
+            get(imports::get_monday_import_preview),
+        )
+        .route(
+            "/integrations/monday/import",
+            post(imports::post_monday_import),
+        )
+        .route(
+            "/integrations/monday/import-projects",
+            post(imports::post_monday_import_projects),
+        )
+        .route(
+            "/integrations/monday/import-categories",
+            post(imports::post_monday_import_categories),
+        )
+        .route(
+            "/integrations/monday/read-catalogs",
+            post(imports::post_monday_read_catalogs),
+        )
         .route(
             "/export-profiles",
             get(export::get_export_profiles).post(export::post_export_profile),
@@ -403,6 +440,110 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got, None, "{method} {uri} {body}");
             assert_eq!(status, StatusCode::BAD_REQUEST, "{method} {uri} {body}");
+        }
+    }
+
+    #[tokio::test]
+    async fn imports_chegam_a_ponte_com_a_op_certa() {
+        let cases = [
+            (
+                "GET",
+                "/integrations/google_calendar/import-preview?from=2026-09-14&to=2026-09-20",
+                "",
+                "calendar.importPreview",
+            ),
+            (
+                "POST",
+                "/integrations/google_calendar/import",
+                r#"{"events":[{"id":"e1","projectId":null,"recurringDays":[1,3]}],"trackMeetings":true}"#,
+                "calendar.import",
+            ),
+            (
+                "GET",
+                "/integrations/zendesk/import-preview",
+                "",
+                "zendesk.importPreview",
+            ),
+            (
+                "POST",
+                "/integrations/zendesk/import",
+                r#"{"tickets":[{"id":42,"scheduleType":"specific_date"}]}"#,
+                "zendesk.import",
+            ),
+            (
+                "GET",
+                "/integrations/monday/import-preview?period=next30",
+                "",
+                "monday.importPreview",
+            ),
+            (
+                "POST",
+                "/integrations/monday/import",
+                r#"{"items":[{"id":"123","projectStage":"UAT"}]}"#,
+                "monday.import",
+            ),
+            (
+                "POST",
+                "/integrations/monday/import-projects",
+                "",
+                "monday.importProjects",
+            ),
+            (
+                "POST",
+                "/integrations/monday/import-categories",
+                "",
+                "monday.importCategories",
+            ),
+            (
+                "POST",
+                "/integrations/monday/read-catalogs",
+                "",
+                "monday.readCatalogs",
+            ),
+            // As rotas fixas do Monday convivem com as de `{id}` do envio.
+            (
+                "GET",
+                "/integrations/monday/send-preview",
+                "",
+                "integrations.sendPreview",
+            ),
+            (
+                "POST",
+                "/integrations/monday/send",
+                r#"{"taskIds":["a"]}"#,
+                "integrations.send",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn import_sem_corpo_ou_com_lista_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        let cases = [
+            ("/integrations/google_calendar/import", ""),
+            ("/integrations/google_calendar/import", "{}"),
+            (
+                "/integrations/google_calendar/import",
+                r#"{"events":["e1"]}"#,
+            ),
+            (
+                "/integrations/google_calendar/import",
+                r#"{"events":[{"id":1}]}"#,
+            ),
+            (
+                "/integrations/zendesk/import",
+                r#"{"tickets":[{"id":"42"}]}"#,
+            ),
+            ("/integrations/monday/import", r#"{"items":"123"}"#),
+        ];
+        for (uri, body) in cases {
+            let (status, got) = send("POST", uri, body).await;
+            assert_eq!(got, None, "{uri} {body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{uri} {body}");
         }
     }
 

@@ -58,6 +58,16 @@ pub const DELETE_EXPORT_PROFILE: &str = "delete_export_profile";
 pub const SET_DEFAULT_EXPORT_PROFILE: &str = "set_default_export_profile";
 pub const EXPORT_TASKS: &str = "export_tasks";
 
+pub const PREVIEW_CALENDAR_IMPORT: &str = "preview_calendar_import";
+pub const IMPORT_CALENDAR_EVENTS: &str = "import_calendar_events";
+pub const PREVIEW_ZENDESK_IMPORT: &str = "preview_zendesk_import";
+pub const IMPORT_ZENDESK_TICKETS: &str = "import_zendesk_tickets";
+pub const PREVIEW_MONDAY_IMPORT: &str = "preview_monday_import";
+pub const IMPORT_MONDAY_ITEMS: &str = "import_monday_items";
+pub const IMPORT_MONDAY_PROJECTS: &str = "import_monday_projects";
+pub const IMPORT_MONDAY_CATEGORIES: &str = "import_monday_categories";
+pub const READ_MONDAY_CATALOGS: &str = "read_monday_catalogs";
+
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
 pub const OP_PROJECTS: &str = "projects.list";
@@ -115,6 +125,15 @@ pub const OP_EXPORT_PROFILES_UPDATE: &str = "exportProfiles.update";
 pub const OP_EXPORT_PROFILES_DELETE: &str = "exportProfiles.delete";
 pub const OP_EXPORT_PROFILES_SET_DEFAULT: &str = "exportProfiles.setDefault";
 pub const OP_EXPORT_GENERATE: &str = "export.generate";
+pub const OP_CALENDAR_IMPORT_PREVIEW: &str = "calendar.importPreview";
+pub const OP_CALENDAR_IMPORT: &str = "calendar.import";
+pub const OP_ZENDESK_IMPORT_PREVIEW: &str = "zendesk.importPreview";
+pub const OP_ZENDESK_IMPORT: &str = "zendesk.import";
+pub const OP_MONDAY_IMPORT_PREVIEW: &str = "monday.importPreview";
+pub const OP_MONDAY_IMPORT: &str = "monday.import";
+pub const OP_MONDAY_IMPORT_PROJECTS: &str = "monday.importProjects";
+pub const OP_MONDAY_IMPORT_CATEGORIES: &str = "monday.importCategories";
+pub const OP_MONDAY_READ_CATALOGS: &str = "monday.readCatalogs";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -262,6 +281,34 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         &[pass_through(OP_EXPORT_PROFILES_SET_DEFAULT)],
     ),
     (EXPORT_TASKS, &[pass_through(OP_EXPORT_GENERATE)]),
+    // Fase D1 da paridade: imports das integrações, prévia antes onde a tela seleciona.
+    (
+        PREVIEW_CALENDAR_IMPORT,
+        &[pass_through(OP_CALENDAR_IMPORT_PREVIEW)],
+    ),
+    (IMPORT_CALENDAR_EVENTS, &[pass_through(OP_CALENDAR_IMPORT)]),
+    (
+        PREVIEW_ZENDESK_IMPORT,
+        &[pass_through(OP_ZENDESK_IMPORT_PREVIEW)],
+    ),
+    (IMPORT_ZENDESK_TICKETS, &[pass_through(OP_ZENDESK_IMPORT)]),
+    (
+        PREVIEW_MONDAY_IMPORT,
+        &[pass_through(OP_MONDAY_IMPORT_PREVIEW)],
+    ),
+    (IMPORT_MONDAY_ITEMS, &[pass_through(OP_MONDAY_IMPORT)]),
+    (
+        IMPORT_MONDAY_PROJECTS,
+        &[pass_through(OP_MONDAY_IMPORT_PROJECTS)],
+    ),
+    (
+        IMPORT_MONDAY_CATEGORIES,
+        &[pass_through(OP_MONDAY_IMPORT_CATEGORIES)],
+    ),
+    (
+        READ_MONDAY_CATALOGS,
+        &[pass_through(OP_MONDAY_READ_CATALOGS)],
+    ),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {
