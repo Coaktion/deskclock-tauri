@@ -71,7 +71,7 @@ const BUTTON_BASELINE: Record<string, number> = {
   "src/presentation/components/WeekPlanningView.tsx": 3,
   "src/presentation/components/WorkspaceSwitcher.tsx": 4,
   "src/presentation/modals/ClockifyEntriesModal.tsx": 3,
-  "src/presentation/modals/ImportCalendarModal.tsx": 2,
+  "src/presentation/modals/ImportCalendarEventRow.tsx": 2,
   "src/presentation/modals/MondayEntriesModal.tsx": 5,
   "src/presentation/modals/SetupModal.tsx": 1,
   "src/presentation/overlays/MeetingPromptView.tsx": 4,

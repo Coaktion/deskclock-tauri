@@ -14,6 +14,55 @@ export interface ImportTicketInput {
   scheduleDate: string | null;
 }
 
+/** O que a linha de um ticket diz antes de qualquer edição. */
+export interface TicketImportDefaults {
+  name: string;
+  projectId: UUID | null;
+  categoryId: UUID | null;
+  addOpenUrlAction: boolean;
+  scheduleType: "recurring" | "specific_date";
+  scheduleDate: string;
+}
+
+/** Nome padrão da planejada: `#<id> - <assunto>`. */
+export function defaultTicketName(ticket: ZendeskTicket): string {
+  return `#${ticket.id} - ${ticket.subject}`;
+}
+
+/** Recorrente todos os dias, com a ação de abrir o ticket — a linha como a tela a abre. */
+export function ticketImportDefaults(
+  ticket: ZendeskTicket,
+  todayISO: string
+): TicketImportDefaults {
+  return {
+    name: defaultTicketName(ticket),
+    projectId: null,
+    categoryId: null,
+    addOpenUrlAction: true,
+    scheduleType: "recurring",
+    scheduleDate: todayISO,
+  };
+}
+
+/**
+ * A entrada do import a partir do que a linha diz. Nome em branco volta ao
+ * padrão, e a data só vale em "Data específica".
+ */
+export function toImportTicketInput(
+  ticket: ZendeskTicket,
+  edit: TicketImportDefaults
+): ImportTicketInput {
+  return {
+    ticket,
+    name: edit.name || defaultTicketName(ticket),
+    projectId: edit.projectId,
+    categoryId: edit.categoryId,
+    addOpenUrlAction: edit.addOpenUrlAction,
+    scheduleType: edit.scheduleType,
+    scheduleDate: edit.scheduleType === "specific_date" ? edit.scheduleDate : null,
+  };
+}
+
 export async function importTickets(
   repo: IPlannedTaskRepository,
   inputs: ImportTicketInput[],

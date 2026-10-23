@@ -1,7 +1,7 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { mergeLabels } from "@domain/usecases/monday/importMondayFieldCatalogs";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
+import { mondayDestinationWorkspaceId } from "@presentation/integrations/mondayCatalogImports";
 import {
   EMPTY_FIELD_CATALOGS,
   type MondayFieldCatalogs,
@@ -43,9 +43,7 @@ export function MondayImportSection({
   // seção: o import manual e o rastreador precisam criar no mesmo lugar, ou o
   // dedupe de `monday_imported_items` — chaveado por (item, workspace) — se
   // parte em dois e a mesma planejada nasce duas vezes.
-  const destinationId = resolveIntegrationWorkspaceId(
-    config.isLoaded ? config.get("mondayDeskclockWorkspaceId") : ""
-  );
+  const destinationId = mondayDestinationWorkspaceId(config);
 
   // Os rótulos de etapa vêm do catálogo e, como reserva, de qualquer projeto
   // **de cliente**: nos boards internos a coluna se chama "Project Phase" e traz

@@ -443,7 +443,7 @@
 
 > **Importar itens (`MondayImportModal`):** **todos** os boards mapeados numa visão só, agrupada
 > pelo **Project do DeskClock** — não há seletor de board. Entram os itens **fora** do grupo
-> Activities e **do usuário**, e viram PlannedTasks no workspace ativo. O agendamento vem da coluna
+> Activities e **do usuário**, e viram PlannedTasks no workspace do Monday (`mondayDeskclockWorkspaceId`, via `resolveIntegrationWorkspaceId`). O agendamento vem da coluna
 > **Timeline** do item (resolvida pelo título, porque o board tem várias colunas desse tipo e a
 > primeira é a realizada): um dia vira `specific_date`, vários viram `period`, ausente cai no dia
 > corrente. Os schemas são buscados antes dos itens — em lote, `listBoardSchemas` — justamente para

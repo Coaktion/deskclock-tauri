@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import { importTickets, type ImportTicketInput } from "@domain/usecases/plannedTasks/ImportTickets";
+import {
+  importTickets,
+  ticketImportDefaults,
+  toImportTicketInput,
+  type ImportTicketInput,
+} from "@domain/usecases/plannedTasks/ImportTickets";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 
@@ -76,5 +81,36 @@ describe("importTickets", () => {
     const { repo } = makeRepo();
     expect(await importTickets(repo, [], NOW, "ws-1")).toBe(0);
     expect(repo.save).not.toHaveBeenCalled();
+  });
+});
+
+describe("ticketImportDefaults e toImportTicketInput", () => {
+  const ticket = {
+    id: 7,
+    subject: "Fatura",
+    status: "new" as const,
+    webUrl: "https://x.zendesk.com/agent/tickets/7",
+  };
+
+  it("a linha abre recorrente, com a ação de abrir o ticket e o nome #id - assunto", () => {
+    expect(ticketImportDefaults(ticket, "2026-09-15")).toEqual({
+      name: "#7 - Fatura",
+      projectId: null,
+      categoryId: null,
+      addOpenUrlAction: true,
+      scheduleType: "recurring",
+      scheduleDate: "2026-09-15",
+    });
+  });
+
+  it("nome em branco volta ao padrão e a data só vale em data específica", () => {
+    const defaults = ticketImportDefaults(ticket, "2026-09-15");
+    expect(toImportTicketInput(ticket, { ...defaults, name: "" })).toMatchObject({
+      name: "#7 - Fatura",
+      scheduleDate: null,
+    });
+    expect(
+      toImportTicketInput(ticket, { ...defaults, scheduleType: "specific_date" }).scheduleDate
+    ).toBe("2026-09-15");
   });
 });
