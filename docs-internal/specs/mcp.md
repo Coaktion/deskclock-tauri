@@ -402,12 +402,18 @@ planejadas — N chamadas resolvem.
 
 | Fase | Estado |
 |---|---|
-| A | implementada; falta revisão e verificação no app de dev |
+| A | implementada e revisada; falta verificação no app de dev |
 | B | implementada; falta verificação no app de dev |
 | C1 (envio) | implementada; falta verificação no app de dev |
 | C2 (exportação) | implementada; falta verificação no app de dev |
 | C (C1 + C2) | concluída no código |
-| D | pendente |
+| D1 (imports: Agenda, Zendesk, Monday) | pendente |
+| D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | pendente |
+| D3 (deeplink, configurações) | pendente |
+
+A Fase D segue o padrão da C: a lógica que mora em modal sai primeiro para um módulo compartilhado (commit `refactor`)
+e só então ganha op, endpoint e tool (commit `feat`); o que na tela é seleção vira **prévia + ação**. A verificação no
+app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuário).
 
 ### Decisões da Fase C1 que a spec não fixava
 
