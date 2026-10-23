@@ -15,12 +15,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
+import { BACKUP_FOLDER_NAME } from "@infra/integrations/googledrive/GoogleDriveClient";
 import {
-  BACKUP_FOLDER_NAME,
-  DRIVE_RECONNECT_MESSAGE,
-  backupFolderName,
-} from "@infra/integrations/googledrive/GoogleDriveClient";
-import { isDevDatabase } from "@infra/database/db";
+  driveBackupNeedsReconnect,
+  resolveFolderName,
+} from "@presentation/integrations/driveBackup";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useAutoSync, SHEETS_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
@@ -437,12 +436,8 @@ function BackupSection({ disabled }: { disabled: boolean }) {
   const [folderName, setFolderName] = useState(BACKUP_FOLDER_NAME);
 
   useEffect(() => {
-    isDevDatabase()
-      .then((isDev) => setFolderName(backupFolderName(isDev)))
-      .catch(() => {
-        // Só o texto da frase depende disto; o backup resolve a pasta por conta
-        // própria. Falhar aqui não pode derrubar a tela de configurações.
-      });
+    // Nunca rejeita: na falha fica o nome padrão, e a tela não cai por isso.
+    void resolveFolderName().then(setFolderName);
   }, []);
 
   useEffect(() => {
@@ -473,7 +468,7 @@ function BackupSection({ disabled }: { disabled: boolean }) {
 
   // O 403 do escopo faltante é o único erro com saída conhecida, e a saída não é
   // "tentar de novo": vira o aviso de reconexão, no lugar da linha de falha.
-  const needsReconnect = lastError === DRIVE_RECONNECT_MESSAGE;
+  const needsReconnect = driveBackupNeedsReconnect(lastError);
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>

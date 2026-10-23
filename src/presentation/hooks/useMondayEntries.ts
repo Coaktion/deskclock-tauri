@@ -2,34 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { buildActivityColumnValues } from "@domain/usecases/monday/buildActivityColumnValues";
-import { listItemsOwnedBy } from "@domain/usecases/monday/listItemsOwnedBy";
 import {
-  findColumnValue,
-  parseDatePairPeriod,
-  periodOverlaps,
-  searchFloorDayISO,
-  type MondayItemPeriod,
-} from "@domain/usecases/monday/mondayItemPeriod";
-import type { MondayItem } from "@shared/types/monday";
+  loadMondayEntries,
+  mondayEntriesInRange,
+  type MondayEntry,
+} from "@domain/usecases/monday/mondayEntries";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
-export interface MondayEntry {
-  boardId: string;
-  boardName: string;
-  itemId: string;
-  name: string;
-  url: string;
-  hoursDecimal: number;
-  billable: boolean;
-  activityTypeLabel: string;
-  projectStageLabel: string;
-  statusLabel: string;
-  period: MondayItemPeriod | null;
-  /** Rótulos aceitos pelas colunas deste board, para os selects da edição. */
-  mapping: MondayProjectMapping;
-}
+export type { MondayEntry };
 
 export interface MondayEntryPatch {
   name: string;
@@ -44,56 +26,6 @@ interface UseMondayEntriesOptions {
   userId: string;
   /** Janela exibida. Recorta o que já veio — **não** dispara nova busca. */
   range: { start: string; end: string };
-}
-
-function columnText(item: MondayItem, columnId: string | undefined): string {
-  return findColumnValue(item, columnId)?.text?.trim() ?? "";
-}
-
-function columnNumber(item: MondayItem, columnId: string | undefined): number {
-  const raw = columnText(item, columnId);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function unique(values: string[]): string[] {
-  return [...new Set(values.filter(Boolean))];
-}
-
-/** Colunas que a listagem e a edição leem — o resto do board não vem no payload. */
-function wantedColumns(mapping: MondayProjectMapping): string[] {
-  const { columnIds } = mapping;
-  return [
-    columnIds.reportedHours,
-    columnIds.activityType,
-    columnIds.person,
-    ...(columnIds.billingType ? [columnIds.billingType] : []),
-    ...(columnIds.status ? [columnIds.status] : []),
-    ...(columnIds.projectStage ? [columnIds.projectStage] : []),
-    ...(columnIds.startDate ? [columnIds.startDate] : []),
-    ...(columnIds.endDate ? [columnIds.endDate] : []),
-  ];
-}
-
-function toEntry(item: MondayItem, mapping: MondayProjectMapping): MondayEntry {
-  const { columnIds } = mapping;
-  return {
-    boardId: mapping.mondayBoardId,
-    boardName: mapping.mondayBoardName,
-    itemId: item.id,
-    name: item.name,
-    url: item.url,
-    hoursDecimal: columnNumber(item, columnIds.reportedHours),
-    billable: columnText(item, columnIds.billingType) === "Billable",
-    activityTypeLabel: columnText(item, columnIds.activityType),
-    projectStageLabel: columnText(item, columnIds.projectStage),
-    statusLabel: columnText(item, columnIds.status),
-    period: parseDatePairPeriod(
-      findColumnValue(item, columnIds.startDate),
-      findColumnValue(item, columnIds.endDate)
-    ),
-    mapping,
-  };
 }
 
 /**
@@ -153,21 +85,10 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
     setLoading(true);
     const api = createMondayApi();
 
-    const byBoard = new Map(mappings.map((m) => [m.mondayBoardId, m]));
-
-    listItemsOwnedBy(api, mappings, userId, {
-      scope: "activities",
-      columnIds: unique(mappings.flatMap(wantedColumns)),
-      endsOnOrAfterDay: searchFloorDayISO(todayISO()),
-    })
-      .then((items) => {
+    loadMondayEntries(api, mappings, userId, todayISO())
+      .then((entries) => {
         if (cancelled) return;
-        setAllEntries(
-          items.flatMap((item) => {
-            const mapping = byBoard.get(item.boardId);
-            return mapping ? [toEntry(item, mapping)] : [];
-          })
-        );
+        setAllEntries(entries);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -189,7 +110,7 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
   }, [mappingsKey, userId, refreshSignal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const entries = useMemo(
-    () => allEntries.filter((e) => periodOverlaps(e.period, range.start, range.end)),
+    () => mondayEntriesInRange(allEntries, { start: range.start, end: range.end }),
     [allEntries, range.start, range.end]
   );
 
