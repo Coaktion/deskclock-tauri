@@ -11,6 +11,7 @@ import {
   mondayEntriesWindow,
   type MondayEntriesWindow,
 } from "@domain/usecases/monday/mondayEntries";
+import { mondayEntryPatchError } from "@domain/usecases/monday/mondayEntryWrite";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
@@ -318,7 +319,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
   const [saving, setSaving] = useState(false);
 
   const hoursDecimal = Number(hours.replace(",", "."));
-  const canSave = name.trim() !== "" && Number.isFinite(hoursDecimal) && hoursDecimal >= 0;
+  const canSave = mondayEntryPatchError({ name, hoursDecimal }) === null;
 
   async function handleSave() {
     if (saving || !canSave) return;

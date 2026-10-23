@@ -15,6 +15,11 @@ import {
   projectDisplayName,
   visibleClockifyEntries,
 } from "@domain/usecases/clockify/clockifyEntries";
+import {
+  buildClockifyEntryPayload,
+  clockifyEntryDraftError,
+  clockifyProjectIdByName,
+} from "@domain/usecases/clockify/clockifyEntryPayload";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import {
@@ -63,13 +68,6 @@ function formatTimeLocal(iso: string): string {
 function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(`${dateISO}T00:00:00`);
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
 }
 
 export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
@@ -480,34 +478,26 @@ function EntryForm({
     [clockifyProjects]
   );
 
-  // Resolve project ID from current input state (same logic as handleSave)
+  // O texto digitado casa pelo nome exibido; sem casamento, vale o último escolhido.
   const resolvedProjectId = useMemo<string | null>(() => {
     if (!projectInput.trim()) return null;
-    const match = projectOptions.find((o) => o.name === projectInput);
-    return match?.id ?? selectedProjectId;
-  }, [projectInput, projectOptions, selectedProjectId]);
+    return clockifyProjectIdByName(clockifyProjects, projectInput) ?? selectedProjectId;
+  }, [projectInput, clockifyProjects, selectedProjectId]);
 
-  const canSave = description.trim() !== "" && resolvedProjectId !== null;
+  const canSave = clockifyEntryDraftError({ description, projectId: resolvedProjectId }) === null;
 
   async function handleSave() {
     if (saving || !canSave) return;
 
-    const projectId = resolvedProjectId;
-
-    const startISO = buildISO(dateISO, startHHMM);
-    let endISO = buildISO(dateISO, endHHMM);
-    if (new Date(endISO) < new Date(startISO)) {
-      endISO = buildISO(addDaysISO(dateISO, 1), endHHMM);
-    }
-
-    const payload: ClockifyTimeEntryPayload = {
-      start: startISO,
-      end: endISO,
-      description: description.trim(),
+    const payload = buildClockifyEntryPayload({
+      description,
+      projectId: resolvedProjectId,
+      tagIds,
       billable,
-      ...(projectId ? { projectId } : {}),
-      ...(tagIds.length > 0 ? { tagIds } : {}),
-    };
+      dateISO,
+      startHHMM,
+      endHHMM,
+    });
 
     setSaving(true);
     try {

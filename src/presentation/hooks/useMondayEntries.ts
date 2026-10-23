@@ -1,25 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { buildActivityColumnValues } from "@domain/usecases/monday/buildActivityColumnValues";
 import {
   loadMondayEntries,
   mondayEntriesInRange,
   type MondayEntry,
 } from "@domain/usecases/monday/mondayEntries";
+import {
+  deleteMondayEntry,
+  updateMondayEntry,
+  type MondayEntryPatch,
+} from "@domain/usecases/monday/mondayEntryWrite";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { todayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 
-export type { MondayEntry };
-
-export interface MondayEntryPatch {
-  name: string;
-  hoursDecimal: number;
-  billable: boolean;
-  activityTypeLabel: string;
-  projectStageLabel: string;
-}
+export type { MondayEntry, MondayEntryPatch };
 
 interface UseMondayEntriesOptions {
   mappings: MondayProjectMapping[];
@@ -118,25 +114,8 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
     async (entry: MondayEntry, patch: MondayEntryPatch) => {
       const api = createMondayApi();
       try {
-        // Mesmo serializador do envio (§9.4): rótulo que não existe na coluna
-        // faz o Monday recusar a escrita inteira, e a guarda mora aqui.
-        const values = buildActivityColumnValues({
-          columnIds: entry.mapping.columnIds,
-          hoursDecimal: patch.hoursDecimal,
-          billable: patch.billable,
-          userId,
-          statusLabel: entry.statusLabel || undefined,
-          ...(entry.mapping.activityTypeLabels.includes(patch.activityTypeLabel)
-            ? { activityTypeLabel: patch.activityTypeLabel }
-            : {}),
-          ...(entry.mapping.projectStageLabels.includes(patch.projectStageLabel)
-            ? { projectStageLabel: patch.projectStageLabel }
-            : {}),
-        });
-        await api.changeColumnValues(entry.boardId, entry.itemId, {
-          name: patch.name.trim(),
-          ...values,
-        });
+        // A guarda dos rótulos (§9.4) mora no `buildMondayEntryUpdate`.
+        await updateMondayEntry(api, entry, patch, userId);
         await showToast("success", "Atividade atualizada no Monday.");
         setEditingId(null);
         setRefreshSignal((n) => n + 1);
@@ -152,10 +131,7 @@ export function useMondayEntries({ mappings, userId, range }: UseMondayEntriesOp
       const api = createMondayApi();
       setDeletingId(entry.itemId);
       try {
-        await api.deleteItem(entry.itemId);
-        // Sem limpar o rastreamento, o próximo envio reencontra o item apagado,
-        // erra com `MondayNotFoundError` e repete o erro a cada execução.
-        await mondayActivityItemRepo.deleteItem(entry.boardId, entry.itemId);
+        await deleteMondayEntry(api, mondayActivityItemRepo, entry);
         setAllEntries((prev) => prev.filter((e) => e.itemId !== entry.itemId));
         setEditingId((cur) => (cur === entry.itemId ? null : cur));
         await showToast("success", "Atividade excluída do Monday.");
