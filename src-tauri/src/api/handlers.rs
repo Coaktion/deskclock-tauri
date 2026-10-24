@@ -100,6 +100,7 @@ pub mod entry_writes;
 pub mod export;
 pub mod history;
 pub mod imports;
+pub mod integration_settings;
 pub mod integrations;
 pub mod planned_tasks;
 pub mod services;

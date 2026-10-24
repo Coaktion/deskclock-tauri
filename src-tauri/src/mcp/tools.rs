@@ -1657,6 +1657,265 @@ pub struct AcceptSharedTaskArgs {
     pub workspace_id: Option<String>,
 }
 
+// Fase D3b. Ajustes das integrações: tudo opcional, ausente mantém; vão no
+// corpo, como na REST. Enums inline para o esquema sair plano.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schemars(inline)]
+pub enum AutoSyncModeArg {
+    PerTask,
+    Daily,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schemars(inline)]
+pub enum AutoSyncTriggerArg {
+    OnOpen,
+    FixedTime,
+}
+
+/// Os controles de "Envio automático", iguais no Sheets, no Clockify e no Monday.
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AutoSyncFields {
+    /// Turn automatic sending of finished tasks on or off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_sync_enabled: Option<bool>,
+    /// `per-task` = each task as it is finished; `daily` = grouped, once a day.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_sync_mode: Option<AutoSyncModeArg>,
+    /// Daily mode only: `on-open` = when the app opens (yesterday backwards); `fixed-time` =
+    /// at autoSyncTime (today and missed days).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_sync_trigger: Option<AutoSyncTriggerArg>,
+    /// Daily fixed-time only: local HH:MM (00:00 to 23:59).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_sync_time: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+#[schemars(inline)]
+pub enum SheetFieldArg {
+    Date,
+    Name,
+    Project,
+    Category,
+    Billable,
+    StartTime,
+    EndTime,
+    Duration,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub struct SheetColumnArg {
+    pub field: SheetFieldArg,
+    /// Column header in the spreadsheet.
+    pub label: String,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[schemars(inline)]
+pub enum SheetDurationFormatArg {
+    #[serde(rename = "HH:MM")]
+    HhMm,
+    #[serde(rename = "HH:MM:SS")]
+    HhMmSs,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSheetsSettingsArgs {
+    /// DeskClock workspace whose tasks are sent (from list_catalog).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+    /// Google spreadsheet id (from its URL). Trimmed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub spreadsheet_id: Option<String>,
+    /// Sheet (tab) name; blank becomes "DeskClock".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sheet_name: Option<String>,
+    /// The whole list of the eight columns, in spreadsheet order, each once — the only way
+    /// to express order. Read the current one with get_sheets_settings and send it back
+    /// changed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub column_mapping: Option<Vec<SheetColumnArg>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_format: Option<SheetDurationFormatArg>,
+    #[serde(flatten)]
+    pub auto_sync: AutoSyncFields,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCalendarSettingsArgs {
+    /// DeskClock workspace of the manual "Import events" (from list_catalog). Automatic
+    /// meeting tracking keeps creating in the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+    /// Track meetings automatically (fetches today's events every 2 minutes and asks at
+    /// start time).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_tracking_enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum IgnoreOperatorArg {
+    Equals,
+    Contains,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct CalendarIgnoreRuleArgs {
+    /// `equals` = the event name is exactly this; `contains` = the name contains it.
+    pub operator: IgnoreOperatorArg,
+    /// Event name. Case and surrounding spaces do not matter; accents do.
+    pub value: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "lowercase")]
+#[schemars(inline)]
+pub enum BackupFrequencyArg {
+    Daily,
+    Weekly,
+    Monthly,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct UpdateDriveBackupSettingsArgs {
+    /// Automatic backup of the database to Google Drive.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    /// Counted from the last successful backup.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frequency: Option<BackupFrequencyArg>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateClockifySettingsArgs {
+    /// DeskClock workspace where imported projects/tags are created and whose tasks are
+    /// sent (from list_catalog).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+    /// The Clockify workspace, one of list_clockify_workspaces.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clockify_workspace_id: Option<String>,
+    #[serde(flatten)]
+    pub auto_sync: AutoSyncFields,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MapClockifyProjectArgs {
+    /// DeskClock project id (from list_catalog).
+    pub project_id: String,
+    /// Clockify project id (from list_clockify_catalog).
+    pub clockify_project_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UnmapClockifyProjectArgs {
+    /// DeskClock project id whose mapping is removed.
+    pub project_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetClockifyCategoryTagsArgs {
+    /// DeskClock category id (from list_catalog).
+    pub category_id: String,
+    /// The whole tag selection (ids from list_clockify_catalog); [] = no tags.
+    pub tag_ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetClockifyDefaultTagsArgs {
+    /// Tags added to every entry sent (ids from list_clockify_catalog); [] = none.
+    pub tag_ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMondaySettingsArgs {
+    /// DeskClock workspace of Monday projects, imported items and sent hours (from
+    /// list_catalog).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+    /// Portfolio board id (the board that lists the projects). Trimmed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub portfolio_board_id: Option<String>,
+    /// Hours Report board id (the label catalog). Trimmed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub report_board_id: Option<String>,
+    /// Import the user's items in linked boards as planned tasks, every 4 hours.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub auto_import_enabled: Option<bool>,
+    /// Select custom field (from list_custom_fields) feeding the Project Stage column;
+    /// "" unlinks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project_stage_field_id: Option<String>,
+    /// Select custom field feeding the Non Billable reason column; "" unlinks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_billable_reason_field_id: Option<String>,
+    #[serde(flatten)]
+    pub auto_sync: AutoSyncFields,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateZendeskSettingsArgs {
+    /// DeskClock workspace where imported tickets become planned tasks (from list_catalog).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum MondayCatalogFieldArg {
+    ProjectStage,
+    NonBillableReason,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct MondayCatalogFieldArgs {
+    /// `project_stage` or `non_billable_reason`.
+    pub field: MondayCatalogFieldArg,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetMondayProjectBoardArgs {
+    /// Portfolio item id (`portfolioItemId` from get_monday_settings) of a project with no
+    /// board.
+    pub portfolio_item_id: String,
+    /// Monday board id where this project's hours are written.
+    pub board_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+#[schemars(inline)]
+pub enum SyncNowIntegrationArg {
+    GoogleSheets,
+    Monday,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+pub struct RunIntegrationSyncNowArgs {
+    /// `google_sheets` or `monday` (Clockify has no "Send now").
+    pub integration: SyncNowIntegrationArg,
+}
+
 #[tool_router]
 impl DeskClockMcp {
     pub fn new(bridge: Arc<Bridge>) -> Self {
@@ -3593,6 +3852,491 @@ impl DeskClockMcp {
     ) -> CallToolResult {
         self.call_single(ACCEPT_SHARED_TASK, json!({ "body": args }))
             .await
+    }
+
+    // ---------------- Fase D3b: ajustes das integrações ----------------
+
+    #[tool(
+        name = "get_sheets_settings",
+        description = "Read the Google Sheets settings (Integrations > Google > Google Sheets): \
+            whether Google is connected, the DeskClock workspace whose tasks are sent, \
+            spreadsheet id, sheet name, the eight columns in order, duration format and \
+            automatic sending. No token or account is returned.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_sheets_settings(&self) -> CallToolResult {
+        self.call_single(GET_SHEETS_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_sheets_settings",
+        description = "Change the Google Sheets settings, like the screen. Pass only what \
+            changes; omitted fields keep their value. columnMapping is the whole list of the \
+            eight columns (reorder, enable, rename) — read it first. Turning automatic sending \
+            on only changes what the scheduler does next; nothing is sent by this call. Needs \
+            Google connected. Returns the whole group.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_sheets_settings(
+        &self,
+        Parameters(args): Parameters<UpdateSheetsSettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_SHEETS_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_calendar_settings",
+        description = "Read the Google Calendar settings: whether Google is connected, the \
+            DeskClock workspace of the manual event import, automatic meeting tracking and the \
+            ignored-event rules.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_calendar_settings(&self) -> CallToolResult {
+        self.call_single(GET_CALENDAR_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_calendar_settings",
+        description = "Change the Google Calendar settings: the DeskClock workspace of the \
+            manual \"Import events\" (automatic meeting tracking keeps creating in the active \
+            workspace, by design) and automatic meeting tracking. Ignored-event rules use \
+            add_calendar_ignore_rule / remove_calendar_ignore_rule. Returns the group.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_calendar_settings(
+        &self,
+        Parameters(args): Parameters<UpdateCalendarSettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_CALENDAR_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "add_calendar_ignore_rule",
+        description = "Add an ignored-event rule: events matching it are not tracked and come \
+            unselected in the calendar import. \"Ignore always\" on an event of \
+            preview_calendar_import is this with operator `equals` and the event title. A rule \
+            that already exists is not duplicated (`added: false`). Returns the rules.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn add_calendar_ignore_rule(
+        &self,
+        Parameters(args): Parameters<CalendarIgnoreRuleArgs>,
+    ) -> CallToolResult {
+        self.call_single(ADD_CALENDAR_IGNORE_RULE, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "remove_calendar_ignore_rule",
+        description = "Remove one ignored-event rule (same operator and name as listed by \
+            get_calendar_settings), like its X on the screen. Undo is add_calendar_ignore_rule \
+            with the same values. A rule that does not exist is an error. Returns the rules.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn remove_calendar_ignore_rule(
+        &self,
+        Parameters(args): Parameters<CalendarIgnoreRuleArgs>,
+    ) -> CallToolResult {
+        self.call_single(REMOVE_CALENDAR_IGNORE_RULE, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_drive_backup_settings",
+        description = "Read the automatic Google Drive backup settings: whether Google is \
+            connected, automatic backup on/off and frequency. Last run and last error are in \
+            get_drive_backup_status.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_drive_backup_settings(&self) -> CallToolResult {
+        self.call_single(GET_DRIVE_BACKUP_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_drive_backup_settings",
+        description = "Turn the automatic Google Drive backup on or off and set its frequency \
+            (counted from the last successful backup). The scheduler reads it at once: when on \
+            and due, a backup runs in its next cycle — this call itself uploads nothing (use \
+            run_drive_backup for that). Needs Google connected. Returns the group.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_drive_backup_settings(
+        &self,
+        Parameters(args): Parameters<UpdateDriveBackupSettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_DRIVE_BACKUP_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_clockify_settings",
+        description = "Read the Clockify settings: whether it is connected, the DeskClock \
+            workspace, the Clockify workspace, default tags, project and category mappings of \
+            that Clockify workspace, and automatic sending. No API key is returned.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_clockify_settings(&self) -> CallToolResult {
+        self.call_single(GET_CLOCKIFY_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_clockify_settings",
+        description = "Change the Clockify settings: DeskClock workspace, Clockify workspace \
+            (one of list_clockify_workspaces; switching changes which mappings apply, nothing \
+            is deleted) and automatic sending. Omitted fields keep their value. Returns the \
+            group.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_clockify_settings(
+        &self,
+        Parameters(args): Parameters<UpdateClockifySettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_CLOCKIFY_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "list_clockify_workspaces",
+        description = "List the user's Clockify workspaces, read from Clockify now (\"Refresh \
+            list\"). The list is kept as the one update_clockify_settings accepts.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn list_clockify_workspaces(&self) -> CallToolResult {
+        self.call_single(LIST_CLOCKIFY_WORKSPACES, json!({})).await
+    }
+
+    #[tool(
+        name = "list_clockify_catalog",
+        description = "List the projects (by display name \"Client - Project\") and tags of the \
+            chosen Clockify workspace, read from Clockify — the ids for the Clockify mappings.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn list_clockify_catalog(&self) -> CallToolResult {
+        self.call_single(LIST_CLOCKIFY_CATALOG, json!({})).await
+    }
+
+    #[tool(
+        name = "map_clockify_project",
+        description = "Map a DeskClock project to a Clockify project, like picking it in the \
+            Mappings list; replaces the project's previous mapping in this Clockify workspace. \
+            Returns the Clockify settings.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn map_clockify_project(
+        &self,
+        Parameters(args): Parameters<MapClockifyProjectArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            MAP_CLOCKIFY_PROJECT,
+            json!({ "id": args.project_id, "body": { "clockifyProjectId": args.clockify_project_id } }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "unmap_clockify_project",
+        description = "Remove a DeskClock project's Clockify mapping, like the X on its row: its \
+            tasks are then sent without a Clockify project. Redo with map_clockify_project (the \
+            Clockify project id is in get_clockify_settings before removing). Returns an empty \
+            object.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn unmap_clockify_project(
+        &self,
+        Parameters(args): Parameters<UnmapClockifyProjectArgs>,
+    ) -> CallToolResult {
+        self.call_single(UNMAP_CLOCKIFY_PROJECT, json!({ "id": args.project_id }))
+            .await
+    }
+
+    #[tool(
+        name = "set_clockify_category_tags",
+        description = "Set the Clockify tags of a DeskClock category (the whole selection; [] \
+            = none), like its tag picker. Returns the Clockify settings.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn set_clockify_category_tags(
+        &self,
+        Parameters(args): Parameters<SetClockifyCategoryTagsArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SET_CLOCKIFY_CATEGORY_TAGS,
+            json!({ "id": args.category_id, "body": { "tagIds": args.tag_ids } }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "set_clockify_default_tags",
+        description = "Set the Clockify default tags, added to every entry sent regardless of \
+            category (the whole selection; [] = none). Returns the Clockify settings.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn set_clockify_default_tags(
+        &self,
+        Parameters(args): Parameters<SetClockifyDefaultTagsArgs>,
+    ) -> CallToolResult {
+        self.call_single(SET_CLOCKIFY_DEFAULT_TAGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "import_clockify_projects",
+        description = "\"Import from Clockify\" for projects: one DeskClock project per Clockify \
+            project (by display name) in the Clockify DeskClock workspace, created when missing, \
+            each mapped to its Clockify project. The project mappings of this Clockify workspace \
+            are REPLACED by the imported ones: a manual mapping of a project with another name \
+            is lost. Call it only when the user asked. Returns how many were read and the \
+            mappings.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn import_clockify_projects(&self) -> CallToolResult {
+        self.call_single(IMPORT_CLOCKIFY_PROJECTS, json!({})).await
+    }
+
+    #[tool(
+        name = "import_clockify_tags",
+        description = "\"Import from Clockify\" for tags: one DeskClock category (billable) per \
+            Clockify tag, created when missing and mapped to the tag; a category that already \
+            had tags keeps them. The category mappings of this Clockify workspace are REPLACED \
+            by the imported ones: a manual mapping of a category with another name is lost. \
+            Call it only when the user asked.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = true,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn import_clockify_tags(&self) -> CallToolResult {
+        self.call_single(IMPORT_CLOCKIFY_TAGS, json!({})).await
+    }
+
+    #[tool(
+        name = "get_monday_settings",
+        description = "Read the Monday settings: whether it is connected, DeskClock workspace, \
+            Portfolio and Report board ids, automatic item import, the Project Stage and Non \
+            Billable reason custom fields (linked field, labels read, options missing), the \
+            linked projects (with portfolioItemId and board; \"\" = no board) and automatic \
+            sending. No API key is returned.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_monday_settings(&self) -> CallToolResult {
+        self.call_single(GET_MONDAY_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_monday_settings",
+        description = "Change the Monday settings: DeskClock workspace, board ids, automatic \
+            item import, the custom field linked to Project Stage / Non Billable reason (a \
+            select field from list_custom_fields, not archived; \"\" unlinks) and automatic \
+            sending. Omitted fields keep their value. Returns the group.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_monday_settings(
+        &self,
+        Parameters(args): Parameters<UpdateMondaySettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_MONDAY_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "create_monday_catalog_field",
+        description = "\"Create from Monday\" for Project Stage or Non Billable reason: creates a \
+            select custom field with the board's labels (read_monday_catalogs first) and links \
+            it; a select field with the same name is linked instead. Only when no field is \
+            linked yet — otherwise use refresh_monday_catalog_field.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn create_monday_catalog_field(
+        &self,
+        Parameters(args): Parameters<MondayCatalogFieldArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            CREATE_MONDAY_CATALOG_FIELD,
+            json!({ "id": serde_json::to_value(args.field).unwrap_or(Value::Null) }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "refresh_monday_catalog_field",
+        description = "\"Refresh\" the linked Project Stage or Non Billable reason field: adds \
+            the board labels it lacks as options; existing options stay (their ids are the \
+            values saved in tasks). Returns how many were added.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn refresh_monday_catalog_field(
+        &self,
+        Parameters(args): Parameters<MondayCatalogFieldArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            REFRESH_MONDAY_CATALOG_FIELD,
+            json!({ "id": serde_json::to_value(args.field).unwrap_or(Value::Null) }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "set_monday_project_board",
+        description = "Type the board id of a Monday project whose Portfolio item has none, \
+            like the field on the Projects card: reads the board schema from Monday and links \
+            it; a board that does not fit the template is an error and nothing is saved. Only \
+            for projects without a board (get_monday_settings). Returns the project.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = true
+        )
+    )]
+    async fn set_monday_project_board(
+        &self,
+        Parameters(args): Parameters<SetMondayProjectBoardArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            SET_MONDAY_PROJECT_BOARD,
+            json!({ "id": args.portfolio_item_id, "body": { "boardId": args.board_id } }),
+        )
+        .await
+    }
+
+    #[tool(
+        name = "get_zendesk_settings",
+        description = "Read the Zendesk settings: whether it is connected and the DeskClock \
+            workspace where imported tickets become planned tasks. No credential is returned.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_zendesk_settings(&self) -> CallToolResult {
+        self.call_single(GET_ZENDESK_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "update_zendesk_settings",
+        description = "Change the DeskClock workspace where imported Zendesk tickets become \
+            planned tasks. Subdomain and OAuth client are part of connecting and are not here.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = true,
+            open_world_hint = false
+        )
+    )]
+    async fn update_zendesk_settings(
+        &self,
+        Parameters(args): Parameters<UpdateZendeskSettingsArgs>,
+    ) -> CallToolResult {
+        self.call_single(UPDATE_ZENDESK_SETTINGS, json!({ "body": args }))
+            .await
+    }
+
+    #[tool(
+        name = "get_llm_settings",
+        description = "Read the AI provider settings (read only): whether it is connected, the \
+            provider preset and the model. Changing them is done in the app's connect dialog, \
+            which tests the key.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_llm_settings(&self) -> CallToolResult {
+        self.call_single(GET_LLM_SETTINGS, json!({})).await
+    }
+
+    #[tool(
+        name = "run_integration_sync_now",
+        description = "\"Send now\" of the daily automatic sending (Google Sheets or Monday; \
+            Clockify has no such button): sends at once what is pending since the last send. \
+            Only works with automatic sending on in daily mode. Every call sends; show the user \
+            what will go before (preview_send_to_integration). Returns the count and the \
+            screen's message.",
+        annotations(
+            read_only_hint = false,
+            destructive_hint = false,
+            idempotent_hint = false,
+            open_world_hint = true
+        )
+    )]
+    async fn run_integration_sync_now(
+        &self,
+        Parameters(args): Parameters<RunIntegrationSyncNowArgs>,
+    ) -> CallToolResult {
+        self.call_single(
+            RUN_INTEGRATION_SYNC_NOW,
+            json!({ "id": serde_json::to_value(args.integration).unwrap_or(Value::Null) }),
+        )
+        .await
     }
 }
 

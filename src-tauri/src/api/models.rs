@@ -1723,3 +1723,349 @@ pub struct ShareApplyResponse {
     pub task: Option<TaskDto>,
     pub unresolved: UnresolvedShareDto,
 }
+
+// ---------------- Fase D3b: ajustes não secretos das integrações ----------------
+//
+// Nenhum DTO daqui carrega chave, token, client secret ou e-mail da conta: de cada
+// integração a leitura diz só se está conectada (`connected`).
+
+/// Uma coluna da planilha.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct SheetColumnDto {
+    /// `date`, `name`, `project`, `category`, `billable`, `startTime`, `endTime` ou `duration`.
+    pub field: String,
+    pub label: String,
+    pub enabled: bool,
+}
+
+/// Integrações → Google → Google Sheets.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SheetsSettingsDto {
+    pub connected: bool,
+    /// Workspace do DeskClock de onde saem as tarefas enviadas.
+    pub workspace_id: String,
+    pub spreadsheet_id: String,
+    pub sheet_name: String,
+    /// As oito colunas, na ordem da planilha.
+    pub column_mapping: Vec<SheetColumnDto>,
+    /// `HH:MM` ou `HH:MM:SS`.
+    pub duration_format: String,
+    pub auto_sync_enabled: bool,
+    /// `per-task` ou `daily`.
+    pub auto_sync_mode: String,
+    /// `on-open` ou `fixed-time`.
+    pub auto_sync_trigger: String,
+    /// `HH:MM`.
+    pub auto_sync_time: String,
+}
+
+/// Edição parcial: ausente mantém; `null` é 400.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SheetsSettingsPatch {
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    #[serde(default)]
+    pub spreadsheet_id: Option<String>,
+    #[serde(default)]
+    pub sheet_name: Option<String>,
+    /// A lista inteira das oito colunas: é o único formato que expressa a ordem.
+    #[serde(default)]
+    pub column_mapping: Option<Vec<SheetColumnDto>>,
+    #[serde(default)]
+    pub duration_format: Option<String>,
+    #[serde(default)]
+    pub auto_sync_enabled: Option<bool>,
+    #[serde(default)]
+    pub auto_sync_mode: Option<String>,
+    #[serde(default)]
+    pub auto_sync_trigger: Option<String>,
+    #[serde(default)]
+    pub auto_sync_time: Option<String>,
+}
+
+/// Uma regra de "Eventos ignorados" da Agenda.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct CalendarIgnoreRuleDto {
+    /// `equals` (igual) ou `contains` (contém).
+    pub operator: String,
+    /// O nome do evento; caixa e espaço nas pontas não contam.
+    pub value: String,
+}
+
+/// Integrações → Google → Google Calendar.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarSettingsDto {
+    pub connected: bool,
+    /// Destino do "Importar eventos". O rastreio automático cria no workspace ativo.
+    pub workspace_id: String,
+    pub auto_tracking_enabled: bool,
+    pub ignore_rules: Vec<CalendarIgnoreRuleDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarSettingsPatch {
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    #[serde(default)]
+    pub auto_tracking_enabled: Option<bool>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CalendarIgnoreRulesResponse {
+    /// Só na criação: `false` quando a regra já existia.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub added: Option<bool>,
+    pub ignore_rules: Vec<CalendarIgnoreRuleDto>,
+}
+
+/// Integrações → Google → Backup do banco: o automático.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DriveBackupSettingsDto {
+    pub connected: bool,
+    pub enabled: bool,
+    /// `daily`, `weekly` ou `monthly`.
+    pub frequency: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct DriveBackupSettingsPatch {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub frequency: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyProjectMappingDto {
+    pub project_id: String,
+    pub clockify_project_id: String,
+    /// Nome exibido no Clockify ("Cliente - Projeto").
+    pub clockify_project_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyCategoryMappingDto {
+    pub category_id: String,
+    pub tag_ids: Vec<String>,
+}
+
+/// Integrações → Clockify.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifySettingsDto {
+    pub connected: bool,
+    /// Workspace do DeskClock dos imports e do envio.
+    pub workspace_id: String,
+    /// Workspace **do Clockify** ("Workspace Clockify").
+    pub clockify_workspace_id: String,
+    pub clockify_workspace_name: String,
+    pub default_tag_ids: Vec<String>,
+    /// Vínculos do workspace do Clockify escolhido.
+    pub project_mappings: Vec<ClockifyProjectMappingDto>,
+    pub category_mappings: Vec<ClockifyCategoryMappingDto>,
+    pub auto_sync_enabled: bool,
+    pub auto_sync_mode: String,
+    pub auto_sync_trigger: String,
+    pub auto_sync_time: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifySettingsPatch {
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    /// Um dos de `GET /integrations/clockify/workspaces`.
+    #[serde(default)]
+    pub clockify_workspace_id: Option<String>,
+    #[serde(default)]
+    pub auto_sync_enabled: Option<bool>,
+    #[serde(default)]
+    pub auto_sync_mode: Option<String>,
+    #[serde(default)]
+    pub auto_sync_trigger: Option<String>,
+    #[serde(default)]
+    pub auto_sync_time: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ClockifyRefDto {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ClockifyWorkspacesResponse {
+    pub workspaces: Vec<ClockifyRefDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ClockifyCatalogResponse {
+    /// Pelo nome exibido ("Cliente - Projeto"), em ordem alfabética.
+    pub projects: Vec<ClockifyRefDto>,
+    pub tags: Vec<ClockifyRefDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyProjectMappingRequest {
+    /// Id de um projeto de `GET /integrations/clockify/catalog`.
+    pub clockify_project_id: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyTagIdsRequest {
+    /// Ids de `GET /integrations/clockify/catalog`; `[]` = nenhuma.
+    pub tag_ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ClockifyImportResponse {
+    /// Quantos itens o Clockify devolveu.
+    pub fetched: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_mappings: Option<Vec<ClockifyProjectMappingDto>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category_mappings: Option<Vec<ClockifyCategoryMappingDto>>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayCatalogFieldStateDto {
+    /// `""` = nenhum campo vinculado.
+    pub field_id: String,
+    pub field_label: Option<String>,
+    /// Rótulos do board que semeiam o campo; 0 = catálogos não lidos.
+    pub catalog_labels: u32,
+    /// Quantos o campo vinculado ainda não tem.
+    pub missing_options: u32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayCatalogFieldsDto {
+    pub project_stage: MondayCatalogFieldStateDto,
+    pub non_billable_reason: MondayCatalogFieldStateDto,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayProjectRefDto {
+    pub project_id: String,
+    pub project_name: String,
+    pub portfolio_item_id: String,
+    /// `""` = sem quadro: as horas não sobem.
+    pub board_id: String,
+    /// `cliente` ou `interno`.
+    pub scope: String,
+}
+
+/// Integrações → Monday.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondaySettingsDto {
+    pub connected: bool,
+    pub workspace_id: String,
+    pub portfolio_board_id: String,
+    pub report_board_id: String,
+    pub auto_import_enabled: bool,
+    pub project_stage_field_id: String,
+    pub non_billable_reason_field_id: String,
+    pub catalog_fields: MondayCatalogFieldsDto,
+    pub projects: Vec<MondayProjectRefDto>,
+    pub auto_sync_enabled: bool,
+    pub auto_sync_mode: String,
+    pub auto_sync_trigger: String,
+    pub auto_sync_time: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondaySettingsPatch {
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+    #[serde(default)]
+    pub portfolio_board_id: Option<String>,
+    #[serde(default)]
+    pub report_board_id: Option<String>,
+    #[serde(default)]
+    pub auto_import_enabled: Option<bool>,
+    /// Id de campo personalizado de seleção; `""` desvincula.
+    #[serde(default)]
+    pub project_stage_field_id: Option<String>,
+    #[serde(default)]
+    pub non_billable_reason_field_id: Option<String>,
+    #[serde(default)]
+    pub auto_sync_enabled: Option<bool>,
+    #[serde(default)]
+    pub auto_sync_mode: Option<String>,
+    #[serde(default)]
+    pub auto_sync_trigger: Option<String>,
+    #[serde(default)]
+    pub auto_sync_time: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayCatalogFieldCreateResponse {
+    pub field_id: String,
+    pub label: String,
+    /// `false` = um campo de seleção homônimo já existia e só foi vinculado.
+    pub created: bool,
+    pub options: u32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayCatalogFieldRefreshResponse {
+    pub field_id: String,
+    /// Opções acrescentadas.
+    pub added: u32,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MondayProjectBoardRequest {
+    /// Id do board onde as horas do projeto são gravadas.
+    pub board_id: String,
+}
+
+/// Integrações → Zendesk: só o workspace (o resto é a conexão).
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskSettingsDto {
+    pub connected: bool,
+    pub workspace_id: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ZendeskSettingsPatch {
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+}
+
+/// Integrações → Provedor de IA. Sem URL base: pode carregar credencial.
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LlmSettingsDto {
+    pub connected: bool,
+    pub provider_id: String,
+    pub model: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SyncNowResponse {
+    pub count: u32,
+    pub warning: Option<String>,
+    /// A frase do toast da tela.
+    pub message: String,
+}

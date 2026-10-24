@@ -3413,6 +3413,31 @@
       </table>
         </div>
 
+    <h3>Ajustes das integrações</h3>
+    <p>Os ajustes da tela de <strong>Integrações</strong> que não são a conexão: o workspace de cada integração, o envio automático, os mapeamentos, as regras de eventos ignorados da Agenda, o backup automático e os campos de Project Stage e Non Billable reason do Monday. Leitura e edição parcial por integração (o que não vier fica como está), com as mesmas regras da tela; editar exige a integração conectada. Conectar, chaves e tokens não passam pela API, e nenhuma resposta traz segredo: de cada integração, só se está conectada.</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/integrations/google_sheets</code></td><td>Workspace, ID da planilha, nome da aba, as oito colunas (a lista inteira, na ordem), formato da duração e envio automático</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/integrations/google_calendar</code></td><td>Workspace do <strong>Importar eventos</strong> e o rastreio automático de reuniões; a leitura traz os eventos ignorados</td></tr>
+          <tr><td><code>POST</code> · <code>DELETE</code></td><td><code>/integrations/google_calendar/ignore-rules</code></td><td>Acrescenta ou remove uma regra de eventos ignorados (<code>equals</code> ou <code>contains</code> e o nome). O <strong>Ignorar sempre</strong> da importação é a regra <code>equals</code> com o título</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/integrations/google_drive</code></td><td>Backup automático e frequência</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/integrations/clockify</code></td><td>Workspace do DeskClock, workspace do Clockify e envio automático; a leitura traz as tags padrão e os mapeamentos</td></tr>
+          <tr><td><code>GET</code></td><td><code>/integrations/clockify/workspaces</code> · <code>/integrations/clockify/catalog</code></td><td>Os workspaces do Clockify (<strong>Atualizar lista</strong>), e os projetos e tags do workspace escolhido</td></tr>
+          <tr><td><code>PUT</code> · <code>DELETE</code></td><td><code>/integrations/clockify/project-mappings/{projectId}</code></td><td>Vincula um projeto a um projeto do Clockify, ou desfaz o vínculo</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/integrations/clockify/category-mappings/{categoryId}</code> · <code>/integrations/clockify/default-tags</code></td><td>As tags de uma categoria, e as tags padrão de todo envio</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/clockify/import-projects</code> · <code>/integrations/clockify/import-tags</code></td><td><strong>Importar do Clockify</strong>: cria e vincula projetos ou categorias. Substitui os mapeamentos daquele workspace do Clockify, como na tela</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/integrations/monday</code></td><td>Workspace, boards de Portfólio e de Report, importação automática de itens, os campos de Project Stage e Non Billable reason e envio automático; a leitura traz os projetos vinculados</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/monday/catalog-fields/{project_stage|non_billable_reason}</code> · <code>…/refresh</code></td><td><strong>Criar do Monday</strong> e <strong>Atualizar</strong> do campo</td></tr>
+          <tr><td><code>PUT</code></td><td><code>/integrations/monday/projects/{portfolioItemId}/board</code></td><td>O ID do quadro de um projeto que o Portfólio não traz</td></tr>
+          <tr><td><code>GET</code> · <code>PATCH</code></td><td><code>/settings/integrations/zendesk</code></td><td>Workspace dos tickets importados</td></tr>
+          <tr><td><code>GET</code></td><td><code>/settings/integrations/llm</code></td><td>Provedor de IA e modelo (só leitura: trocar é pelo modal de conexão)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/integrations/{google_sheets|monday}/sync-now</code></td><td>O <strong>Enviar agora</strong> do envio automático diário</td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h3>Exportação</h3>
     <p>Os perfis e o conteúdo da janela <strong>Exportar</strong> do Histórico. Os perfis são do workspace (<code>workspaceId</code> ausente = o ativo). A API não grava arquivo: o texto CSV ou JSON vem na resposta, com um nome sugerido, e salvar ou copiar fica com quem chamou.</p>
     <div class="table-scroll">
@@ -3471,6 +3496,7 @@
           <tr><td><strong>Resumo e backup</strong></td><td>Ler e gerar o resumo por IA dos seus dias de trabalho, como a aba Resumo do Histórico; ver o estado do backup no Google Drive e fazer um backup agora</td></tr>
           <tr><td><strong>Exportar</strong></td><td>Gerar o CSV ou JSON das tarefas de um período com um perfil de exportação, e criar, editar, excluir e escolher o padrão entre os perfis. O texto vem na conversa; o assistente o entrega a você ou o salva, se você pedir um arquivo</td></tr>
           <tr><td><strong>Configurações e link</strong></td><td>Ler e mudar as configurações Geral, Overlay, Aparência e Atalhos — os atalhos são globais no sistema, e o assistente confirma a combinação com você —, mostrar ou ocultar o overlay; gerar o link de compartilhar de uma planejada e, para um link recebido, mostrar o que ele traz e adicioná-lo como planejada ou iniciá-lo</td></tr>
+          <tr><td><strong>Ajustes das integrações</strong></td><td>Ler e mudar o workspace de cada integração, o envio automático, os mapeamentos do Clockify, as regras de eventos ignorados da Agenda, o backup automático, os boards e os campos de Project Stage e Non Billable reason do Monday; importar projetos e tags do Clockify e o "Enviar agora" do Sheets e do Monday. Conectar uma integração continua sendo pela tela</td></tr>
         </tbody>
       </table>
         </div>

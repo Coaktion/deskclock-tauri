@@ -248,6 +248,14 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     resetWindowPositions: notConfigured("settings.resetWindowPositions"),
   };
 
+  // Sem porta por padrão: o teste dos ajustes de integração injeta a sua.
+  const integrationSettings = new Proxy(
+    {},
+    {
+      get: (_target, name) => notConfigured(`integrationSettings.${String(name)}`),
+    }
+  );
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -280,6 +288,7 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     entries,
     mondayActivityItemRepo,
     settings,
+    integrationSettings,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,

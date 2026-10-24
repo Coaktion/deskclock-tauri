@@ -148,12 +148,14 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
         names,
         [
             "accept_shared_task",
+            "add_calendar_ignore_rule",
             "cancel_task",
             "complete_planned_task",
             "create_category",
             "create_clockify_entry",
             "create_custom_field",
             "create_export_profile",
+            "create_monday_catalog_field",
             "create_project",
             "create_workspace",
             "delete_categories",
@@ -172,23 +174,34 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "export_tasks",
             "generate_day_summaries",
             "get_accessibility_settings",
+            "get_calendar_settings",
+            "get_clockify_settings",
+            "get_drive_backup_settings",
             "get_drive_backup_status",
             "get_general_settings",
+            "get_llm_settings",
+            "get_monday_settings",
             "get_overlay_settings",
+            "get_sheets_settings",
             "get_shortcut_settings",
             "get_status",
             "get_task_share_link",
             "get_totals",
             "get_week_totals",
+            "get_zendesk_settings",
             "import_calendar_events",
             "import_categories",
+            "import_clockify_projects",
+            "import_clockify_tags",
             "import_monday_categories",
             "import_monday_items",
             "import_monday_projects",
             "import_projects",
             "import_zendesk_tickets",
             "list_catalog",
+            "list_clockify_catalog",
             "list_clockify_entries",
+            "list_clockify_workspaces",
             "list_custom_fields",
             "list_day_summaries",
             "list_export_profiles",
@@ -198,6 +211,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "list_tasks",
             "log_past_task",
             "log_planned_task",
+            "map_clockify_project",
             "merge_tasks",
             "move_tasks_to_workspace",
             "pause_task",
@@ -208,12 +222,18 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "preview_shared_task",
             "preview_zendesk_import",
             "read_monday_catalogs",
+            "refresh_monday_catalog_field",
+            "remove_calendar_ignore_rule",
             "reset_window_positions",
             "resume_task",
             "run_drive_backup",
+            "run_integration_sync_now",
             "send_tasks_to_integration",
             "set_active_workspace",
+            "set_clockify_category_tags",
+            "set_clockify_default_tags",
             "set_default_export_profile",
+            "set_monday_project_board",
             "set_project_categories",
             "set_task_billable",
             "start_planned_task",
@@ -221,20 +241,27 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "stop_task",
             "toggle_overlay",
             "uncomplete_planned_task",
+            "unmap_clockify_project",
             "update_accessibility_settings",
+            "update_calendar_settings",
             "update_category",
             "update_clockify_entry",
+            "update_clockify_settings",
             "update_custom_field",
+            "update_drive_backup_settings",
             "update_export_profile",
             "update_general_settings",
             "update_monday_entry",
+            "update_monday_settings",
             "update_overlay_settings",
             "update_planned_task",
             "update_project",
             "update_running_task",
+            "update_sheets_settings",
             "update_shortcut_settings",
             "update_task",
             "update_workspace",
+            "update_zendesk_settings",
         ]
     );
 }
@@ -362,6 +389,38 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("get_task_share_link", true, None, false),
         ("preview_shared_task", true, None, false),
         ("accept_shared_task", false, Some(false), true),
+        // Fase D3b. Ajustes gravam config local (o agendador e os rastreadores leem
+        // na hora; a chamada não envia nada). Leem o Clockify ou o Monday as que
+        // validam contra a lista do serviço (vínculos, tags, quadro) e as listas.
+        // Remover regra ou vínculo se refaz numa chamada: não é destrutivo. Os
+        // imports do Clockify substituem os vínculos do workspace: destrutivos.
+        ("get_sheets_settings", true, None, false),
+        ("update_sheets_settings", false, Some(true), false),
+        ("get_calendar_settings", true, None, false),
+        ("update_calendar_settings", false, Some(true), false),
+        ("get_drive_backup_settings", true, None, false),
+        ("update_drive_backup_settings", false, Some(true), false),
+        ("get_clockify_settings", true, None, false),
+        ("update_clockify_settings", false, Some(true), false),
+        ("get_monday_settings", true, None, false),
+        ("update_monday_settings", false, Some(true), false),
+        ("get_zendesk_settings", true, None, false),
+        ("update_zendesk_settings", false, Some(true), false),
+        ("get_llm_settings", true, None, false),
+        ("add_calendar_ignore_rule", false, Some(true), false),
+        ("remove_calendar_ignore_rule", false, Some(true), false),
+        ("list_clockify_workspaces", true, None, true),
+        ("list_clockify_catalog", true, None, true),
+        ("map_clockify_project", false, Some(true), true),
+        ("unmap_clockify_project", false, Some(true), false),
+        ("set_clockify_category_tags", false, Some(true), true),
+        ("set_clockify_default_tags", false, Some(true), true),
+        ("import_clockify_projects", false, Some(true), true),
+        ("import_clockify_tags", false, Some(true), true),
+        ("create_monday_catalog_field", false, Some(true), false),
+        ("refresh_monday_catalog_field", false, Some(true), false),
+        ("set_monday_project_board", false, Some(true), true),
+        ("run_integration_sync_now", false, Some(false), true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -388,6 +447,8 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
                 "delete_export_profile",
                 "delete_clockify_entry",
                 "delete_monday_entry",
+                "import_clockify_projects",
+                "import_clockify_tags",
             ]
             .contains(name);
             assert_eq!(annotations["destructiveHint"], json!(destructive), "{tool}");
@@ -3257,5 +3318,285 @@ async fn esquemas_da_fase_d3a_saem_planos_e_o_de_atalhos_avisa_que_e_global() {
     assert!(
         shortcuts.contains("GLOBAL in the operating system"),
         "{shortcuts}"
+    );
+}
+
+fn phase_d3b_responder(op: &str) -> (u16, Value) {
+    match op {
+        "clockify.removeProjectMapping" => (204, Value::Null),
+        other => (200, json!({ "ok": other })),
+    }
+}
+
+#[tokio::test]
+async fn tools_da_fase_d3b_repassam_os_params_como_a_rest() {
+    let rule = json!({ "operator": "equals", "value": "Daily" });
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "get_sheets_settings",
+            json!({}),
+            "settings.getSheets",
+            json!({}),
+        ),
+        (
+            "update_sheets_settings",
+            json!({ "sheetName": "Horas", "durationFormat": "HH:MM:SS", "autoSyncMode": "per-task" }),
+            "settings.updateSheets",
+            json!({ "body": { "sheetName": "Horas", "durationFormat": "HH:MM:SS", "autoSyncMode": "per-task" } }),
+        ),
+        (
+            "update_sheets_settings",
+            json!({ "columnMapping": [{ "field": "startTime", "label": "Início", "enabled": true }] }),
+            "settings.updateSheets",
+            json!({ "body": { "columnMapping": [{ "field": "startTime", "label": "Início", "enabled": true }] } }),
+        ),
+        (
+            "get_calendar_settings",
+            json!({}),
+            "settings.getCalendar",
+            json!({}),
+        ),
+        (
+            "update_calendar_settings",
+            json!({ "autoTrackingEnabled": true }),
+            "settings.updateCalendar",
+            json!({ "body": { "autoTrackingEnabled": true } }),
+        ),
+        (
+            "add_calendar_ignore_rule",
+            rule.clone(),
+            "calendar.addIgnoreRule",
+            json!({ "body": rule }),
+        ),
+        (
+            "remove_calendar_ignore_rule",
+            rule.clone(),
+            "calendar.removeIgnoreRule",
+            json!({ "body": rule }),
+        ),
+        (
+            "get_drive_backup_settings",
+            json!({}),
+            "settings.getDriveBackup",
+            json!({}),
+        ),
+        (
+            "update_drive_backup_settings",
+            json!({ "enabled": true, "frequency": "monthly" }),
+            "settings.updateDriveBackup",
+            json!({ "body": { "enabled": true, "frequency": "monthly" } }),
+        ),
+        (
+            "get_clockify_settings",
+            json!({}),
+            "settings.getClockify",
+            json!({}),
+        ),
+        (
+            "update_clockify_settings",
+            json!({ "clockifyWorkspaceId": "cw", "autoSyncTrigger": "fixed-time", "autoSyncTime": "18:00" }),
+            "settings.updateClockify",
+            json!({ "body": { "clockifyWorkspaceId": "cw", "autoSyncTrigger": "fixed-time", "autoSyncTime": "18:00" } }),
+        ),
+        (
+            "list_clockify_workspaces",
+            json!({}),
+            "clockify.workspaces",
+            json!({}),
+        ),
+        (
+            "list_clockify_catalog",
+            json!({}),
+            "clockify.catalog",
+            json!({}),
+        ),
+        (
+            "map_clockify_project",
+            json!({ "projectId": "p-1", "clockifyProjectId": "cp-1" }),
+            "clockify.setProjectMapping",
+            json!({ "id": "p-1", "body": { "clockifyProjectId": "cp-1" } }),
+        ),
+        (
+            "unmap_clockify_project",
+            json!({ "projectId": "p-1" }),
+            "clockify.removeProjectMapping",
+            json!({ "id": "p-1" }),
+        ),
+        (
+            "set_clockify_category_tags",
+            json!({ "categoryId": "c-1", "tagIds": ["t-1"] }),
+            "clockify.setCategoryTags",
+            json!({ "id": "c-1", "body": { "tagIds": ["t-1"] } }),
+        ),
+        (
+            "set_clockify_default_tags",
+            json!({ "tagIds": [] }),
+            "clockify.setDefaultTags",
+            json!({ "body": { "tagIds": [] } }),
+        ),
+        (
+            "import_clockify_projects",
+            json!({}),
+            "clockify.importProjects",
+            json!({}),
+        ),
+        (
+            "import_clockify_tags",
+            json!({}),
+            "clockify.importTags",
+            json!({}),
+        ),
+        (
+            "get_monday_settings",
+            json!({}),
+            "settings.getMonday",
+            json!({}),
+        ),
+        (
+            "update_monday_settings",
+            json!({ "projectStageFieldId": "", "autoImportEnabled": false }),
+            "settings.updateMonday",
+            json!({ "body": { "projectStageFieldId": "", "autoImportEnabled": false } }),
+        ),
+        (
+            "create_monday_catalog_field",
+            json!({ "field": "project_stage" }),
+            "monday.createCatalogField",
+            json!({ "id": "project_stage" }),
+        ),
+        (
+            "refresh_monday_catalog_field",
+            json!({ "field": "non_billable_reason" }),
+            "monday.refreshCatalogField",
+            json!({ "id": "non_billable_reason" }),
+        ),
+        (
+            "set_monday_project_board",
+            json!({ "portfolioItemId": "i-1", "boardId": "99" }),
+            "monday.setProjectBoard",
+            json!({ "id": "i-1", "body": { "boardId": "99" } }),
+        ),
+        (
+            "get_zendesk_settings",
+            json!({}),
+            "settings.getZendesk",
+            json!({}),
+        ),
+        (
+            "update_zendesk_settings",
+            json!({ "workspaceId": "ws-1" }),
+            "settings.updateZendesk",
+            json!({ "body": { "workspaceId": "ws-1" } }),
+        ),
+        // Sem argumentos: corpo vazio, nada muda.
+        (
+            "update_zendesk_settings",
+            json!({}),
+            "settings.updateZendesk",
+            json!({ "body": {} }),
+        ),
+        ("get_llm_settings", json!({}), "settings.getLlm", json!({})),
+        (
+            "run_integration_sync_now",
+            json!({ "integration": "google_sheets" }),
+            "integrations.syncNow",
+            json!({ "id": "google_sheets" }),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, phase_d3b_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn fase_d3b_com_argumento_fora_do_esquema_vira_is_error_sem_chamar_a_ponte() {
+    for (tool, arguments) in [
+        ("update_sheets_settings", json!({ "durationFormat": "MM" })),
+        (
+            "update_sheets_settings",
+            json!({ "autoSyncMode": "hourly" }),
+        ),
+        (
+            "update_sheets_settings",
+            json!({ "columnMapping": [{ "field": "x", "label": "", "enabled": true }] }),
+        ),
+        (
+            "update_drive_backup_settings",
+            json!({ "frequency": "hourly" }),
+        ),
+        (
+            "add_calendar_ignore_rule",
+            json!({ "operator": "starts", "value": "x" }),
+        ),
+        (
+            "remove_calendar_ignore_rule",
+            json!({ "operator": "equals" }),
+        ),
+        ("map_clockify_project", json!({ "projectId": "p" })),
+        ("set_clockify_category_tags", json!({ "categoryId": "c" })),
+        (
+            "create_monday_catalog_field",
+            json!({ "field": "report_type" }),
+        ),
+        ("set_monday_project_board", json!({ "boardId": "1" })),
+        (
+            "run_integration_sync_now",
+            json!({ "integration": "clockify" }),
+        ),
+    ] {
+        let (state, calls) = fake_state(true, phase_d3b_responder);
+        let result = call_tool(state, tool, arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{tool} {arguments}");
+    }
+}
+
+#[tokio::test]
+async fn esquemas_da_fase_d3b_saem_planos_e_os_imports_avisam_da_substituicao() {
+    let (state, _) = fake_state(true, phase_d3b_responder);
+    let tools = list_tools(state).await;
+    for name in [
+        "update_sheets_settings",
+        "update_clockify_settings",
+        "update_monday_settings",
+    ] {
+        let tool = tools.iter().find(|t| t["name"] == name).unwrap();
+        let schema = tool["inputSchema"].to_string();
+        assert!(!schema.contains("$ref"), "{name}: {schema}");
+        assert!(!schema.contains("allOf"), "{name}: {schema}");
+        assert!(schema.contains("autoSyncTrigger"), "{name}: {schema}");
+    }
+    for name in ["import_clockify_projects", "import_clockify_tags"] {
+        let tool = tools.iter().find(|t| t["name"] == name).unwrap();
+        assert!(
+            tool["description"].as_str().unwrap().contains("REPLACED"),
+            "{name}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn fase_d3b_com_erro_da_ponte_vira_is_error_com_a_mensagem() {
+    fn refuse(_op: &str) -> (u16, Value) {
+        (
+            409,
+            json!({ "error": "Monday não conectado. Conecte o Monday em Integrações." }),
+        )
+    }
+    let (state, _) = fake_state(true, refuse);
+    let result = call_tool(
+        state,
+        "update_monday_settings",
+        json!({ "autoImportEnabled": true }),
+    )
+    .await;
+    assert_eq!(
+        error_text(&result),
+        "Monday não conectado. Conecte o Monday em Integrações."
     );
 }

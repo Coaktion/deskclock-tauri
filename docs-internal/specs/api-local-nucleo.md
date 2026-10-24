@@ -100,6 +100,7 @@ Todos aceitam `workspaceId` opcional onde houver escopo.
 | Lançamentos, resumo por IA e backup (paridade, Fase D2) | `GET /integrations/clockify/entries?from&to&onlyDefaultTags` (op `clockify.entries`) · `GET /integrations/monday/entries?period` (`monday.entries`) · `GET /day-summaries?from&to&workspaceId` (`daySummaries.list`) · `POST /day-summaries/generate` (`daySummaries.generate`) · `GET /backup/drive` (`driveBackup.status`) · `POST /backup/drive/run` (`driveBackup.run`) |
 | Escrita nos lançamentos (paridade, Fase D2b) | `POST /integrations/clockify/entries` (op `clockify.createEntry`) · `PUT/DELETE /integrations/clockify/entries/{id}` (`clockify.updateEntry`/`clockify.deleteEntry`) · `PUT/DELETE /integrations/monday/entries/{id}` (`monday.updateEntry`/`monday.deleteEntry`), `id` = o `itemId` |
 | Configurações e link de tarefa (paridade, Fase D3a) | `GET/PATCH /settings/general` · `/settings/overlay` · `/settings/accessibility` · `/settings/shortcuts` (ops `settings.getGeneral`/`updateGeneral`, `getOverlay`/`updateOverlay`, `getAccessibility`/`updateAccessibility`, `getShortcuts`/`updateShortcuts`) · `POST /settings/reset-window-positions` (`settings.resetWindowPositions`) · `POST /overlay/toggle` (`overlay.toggle`) · `POST /share/link` · `POST /share/preview` · `POST /share/apply` (`share.link`/`share.preview`/`share.apply`) |
+| Ajustes das integrações (paridade, Fase D3b) | `GET/PATCH /settings/integrations/{google_sheets,google_calendar,google_drive,clockify,monday,zendesk}` e `GET /settings/integrations/llm` (ops `settings.getSheets`/`updateSheets`, `getCalendar`/`updateCalendar`, `getDriveBackup`/`updateDriveBackup`, `getClockify`/`updateClockify`, `getMonday`/`updateMonday`, `getZendesk`/`updateZendesk`, `getLlm`) · `POST`/`DELETE /integrations/google_calendar/ignore-rules` (`calendar.addIgnoreRule`/`removeIgnoreRule`; o `DELETE` por `?operator&value`) · `GET /integrations/clockify/workspaces` · `GET /integrations/clockify/catalog` · `PUT/DELETE /integrations/clockify/project-mappings/{projectId}` · `PUT /integrations/clockify/category-mappings/{categoryId}` · `PUT /integrations/clockify/default-tags` · `POST /integrations/clockify/import-projects` · `POST /integrations/clockify/import-tags` (`clockify.workspaces/catalog/setProjectMapping/removeProjectMapping/setCategoryTags/setDefaultTags/importProjects/importTags`) · `POST /integrations/monday/catalog-fields/{project_stage\|non_billable_reason}` e `…/refresh` (`monday.createCatalogField`/`refreshCatalogField`) · `PUT /integrations/monday/projects/{portfolioItemId}/board` (`monday.setProjectBoard`) · `POST /integrations/{google_sheets\|monday}/sync-now` (`integrations.syncNow`) |
 | Exportação (paridade, Fase C2) | `GET/POST /export-profiles` · `PUT/DELETE /export-profiles/{id}` · `PUT /export-profiles/{id}/default` (ops `exportProfiles.list/create/update/delete/setDefault`, `?workspaceId=` nas rotas por id) · `POST /export` (op `export.generate`) |
 
 **Mudanças que clientes existentes percebem:** listas filtradas pelo workspace ativo; nome de
@@ -340,6 +341,51 @@ por grupo (`deps.settings`, `presentation/settings/settingsGroups.ts`), não a c
   `POST /share/apply { link, mode, date?, workspaceId? }`: `plan` grava `specific_date` na `date` (hoje se ausente,
   `planSharedTask`) e avisa as planejadas; `start` usa o `switchToTask` (encerra a ativa pelas regras de parada; envio
   automático em segundo plano) e espera o render. Grava o que o link resolveu; editar é depois, pelas rotas de edição. 201.
+
+**Ajustes das integrações (Fase D3b da paridade, `mcp.md` §7) — 2026-10-23.** Regras em
+`src/presentation/localApi/handlers/{integrationSettings,integrationActions}.ts`; a validação por chave usa o
+`parsePatch` compartilhado com a D3a (`localApi/patchRules.ts`). A ponte recebe uma porta (`deps.integrationSettings`,
+`presentation/settings/integrationSettingsPort.ts`, que compõe os grupos simples de `integrationSettings.ts` com `clockifySettingsPort.ts` e `mondaySettingsPort.ts`), não a config. A
+gravação passa pelas mesmas funções da tela: `domain/usecases/settings/integrationSettingsRules.ts` (aba em branco =
+`DeskClock`, opções, `HH:MM`, as oito colunas), `domain/usecases/clockify/clockifyMappings.ts` e
+`presentation/integrations/clockifySettings.ts` (vínculos, lista de workspaces, os dois "Importar do Clockify"),
+`domain/usecases/monday/mondayCatalogFields.ts` e `presentation/integrations/mondayCatalogFields.ts` ("Criar do Monday",
+"Atualizar"), `runMondaySetProjectBoard` (`mondayCatalogImports.ts`, o quadro digitado à mão) e `removeIgnoreRule`
+(`isEventIgnored.ts`).
+- **Grupos e chaves.** Sheets: `workspaceId`, `spreadsheetId` (aparado), `sheetName` (em branco = `DeskClock`),
+  `columnMapping` (a lista inteira das oito colunas — é o único formato que expressa a ordem do arrastar), `durationFormat`
+  e o envio automático (`autoSyncEnabled`, `autoSyncMode`, `autoSyncTrigger`, `autoSyncTime`). Agenda: `workspaceId` (só o
+  "Importar eventos"; o rastreio cria no ativo, decisão registrada) e `autoTrackingEnabled`; as regras de ignorar vêm na
+  leitura e se editam por rota própria, um item por vez, como a lista. Drive: `enabled` e `frequency`. Clockify:
+  `workspaceId`, `clockifyWorkspaceId` (um do cache que a lista grava; troca id e nome juntos) e o envio automático; a leitura
+  traz `defaultTagIds` e os vínculos do workspace do Clockify. Monday: `workspaceId`, `portfolioBoardId`/`reportBoardId`
+  (aparados), `autoImportEnabled`, `projectStageFieldId`/`nonBillableReasonFieldId` (campo `select` não arquivado, ou o já
+  vinculado; `""` desvincula) e o envio automático; a leitura traz o estado dos dois campos de catálogo e os projetos
+  vinculados que existem no destino. Zendesk: `workspaceId`. IA: só leitura (`providerId`, `model`).
+- **Fora, de propósito.** Segredo e conexão: chaves de API, tokens, client id/secret, subdomínio, e-mail da conta, a URL base do
+  provedor (pode carregar credencial). Estado interno: caches (`clockifyWorkspaceCache` só pela lista,
+  `mondayFieldCatalogs`, `llmLastLimits`), carimbos (`*LastTimestamp`, `*LastFiredDate`, `driveBackupLastRunAt`,
+  `mondayProjectsSyncLastDate`), erros do último ciclo, `driveBackupFolderId`, `driveBackupKeepCount` (sem controle na tela),
+  `mondayReportTypeFieldId` (card adormecido) e o resto do `mondayProjectMapping` (colunas, rótulos, schema).
+- **Nenhum segredo sai:** cada leitura diz só `connected`. Há teste que semeia segredos (`SECRET-`) e estado interno (`INTERNAL-`) e passa as 27 ops,
+  sucessos e erros (400/404/409/500/502), conferindo as chaves de cada resposta contra uma whitelist; e um que manda cada
+  chave de segredo ou interna em cada `PATCH` e espera 400 sem gravar.
+- **`PATCH`:** como a D3a — ausente mantém, `null` e chave fora do grupo → 400, valor fora das opções → 400. Workspace que não
+  existe, workspace do Clockify fora da lista e campo que não pode ser vinculado → 409. **Sem conexão → 409**: a tela só mostra
+  os controles com a integração conectada.
+- **Efeitos:** nenhum além de gravar. Os agendadores (`useDailySyncScheduler`, `useDriveBackupScheduler`), os rastreadores
+  (`useMeetingTracker`, `useMondayItemTracker`) e as estratégias leem a config na hora; trocar o workspace de uma integração na
+  tela é só `config.set`. Nenhuma op espera o render.
+- **Ações.** Regras de ignorar: `POST` acrescenta (repetida → 200 `added: false`; nova → 201), `DELETE` tira por operador e
+  nome normalizado (ausente → 404); o "Ignorar sempre" do import é o `POST` com `equals` e o título. Clockify: lista de
+  workspaces (relê e grava o cache), catálogo (projetos pelo nome exibido e tags), vincular/desvincular projeto (projeto de
+  qualquer workspace; inexistente → 404; projeto do Clockify fora do catálogo → 409; desvincular sem vínculo → 404), tags da
+  categoria e tags padrão (seleção inteira, conferida no catálogo), e os dois imports, que **substituem** os vínculos daquele
+  workspace do Clockify, como na tela. Monday: "Criar do Monday" (cria o `select` com os rótulos ou vincula o homônimo; já
+  vinculado ou catálogo não lido → 409; homônimo que não é `select` → 400), "Atualizar" (une as opções; sem vínculo → 409) e o
+  quadro à mão (só projeto sem quadro, como a tela; board que não serve → 409 com o motivo do toast, sem gravar). "Enviar
+  agora": só `google_sheets` e `monday` (o card do Clockify não tem o botão → 404), só com o envio diário ligado (409), planilha
+  sem id → 409, falha do envio → 502; a resposta traz a frase do toast.
 
 **`PATCH /planned-tasks/{id}` — decisão do usuário, 2026-10-22.** O `PUT` exige `name`/`scheduleType` e regrava
 agendamento e ações; para editar só um campo (o MCP edita só `customValues`) entrou o `PATCH`, com o `PUT` intacto.

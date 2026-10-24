@@ -29,6 +29,7 @@ import type {
   MondayEntriesSource,
 } from "@presentation/integrations/entriesSources";
 import type { SettingsPort } from "@presentation/settings/settingsGroups";
+import type { IntegrationSettingsPort } from "@presentation/settings/integrationSettingsPort";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 import type { WorkspaceContextValue } from "@presentation/contexts/WorkspaceContext";
 import type { useWorkspaceAdmin } from "@presentation/hooks/useWorkspaceAdmin";
@@ -142,6 +143,11 @@ export interface LocalApiDeps {
    * efeitos das abas. Porta estreita: a ponte não recebe a config inteira.
    */
   settings: SettingsPort;
+  /**
+   * Os ajustes não secretos de cada integração e as ações da tela de
+   * Integrações (Fase D3b). Porta estreita: nada de chave, token nem cache.
+   */
+  integrationSettings: IntegrationSettingsPort;
   activeWorkspaceId: string;
   running: RunningTaskOps;
   workspaces: WorkspaceOps;

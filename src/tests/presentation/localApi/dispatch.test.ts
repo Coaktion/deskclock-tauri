@@ -68,6 +68,11 @@ describe("waitsForNextCommit", () => {
     expect(waitsForNextCommit("settings.updateGeneral")).toBe(false);
     expect(waitsForNextCommit("settings.updateAccessibility")).toBe(false);
     expect(waitsForNextCommit("overlay.toggle")).toBe(false);
+    // Fase D3b: ajustes de integração só gravam config e catálogo; trocar o
+    // workspace de uma integração não troca o ativo.
+    expect(waitsForNextCommit("settings.updateMonday")).toBe(false);
+    expect(waitsForNextCommit("clockify.importProjects")).toBe(false);
+    expect(waitsForNextCommit("integrations.syncNow")).toBe(false);
   });
 });
 

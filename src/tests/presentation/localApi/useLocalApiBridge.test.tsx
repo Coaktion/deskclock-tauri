@@ -45,6 +45,12 @@ vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({ isLoaded: true, get: () => 1, set: vi.fn() }),
 }));
 vi.mock("@presentation/contexts/IntegrationsContext", () => ({ useIntegrations: () => ({}) }));
+vi.mock("@presentation/contexts/AutoSyncContext", () => ({
+  SHEETS_INTEGRATION_NAME: "google_sheets",
+  MONDAY_INTEGRATION_NAME: "monday",
+  CLOCKIFY_INTEGRATION_NAME: "clockify",
+  useAutoSync: () => ({ runDailyFor: vi.fn() }),
+}));
 vi.mock("@presentation/hooks/useWorkspaceAdmin", () => ({
   useWorkspaceAdmin: () => ({ create: vi.fn(), update: vi.fn(), remove: vi.fn() }),
 }));

@@ -36,6 +36,12 @@ import {
 } from "@presentation/integrations/entriesSources";
 import { buildSettingsPort } from "@presentation/settings/settingsGroups";
 import { tauriSettingsSystem } from "@presentation/settings/settingsEffects";
+import { buildIntegrationSettingsPort } from "@presentation/settings/integrationSettingsPort";
+import {
+  MONDAY_INTEGRATION_NAME,
+  SHEETS_INTEGRATION_NAME,
+  useAutoSync,
+} from "@presentation/contexts/AutoSyncContext";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -61,6 +67,7 @@ export function useLocalApiBridge(): void {
   const { create, update, remove } = useWorkspaceAdmin();
   const config = useAppConfig();
   const factories = useIntegrations();
+  const autoSync = useAutoSync();
   const depsRef = useRef<LocalApiDeps | null>(null);
   const commitListeners = useRef(new Set<() => void>());
 
@@ -107,6 +114,20 @@ export function useLocalApiBridge(): void {
       },
       mondayActivityItemRepo: repos.mondayActivityItemRepo,
       settings: buildSettingsPort(config, tauriSettingsSystem),
+      integrationSettings: buildIntegrationSettingsPort({
+        config,
+        factories,
+        projectRepo: repos.projectRepo,
+        categoryRepo: repos.categoryRepo,
+        customFieldRepo: repos.customFieldRepo,
+        notifyProjectsChanged,
+        notifyCategoriesChanged,
+        notifyCustomFieldsChanged,
+        autoSyncNames: { google_sheets: SHEETS_INTEGRATION_NAME, monday: MONDAY_INTEGRATION_NAME },
+        runDailyFor: (name, endDateISO) => autoSync.runDailyFor(name, endDateISO),
+        nowISO: () => new Date().toISOString(),
+        todayISO,
+      }),
       activeWorkspaceId,
       running,
       workspaces: { create, update, remove, switchTo },

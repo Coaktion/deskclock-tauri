@@ -1,8 +1,8 @@
 use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
-    catalog, custom_fields, entry_writes, export, history, imports, integrations, planned_tasks,
-    services, settings, share, totals, workspaces,
+    catalog, custom_fields, entry_writes, export, history, imports, integration_settings,
+    integrations, planned_tasks, services, settings, share, totals, workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -15,6 +15,82 @@ use axum::{
 use std::sync::Arc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+
+/// Fase D3b: ajustes das integrações e as ações da tela de Integrações.
+fn integration_settings_routes() -> Router<Arc<ApiState>> {
+    use integration_settings as s;
+    Router::new()
+        .route(
+            "/settings/integrations/google_sheets",
+            get(s::get_sheets).patch(s::patch_sheets),
+        )
+        .route(
+            "/settings/integrations/google_calendar",
+            get(s::get_calendar).patch(s::patch_calendar),
+        )
+        .route(
+            "/settings/integrations/google_drive",
+            get(s::get_drive_backup).patch(s::patch_drive_backup),
+        )
+        .route(
+            "/settings/integrations/clockify",
+            get(s::get_clockify).patch(s::patch_clockify),
+        )
+        .route(
+            "/settings/integrations/monday",
+            get(s::get_monday).patch(s::patch_monday),
+        )
+        .route(
+            "/settings/integrations/zendesk",
+            get(s::get_zendesk).patch(s::patch_zendesk),
+        )
+        .route("/settings/integrations/llm", get(s::get_llm))
+        .route(
+            "/integrations/google_calendar/ignore-rules",
+            post(s::post_ignore_rule).delete(s::delete_ignore_rule),
+        )
+        .route(
+            "/integrations/clockify/workspaces",
+            get(s::get_clockify_workspaces),
+        )
+        .route(
+            "/integrations/clockify/catalog",
+            get(s::get_clockify_catalog),
+        )
+        .route(
+            "/integrations/clockify/project-mappings/{id}",
+            put(s::put_clockify_project_mapping).delete(s::delete_clockify_project_mapping),
+        )
+        .route(
+            "/integrations/clockify/category-mappings/{id}",
+            put(s::put_clockify_category_mapping),
+        )
+        .route(
+            "/integrations/clockify/default-tags",
+            put(s::put_clockify_default_tags),
+        )
+        .route(
+            "/integrations/clockify/import-projects",
+            post(s::post_clockify_import_projects),
+        )
+        .route(
+            "/integrations/clockify/import-tags",
+            post(s::post_clockify_import_tags),
+        )
+        .route(
+            "/integrations/monday/catalog-fields/{id}",
+            post(s::post_monday_catalog_field),
+        )
+        .route(
+            "/integrations/monday/catalog-fields/{id}/refresh",
+            post(s::post_monday_catalog_field_refresh),
+        )
+        .route(
+            "/integrations/monday/projects/{id}/board",
+            put(s::put_monday_project_board),
+        )
+        .route("/integrations/{id}/sync-now", post(s::post_sync_now))
+}
 
 pub fn build_router(state: Arc<ApiState>) -> Router {
     let api = Router::new()
@@ -215,6 +291,7 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
         .route("/share/link", post(share::post_share_link))
         .route("/share/preview", post(share::post_share_preview))
         .route("/share/apply", post(share::post_share_apply))
+        .merge(integration_settings_routes())
         .with_state(state.clone());
 
     Router::new()
@@ -733,6 +810,236 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
             assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fase_d3b_chega_a_ponte_com_a_op_certa() {
+        let tags = r#"{"tagIds":["t-1"]}"#;
+        let cases = [
+            (
+                "GET",
+                "/settings/integrations/google_sheets",
+                "",
+                "settings.getSheets",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/google_sheets",
+                r#"{"sheetName":"Horas","columnMapping":[{"field":"date","label":"Data","enabled":true}]}"#,
+                "settings.updateSheets",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/google_sheets",
+                "",
+                "settings.updateSheets",
+            ),
+            (
+                "GET",
+                "/settings/integrations/google_calendar",
+                "",
+                "settings.getCalendar",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/google_calendar",
+                r#"{"autoTrackingEnabled":true}"#,
+                "settings.updateCalendar",
+            ),
+            (
+                "GET",
+                "/settings/integrations/google_drive",
+                "",
+                "settings.getDriveBackup",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/google_drive",
+                r#"{"enabled":true,"frequency":"daily"}"#,
+                "settings.updateDriveBackup",
+            ),
+            (
+                "GET",
+                "/settings/integrations/clockify",
+                "",
+                "settings.getClockify",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/clockify",
+                r#"{"clockifyWorkspaceId":"cw"}"#,
+                "settings.updateClockify",
+            ),
+            (
+                "GET",
+                "/settings/integrations/monday",
+                "",
+                "settings.getMonday",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/monday",
+                r#"{"projectStageFieldId":""}"#,
+                "settings.updateMonday",
+            ),
+            (
+                "GET",
+                "/settings/integrations/zendesk",
+                "",
+                "settings.getZendesk",
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/zendesk",
+                r#"{"workspaceId":"ws"}"#,
+                "settings.updateZendesk",
+            ),
+            ("GET", "/settings/integrations/llm", "", "settings.getLlm"),
+            (
+                "POST",
+                "/integrations/google_calendar/ignore-rules",
+                r#"{"operator":"equals","value":"Daily"}"#,
+                "calendar.addIgnoreRule",
+            ),
+            (
+                "DELETE",
+                "/integrations/google_calendar/ignore-rules?operator=equals&value=Daily",
+                "",
+                "calendar.removeIgnoreRule",
+            ),
+            (
+                "GET",
+                "/integrations/clockify/workspaces",
+                "",
+                "clockify.workspaces",
+            ),
+            (
+                "GET",
+                "/integrations/clockify/catalog",
+                "",
+                "clockify.catalog",
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/project-mappings/p-1",
+                r#"{"clockifyProjectId":"cp"}"#,
+                "clockify.setProjectMapping",
+            ),
+            (
+                "DELETE",
+                "/integrations/clockify/project-mappings/p-1",
+                "",
+                "clockify.removeProjectMapping",
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/category-mappings/c-1",
+                tags,
+                "clockify.setCategoryTags",
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/default-tags",
+                tags,
+                "clockify.setDefaultTags",
+            ),
+            (
+                "POST",
+                "/integrations/clockify/import-projects",
+                "",
+                "clockify.importProjects",
+            ),
+            (
+                "POST",
+                "/integrations/clockify/import-tags",
+                "",
+                "clockify.importTags",
+            ),
+            (
+                "POST",
+                "/integrations/monday/catalog-fields/project_stage",
+                "",
+                "monday.createCatalogField",
+            ),
+            (
+                "POST",
+                "/integrations/monday/catalog-fields/project_stage/refresh",
+                "",
+                "monday.refreshCatalogField",
+            ),
+            (
+                "PUT",
+                "/integrations/monday/projects/i-1/board",
+                r#"{"boardId":"99"}"#,
+                "monday.setProjectBoard",
+            ),
+            (
+                "POST",
+                "/integrations/google_sheets/sync-now",
+                "",
+                "integrations.syncNow",
+            ),
+            // As rotas fixas convivem com as `{id}` do envio.
+            (
+                "POST",
+                "/integrations/monday/send",
+                r#"{"taskIds":["t"]}"#,
+                "integrations.send",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn fase_d3b_fora_do_formato_e_400_sem_chegar_a_ponte() {
+        let cases = [
+            (
+                "PATCH",
+                "/settings/integrations/google_sheets",
+                r#"{"columnMapping":"x"}"#,
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/google_drive",
+                r#"{"enabled":"sim"}"#,
+            ),
+            (
+                "PATCH",
+                "/settings/integrations/monday",
+                r#"{"autoImportEnabled":1}"#,
+            ),
+            ("POST", "/integrations/google_calendar/ignore-rules", ""),
+            (
+                "POST",
+                "/integrations/google_calendar/ignore-rules",
+                r#"{"operator":"equals"}"#,
+            ),
+            (
+                "DELETE",
+                "/integrations/google_calendar/ignore-rules?operator=equals",
+                "",
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/project-mappings/p-1",
+                r#"{}"#,
+            ),
+            (
+                "PUT",
+                "/integrations/clockify/default-tags",
+                r#"{"tagIds":"t"}"#,
+            ),
+            ("PUT", "/integrations/monday/projects/i-1/board", ""),
+        ];
+        for (method, uri, body) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got, None, "{method} {uri} {body}");
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{method} {uri} {body}");
         }
     }
 

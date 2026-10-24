@@ -95,6 +95,34 @@ pub const GET_TASK_SHARE_LINK: &str = "get_task_share_link";
 pub const PREVIEW_SHARED_TASK: &str = "preview_shared_task";
 pub const ACCEPT_SHARED_TASK: &str = "accept_shared_task";
 
+pub const GET_SHEETS_SETTINGS: &str = "get_sheets_settings";
+pub const UPDATE_SHEETS_SETTINGS: &str = "update_sheets_settings";
+pub const GET_CALENDAR_SETTINGS: &str = "get_calendar_settings";
+pub const UPDATE_CALENDAR_SETTINGS: &str = "update_calendar_settings";
+pub const GET_DRIVE_BACKUP_SETTINGS: &str = "get_drive_backup_settings";
+pub const UPDATE_DRIVE_BACKUP_SETTINGS: &str = "update_drive_backup_settings";
+pub const GET_CLOCKIFY_SETTINGS: &str = "get_clockify_settings";
+pub const UPDATE_CLOCKIFY_SETTINGS: &str = "update_clockify_settings";
+pub const GET_MONDAY_SETTINGS: &str = "get_monday_settings";
+pub const UPDATE_MONDAY_SETTINGS: &str = "update_monday_settings";
+pub const GET_ZENDESK_SETTINGS: &str = "get_zendesk_settings";
+pub const UPDATE_ZENDESK_SETTINGS: &str = "update_zendesk_settings";
+pub const GET_LLM_SETTINGS: &str = "get_llm_settings";
+pub const ADD_CALENDAR_IGNORE_RULE: &str = "add_calendar_ignore_rule";
+pub const REMOVE_CALENDAR_IGNORE_RULE: &str = "remove_calendar_ignore_rule";
+pub const LIST_CLOCKIFY_WORKSPACES: &str = "list_clockify_workspaces";
+pub const LIST_CLOCKIFY_CATALOG: &str = "list_clockify_catalog";
+pub const MAP_CLOCKIFY_PROJECT: &str = "map_clockify_project";
+pub const UNMAP_CLOCKIFY_PROJECT: &str = "unmap_clockify_project";
+pub const SET_CLOCKIFY_CATEGORY_TAGS: &str = "set_clockify_category_tags";
+pub const SET_CLOCKIFY_DEFAULT_TAGS: &str = "set_clockify_default_tags";
+pub const IMPORT_CLOCKIFY_PROJECTS: &str = "import_clockify_projects";
+pub const IMPORT_CLOCKIFY_TAGS: &str = "import_clockify_tags";
+pub const CREATE_MONDAY_CATALOG_FIELD: &str = "create_monday_catalog_field";
+pub const REFRESH_MONDAY_CATALOG_FIELD: &str = "refresh_monday_catalog_field";
+pub const SET_MONDAY_PROJECT_BOARD: &str = "set_monday_project_board";
+pub const RUN_INTEGRATION_SYNC_NOW: &str = "run_integration_sync_now";
+
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
 pub const OP_PROJECTS: &str = "projects.list";
@@ -185,6 +213,33 @@ pub const OP_OVERLAY_TOGGLE: &str = "overlay.toggle";
 pub const OP_SHARE_LINK: &str = "share.link";
 pub const OP_SHARE_PREVIEW: &str = "share.preview";
 pub const OP_SHARE_APPLY: &str = "share.apply";
+pub const OP_SETTINGS_GET_SHEETS: &str = "settings.getSheets";
+pub const OP_SETTINGS_UPDATE_SHEETS: &str = "settings.updateSheets";
+pub const OP_SETTINGS_GET_CALENDAR: &str = "settings.getCalendar";
+pub const OP_SETTINGS_UPDATE_CALENDAR: &str = "settings.updateCalendar";
+pub const OP_SETTINGS_GET_DRIVE_BACKUP: &str = "settings.getDriveBackup";
+pub const OP_SETTINGS_UPDATE_DRIVE_BACKUP: &str = "settings.updateDriveBackup";
+pub const OP_SETTINGS_GET_CLOCKIFY: &str = "settings.getClockify";
+pub const OP_SETTINGS_UPDATE_CLOCKIFY: &str = "settings.updateClockify";
+pub const OP_SETTINGS_GET_MONDAY: &str = "settings.getMonday";
+pub const OP_SETTINGS_UPDATE_MONDAY: &str = "settings.updateMonday";
+pub const OP_SETTINGS_GET_ZENDESK: &str = "settings.getZendesk";
+pub const OP_SETTINGS_UPDATE_ZENDESK: &str = "settings.updateZendesk";
+pub const OP_SETTINGS_GET_LLM: &str = "settings.getLlm";
+pub const OP_CALENDAR_ADD_IGNORE_RULE: &str = "calendar.addIgnoreRule";
+pub const OP_CALENDAR_REMOVE_IGNORE_RULE: &str = "calendar.removeIgnoreRule";
+pub const OP_CLOCKIFY_WORKSPACES: &str = "clockify.workspaces";
+pub const OP_CLOCKIFY_CATALOG: &str = "clockify.catalog";
+pub const OP_CLOCKIFY_SET_PROJECT_MAPPING: &str = "clockify.setProjectMapping";
+pub const OP_CLOCKIFY_REMOVE_PROJECT_MAPPING: &str = "clockify.removeProjectMapping";
+pub const OP_CLOCKIFY_SET_CATEGORY_TAGS: &str = "clockify.setCategoryTags";
+pub const OP_CLOCKIFY_SET_DEFAULT_TAGS: &str = "clockify.setDefaultTags";
+pub const OP_CLOCKIFY_IMPORT_PROJECTS: &str = "clockify.importProjects";
+pub const OP_CLOCKIFY_IMPORT_TAGS: &str = "clockify.importTags";
+pub const OP_MONDAY_CREATE_CATALOG_FIELD: &str = "monday.createCatalogField";
+pub const OP_MONDAY_REFRESH_CATALOG_FIELD: &str = "monday.refreshCatalogField";
+pub const OP_MONDAY_SET_PROJECT_BOARD: &str = "monday.setProjectBoard";
+pub const OP_INTEGRATIONS_SYNC_NOW: &str = "integrations.syncNow";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -429,6 +484,103 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
     (GET_TASK_SHARE_LINK, &[pass_through(OP_SHARE_LINK)]),
     (PREVIEW_SHARED_TASK, &[pass_through(OP_SHARE_PREVIEW)]),
     (ACCEPT_SHARED_TASK, &[pass_through(OP_SHARE_APPLY)]),
+    // Fase D3b: ajustes não secretos das integrações e as ações da tela.
+    (GET_SHEETS_SETTINGS, &[pass_through(OP_SETTINGS_GET_SHEETS)]),
+    (
+        UPDATE_SHEETS_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_SHEETS)],
+    ),
+    (
+        GET_CALENDAR_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_CALENDAR)],
+    ),
+    (
+        UPDATE_CALENDAR_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_CALENDAR)],
+    ),
+    (
+        GET_DRIVE_BACKUP_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_DRIVE_BACKUP)],
+    ),
+    (
+        UPDATE_DRIVE_BACKUP_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_DRIVE_BACKUP)],
+    ),
+    (
+        GET_CLOCKIFY_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_CLOCKIFY)],
+    ),
+    (
+        UPDATE_CLOCKIFY_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_CLOCKIFY)],
+    ),
+    (GET_MONDAY_SETTINGS, &[pass_through(OP_SETTINGS_GET_MONDAY)]),
+    (
+        UPDATE_MONDAY_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_MONDAY)],
+    ),
+    (
+        GET_ZENDESK_SETTINGS,
+        &[pass_through(OP_SETTINGS_GET_ZENDESK)],
+    ),
+    (
+        UPDATE_ZENDESK_SETTINGS,
+        &[pass_through(OP_SETTINGS_UPDATE_ZENDESK)],
+    ),
+    (GET_LLM_SETTINGS, &[pass_through(OP_SETTINGS_GET_LLM)]),
+    (
+        ADD_CALENDAR_IGNORE_RULE,
+        &[pass_through(OP_CALENDAR_ADD_IGNORE_RULE)],
+    ),
+    (
+        REMOVE_CALENDAR_IGNORE_RULE,
+        &[pass_through(OP_CALENDAR_REMOVE_IGNORE_RULE)],
+    ),
+    (
+        LIST_CLOCKIFY_WORKSPACES,
+        &[pass_through(OP_CLOCKIFY_WORKSPACES)],
+    ),
+    (LIST_CLOCKIFY_CATALOG, &[pass_through(OP_CLOCKIFY_CATALOG)]),
+    (
+        MAP_CLOCKIFY_PROJECT,
+        &[pass_through(OP_CLOCKIFY_SET_PROJECT_MAPPING)],
+    ),
+    (
+        UNMAP_CLOCKIFY_PROJECT,
+        &[pass_through(OP_CLOCKIFY_REMOVE_PROJECT_MAPPING)],
+    ),
+    (
+        SET_CLOCKIFY_CATEGORY_TAGS,
+        &[pass_through(OP_CLOCKIFY_SET_CATEGORY_TAGS)],
+    ),
+    (
+        SET_CLOCKIFY_DEFAULT_TAGS,
+        &[pass_through(OP_CLOCKIFY_SET_DEFAULT_TAGS)],
+    ),
+    (
+        IMPORT_CLOCKIFY_PROJECTS,
+        &[pass_through(OP_CLOCKIFY_IMPORT_PROJECTS)],
+    ),
+    (
+        IMPORT_CLOCKIFY_TAGS,
+        &[pass_through(OP_CLOCKIFY_IMPORT_TAGS)],
+    ),
+    (
+        CREATE_MONDAY_CATALOG_FIELD,
+        &[pass_through(OP_MONDAY_CREATE_CATALOG_FIELD)],
+    ),
+    (
+        REFRESH_MONDAY_CATALOG_FIELD,
+        &[pass_through(OP_MONDAY_REFRESH_CATALOG_FIELD)],
+    ),
+    (
+        SET_MONDAY_PROJECT_BOARD,
+        &[pass_through(OP_MONDAY_SET_PROJECT_BOARD)],
+    ),
+    (
+        RUN_INTEGRATION_SYNC_NOW,
+        &[pass_through(OP_INTEGRATIONS_SYNC_NOW)],
+    ),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

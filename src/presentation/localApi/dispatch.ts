@@ -87,6 +87,37 @@ import {
   updateOverlaySettings,
   updateShortcutSettings,
 } from "./handlers/settings";
+import {
+  getCalendarSettings,
+  getClockifySettings,
+  getDriveBackupSettings,
+  getLlmSettings,
+  getMondaySettings,
+  getSheetsSettings,
+  getZendeskSettings,
+  updateCalendarSettings,
+  updateClockifySettings,
+  updateDriveBackupSettings,
+  updateMondaySettings,
+  updateSheetsSettings,
+  updateZendeskSettings,
+} from "./handlers/integrationSettings";
+import {
+  addCalendarIgnoreRule,
+  createMondayCatalogField,
+  getClockifyCatalog,
+  importClockifyProjects,
+  importClockifyTags,
+  listClockifyWorkspaces,
+  refreshMondayCatalogField,
+  removeCalendarIgnoreRule,
+  removeClockifyProjectMapping,
+  runAutoSyncNow,
+  setClockifyCategoryTags,
+  setClockifyDefaultTags,
+  setClockifyProjectMapping,
+  setMondayProjectBoard,
+} from "./handlers/integrationActions";
 import { applyShareHandler, previewShareHandler, shareLinkHandler } from "./handlers/share";
 import {
   cancelTask,
@@ -218,6 +249,37 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "share.preview": previewShareHandler,
   // Inicia a tarefa em execução no modo `start`: espera o render (abaixo).
   "share.apply": applyShareHandler,
+  // Fase D3b: ajustes não secretos das integrações e as ações da tela de
+  // Integrações. Só gravam config, catálogo e campos (e, no "Enviar agora",
+  // enviam): não mexem na tarefa em execução nem no workspace ativo, e não
+  // esperam o render — a ponte lê a config na hora.
+  "settings.getSheets": getSheetsSettings,
+  "settings.updateSheets": updateSheetsSettings,
+  "settings.getCalendar": getCalendarSettings,
+  "settings.updateCalendar": updateCalendarSettings,
+  "settings.getDriveBackup": getDriveBackupSettings,
+  "settings.updateDriveBackup": updateDriveBackupSettings,
+  "settings.getClockify": getClockifySettings,
+  "settings.updateClockify": updateClockifySettings,
+  "settings.getMonday": getMondaySettings,
+  "settings.updateMonday": updateMondaySettings,
+  "settings.getZendesk": getZendeskSettings,
+  "settings.updateZendesk": updateZendeskSettings,
+  "settings.getLlm": getLlmSettings,
+  "calendar.addIgnoreRule": addCalendarIgnoreRule,
+  "calendar.removeIgnoreRule": removeCalendarIgnoreRule,
+  "clockify.workspaces": listClockifyWorkspaces,
+  "clockify.catalog": getClockifyCatalog,
+  "clockify.setProjectMapping": setClockifyProjectMapping,
+  "clockify.removeProjectMapping": removeClockifyProjectMapping,
+  "clockify.setCategoryTags": setClockifyCategoryTags,
+  "clockify.setDefaultTags": setClockifyDefaultTags,
+  "clockify.importProjects": importClockifyProjects,
+  "clockify.importTags": importClockifyTags,
+  "monday.createCatalogField": createMondayCatalogField,
+  "monday.refreshCatalogField": refreshMondayCatalogField,
+  "monday.setProjectBoard": setMondayProjectBoard,
+  "integrations.syncNow": runAutoSyncNow,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */

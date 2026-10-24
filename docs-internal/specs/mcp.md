@@ -89,12 +89,27 @@ Todas do usuário, em 2026-09-18.
 | `toggle_overlay` · `reset_window_positions` | `overlay.toggle` · `settings.resetWindowPositions` | As duas ações das abas; o toggle devolve `visible`, `idempotentHint: false` (Fase D3a) |
 | `get_task_share_link` | `share.link` | O "Copiar link" de uma planejada: `link` + o que viaja (Fase D3a) |
 | `preview_shared_task` · `accept_shared_task` | `share.preview` · `share.apply` | O modal da tarefa recebida: prévia sem gravar; aceitar com `mode` `plan`/`start`, `openWorldHint: true` (o `start` encerra a ativa) (Fase D3a) |
+| `get_sheets_settings` · `update_sheets_settings` | `settings.getSheets` · `settings.updateSheets` | Google Sheets: workspace, planilha, aba, as oito colunas (lista inteira), duração, envio automático; só `connected` da conexão (Fase D3b) |
+| `get_calendar_settings` · `update_calendar_settings` | `settings.getCalendar` · `settings.updateCalendar` | Workspace do "Importar eventos" e rastreio automático; a leitura traz as regras de ignorar (Fase D3b) |
+| `add_calendar_ignore_rule` · `remove_calendar_ignore_rule` | `calendar.addIgnoreRule` · `calendar.removeIgnoreRule` | Um item por vez; o "Ignorar sempre" é o add com `equals` e o título. Remover não é destrutivo: refaz-se com o add (Fase D3b) |
+| `get_drive_backup_settings` · `update_drive_backup_settings` | `settings.getDriveBackup` · `settings.updateDriveBackup` | Backup automático e frequência; a chamada não sobe nada (Fase D3b) |
+| `get_clockify_settings` · `update_clockify_settings` | `settings.getClockify` · `settings.updateClockify` | Workspaces (o do Clockify vem de `list_clockify_workspaces`), tags padrão, vínculos e envio automático (Fase D3b) |
+| `list_clockify_workspaces` · `list_clockify_catalog` | `clockify.workspaces` · `clockify.catalog` | Leem o Clockify; `readOnlyHint`, `openWorldHint: true` (Fase D3b) |
+| `map_clockify_project` · `unmap_clockify_project` | `clockify.setProjectMapping` · `clockify.removeProjectMapping` | Desvincular não é destrutivo: refaz-se com o map (Fase D3b) |
+| `set_clockify_category_tags` · `set_clockify_default_tags` | `clockify.setCategoryTags` · `clockify.setDefaultTags` | Seleção inteira, conferida no catálogo do Clockify (Fase D3b) |
+| `import_clockify_projects` · `import_clockify_tags` | `clockify.importProjects` · `clockify.importTags` | `destructiveHint: true`: substituem os vínculos do workspace do Clockify, e o vínculo manual de outro nome se perde (Fase D3b) |
+| `get_monday_settings` · `update_monday_settings` | `settings.getMonday` · `settings.updateMonday` | Boards, importação automática, campos de Project Stage e Non Billable reason, projetos vinculados e envio automático (Fase D3b) |
+| `create_monday_catalog_field` · `refresh_monday_catalog_field` | `monday.createCatalogField` · `monday.refreshCatalogField` | "Criar do Monday" e "Atualizar" dos dois campos; `field` enum inline (Fase D3b) |
+| `set_monday_project_board` | `monday.setProjectBoard` | Quadro à mão de projeto sem quadro; lê o schema (`openWorldHint: true`) (Fase D3b) |
+| `get_zendesk_settings` · `update_zendesk_settings` | `settings.getZendesk` · `settings.updateZendesk` | Só o workspace (Fase D3b) |
+| `get_llm_settings` | `settings.getLlm` | Só leitura: provedor e modelo, sem a URL base (Fase D3b) |
+| `run_integration_sync_now` | `integrations.syncNow` | "Enviar agora" do envio diário (Sheets e Monday); `idempotentHint: false`, `openWorldHint: true` (Fase D3b) |
 | `list_day_summaries` | `daySummaries.list` | Resumos já gerados do período, do banco local; `readOnlyHint`, `openWorldHint: false` (Fase D2) |
 | `generate_day_summaries` | `daySummaries.generate` | Regras da aba Resumo: até 5 dias, cache, hoje regerado, erro por dia, parada na cota; `openWorldHint: true`, `idempotentHint: false` (Fase D2) |
 | `get_drive_backup_status` · `run_drive_backup` | `driveBackup.status` · `driveBackup.run` | Estado (só config, `readOnlyHint`) e "Fazer backup agora" (`openWorldHint: true`, `idempotentHint: false`) (Fase D2) |
 
 Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,
-`workspaces.getActive`, `plannedTasks.update`). O que falta para a paridade não tem `op` na ponte (§7.2).
+`workspaces.getActive`, `plannedTasks.update`). Com a Fase D3b a paridade está completa no código (§7, "Paridade no código").
 
 **Desenho das tools:** nome de intenção (`log_past_task`, não `post_tasks`); descrição diz *quando* usar e
 o formato de data/hora; projeto e categoria por **nome** (a API já resolve dentro do workspace e devolve
@@ -428,7 +443,8 @@ planejadas — N chamadas resolvem.
 | D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada; falta verificação no app de dev |
 | D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | implementada; falta verificação no app de dev |
 | D3a (link de compartilhar tarefa; Configurações: Geral, Overlay, Acessibilidade, Atalhos) | implementada; falta verificação no app de dev |
-| D3b (ajustes não secretos das integrações) | pendente |
+| D3b (ajustes não secretos das integrações) | implementada; falta verificação no app de dev |
+| D (D1 a D3b) | concluída no código |
 
 **Decisões da D2b e da D3** (usuário, 2026-10-23): a escrita dos modais de lançamentos entra (D2b), com as exclusões
 marcadas `destructiveHint`. A D3 expõe os quatro grupos das Configurações — Geral, Overlay e Acessibilidade, Atalhos
@@ -666,6 +682,80 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
 - **Params como a REST:** GETs e ações `{}`; updates e as três do link `{ body }` só com o que veio.
 - **Diferença conhecida:** a aba aberta não relê a config depois de um `PATCH` pela API (ela semeia no `isLoaded`), como no
   backup da D2; reabrir a tela atualiza. As outras janelas recebem o `OVERLAY_CONFIG_CHANGED` das chaves que o emitem.
+
+### Decisões da Fase D3b que a spec não fixava
+
+- **Inventário** (chave · tipo · efeito; "segredo" e "interno" não entram):
+  - *Google (conexão única)* — `googleAccessToken`/`googleRefreshToken`/`googleTokenExpiry` (segredo), `googleUserEmail`
+    (conta). `connected` = há refresh token. As três subseções ficam apagadas sem conexão.
+  - *Sheets* — `sheetsDeskclockWorkspaceId` (texto), `integrationGoogleSheetsSpreadsheetId` (texto, aparado no blur),
+    `integrationGoogleSheetsSheetName` (texto, em branco = `DeskClock`), `integrationGoogleSheetsColumnMapping` (as oito
+    colunas: arrastar, ligar, renomear), `integrationGoogleSheetsDurationFormat` (`HH:MM`/`HH:MM:SS`), o envio automático
+    (`integrationGoogleSheetsAutoSync`, `sheetsAutoSyncMode`, `sheetsAutoSyncTrigger`, `sheetsAutoSyncTime`) e o "Enviar
+    agora". Internos: `sheetsDailySyncLastTimestamp`, `sheetsAutoSyncLastFiredDate`. Nenhuma chave tem efeito além de gravar.
+  - *Agenda* — `calendarDeskclockWorkspaceId`, `calendarAutoTrackingEnabled` (bool), `calendarIgnoreRules` (lista; a tela
+    acrescenta e remove item a item; o "Ignorar sempre" do import acrescenta `equals` + título). Interno:
+    `calendarLastSyncError`. "Buscar eventos agora" dispara o rastreador (fora, como na D1).
+  - *Drive* — `driveBackupEnabled` (bool), `driveBackupFrequency` (`daily`/`weekly`/`monthly`). Internos: `driveBackupFolderId`,
+    `driveBackupLastRunAt`, `driveBackupLastError`; `driveBackupKeepCount` não tem controle na tela.
+  - *Clockify* — `clockifyApiKey` (segredo), `clockifyUserEmail`/`clockifyUserId` (conta). `clockifyDeskclockWorkspaceId`;
+    `clockifyActiveWorkspaceId` + `clockifyActiveWorkspaceName` (o seletor, sobre `clockifyWorkspaceCache`, que o "Atualizar
+    lista" regrava); `clockifyProjectMapping` (por projeto: vincular, X), `clockifyCategoryMapping` (por categoria: seleção de
+    tags), `clockifyDefaultTagIds` (seleção); os dois "Importar do Clockify"; o envio automático (`clockifyAutoSync*`). Sem
+    "Enviar agora". Internos: `clockifyDailySyncLastTimestamp`, `clockifyAutoSyncLastFiredDate`.
+  - *Monday* — `mondayApiKey` (segredo), `mondayUserId/Name/Email` (conta). `mondayDeskclockWorkspaceId`,
+    `mondayPortfolioBoardId`/`mondayReportBoardId` (texto, aparado), `mondayAutoImportEnabled` (bool), envio automático
+    (`mondayAutoSync*`) e "Enviar agora", `mondayProjectStageFieldId`/`mondayNonBillableReasonFieldId` (seleção de campo +
+    "Criar do Monday"/"Atualizar"), o quadro à mão dentro de `mondayProjectMapping`. Internos: `mondayFieldCatalogs` (cache;
+    a leitura é a `read_monday_catalogs` da D1), `mondayProjectsSyncLastDate`, `mondayProjectsLastSyncError`,
+    `mondayMappingCacheVersion`, o resto do mapeamento. `mondayReportTypeFieldId`: card adormecido, fora.
+  - *Zendesk* — `zendeskSubdomain`/`zendeskClientId` (conexão, travados conectado), `zendeskClientSecret`/tokens (segredo),
+    `zendeskUserEmail` (conta). Só `zendeskDeskclockWorkspaceId` é ajuste.
+  - *IA* — `llmApiKey` (segredo), `llmProviderId`/`llmBaseUrl`/`llmModel` só pelo modal de conexão, que testa a chave; `llmLastLimits*`
+    (cache). Sem workspace, de propósito. Fica só leitura (`providerId`, `model`); a URL base fica fora porque um gateway pode
+    levar credencial na query.
+- **Refatoração (sem mudar a tela):** a regra que morava nos componentes saiu para `integrationSettingsRules.ts`,
+  `clockifyMappings.ts`, `mondayCatalogFields.ts` e `removeIgnoreRule` (domínio) e para `clockifySettings.ts`,
+  `mondayCatalogFields.ts` e `runMondaySetProjectBoard` (presentation/integrations). `ClockifyMappingsSection`,
+  `ClockifyWorkspaceSection`, `MondayCatalogField`, `MondayImportSection`, `MondayProjectsImport`, `CalendarIgnoreRules` e a
+  aba da planilha chamam os mesmos. O `parsePatch` e os validadores da D3a foram para `localApi/patchRules.ts`. `autoSyncIntegrations.ts` e o `isLlmConnected` saíram de `sections/integrations/` para `presentation/integrations/` (a porta não importa seção de tela). A porta compõe `clockifySettingsPort.ts` e `mondaySettingsPort.ts`. Diferenças de
+  ordem aceitas: nos imports do Clockify o `notify*Changed` roda dentro do import, antes da recarga e do toast (como na D1);
+  no "Atualizar lista" o cache é gravado antes de a lista aparecer.
+- **Uma porta, um grupo por integração**, não key-value: `deps.integrationSettings`. Ids das rotas = os de sempre
+  (`google_sheets`, `google_calendar`, `clockify`, `monday`, `zendesk`) mais `google_drive` e `llm`; rotas fixas sob
+  `/settings/integrations/` e ações sob `/integrations/<id>/`, que convivem com as `{id}` do envio (teste de rota).
+- **Trocar o workspace de uma integração não tem aviso nem reconciliação** — divergência com o pedido: a tela só faz
+  `config.set` (`DeskclockWorkspaceRow`); o aviso de integrações presas existe só na exclusão de workspace
+  (`integrationsBoundToWorkspace`). A API faz o mesmo, mais conferir que o workspace existe (409). Idem o envio diário: o
+  agendador lê a config a cada 30 s e não há o que reiniciar.
+- **Sem conexão, editar é 409**, porque a tela não mostra o controle. A leitura funciona sempre e diz `connected: false`.
+- **Listas pela semântica da tela.** Regras de ignorar: item a item. Vínculos do Clockify: item a item (projeto: vincular e
+  desvincular; categoria: a seleção de tags, que a tela grava inteira — lista vazia continua vínculo). Tags padrão e colunas do
+  Sheets: a lista inteira, porque o controle da tela é uma seleção (tags) ou uma ordem (colunas).
+- **Validação contra o serviço onde a tela só oferece o que existe:** projeto e tags do Clockify conferidos no catálogo lido na
+  hora (409); o workspace do Clockify, no cache que `list_clockify_workspaces` regrava (409), para o `update` não ir à rede.
+  O projeto/categoria do DeskClock pode ser de qualquer workspace (a tabela de vínculos não é escopada do lado do DeskClock; a
+  tela lista os do workspace ativo).
+- **Quadro à mão só em projeto sem quadro** (409 se já tem), como a tela, que só mostra o campo nesses; board que não serve →
+  409 com o motivo do toast, nada gravado. "Criar do Monday" com campo já vinculado → 409 (a tela troca o botão por
+  "Atualizar"); sem rótulos → 409 com a dica da tela.
+- **"Enviar agora" é ação desta fase** (op `integrations.syncNow`): só Sheets e Monday, só com envio diário ligado (onde o botão
+  aparece), mesma guarda da planilha e a frase do toast na resposta; erro do serviço → 502.
+- **Anotações.** Leituras de config: `readOnlyHint`, `openWorldHint: false`; as duas listas do Clockify leem o serviço
+  (`openWorldHint: true`; a de workspaces regrava só o cache que o seletor mostra, por isso continua `readOnlyHint`). Updates:
+  `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` — ligar o envio ou o backup muda o que o agendador
+  faz depois; a chamada não envia. Vínculos, tags e quadro: `openWorldHint: true` (conferem no serviço). **Remover regra de
+  ignorar e desvincular projeto não são destrutivos**: a perda se refaz numa chamada com os valores que a leitura mostrava.
+  **Os dois imports do Clockify são `destructiveHint: true`**: substituem os vínculos do workspace do Clockify, e vínculo
+  manual de nome diferente se perde sem como recuperar. `run_integration_sync_now`: `idempotentHint: false`.
+- **`waitsForNextCommit`:** nenhuma op da D3b — nada muda a tarefa em execução, o workspace ativo nem a lista de workspaces.
+- **Diferença conhecida:** como na D3a, a tela de Integrações aberta não relê a config depois de um `PATCH` pela API (semeia no
+  `isLoaded`); reabrir atualiza.
+
+**Paridade no código:** com a D3b, tudo que a UI faz tem op, endpoint e tool. Ficam fora de propósito: conectar e desconectar
+integrações (OAuth, chaves, tokens, subdomínio e client do Zendesk, provedor/modelo/URL da IA), desfazer (`Restore*`), executar
+a ação ⚡, "Buscar eventos agora" e "Buscar itens agora" (disparam rastreadores), o card adormecido do Report Type, restaurar
+backup (sem UI), estado de janela e as ops com motivo em `excluded`.
 
 ### Decisões da Fase A que a spec não fixava
 
