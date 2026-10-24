@@ -8,14 +8,19 @@ import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import { notifyCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
 import { showToast } from "@shared/utils/toast";
 import type { ClockifyCategoryMapping, ClockifyProjectMapping } from "@shared/types/clockifyConfig";
+import { clockifyMappingsFor } from "@domain/usecases/clockify/clockifyMappings";
+import {
+  clockifyProjectRefs,
+  clockifyTagRefs,
+  runClockifyProjectsImport,
+  runClockifyTagsImport,
+  saveClockifyCategoryMapping,
+  saveClockifyProjectMapping,
+  type ClockifyRef,
+} from "@presentation/integrations/clockifySettings";
 import { ChevronDown, ChevronRight, ListChecks, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ProjectMappingRow } from "./ProjectMappingRow";
-
-interface ClockifyRef {
-  id: string;
-  name: string;
-}
 
 /**
  * Caixa recolhível de um mapeamento — título, quantos de quantos, e o corpo.
@@ -66,42 +71,6 @@ function MappingBox({
   );
 }
 
-async function runClockifyImport<TItem, TMapping extends { workspaceId: string }>({
-  fetchItems,
-  onFetched,
-  buildMapping,
-  getAllMappings,
-  setAllMappings,
-  workspaceId,
-  setLocalMappings,
-  reload,
-  successMessage,
-}: {
-  fetchItems: () => Promise<TItem[]>;
-  onFetched?: (list: TItem[]) => void;
-  buildMapping: (item: TItem) => Promise<TMapping | null>;
-  getAllMappings: () => TMapping[];
-  setAllMappings: (mappings: TMapping[]) => Promise<void>;
-  workspaceId: string;
-  setLocalMappings: (mappings: TMapping[]) => void;
-  reload: () => Promise<void>;
-  successMessage: (count: number) => string;
-}): Promise<void> {
-  const list = await fetchItems();
-  onFetched?.(list);
-  const otherWS = getAllMappings().filter((m) => m.workspaceId !== workspaceId);
-  const newMappings: TMapping[] = [];
-  for (const item of list) {
-    const mapping = await buildMapping(item);
-    if (mapping) newMappings.push(mapping);
-  }
-  const merged = [...otherWS, ...newMappings];
-  await setAllMappings(merged);
-  setLocalMappings(newMappings);
-  await reload();
-  await showToast("success", successMessage(list.length));
-}
-
 export function ClockifyMappingsSection({
   projects,
   categories,
@@ -136,10 +105,8 @@ export function ClockifyMappingsSection({
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    const allPM = config.get("clockifyProjectMapping");
-    setProjectMapping(allPM.filter((m) => m.workspaceId === workspaceId));
-    const allCM = config.get("clockifyCategoryMapping");
-    setCategoryMapping(allCM.filter((m) => m.workspaceId === workspaceId));
+    setProjectMapping(clockifyMappingsFor(config.get("clockifyProjectMapping"), workspaceId));
+    setCategoryMapping(clockifyMappingsFor(config.get("clockifyCategoryMapping"), workspaceId));
     setDefaultTagIds(config.get("clockifyDefaultTagIds"));
   }, [config.isLoaded, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -147,20 +114,12 @@ export function ClockifyMappingsSection({
     return factories.createClockifyApi();
   }
 
-  function projectDisplayName(p: { name: string; clientName?: string | null }) {
-    return p.clientName ? `${p.clientName} - ${p.name}` : p.name;
-  }
-
   async function fetchProjects() {
     setLoadingProjects(true);
     try {
       const client = getClient();
       const list = await client.listProjects(workspaceId);
-      setClockifyProjects(
-        list
-          .map((p) => ({ id: p.id, name: projectDisplayName(p) }))
-          .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-      );
+      setClockifyProjects(clockifyProjectRefs(list));
     } catch {
       // erro silencioso
     } finally {
@@ -173,7 +132,7 @@ export function ClockifyMappingsSection({
     try {
       const client = getClient();
       const list = await client.listTags(workspaceId);
-      setClockifyTags(list.map((t) => ({ id: t.id, name: t.name })));
+      setClockifyTags(clockifyTagRefs(list));
     } finally {
       setLoadingTags(false);
     }
@@ -183,44 +142,18 @@ export function ClockifyMappingsSection({
     if (clockifyProjects.length === 0) await fetchProjects();
     setImportingProjects(true);
     try {
-      const { createProject: createProjectUC } =
-        await import("@domain/usecases/projects/CreateProject");
-      await runClockifyImport({
-        fetchItems: () => getClient().listProjects(workspaceId),
-        onFetched: (list) =>
-          setClockifyProjects(
-            list
-              .map((p) => ({ id: p.id, name: projectDisplayName(p) }))
-              .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-          ),
-        buildMapping: async (cp): Promise<ClockifyProjectMapping | null> => {
-          const displayName = projectDisplayName(cp);
-          let proj = await projectRepo.findByName(displayName, deskclockWorkspaceId);
-          if (!proj) {
-            try {
-              proj = await createProjectUC(projectRepo, displayName, deskclockWorkspaceId);
-            } catch {
-              proj = await projectRepo.findByName(displayName, deskclockWorkspaceId);
-            }
-          }
-          if (!proj) return null;
-          return {
-            deskclockProjectId: proj.id,
-            clockifyProjectId: cp.id,
-            clockifyProjectName: displayName,
-            workspaceId,
-          };
-        },
-        getAllMappings: () => config.get("clockifyProjectMapping"),
-        setAllMappings: (merged) => config.set("clockifyProjectMapping", merged),
-        workspaceId,
-        setLocalMappings: setProjectMapping,
-        reload: reloadProjects,
-        successMessage: (n) => `${n} projeto(s) importado(s).`,
+      const { fetched, mappings } = await runClockifyProjectsImport({
+        config,
+        api: getClient(),
+        clockifyWorkspaceId: workspaceId,
+        deskclockWorkspaceId,
+        projectRepo,
+        notifyProjectsChanged,
+        onFetched: setClockifyProjects,
       });
-      // Criados pelo repositório, fora das mutações de `useProjects` — as outras
-      // janelas só ficam sabendo por este aviso.
-      await notifyProjectsChanged();
+      setProjectMapping(mappings);
+      await reloadProjects();
+      await showToast("success", `${fetched} projeto(s) importado(s).`);
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao importar projetos.");
     } finally {
@@ -232,40 +165,18 @@ export function ClockifyMappingsSection({
     if (clockifyTags.length === 0) await fetchTags();
     setImportingTags(true);
     try {
-      const { createCategory: createCategoryUC } =
-        await import("@domain/usecases/categories/CreateCategory");
-      const allCMSnapshot = config.get("clockifyCategoryMapping");
-      await runClockifyImport({
-        fetchItems: () => getClient().listTags(workspaceId),
-        onFetched: (list) => setClockifyTags(list.map((t) => ({ id: t.id, name: t.name }))),
-        buildMapping: async (tag): Promise<ClockifyCategoryMapping | null> => {
-          let cat = await categoryRepo.findByName(tag.name, deskclockWorkspaceId);
-          if (!cat) {
-            try {
-              cat = await createCategoryUC(categoryRepo, tag.name, true, deskclockWorkspaceId);
-            } catch {
-              cat = await categoryRepo.findByName(tag.name, deskclockWorkspaceId);
-            }
-          }
-          if (!cat) return null;
-          const existingTagIds =
-            allCMSnapshot.find(
-              (m) => m.deskclockCategoryId === cat!.id && m.workspaceId === workspaceId
-            )?.clockifyTagIds ?? [];
-          return {
-            deskclockCategoryId: cat.id,
-            clockifyTagIds: existingTagIds.length > 0 ? existingTagIds : [tag.id],
-            workspaceId,
-          };
-        },
-        getAllMappings: () => config.get("clockifyCategoryMapping"),
-        setAllMappings: (merged) => config.set("clockifyCategoryMapping", merged),
-        workspaceId,
-        setLocalMappings: setCategoryMapping,
-        reload: reloadCategories,
-        successMessage: (n) => `${n} tag(s) importada(s) como categorias.`,
+      const { fetched, mappings } = await runClockifyTagsImport({
+        config,
+        api: getClient(),
+        clockifyWorkspaceId: workspaceId,
+        deskclockWorkspaceId,
+        categoryRepo,
+        notifyCategoriesChanged,
+        onFetched: setClockifyTags,
       });
-      await notifyCategoriesChanged();
+      setCategoryMapping(mappings);
+      await reloadCategories();
+      await showToast("success", `${fetched} tag(s) importada(s) como categorias.`);
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao importar tags.");
     } finally {
@@ -274,32 +185,21 @@ export function ClockifyMappingsSection({
   }
 
   async function updateProjectMapping(deskclockProjectId: string, clockifyProjectId: string) {
-    const allPM = config.get("clockifyProjectMapping");
-    const rest = allPM.filter(
-      (m) => !(m.workspaceId === workspaceId && m.deskclockProjectId === deskclockProjectId)
-    );
-    const updated = [...rest];
-    if (clockifyProjectId) {
-      const cp = clockifyProjects.find((p) => p.id === clockifyProjectId);
-      updated.push({
-        deskclockProjectId,
-        clockifyProjectId,
-        clockifyProjectName: cp?.name ?? "",
+    const cp = clockifyProjects.find((p) => p.id === clockifyProjectId);
+    setProjectMapping(
+      await saveClockifyProjectMapping(
+        config,
         workspaceId,
-      });
-    }
-    await config.set("clockifyProjectMapping", updated);
-    setProjectMapping(updated.filter((m) => m.workspaceId === workspaceId));
+        deskclockProjectId,
+        clockifyProjectId ? { id: clockifyProjectId, name: cp?.name ?? "" } : null
+      )
+    );
   }
 
   async function updateCategoryMapping(deskclockCategoryId: string, tagIds: string[]) {
-    const allCM = config.get("clockifyCategoryMapping");
-    const rest = allCM.filter(
-      (m) => !(m.workspaceId === workspaceId && m.deskclockCategoryId === deskclockCategoryId)
+    setCategoryMapping(
+      await saveClockifyCategoryMapping(config, workspaceId, deskclockCategoryId, tagIds)
     );
-    const updated = [...rest, { deskclockCategoryId, clockifyTagIds: tagIds, workspaceId }];
-    await config.set("clockifyCategoryMapping", updated);
-    setCategoryMapping(updated.filter((m) => m.workspaceId === workspaceId));
   }
 
   async function updateDefaultTags(ids: string[]) {

@@ -3,10 +3,8 @@ import type { IDaySummaryRepository } from "@domain/repositories/IDaySummaryRepo
 import type { ITaskRepository } from "@domain/repositories/ITaskRepository";
 import { summarizeWorkdays, type DaySummaryResult } from "@domain/usecases/llm/SummarizeWorkdays";
 import type { IntegrationFactories } from "@presentation/contexts/IntegrationsContext";
-import {
-  describeLlmError,
-  isLlmConnected,
-} from "@presentation/sections/integrations/llm/llmConnection";
+import { isLlmConnected } from "@presentation/integrations/llmConnection";
+import { describeLlmError } from "@presentation/sections/integrations/llm/llmConnection";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import type { LlmRateLimits } from "@shared/types/llm";
 

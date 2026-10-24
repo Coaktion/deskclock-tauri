@@ -1,12 +1,14 @@
-import { resolveProjectDestination } from "@domain/usecases/monday/importMondayProjects";
-import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import type { SeedMondayProjectCategoriesResult } from "@domain/usecases/monday/seedMondayProjectCategories";
-import { runMondayProjectsImport } from "@presentation/integrations/mondayCatalogImports";
+import {
+  runMondayProjectsImport,
+  runMondaySetProjectBoard,
+} from "@presentation/integrations/mondayCatalogImports";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyProjectCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
+import { DomainError } from "@shared/errors";
 import { showToast } from "@shared/utils/toast";
 import { Button, Input } from "@presentation/components/ui";
 import { ImportActionButton, ImportCard } from "./ImportCard";
@@ -148,20 +150,20 @@ export function MondayProjectsImport({
    * que é o problema que o campo existe para resolver.
    */
   async function handleSetBoardId(portfolioItemId: string, boardId: string) {
-    const { destination, failure } = await resolveProjectDestination(
-      factories.createMondayApi(),
-      boardId,
-      new Date().toISOString()
-    );
-    if (failure) {
-      await showToast("error", failure);
+    let next: MondayProjectMapping[];
+    try {
+      next = await runMondaySetProjectBoard(
+        { config, api: factories.createMondayApi() },
+        portfolioItemId,
+        boardId,
+        new Date().toISOString()
+      );
+    } catch (err) {
+      // Só o board que não serve vira toast, como antes; o resto sobe.
+      if (!(err instanceof DomainError)) throw err;
+      await showToast("error", err.message);
       return;
     }
-
-    const next = normalizeProjectMappings(config.get("mondayProjectMapping")).map((m) =>
-      m.portfolioItemId === portfolioItemId ? { ...m, mondayBoardId: boardId, ...destination } : m
-    );
-    await config.set("mondayProjectMapping", next);
     onImported(next);
     await showToast("success", boardId ? "Quadro vinculado." : "Quadro removido.");
   }

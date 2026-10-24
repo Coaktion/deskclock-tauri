@@ -9,6 +9,7 @@ import {
   runMondayCatalogsRead,
   runMondayCategoriesImport,
   runMondayProjectsImport,
+  runMondaySetProjectBoard,
 } from "@presentation/integrations/mondayCatalogImports";
 import type { ConfigContextValue } from "@shared/types/appConfig";
 import { EMPTY_FIELD_CATALOGS } from "@shared/types/mondayConfig";
@@ -132,5 +133,25 @@ describe("runMondayCatalogsRead", () => {
     expect(api.getBoardSchema).toHaveBeenCalledWith("rep");
     expect(result).toEqual(EMPTY_FIELD_CATALOGS);
     expect(config.set).toHaveBeenCalledWith("mondayFieldCatalogs", result);
+  });
+});
+
+describe("quadro digitado à mão", () => {
+  it("lê o schema e grava o destino no vínculo do item", async () => {
+    const config = makeConfig({
+      mondayProjectMapping: [
+        { portfolioItemId: "i1", deskclockProjectId: "p1", mondayBoardId: "" },
+        { portfolioItemId: "i2", deskclockProjectId: "p2", mondayBoardId: "" },
+      ],
+    });
+    const api = {
+      getBoardSchema: vi.fn(async () => {
+        throw new Error("board inacessível");
+      }),
+    } as unknown as IMondayApi;
+    await expect(
+      runMondaySetProjectBoard({ config, api }, "i1", "99", "2026-09-15T10:00:00Z")
+    ).rejects.toThrow("board inacessível");
+    expect(config.set).not.toHaveBeenCalled();
   });
 });

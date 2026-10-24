@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
-import { addIgnoreRule } from "@domain/usecases/calendar/isEventIgnored";
+import { addIgnoreRule, removeIgnoreRule } from "@domain/usecases/calendar/isEventIgnored";
 import { Button, IconButton, Input, Select } from "@presentation/components/ui";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrationsUi } from "@presentation/contexts/IntegrationsUiContext";
@@ -60,7 +60,7 @@ export function CalendarIgnoreRules() {
             title="Remover regra"
             variant="danger"
             size="sm"
-            onClick={() => void save(rules.filter((r) => r !== rule))}
+            onClick={() => void save(removeIgnoreRule(rules, rule))}
           />
         </div>
       ))}

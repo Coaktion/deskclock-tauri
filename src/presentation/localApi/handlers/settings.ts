@@ -3,9 +3,7 @@ import {
   OVERLAY_OPACITY_RANGE,
   ROUNDING_TOLERANCE_OPTIONS,
   WEEKLY_GOAL_RANGE,
-  isIntegerInRange,
   isRoundingSlot,
-  type NumberRange,
 } from "@domain/usecases/settings/settingsRules";
 import {
   SHORTCUTS,
@@ -22,6 +20,7 @@ import type {
   ShortcutsUpdate,
 } from "@presentation/settings/settingsGroups";
 import { DomainError } from "@shared/errors";
+import { boolean, integerIn, oneOf, parsePatch, text, type Validator } from "../patchRules";
 import { ACCENTS, MODES } from "@shared/utils/theme";
 import type { LocalApiHandler } from "../types";
 
@@ -31,28 +30,6 @@ import type { LocalApiHandler } from "../types";
  * o que a tela não deixa escolher (fora da faixa, fora das opções) é 400. A
  * gravação e os efeitos são os das abas, pela porta `deps.settings`.
  */
-
-type Validator = (value: unknown, key: string) => string | null;
-
-const boolean: Validator = (value, key) =>
-  typeof value === "boolean" ? null : `${key} deve ser true ou false.`;
-
-const text: Validator = (value, key) =>
-  typeof value === "string" ? null : `${key} deve ser texto.`;
-
-const integerIn =
-  (range: NumberRange, unit: string): Validator =>
-  (value, key) =>
-    isIntegerInRange(value, range)
-      ? null
-      : `${key} deve ser um inteiro de ${range.min} a ${range.max}${unit}.`;
-
-const oneOf =
-  (options: readonly (string | number)[]): Validator =>
-  (value, key) =>
-    options.includes(value as string | number)
-      ? null
-      : `${key} deve ser um de: ${options.join(", ")}.`;
 
 const roundingSlots: Validator = (value, key) =>
   Array.isArray(value) && value.every(isRoundingSlot)
@@ -93,33 +70,6 @@ const SHORTCUT_RULES: Record<ShortcutName, Validator> = Object.fromEntries(
         : `${key} deve ser texto ("" remove o atalho).`,
   ])
 ) as Record<ShortcutName, Validator>;
-
-/**
- * O corpo como patch tipado. Chave fora do grupo é 400 em vez de ignorada: um
- * erro de digitação passaria por "gravado" sem gravar nada — e é assim que as
- * chaves órfãs (`fontSize`, `overlayShowOnStart`) ficam de fora.
- */
-function parsePatch<T>(body: unknown, rules: Record<string, Validator>, group: string): Partial<T> {
-  if (body === null || body === undefined) return {};
-  if (typeof body !== "object" || Array.isArray(body)) {
-    throw new DomainError("O corpo deve ser um objeto JSON.");
-  }
-  const patch: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(body)) {
-    const rule = rules[key];
-    if (!rule) {
-      throw new DomainError(
-        `Configuração desconhecida em ${group}: '${key}'. Válidas: ${Object.keys(rules).join(", ")}.`
-      );
-    }
-    if (value === undefined) continue;
-    if (value === null) throw new DomainError(`${key} não aceita null; omita para manter.`);
-    const error = rule(value, key);
-    if (error) throw new DomainError(error);
-    patch[key] = value;
-  }
-  return patch as Partial<T>;
-}
 
 export const getGeneralSettings: LocalApiHandler = async (deps) => ({
   status: 200,

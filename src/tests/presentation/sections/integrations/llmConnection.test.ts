@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   describeLlmError,
-  isLlmConnected,
   pickDefaultModel,
 } from "@presentation/sections/integrations/llm/llmConnection";
+import { isLlmConnected } from "@presentation/integrations/llmConnection";
 import {
   LlmAuthError,
   LlmEmptyResponseError,

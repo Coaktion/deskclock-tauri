@@ -34,3 +34,17 @@ export function addIgnoreRule(
   );
   return exists ? rules : [...rules, { operator: rule.operator, value }];
 }
+
+/**
+ * Tira a regra da lista pelo mesmo critério de igualdade do `addIgnoreRule`
+ * (operador e valor normalizado). Devolve a própria lista quando nenhuma casa,
+ * para o chamador saber que não havia o que remover.
+ */
+export function removeIgnoreRule(
+  rules: CalendarIgnoreRule[],
+  rule: CalendarIgnoreRule
+): CalendarIgnoreRule[] {
+  const key = nameKey(rule.value);
+  const next = rules.filter((r) => !(r.operator === rule.operator && nameKey(r.value) === key));
+  return next.length === rules.length ? rules : next;
+}

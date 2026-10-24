@@ -32,6 +32,10 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
+import {
+  DEFAULT_SHEET_NAME,
+  normalizeSheetName,
+} from "@domain/usecases/settings/integrationSettingsRules";
 import { formatLastSync } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
@@ -58,7 +62,7 @@ import {
 } from "./shared";
 import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
 import { AutoSyncControls, type AutoSyncNow } from "./AutoSyncControls";
-import { SHEETS_AUTO_SYNC_KEYS } from "./autoSyncIntegrations";
+import { SHEETS_AUTO_SYNC_KEYS } from "@presentation/integrations/autoSyncIntegrations";
 import { CalendarIgnoreRules } from "./google/CalendarIgnoreRules";
 import { GoogleCalendarLogo } from "./google/GoogleCalendarLogo";
 import { GoogleDriveLogo } from "./google/GoogleDriveLogo";
@@ -203,7 +207,7 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
   useEffect(() => {
     if (!config.isLoaded) return;
     setSpreadsheetId(config.get("integrationGoogleSheetsSpreadsheetId"));
-    setSheetName(config.get("integrationGoogleSheetsSheetName") || "DeskClock");
+    setSheetName(config.get("integrationGoogleSheetsSheetName") || DEFAULT_SHEET_NAME);
     setColumnMapping(config.get("integrationGoogleSheetsColumnMapping") ?? DEFAULT_COLUMN_MAPPING);
     setDurationFormat(config.get("integrationGoogleSheetsDurationFormat") ?? "HH:MM");
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -242,7 +246,7 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
             value={sheetName}
             onChange={(e) => setSheetName(e.target.value)}
             onBlur={async () => {
-              const name = sheetName.trim() || "DeskClock";
+              const name = normalizeSheetName(sheetName);
               setSheetName(name);
               await config.set("integrationGoogleSheetsSheetName", name);
             }}

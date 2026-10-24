@@ -10,6 +10,7 @@ import {
 import { importMondayFieldCatalogs } from "@domain/usecases/monday/importMondayFieldCatalogs";
 import {
   importMondayProjects,
+  resolveProjectDestination,
   type ImportMondayProjectsResult,
 } from "@domain/usecases/monday/importMondayProjects";
 import { MONDAY_MAPPING_CACHE_VERSION } from "@domain/usecases/monday/mondayMappingCachePolicy";
@@ -20,7 +21,12 @@ import {
 } from "@domain/usecases/monday/seedMondayProjectCategories";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import type { ConfigContextValue } from "@shared/types/appConfig";
-import { EMPTY_FIELD_CATALOGS, type MondayFieldCatalogs } from "@shared/types/mondayConfig";
+import { DomainError } from "@shared/errors";
+import {
+  EMPTY_FIELD_CATALOGS,
+  type MondayFieldCatalogs,
+  type MondayProjectMapping,
+} from "@shared/types/mondayConfig";
 import { todayISO } from "@shared/utils/time";
 
 // Os três botões da "Importação de dados" do Monday (Projetos, Catálogos,
@@ -170,4 +176,28 @@ export async function runMondayCatalogsRead(deps: {
   });
   await deps.config.set("mondayFieldCatalogs", result);
   return result;
+}
+
+/**
+ * O "ID do quadro" digitado à mão num projeto cujo item de Portfólio não traz a
+ * coluna preenchida: lê o schema do board e grava o vínculo com o destino já
+ * resolvido. Sem ler o schema o vínculo ficaria sem grupo nem colunas — o
+ * projeto pareceria vinculado e o envio continuaria sem onde criar a atividade.
+ *
+ * Board que não serve lança com o motivo (o toast da tela); nada é gravado.
+ * Devolve os vínculos como ficaram.
+ */
+export async function runMondaySetProjectBoard(
+  deps: { config: Pick<ConfigContextValue, "get" | "set">; api: IMondayApi },
+  portfolioItemId: string,
+  boardId: string,
+  nowISO: string
+): Promise<MondayProjectMapping[]> {
+  const { destination, failure } = await resolveProjectDestination(deps.api, boardId, nowISO);
+  if (failure) throw new DomainError(failure);
+  const next = normalizeProjectMappings(deps.config.get("mondayProjectMapping")).map((m) =>
+    m.portfolioItemId === portfolioItemId ? { ...m, mondayBoardId: boardId, ...destination } : m
+  );
+  await deps.config.set("mondayProjectMapping", next);
+  return next;
 }

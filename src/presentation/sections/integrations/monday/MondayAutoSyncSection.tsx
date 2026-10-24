@@ -1,6 +1,6 @@
 import { MONDAY_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { AutoSyncControls, type AutoSyncNow } from "../AutoSyncControls";
-import { MONDAY_AUTO_SYNC_KEYS } from "../autoSyncIntegrations";
+import { MONDAY_AUTO_SYNC_KEYS } from "@presentation/integrations/autoSyncIntegrations";
 
 /** O envio ao Monday é um upsert por grupo: o count são atividades, não tarefas. */
 const MONDAY_SYNC_NOW: AutoSyncNow = {

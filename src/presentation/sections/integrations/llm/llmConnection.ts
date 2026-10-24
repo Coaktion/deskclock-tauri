@@ -6,17 +6,6 @@ import {
 } from "@infra/integrations/llm/errors";
 
 /**
- * Conectado = há um destino e um modelo escolhido.
- *
- * **A chave não entra na conta**, e é deliberado: Ollama e LM Studio rodam sem
- * nenhuma, e amarrar o estado a ela deixaria os dois provedores locais eternamente
- * "não configurados" depois de uma conexão que funcionou.
- */
-export function isLlmConnected(baseUrl: string, model: string): boolean {
-  return baseUrl.trim() !== "" && model.trim() !== "";
-}
-
-/**
  * Erro do provedor traduzido para a frase que a tela mostra.
  *
  * **O erro cru nunca chega ao usuário**: os provedores devolvem JSON de formatos

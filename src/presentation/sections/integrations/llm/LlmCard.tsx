@@ -6,7 +6,7 @@ import { LlmConnectModal } from "@presentation/modals/LlmConnectModal";
 import { Button } from "@presentation/components/ui";
 import { Row, StatusBadge } from "../shared";
 import { LlmLogo } from "./LlmLogo";
-import { isLlmConnected } from "./llmConnection";
+import { isLlmConnected } from "@presentation/integrations/llmConnection";
 import { buildLlmQuotaView, type LlmQuotaView } from "./llmQuota";
 
 export function LlmIntegrationCard() {

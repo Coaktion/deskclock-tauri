@@ -2,7 +2,7 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { findLlmProvider } from "@infra/integrations/llm/providers";
 import { IntegrationTile } from "../shared";
 import { LlmLogo } from "./LlmLogo";
-import { isLlmConnected } from "./llmConnection";
+import { isLlmConnected } from "@presentation/integrations/llmConnection";
 
 export function LlmTile({ onClick }: { onClick: () => void }) {
   const config = useAppConfig();
