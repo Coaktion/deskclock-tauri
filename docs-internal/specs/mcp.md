@@ -495,10 +495,10 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
   `{ id, workspaceId, body }`; `delete`/`set_default` `{ id, workspaceId }` (`scoped_id_params`); `export_tasks`
   `{ body }` só com o que veio (`{}` = hoje, perfil padrão, workspace ativo).
 - **Workspace da geração.** A ponte escopa as tarefas pelo workspace pedido (ausente = ativo), como o `history.list`.
-  **O modal não escopa**: o `searchTasks` dele nunca recebeu `workspaceId` (vem de antes dos workspaces) e exporta as
+  O modal não escopava — o `searchTasks` dele nunca recebeu `workspaceId` (vinha de antes dos workspaces) e exportava as
   concluídas de **todos** os workspaces, com projeto/categoria resolvidos só no catálogo do ativo (os de outro workspace
-  saem em branco). A refatoração manteve isso (`loadTasksForExport` sem `workspaceId`); para tarefas do workspace ativo o
-  conteúdo é idêntico. Corrigir o modal fica para decisão do usuário.
+  saíam em branco). **Corrigido em 2026-10-23** a pedido do usuário: o modal passa o workspace ativo, e tela e API geram o
+  mesmo conteúdo para a mesma entrada.
 
 ### Decisões da Fase D1 que a spec não fixava
 

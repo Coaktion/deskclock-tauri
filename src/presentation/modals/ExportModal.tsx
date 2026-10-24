@@ -16,6 +16,7 @@ import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { useCopyFeedback } from "@presentation/hooks/useCopyFeedback";
 import { todayISO } from "@shared/utils/time";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
+import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import {
   generateTaskExport,
   loadTasksForExport,
@@ -41,6 +42,7 @@ interface ExportModalProps {
 
 export function ExportModal({ projects, categories, onClose }: ExportModalProps) {
   const { taskRepo } = useRepositories();
+  const activeWorkspaceId = useActiveWorkspaceId();
   const { profiles, create, update, remove, setDefault } = useExportProfiles();
   // `fields` (e não `activeFields`) na exportação: um campo arquivado ainda tem
   // valores gravados no histórico e a coluna precisa continuar resolvendo.
@@ -71,8 +73,13 @@ export function ExportModal({ projects, categories, onClose }: ExportModalProps)
   async function loadTasks() {
     const from = periodMode === "today" ? todayISO() : startDate;
     const to = periodMode === "today" ? todayISO() : endDate;
-    // Sem `workspaceId`: o modal sempre buscou em todos os workspaces.
-    const result = await loadTasksForExport(taskRepo, { from, to });
+    // Do workspace ativo, como os projetos e categorias que nomeiam as linhas:
+    // buscar em todos deixava a tarefa de outro workspace sem projeto e categoria.
+    const result = await loadTasksForExport(taskRepo, {
+      from,
+      to,
+      workspaceId: activeWorkspaceId,
+    });
     setTasks(result);
     setSelected(new Set(result.map((t) => t.id)));
     setLoaded(true);
