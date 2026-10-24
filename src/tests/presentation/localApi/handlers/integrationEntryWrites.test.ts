@@ -204,6 +204,7 @@ const MAPPING = {
   },
   activityTypeLabels: ["Development", "Meeting"],
   projectStageLabels: [],
+  statusLabels: ["Done"],
 } as unknown as MondayProjectMapping;
 
 function mondayEntry(itemId: string, mapping: MondayProjectMapping = MAPPING): MondayEntry {

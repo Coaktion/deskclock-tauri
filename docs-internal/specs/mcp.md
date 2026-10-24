@@ -640,9 +640,11 @@ app de dev de todas as fases fica para o fim, numa rodada só (decisão do usuá
   Edições: `idempotentHint: true`. Exclusões: `destructiveHint: true`, `idempotentHint: true` (a segunda só erra); a descrição
   manda chamar só a pedido explícito, e a do Monday manda confirmar com o usuário antes, nomeando atividade, board e horas.
 - **Erros do serviço**: como na D2, sobem e viram 500 com a mensagem. Não configurado: 409 com o aviso da leitura.
-- **Achado, não mexido:** a edição do Monday reescreve o Status com o rótulo que a atividade já tem (`entry.statusLabel`), sem
-  conferir contra `statusLabels` como o envio faz. Se o rótulo tiver saído do board, o Monday pode recusar a edição inteira — a
-  armadilha que a guarda do envio fechou. Mantido igual à tela (a API usa a mesma função); corrigir é decisão do usuário.
+- **Status na edição do Monday — corrigido em 2026-10-23** a pedido do usuário: a edição reescrevia o Status com o rótulo que a
+  atividade já tinha (`entry.statusLabel`), sem conferir contra `statusLabels` como o envio faz, e um rótulo que saiu do board
+  faria o Monday recusar a edição inteira — a armadilha que a guarda do envio fechou. Agora o `buildMondayEntryUpdate` só manda
+  o Status quando o rótulo está em `statusLabels`; fora dele, ou com o cache sem os rótulos, a coluna fica como está. Vale para
+  a tela e para a API, que usam a mesma função.
 
 ### Decisões da Fase D3a que a spec não fixava
 

@@ -32,6 +32,7 @@ const MAPPING: MondayProjectMapping = {
   projectStageTitle: "Project Stage",
   nonBillableReasonLabels: [],
   reportTypeGroupIds: { Activity: "g_act" },
+  statusLabels: ["Working on it", "Done"],
 };
 
 const ENTRY: MondayEntry = {
@@ -98,6 +99,19 @@ describe("buildMondayEntryUpdate", () => {
   it("atividade sem Status não escreve a coluna", () => {
     const values = buildMondayEntryUpdate({ ...ENTRY, statusLabel: "" }, patch(), "7");
     expect("status" in values).toBe(false);
+  });
+
+  // O Monday recusa a mutation inteira por um rótulo que o board não tem — foi
+  // o que derrubou o envio quando "Completed" saiu dos boards.
+  it("Status cujo rótulo saiu do board não vai, e o resto da edição sim", () => {
+    const values = buildMondayEntryUpdate({ ...ENTRY, statusLabel: "Completed" }, patch(), "7");
+    expect("status" in values).toBe(false);
+    expect(values).toMatchObject({ name: "Nova", hours: "2.5" });
+  });
+
+  it("cache sem os rótulos do Status não arrisca escrever a coluna", () => {
+    const semRotulos = { ...ENTRY, mapping: { ...MAPPING, statusLabels: undefined } };
+    expect("status" in buildMondayEntryUpdate(semRotulos, patch(), "7")).toBe(false);
   });
 });
 

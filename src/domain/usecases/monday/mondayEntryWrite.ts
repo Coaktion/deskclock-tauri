@@ -35,8 +35,10 @@ export function mondayEntryPatchError(
 /**
  * O `column_values` da edição, com o nome. Mesmo serializador do envio (§9.4):
  * rótulo que não existe na coluna faz o Monday recusar a escrita inteira, então
- * Activity Type e Project Stage fora dos rótulos do board ficam fora do payload.
- * O Status vai com o rótulo que a atividade já tem.
+ * Activity Type, Project Stage e Status fora dos rótulos do board ficam fora do
+ * payload. O Status repete o rótulo que a atividade já tem — e, se esse rótulo
+ * saiu do board (ou o cache não tem os rótulos), não vai: a coluna fica como
+ * está, em vez de a edição inteira ser recusada, como já aconteceu no envio.
  */
 export function buildMondayEntryUpdate(
   entry: MondayEntry,
@@ -48,7 +50,9 @@ export function buildMondayEntryUpdate(
     hoursDecimal: patch.hoursDecimal,
     billable: patch.billable,
     userId,
-    statusLabel: entry.statusLabel || undefined,
+    ...(entry.statusLabel && entry.mapping.statusLabels?.includes(entry.statusLabel)
+      ? { statusLabel: entry.statusLabel }
+      : {}),
     ...(entry.mapping.activityTypeLabels.includes(patch.activityTypeLabel)
       ? { activityTypeLabel: patch.activityTypeLabel }
       : {}),
