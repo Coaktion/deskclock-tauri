@@ -807,7 +807,7 @@
         <button type="button" data-a="ambar" aria-pressed="false" title="Âmbar"><span></span></button>
       </div>
     </div>
-    <div class="sidebar-version">v2.4.1 · DeskClock</div>
+    <div class="sidebar-version">v2.5.0 · DeskClock</div>
   </div>
 </nav>
 
@@ -986,6 +986,50 @@
       </div>
     </div>
 
+    <h2 id="iniciar-por-texto">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+      Iniciar por texto
+    </h2>
+
+    <p>Dá para dizer tudo de uma vez, no próprio campo do omnibox: o nome e, depois, os campos da tarefa separados por vírgula. Abaixo do Play, a instrução com o ícone de IA mostra os campos na ordem em que se digitam, com um exemplo tirado do seu catálogo — algo como <em>"Nome, Projeto, Categoria, Billable, …, nessa ordem e por vírgula; dá para pular campo"</em>.</p>
+
+    <ul>
+      <li><strong>O primeiro trecho é o nome</strong>; os seguintes vão para os campos, na ordem. Exemplo: <code>Revisão, Tech interno, Development, nb</code>.</li>
+      <li><strong>Dá para pular campo.</strong> Cada trecho vai para o próximo campo que o reconhece: <code>Daily, nb</code> só marca como não faturável.</li>
+      <li><strong>Não precisa do nome inteiro.</strong> O começo das palavras basta (<code>tech int</code> acha "Tech interno"), e singular ou plural, masculino ou feminino não atrapalham ("reunião interna" acha "Reuniões internas").</li>
+      <li><strong>Billable</strong> aceita <code>b</code>, <code>nb</code>, <code>sim</code> e <code>não</code>.</li>
+      <li><strong>Texto livre</strong>, sem a ordem, também funciona quando há um <a onclick="show('llm')">provedor de IA</a> conectado: "Revisão do PR no projeto Portal, não faturável". Sem provedor, o texto livre vira só o nome, como sempre foi.</li>
+    </ul>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Digite e pressione Enter</h4>
+          <p>Em vez de iniciar, o DeskClock lê o texto e mostra a <strong>prévia</strong> no lugar dos chips: nome, projeto, categoria, billable e campos personalizados.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Confira a prévia</h4>
+          <p>Quando mais de um item combina, o chip vem destacado e abre os candidatos para você escolher. O que não foi encontrado fica vazio, para completar ali mesmo. O billable alterna com um clique. <kbd>Esc</kbd> fecha a prévia, e editar o texto também a descarta.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Enter de novo para iniciar</h4>
+          <p>A tarefa começa com os campos da prévia e com o horário do <strong>primeiro</strong> Enter — a espera pela IA não come os segundos da tarefa.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body">Texto só com o nome inicia direto, sem prévia, como antes. Se você já escolheu projeto, categoria ou billable nos chips, o texto é tratado como nome e nada é sobrescrito. Se a IA falhar, a mensagem aparece no lugar da prévia e o segundo Enter inicia o texto como nome.</div>
+    </div>
+
     <h2 id="tarefa-em-execucao">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
       Tarefa em execução
@@ -1157,6 +1201,14 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
       <div class="callout-body">A coluna recolhida <strong>reabre sozinha</strong> quando algo pré-preenche o formulário — um deep link de lançamento, ou o play de uma tarefa planejada sem horário. Preencher um campo escondido não mostraria nada.</div>
     </div>
+
+    <h2 id="lancar-por-texto">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+      Lançar por texto
+    </h2>
+
+    <p>No topo da coluna do formulário, as abas <strong>Formulário</strong> e <strong>IA</strong>. A aba IA troca nome, projeto, categoria, billable e campos personalizados por um campo de texto curto, lido do mesmo jeito que o <a onclick="show('tasks/iniciar-por-texto')">omnibox</a>: <code>Nome, Projeto, Categoria, …</code>, por vírgula. Os horários continuam embaixo, como no formulário.</p>
+    <p>Enter mostra a prévia; o segundo Enter (ou <strong>Adicionar</strong>) lança. A aba escolhida fica lembrada para a próxima vez.</p>
 
     <h2 id="adicionar-entrada">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
@@ -1637,7 +1689,7 @@
     
     </div>
 
-    <p>Tarefas agrupadas viram um registro único, com a duração somada. Os perfis são por workspace, e há um perfil padrão editável desde o início.</p>
+    <p>Tarefas agrupadas viram um registro único, com a duração somada. Os perfis são por workspace, e há um perfil padrão editável desde o início. A exportação traz só as tarefas do workspace ativo.</p>
 
     <div class="callout info">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -1956,7 +2008,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-text)" stroke-width="2"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
         </div>
         <h4>Provedor de IA</h4>
-        <p>Conecte um provedor de LLM para gerar o resumo dos seus dias no Histórico.</p>
+        <p>Conecte um provedor de LLM para gerar o resumo dos seus dias e iniciar tarefas por texto livre.</p>
       </div>
     </div>
 
@@ -2515,7 +2567,7 @@
     <div class="page-header">
       <div class="page-header-eyebrow">Integração</div>
       <h1>Provedor de IA</h1>
-      <p>Conecte um provedor de LLM para gerar o resumo dos seus dias de trabalho no Histórico.</p>
+      <p>Conecte um provedor de LLM para gerar o resumo dos seus dias de trabalho no Histórico e para iniciar tarefas descritas em texto livre.</p>
     </div>
 
     <p>O DeskClock não vem com um modelo de IA embutido: você escolhe o provedor e usa a sua própria chave. O card <strong>Provedor de IA</strong> fica na tela de Integrações. Enquanto nenhum provedor estiver conectado, nada de IA aparece no resto do app.</p>
@@ -2557,6 +2609,18 @@
     </div>
 
     <p>Com o provedor conectado, o card mostra provedor, modelo e URL base, além de <strong>"Trocar provedor…"</strong>. <strong>Desconectar</strong> apaga a chave e o modelo, mas mantém o provedor e a URL, para reconectar ser só colar a chave de novo.</p>
+
+    <h2 id="llm-texto">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+      Iniciar tarefa por texto
+    </h2>
+
+    <p>Com o provedor conectado, o <a onclick="show('tasks/iniciar-por-texto')">texto do omnibox</a>, do botão <strong>Iniciar com IA</strong> do popup e da aba IA do Lançamento Manual pode ser escrito livremente, sem a ordem dos campos. O texto na ordem, por vírgula, é lido no próprio app e não chama o provedor.</p>
+
+    <div class="callout info">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div class="callout-body"><strong>Seus projetos não saem do computador.</strong> Ao provedor vão só o texto que você digitou e o nome e o tipo de cada campo da tarefa — inclusive o nome dos seus campos personalizados. A lista de projetos, de categorias e as opções dos campos nunca vão: o DeskClock recebe as palavras de volta e as procura no seu catálogo, localmente.</div>
+    </div>
 
     <h2 id="llm-cota">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -2697,6 +2761,9 @@
 
     
     </div>
+
+    <h3>Iniciar com IA</h3>
+    <p>Sem tarefa rodando, o botão <strong>Iniciar com IA</strong> fica ao lado de <strong>Nova tarefa</strong>. Ele abre um painel com a instrução dos campos, o campo de texto e a prévia — o mesmo texto do <a onclick="show('tasks/iniciar-por-texto')">omnibox</a>. A primária diz <strong>Analisar</strong> e vira <strong>Iniciar</strong> quando a prévia (ou uma mensagem de erro) aparece. <kbd>Esc</kbd> fecha o painel, não o popup.</p>
 
     <h3>Ao parar</h3>
     <p>O card troca a linha do cronômetro pelo campo de hora de término e os botões <strong>Concluída</strong> / <strong>Pendente</strong> — o mesmo fluxo da tela de <a onclick="show('tasks')">Tarefas</a>.</p>
@@ -3438,6 +3505,18 @@
       </table>
         </div>
 
+    <h3>Iniciar por texto</h3>
+    <p>A mesma leitura do campo da tela. As rotas <strong>só interpretam</strong>: nada é criado, e quem chama confirma com você e inicia com <code>POST /tasks/start</code>, <code>POST /tasks</code> ou <code>POST /planned-tasks</code>.</p>
+    <div class="table-scroll">
+          <table class="data-table">
+        <thead><tr><th>Método</th><th>Rota</th><th>O que faz</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/tasks/text/fields</code></td><td>Os campos da tarefa na ordem de digitar, com a instrução e um exemplo do catálogo</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tasks/text/interpret</code></td><td>Interpreta um texto: devolve nome, projeto, categoria, billable e campos personalizados com os nomes ao lado, e o que ficou ambíguo (com os candidatos) ou não foi encontrado. Texto livre usa o provedor de IA; erro dele responde 502</td></tr>
+        </tbody>
+      </table>
+        </div>
+
     <h3>Exportação</h3>
     <p>Os perfis e o conteúdo da janela <strong>Exportar</strong> do Histórico. Os perfis são do workspace (<code>workspaceId</code> ausente = o ativo). A API não grava arquivo: o texto CSV ou JSON vem na resposta, com um nome sugerido, e salvar ou copiar fica com quem chamou.</p>
     <div class="table-scroll">
@@ -3494,6 +3573,7 @@
           <tr><td><strong>Editar e excluir</strong></td><td>Editar, concluir, desmarcar, duplicar e excluir planejadas; editar, excluir, unificar, mover de workspace e mudar o billable de registros do Histórico; cadastrar, editar, importar e excluir projetos, categorias, categorias por projeto, campos personalizados e workspaces, e trocar o workspace ativo</td></tr>
           <tr><td><strong>Integrações</strong></td><td>Mostrar o que vai ser enviado ao Google Sheets, ao Clockify ou ao Monday num período, e enviar os grupos escolhidos; mostrar e importar como planejadas os eventos do Google Agenda, os tickets do Zendesk e os itens do Monday; importar do Monday os projetos, as categorias e os catálogos; mostrar os lançamentos que já estão no Clockify e no Monday, criar, editar e excluir apontamentos do Clockify e editar e excluir as suas atividades do Monday — antes de excluir no Monday, o assistente confirma com você</td></tr>
           <tr><td><strong>Resumo e backup</strong></td><td>Ler e gerar o resumo por IA dos seus dias de trabalho, como a aba Resumo do Histórico; ver o estado do backup no Google Drive e fazer um backup agora</td></tr>
+          <tr><td><strong>Iniciar por texto</strong></td><td>Interpretar um texto como o campo da tela, devolvendo os campos e o que ficou ambíguo ou não encontrado. Só interpreta: o assistente confirma com você e então inicia, lança ou planeja</td></tr>
           <tr><td><strong>Exportar</strong></td><td>Gerar o CSV ou JSON das tarefas de um período com um perfil de exportação, e criar, editar, excluir e escolher o padrão entre os perfis. O texto vem na conversa; o assistente o entrega a você ou o salva, se você pedir um arquivo</td></tr>
           <tr><td><strong>Configurações e link</strong></td><td>Ler e mudar as configurações Geral, Overlay, Aparência e Atalhos — os atalhos são globais no sistema, e o assistente confirma a combinação com você —, mostrar ou ocultar o overlay; gerar o link de compartilhar de uma planejada e, para um link recebido, mostrar o que ele traz e adicioná-lo como planejada ou iniciá-lo</td></tr>
           <tr><td><strong>Ajustes das integrações</strong></td><td>Ler e mudar o workspace de cada integração, o envio automático, os mapeamentos do Clockify, as regras de eventos ignorados da Agenda, o backup automático, os boards e os campos de Project Stage e Non Billable reason do Monday; importar projetos e tags do Clockify e o "Enviar agora" do Sheets e do Monday. Conectar uma integração continua sendo pela tela</td></tr>
