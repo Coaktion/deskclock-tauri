@@ -1,5 +1,8 @@
 import { formatCustomValue } from "@domain/usecases/customFields/customValueCodec";
-import { buildTaskFieldHints } from "@domain/usecases/llm/taskText/buildTaskFieldHints";
+import {
+  buildTaskTextContext,
+  type TaskTextContext,
+} from "@domain/usecases/llm/taskText/buildTaskTextContext";
 import { formatTaskFieldInstruction } from "@domain/usecases/llm/taskText/formatTaskFieldInstruction";
 import { interpretTaskText } from "@domain/usecases/llm/taskText/interpretTaskText";
 import type {
@@ -7,7 +10,6 @@ import type {
   TaskTextCatalog,
   TaskTextInterpretation,
 } from "@domain/usecases/llm/taskText/types";
-import { buildProjectCategoryMap } from "@domain/usecases/projectCategories/buildProjectCategoryMap";
 import { describeTaskTextError } from "@presentation/integrations/taskText";
 import { DomainError } from "@shared/errors";
 import { errorResult } from "../errors";
@@ -20,29 +22,15 @@ import type { LocalApiDeps, LocalApiHandler } from "../types";
 // interpretar e iniciar de uma vez pularia a confirmação que a tela exige. Ele
 // mostra a interpretação, confirma e chama `start_task`/`log_past_task`/`plan_task`.
 
-interface TaskTextContext {
-  hints: TaskFieldHint[];
-  catalog: TaskTextCatalog;
-}
-
 /** O que a instrução e o casamento consultam: o catálogo do workspace e os campos ativos. */
 async function loadContext(deps: LocalApiDeps, workspaceId: string): Promise<TaskTextContext> {
-  const [projects, categories, associations, allFields] = await Promise.all([
+  const [projects, categories, associations, customFields] = await Promise.all([
     deps.projectRepo.findAll(workspaceId),
     deps.categoryRepo.findAll(workspaceId),
     deps.projectCategoryRepo.findAll(workspaceId),
     deps.customFieldRepo.findAll(),
   ]);
-  const customFields = allFields.filter((field) => !field.archived);
-  return {
-    hints: buildTaskFieldHints(customFields, { projects, categories }),
-    catalog: {
-      projects,
-      categories,
-      projectCategoryMap: buildProjectCategoryMap(associations),
-      customFields,
-    },
-  };
+  return buildTaskTextContext({ projects, categories, associations, customFields });
 }
 
 // O exemplo vem do catálogo e aqui pode sair: a API é local. A regra de

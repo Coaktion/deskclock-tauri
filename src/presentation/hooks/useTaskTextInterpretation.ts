@@ -1,11 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { activeCustomFields } from "@domain/usecases/customFields/GetCustomFields";
-import { buildTaskFieldHints } from "@domain/usecases/llm/taskText/buildTaskFieldHints";
+import { buildTaskTextContext } from "@domain/usecases/llm/taskText/buildTaskTextContext";
 import { chooseTaskTextCandidate } from "@domain/usecases/llm/taskText/chooseTaskTextCandidate";
 import { formatTaskFieldInstruction } from "@domain/usecases/llm/taskText/formatTaskFieldInstruction";
 import { interpretTaskText } from "@domain/usecases/llm/taskText/interpretTaskText";
-import type { TaskTextCatalog, TaskTextInterpretation } from "@domain/usecases/llm/taskText/types";
-import { buildProjectCategoryMap } from "@domain/usecases/projectCategories/buildProjectCategoryMap";
+import type { TaskTextInterpretation } from "@domain/usecases/llm/taskText/types";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useCategories } from "@presentation/hooks/useCategories";
@@ -60,16 +58,10 @@ export function useTaskTextInterpretation() {
   const { rows } = useProjectCategoryMap();
   const connected = llmConnected(config);
 
-  const catalog = useMemo<TaskTextCatalog>(
-    () => ({
-      projects,
-      categories,
-      projectCategoryMap: buildProjectCategoryMap(rows),
-      customFields: activeCustomFields(fields),
-    }),
+  const { hints, catalog } = useMemo(
+    () => buildTaskTextContext({ projects, categories, associations: rows, customFields: fields }),
     [projects, categories, rows, fields]
   );
-  const hints = useMemo(() => buildTaskFieldHints(catalog.customFields, catalog), [catalog]);
   const instruction = useMemo(() => formatTaskFieldInstruction(hints), [hints]);
 
   const [state, setState] = useState<TaskTextState>(IDLE);

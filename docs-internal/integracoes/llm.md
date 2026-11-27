@@ -369,6 +369,8 @@ o desvio do Enter, comum às três superfícies (omnibox, popup, Lançamento Man
 
 **Ao provedor vão só o texto digitado e, de cada campo, rótulo, sigla e tipo**
 (`buildTaskTextPrompt`). Nunca a lista de projetos, de categorias ou as opções dos campos `select`.
+O rótulo do campo personalizado **vai**, e é nome que o usuário escolheu: um rótulo com nome de
+cliente sai da máquina.
 
 > **Projetos são nomes de clientes.** Mandar o catálogo a cada uso entregaria a carteira inteira a
 > um terceiro para separar meia dúzia de palavras. Foi decisão do usuário (opção A da spec); o

@@ -20,12 +20,13 @@ pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 /// Ops que esperam o serviço externo por mais de uma ida e volta: o resumo por
 /// IA chama o provedor um dia de cada vez (até cinco, em série) e o backup faz o
 /// snapshot do banco inteiro e o sobe ao Drive; a interpretação do texto da
-/// tarefa espera uma completação, que em modelo local passa fácil dos 10 s. No prazo padrão o cliente
-/// receberia 504 com o trabalho ainda em curso — e repetiria um backup que deu
-/// certo. A mesma lista está em `runsInLongQueue` (`localApi/dispatch.ts`) e em
-/// `src-tauri/long-ops.json`, que os testes dos dois lados conferem. No
-/// TS elas rodam numa fila própria, senão quem chegasse atrás estouraria os 10 s
-/// e ainda executaria depois. Ver `docs-internal/specs/mcp.md` §7, Fase D2.
+/// tarefa espera uma completação, que em modelo local passa fácil dos 10 s. No
+/// prazo padrão o cliente receberia 504 com o trabalho ainda em curso — e
+/// repetiria um backup que deu certo. A mesma lista está em `runsInLongQueue`
+/// (`localApi/dispatch.ts`) e em `src-tauri/long-ops.json`, que os testes dos
+/// dois lados conferem. No TS elas rodam numa fila própria, senão quem chegasse
+/// atrás estouraria os 10 s e ainda executaria depois. Ver
+/// `docs-internal/specs/mcp.md` §7, Fase D2.
 const LONG_OPS: &[&str] = &[
     "daySummaries.generate",
     "driveBackup.run",
