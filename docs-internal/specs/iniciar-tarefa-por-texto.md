@@ -6,8 +6,8 @@
 - **Coverage tier:** A em `src/domain/usecases/llm/taskText/` e no handler da API local; B nos
   hooks; C na UI (sem teste de renderização — padrão do repo, `docs-internal/testes.md`)
 - **Branch:** `feat/llm-task-start`, a partir da `develop` local (`4b0655b`)
-- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · Execute concluído (Fases 1–6); falta Review —
-  ver **Andamento** no fim
+- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · Execute ✅ · Review ✅ (2026-11-27) — falta a
+  verificação manual do usuário; ver **Andamento** no fim
 
 > Ordem de trabalho escrita para ser lida por um agente sem acesso à conversa que a originou.
 
@@ -144,17 +144,22 @@ inofensiva.
   `useRetroactiveForm`, `RetroactiveEntryForm`.
 - 2026-11-27 — `e0a55ac` Fase 1: domínio em `src/domain/usecases/llm/taskText/` (hints e siglas,
   atalho de siglas, prompt, leitura tolerante, casamento local, `interpretTaskText`).
-- 2026-11-27 — `d278d6c` Fase 2: `useTaskTextInterpretation`, `TaskTextHint`, `TaskTextPreview` e
+- 2026-11-27 — `f9ac333` Fase 2: `useTaskTextInterpretation`, `TaskTextHint`, `TaskTextPreview` e
   o omnibox com instrução, análise, prévia e início com o instante do primeiro envio.
-- 2026-11-27 — `ba5bef2` Fase 5: `taskText.fields` / `taskText.interpret` na API local e as tools
-  `get_task_text_fields` / `interpret_task_text` no MCP (nenhuma inicia tarefa).
-- 2026-11-27 — `9133cfe` Fase 3: "Iniciar com IA" no popup (`TaskTextSheet`).
-- 2026-11-27 — `1e544b4` Fase 4: abas Formulário | IA no Lançamento Manual, aba memorizada em
+- 2026-11-27 — `d4d51d5` Fase 5: `taskText.fields` / `taskText.interpret` na API local
+  (`GET /tasks/text/fields`, `POST /tasks/text/interpret`) e as tools `get_task_text_fields` /
+  `interpret_task_text` no MCP (nenhuma inicia tarefa). As duas rotas em `build_router` (impacto
+  HIGH por ser a raiz do roteador) entraram com aprovação do usuário.
+- 2026-11-27 — `5992fba` Fase 3: "Iniciar com IA" no popup (`TaskTextSheet`).
+- 2026-11-27 — `ebabe72` Fase 4: abas Formulário | IA no Lançamento Manual, aba memorizada em
   `retroactiveEntryMode`.
-- 2026-11-27 — Fase 6 (ainda não commitada): docs (`integracoes/llm.md`, `telas/tarefas.md`,
+- 2026-11-27 — `b9cdf9a` Fase 6: docs (`integracoes/llm.md`, `telas/tarefas.md`,
   `telas/overlays.md`, `telas/lancamento-retroativo.md`, esta spec) e o rename
-  `omniboxTextEntry` → `taskTextEntry` (`TaskTextInterpreter`), já que o desvio do Enter serve às
-  três superfícies.
+  `omniboxTextEntry` → `taskTextEntry` (`TaskTextInterpreter`).
+- 2026-11-27 — `4e05616` + `97ed3fe` correções do review: `buildTaskTextContext` (um só montador de
+  catálogo e instrução para hook e API, com `activeCustomFields`), teste do hook
+  `useTaskTextInterpretation` e dois casos de borda. Segunda rodada do `@code-quality-reviewer`:
+  **PASS**. Os hashes anteriores a `f9ac333` mudaram num rebase local (reword de assunto > 72).
 
 **Desvios do plano** (registrados para o Review):
 
@@ -169,9 +174,18 @@ inofensiva.
 - **Impacto CRITICAL em `AppConfig` aceito**: a mudança é aditiva (uma chave nova com padrão), e
   quem já lê a config não muda de comportamento.
 
-**Pendente:**
+**Dívida registrada** (fora do escopo, apontada no review):
 
-- `@code-quality-reviewer` sobre o diff da branch.
+- O cabeçalho/rodapé dos painéis do popup está na 4ª cópia (`h-[37px]`/`h-[38px]` em
+  `TaskTextSheet`, `RunningTaskEditSheet`, `PlannedTaskEditSheet`, `CompletedTaskEditSheet`) —
+  candidato a primitivo `SheetHeader`/`SheetFooter`.
+- `useRetroactiveForm` foi de 227 para 278 linhas; `PopupOverlayContent` de 693 para 733.
+- `taskTextEntry.ts` é função pura morando em `presentation/hooks/`.
+- A aba IA do Lançamento Manual perde o foco quando um pré-preenchimento troca para a aba
+  Formulário.
+
+**Pendente — próximo passo:**
+
 - Verificação visual pelo usuário: `pnpm tauri dev` nos 2 modos × 4 acentos (omnibox, popup,
   Lançamento Manual).
 - Ida e volta real com um provedor de IA (texto livre → prévia → início).
