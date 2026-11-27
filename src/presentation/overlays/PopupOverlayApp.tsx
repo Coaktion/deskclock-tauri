@@ -15,6 +15,7 @@ import { cancelTask as cancelTaskUC } from "@domain/usecases/tasks/CancelTask";
 import { updateTask as updateTaskUC } from "@domain/usecases/tasks/UpdateTask";
 import { applyRunningTaskEditToPlanned } from "@domain/usecases/plannedTasks/ApplyRunningTaskEditToPlanned";
 import { ConfigProvider, useAppConfig } from "@presentation/contexts/ConfigContext";
+import { IntegrationsProvider } from "@presentation/contexts/IntegrationsContext";
 import {
   OVERLAY_EVENTS,
   type RunningTaskChangedPayload,
@@ -24,7 +25,7 @@ import {
 import { useAppearanceSync } from "@presentation/hooks/useAppearanceSync";
 import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import type { PlannedTask, PlannedTaskAction } from "@domain/entities/PlannedTask";
-import { PopupOverlayContent } from "./PopupOverlayContent";
+import { PopupOverlayContent, type PopupStartTaskInput } from "./PopupOverlayContent";
 import { MeetingPromptView } from "./MeetingPromptView";
 import { useMeetingPrompt } from "./useMeetingPrompt";
 import { shouldHidePopupOnEscape } from "./popupEscape";
@@ -217,13 +218,7 @@ function PopupOverlayAppInner() {
   }, [meetingPromptActiveRef]);
 
   const handleStartTask = useCallback(
-    async (input: {
-      name?: string | null;
-      projectId?: string | null;
-      categoryId?: string | null;
-      billable: boolean;
-      plannedTaskId?: string | null;
-    }) => {
+    async (input: PopupStartTaskInput) => {
       if (isStartingTaskRef.current) return;
       isStartingTaskRef.current = true;
       try {
@@ -384,7 +379,11 @@ export function PopupOverlayApp() {
     <ConfigProvider>
       <RepositoriesProvider>
         <WorkspaceProvider>
-          <PopupOverlayAppInner />
+          {/* Só para o "Iniciar com IA": as factories são preguiçosas, então o
+              popup não instancia cliente nenhum até alguém analisar um texto. */}
+          <IntegrationsProvider>
+            <PopupOverlayAppInner />
+          </IntegrationsProvider>
         </WorkspaceProvider>
       </RepositoriesProvider>
     </ConfigProvider>
