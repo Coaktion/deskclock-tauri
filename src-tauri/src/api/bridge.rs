@@ -17,6 +17,18 @@ use uuid::Uuid;
 pub const REQUEST_EVENT: &str = "local-api:request";
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
 
+/// Ops que esperam o serviço externo por mais de uma ida e volta: o resumo por
+/// IA chama o provedor um dia de cada vez (até cinco, em série) e o backup faz o
+/// snapshot do banco inteiro e o sobe ao Drive. No prazo padrão o cliente
+/// receberia 504 com o trabalho ainda em curso — e repetiria um backup que deu
+/// certo. A mesma lista está em `runsInLongQueue` (`localApi/dispatch.ts`) e em
+/// `src-tauri/long-ops.json`, que os testes dos dois lados conferem. No
+/// TS elas rodam numa fila própria, senão quem chegasse atrás estouraria os 10 s
+/// e ainda executaria depois. Ver `docs-internal/specs/mcp.md` §7, Fase D2.
+const LONG_OPS: &[&str] = &["daySummaries.generate", "driveBackup.run"];
+/// O prazo das `LONG_OPS` é este múltiplo do padrão (2 min com os 10 s do app).
+const LONG_OP_FACTOR: u32 = 12;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct BridgeResponse {
     pub status: u16,
@@ -104,7 +116,7 @@ impl Bridge {
             return Err(BridgeError::Failed(e));
         }
 
-        match tokio::time::timeout(self.timeout, rx).await {
+        match tokio::time::timeout(self.timeout_for(op), rx).await {
             Ok(Ok(response)) => Ok(response),
             Ok(Err(_)) => Err(BridgeError::Failed("resposta descartada".into())),
             Err(_) => {
@@ -113,6 +125,14 @@ impl Bridge {
                 self.pending.lock().unwrap().remove(&id);
                 Err(BridgeError::Timeout)
             }
+        }
+    }
+
+    fn timeout_for(&self, op: &str) -> Duration {
+        if LONG_OPS.contains(&op) {
+            self.timeout * LONG_OP_FACTOR
+        } else {
+            self.timeout
         }
     }
 
@@ -213,6 +233,42 @@ mod tests {
         let (id, _) = sent.lock().unwrap()[0].clone();
         assert!(!bridge.respond(&id, 200, json!({})));
         assert!(bridge.pending.lock().unwrap().is_empty());
+    }
+
+    /// O TS confere a lista dele (`runsInLongQueue`) contra o mesmo arquivo:
+    /// op longa num lado só voltaria a dar 504 em quem chega atrás dela.
+    #[test]
+    fn long_ops_bate_com_long_ops_json() {
+        let manifest: Vec<String> =
+            serde_json::from_str(include_str!("../../long-ops.json")).unwrap();
+        let mut ours: Vec<&str> = LONG_OPS.to_vec();
+        let mut theirs: Vec<&str> = manifest.iter().map(String::as_str).collect();
+        ours.sort_unstable();
+        theirs.sort_unstable();
+        assert_eq!(ours, theirs, "LONG_OPS diverge de src-tauri/long-ops.json");
+    }
+
+    #[tokio::test]
+    async fn ops_longas_esperam_mais_que_o_prazo_padrao() {
+        let (bridge, sent) = bridge_with_log(Duration::from_millis(30));
+        bridge.mark_ready();
+        for op in ["daySummaries.generate", "driveBackup.run"] {
+            let pending = tokio::spawn({
+                let b = bridge.clone();
+                async move { b.request(op, json!({})).await }
+            });
+            let emitted = wait_for_emits(&sent, 1).await;
+            // Depois do prazo padrão, mas dentro do longo.
+            tokio::time::sleep(Duration::from_millis(80)).await;
+            let (id, _) = emitted.last().unwrap().clone();
+            assert!(bridge.respond(&id, 200, json!({})), "{op}");
+            assert_eq!(pending.await.unwrap().unwrap().status, 200, "{op}");
+            sent.lock().unwrap().clear();
+        }
+        assert_eq!(
+            bridge.request("daySummaries.list", json!({})).await,
+            Err(BridgeError::Timeout)
+        );
     }
 
     #[tokio::test]

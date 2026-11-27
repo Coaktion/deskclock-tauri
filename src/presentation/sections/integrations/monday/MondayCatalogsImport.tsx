@@ -1,6 +1,6 @@
-import { importMondayFieldCatalogs } from "@domain/usecases/monday/importMondayFieldCatalogs";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import { runMondayCatalogsRead } from "@presentation/integrations/mondayCatalogImports";
 import type { MondayFieldCatalogs } from "@shared/types/mondayConfig";
 import { showToast } from "@shared/utils/toast";
 import { ImportActionButton, ImportCard } from "./ImportCard";
@@ -38,11 +38,7 @@ export function MondayCatalogsImport({
   async function handleRead() {
     setBusy(true);
     try {
-      const result = await importMondayFieldCatalogs({
-        api: factories.createMondayApi(),
-        reportBoardId,
-      });
-      await config.set("mondayFieldCatalogs", result);
+      const result = await runMondayCatalogsRead({ config, api: factories.createMondayApi() });
       onRead(result);
       await showToast(
         "success",

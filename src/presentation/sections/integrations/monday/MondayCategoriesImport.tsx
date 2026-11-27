@@ -1,7 +1,6 @@
-import {
-  activityTypeCatalog,
-  importMondayCategories,
-} from "@domain/usecases/monday/importMondayCategories";
+import { activityTypeCatalog } from "@domain/usecases/monday/importMondayCategories";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { runMondayCategoriesImport } from "@presentation/integrations/mondayCatalogImports";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyCategoriesChanged } from "@shared/utils/catalogSync";
@@ -27,6 +26,7 @@ export function MondayCategoriesImport({
   reloadCategories: () => Promise<void>;
 }) {
   const { categoryRepo } = useRepositories();
+  const config = useAppConfig();
   const [importing, setImporting] = useState(false);
   const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
 
@@ -51,15 +51,13 @@ export function MondayCategoriesImport({
   async function handleImport() {
     setImporting(true);
     try {
-      const { created, existing } = await importMondayCategories({
+      const { created, existing } = await runMondayCategoriesImport({
+        config,
         categoryRepo,
-        catalogLabels,
-        mappings,
-        deskclockWorkspaceId,
+        notifyCategoriesChanged,
       });
       await loadExisting();
       await reloadCategories();
-      await notifyCategoriesChanged();
       await showToast(
         "success",
         `${created.length} categoria(s) criada(s); ${existing.length} já existia(m).`

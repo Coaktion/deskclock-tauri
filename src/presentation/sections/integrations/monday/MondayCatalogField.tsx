@@ -2,6 +2,15 @@ import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import type { AppConfig } from "@shared/types/appConfig";
 import { showToast } from "@shared/utils/toast";
+import {
+  linkableCatalogFields,
+  missingCatalogOptions,
+  MONDAY_CATALOG_EMPTY_HINT,
+} from "@domain/usecases/monday/mondayCatalogFields";
+import {
+  createOrLinkCatalogField,
+  refreshCatalogFieldOptions,
+} from "@presentation/integrations/mondayCatalogFields";
 import { Select } from "@presentation/components/ui";
 import { ImportActionButton, ImportCard } from "./ImportCard";
 import { useEffect, useState } from "react";
@@ -55,13 +64,9 @@ export function MondayCatalogField({
     // render do provider, então tê-lo nas deps desfaria a escolha do usuário.
   }, [config.isLoaded, configKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // O campo vinculado continua na lista mesmo arquivado — sumir com ele faria o
-  // vínculo existente parecer inexistente.
-  const options = fields.filter((f) => f.type === "select" && (!f.archived || f.id === fieldId));
+  const options = linkableCatalogFields(fields, fieldId);
   const linked = fields.find((f) => f.id === fieldId);
-  const missingOptions = linked
-    ? optionLabels.filter((l) => !linked.options.some((o) => o.label === l)).length
-    : 0;
+  const missingOptions = linked ? missingCatalogOptions(linked, optionLabels).length : 0;
 
   async function handleSelect(id: string) {
     setFieldId(id);
@@ -72,23 +77,13 @@ export function MondayCatalogField({
   async function handleCreate() {
     setBusy(true);
     try {
-      const label = (defaultFieldLabel ?? "").trim() || title;
-      // Só um `select` serve: vincular um campo `text` homônimo mandaria texto
-      // livre para uma coluna `status` e sumiria do select desta tela, que só
-      // lista selects — o vínculo pareceria não existir.
-      const homonym = fields.find((f) => f.label.toLowerCase() === label.toLowerCase());
-      if (homonym && homonym.type !== "select") {
-        // Criar estouraria `DuplicateNameError`, cuja mensagem não diz o que
-        // fazer: o campo homônimo nem aparece no select desta tela.
-        throw new Error(
-          `Já existe um campo "${label}" que não é de seleção. Renomeie-o na tela de Dados ou escolha outro campo na lista.`
-        );
-      }
-      const field = homonym ?? (await createField({ label, type: "select", optionLabels }));
-      await handleSelect(field.id);
+      const { label, reused } = await createOrLinkCatalogField(
+        { fields, createField, updateField, link: handleSelect },
+        { title, defaultFieldLabel: defaultFieldLabel ?? "", optionLabels }
+      );
       await showToast(
         "success",
-        homonym
+        reused
           ? `Campo "${label}" já existia e foi vinculado.`
           : `Campo "${label}" criado com ${optionLabels.length} opção(ões).`
       );
@@ -99,20 +94,13 @@ export function MondayCatalogField({
     }
   }
 
-  /**
-   * Traz rótulos novos do board sem tocar nos antigos: `updateCustomField` casa
-   * as opções existentes pelo rótulo e preserva o id, que é o valor gravado nas
-   * tarefas. Remover opção some do formulário, mas o histórico continua válido —
-   * por isso a união, e não a substituição.
-   */
+  /** Traz rótulos novos do board sem tocar nos antigos (ver `refreshCatalogFieldOptions`). */
   async function handleRefreshOptions() {
     if (!linked) return;
     setBusy(true);
     try {
-      const merged = [...linked.options.map((o) => o.label)];
-      for (const label of optionLabels) if (!merged.includes(label)) merged.push(label);
-      await updateField(linked.id, { optionLabels: merged });
-      await showToast("success", `${missingOptions} opção(ões) adicionada(s) ao campo.`);
+      const added = await refreshCatalogFieldOptions({ updateField }, linked, optionLabels);
+      await showToast("success", `${added} opção(ões) adicionada(s) ao campo.`);
     } catch (err) {
       await showToast("error", err instanceof Error ? err.message : "Erro ao atualizar o campo.");
     } finally {
@@ -121,7 +109,7 @@ export function MondayCatalogField({
   }
 
   const noLabels = optionLabels.length === 0;
-  const emptyHint = "Leia os catálogos para carregar os rótulos desta coluna.";
+  const emptyHint = MONDAY_CATALOG_EMPTY_HINT;
 
   return (
     <ImportCard title={title} hint={hint}>

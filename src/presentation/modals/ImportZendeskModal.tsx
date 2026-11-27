@@ -14,7 +14,12 @@ import type { ITicketImporter } from "@domain/integrations/ITicketImporter";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import { importTickets, type ImportTicketInput } from "@domain/usecases/plannedTasks/ImportTickets";
+import {
+  importTickets,
+  ticketImportDefaults,
+  toImportTicketInput,
+  type TicketImportDefaults,
+} from "@domain/usecases/plannedTasks/ImportTickets";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { emit } from "@tauri-apps/api/event";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
@@ -44,28 +49,17 @@ const STATUS_COLORS: Record<ZendeskTicket["status"], string> = {
   hold: "bg-orange-500/20 text-orange-300",
 };
 
-interface TicketEditState {
-  name: string;
-  projectId: string | null;
+interface TicketEditState extends TicketImportDefaults {
   projectName: string;
-  categoryId: string | null;
   categoryName: string;
-  addOpenUrlAction: boolean;
-  scheduleType: "recurring" | "specific_date";
-  scheduleDate: string;
   expanded: boolean;
 }
 
 function defaultEditState(ticket: ZendeskTicket): TicketEditState {
   return {
-    name: `#${ticket.id} - ${ticket.subject}`,
-    projectId: null,
+    ...ticketImportDefaults(ticket, todayISO()),
     projectName: "",
-    categoryId: null,
     categoryName: "",
-    addOpenUrlAction: true,
-    scheduleType: "recurring",
-    scheduleDate: todayISO(),
     expanded: false,
   };
 }
@@ -286,20 +280,9 @@ export function ImportZendeskModal({
   }
 
   async function handleImport() {
-    const inputs: ImportTicketInput[] = tickets
+    const inputs = tickets
       .filter((t) => selected.has(t.id))
-      .map((t) => {
-        const edit = editMap.get(t.id)!;
-        return {
-          ticket: t,
-          name: edit.name || `#${t.id} - ${t.subject}`,
-          projectId: edit.projectId,
-          categoryId: edit.categoryId,
-          addOpenUrlAction: edit.addOpenUrlAction,
-          scheduleType: edit.scheduleType,
-          scheduleDate: edit.scheduleType === "specific_date" ? edit.scheduleDate : null,
-        };
-      });
+      .map((t) => toImportTicketInput(t, editMap.get(t.id)!));
 
     if (inputs.length === 0) return;
 

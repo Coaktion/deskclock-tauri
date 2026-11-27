@@ -1,5 +1,9 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import {
+  refreshClockifyWorkspaces,
+  selectClockifyWorkspace,
+} from "@presentation/integrations/clockifySettings";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { IconButton, Select } from "@presentation/components/ui";
@@ -24,10 +28,7 @@ export function ClockifyWorkspaceSection() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      const client = factories.createClockifyApi();
-      const list = await client.listWorkspaces();
-      setWorkspaces(list);
-      await config.set("clockifyWorkspaceCache", list);
+      setWorkspaces(await refreshClockifyWorkspaces(config, factories.createClockifyApi()));
     } catch {
       // erro silencioso — lista anterior permanece
     } finally {
@@ -40,8 +41,7 @@ export function ClockifyWorkspaceSection() {
     if (!ws) return;
     setActiveId(id);
     setActiveName(ws.name);
-    await config.set("clockifyActiveWorkspaceId", id);
-    await config.set("clockifyActiveWorkspaceName", ws.name);
+    await selectClockifyWorkspace(config, ws);
   }
 
   return (

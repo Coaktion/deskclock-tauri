@@ -14,8 +14,14 @@ import { localDateISO } from "@shared/utils/time";
 import { ConflictError, NotFoundError } from "../errors";
 import { loadCatalogNames, plannedTaskDto, taskDto, toPlannedTaskDto } from "../dto";
 import { assertDate } from "../period";
-import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "../resolve";
-import { parseInstant } from "../taskInput";
+import {
+  billableForCategoryChange,
+  resolveCatalogPatch,
+  resolveCategoryId,
+  resolveProjectId,
+  resolveRequestWorkspace,
+} from "../resolve";
+import { parseInstant, resolveCustomValues } from "../taskInput";
 import type { LocalApiDeps, LocalApiHandler, LocalApiParams } from "../types";
 
 interface PlannedTaskBody {
@@ -134,7 +140,7 @@ export const createPlannedTaskHandler: LocalApiHandler = async (deps, params) =>
       sortOrder: body.sortOrder ?? DEFAULT_SORT_ORDER,
       startTime: body.startTime ?? undefined,
       endTime: body.endTime ?? undefined,
-      customValues: body.customValues ?? {},
+      customValues: (await resolveCustomValues(deps, body.customValues)) ?? {},
     },
     deps.nowISO()
   );
@@ -144,7 +150,7 @@ export const createPlannedTaskHandler: LocalApiHandler = async (deps, params) =>
 
 // Campo ausente preserva; `null` explícito remove. Sem essa distinção, editar
 // pela API uma planejada importada apagava o horário dela (defeito 6 da spec).
-function keepUnlessSent<K extends "startTime" | "endTime" | "customValues">(
+function keepUnlessSent<K extends "startTime" | "endTime">(
   body: PlannedTaskBody,
   existing: PlannedTask,
   key: K,
@@ -152,6 +158,11 @@ function keepUnlessSent<K extends "startTime" | "endTime" | "customValues">(
 ): PlannedTask[K] {
   if (!(key in body)) return existing[key];
   return (body[key] ?? cleared) as PlannedTask[K];
+}
+
+async function customValuesPatch(deps: LocalApiDeps, body: PlannedTaskBody, existing: PlannedTask) {
+  if (!("customValues" in body)) return existing.customValues;
+  return (await resolveCustomValues(deps, body.customValues)) ?? {};
 }
 
 export const updatePlannedTaskHandler: LocalApiHandler = async (deps, params) => {
@@ -172,8 +183,114 @@ export const updatePlannedTaskHandler: LocalApiHandler = async (deps, params) =>
     sortOrder: body.sortOrder ?? existing.sortOrder,
     startTime: keepUnlessSent(body, existing, "startTime", undefined),
     endTime: keepUnlessSent(body, existing, "endTime", undefined),
-    customValues: keepUnlessSent(body, existing, "customValues", {}),
+    customValues: await customValuesPatch(deps, body, existing),
   });
+  await deps.notifyPlannedTasksChanged();
+  return { status: 200, body: await plannedTaskDto(deps, updated) };
+};
+
+type Nullable<T> = { [K in keyof T]?: T[K] | null };
+
+/** Corpo do PATCH: tudo opcional; o workspace não muda por aqui. */
+type PlannedTaskPatchBody = Nullable<Omit<PlannedTaskBody, "workspaceId">>;
+
+type ScheduleFields = Pick<
+  PlannedTask,
+  "scheduleType" | "scheduleDate" | "recurringDays" | "periodStart" | "periodEnd"
+>;
+type ScheduleField = Exclude<keyof ScheduleFields, "scheduleType">;
+
+/** Os campos que cada tipo de agendamento usa — os outros ficam `null`, como a tela grava. */
+const SCHEDULE_FIELDS: Record<ScheduleType, ScheduleField[]> = {
+  specific_date: ["scheduleDate"],
+  recurring: ["recurringDays"],
+  period: ["periodStart", "periodEnd"],
+};
+const ALL_SCHEDULE_FIELDS: ScheduleField[] = Object.values(SCHEDULE_FIELDS).flat();
+// `periodEnd` nulo é período sem fim, como o formulário e o `POST` aceitam.
+const OPTIONAL_SCHEDULE_FIELDS: ScheduleField[] = ["periodEnd"];
+
+function isBlank(value: string | number[] | null | undefined) {
+  return value === null || value === undefined || value.length === 0;
+}
+
+/**
+ * Agendamento resultante do PATCH, ou `{}` se o corpo não toca nele. Trocar o
+ * tipo exige os campos do novo; o campo do tipo atual não pode ser limpo, e o
+ * de outro tipo é recusado — a planejada nunca fica sem dia para ocorrer.
+ */
+function schedulePatch(body: PlannedTaskPatchBody, existing: PlannedTask): Partial<ScheduleFields> {
+  if (!("scheduleType" in body) && !ALL_SCHEDULE_FIELDS.some((key) => key in body)) return {};
+  if (body.scheduleType === null) throw new DomainError("scheduleType não pode ser null");
+  const type =
+    body.scheduleType === undefined ? existing.scheduleType : scheduleType(body.scheduleType);
+  const fields = SCHEDULE_FIELDS[type];
+  const foreign = ALL_SCHEDULE_FIELDS.find((key) => !fields.includes(key) && !isBlank(body[key]));
+  if (foreign) throw new DomainError(`${foreign} não vale para scheduleType '${type}'`);
+
+  const keepCurrent = type === existing.scheduleType;
+  const result: ScheduleFields = {
+    scheduleType: type,
+    scheduleDate: null,
+    recurringDays: null,
+    periodStart: null,
+    periodEnd: null,
+  };
+  for (const key of fields) {
+    const value = key in body ? body[key] : keepCurrent ? existing[key] : null;
+    if (isBlank(value)) {
+      if (OPTIONAL_SCHEDULE_FIELDS.includes(key)) continue;
+      const required = fields.filter((field) => !OPTIONAL_SCHEDULE_FIELDS.includes(field));
+      throw new DomainError(`scheduleType '${type}' exige ${required.join(" e ")}`);
+    }
+    if (typeof value === "string") assertDate(value, key);
+    Object.assign(result, { [key]: value });
+  }
+  return result;
+}
+
+function namePatch(body: PlannedTaskPatchBody) {
+  if (!("name" in body)) return {};
+  const name = body.name?.trim();
+  if (!name) throw new DomainError("name não pode ser vazio");
+  return { name };
+}
+
+/** O que só entra se veio no corpo; `null` limpa (horário some, ações viram `[]`). */
+function optionalFieldsPatch(body: PlannedTaskPatchBody) {
+  return {
+    ...("startTime" in body && { startTime: body.startTime ?? undefined }),
+    ...("endTime" in body && { endTime: body.endTime ?? undefined }),
+    ...("actions" in body && { actions: actions(body.actions) }),
+    ...(typeof body.sortOrder === "number" && { sortOrder: body.sortOrder }),
+  };
+}
+
+/**
+ * Edição parcial: campo ausente preserva, `null` limpa onde limpar faz sentido.
+ * O `PUT` continua sendo a substituição completa.
+ */
+export const patchPlannedTaskHandler: LocalApiHandler = async (deps, params) => {
+  const existing = await findOrThrow(deps, params.id);
+  const body = (params.body ?? {}) as PlannedTaskPatchBody;
+  const catalog = await resolveCatalogPatch(deps, existing.workspaceId, body);
+  const input = {
+    ...namePatch(body),
+    ...schedulePatch(body, existing),
+    ...optionalFieldsPatch(body),
+    ...catalog,
+    ...(await billableForCategoryChange(
+      deps,
+      existing.workspaceId,
+      body,
+      catalog,
+      existing.categoryId
+    )),
+    ...("customValues" in body && {
+      customValues: await resolveCustomValues(deps, body.customValues),
+    }),
+  };
+  const updated = await updatePlannedTask(deps.plannedTaskRepo, existing.id, input);
   await deps.notifyPlannedTasksChanged();
   return { status: 200, body: await plannedTaskDto(deps, updated) };
 };

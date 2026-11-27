@@ -3,7 +3,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Task } from "@domain/entities/Task";
 import { dispatchLocalApiRequest } from "@presentation/localApi/dispatch";
 import { localISO } from "../../../helpers/localTime";
-import { makeDeps, makePlanned, makeTask, TODAY, WS_ATIVO, WS_OUTRO } from "../fakeDeps";
+import { makeDeps, makePlanned, makeTask, NOW, TODAY, WS_ATIVO, WS_OUTRO } from "../fakeDeps";
 
 const BODY_MINIMO = {
   name: "Daily",
@@ -79,6 +79,17 @@ describe("plannedTasks.list", () => {
 describe("plannedTasks.create", () => {
   it("grava no workspace ativo com sortOrder 0, como o app, e avisa as janelas", async () => {
     const deps = makeDeps();
+    deps.customFieldRepo.findAll.mockResolvedValue([
+      {
+        id: "f",
+        label: "F",
+        type: "text",
+        options: [],
+        sortOrder: 0,
+        archived: false,
+        createdAt: NOW,
+      },
+    ]);
 
     const result = await dispatchLocalApiRequest(deps, "plannedTasks.create", {
       body: {
@@ -199,6 +210,205 @@ describe("plannedTasks.update", () => {
     const result = await dispatchLocalApiRequest(deps, "plannedTasks.update", {
       id: "nao-existe",
       body: BODY_MINIMO,
+    });
+    expect(result).toEqual({
+      status: 404,
+      body: { error: "Tarefa planejada 'nao-existe' não encontrada" },
+    });
+  });
+});
+
+describe("plannedTasks.patch", () => {
+  const CAMPO = {
+    id: "f",
+    label: "F",
+    type: "text" as const,
+    options: [],
+    sortOrder: 0,
+    archived: false,
+    createdAt: NOW,
+  };
+  const recorrente = makePlanned({
+    name: "Daily",
+    projectId: "proj-1",
+    categoryId: "cat-ativo",
+    billable: false,
+    scheduleType: "recurring",
+    scheduleDate: null,
+    recurringDays: [1, 3],
+    startTime: "09:00",
+    endTime: "09:15",
+    sortOrder: 2,
+    completedDates: ["2026-09-14"],
+    customValues: { f: "antes" },
+    actions: [{ type: "open_url", value: "https://meet.example/x", label: "Meet" }],
+  });
+
+  function depsCom(task: PlannedTask = recorrente) {
+    const deps = makeDeps();
+    deps.plannedTaskRepo.findById.mockResolvedValue(task as never);
+    deps.customFieldRepo.findAll.mockResolvedValue([CAMPO]);
+    return deps;
+  }
+
+  function gravada(deps: ReturnType<typeof makeDeps>) {
+    return deps.plannedTaskRepo.update.mock.calls[0][0] as unknown as PlannedTask;
+  }
+
+  it("só customValues troca o mapa e preserva todo o resto", async () => {
+    const deps = depsCom();
+
+    const result = await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { customValues: { f: "  depois  " } },
+    });
+
+    expect(result.status).toBe(200);
+    expect(gravada(deps)).toEqual({ ...recorrente, customValues: { f: "depois" } });
+    expect(deps.notifyPlannedTasksChanged).toHaveBeenCalled();
+  });
+
+  it("null limpa horário, campos personalizados, ações, projeto e categoria", async () => {
+    const deps = depsCom();
+
+    await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: {
+        startTime: null,
+        endTime: null,
+        customValues: null,
+        actions: null,
+        projectId: null,
+        categoryId: null,
+      },
+    });
+
+    const updated = gravada(deps);
+    expect(updated.startTime).toBeUndefined();
+    expect(updated.endTime).toBeUndefined();
+    expect(updated).toMatchObject({
+      customValues: {},
+      actions: [],
+      projectId: null,
+      categoryId: null,
+      name: "Daily",
+      recurringDays: [1, 3],
+    });
+  });
+
+  it("trocar a categoria sem billable aplica o padrão dela", async () => {
+    const deps = depsCom({ ...recorrente, categoryId: null, billable: true });
+
+    await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { categoryName: "Reuniões" },
+    });
+
+    expect(gravada(deps)).toMatchObject({ categoryId: "cat-ativo", billable: false });
+  });
+
+  it("trocar o scheduleType com os campos do tipo novo limpa os do anterior", async () => {
+    const deps = depsCom();
+
+    await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { scheduleType: "period", periodStart: "2026-09-14", periodEnd: "2026-09-18" },
+    });
+
+    expect(gravada(deps)).toMatchObject({
+      scheduleType: "period",
+      scheduleDate: null,
+      recurringDays: null,
+      periodStart: "2026-09-14",
+      periodEnd: "2026-09-18",
+    });
+  });
+
+  it("troca para period sem periodEnd grava período sem fim, como o formulário", async () => {
+    const deps = depsCom();
+
+    await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { scheduleType: "period", periodStart: "2026-09-14" },
+    });
+
+    expect(gravada(deps)).toMatchObject({
+      scheduleType: "period",
+      periodStart: "2026-09-14",
+      periodEnd: null,
+    });
+  });
+
+  it("em período sem fim, mexer só no início preserva o fim aberto; null abre o fim", async () => {
+    const aberto = makePlanned({
+      scheduleType: "period",
+      scheduleDate: null,
+      periodStart: "2026-09-01",
+      periodEnd: null,
+    });
+    const soInicio = depsCom(aberto);
+    await dispatchLocalApiRequest(soInicio, "plannedTasks.patch", {
+      id: "p-1",
+      body: { periodStart: "2026-09-07" },
+    });
+    expect(gravada(soInicio)).toMatchObject({ periodStart: "2026-09-07", periodEnd: null });
+
+    const comFim = depsCom({ ...aberto, periodEnd: "2026-09-30" });
+    await dispatchLocalApiRequest(comFim, "plannedTasks.patch", {
+      id: "p-1",
+      body: { periodEnd: null },
+    });
+    expect(gravada(comFim)).toMatchObject({ periodStart: "2026-09-01", periodEnd: null });
+  });
+
+  it("campo do tipo atual sem scheduleType só ajusta o agendamento", async () => {
+    const deps = depsCom();
+
+    await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { recurringDays: [5] },
+    });
+
+    expect(gravada(deps)).toMatchObject({ scheduleType: "recurring", recurringDays: [5] });
+  });
+
+  it.each([
+    ["name null", { name: null }],
+    ["name vazio", { name: "   " }],
+    ["scheduleType null", { scheduleType: null }],
+    ["scheduleType desconhecido", { scheduleType: "weekly" }],
+    ["scheduleType vazio", { scheduleType: "" }],
+    ["troca para specific_date sem scheduleDate", { scheduleType: "specific_date" }],
+    ["troca para period sem periodStart", { scheduleType: "period", periodEnd: "2026-09-18" }],
+    ["dia da recorrência limpo", { recurringDays: null }],
+    ["recorrência sem dias", { recurringDays: [] }],
+    ["campo de outro tipo", { scheduleDate: TODAY }],
+    ["data fora do formato", { scheduleType: "specific_date", scheduleDate: "15/09/2026" }],
+    ["customValues com campo desconhecido", { customValues: { nao: "x" } }],
+  ])("recusa %s com 400 e não grava", async (_caso, body) => {
+    const deps = depsCom();
+    const result = await dispatchLocalApiRequest(deps, "plannedTasks.patch", { id: "p-1", body });
+    expect(result.status).toBe(400);
+    expect(deps.plannedTaskRepo.update).not.toHaveBeenCalled();
+    expect(deps.notifyPlannedTasksChanged).not.toHaveBeenCalled();
+  });
+
+  it("devolve 409 quando o projeto não existe no workspace da planejada", async () => {
+    const deps = depsCom({ ...recorrente, workspaceId: WS_OUTRO });
+    const result = await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "p-1",
+      body: { projectName: "Cliente" },
+    });
+    expect(deps.projectRepo.findByName).toHaveBeenCalledWith("Cliente", WS_OUTRO);
+    expect(result.status).toBe(409);
+    expect(deps.plannedTaskRepo.update).not.toHaveBeenCalled();
+  });
+
+  it("devolve 404 para planejada inexistente", async () => {
+    const deps = makeDeps();
+    const result = await dispatchLocalApiRequest(deps, "plannedTasks.patch", {
+      id: "nao-existe",
+      body: { customValues: {} },
     });
     expect(result).toEqual({
       status: 404,

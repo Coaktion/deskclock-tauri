@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { ConfigContextValue } from "@shared/types/appConfig";
+import { shortcutRegistrations } from "@domain/usecases/settings/shortcuts";
+import { currentShortcuts } from "@presentation/settings/settingsEffects";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const appWindow = getCurrentWindow();
@@ -10,12 +12,7 @@ export function useGlobalShortcuts(config: ConfigContextValue) {
   useEffect(() => {
     if (!config.isLoaded) return;
     invoke("update_shortcuts", {
-      shortcuts: [
-        { action: "toggle-task", accelerator: config.get("shortcutToggleTask") },
-        { action: "stop-task", accelerator: config.get("shortcutStopTask") },
-        { action: "toggle-overlay", accelerator: config.get("shortcutToggleOverlay") },
-        { action: "toggle-window", accelerator: config.get("shortcutToggleWindow") },
-      ],
+      shortcuts: shortcutRegistrations(currentShortcuts(config)),
     }).catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 

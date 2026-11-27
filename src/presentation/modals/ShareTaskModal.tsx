@@ -4,8 +4,9 @@ import { emit } from "@tauri-apps/api/event";
 import type { Category } from "@domain/entities/Category";
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
-import { createPlannedTask } from "@domain/usecases/plannedTasks/CreatePlannedTask";
+import { planSharedTask } from "@domain/usecases/plannedTasks/planSharedTask";
 import { resolveSharedPayload } from "@domain/utils/resolveSharedPayload";
+import { sharedTaskStartWarning } from "@domain/utils/sharePayload";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import {
@@ -167,16 +168,9 @@ function ShareTaskForm({
   async function handlePlan() {
     setPending("plan");
     try {
-      await createPlannedTask(
+      await planSharedTask(
         plannedTaskRepo,
-        {
-          workspaceId,
-          ...formValues(),
-          scheduleType: "specific_date",
-          scheduleDate: date,
-          startTime: startTime || undefined,
-          endTime: endTime || undefined,
-        },
+        { workspaceId, ...formValues(), date, startTime, endTime },
         new Date().toISOString()
       );
       await emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
@@ -186,8 +180,6 @@ function ShareTaskForm({
     }
   }
 
-  const runningName = runningTask?.name?.trim() || "(sem nome)";
-  const runningState = runningTask?.status === "paused" ? "pausada" : "em execução";
   const busy = pending !== null;
 
   return (
@@ -201,13 +193,7 @@ function ShareTaskForm({
         runningTask ? (
           <div className="flex items-start gap-2 px-3 py-2 bg-warning/10 border border-warning/20 rounded-control">
             <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
-            {/* O aviso para em "encerra", de propósito: o que acontece depois
-                é das regras de parada, e uma delas descarta a tarefa com menos
-                de um minuto (`shouldDiscardTask`). Prometer "e a salva como
-                concluída" seria falso justamente no caso em que mais se perde. */}
-            <p className="text-xs text-warning">
-              Iniciar agora encerra a tarefa {runningState} &ldquo;{runningName}&rdquo;.
-            </p>
+            <p className="text-xs text-warning">{sharedTaskStartWarning(runningTask)}</p>
           </div>
         ) : undefined
       }

@@ -275,7 +275,7 @@ de sobra. Nem todo provedor manda estes cabeçalhos, e ausente é ausente — a 
 nenhum dos onze provedores tem endpoint gratuito que a informe, e o teste de conexão não serve
 (§ acima). Sem persistir, o card ficaria vazio até a próxima geração, que só acontece com uma
 abertura da aba Resumo do Histórico sobre dia ainda não resumido. Quem grava é o
-`useDaySummaries`, e só quando `limits` veio. Não são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
+`useDaySummaries` (e a geração pela API local), pelo `saveLlmLimits`, e só quando `limits` veio. Não são segredo — dizem quanto resta de uma cota, não como usá-la —, então ficam fora de
 `SECRET_CONFIG_KEYS`.
 
 Como a medição só acontece quando a aba Resumo gera dia novo, **ela quase sempre é uma foto do

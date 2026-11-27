@@ -1,7 +1,7 @@
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { mergeLabels } from "@domain/usecases/monday/importMondayFieldCatalogs";
+import { mondayCatalogFieldSource } from "@domain/usecases/monday/mondayCatalogFields";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
+import { mondayDestinationWorkspaceId } from "@presentation/integrations/mondayCatalogImports";
 import {
   EMPTY_FIELD_CATALOGS,
   type MondayFieldCatalogs,
@@ -43,20 +43,12 @@ export function MondayImportSection({
   // seção: o import manual e o rastreador precisam criar no mesmo lugar, ou o
   // dedupe de `monday_imported_items` — chaveado por (item, workspace) — se
   // parte em dois e a mesma planejada nasce duas vezes.
-  const destinationId = resolveIntegrationWorkspaceId(
-    config.isLoaded ? config.get("mondayDeskclockWorkspaceId") : ""
-  );
+  const destinationId = mondayDestinationWorkspaceId(config);
 
-  // Os rótulos de etapa vêm do catálogo e, como reserva, de qualquer projeto
-  // **de cliente**: nos boards internos a coluna se chama "Project Phase" e traz
-  // outros quatro rótulos, que não são a etapa que o envio das horas preenche.
-  // Os 18 do Report batem exatamente com os dos boards de cliente, então as duas
-  // origens dizem a mesma coisa — a reserva existe para a tela não ficar vazia
-  // enquanto os catálogos não forem lidos.
-  const stageSource = mappings.find(
-    (m) => m.scope === "cliente" && m.projectStageLabels.length > 0
-  );
-  const stageLabels = mergeLabels(catalogs.projectStage, stageSource?.projectStageLabels ?? []);
+  // Etapa: catálogo e, de reserva, os rótulos de um projeto de cliente (ver
+  // `mondayCatalogFieldSource`) — a mesma fonte que a API local usa.
+  const stage = mondayCatalogFieldSource("projectStage", catalogs, mappings);
+  const nonBillable = mondayCatalogFieldSource("nonBillableReason", catalogs, mappings);
 
   return (
     <SubSection icon={<DownloadCloud size={14} />} title="Importação de dados">
@@ -81,8 +73,8 @@ export function MondayImportSection({
           title="Project Stage"
           hint="Etapa do projeto na atividade. Só entra no apontamento de projeto de cliente — nos boards internos a coluna homônima tem outros rótulos."
           configKey="mondayProjectStageFieldId"
-          optionLabels={stageLabels}
-          defaultFieldLabel={stageSource?.projectStageTitle ?? "Project Stage"}
+          optionLabels={stage.optionLabels}
+          defaultFieldLabel={stage.defaultFieldLabel}
         />
 
         {/*
@@ -98,7 +90,7 @@ export function MondayImportSection({
           title="Non Billable reason"
           hint="Por que a hora não foi faturada. Obrigatório em projeto de cliente marcado como non-billable; dispensado em projeto interno."
           configKey="mondayNonBillableReasonFieldId"
-          optionLabels={catalogs.nonBillableReason}
+          optionLabels={nonBillable.optionLabels}
         />
       </div>
     </SubSection>

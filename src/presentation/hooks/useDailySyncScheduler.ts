@@ -7,7 +7,7 @@ import type { useAutoSync } from "@presentation/contexts/AutoSyncContext";
 import {
   AUTO_SYNC_INTEGRATIONS,
   type AutoSyncConfigKeys,
-} from "@presentation/sections/integrations/autoSyncIntegrations";
+} from "@presentation/integrations/autoSyncIntegrations";
 
 type AutoSync = ReturnType<typeof useAutoSync>;
 

@@ -11,27 +11,23 @@ import {
 } from "lucide-react";
 import { emit } from "@tauri-apps/api/event";
 import { useWeekStart } from "@presentation/hooks/useWeekStart";
-import type { WeekStart } from "@shared/types/appConfig";
 import type { Category } from "@domain/entities/Category";
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
-import { snapshotOf } from "@domain/usecases/monday/diffMondayItem";
-import { findImportedMondayItems } from "@domain/usecases/monday/findImportedMondayItems";
 import {
-  importMondayItems,
-  type ImportMondayItemInput,
-} from "@domain/usecases/monday/importMondayItems";
-import { listItemsOwnedBy } from "@domain/usecases/monday/listItemsOwnedBy";
+  importMondaySelection,
+  loadMondayImportCandidates,
+  mondayImportBoards,
+  mondayImportWindow,
+  rowsInWindow,
+  type MondayImportPeriod,
+} from "@domain/usecases/monday/manualMondayImport";
 import {
-  buildImportRows,
-  importColumnIds,
   resolveItemDefaults,
   type MondayImportRow,
 } from "@domain/usecases/monday/mondayImportRows";
-import { periodOverlaps, type MondayItemPeriod } from "@domain/usecases/monday/mondayItemPeriod";
-import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { resolveTimelineByBoard } from "@domain/usecases/monday/resolveTimelineColumns";
+import type { MondayItemPeriod } from "@domain/usecases/monday/mondayItemPeriod";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { Badge, Button, FilterPill, Modal, Toggle } from "@presentation/components/ui";
@@ -42,37 +38,15 @@ import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { addDaysISO, todayISO, weekBoundsISO } from "@shared/utils/time";
+import { todayISO } from "@shared/utils/time";
 
-type PeriodFilter = "today" | "week" | "next30";
+type PeriodFilter = MondayImportPeriod;
 
 const PERIOD_LABELS: Record<PeriodFilter, string> = {
   today: "Hoje",
   week: "Esta semana",
   next30: "Próximos 30 dias",
 };
-
-/**
- * Janela de cada filtro.
- *
- * Todas olham para a frente, e não existe "tudo": planejamento é futuro, e um
- * item encerrado em julho só polui a lista de agosto. O recorte é aplicado sobre
- * o que já veio na busca — **trocar de filtro não custa chamada ao Monday**.
- */
-function periodWindow(
-  filter: PeriodFilter,
-  weekStartsOn: WeekStart
-): { start: string; end: string } {
-  const today = todayISO();
-  switch (filter) {
-    case "today":
-      return { start: today, end: today };
-    case "week":
-      return weekBoundsISO(weekStartsOn);
-    case "next30":
-      return { start: today, end: addDaysISO(today, 30) };
-  }
-}
 
 interface ItemEditState {
   categoryId: string | null;
@@ -162,21 +136,11 @@ export function MondayImportModal({
   const [error, setError] = useState<string | null>(null);
   const [addOpenUrlAction, setAddOpenUrlAction] = useState(true);
 
-  // Só projeto com quadro de destino: sem ele não há board de onde ler itens.
-  const mappings = useMemo(
-    () =>
-      normalizeProjectMappings(config.get("mondayProjectMapping")).filter((m) => !!m.mondayBoardId),
-    [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  /**
-   * Só entram os boards cujo projeto existe **no workspace da integração**. O
-   * vínculo mora na config e não sabe de workspace: importar por um board
-   * mapeado noutro criaria planejadas apontando para projeto de fora.
-   */
-  const availableBoards = useMemo(
-    () => mappings.filter((m) => projects.some((p) => p.id === m.deskclockProjectId)),
-    [mappings, projects]
+  // Só projeto com quadro de destino e, dele, só o que existe no workspace da
+  // integração — ver `mondayImportBoards`.
+  const { mapped: mappings, available: availableBoards } = useMemo(
+    () => mondayImportBoards(config.get("mondayProjectMapping"), projects),
+    [config.isLoaded, projects] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const unavailableCount = mappings.length - availableBoards.length;
@@ -193,49 +157,15 @@ export function MondayImportModal({
     let cancelled = false;
     setLoading(true);
     setError(null);
-    const api = createMondayApi();
-
-    // A coluna de cronograma vem antes dos itens: é ela que diz quais colunas
-    // pedir, e o template tem mais de sessenta. O id sai do cache do mapeamento
-    // — só board que ainda não o tem custa uma leitura de schema, que era o que
-    // este modal fazia para **todos** os boards a cada abertura.
-    resolveTimelineByBoard(api, availableBoards)
-      .then(async (timelineByBoard) => {
-        const items = await listItemsOwnedBy(api, availableBoards, userId, {
-          // O grupo Activities é o destino das horas que o DeskClock envia;
-          // reimportá-lo duplicaria trabalho que já está registrado aqui.
-          scope: "outsideActivities",
-          columnIds: importColumnIds(availableBoards, timelineByBoard),
-        });
-
-        const next = buildImportRows(items, availableBoards, projects, timelineByBoard);
-
-        // A janela de duplicatas cobre tudo o que os itens abrangem: um item de
-        // agosto não teria como bater com a semana corrente.
-        const days = next.flatMap((r) =>
-          r.period ? [r.period.startDayISO, r.period.endDayISO] : []
-        );
-        const today = todayISO();
-        const planned = await repo.findForWeek(
-          days.length > 0 ? days.reduce((a, b) => (a < b ? a : b)) : today,
-          days.length > 0 ? days.reduce((a, b) => (a > b ? a : b)) : today,
-          workspaceId
-        );
-
-        // O que já tem planejada viva sai da lista: reimportar duplicaria a
-        // tarefa e ainda reapontaria o vínculo para a cópia, deixando a original
-        // órfã do sync. O badge "já existe" abaixo não cobre isto — ele compara
-        // nomes, e renomear a planejada o apaga.
-        const alreadyImported = await findImportedMondayItems(
-          { trackedRepo: mondayImportedItemRepo, plannedRepo: repo },
-          next.map((r) => r.item.id),
-          workspaceId
-        );
-
+    loadMondayImportCandidates(
+      { api: createMondayApi(), trackedRepo: mondayImportedItemRepo, plannedRepo: repo },
+      { boards: availableBoards, projects, personId: userId, workspaceId, todayISO: todayISO() }
+    )
+      .then(({ rows: next, imported: alreadyImported, existingNames: names }) => {
         if (cancelled) return;
         setRows(next);
         setImported(alreadyImported);
-        setExistingNames(new Set(planned.map((t) => t.name.toLowerCase().trim())));
+        setExistingNames(names);
         // O mapa guarda só o que o usuário editou; a sugestão é derivada na
         // hora, a cada render. Semeá-la aqui congelaria o estado do
         // carregamento: os campos personalizados chegam em paralelo, e uma
@@ -266,12 +196,7 @@ export function MondayImportModal({
    * lista, mas não sem dizer para onde foi.
    */
   const [visibleRows, hiddenImported] = useMemo(() => {
-    const window = periodWindow(period, weekStartsOn);
-    // Item sem cronograma no board entra em qualquer recorte: ele nasce no dia
-    // corrente e escondê-lo por falta de data seria escondê-lo para sempre.
-    const inWindow = rows.filter(
-      (r) => !r.period || periodOverlaps(r.period, window.start, window.end)
-    );
+    const inWindow = rowsInWindow(rows, mondayImportWindow(period, todayISO(), weekStartsOn));
     return [
       inWindow.filter((r) => !imported.has(r.item.id)),
       inWindow.filter((r) => imported.has(r.item.id)).length,
@@ -324,37 +249,25 @@ export function MondayImportModal({
   }
 
   async function handleImport() {
-    const inputs: ImportMondayItemInput[] = selectedVisible.map((r) => {
-      const edit = editMap.get(r.item.id) ?? defaultEditState(r, categories, stageField);
+    const selections = selectedVisible.map((row) => {
+      const edit = editMap.get(row.item.id) ?? defaultEditState(row, categories, stageField);
       return {
-        item: r.item,
-        projectId: r.project.id,
+        row,
         categoryId: edit.categoryId,
         billable: edit.billable,
-        period: r.period,
         customValues: edit.customValues,
       };
     });
 
-    if (inputs.length === 0) return;
+    if (selections.length === 0) return;
 
     setImporting(true);
-    const nowISO = new Date().toISOString();
     try {
-      const planned = await importMondayItems(repo, inputs, nowISO, workspaceId, addOpenUrlAction);
-      // O import manual grava o mesmo rastreamento do automático: sem isso, a
-      // varredura seguinte não reconheceria estes itens e criaria tudo de novo.
-      for (const [index, row] of selectedVisible.entries()) {
-        await mondayImportedItemRepo.upsert({
-          mondayItemId: row.item.id,
-          workspaceId,
-          boardId: row.item.boardId,
-          plannedTaskId: planned[index].id,
-          snapshot: snapshotOf(row),
-          importedAt: nowISO,
-          updatedAt: nowISO,
-        });
-      }
+      const planned = await importMondaySelection(
+        { plannedRepo: repo, trackedRepo: mondayImportedItemRepo },
+        selections,
+        { nowISO: new Date().toISOString(), workspaceId, addOpenUrlAction }
+      );
       if (planned.length > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
       onImported(planned.length);
     } catch (err) {

@@ -40,7 +40,8 @@
 
 É a **terceira aba do resultado**, ao lado de Tarefas e KPIs.
 `sections/history/HistorySummarySection.tsx` desenha o corpo; toda a lógica está em
-`presentation/hooks/useDaySummaries.ts`, chamado **pela página**, não pela aba.
+`presentation/hooks/useDaySummaries.ts`, chamado **pela página**, não pela aba. A rodada em si
+(`runDaySummaries`, `presentation/integrations/daySummaries.ts`) é a mesma que a API local usa.
 
 > **Já foi seção fixa acima da barra de abas, disparada pela busca** (2026-08-28). Virou aba
 > porque a geração é paga: acima das abas ela rodava em toda busca, inclusive para quem só queria

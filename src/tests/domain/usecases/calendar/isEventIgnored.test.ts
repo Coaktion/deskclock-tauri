@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { addIgnoreRule, isEventIgnored } from "@domain/usecases/calendar/isEventIgnored";
+import {
+  addIgnoreRule,
+  isEventIgnored,
+  removeIgnoreRule,
+} from "@domain/usecases/calendar/isEventIgnored";
 import type { CalendarIgnoreRule } from "@shared/types/calendarConfig";
 
 describe("isEventIgnored", () => {
@@ -57,5 +61,22 @@ describe("addIgnoreRule", () => {
   it("valor em branco não entra", () => {
     const rules: CalendarIgnoreRule[] = [];
     expect(addIgnoreRule(rules, { operator: "contains", value: "  " })).toBe(rules);
+  });
+});
+
+describe("removeIgnoreRule", () => {
+  const rules: CalendarIgnoreRule[] = [
+    { operator: "equals", value: "Daily" },
+    { operator: "contains", value: "Almoço" },
+  ];
+
+  it("tira pela mesma igualdade do add: operador e valor normalizado", () => {
+    expect(removeIgnoreRule(rules, { operator: "equals", value: "  daily " })).toEqual([
+      { operator: "contains", value: "Almoço" },
+    ]);
+  });
+
+  it("operador diferente não casa, e a lista volta a mesma", () => {
+    expect(removeIgnoreRule(rules, { operator: "contains", value: "Daily" })).toBe(rules);
   });
 });

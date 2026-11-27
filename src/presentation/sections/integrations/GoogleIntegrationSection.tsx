@@ -15,12 +15,11 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { startGoogleOAuth } from "@infra/integrations/google/GoogleOAuth";
 import { GoogleTokenManager } from "@infra/integrations/google/GoogleTokenManager";
+import { BACKUP_FOLDER_NAME } from "@infra/integrations/googledrive/GoogleDriveClient";
 import {
-  BACKUP_FOLDER_NAME,
-  DRIVE_RECONNECT_MESSAGE,
-  backupFolderName,
-} from "@infra/integrations/googledrive/GoogleDriveClient";
-import { isDevDatabase } from "@infra/database/db";
+  driveBackupNeedsReconnect,
+  resolveFolderName,
+} from "@presentation/integrations/driveBackup";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useAutoSync, SHEETS_INTEGRATION_NAME } from "@presentation/contexts/AutoSyncContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
@@ -33,6 +32,10 @@ import {
   type SheetColumn,
   type SheetColumnMapping,
 } from "@shared/types/sheetsConfig";
+import {
+  DEFAULT_SHEET_NAME,
+  normalizeSheetName,
+} from "@domain/usecases/settings/integrationSettingsRules";
 import { formatLastSync } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
 import {
@@ -59,7 +62,7 @@ import {
 } from "./shared";
 import { Button, Input, SegmentedControl, TourButton, Toggle } from "@presentation/components/ui";
 import { AutoSyncControls, type AutoSyncNow } from "./AutoSyncControls";
-import { SHEETS_AUTO_SYNC_KEYS } from "./autoSyncIntegrations";
+import { SHEETS_AUTO_SYNC_KEYS } from "@presentation/integrations/autoSyncIntegrations";
 import { CalendarIgnoreRules } from "./google/CalendarIgnoreRules";
 import { GoogleCalendarLogo } from "./google/GoogleCalendarLogo";
 import { GoogleDriveLogo } from "./google/GoogleDriveLogo";
@@ -204,7 +207,7 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
   useEffect(() => {
     if (!config.isLoaded) return;
     setSpreadsheetId(config.get("integrationGoogleSheetsSpreadsheetId"));
-    setSheetName(config.get("integrationGoogleSheetsSheetName") || "DeskClock");
+    setSheetName(config.get("integrationGoogleSheetsSheetName") || DEFAULT_SHEET_NAME);
     setColumnMapping(config.get("integrationGoogleSheetsColumnMapping") ?? DEFAULT_COLUMN_MAPPING);
     setDurationFormat(config.get("integrationGoogleSheetsDurationFormat") ?? "HH:MM");
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -243,7 +246,7 @@ function SheetsSection({ disabled }: { disabled: boolean }) {
             value={sheetName}
             onChange={(e) => setSheetName(e.target.value)}
             onBlur={async () => {
-              const name = sheetName.trim() || "DeskClock";
+              const name = normalizeSheetName(sheetName);
               setSheetName(name);
               await config.set("integrationGoogleSheetsSheetName", name);
             }}
@@ -437,12 +440,8 @@ function BackupSection({ disabled }: { disabled: boolean }) {
   const [folderName, setFolderName] = useState(BACKUP_FOLDER_NAME);
 
   useEffect(() => {
-    isDevDatabase()
-      .then((isDev) => setFolderName(backupFolderName(isDev)))
-      .catch(() => {
-        // Só o texto da frase depende disto; o backup resolve a pasta por conta
-        // própria. Falhar aqui não pode derrubar a tela de configurações.
-      });
+    // Nunca rejeita: na falha fica o nome padrão, e a tela não cai por isso.
+    void resolveFolderName().then(setFolderName);
   }, []);
 
   useEffect(() => {
@@ -473,7 +472,7 @@ function BackupSection({ disabled }: { disabled: boolean }) {
 
   // O 403 do escopo faltante é o único erro com saída conhecida, e a saída não é
   // "tentar de novo": vira o aviso de reconexão, no lugar da linha de falha.
-  const needsReconnect = lastError === DRIVE_RECONNECT_MESSAGE;
+  const needsReconnect = driveBackupNeedsReconnect(lastError);
 
   return (
     <div className={disabled ? "opacity-40 pointer-events-none" : ""}>

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
-import { emit } from "@tauri-apps/api/event";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { applyAppearance, resolveAppearance, MODES, ACCENTS } from "@shared/utils/theme";
+import { MODES, ACCENTS, resolveAppearance } from "@shared/utils/theme";
 import type { Appearance, Mode, Accent } from "@shared/utils/theme";
-import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
+import {
+  currentAppearance,
+  saveAppearance,
+  tauriSettingsSystem,
+} from "@presentation/settings/settingsEffects";
 import { SectionCard, SectionRow } from "@presentation/components/ui";
 import { SelectRow } from "./SettingsShared";
 
@@ -26,24 +29,13 @@ export function AparenciaTab() {
 
   useEffect(() => {
     if (!config.isLoaded) return;
-    setAppearance(
-      resolveAppearance({
-        mode: config.get("mode"),
-        accent: config.get("accent"),
-        theme: config.get("theme"),
-      })
-    );
+    setAppearance(currentAppearance(config));
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAppearance(key: "mode" | "accent", value: Mode | Accent) {
-    const next = resolveAppearance({ ...appearance, [key]: value });
-    setAppearance(next);
-    applyAppearance(next);
-    await config.set(key, value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key,
-      value,
-    } satisfies OverlayConfigChangedPayload);
+    // Antes de gravar, como sempre foi: a tela troca na hora, e a escrita vem depois.
+    setAppearance(resolveAppearance({ ...appearance, [key]: value }));
+    await saveAppearance(config, tauriSettingsSystem, appearance, key, value);
   }
 
   return (

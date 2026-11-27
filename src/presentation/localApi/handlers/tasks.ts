@@ -7,7 +7,12 @@ import { localClock } from "@shared/utils/localClock";
 import { ConflictError, NotFoundError } from "../errors";
 import { loadCatalogNames, taskDto, toTaskDto } from "../dto";
 import { resolveCategoryId, resolveProjectId, resolveRequestWorkspace } from "../resolve";
-import { buildTaskEditPatch, parseInstant, type TaskEditBody } from "../taskInput";
+import {
+  buildTaskEditPatch,
+  parseInstant,
+  resolveCustomValues,
+  type TaskEditBody,
+} from "../taskInput";
 import type { LocalApiDeps, LocalApiHandler } from "../types";
 
 // O envio automático depende de rede e passaria do prazo de 10s da ponte: a
@@ -76,7 +81,7 @@ async function startFromBody(deps: LocalApiDeps, body: StartBody, billableDefaul
       projectId,
       categoryId,
       billable: body.billable ?? billableDefault ?? true,
-      customValues: body.customValues ?? undefined,
+      customValues: await resolveCustomValues(deps, body.customValues),
     },
     STOP_OPTIONS
   );

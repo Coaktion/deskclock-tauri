@@ -67,7 +67,7 @@ Roteiro obrigatório:
 3. Se sincroniza tarefas: criar `TogglSyncStrategy implements ISyncStrategy`.
 4. Registrar a strategy no Provider central de auto-sync (não em `App.tsx` nem em `usePostStopLogic` — esses dois lugares hoje têm cópias hardcoded; novo trabalho deve usar o ponto único).
 4.1. **Registrar as chaves de envio automático em `AUTO_SYNC_INTEGRATIONS`**
-   (`presentation/sections/integrations/autoSyncIntegrations.ts`) — inclusive a
+   (`presentation/integrations/autoSyncIntegrations.ts`) — inclusive a
    `<integração>AutoSyncLastFiredDate`. É de lá que o `useDailySyncScheduler` descobre o gatilho, e
    é o passo que faltou no Monday: a tela gravava horário fixo, nenhum código lia a chave e o envio
    nunca disparava. Strategy registrada sem entrada aqui só sobe no modo por tarefa.

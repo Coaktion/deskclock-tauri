@@ -109,9 +109,19 @@ describe("history.create", () => {
     endTime: localISO(2026, 9, 14, 10, 30),
     customValues: { "f-1": "o-1" },
   };
+  const campoSelect = {
+    id: "f-1",
+    label: "Fase",
+    type: "select" as const,
+    options: [{ id: "o-1", label: "Análise" }],
+    sortOrder: 0,
+    archived: false,
+    createdAt: NOW,
+  };
 
   it("lança a tarefa concluída no workspace ativo e avisa as janelas", async () => {
     const deps = makeDeps();
+    deps.customFieldRepo.findAll.mockResolvedValue([campoSelect]);
     const result = await dispatchLocalApiRequest(deps, "history.create", { body: corpo });
     const salva = deps.taskRepo.save.mock.calls[0][0] as Task;
     expect(result.status).toBe(201);
@@ -141,6 +151,7 @@ describe("history.create", () => {
 
   it("devolve 400 com duração menor que 1 minuto ou instante inválido", async () => {
     const deps = makeDeps();
+    deps.customFieldRepo.findAll.mockResolvedValue([campoSelect]);
     const curta = await dispatchLocalApiRequest(deps, "history.create", {
       body: { ...corpo, endTime: localISO(2026, 9, 14, 9, 0, 30) },
     });
