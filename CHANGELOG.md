@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.5.0](https://github.com/Coaktion/deskclock-tauri/compare/v2.4.1...v2.5.0) (2026-11-27)
+
+
+### Features
+
+* **tarefas:** diga a tarefa inteira num texto só, no campo de início — o nome e depois os campos, na ordem, separados por vírgula (ex.: "Revisão, Tech interno, Development, nb"), podendo pular campo. A instrução abaixo do Play mostra a ordem e um exemplo do seu catálogo
+* **tarefas:** antes de iniciar, uma prévia mostra o que foi entendido: quando mais de um projeto ou categoria combina, você escolhe entre os candidatos; o que não foi encontrado fica para completar ali mesmo, e o próximo Enter inicia com o horário do primeiro
+* **tarefas:** não precisa digitar o nome inteiro nem acertar o plural — "tech interno" acha "Tech Atividades Internas", e "reunião interna" acha "Reuniões internas"
+* **IA:** com um provedor de IA conectado, o texto também pode ser escrito livremente, sem a ordem. Só o texto e os nomes dos campos vão ao provedor: seus projetos e categorias nunca saem do computador
+* **popup:** novo botão "Iniciar com IA", ao lado de "Nova tarefa", com o mesmo texto e a mesma prévia
+* **lançamento manual:** nova aba IA para lançar por texto, e a aba escolhida fica lembrada
+* **mcp:** pelo Claude, agora dá para fazer tudo o que a tela faz — editar e excluir tarefas e planejadas, cadastrar projetos, categorias, campos personalizados e workspaces, enviar às integrações, importar da Agenda, do Zendesk e do Monday, exportar, gerar o resumo por IA, fazer backup no Drive, mudar as configurações e interpretar o texto de uma tarefa
+* **api local:** as mesmas ações ganharam rotas na API local, com as regras da tela
+
+
+### Bug Fixes
+
+* **exportação:** o arquivo traz só as tarefas do workspace ativo — antes, tarefas de outros workspaces entravam com projeto e categoria em branco
+* **monday:** editar uma atividade não tenta mais gravar um Status que o board não tem, o que fazia o Monday recusar a edição
+* **api local:** editar uma planejada de período sem data de fim deixou de ser recusado
+
 ### [2.4.1](https://github.com/Coaktion/deskclock-tauri/compare/v2.4.0...v2.4.1) (2026-09-21)
 
 
