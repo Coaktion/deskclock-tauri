@@ -221,9 +221,5 @@ inofensiva.
 - A aba IA do Lançamento Manual perde o foco quando um pré-preenchimento troca para a aba
   Formulário.
 
-**Pendente — próximo passo:**
-
-- Verificação visual pelo usuário: `pnpm tauri dev` nos 2 modos × 4 acentos (omnibox, popup,
-  Lançamento Manual) — agora com a instrução por posição.
-- Ida e volta real na UI (texto → prévia → início); pela API/MCP já foi feita.
-- Aprovado, merge local `--no-ff` em develop e main. Sem push.
+**Concluído (2026-11-27):** verificação visual e ida e volta na UI aprovadas pelo usuário; merge
+`--no-ff` em develop e main e release gerada (ver `CHANGELOG.md`).
