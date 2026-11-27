@@ -83,8 +83,8 @@ achado de relance.
 `OmniboxIdle`, `taskText/TaskTextHint`, `taskText/TaskTextPreview` e o desvio comum
 `hooks/taskTextEntry.ts`.
 
-- **A instrução fica sempre visível**, acima do campo: os campos que a tarefa pede, na ordem em que
-  se digitam, e um exemplo do catálogo (`Nome, Projeto, Categoria, Billable, …, nessa ordem e por
+- **A instrução fica sempre visível**, abaixo da linha do Play e do campo, na largura toda e com
+  o ícone `Sparkles` antes do texto: os campos que a tarefa pede, na ordem em que se digitam, e um exemplo do catálogo (`Nome, Projeto, Categoria, Billable, …, nessa ordem e por
   vírgula; dá para pular campo. Ex.: Revisão, Tech interno, Development NB, nb`). Ela aparece com
   ou sem provedor de IA — texto por posição (e por sigla, `P=`, que segue aceito) se resolve no app.
 - **Enter (lista fechada ou vazia) e Play com texto analisam**, em vez de iniciar. Enquanto analisa,

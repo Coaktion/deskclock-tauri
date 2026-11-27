@@ -441,6 +441,12 @@ sem caixa. Três níveis: **exato > prefixo de palavras** (`tech int` → "Tech 
 `fuzzyMatch`**, e **só o melhor nível conta** — um exato não fica ambíguo porque o fuzzy também
 bateu em outros dez.
 
+**Prefixo de palavras tolera flexão** (`wordMatches`): a palavra digitada casa a do alvo quando é
+prefixo dela **ou** quando as duas só diferem na terminação — raiz comum de 4+ letras, sobrando
+no máximo 2 letras na busca e 3 no alvo. "tech interno" acha "Tech Atividades Internas" e
+"reunião interna" acha "Reuniões internas"; "interno" **não** acha "intervalo" (sobra "valo").
+Vale para a resolução e para a prova da leitura por posição.
+
 > **Mais de um no melhor nível é ambíguo**, e a prévia mostra até 5 candidatos para o usuário
 > escolher. Escolher sozinho seria trocar o projeto do cliente em silêncio. Ambiguidade não
 > resolvida segue **vazia** no início da tarefa.

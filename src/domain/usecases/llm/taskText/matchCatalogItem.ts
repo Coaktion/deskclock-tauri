@@ -17,11 +17,41 @@ function words(normalized: string): string[] {
   return normalized.split(/[^a-z0-9]+/).filter(Boolean);
 }
 
-/** Cada palavra da busca é prefixo de uma palavra do alvo, na mesma ordem: "tech int" → "Tech interno". */
+const MIN_SHARED_PREFIX = 4;
+const MAX_QUERY_TAIL = 2;
+const MAX_TARGET_TAIL = 3;
+
+function sharedPrefixLength(a: string, b: string): number {
+  let i = 0;
+  while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  return i;
+}
+
+/**
+ * A palavra da busca é prefixo da do alvo, ou as duas só diferem na flexão:
+ * "interno" → "internas", "reuniao" → "reunioes". O usuário escreve no
+ * singular e no masculino o que o catálogo tem no plural ou no feminino.
+ *
+ * A flexão é medida **dos dois lados** — raiz comum de 4+ letras, sobra curta
+ * na busca e no alvo. Só a raiz e a sobra da busca deixariam "interno" casar
+ * "intervalo" ("inter" + "no"), e a leitura por posição tomaria o trecho pelo
+ * campo errado.
+ */
+function wordMatches(queryWord: string, targetWord: string): boolean {
+  if (targetWord.startsWith(queryWord)) return true;
+  const shared = sharedPrefixLength(queryWord, targetWord);
+  return (
+    shared >= MIN_SHARED_PREFIX &&
+    queryWord.length - shared <= MAX_QUERY_TAIL &&
+    targetWord.length - shared <= MAX_TARGET_TAIL
+  );
+}
+
+/** Cada palavra da busca casa uma palavra do alvo, na mesma ordem: "tech int" → "Tech interno". */
 function wordPrefixMatch(queryWords: string[], targetWords: string[]): boolean {
   let ti = 0;
   for (const qw of queryWords) {
-    while (ti < targetWords.length && !targetWords[ti].startsWith(qw)) ti++;
+    while (ti < targetWords.length && !wordMatches(qw, targetWords[ti])) ti++;
     if (ti === targetWords.length) return false;
     ti++;
   }

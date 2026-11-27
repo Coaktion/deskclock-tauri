@@ -108,9 +108,6 @@ export function OmniboxIdle({
         focused ? "border-accent ring-2 ring-accent/20" : "border-border"
       }`}
     >
-      {/* pl-16: alinha com o texto do campo — 12 de padding + 40 do Play + 12 de gap. */}
-      <TaskTextHint instruction={taskText.instruction} className="pl-16 pr-3 pt-3" />
-
       {/* Main input row */}
       <div className="flex items-center gap-3 px-3 py-3">
         <button
@@ -137,6 +134,9 @@ export function OmniboxIdle({
           className="flex-1 text-lead! font-medium"
         />
       </div>
+
+      {/* Na largura toda, abaixo do Play: a linha é longa e, recuada até o texto, quebrava cedo. */}
+      <TaskTextHint instruction={taskText.instruction} className="px-3 pb-3" />
 
       {/* Analisando o texto, a prévia toma o lugar dos chips do rascunho. */}
       {textStatus !== "idle" && (

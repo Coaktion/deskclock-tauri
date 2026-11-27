@@ -52,7 +52,7 @@ Restrições que decidiram o desenho:
 
 | Decisão | Descartada | Motivo |
 |---|---|---|
-| Casamento | B — catálogos vão ao provedor | lista de clientes enviada a terceiro a cada uso |
+| Casamento | B — catálogos vão ao provedor | lista de clientes enviada a terceiro a cada uso; **testada em 2026-11-27 e revertida**: ~3 mil tokens por chamada (2 análises/min no Groq gratuito) e acerto pior que o casamento local (ver Andamento) |
 | Casamento | C — híbrido, só candidatos empatados vão | contrato difícil de explicar, vaza pouco mas vaza |
 | IA devolvendo ids | — | exigiria B; id inventado passaria calado |
 | Só parser de siglas, sem IA | — | não atende texto livre; ficou como **atalho** (texto com siglas não chama o provedor) |
@@ -186,6 +186,17 @@ inofensiva.
   texto que descartava trechos. Verificado ao vivo: o exemplo do usuário
   (`Migration Service - Northwind JSM, Pinecrest Travel Group, Development, Migration`) resolve
   tudo no app.
+
+- 2026-11-27 — Verificação manual, parte 2. `Troca de conhecimentos, tech interno, reunião
+  interna` ficava inteiro no nome: o casamento estrito não aceitava flexão ("interno" ×
+  "Internas", "reunião" × "Reuniões"). Corrigido em `matchCatalogItem` (`wordMatches`, raiz comum
+  de 4+ letras com sobra curta dos dois lados). **Opção B testada e revertida**: o usuário
+  considerou mandar o catálogo ao provedor e ela foi implementada, mas medida no Groq ficou ruim —
+  ~3.030 tokens de entrada por chamada contra o limite gratuito de 8.000 TPM (a 3ª análise no
+  mesmo minuto deu 429), e a frase livre acertou o projeto 1 vez em 5 (`gpt-oss-20b` e `-120b`) e
+  nunca a categoria certa. Decisão do usuário: **voltar à opção A** (catálogo local). Ficaram a
+  flexão e, na UI, a instrução do omnibox abaixo da linha do Play, na largura toda, com o
+  `Sparkles` antes do texto (nas três superfícies).
 
 **Desvios do plano** (registrados para o Review):
 

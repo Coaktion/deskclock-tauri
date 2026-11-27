@@ -173,6 +173,36 @@ describe("parseOrderedText", () => {
     });
   });
 
+  it("tolera a flexão: tech interno e reunião interna casam o plural do catálogo", () => {
+    const c = makeOrderedCatalog({
+      projects: [
+        project("p-tech", "Tech Atividades Internas"),
+        project("p-cx", "CX Atividades Internas"),
+        project("p-nrt", "[US] Globex Tech  Zendesk 121-1"),
+      ],
+      categories: [
+        category("c-reun", "Reuniões internas"),
+        category("c-com", "Comunicação interna"),
+        category("c-int", "Internal Activity"),
+        category("c-proj", "Projeto interno"),
+      ],
+      customFields: [],
+    });
+    const text = "Troca de conhecimentos, tech interno, reunião interna";
+    expect(parseOrderedText(text, buildTaskFieldHints([], c), c)).toEqual({
+      name: "Troca de conhecimentos",
+      fields: { P: "tech interno", C: "reunião interna" },
+    });
+    expect(interpret(text, c)).toMatchObject({
+      name: "Troca de conhecimentos",
+      projectId: "p-tech",
+      categoryId: "c-reun",
+      ambiguities: [],
+      notFound: [],
+      source: "local",
+    });
+  });
+
   it("campo select sem o campo no catálogo não reconhece nada", () => {
     const orphan = buildTaskFieldHints([STAGE], makeOrderedCatalog());
     const c = makeOrderedCatalog({ customFields: [] });
