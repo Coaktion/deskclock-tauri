@@ -3,7 +3,7 @@ import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { matchPlannedTasks } from "@domain/utils/plannedPending";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
 import type { TaskTextStartInput } from "@presentation/integrations/taskText";
-import { omniboxTextEntry, type OmniboxInterpreter } from "./omniboxTextEntry";
+import { taskTextEntry, type TaskTextInterpreter } from "./taskTextEntry";
 
 export interface DraftState {
   name: string;
@@ -30,7 +30,7 @@ interface UseOmniboxDraftParams {
   startTask: RunningTaskContextValue["startTask"];
   onStarted?: () => void;
   /** Ausente, o texto vira só o nome, como antes da interpretação por IA. */
-  interpreter?: OmniboxInterpreter;
+  interpreter?: TaskTextInterpreter;
 }
 
 export function useOmniboxDraft({
@@ -81,7 +81,7 @@ export function useOmniboxDraft({
     finish();
   }
 
-  const textEntry = omniboxTextEntry({
+  const textEntry = taskTextEntry({
     interpreter,
     text: draft.name,
     manualFields: draft.projectId !== null || draft.categoryId !== null || !draft.billable,
@@ -89,7 +89,7 @@ export function useOmniboxDraft({
     startInterpreted,
   });
 
-  /** Enter e Play: inicia, analisa o texto ou confirma a prévia (`omniboxTextEntry`). */
+  /** Enter e Play: inicia, analisa o texto ou confirma a prévia (`taskTextEntry`). */
   async function handleStart() {
     // A lista cobriria a prévia que a análise abre logo abaixo do campo.
     setShowSuggestions(false);

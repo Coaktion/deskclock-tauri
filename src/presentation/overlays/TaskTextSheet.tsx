@@ -3,7 +3,7 @@ import { Sparkles, X } from "lucide-react";
 import { TaskTextHint } from "@presentation/components/taskText/TaskTextHint";
 import { TaskTextPreview } from "@presentation/components/taskText/TaskTextPreview";
 import { Button, IconButton, Input } from "@presentation/components/ui";
-import { omniboxTextEntry } from "@presentation/hooks/omniboxTextEntry";
+import { taskTextEntry } from "@presentation/hooks/taskTextEntry";
 import { useEscapeToClose } from "@presentation/hooks/useEscapeToClose";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import { useTaskTextInterpretation } from "@presentation/hooks/useTaskTextInterpretation";
@@ -20,7 +20,7 @@ interface TaskTextSheetProps {
  * **dentro** do popup e no tamanho que ele já tem — o desenho dos painéis de
  * edição (`RunningTaskEditSheet`).
  *
- * O que o Enter faz com o texto é o mesmo do omnibox (`omniboxTextEntry`):
+ * O que o Enter faz com o texto é o mesmo do omnibox (`taskTextEntry`):
  * analisa; o que volta só com o nome inicia direto; com a prévia aberta,
  * inicia com os campos dela e com o instante do primeiro envio; com erro, o
  * segundo Enter inicia o texto como nome. Aqui não há chips manuais, e o campo
@@ -39,7 +39,7 @@ export function TaskTextSheet({ onStart, onClose }: TaskTextSheetProps) {
     onClose();
   }
 
-  const entry = omniboxTextEntry({
+  const entry = taskTextEntry({
     interpreter,
     text,
     manualFields: false,

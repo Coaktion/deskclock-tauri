@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { omniboxTextEntry } from "@presentation/hooks/omniboxTextEntry";
+import { taskTextEntry } from "@presentation/hooks/taskTextEntry";
 import type {
   RetroactiveTaskWhat,
   useRetroactiveForm,
@@ -28,7 +28,7 @@ export function rawTextWhat(text: string): RetroactiveTaskWhat {
  * (`docs-internal/specs/iniciar-tarefa-por-texto.md`, decisão (b) e item 11).
  *
  * O desvio entre analisar, confirmar e lançar é o mesmo do omnibox
- * (`omniboxTextEntry`); muda só o destino. O `startTime` do primeiro envio que
+ * (`taskTextEntry`); muda só o destino. O `startTime` do primeiro envio que
  * ele entrega **não** vale aqui — o lançamento é retroativo, e o início é o da
  * cadeia do formulário.
  */
@@ -45,7 +45,7 @@ export function useRetroactiveTextEntry(form: RetroactiveForm) {
   }
 
   function entry(overrideEndHHMM?: string) {
-    return omniboxTextEntry({
+    return taskTextEntry({
       interpreter,
       text,
       manualFields: false,

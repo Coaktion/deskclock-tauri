@@ -8,14 +8,14 @@ import type {
   UseTaskTextInterpretationResult,
 } from "@presentation/hooks/useTaskTextInterpretation";
 
-/** O que o omnibox usa do intérprete — `useTaskTextInterpretation` o satisfaz. */
-export type OmniboxInterpreter = Pick<
+/** O que as superfícies de texto usam do intérprete — `useTaskTextInterpretation` o satisfaz. */
+export type TaskTextInterpreter = Pick<
   UseTaskTextInterpretationResult,
   "status" | "interpretation" | "submittedAt" | "submit" | "dismiss" | "reset"
 >;
 
-interface OmniboxTextEntryParams {
-  interpreter?: OmniboxInterpreter;
+interface TaskTextEntryParams {
+  interpreter?: TaskTextInterpreter;
   text: string;
   /**
    * Projeto, categoria ou billable escolhidos à mão nos chips. Aí o texto é só
@@ -28,21 +28,23 @@ interface OmniboxTextEntryParams {
 }
 
 /**
- * O que o Enter e o Play do omnibox fazem com o texto
- * (`docs-internal/specs/iniciar-tarefa-por-texto.md`, item 9):
+ * O que o Enter (e o Play) fazem com o texto nas três superfícies que iniciam
+ * tarefa por texto — omnibox, `TaskTextSheet` do popup e aba IA do lançamento
+ * manual (`docs-internal/specs/iniciar-tarefa-por-texto.md`, itens 9–11). Cada
+ * uma só troca o destino (`startRaw` / `startInterpreted`):
  *
  * - campo vazio, chips escolhidos à mão ou sem intérprete → inicia na hora;
  * - texto, sem prévia → analisa; o que volta só com o nome inicia direto;
  * - prévia aberta → inicia com os campos dela;
  * - erro na análise → o segundo Enter inicia o texto como nome, sem travar.
  */
-export function omniboxTextEntry({
+export function taskTextEntry({
   interpreter,
   text,
   manualFields,
   startRaw,
   startInterpreted,
-}: OmniboxTextEntryParams) {
+}: TaskTextEntryParams) {
   const status: TaskTextStatus = interpreter?.status ?? "idle";
 
   async function advance(): Promise<void> {

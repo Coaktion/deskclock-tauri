@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { TaskTextInterpretation } from "@domain/usecases/llm/taskText/types";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
-import type { OmniboxInterpreter } from "@presentation/hooks/omniboxTextEntry";
+import type { TaskTextInterpreter } from "@presentation/hooks/taskTextEntry";
 
 const TODAY = "2026-08-19";
 
@@ -177,7 +177,7 @@ function interpretation(over: Partial<TaskTextInterpretation> = {}): TaskTextInt
 }
 
 /** O intérprete falso: o estado é o que o teste manda, e o `submit` devolve o que ele diz. */
-function fakeInterpreter(over: Partial<OmniboxInterpreter> = {}): OmniboxInterpreter {
+function fakeInterpreter(over: Partial<TaskTextInterpreter> = {}): TaskTextInterpreter {
   return {
     status: "idle",
     interpretation: null,
@@ -191,7 +191,7 @@ function fakeInterpreter(over: Partial<OmniboxInterpreter> = {}): OmniboxInterpr
   };
 }
 
-function setupWithInterpreter(interpreter: OmniboxInterpreter) {
+function setupWithInterpreter(interpreter: TaskTextInterpreter) {
   const startTask = vi.fn(() => Promise.resolve(null));
   const hook = renderHook(
     ({ it }) => useOmniboxDraft({ plannedTasks: [], today: TODAY, startTask, interpreter: it }),

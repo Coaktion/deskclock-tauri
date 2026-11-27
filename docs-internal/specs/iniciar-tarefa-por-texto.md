@@ -6,7 +6,8 @@
 - **Coverage tier:** A em `src/domain/usecases/llm/taskText/` e no handler da API local; B nos
   hooks; C na UI (sem teste de renderização — padrão do repo, `docs-internal/testes.md`)
 - **Branch:** `feat/llm-task-start`, a partir da `develop` local (`4b0655b`)
-- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · Execute em curso — ver **Andamento** no fim
+- **Estado do ritual SDD:** Brainstorm ✅ · Plan ✅ · Execute concluído (Fases 1–6); falta Review —
+  ver **Andamento** no fim
 
 > Ordem de trabalho escrita para ser lida por um agente sem acesso à conversa que a originou.
 
@@ -141,3 +142,36 @@ inofensiva.
 - 2026-11-27 — Brainstorm e Plan aprovados; branch criada; impact analysis LOW em
   `useOmniboxDraft`, `OmniboxIdle`, `PopupOverlayContent`, `PopupOverlayApp`,
   `useRetroactiveForm`, `RetroactiveEntryForm`.
+- 2026-11-27 — `e0a55ac` Fase 1: domínio em `src/domain/usecases/llm/taskText/` (hints e siglas,
+  atalho de siglas, prompt, leitura tolerante, casamento local, `interpretTaskText`).
+- 2026-11-27 — `d278d6c` Fase 2: `useTaskTextInterpretation`, `TaskTextHint`, `TaskTextPreview` e
+  o omnibox com instrução, análise, prévia e início com o instante do primeiro envio.
+- 2026-11-27 — `ba5bef2` Fase 5: `taskText.fields` / `taskText.interpret` na API local e as tools
+  `get_task_text_fields` / `interpret_task_text` no MCP (nenhuma inicia tarefa).
+- 2026-11-27 — `9133cfe` Fase 3: "Iniciar com IA" no popup (`TaskTextSheet`).
+- 2026-11-27 — `1e544b4` Fase 4: abas Formulário | IA no Lançamento Manual, aba memorizada em
+  `retroactiveEntryMode`.
+- 2026-11-27 — Fase 6 (ainda não commitada): docs (`integracoes/llm.md`, `telas/tarefas.md`,
+  `telas/overlays.md`, `telas/lancamento-retroativo.md`, esta spec) e o rename
+  `omniboxTextEntry` → `taskTextEntry` (`TaskTextInterpreter`), já que o desvio do Enter serve às
+  três superfícies.
+
+**Desvios do plano** (registrados para o Review):
+
+- **`describeTaskTextError` embrulha o `describeLlmError`** em vez de editá-lo: o impacto dele deu
+  **HIGH** (modal de conexão e resumo do Histórico). O caso novo — resposta ilegível,
+  `TaskTextResponseError` — vive só no wrapper.
+- **Chips escolhidos à mão no omnibox pulam a análise**: o texto vira só o nome, senão a IA
+  sobrescreveria a escolha do usuário.
+- **Resultado só com nome inicia direto**, sem prévia (`isNameOnly`) — não há o que conferir.
+- **No popup, texto vazio não faz nada** (primária desabilitada): a tarefa sem nome é pelo "Nova
+  tarefa", ao lado.
+- **Impacto CRITICAL em `AppConfig` aceito**: a mudança é aditiva (uma chave nova com padrão), e
+  quem já lê a config não muda de comportamento.
+
+**Pendente:**
+
+- `@code-quality-reviewer` sobre o diff da branch.
+- Verificação visual pelo usuário: `pnpm tauri dev` nos 2 modos × 4 acentos (omnibox, popup,
+  Lançamento Manual).
+- Ida e volta real com um provedor de IA (texto livre → prévia → início).
