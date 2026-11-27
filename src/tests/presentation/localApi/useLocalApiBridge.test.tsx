@@ -44,6 +44,13 @@ vi.mock("@presentation/contexts/WorkspaceContext", () => ({
 vi.mock("@presentation/contexts/ConfigContext", () => ({
   useAppConfig: () => ({ isLoaded: true, get: () => 1, set: vi.fn() }),
 }));
+vi.mock("@presentation/contexts/IntegrationsContext", () => ({ useIntegrations: () => ({}) }));
+vi.mock("@presentation/contexts/AutoSyncContext", () => ({
+  SHEETS_INTEGRATION_NAME: "google_sheets",
+  MONDAY_INTEGRATION_NAME: "monday",
+  CLOCKIFY_INTEGRATION_NAME: "clockify",
+  useAutoSync: () => ({ runDailyFor: vi.fn() }),
+}));
 vi.mock("@presentation/hooks/useWorkspaceAdmin", () => ({
   useWorkspaceAdmin: () => ({ create: vi.fn(), update: vi.fn(), remove: vi.fn() }),
 }));
@@ -119,6 +126,42 @@ describe("useLocalApiBridge", () => {
     // 200 < COMMIT_WAIT_MS (300): se passar, foi o commit que liberou a fila, não o teto.
     await vi.waitFor(() => expect(responded("r2")).toBe(true), { timeout: 200 });
     expect(vistas).toEqual(["antes", "depois"]);
+  });
+
+  it("op longa não segura a fila principal: quem chega atrás dela responde antes", async () => {
+    let finishLong: (r: LocalApiResult) => void = () => {};
+    bus.dispatch.mockImplementation(async (_deps: LocalApiDeps, op: string) =>
+      op === "driveBackup.run" ? new Promise<LocalApiResult>((r) => (finishLong = r)) : OK
+    );
+    await mountReady();
+
+    await act(async () => {
+      request("longa", "driveBackup.run");
+      request("curta", "tasks.start");
+    });
+
+    await vi.waitFor(() => expect(responded("curta")).toBe(true));
+    expect(responded("longa")).toBe(false);
+
+    await act(async () => finishLong(OK));
+    await vi.waitFor(() => expect(responded("longa")).toBe(true));
+  });
+
+  it("duas ops longas rodam uma de cada vez", async () => {
+    const finish: ((r: LocalApiResult) => void)[] = [];
+    bus.dispatch.mockImplementation(async () => new Promise<LocalApiResult>((r) => finish.push(r)));
+    await mountReady();
+
+    await act(async () => {
+      request("b1", "driveBackup.run");
+      request("b2", "daySummaries.generate");
+    });
+    await vi.waitFor(() => expect(bus.dispatch).toHaveBeenCalledTimes(1));
+
+    await act(async () => finish[0](OK));
+    await vi.waitFor(() => expect(bus.dispatch).toHaveBeenCalledTimes(2));
+    await act(async () => finish[1](OK));
+    await vi.waitFor(() => expect(responded("b2")).toBe(true));
   });
 
   it("uma op que falha não trava a fila", async () => {

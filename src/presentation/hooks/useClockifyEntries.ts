@@ -6,12 +6,9 @@ import type {
   ClockifyTimeEntryFull,
   ClockifyTimeEntryPayload,
 } from "@shared/types/clockify";
+import { projectDisplayName } from "@domain/usecases/clockify/clockifyEntries";
 import { startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { showToast } from "@shared/utils/toast";
-
-export function projectDisplayName(p: { name: string; clientName?: string | null }): string {
-  return p.clientName ? `${p.clientName} - ${p.name}` : p.name;
-}
 
 interface UseClockifyEntriesOptions {
   apiKey: string;

@@ -1,92 +1,34 @@
 import type { Category } from "@domain/entities/Category";
-import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
 import type { CalendarEvent, ICalendarImporter } from "@domain/integrations/ICalendarImporter";
 import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
 import type { IPlannedTaskRepository } from "@domain/repositories/IPlannedTaskRepository";
+import {
+  importCalendarSelection,
+  planCalendarImport,
+} from "@domain/usecases/calendar/importCalendarSelection";
 import { addIgnoreRule, isEventIgnored } from "@domain/usecases/calendar/isEventIgnored";
-import { trackImportedMeetings } from "@domain/usecases/calendar/trackImportedMeetings";
-import { dedupeCalendarEvents } from "@domain/usecases/plannedTasks/DedupeCalendarEvents";
-import {
-  importCalendarEvents,
-  type ImportEventInput,
-} from "@domain/usecases/plannedTasks/ImportCalendarEvents";
-import { Autocomplete } from "@presentation/components/Autocomplete";
-import {
-  Badge,
-  Button,
-  DateRangeInput,
-  IconButton,
-  Modal,
-  Toggle,
-} from "@presentation/components/ui";
-import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
-import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
-import { findByNameCaseInsensitive, parseCalendarMetadata } from "@shared/utils/calendarMetadata";
-import { todayISO, weekBoundsOf } from "@shared/utils/time";
-import { emit } from "@tauri-apps/api/event";
-import {
-  AlertCircle,
-  AlertTriangle,
-  Calendar,
-  CheckSquare,
-  ChevronDown,
-  ChevronRight,
-  EyeOff,
-  Loader2,
-  Repeat2,
-  Square,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { loadCalendarImportCandidates } from "@domain/usecases/calendar/loadCalendarImportCandidates";
+import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
+import { Badge, Button, DateRangeInput, Modal, Toggle } from "@presentation/components/ui";
+import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 import { useShowWeekend } from "@presentation/hooks/useShowWeekend";
 import { useWeekStart } from "@presentation/hooks/useWeekStart";
+import { GoogleCalendarLogo } from "@presentation/sections/integrations/google/GoogleCalendarLogo";
 import type { WeekStart } from "@shared/types/appConfig";
-import { effectiveWeekStart, isWeekendDay, weekSpan, weekdayOptions } from "@shared/utils/weekdays";
-import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { resolveIntegrationWorkspaceId } from "@domain/usecases/workspaces/resolveIntegrationWorkspaceId";
-
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
-function isWeekend(dateISO: string): boolean {
-  return isWeekendDay(new Date(dateISO + "T12:00:00").getDay());
-}
-
-/** Descarta o que a semana desta janela não mostra — nada, com o fim de semana ligado. */
-function onlyVisibleDays(days: number[], showWeekend: boolean): number[] {
-  return showWeekend ? days : days.filter((d) => !isWeekendDay(d));
-}
-
-interface EventEditState {
-  projectId: string | null;
-  projectName: string;
-  categoryId: string | null;
-  categoryName: string;
-  scheduleType: "specific_date" | "recurring";
-  recurringDays: number[];
-  expanded: boolean;
-}
-
-function defaultEditState(
-  event: CalendarEvent,
-  projects: Project[],
-  categories: Category[],
-  showWeekend: boolean
-): EventEditState {
-  const hasRecurring = !!event.suggestedRecurringDays?.length || !!event.recurringEventId;
-  const meta = parseCalendarMetadata(event.description);
-  const matchedProject = findByNameCaseInsensitive(meta.projectName, projects);
-  const matchedCategory = findByNameCaseInsensitive(meta.categoryName, categories);
-  return {
-    projectId: matchedProject?.id ?? null,
-    projectName: matchedProject?.name ?? "",
-    categoryId: matchedCategory?.id ?? null,
-    categoryName: matchedCategory?.name ?? "",
-    scheduleType: hasRecurring ? "recurring" : "specific_date",
-    recurringDays: onlyVisibleDays(event.suggestedRecurringDays ?? [], showWeekend),
-    expanded: false,
-  };
-}
+import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
+import { todayISO, weekBoundsOf } from "@shared/utils/time";
+import { effectiveWeekStart, weekSpan } from "@shared/utils/weekdays";
+import { emit } from "@tauri-apps/api/event";
+import { AlertCircle, Calendar, CheckSquare, Loader2, Square } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  DAY_LABELS,
+  defaultEditState,
+  EventRow,
+  type EventEditState,
+} from "./ImportCalendarEventRow";
 
 function groupByDate(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
   const map = new Map<string, CalendarEvent[]>();
@@ -151,237 +93,6 @@ function weekRangeLabelLong(weekKeyISO: string, showWeekend: boolean): string {
   return `${fmt(new Date(weekKeyISO + "T12:00:00"))} a ${fmt(weekEndOf(weekKeyISO, showWeekend))}`;
 }
 
-/* ── Editor inline por evento ── */
-
-interface EventEditorProps {
-  event: CalendarEvent;
-  state: EventEditState;
-  projects: Project[];
-  /** Recorte de categorias do projeto da linha — ver `useProjectCategoryMap`. */
-  categoryOptionsFor: (projectId: string | null) => Category[];
-  onChange: (s: EventEditState) => void;
-}
-
-function EventEditor({ event, state, projects, categoryOptionsFor, onChange }: EventEditorProps) {
-  const showWeekend = useShowWeekend();
-  const weekdays = weekdayOptions(showWeekend, useWeekStart());
-
-  function toggleDay(day: number) {
-    const next = state.recurringDays.includes(day)
-      ? state.recurringDays.filter((d) => d !== day)
-      : [...state.recurringDays, day].sort((a, b) => a - b);
-    onChange({ ...state, recurringDays: next });
-  }
-
-  return (
-    <div className="mt-1 mx-4 mb-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
-      <Autocomplete
-        value={state.projectName}
-        onChange={(v) => onChange({ ...state, projectName: v, projectId: null })}
-        onSelect={(o) =>
-          // Projeto novo zera a categoria. Só aqui: o `onChange` acima dispara a
-          // cada tecla, e limpar ali apagaria a categoria enquanto se digita.
-          onChange({
-            ...state,
-            projectId: o.id,
-            projectName: o.name,
-            categoryId: null,
-            categoryName: "",
-          })
-        }
-        options={projects}
-        placeholder="Projeto"
-      />
-      <Autocomplete
-        value={state.categoryName}
-        onChange={(v) => onChange({ ...state, categoryName: v, categoryId: null })}
-        onSelect={(o) => onChange({ ...state, categoryId: o.id, categoryName: o.name })}
-        options={categoryOptionsFor(state.projectId)}
-        placeholder="Categoria"
-      />
-
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-fg-muted shrink-0">Agendamento:</span>
-        <div className="flex items-center gap-1 bg-raised rounded-control p-0.5">
-          <button
-            onClick={() => onChange({ ...state, scheduleType: "specific_date" })}
-            className={`px-2 py-0.5 text-sm rounded-control transition-colors ${
-              state.scheduleType === "specific_date"
-                ? "bg-accent text-white"
-                : "text-fg-secondary hover:text-fg"
-            }`}
-          >
-            Específica
-          </button>
-          <button
-            onClick={() => {
-              const days = state.recurringDays.length
-                ? state.recurringDays
-                : onlyVisibleDays(event.suggestedRecurringDays ?? [], showWeekend);
-              onChange({ ...state, scheduleType: "recurring", recurringDays: days });
-            }}
-            className={`px-2 py-0.5 text-sm rounded-control transition-colors ${
-              state.scheduleType === "recurring"
-                ? "bg-accent text-white"
-                : "text-fg-secondary hover:text-fg"
-            }`}
-          >
-            Recorrente
-          </button>
-        </div>
-      </div>
-
-      {state.scheduleType === "recurring" && (
-        <div className="flex items-center gap-1">
-          <span className="text-sm text-fg-muted shrink-0 mr-1">Dias:</span>
-          {weekdays.map(({ value, label, title }) => (
-            <button
-              key={value}
-              onClick={() => toggleDay(value)}
-              title={title}
-              className={`w-7 h-7 text-sm rounded-control transition-colors ${
-                state.recurringDays.includes(value)
-                  ? "bg-accent text-white"
-                  : "bg-raised text-fg-muted hover:text-fg"
-              }`}
-            >
-              {label[0]}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Linha de evento ── */
-
-interface EventRowProps {
-  event: CalendarEvent;
-  selected: boolean;
-  editState: EventEditState;
-  projects: Project[];
-  categoryOptionsFor: (projectId: string | null) => Category[];
-  isDeduped: boolean;
-  isDuplicateOfExisting: boolean;
-  /** Casa com uma regra de "Eventos ignorados": vem desmarcado e sem o "Ignorar sempre". */
-  isIgnored: boolean;
-  /**
-   * Dias que a planejada terá de fato — os desta linha mais os das ocorrências
-   * que ela absorveu. Fica no resumo, e não no editor: ali se edita o dia deste
-   * evento, e a linha diz o que será criado.
-   */
-  effectiveRecurringDays: number[];
-  onToggleSelect: () => void;
-  onEditChange: (s: EventEditState) => void;
-  onIgnore: () => void;
-}
-
-function EventRow({
-  event,
-  selected,
-  editState,
-  projects,
-  categoryOptionsFor,
-  isDeduped,
-  isDuplicateOfExisting,
-  isIgnored,
-  effectiveRecurringDays,
-  onToggleSelect,
-  onEditChange,
-  onIgnore,
-}: EventRowProps) {
-  const hasEdits =
-    editState.projectId !== null ||
-    editState.categoryId !== null ||
-    (editState.scheduleType === "recurring" && editState.recurringDays.length > 0);
-
-  return (
-    <div
-      className={`border-b border-border-subtle last:border-0 cursor-pointer hover:bg-raised/30 transition-colors ${isDeduped ? "opacity-60" : ""}`}
-      onClick={() => onEditChange({ ...editState, expanded: !editState.expanded })}
-    >
-      <div className="flex items-start gap-2 px-4 py-2.5">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={onToggleSelect}
-          onClick={(e) => e.stopPropagation()}
-          className="mt-0.5 accent-accent shrink-0"
-        />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-sm text-fg truncate">{event.title}</span>
-            {event.recurringEventId && (
-              <span title="Evento recorrente">
-                <Repeat2 size={14} className="text-accent-text shrink-0" />
-              </span>
-            )}
-            {isDeduped && (
-              <Badge title="Mesma tarefa recorrente já incluída — não criará tarefa separada">
-                recorrente
-              </Badge>
-            )}
-            {isDuplicateOfExisting && (
-              <Badge
-                tone="warning"
-                icon={<AlertTriangle size={14} />}
-                title="Já existe uma tarefa planejada com este nome"
-              >
-                já existe
-              </Badge>
-            )}
-            {isIgnored && <Badge title="Casa com uma regra de eventos ignorados">Ignorado</Badge>}
-          </div>
-          <p className="text-xs text-fg-muted mt-0.5">
-            {event.allDay
-              ? "Dia todo"
-              : event.startTime
-                ? `${event.startTime}${event.endTime ? ` – ${event.endTime}` : ""}`
-                : ""}
-            {hasEdits && (
-              <span className="ml-2 text-accent-text">
-                {editState.projectName || ""}
-                {editState.scheduleType === "recurring" && effectiveRecurringDays.length > 0
-                  ? ` · ${[...effectiveRecurringDays]
-                      .sort((a, b) => a - b)
-                      .map((d) => DAY_LABELS[d][0])
-                      .join("")}`
-                  : ""}
-              </span>
-            )}
-          </p>
-        </div>
-        {!isIgnored && (
-          // O clique na linha abre o editor; o span impede que ignorar também o abra.
-          <span onClick={(e) => e.stopPropagation()}>
-            <IconButton
-              icon={<EyeOff size={14} />}
-              title="Ignorar sempre"
-              variant="neutral"
-              size="sm"
-              onClick={onIgnore}
-            />
-          </span>
-        )}
-        <span className="p-1 text-fg-muted shrink-0">
-          {editState.expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        </span>
-      </div>
-
-      {editState.expanded && (
-        <EventEditor
-          event={event}
-          state={editState}
-          projects={projects}
-          categoryOptionsFor={categoryOptionsFor}
-          onChange={onEditChange}
-        />
-      )}
-    </div>
-  );
-}
-
 /* ── Modal principal ── */
 
 interface ImportCalendarModalProps {
@@ -427,7 +138,8 @@ export function ImportCalendarModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editMap, setEditMap] = useState<Map<string, EventEditState>>(new Map());
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const [existingNames, setExistingNames] = useState<Set<string>>(new Set());
+  /** Eventos com o chip "já existe" — planejada de mesmo nome no destino. */
+  const [existingIds, setExistingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -441,47 +153,22 @@ export function ImportCalendarModal({
     setLoading(true);
     setError(null);
     setSelectedWeek(null);
-    const fromISO = new Date(fromDate + "T00:00:00").toISOString();
-    const toISO = new Date(toDate + "T23:59:59").toISOString();
-    // A duplicata é procurada no workspace **de destino** do import, não em
-    // todos: sem o escopo, evento já importado noutro workspace vinha marcado
-    // "já existe" e desmarcado aqui, onde ele ainda não foi importado.
-    //
-    // O `findForWeek` recebe **dia**, não instante, e é o que todos os outros
-    // chamadores passam: ele compara com `schedule_date`, que é "AAAA-MM-DD" no
-    // banco. Passando o instante, o SQLite comparava `"2026-08-03"` com
-    // `"2026-08-03T03:00:00.000Z"` como texto — o mais curto é prefixo do outro,
-    // logo **menor** —, e a planejada do **primeiro dia do intervalo** ficava de
-    // fora da busca. Na prática, o evento da segunda-feira nunca era marcado
-    // "já existe", vinha selecionado e era importado de novo a cada import; do
-    // segundo dia em diante o chip funcionava. O fim escapava por sorte, porque
-    // ali ser "menor que o instante" é justamente o que se queria.
-    Promise.all([
-      importer.getEvents(fromISO, toISO),
-      repo.findForWeek(fromDate, toDate, workspaceId),
-    ])
-      .then(([allEvts, existingTasks]) => {
-        // Com o fim de semana desligado ele é descartado aqui, na origem, e não
-        // só na renderização dos dias: escondido mas presente na lista, o evento
-        // de sábado continuava selecionado por padrão, entrava na contagem do
-        // botão e era importado — virando planejada sem dia onde aparecer.
-        const evts = showWeekend ? allEvts : allEvts.filter((e) => !isWeekend(e.date));
-        const names = new Set(existingTasks.map((t) => t.name.toLowerCase().trim()));
-        setExistingNames(names);
+    loadCalendarImportCandidates(importer, repo, {
+      fromDay: fromDate,
+      toDay: toDate,
+      workspaceId,
+      showWeekend,
+      ignoreRules: config.get("calendarIgnoreRules"),
+      projects,
+      categories,
+    })
+      .then((candidates) => {
+        const evts = candidates.map((c) => c.event);
+        setExistingIds(new Set(candidates.filter((c) => c.alreadyExists).map((c) => c.event.id)));
         setEvents(evts);
-        const duplicateIds = new Set(
-          evts.filter((e) => names.has(e.title.toLowerCase().trim())).map((e) => e.id)
-        );
-        const rules = config.get("calendarIgnoreRules");
-        setSelected(
-          new Set(
-            evts
-              .filter((e) => !duplicateIds.has(e.id) && !isEventIgnored(e.title, rules))
-              .map((e) => e.id)
-          )
-        );
+        setSelected(new Set(candidates.filter((c) => c.preselected).map((c) => c.event.id)));
         const map = new Map<string, EventEditState>();
-        evts.forEach((e) => map.set(e.id, defaultEditState(e, projects, categories, showWeekend)));
+        candidates.forEach((c) => map.set(c.event.id, { ...c.defaults, expanded: false }));
         setEditMap(map);
         if (evts.length > 0) {
           const firstDate = [...evts].sort((a, b) => a.date.localeCompare(b.date))[0].date;
@@ -534,25 +221,25 @@ export function ImportCalendarModal({
   }, [events, activeWeek, showWeekend, weekStartsOn]);
 
   // Nome + horário, não o id da série do Google — ver `dedupeCalendarEvents`.
-  const { dedupedIds: dedupedEventIds, daysById: mergedDaysById } = useMemo(
+  const importPlan = useMemo(
     () =>
-      dedupeCalendarEvents(
+      planCalendarImport(
         events
           .filter((e) => selected.has(e.id))
           .map((e) => {
             const edit = editMap.get(e.id);
             return {
-              id: e.id,
-              title: e.title,
-              startTime: e.startTime,
-              endTime: e.endTime,
-              isRecurring: edit?.scheduleType === "recurring",
+              event: e,
+              projectId: edit?.projectId ?? null,
+              categoryId: edit?.categoryId ?? null,
+              scheduleType: edit?.scheduleType ?? "specific_date",
               recurringDays: edit?.recurringDays ?? [],
             };
           })
       ),
     [events, selected, editMap]
   );
+  const { dedupedIds: dedupedEventIds, daysById: mergedDaysById } = importPlan;
 
   const effectiveTaskCount = selected.size - dedupedEventIds.size;
 
@@ -594,64 +281,29 @@ export function ImportCalendarModal({
     setEditMap((prev) => new Map(prev).set(id, state));
   }
 
-  /**
-   * Faz as reuniões da importação avisarem no início e no fim, emparelhando cada
-   * evento com a planejada que ele criou — `importCalendarEvents` devolve as
-   * planejadas na ordem das entradas, e é esse contrato que sustenta o par.
-   *
-   * **Falha aqui não é falha da importação.** As planejadas já estão gravadas
-   * quando este passo roda; pintar "erro ao importar eventos" por cima levaria o
-   * usuário a repetir o import e duplicar tudo. Fica no console.
-   */
-  async function trackSelectedMeetings(
-    inputs: ImportEventInput[],
-    created: PlannedTask[]
-  ): Promise<number> {
-    try {
-      const { tracked, errors } = await trackImportedMeetings(
-        trackedRepo,
-        inputs.map((input, i) => ({ event: input.event, plannedTaskId: created[i].id })),
-        todayISO()
-      );
-      if (errors.length > 0) {
-        console.error("[importCalendar] falha ao rastrear reuniões", errors);
-      }
-      return tracked;
-    } catch (err) {
-      console.error("[importCalendar] falha ao rastrear reuniões", err);
-      return 0;
-    }
-  }
-
   async function handleImport() {
-    const inputs: ImportEventInput[] = events
-      .filter((e) => selected.has(e.id) && !dedupedEventIds.has(e.id))
-      .map((e) => {
-        const edit = editMap.get(e.id)!;
-        return {
-          event: e,
-          projectId: edit.projectId,
-          categoryId: edit.categoryId,
-          scheduleType: edit.scheduleType,
-          // Os dias das ocorrências absorvidas entram aqui: a série partida em
-          // dois ids pode cobrir dias diferentes em cada metade.
-          recurringDays: mergedDaysById.get(e.id) ?? edit.recurringDays,
-        };
-      });
-
+    const { inputs } = importPlan;
     if (inputs.length === 0) return;
 
     setImporting(true);
     try {
-      const created = await importCalendarEvents(
-        repo,
+      const { created, tracked, trackErrors } = await importCalendarSelection(
+        { plannedRepo: repo, trackedRepo },
         inputs,
-        new Date().toISOString(),
-        workspaceId,
-        addOpenUrlAction
+        {
+          workspaceId,
+          nowISO: new Date().toISOString(),
+          todayISO: todayISO(),
+          addOpenUrlAction,
+          trackMeetings,
+        }
       );
       if (created.length > 0) void emit(OVERLAY_EVENTS.PLANNED_TASKS_CHANGED, {});
-      const tracked = trackMeetings ? await trackSelectedMeetings(inputs, created) : 0;
+      // As planejadas já estão gravadas: a falha do rastreio fica no console, e
+      // pintar "erro ao importar" levaria o usuário a repetir e duplicar tudo.
+      if (trackErrors.length > 0) {
+        console.error("[importCalendar] falha ao rastrear reuniões", trackErrors);
+      }
       onImported(created.length, tracked);
     } catch (err) {
       const msg =
@@ -719,7 +371,7 @@ export function ImportCalendarModal({
               projects={projects}
               categoryOptionsFor={categoryOptionsFor}
               isDeduped={dedupedEventIds.has(event.id)}
-              isDuplicateOfExisting={existingNames.has(event.title.toLowerCase().trim())}
+              isDuplicateOfExisting={existingIds.has(event.id)}
               isIgnored={isEventIgnored(event.title, ignoreRules)}
               effectiveRecurringDays={
                 mergedDaysById.get(event.id) ??

@@ -6,6 +6,12 @@ import {
   type MondayEntry,
   type MondayEntryPatch,
 } from "@presentation/hooks/useMondayEntries";
+import {
+  groupMondayEntriesByDay,
+  mondayEntriesWindow,
+  type MondayEntriesWindow,
+} from "@domain/usecases/monday/mondayEntries";
+import { mondayEntryPatchError } from "@domain/usecases/monday/mondayEntryWrite";
 import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
 import {
@@ -17,13 +23,7 @@ import {
   Modal,
   Select,
 } from "@presentation/components/ui";
-import {
-  addDaysISO,
-  formatDurationCompact,
-  formatHistoryDayHeader,
-  startOfMonthISO,
-  todayISO,
-} from "@shared/utils/time";
+import { formatDurationCompact, formatHistoryDayHeader, todayISO } from "@shared/utils/time";
 
 /**
  * Só janelas prontas. O personalizado saiu: a busca não é filtrada por data no
@@ -31,7 +31,7 @@ import {
  * já não cubram — em troca de dois campos de data e de um estado inválido para
  * a tela tratar.
  */
-type QuickFilter = "today" | "7days" | "30days" | "month";
+type QuickFilter = MondayEntriesWindow;
 
 const QUICK_LABELS: Record<QuickFilter, string> = {
   today: "Hoje",
@@ -48,28 +48,6 @@ function periodLabel(entry: MondayEntry): string {
   };
   const { startDayISO, endDayISO } = entry.period;
   return startDayISO === endDayISO ? fmt(startDayISO) : `${fmt(startDayISO)} – ${fmt(endDayISO)}`;
-}
-
-interface DayGroup {
-  dayISO: string;
-  entries: MondayEntry[];
-  totalHours: number;
-}
-
-/** Agrupa pelo dia de início; um item que cruza dias aparece uma vez, no começo. */
-function groupByDay(entries: MondayEntry[]): DayGroup[] {
-  const map = new Map<string, MondayEntry[]>();
-  for (const entry of entries) {
-    const day = entry.period?.startDayISO ?? "";
-    map.set(day, [...(map.get(day) ?? []), entry]);
-  }
-  return [...map.entries()]
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([dayISO, list]) => ({
-      dayISO,
-      entries: list,
-      totalHours: list.reduce((sum, e) => sum + e.hoursDecimal, 0),
-    }));
 }
 
 export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
@@ -89,19 +67,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
     [config.isLoaded] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  const range = useMemo(() => {
-    const today = todayISO();
-    switch (quick) {
-      case "today":
-        return { start: today, end: today };
-      case "7days":
-        return { start: addDaysISO(today, -6), end: today };
-      case "30days":
-        return { start: addDaysISO(today, -29), end: today };
-      case "month":
-        return { start: startOfMonthISO(), end: today };
-    }
-  }, [quick]);
+  const range = useMemo(() => mondayEntriesWindow(quick, todayISO()), [quick]);
 
   const {
     entries,
@@ -118,7 +84,7 @@ export function MondayEntriesModal({ onClose }: { onClose: () => void }) {
   // lista — a exclusão no Monday não fica visível na consulta seguinte na hora.
   const busy = loading || deletingId !== null;
 
-  const dayGroups = useMemo(() => groupByDay(entries), [entries]);
+  const dayGroups = useMemo(() => groupMondayEntriesByDay(entries), [entries]);
   const totalHours = entries.reduce((sum, e) => sum + e.hoursDecimal, 0);
 
   if (!apiKey || !userId || mappings.length === 0) {
@@ -353,7 +319,7 @@ function EntryForm({ entry, onCancel, onSave }: EntryFormProps) {
   const [saving, setSaving] = useState(false);
 
   const hoursDecimal = Number(hours.replace(",", "."));
-  const canSave = name.trim() !== "" && Number.isFinite(hoursDecimal) && hoursDecimal >= 0;
+  const canSave = mondayEntryPatchError({ name, hoursDecimal }) === null;
 
   async function handleSave() {
     if (saving || !canSave) return;

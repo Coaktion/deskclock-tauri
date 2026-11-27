@@ -5,26 +5,18 @@ import {
   CheckSquare,
   Square,
   AlertTriangle,
-  CheckCheck,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
-import type { Task } from "@domain/entities/Task";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
-import type { TaskGroup } from "@domain/utils/groupTasks";
-import type { TaskValidationResult } from "@domain/integrations/taskValidation";
-import type { ITaskSender } from "@domain/integrations/ITaskSender";
-import { resolveSentTasks } from "@domain/utils/resolveSentTasks";
+import { TaskSendGroupRow } from "./TaskSendGroupRow";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import {
-  sendTasks,
-  NoIntegrationError,
-  NoTasksSelectedError,
-} from "@domain/usecases/tasks/SendTasks";
+import { NoIntegrationError, NoTasksSelectedError } from "@domain/usecases/tasks/SendTasks";
+import { sendBlockedReason, sendTaskGroups } from "@domain/usecases/tasks/SendTaskGroups";
+import type { TaskSendAdapter } from "@presentation/integrations/taskSendAdapters";
 import { formatDurationCompact, todayISO } from "@shared/utils/time";
-import { getProjectColor } from "@shared/utils/projectColor";
-import { Badge, Button, DateRangeInput, FilterPill, Modal } from "@presentation/components/ui";
+import { Button, DateRangeInput, FilterPill, Modal } from "@presentation/components/ui";
 import {
   useTaskSendSelection,
   buildResultMessage,
@@ -34,130 +26,11 @@ import {
   type SendTone,
 } from "@presentation/hooks/useTaskSendSelection";
 
-export interface TaskSendAdapter {
-  /** Id da integração — usado em taskLogRepo.findSentIds / markSent. */
-  integrationId: string;
-  /**
-   * Workspace do DeskClock da integração — o recorte da lista de tarefas.
-   * Cada adaptador resolve o seu (`resolveIntegrationWorkspaceId`).
-   */
-  workspaceId: string;
-  /** Título exibido no header do modal. */
-  title: string;
-  /** Sender pronto para uso (null quando integração não configurada). */
-  sender: ITaskSender | null;
-  /** Valida uma tarefa antes de exibi-la / selecioná-la. */
-  validateTask: (task: Task) => TaskValidationResult;
-  /** Validação adicional imediatamente antes de enviar (ex: campos obrigatórios do Sheets). */
-  validateBeforeSend?: (tasks: Task[]) => string | null;
-  /** Chamado após sendTasks+markSent com sucesso (ex: atualizar timestamp do último sync). */
-  onSendSuccess: (taskIds: string[]) => Promise<void>;
-  /** Mensagem de erro quando sender é null. */
-  notConfiguredMessage: string;
-  /**
-   * Envia as tarefas cruas em vez de um registro unificado por grupo. Para
-   * integrações idempotentes, que precisam de todos os ids do grupo para
-   * reencontrar o registro já criado no destino.
-   */
-  sendsRawTasks?: boolean;
-  /** Sobrescreve o aviso exibido quando há tarefas já enviadas na seleção. */
-  resendWarning?: string;
-}
-
-const DEFAULT_RESEND_WARNING =
-  "Uma ou mais tarefas selecionadas já foram enviadas. O reenvio pode criar duplicatas.";
-
 const TONE_CLASS: Record<SendTone, string> = {
   success: "text-success",
   warning: "text-warning",
   error: "text-danger",
 };
-
-interface GroupRowProps {
-  group: TaskGroup;
-  projects: Project[];
-  categories: Category[];
-  sentIds: Set<string>;
-  selected: boolean;
-  onToggle: () => void;
-  validateTask: (task: Task) => TaskValidationResult;
-}
-
-function GroupRow({
-  group,
-  projects,
-  categories,
-  sentIds,
-  selected,
-  onToggle,
-  validateTask,
-}: GroupRowProps) {
-  const first = group.tasks[0];
-  const project = projects.find((p) => p.id === first.projectId);
-  const category = categories.find((c) => c.id === first.categoryId);
-  const allSent = group.tasks.every((t) => sentIds.has(t.id));
-  const someSent = !allSent && group.tasks.some((t) => sentIds.has(t.id));
-  const projectColor = getProjectColor(project);
-  const validation = validateTask(first);
-  const isInvalid = !validation.ok;
-
-  return (
-    <div
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-control transition-colors ${
-        isInvalid ? "opacity-50 cursor-not-allowed" : "hover:bg-raised/50 cursor-pointer"
-      }`}
-      onClick={isInvalid ? undefined : onToggle}
-    >
-      <input
-        type="checkbox"
-        checked={selected && !isInvalid}
-        disabled={isInvalid}
-        onChange={onToggle}
-        onClick={(e) => e.stopPropagation()}
-        className="flex-shrink-0 accent-accent cursor-pointer disabled:cursor-not-allowed"
-      />
-
-      <span
-        className="shrink-0 w-1.5 h-1.5 rounded-full"
-        style={{ backgroundColor: projectColor }}
-      />
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-fg truncate">{first.name ?? "(sem nome)"}</span>
-          {/* Faltar dado desabilita a seleção do grupo — é impedimento, não
-              aviso, e por isso o vermelho e não o âmbar do "Parcial". */}
-          {isInvalid && (
-            <Badge tone="danger" icon={<AlertTriangle size={14} />}>
-              Faltando: {validation.missing.join(", ")}
-            </Badge>
-          )}
-          {!isInvalid && allSent && (
-            <Badge tone="success" icon={<CheckCheck size={14} />}>
-              Enviado
-            </Badge>
-          )}
-          {!isInvalid && someSent && (
-            <Badge tone="warning" icon={<AlertTriangle size={14} />}>
-              Parcial
-            </Badge>
-          )}
-        </div>
-        <div className="flex gap-2 text-xs text-fg-muted mt-0.5">
-          {project && <span>{project.name}</span>}
-          {category && <span>{category.name}</span>}
-          {group.tasks.length > 1 && (
-            <span className="text-fg-muted">{group.tasks.length} registros</span>
-          )}
-        </div>
-      </div>
-
-      <span className="text-xs font-mono tabular-nums text-fg-secondary shrink-0">
-        {formatDurationCompact(group.totalSeconds)}
-      </span>
-    </div>
-  );
-}
 
 interface TaskSendModalProps {
   adapter: TaskSendAdapter;
@@ -189,41 +62,22 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
     sel.setMessage(null);
 
     const selectedGroups = sel.collectSelectedGroups();
-    const tasksToSend = adapter.sendsRawTasks
-      ? selectedGroups.flatMap((g) => g.tasks)
-      : selectedGroups.map((g) => ({
-          ...g.tasks[0],
-          durationSeconds: g.totalSeconds,
-        }));
-    if (adapter.validateBeforeSend) {
-      const err = adapter.validateBeforeSend(tasksToSend);
-      if (err) {
-        sel.setMessage({ text: err, tone: "error" });
-        return;
-      }
+    // Checada aqui antes do `sendTaskGroups` (que repete a checagem) só para o
+    // botão não piscar "Enviando…" quando a carga nem pode sair.
+    const blocked = sendBlockedReason(adapter, selectedGroups);
+    if (blocked) {
+      sel.setMessage({ text: blocked, tone: "error" });
+      return;
     }
 
     setSending(true);
     try {
-      const outcome = await sendTasks(adapter.sender, tasksToSend);
-
-      // Quem conhece o agrupamento da tela é esta tela; o sender só devolve ids.
-      // A regra vive em `domain/utils` porque decide o que recebe o badge
-      // "Enviado" — e o badge é o que impede o reenvio.
-      const sent = resolveSentTasks(selectedGroups, outcome.sentTaskIds, !!adapter.sendsRawTasks);
-
-      if (sent.taskIds.length > 0) {
-        await taskLogRepo.markSent(sent.taskIds, adapter.integrationId);
+      const result = await sendTaskGroups(adapter, selectedGroups, taskLogRepo);
+      if (result.kind === "blocked") {
+        sel.setMessage({ text: result.message, tone: "error" });
+        return;
       }
-
-      // O `onSendSuccess` avança o timestamp do envio diário nas três
-      // integrações, e a janela do próximo ciclo começa nele: avançá-lo com
-      // algo recusado faria o grupo que ficou para trás sair da janela e nunca
-      // mais ser tentado sozinho.
-      if (outcome.refused.length + outcome.failed.length === 0 && sent.taskIds.length > 0) {
-        await adapter.onSendSuccess(sent.taskIds);
-      }
-
+      const { outcome, sent } = result;
       sel.setMessage(buildResultMessage(sent.fullySentGroups, outcome));
 
       // O reload é o que devolve a seleção certa: o efeito de carga remarca o
@@ -306,9 +160,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
             {sel.hasSentSelected && (
               <div className="flex items-start gap-2 px-3 py-2 bg-warning/10 border border-warning/20 rounded-control">
                 <AlertTriangle size={14} className="text-warning shrink-0 mt-0.5" />
-                <p className="text-xs text-warning">
-                  {adapter.resendWarning ?? DEFAULT_RESEND_WARNING}
-                </p>
+                <p className="text-xs text-warning">{adapter.resendWarning}</p>
               </div>
             )}
             {sel.message && (
@@ -411,7 +263,7 @@ export function TaskSendModal({ adapter, projects, categories, onClose }: TaskSe
                 {!isCollapsed && (
                   <div className="pl-2 space-y-0.5 py-1">
                     {groups.map((g) => (
-                      <GroupRow
+                      <TaskSendGroupRow
                         key={g.key}
                         group={g}
                         projects={projects}

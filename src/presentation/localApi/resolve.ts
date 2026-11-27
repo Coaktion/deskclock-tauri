@@ -111,7 +111,7 @@ export interface CatalogRefs {
   categoryName?: string | null;
 }
 
-const has = (body: object, key: string) => Object.prototype.hasOwnProperty.call(body, key);
+export const has = (body: object, key: string) => Object.prototype.hasOwnProperty.call(body, key);
 
 /**
  * Projeto e categoria de uma edição parcial: só entra no resultado o que o

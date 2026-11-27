@@ -14,10 +14,34 @@ import {
 } from "@shared/utils/catalogSync";
 import { notifyTasksChanged } from "@shared/utils/taskSync";
 import { todayISO } from "@shared/utils/time";
-import { waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
+import { runsInLongQueue, waitsForNextCommit, dispatchLocalApiRequest } from "./dispatch";
 import { errorResult } from "./errors";
 import { claimRequestId, createSerialQueue, waitForSignal } from "./queue";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
+import {
+  buildTaskSendAdapter,
+  taskSendWorkspaceId,
+} from "@presentation/integrations/taskSendAdapters";
+import {
+  buildCalendarImportSource,
+  buildMondayImportSource,
+  buildZendeskImportSource,
+} from "@presentation/integrations/importSources";
+import { buildDaySummarySource } from "@presentation/integrations/daySummaries";
+import { buildDriveBackupSource } from "@presentation/integrations/driveBackup";
+import {
+  buildClockifyEntriesSource,
+  buildMondayEntriesSource,
+} from "@presentation/integrations/entriesSources";
+import { buildSettingsPort } from "@presentation/settings/settingsGroups";
+import { tauriSettingsSystem } from "@presentation/settings/settingsEffects";
+import { buildIntegrationSettingsPort } from "@presentation/settings/integrationSettingsPort";
+import {
+  MONDAY_INTEGRATION_NAME,
+  SHEETS_INTEGRATION_NAME,
+  useAutoSync,
+} from "@presentation/contexts/AutoSyncContext";
 import type { LocalApiDeps, LocalApiParams } from "./types";
 
 const REQUEST_EVENT = "local-api:request";
@@ -42,6 +66,8 @@ export function useLocalApiBridge(): void {
   const { activeWorkspaceId, switchTo } = useWorkspaces();
   const { create, update, remove } = useWorkspaceAdmin();
   const config = useAppConfig();
+  const factories = useIntegrations();
+  const autoSync = useAutoSync();
   const depsRef = useRef<LocalApiDeps | null>(null);
   const commitListeners = useRef(new Set<() => void>());
 
@@ -57,6 +83,51 @@ export function useLocalApiBridge(): void {
       workspaceRepo: repos.workspaceRepo,
       projectCategoryRepo: repos.projectCategoryRepo,
       customFieldRepo: repos.customFieldRepo,
+      taskLogRepo: repos.taskLogRepo,
+      exportProfileRepo: repos.exportProfileRepo,
+      taskSend: {
+        workspaceIdFor: (integration) => taskSendWorkspaceId(integration, config),
+        adapterFor: (integration, catalogs) =>
+          buildTaskSendAdapter(integration, config, factories, catalogs),
+      },
+      trackedMeetingRepo: repos.trackedMeetingRepo,
+      mondayImportedItemRepo: repos.mondayImportedItemRepo,
+      imports: {
+        calendar: () => buildCalendarImportSource(config, factories),
+        zendesk: () => buildZendeskImportSource(config, factories),
+        monday: () =>
+          buildMondayImportSource(config, factories, {
+            projectRepo: repos.projectRepo,
+            categoryRepo: repos.categoryRepo,
+            projectCategoryRepo: repos.projectCategoryRepo,
+            notifyProjectsChanged,
+            notifyProjectCategoriesChanged,
+            notifyCategoriesChanged,
+          }),
+      },
+      daySummaryRepo: repos.daySummaryRepo,
+      llm: () => buildDaySummarySource(config, factories),
+      driveBackup: () => buildDriveBackupSource(config, factories),
+      entries: {
+        clockify: () => buildClockifyEntriesSource(config, factories),
+        monday: () => buildMondayEntriesSource(config, factories),
+      },
+      mondayActivityItemRepo: repos.mondayActivityItemRepo,
+      settings: buildSettingsPort(config, tauriSettingsSystem),
+      integrationSettings: buildIntegrationSettingsPort({
+        config,
+        factories,
+        projectRepo: repos.projectRepo,
+        categoryRepo: repos.categoryRepo,
+        customFieldRepo: repos.customFieldRepo,
+        notifyProjectsChanged,
+        notifyCategoriesChanged,
+        notifyCustomFieldsChanged,
+        autoSyncNames: { google_sheets: SHEETS_INTEGRATION_NAME, monday: MONDAY_INTEGRATION_NAME },
+        runDailyFor: (name, endDateISO) => autoSync.runDailyFor(name, endDateISO),
+        nowISO: () => new Date().toISOString(),
+        todayISO,
+      }),
       activeWorkspaceId,
       running,
       workspaces: { create, update, remove, switchTo },
@@ -75,6 +146,8 @@ export function useLocalApiBridge(): void {
 
   useEffect(() => {
     const enqueue = createSerialQueue();
+    // Uma de cada vez entre si (dois backups juntos disputariam o mesmo upload).
+    const enqueueLong = createSerialQueue();
     let disposed = false;
 
     const handle = async ({ id, op, params }: BridgeRequest) => {
@@ -93,7 +166,8 @@ export function useLocalApiBridge(): void {
     // chegar a dois: descartado ignora, e o id deduplica os vivos (spec §6).
     const unlisten = listen<BridgeRequest>(REQUEST_EVENT, ({ payload }) => {
       if (disposed || !claimRequestId(payload.id)) return;
-      void enqueue(() => handle(payload)).catch((error) => {
+      const queue = runsInLongQueue(payload.op) ? enqueueLong : enqueue;
+      void queue(() => handle(payload)).catch((error) => {
         console.error("[local-api] falha ao responder", error);
       });
     });

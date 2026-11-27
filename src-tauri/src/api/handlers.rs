@@ -3,9 +3,9 @@
 
 use crate::api::bridge::{BridgeError, BridgeResponse};
 use crate::api::models::{
-    CategoryDto, CreatePlannedTaskRequest, ErrorResponse, PlannedTaskCompleteRequest,
-    PlannedTaskDto, ProjectDto, StartTaskRequest, StatusResponse, StopTaskRequest, TaskDto,
-    ToggleTaskRequest, UpdatePlannedTaskRequest,
+    CategoryDto, CreatePlannedTaskRequest, ErrorResponse, PatchPlannedTaskRequest,
+    PlannedTaskCompleteRequest, PlannedTaskDto, ProjectDto, StartTaskRequest, StatusResponse,
+    StopTaskRequest, TaskDto, ToggleTaskRequest, UpdatePlannedTaskRequest,
 };
 use crate::api::state::ApiState;
 use axum::{
@@ -96,8 +96,16 @@ fn scoped_params(id: String, q: &WorkspaceQuery) -> Value {
 // `WorkspaceQuery` sem que eles precisem sair do escopo privado deste módulo.
 pub mod catalog;
 pub mod custom_fields;
+pub mod entry_writes;
+pub mod export;
 pub mod history;
+pub mod imports;
+pub mod integration_settings;
+pub mod integrations;
 pub mod planned_tasks;
+pub mod services;
+pub mod settings;
+pub mod share;
 pub mod totals;
 pub mod workspaces;
 
@@ -420,7 +428,8 @@ pub async fn post_planned_task(State(state): State<Arc<ApiState>>, body: Bytes) 
         content = UpdatePlannedTaskRequest,
         description = "Substitui os campos atualizáveis da tarefa planejada. `completedDates` é preservado; \
             `sortOrder`, `startTime`, `endTime` e `customValues` ausentes também; \
-            `null` em `startTime`, `endTime` ou `customValues` limpa o campo.",
+            `null` em `startTime`, `endTime` ou `customValues` limpa o campo. \
+            `customValues` é validado: id de campo desconhecido ou valor inválido devolve 400; `select` aceita id ou rótulo da opção, `checkbox` aceita 1/true/Sim.",
         example = json!({
             "name": "Daily standup",
             "billable": false,
@@ -452,6 +461,44 @@ pub async fn put_planned_task(
         }
         Err(r) => *r,
     }
+}
+
+#[utoipa::path(
+    patch,
+    path = "/planned-tasks/{id}",
+    tag = "planned-tasks",
+    params(("id" = String, Path, description = "ID da tarefa planejada")),
+    request_body(
+        content = PatchPlannedTaskRequest,
+        description = "Edição parcial: campo ausente é preservado (o `PUT` substitui tudo). \
+            `null` limpa projeto, categoria, `startTime`, `endTime`, `customValues` (`{}`) e `actions` (`[]`); \
+            em `name` e `scheduleType` é 400. Projeto e categoria são resolvidos no workspace da planejada; \
+            trocar a categoria sem `billable` aplica o `defaultBillable` da nova. \
+            Trocar `scheduleType` exige os campos do novo tipo e limpa os do anterior; \
+            campo de agendamento de outro tipo, ou o do tipo atual em `null`, é 400. \
+            `customValues` substitui o mapa inteiro e é validado como no `PUT`.",
+        example = json!({ "customValues": { "<id do campo>": "Valor" } })
+    ),
+    responses(
+        (status = 200, description = "Tarefa planejada atualizada", body = PlannedTaskDto),
+        (status = 400, description = "Corpo inválido, `name`/`scheduleType` nulo, agendamento incompleto ou `customValues` inválido", body = ErrorResponse),
+        (status = 404, description = "Não encontrada", body = ErrorResponse),
+        (status = 409, description = "Projeto/categoria não encontrado no workspace da tarefa", body = ErrorResponse)
+    )
+)]
+pub async fn patch_planned_task(
+    State(state): State<Arc<ApiState>>,
+    Path(id): Path<String>,
+    body: Bytes,
+) -> Response {
+    forward_with_body::<PatchPlannedTaskRequest>(
+        &state,
+        "plannedTasks.patch",
+        &body,
+        true,
+        json!({ "id": id }),
+    )
+    .await
 }
 
 #[utoipa::path(

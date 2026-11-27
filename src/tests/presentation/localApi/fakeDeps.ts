@@ -9,6 +9,15 @@ import type { ICategoryRepository } from "@domain/repositories/ICategoryReposito
 import type { IWorkspaceRepository } from "@domain/repositories/IWorkspaceRepository";
 import type { IProjectCategoryRepository } from "@domain/repositories/IProjectCategoryRepository";
 import type { ICustomFieldRepository } from "@domain/repositories/ICustomFieldRepository";
+import type { ITaskIntegrationLogRepository } from "@domain/repositories/ITaskIntegrationLogRepository";
+import type { IExportProfileRepository } from "@domain/repositories/IExportProfileRepository";
+import type { ExportProfile } from "@domain/entities/ExportProfile";
+import type { ITrackedMeetingRepository } from "@domain/integrations/ITrackedMeetingRepository";
+import type { ITrackedMondayItemRepository } from "@domain/integrations/ITrackedMondayItemRepository";
+import type { TrackedMeeting } from "@domain/integrations/TrackedMeeting";
+import type { TrackedMondayItem } from "@domain/integrations/TrackedMondayItem";
+import type { DaySummary } from "@domain/entities/DaySummary";
+import type { IDaySummaryRepository } from "@domain/repositories/IDaySummaryRepository";
 import type { CustomField } from "@domain/entities/CustomField";
 import type { ProjectCategory } from "@domain/entities/ProjectCategory";
 import type { Workspace } from "@domain/entities/Workspace";
@@ -158,6 +167,95 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     delete: vi.fn(async () => {}),
   } satisfies Record<keyof ICustomFieldRepository, unknown>;
 
+  const taskLogRepo = {
+    markSent: vi.fn(async (_ids: string[], _integration: string) => {}),
+    findSentIds: vi.fn(
+      async (_integration: string, _start?: string, _end?: string): Promise<string[]> => []
+    ),
+  } satisfies Record<keyof ITaskIntegrationLogRepository, unknown>;
+
+  const exportProfileRepo = {
+    findAll: vi.fn(async (_ws?: string): Promise<ExportProfile[]> => []),
+    findById: vi.fn(async (_id: string): Promise<ExportProfile | null> => null),
+    findDefault: vi.fn(async (_ws: string): Promise<ExportProfile | null> => null),
+    save: vi.fn(async (_profile: ExportProfile) => {}),
+    update: vi.fn(async (_profile: ExportProfile) => {}),
+    setDefault: vi.fn(async (_id: string) => {}),
+    delete: vi.fn(async (_id: string) => {}),
+  } satisfies Record<keyof IExportProfileRepository, unknown>;
+
+  // Sem adaptador por padrão: o teste de envio injeta o seu.
+  const taskSend = {
+    workspaceIdFor: vi.fn((_integration: string) => WS_ATIVO),
+    adapterFor: vi.fn((_integration: string, _catalogs: unknown): unknown => {
+      throw new Error("adapterFor não configurado no teste");
+    }),
+  };
+
+  const trackedMeetingRepo = {
+    listForDate: vi.fn(async (_date: string): Promise<TrackedMeeting[]> => []),
+    upsert: vi.fn(async (_meeting: TrackedMeeting) => {}),
+    setPlannedTaskId: vi.fn(async () => {}),
+    setStartedTaskId: vi.fn(async () => {}),
+    remove: vi.fn(async () => {}),
+    pruneBefore: vi.fn(async () => {}),
+  } satisfies Record<keyof ITrackedMeetingRepository, unknown>;
+
+  const mondayImportedItemRepo = {
+    listForWorkspace: vi.fn(async (_ws: string): Promise<TrackedMondayItem[]> => []),
+    upsert: vi.fn(async (_item: TrackedMondayItem) => {}),
+    remove: vi.fn(async () => {}),
+  } satisfies Record<keyof ITrackedMondayItemRepository, unknown>;
+
+  // Sem fonte por padrão: o teste de import injeta a sua.
+  const notConfigured = (name: string) =>
+    vi.fn((): unknown => {
+      throw new Error(`imports.${name} não configurado no teste`);
+    });
+  const imports = {
+    calendar: notConfigured("calendar"),
+    zendesk: notConfigured("zendesk"),
+    monday: notConfigured("monday"),
+  };
+
+  const daySummaryRepo = {
+    findByDays: vi.fn(async (_ws: string, _days: string[]): Promise<DaySummary[]> => []),
+    save: vi.fn(async (_summary: DaySummary) => {}),
+  } satisfies Record<keyof IDaySummaryRepository, unknown>;
+
+  const llm = notConfigured("llm");
+  const driveBackup = notConfigured("driveBackup");
+  const entries = {
+    clockify: notConfigured("entries.clockify"),
+    monday: notConfigured("entries.monday"),
+  };
+
+  const mondayActivityItemRepo = {
+    deleteItem: vi.fn(async (_boardId: string, _itemId: string) => {}),
+  };
+
+  // Sem porta por padrão: o teste de configurações injeta a sua.
+  const settings = {
+    general: notConfigured("settings.general"),
+    updateGeneral: notConfigured("settings.updateGeneral"),
+    overlay: notConfigured("settings.overlay"),
+    updateOverlay: notConfigured("settings.updateOverlay"),
+    accessibility: notConfigured("settings.accessibility"),
+    updateAccessibility: notConfigured("settings.updateAccessibility"),
+    shortcuts: notConfigured("settings.shortcuts"),
+    updateShortcuts: notConfigured("settings.updateShortcuts"),
+    toggleOverlay: notConfigured("settings.toggleOverlay"),
+    resetWindowPositions: notConfigured("settings.resetWindowPositions"),
+  };
+
+  // Sem porta por padrão: o teste dos ajustes de integração injeta a sua.
+  const integrationSettings = new Proxy(
+    {},
+    {
+      get: (_target, name) => notConfigured(`integrationSettings.${String(name)}`),
+    }
+  );
+
   const workspaces = {
     create: vi.fn(async (name: string, color?: string): Promise<Workspace> => ({
       id: "ws-novo",
@@ -178,6 +276,19 @@ export function makeDeps(overrides: { running?: Partial<RunningTaskOps> } = {}) 
     workspaceRepo,
     projectCategoryRepo,
     customFieldRepo,
+    taskLogRepo,
+    exportProfileRepo,
+    taskSend,
+    trackedMeetingRepo,
+    mondayImportedItemRepo,
+    imports,
+    daySummaryRepo,
+    llm,
+    driveBackup,
+    entries,
+    mondayActivityItemRepo,
+    settings,
+    integrationSettings,
     activeWorkspaceId: WS_ATIVO,
     running,
     workspaces,

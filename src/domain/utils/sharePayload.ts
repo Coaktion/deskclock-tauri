@@ -3,7 +3,8 @@ import type { CustomField } from "@domain/entities/CustomField";
 import type { Project } from "@domain/entities/Project";
 import type { Category } from "@domain/entities/Category";
 import { formatCustomValue } from "@domain/usecases/customFields/customValueCodec";
-import type { SharedTaskPayload } from "@shared/utils/shareLink";
+import type { Task } from "@domain/entities/Task";
+import { buildShareLink, type SharedTaskPayload } from "@shared/utils/shareLink";
 
 /**
  * Traduz a planejada para o payload do deeplink (`shared/utils/shareLink.ts`).
@@ -52,4 +53,28 @@ export function plannedTaskToSharePayload(
     endTime: task.endTime,
     customValues,
   };
+}
+
+/**
+ * O link do "Copiar link" da planejada. `customFields` é o catálogo inteiro,
+ * arquivados inclusive: valor gravado num campo arquivado continua valendo.
+ */
+export function plannedTaskShareLink(
+  task: PlannedTask,
+  projects: Project[],
+  categories: Category[],
+  customFields: CustomField[]
+): string {
+  return buildShareLink(plannedTaskToSharePayload(task, projects, categories, customFields));
+}
+
+/**
+ * O aviso do modal de tarefa recebida quando há tarefa ativa. Para em
+ * "encerra", de propósito: o que acontece depois é das regras de parada, e uma
+ * delas descarta a tarefa com menos de um minuto (`shouldDiscardTask`).
+ */
+export function sharedTaskStartWarning(active: Pick<Task, "name" | "status">): string {
+  const name = active.name?.trim() || "(sem nome)";
+  const state = active.status === "paused" ? "pausada" : "em execução";
+  return `Iniciar agora encerra a tarefa ${state} “${name}”.`;
 }

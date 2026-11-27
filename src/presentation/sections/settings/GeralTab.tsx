@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { ALL_ROUNDING_SLOTS } from "@shared/utils/roundDuration";
 import type { RoundingSlot } from "@shared/utils/roundDuration";
@@ -12,8 +11,19 @@ import {
   Toggle,
 } from "@presentation/components/ui";
 import { DEFAULT_SHOW_WEEKEND, DEFAULT_WEEK_START, type WeekStart } from "@shared/types/appConfig";
-import { OVERLAY_EVENTS, type OverlayConfigChangedPayload } from "@shared/types/overlayEvents";
-import { emit } from "@tauri-apps/api/event";
+import {
+  DAILY_GOAL_RANGE,
+  ROUNDING_TOLERANCE_OPTIONS,
+  WEEKLY_GOAL_RANGE,
+  toggleRoundingSlot,
+} from "@domain/usecases/settings/settingsRules";
+import {
+  resetWindowPositions,
+  saveShowWeekend,
+  saveStartOnBoot,
+  saveWeekStartsOn,
+  tauriSettingsSystem,
+} from "@presentation/settings/settingsEffects";
 import { NumberInputWithCommit } from "./SettingsShared";
 
 /** Os dois modos da semana. O valor é o `WeekStart` em texto, e não um rótulo
@@ -78,7 +88,8 @@ export function GeralTab() {
     setWeeklyGoalHours(config.get("weeklyGoalHours"));
     setWeekStartsOn(config.get("weekStartsOn"));
     setShowWeekend(config.get("showWeekend"));
-    isEnabled()
+    tauriSettingsSystem.autostart
+      .isEnabled()
       .then(setStartOnBoot)
       .catch(() => {});
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -92,34 +103,19 @@ export function GeralTab() {
     await config.set(key, value);
   }
 
-  /** Emite para as outras janelas: a config delas é o retrato do mount. */
   async function handleWeekStart(value: WeekStart) {
     setWeekStartsOn(value);
-    await config.set("weekStartsOn", value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "weekStartsOn",
-      value,
-    } satisfies OverlayConfigChangedPayload);
+    await saveWeekStartsOn(config, tauriSettingsSystem, value);
   }
 
-  /** Também emite: o editor de planejada do popup lê esta config. */
   async function handleShowWeekend(value: boolean) {
     setShowWeekend(value);
-    await config.set("showWeekend", value);
-    await emit(OVERLAY_EVENTS.OVERLAY_CONFIG_CHANGED, {
-      key: "showWeekend",
-      value,
-    } satisfies OverlayConfigChangedPayload);
+    await saveShowWeekend(config, tauriSettingsSystem, value);
   }
 
   async function handleStartOnBoot(value: boolean) {
     setStartOnBoot(value);
-    await config.set("startOnBoot", value);
-    if (value) {
-      await enable();
-    } else {
-      await disable();
-    }
+    await saveStartOnBoot(config, tauriSettingsSystem, value);
   }
 
   async function handleRoundingEnabled(value: boolean) {
@@ -128,9 +124,7 @@ export function GeralTab() {
   }
 
   async function handleRoundingSlotToggle(slot: RoundingSlot) {
-    const next = roundingSlots.includes(slot)
-      ? roundingSlots.filter((s) => s !== slot)
-      : ([...roundingSlots, slot].sort((a, b) => a - b) as RoundingSlot[]);
+    const next = toggleRoundingSlot(roundingSlots, slot);
     setRoundingSlots(next);
     await config.set("roundingSlots", next);
   }
@@ -235,7 +229,7 @@ export function GeralTab() {
                   próximo slot.
                 </p>
                 <div className="flex gap-1.5 flex-wrap">
-                  {[0, 1, 2, 5, 10, 15].map((min) => (
+                  {ROUNDING_TOLERANCE_OPTIONS.map((min) => (
                     <ChoiceChip
                       key={min}
                       active={roundingTolerance === min}
@@ -255,8 +249,8 @@ export function GeralTab() {
         <SectionRow className="flex gap-4">
           <NumberInputWithCommit
             label="Meta diária (horas)"
-            min={1}
-            max={24}
+            min={DAILY_GOAL_RANGE.min}
+            max={DAILY_GOAL_RANGE.max}
             committed={dailyGoalHours}
             onCommit={async (v) => {
               setDailyGoalHours(v);
@@ -265,8 +259,8 @@ export function GeralTab() {
           />
           <NumberInputWithCommit
             label="Meta semanal (horas)"
-            min={1}
-            max={168}
+            min={WEEKLY_GOAL_RANGE.min}
+            max={WEEKLY_GOAL_RANGE.max}
             committed={weeklyGoalHours}
             onCommit={async (v) => {
               setWeeklyGoalHours(v);
@@ -299,12 +293,7 @@ export function GeralTab() {
       <SectionCard title="Janelas">
         <SectionRow>
           <button
-            onClick={async () => {
-              await config.set("mainWindowPosition", { x: -1, y: -1 });
-              await config.set("overlayPosition_execution", { x: -1, y: -1 });
-              await config.set("overlayPosition_planning", { x: -1, y: -1 });
-              await config.set("overlayPosition_compact", { x: -1, y: -1 });
-            }}
+            onClick={() => resetWindowPositions(config)}
             className="text-sm text-fg-secondary hover:text-fg underline underline-offset-2 transition-colors"
           >
             Redefinir posições salvas das janelas

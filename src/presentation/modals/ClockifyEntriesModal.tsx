@@ -7,7 +7,19 @@ import type {
   ClockifyTimeEntryPayload,
 } from "@shared/types/clockify";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
-import { useClockifyEntries, projectDisplayName } from "@presentation/hooks/useClockifyEntries";
+import { useClockifyEntries } from "@presentation/hooks/useClockifyEntries";
+import {
+  clockifyEntriesHiddenByTags,
+  clockifyEntryDurationSeconds,
+  groupClockifyEntriesByDay,
+  projectDisplayName,
+  visibleClockifyEntries,
+} from "@domain/usecases/clockify/clockifyEntries";
+import {
+  buildClockifyEntryPayload,
+  clockifyEntryDraftError,
+  clockifyProjectIdByName,
+} from "@domain/usecases/clockify/clockifyEntryPayload";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { TagMultiSelect } from "@presentation/components/TagMultiSelect";
 import {
@@ -56,47 +68,6 @@ function formatTimeLocal(iso: string): string {
 function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function buildISO(dateISO: string, hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date(`${dateISO}T00:00:00`);
-  d.setHours(h, m, 0, 0);
-  return d.toISOString();
-}
-
-function entryDurationSeconds(entry: ClockifyTimeEntryFull): number {
-  if (!entry.timeInterval.end) return 0;
-  return Math.round(
-    (new Date(entry.timeInterval.end).getTime() - new Date(entry.timeInterval.start).getTime()) /
-      1000
-  );
-}
-
-interface DayGroup {
-  dateISO: string;
-  entries: ClockifyTimeEntryFull[];
-  totalSeconds: number;
-}
-
-function groupByDay(entries: ClockifyTimeEntryFull[]): DayGroup[] {
-  const map = new Map<string, ClockifyTimeEntryFull[]>();
-  for (const e of entries) {
-    const date = toLocalDate(e.timeInterval.start);
-    const list = map.get(date) ?? [];
-    list.push(e);
-    map.set(date, list);
-  }
-  return [...map.entries()]
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([dateISO, list]) => ({
-      dateISO,
-      entries: list.sort(
-        (a, b) =>
-          new Date(b.timeInterval.start).getTime() - new Date(a.timeInterval.start).getTime()
-      ),
-      totalSeconds: list.reduce((s, e) => s + entryDurationSeconds(e), 0),
-    }));
 }
 
 export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
@@ -166,21 +137,15 @@ export function ClockifyEntriesModal({ onClose }: ClockifyEntriesModalProps) {
   }, [defaultTagIds, createOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pipeline de filtragem: oculta in-progress e (opcional) filtra por tags padrão
-  const visibleEntries = useMemo(() => {
-    let list = entries.filter((e) => e.timeInterval.end !== null);
-    if (onlyDefaultTags && defaultTagIds.length > 0) {
-      list = list.filter((e) => defaultTagIds.every((id) => e.tagIds.includes(id)));
-    }
-    return list;
-  }, [entries, onlyDefaultTags, defaultTagIds]);
+  const tagFilter = { onlyDefaultTags, defaultTagIds };
+  const visibleEntries = useMemo(
+    () => visibleClockifyEntries(entries, { onlyDefaultTags, defaultTagIds }),
+    [entries, onlyDefaultTags, defaultTagIds]
+  );
 
-  const dayGroups = useMemo(() => groupByDay(visibleEntries), [visibleEntries]);
+  const dayGroups = useMemo(() => groupClockifyEntriesByDay(visibleEntries), [visibleEntries]);
 
-  const filteredOutByTags =
-    onlyDefaultTags &&
-    defaultTagIds.length > 0 &&
-    visibleEntries.length === 0 &&
-    entries.some((e) => e.timeInterval.end !== null);
+  const filteredOutByTags = clockifyEntriesHiddenByTags(entries, visibleEntries, tagFilter);
 
   const showLoading = loading && entries.length === 0;
   const showEmpty = !loading && dayGroups.length === 0 && !filteredOutByTags;
@@ -371,7 +336,7 @@ function EntryRow(props: EntryRowProps) {
 function EntryDisplay({ entry, onStartEdit, onDelete }: EntryRowProps) {
   const startStr = formatTimeLocal(entry.timeInterval.start);
   const endStr = entry.timeInterval.end ? formatTimeLocal(entry.timeInterval.end) : "—";
-  const duration = entryDurationSeconds(entry);
+  const duration = clockifyEntryDurationSeconds(entry);
   const projectLabel = entry.project ? projectDisplayName(entry.project) : null;
   // A cor vem do Clockify, então é hex de terceiro; o que falta é que precisa
   // ser nosso, ou o ponto do projeto sem cor fica cinza fixo no modo claro.
@@ -513,34 +478,26 @@ function EntryForm({
     [clockifyProjects]
   );
 
-  // Resolve project ID from current input state (same logic as handleSave)
+  // O texto digitado casa pelo nome exibido; sem casamento, vale o último escolhido.
   const resolvedProjectId = useMemo<string | null>(() => {
     if (!projectInput.trim()) return null;
-    const match = projectOptions.find((o) => o.name === projectInput);
-    return match?.id ?? selectedProjectId;
-  }, [projectInput, projectOptions, selectedProjectId]);
+    return clockifyProjectIdByName(clockifyProjects, projectInput) ?? selectedProjectId;
+  }, [projectInput, clockifyProjects, selectedProjectId]);
 
-  const canSave = description.trim() !== "" && resolvedProjectId !== null;
+  const canSave = clockifyEntryDraftError({ description, projectId: resolvedProjectId }) === null;
 
   async function handleSave() {
     if (saving || !canSave) return;
 
-    const projectId = resolvedProjectId;
-
-    const startISO = buildISO(dateISO, startHHMM);
-    let endISO = buildISO(dateISO, endHHMM);
-    if (new Date(endISO) < new Date(startISO)) {
-      endISO = buildISO(addDaysISO(dateISO, 1), endHHMM);
-    }
-
-    const payload: ClockifyTimeEntryPayload = {
-      start: startISO,
-      end: endISO,
-      description: description.trim(),
+    const payload = buildClockifyEntryPayload({
+      description,
+      projectId: resolvedProjectId,
+      tagIds,
       billable,
-      ...(projectId ? { projectId } : {}),
-      ...(tagIds.length > 0 ? { tagIds } : {}),
-    };
+      dateISO,
+      startHHMM,
+      endHHMM,
+    });
 
     setSaving(true);
     try {

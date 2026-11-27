@@ -1,19 +1,14 @@
+import type { SeedMondayProjectCategoriesResult } from "@domain/usecases/monday/seedMondayProjectCategories";
 import {
-  importMondayProjects,
-  resolveProjectDestination,
-} from "@domain/usecases/monday/importMondayProjects";
-import { normalizeProjectMappings } from "@domain/usecases/monday/normalizeProjectMappings";
-import { MONDAY_MAPPING_CACHE_VERSION } from "@domain/usecases/monday/mondayMappingCachePolicy";
-import {
-  seedMondayProjectCategories,
-  type SeedMondayProjectCategoriesResult,
-} from "@domain/usecases/monday/seedMondayProjectCategories";
+  runMondayProjectsImport,
+  runMondaySetProjectBoard,
+} from "@presentation/integrations/mondayCatalogImports";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import type { MondayProjectMapping } from "@shared/types/mondayConfig";
 import { notifyProjectCategoriesChanged, notifyProjectsChanged } from "@shared/utils/catalogSync";
-import { todayISO } from "@shared/utils/time";
+import { DomainError } from "@shared/errors";
 import { showToast } from "@shared/utils/toast";
 import { Button, Input } from "@presentation/components/ui";
 import { ImportActionButton, ImportCard } from "./ImportCard";
@@ -155,20 +150,20 @@ export function MondayProjectsImport({
    * que é o problema que o campo existe para resolver.
    */
   async function handleSetBoardId(portfolioItemId: string, boardId: string) {
-    const { destination, failure } = await resolveProjectDestination(
-      factories.createMondayApi(),
-      boardId,
-      new Date().toISOString()
-    );
-    if (failure) {
-      await showToast("error", failure);
+    let next: MondayProjectMapping[];
+    try {
+      next = await runMondaySetProjectBoard(
+        { config, api: factories.createMondayApi() },
+        portfolioItemId,
+        boardId,
+        new Date().toISOString()
+      );
+    } catch (err) {
+      // Só o board que não serve vira toast, como antes; o resto sobe.
+      if (!(err instanceof DomainError)) throw err;
+      await showToast("error", err.message);
       return;
     }
-
-    const next = normalizeProjectMappings(config.get("mondayProjectMapping")).map((m) =>
-      m.portfolioItemId === portfolioItemId ? { ...m, mondayBoardId: boardId, ...destination } : m
-    );
-    await config.set("mondayProjectMapping", next);
     onImported(next);
     await showToast("success", boardId ? "Quadro vinculado." : "Quadro removido.");
   }
@@ -177,53 +172,26 @@ export function MondayProjectsImport({
     setImporting(true);
     setProgress({ done: 0, total: 0 });
     try {
-      const result = await importMondayProjects({
-        api: factories.createMondayApi(),
-        projectRepo,
-        portfolioBoardId: config.get("mondayPortfolioBoardId"),
-        deskclockWorkspaceId,
-        // Sem isto, o quadro digitado à mão logo abaixo seria desfeito no
-        // primeiro "Atualizar": o Portfólio devolve a coluna vazia.
-        existingMappings: normalizeProjectMappings(config.get("mondayProjectMapping")),
-        nowISO: new Date().toISOString(),
-        // O clique relê o schema de todos os boards, ignorando a validade do
-        // cache — mesmo papel do `forceWrite` no envio manual de horas. É o
-        // caminho de quem acabou de criar um rótulo no board e quer vê-lo aqui.
-        forceSchemaRead: true,
-        onProgress: (done, total) => setProgress({ done, total }),
-      });
+      const result = await runMondayProjectsImport(
+        {
+          config,
+          api: factories.createMondayApi(),
+          projectRepo,
+          categoryRepo,
+          projectCategoryRepo,
+          notifyProjectsChanged,
+          notifyProjectCategoriesChanged,
+        },
+        (done, total) => setProgress({ done, total })
+      );
+      setSeededCategories(result.seeded);
 
-      await config.set("mondayProjectMapping", result.mappings);
-
-      // Os Activity Types de cada board viram as categorias que o projeto
-      // oferece. Não custa consulta nova — os rótulos vieram no import.
-      const seeded = await seedMondayProjectCategories({
-        mappings: result.mappings,
-        categoryRepo,
-        projectCategoryRepo,
-        workspaceId: deskclockWorkspaceId,
-      });
-      setSeededCategories(seeded);
-
-      // O clique acabou de fazer o trabalho do dia: marcar a data evita que a
-      // releitura automática repita a mesma varredura horas depois, e limpar o
-      // erro tira da tela uma falha que deixou de valer.
-      await config.set("mondayProjectsSyncLastDate", todayISO());
-      // E fez também o da migração, com o mesmo `forceSchemaRead` sobre os mesmos
-      // boards: sem marcar a versão, quem consertou à mão pagaria a varredura
-      // forçada de novo no tique seguinte.
-      await config.set("mondayMappingCacheVersion", MONDAY_MAPPING_CACHE_VERSION);
-      await config.set("mondayProjectsLastSyncError", "");
       setAutoError("");
       onImported(result.mappings);
       setSkipped(result.skipped);
       setIgnored(result.ignored);
       await loadNames();
       await reloadProjects();
-      // Os projetos nascem pelo repositório, sem passar pelas mutações de
-      // `useProjects`: sem este aviso, o overlay não os enxergaria até reiniciar.
-      await notifyProjectsChanged();
-      await notifyProjectCategoriesChanged();
 
       await showToast(
         result.skipped.length > 0 ? "warning" : "success",

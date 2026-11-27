@@ -1,21 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { summarizeWorkdays, type DaySummaryResult } from "@domain/usecases/llm/SummarizeWorkdays";
+import type { DaySummaryResult } from "@domain/usecases/llm/SummarizeWorkdays";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
 import { useIntegrations } from "@presentation/contexts/IntegrationsContext";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
 import { useActiveWorkspaceId } from "@presentation/contexts/WorkspaceContext";
 import { useProjects } from "@presentation/hooks/useProjects";
 import {
-  describeLlmError,
-  isLlmConnected,
-} from "@presentation/sections/integrations/llm/llmConnection";
+  llmConnected,
+  runDaySummaries,
+  saveLlmLimits,
+  type DaySummaryError,
+} from "@presentation/integrations/daySummaries";
 import { todayISO } from "@shared/utils/time";
 
-export interface DaySummaryError {
-  dateISO: string;
-  /** Já traduzido por `describeLlmError`; o erro cru não chega à tela. */
-  message: string;
-}
+export type { DaySummaryError };
 
 export interface DaySummariesState {
   summaries: DaySummaryResult[];
@@ -75,7 +73,7 @@ export function useDaySummaries(dateISOs: string[], options?: { enabled?: boolea
     const isCurrent = () => runId === runIdRef.current;
 
     setState({ ...EMPTY, progress: { done: 0, total: 0 } });
-    const outcome = await summarizeWorkdays(
+    const outcome = await runDaySummaries(
       { taskRepo, daySummaryRepo, llm: createLlmApi() },
       {
         workspaceId,
@@ -83,7 +81,7 @@ export function useDaySummaries(dateISOs: string[], options?: { enabled?: boolea
         projectNameById,
         // Hoje não vale do cache: o dia ainda está acontecendo, e o filtro
         // padrão do Histórico é justamente "Hoje".
-        unfinishedDayISO: todayISO(),
+        todayISO: todayISO(),
         onProgress: (progress) => {
           if (isCurrent()) setState((prev) => ({ ...prev, progress }));
         },
@@ -95,23 +93,18 @@ export function useDaySummaries(dateISOs: string[], options?: { enabled?: boolea
     // tem outra fonte — sem guardar o que esta rodada mediu, ele fica com a
     // leitura anterior, que pode ser de dias atrás.
     if (outcome.limits) {
-      await config.set("llmLastLimits", outcome.limits);
-      await config.set("llmLastLimitsAt", new Date().toISOString());
+      await saveLlmLimits(config, outcome.limits, new Date().toISOString());
     }
     if (!isCurrent()) return;
     setState({
       summaries: outcome.summaries,
-      errors: outcome.failed.map((failure) => ({
-        dateISO: failure.dateISO,
-        message: describeLlmError(failure.error),
-      })),
+      errors: outcome.errors,
       skipped: outcome.skipped,
       progress: null,
     });
   }, [taskRepo, daySummaryRepo, createLlmApi, config, workspaceId, dateISOs, projectNameById]);
 
-  const connected =
-    config.isLoaded && isLlmConnected(config.get("llmBaseUrl"), config.get("llmModel"));
+  const connected = llmConnected(config);
 
   // O que identifica uma rodada: os dias, e o workspace em que eles são lidos.
   // Sem o workspace, trocar de recorte sobre o mesmo intervalo deixaria na tela

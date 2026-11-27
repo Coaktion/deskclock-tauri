@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { useAppConfig } from "@presentation/contexts/ConfigContext";
+import {
+  WAYLAND_SHORTCUTS_WARNING,
+  failedShortcutsWarning,
+} from "@domain/usecases/settings/shortcuts";
+import { saveShortcuts, tauriSettingsSystem } from "@presentation/settings/settingsEffects";
 import { AlertTriangle } from "lucide-react";
 import { ShortcutRow } from "./ShortcutRow";
 import { SectionCard, SectionRow } from "@presentation/components/ui";
@@ -34,7 +38,8 @@ export function AtalhosTab() {
   }, [config.isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    invoke<string>("get_display_server")
+    tauriSettingsSystem
+      .displayServer()
       .then(setDisplayServer)
       .catch(() => {});
   }, []);
@@ -51,35 +56,20 @@ export function AtalhosTab() {
     const s = overrides?.stopTask ?? shortcutStopTask;
     const o = overrides?.toggleOverlay ?? shortcutToggleOverlay;
     const w = overrides?.toggleWindow ?? shortcutToggleWindow;
-    const failed = await invoke<string[]>("update_shortcuts", {
-      shortcuts: [
-        { action: "toggle-task", accelerator: t },
-        { action: "stop-task", accelerator: s },
-        { action: "toggle-overlay", accelerator: o },
-        { action: "toggle-window", accelerator: w },
-      ],
+    const failed = await saveShortcuts(config, tauriSettingsSystem, {
+      toggleTask: t,
+      stopTask: s,
+      toggleOverlay: o,
+      toggleWindow: w,
     });
     setFailedShortcuts(failed);
-    await config.set("shortcutToggleTask", t);
-    await config.set("shortcutStopTask", s);
-    await config.set("shortcutToggleOverlay", o);
-    await config.set("shortcutToggleWindow", w);
   }
 
   return (
     <div className="space-y-5">
-      {displayServer === "wayland" && (
-        <WarningBanner>
-          Atalhos globais usam XGrabKey e não funcionam no Wayland. Execute o app em XWayland ou
-          mude para uma sessão X11 para usar este recurso.
-        </WarningBanner>
-      )}
+      {displayServer === "wayland" && <WarningBanner>{WAYLAND_SHORTCUTS_WARNING}</WarningBanner>}
       {failedShortcuts.length > 0 && displayServer !== "wayland" && (
-        <WarningBanner>
-          {failedShortcuts.length === 1
-            ? "Um atalho não pôde ser registrado — pode estar em uso por outro aplicativo."
-            : `${failedShortcuts.length} atalhos não puderam ser registrados — podem estar em uso por outro aplicativo.`}
-        </WarningBanner>
+        <WarningBanner>{failedShortcutsWarning(failedShortcuts.length)}</WarningBanner>
       )}
 
       <SectionCard title="Tarefa e janelas" divided>

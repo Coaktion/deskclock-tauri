@@ -6,7 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, Input, SegmentedControl, Toggle } from "@presentation/components/ui";
 import { Row, SubSection } from "./shared";
-import type { AutoSyncConfigKeys } from "./autoSyncIntegrations";
+import type { AutoSyncConfigKeys } from "@presentation/integrations/autoSyncIntegrations";
 
 /**
  * Habilita o "Enviar agora" da integração. Opcional porque nem toda

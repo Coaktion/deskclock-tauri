@@ -2,19 +2,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Task } from "@domain/entities/Task";
 import type { TaskGroup } from "@domain/utils/groupTasks";
 import type { TaskValidationResult } from "@domain/integrations/taskValidation";
-import { groupTasks } from "@domain/utils/groupTasks";
+import type { DayGroup } from "@domain/utils/groupTasksByDay";
+import { groupSendStatus, loadTaskSendDays } from "@domain/usecases/tasks/LoadTaskSendDays";
 import { useRepositories } from "@presentation/contexts/RepositoriesContext";
-import { todayISO, startOfDayISO, endOfDayISO, localDateISO } from "@shared/utils/time";
+import { todayISO, startOfDayISO, endOfDayISO } from "@shared/utils/time";
 import { useWeekStart } from "@presentation/hooks/useWeekStart";
 import type { WeekStart } from "@shared/types/appConfig";
 import { dateRangeFor, type DateRangeId } from "@shared/utils/datePresets";
 
 export type QuickPeriod = "today" | "yesterday" | "week" | "month" | "custom";
 
-export interface DayGroup {
-  date: string;
-  groups: TaskGroup[];
-}
+export type { DayGroup };
 
 /**
  * O tom precisa de três estados porque o envio tem três desfechos, e o booleano
@@ -35,19 +33,6 @@ export function formatDayLabel(isoDate: string): string {
   const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" });
   const datePart = d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   return `${weekday}, ${datePart}`;
-}
-
-export function groupTasksByDay(tasks: Task[]): DayGroup[] {
-  const byDate = new Map<string, Task[]>();
-  for (const task of tasks) {
-    const date = localDateISO(task.startTime);
-    const list = byDate.get(date) ?? [];
-    list.push(task);
-    byDate.set(date, list);
-  }
-  return [...byDate.entries()]
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, dayTasks]) => ({ date, groups: groupTasks(dayTasks) }));
 }
 
 /**
@@ -205,23 +190,20 @@ export function useTaskSendSelection(
           customEndRef.current,
           weekStartsOn
         );
-        const [tasks, sentIdsArr] = await Promise.all([
-          // Só as tarefas do workspace **da integração**. Antes a busca era sem
-          // escopo, de propósito — "integrações enxergam tudo" —, e a lista
-          // oferecia ao board do cliente as horas do trabalho pessoal.
-          taskRepo.findByDateRange(startOfDayISO(start), endOfDayISO(end), workspaceId),
-          taskLogRepo.findSentIds(integrationId, startOfDayISO(start), endOfDayISO(end)),
-        ]);
+        const { dayGroups: dg, sentIds: newSentIds } = await loadTaskSendDays(
+          taskRepo,
+          taskLogRepo,
+          integrationId,
+          workspaceId,
+          startOfDayISO(start),
+          endOfDayISO(end)
+        );
         if (cancelled) return;
-
-        const completed = tasks.filter((t) => t.status === "completed");
-        const newSentIds = new Set(sentIdsArr);
-        const dg = groupTasksByDay(completed);
 
         const keys = new Set<string>();
         for (const { date, groups } of dg) {
           for (const g of groups) {
-            if (validateTask(g.tasks[0]).ok && !g.tasks.every((t) => newSentIds.has(t.id))) {
+            if (groupSendStatus(g, newSentIds, validateTask).state === "pending") {
               keys.add(selKey(date, g.key));
             }
           }
