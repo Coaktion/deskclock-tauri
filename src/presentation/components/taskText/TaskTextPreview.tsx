@@ -27,6 +27,8 @@ interface TaskTextPreviewProps {
   onToggleBillable: () => void;
   /** O rodapé com as teclas; cada superfície diz as suas. */
   keysHint?: string;
+  /** O que o Enter faz depois de um erro — idem. */
+  errorHint?: string;
 }
 
 interface OpenChoice {
@@ -57,6 +59,7 @@ export function TaskTextPreview({
   onChoose,
   onToggleBillable,
   keysHint = "Enter inicia · Esc fecha",
+  errorHint = "Enter inicia com o texto como nome.",
 }: TaskTextPreviewProps) {
   const [open, setOpen] = useState<OpenChoice | null>(null);
   const chips = useMemo(
@@ -71,7 +74,7 @@ export function TaskTextPreview({
     return (
       <div className="flex flex-col gap-1">
         <p className="text-sm text-danger">{error}</p>
-        <p className="text-xs text-fg-muted">Enter inicia com o texto como nome.</p>
+        <p className="text-xs text-fg-muted">{errorHint}</p>
       </div>
     );
   }
