@@ -434,17 +434,17 @@ planejadas — N chamadas resolvem.
 
 | Fase | Estado |
 |---|---|
-| A | implementada e revisada; falta verificação no app de dev |
-| B | implementada; falta verificação no app de dev |
-| C1 (envio) | implementada; falta verificação no app de dev |
-| C2 (exportação) | implementada; falta verificação no app de dev |
-| C (C1 + C2) | concluída no código |
-| D1 (imports: Agenda, Zendesk, Monday) | implementada; falta verificação no app de dev |
-| D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada; falta verificação no app de dev |
-| D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | implementada; falta verificação no app de dev |
-| D3a (link de compartilhar tarefa; Configurações: Geral, Overlay, Acessibilidade, Atalhos) | implementada; falta verificação no app de dev |
-| D3b (ajustes não secretos das integrações) | implementada; falta verificação no app de dev |
-| D (D1 a D3b) | concluída no código |
+| A | implementada, revisada e verificada no app de dev |
+| B | implementada e verificada no app de dev |
+| C1 (envio) | implementada e verificada no app de dev |
+| C2 (exportação) | implementada e verificada no app de dev |
+| C (C1 + C2) | concluída e verificada; mergeada em main (2026-11-27) |
+| D1 (imports: Agenda, Zendesk, Monday) | implementada e verificada no app de dev |
+| D2 (lançamentos do Clockify e do Monday, resumo por IA, backup no Drive) | implementada e verificada no app de dev |
+| D2b (escrita nos lançamentos: Clockify cria/edita/exclui; Monday edita/exclui) | implementada e verificada no app de dev |
+| D3a (link de compartilhar tarefa; Configurações: Geral, Overlay, Acessibilidade, Atalhos) | implementada e verificada no app de dev |
+| D3b (ajustes não secretos das integrações) | implementada e verificada no app de dev |
+| D (D1 a D3b) | concluída e verificada; mergeada em main (2026-11-27) |
 
 **Decisões da D2b e da D3** (usuário, 2026-10-23): a escrita dos modais de lançamentos entra (D2b), com as exclusões
 marcadas `destructiveHint`. A D3 expõe os quatro grupos das Configurações — Geral, Overlay e Acessibilidade, Atalhos
