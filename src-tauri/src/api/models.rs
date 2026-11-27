@@ -1380,6 +1380,109 @@ pub struct GenerateDaySummariesResponse {
 
 #[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+pub struct TaskTextFieldDto {
+    /// O que o usuário digita antes do `=` (`P`, `C`, `B`, `PS`…).
+    pub sigla: String,
+    pub label: String,
+    /// `project`, `category`, `billable`, `text`, `multiline`, `select` ou `checkbox`.
+    pub kind: String,
+    /// Só nos campos personalizados: a chave em `customValues`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_id: Option<String>,
+    /// Valor real do catálogo (projeto, categoria, primeira opção). Ausente sem catálogo.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub example: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTextFieldsDto {
+    pub workspace_id: String,
+    /// A linha que a tela mostra acima do campo.
+    pub instruction: String,
+    pub fields: Vec<TaskTextFieldDto>,
+}
+
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct InterpretTaskTextRequest {
+    /// O texto curto, com ou sem siglas (`Daily P=acme C=dev nb`).
+    pub text: String,
+    /// Ausente = workspace ativo.
+    #[serde(default)]
+    pub workspace_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTextCandidateDto {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTextAmbiguityDto {
+    /// `project`, `category` ou o id do campo personalizado.
+    pub key: String,
+    pub sigla: String,
+    pub label: String,
+    /// O trecho do texto que casou com mais de um.
+    pub query: String,
+    /// Até 5.
+    pub candidates: Vec<TaskTextCandidateDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTextNotFoundDto {
+    pub key: String,
+    pub sigla: String,
+    pub label: String,
+    pub query: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTextCustomFieldDto {
+    pub field_id: String,
+    pub label: String,
+    /// O valor gravável (id da opção no `select`, `1` no `checkbox`).
+    pub value: String,
+    /// O valor legível (rótulo da opção, `Sim`).
+    pub value_label: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskTextSource {
+    /// Siglas, ou sem provedor: nada saiu da máquina.
+    Local,
+    Llm,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskTextInterpretationDto {
+    pub workspace_id: String,
+    pub source: TaskTextSource,
+    pub name: Option<String>,
+    pub project_id: Option<String>,
+    pub project_name: Option<String>,
+    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+    pub billable: bool,
+    /// `true` quando o texto disse b/nb; senão veio do padrão da categoria.
+    pub billable_explicit: bool,
+    /// Pronto para o `customValues` de `POST /tasks/start`, `POST /tasks` e `POST /planned-tasks`.
+    pub custom_values: HashMap<String, String>,
+    pub custom_fields: Vec<TaskTextCustomFieldDto>,
+    pub ambiguities: Vec<TaskTextAmbiguityDto>,
+    pub not_found: Vec<TaskTextNotFoundDto>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DriveBackupStatusDto {
     /// Google conectado (sem isso o backup não roda).
     pub connected: bool,

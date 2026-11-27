@@ -78,3 +78,106 @@ describe("useRetroactiveForm — duração mínima", () => {
     expect(plannedTaskRepo.complete).toHaveBeenCalledWith("pt-1", DATE);
   });
 });
+
+describe("useRetroactiveForm — aba IA", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const projects = [{ id: "p-1", name: "Tech interno" }] as unknown as Parameters<
+    typeof useRetroactiveForm
+  >[0]["projects"];
+  const categories = [{ id: "c-1", name: "Development" }] as unknown as Parameters<
+    typeof useRetroactiveForm
+  >[0]["categories"];
+  const what = {
+    name: "Alinhamento sprint",
+    projectId: "p-1",
+    categoryId: "c-1",
+    billable: false,
+    customValues: { "f-1": "opt-1" },
+  };
+
+  function renderWithCatalog() {
+    return renderHook(() =>
+      useRetroactiveForm({
+        selectedDate: DATE,
+        projects,
+        categories,
+        onTaskAdded: vi.fn(async () => undefined),
+      })
+    );
+  }
+
+  it("applyInterpretation escreve o quê nos campos, com os nomes do catálogo", () => {
+    const { result } = renderWithCatalog();
+
+    act(() => result.current.applyInterpretation(what));
+
+    expect(result.current.name).toBe("Alinhamento sprint");
+    expect(result.current.projectName).toBe("Tech interno");
+    expect(result.current.selectedProjectId).toBe("p-1");
+    expect(result.current.categoryName).toBe("Development");
+    expect(result.current.billable).toBe(false);
+    expect(result.current.customValues).toEqual({ "f-1": "opt-1" });
+  });
+
+  it("handleAdd com o quê explícito grava ele, não o estado do render anterior", async () => {
+    const { result } = renderWithCatalog();
+    act(() => result.current.setName("Outra coisa"));
+
+    let added = false;
+    await act(async () => {
+      result.current.applyInterpretation(what);
+      added = await result.current.handleAdd(undefined, what);
+    });
+
+    expect(added).toBe(true);
+    expect(taskRepo.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Alinhamento sprint",
+        projectId: "p-1",
+        categoryId: "c-1",
+        billable: false,
+        customValues: { "f-1": "opt-1" },
+      })
+    );
+    // Encadeia como o formulário: o nome limpa, projeto e categoria ficam.
+    expect(result.current.name).toBe("");
+    expect(result.current.projectName).toBe("Tech interno");
+  });
+
+  it("o início de tarefa do omnibox não vaza startTime nem plannedTaskId", async () => {
+    const { result } = renderWithCatalog();
+    const fromOmnibox = { ...what, startTime: "2020-01-01T00:00:00Z", plannedTaskId: null };
+
+    await act(() => result.current.handleAdd(undefined, fromOmnibox));
+
+    const saved = vi.mocked(taskRepo.save).mock.calls[0][0] as unknown as Record<string, unknown>;
+    expect(saved.startTime).not.toBe("2020-01-01T00:00:00Z");
+    expect(saved).not.toHaveProperty("plannedTaskId");
+  });
+
+  it("applyInterpretation desfaz o vínculo com a planejada do pré-preenchimento", async () => {
+    const { result } = renderWithCatalog();
+    act(() => result.current.prefill(planned()));
+
+    await act(async () => {
+      result.current.applyInterpretation(what);
+      await result.current.handleAdd(undefined, what);
+    });
+
+    expect(taskRepo.save).toHaveBeenCalledTimes(1);
+    expect(plannedTaskRepo.complete).not.toHaveBeenCalled();
+  });
+
+  it("handleAdd devolve false quando o domínio recusa", async () => {
+    const { result } = renderWithCatalog();
+
+    let added = true;
+    await act(async () => {
+      added = await result.current.handleAdd(result.current.startTime, what);
+    });
+
+    expect(added).toBe(false);
+    expect(taskRepo.save).not.toHaveBeenCalled();
+  });
+});

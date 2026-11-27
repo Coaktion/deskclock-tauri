@@ -119,6 +119,7 @@ import {
   setMondayProjectBoard,
 } from "./handlers/integrationActions";
 import { applyShareHandler, previewShareHandler, shareLinkHandler } from "./handlers/share";
+import { getTaskTextFields, interpretTaskTextHandler } from "./handlers/taskText";
 import {
   cancelTask,
   getStatus,
@@ -280,6 +281,11 @@ const HANDLERS: Record<string, LocalApiHandler> = {
   "monday.refreshCatalogField": refreshMondayCatalogField,
   "monday.setProjectBoard": setMondayProjectBoard,
   "integrations.syncNow": runAutoSyncNow,
+  // Iniciar tarefa por texto: só leem e interpretam — o chamador inicia com
+  // `tasks.start`, `history.create` ou `plannedTasks.create`. `taskText.*`, e
+  // não `tasks.*`, para não esperarem o render: não mexem na tarefa em execução.
+  "taskText.fields": getTaskTextFields,
+  "taskText.interpret": interpretTaskTextHandler,
 };
 
 /** Toda `op` da ponte — a trava de cobertura do MCP confere contra `src-tauri/mcp-ops.json`. */
@@ -327,7 +333,7 @@ export function waitsForNextCommit(op: string): boolean {
  * não leem nem mudam o que o retrato tira de contexto, como na tela, onde o
  * botão de backup e a aba de resumo correm junto com o resto.
  */
-const LONG_OPS = new Set(["daySummaries.generate", "driveBackup.run"]);
+const LONG_OPS = new Set(["daySummaries.generate", "driveBackup.run", "taskText.interpret"]);
 
 export function runsInLongQueue(op: string): boolean {
   return LONG_OPS.has(op);

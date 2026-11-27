@@ -4,17 +4,28 @@ import type { Project } from "@domain/entities/Project";
 import { Autocomplete } from "@presentation/components/Autocomplete";
 import { CustomFieldInputs } from "@presentation/components/CustomFieldInputs";
 import { formColumnClass } from "@presentation/components/fieldStyles";
-import { BillableChip, Field, Input } from "@presentation/components/ui";
+import { RetroactiveTextFields } from "@presentation/components/retroactive/RetroactiveTextFields";
+import { RetroactiveTimeFields } from "@presentation/components/retroactive/RetroactiveTimeFields";
+import { BillableChip, Field, Input, SegmentedControl } from "@presentation/components/ui";
 import type { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
+import { useRetroactiveTextEntry } from "@presentation/hooks/useRetroactiveTextEntry";
 import { useSubmitOnEnter } from "@presentation/hooks/useSubmitOnEnter";
+import type { RetroactiveEntryMode } from "@shared/types/appConfig";
 
 interface RetroactiveEntryFormProps {
   form: ReturnType<typeof useRetroactiveForm>;
   projects: Project[];
   categories: Category[];
   customFields: CustomField[];
+  mode: RetroactiveEntryMode;
+  onModeChange: (mode: RetroactiveEntryMode) => void;
 }
+
+const MODE_OPTIONS = [
+  { value: "form", label: "Formulário" },
+  { value: "ai", label: "IA" },
+] as const satisfies readonly { value: RetroactiveEntryMode; label: string }[];
 
 /**
  * Coluna de entrada da tela de Lançamento Manual. Vive à esquerda, fixa e
@@ -28,19 +39,68 @@ interface RetroactiveEntryFormProps {
  * entalhe da duração e das horas), então o que existia era a alternância entre
  * dois desenhos de campo, não a economia dela. O placeholder continua, dizendo
  * o formato ("Buscar projeto…", "HH:MM"); o rótulo diz o que é.
+ *
+ * **Duas abas, um formulário só.** A aba IA troca os campos do "quê" pelo texto
+ * curto e a prévia; os horários, o erro e o Adicionar são os mesmos, do mesmo
+ * `useRetroactiveForm` — é o que mantém a cadeia de horários nas duas.
  */
 export function RetroactiveEntryForm({
   form,
   projects,
   categories,
   customFields,
+  mode,
+  onModeChange,
 }: RetroactiveEntryFormProps) {
-  const { categoriesFor } = useProjectCategoryMap();
-  const categoryOptions = categoriesFor(categories, form.selectedProjectId);
-  const handleKeyDown = useSubmitOnEnter(() => void form.handleAdd());
+  const textEntry = useRetroactiveTextEntry(form);
+  const submit = (overrideEndHHMM?: string) =>
+    void (mode === "ai" ? textEntry.submit(overrideEndHHMM) : form.handleAdd(overrideEndHHMM));
+  const handleKeyDown = useSubmitOnEnter(() => submit());
 
   return (
     <div className={formColumnClass} onKeyDown={handleKeyDown}>
+      <SegmentedControl
+        value={mode}
+        onChange={onModeChange}
+        options={MODE_OPTIONS}
+        ariaLabel="Modo de lançamento"
+      />
+
+      {mode === "ai" ? (
+        <RetroactiveTextFields entry={textEntry} inputRef={form.nameRef} />
+      ) : (
+        <WhatFields
+          form={form}
+          projects={projects}
+          categories={categories}
+          customFields={customFields}
+        />
+      )}
+
+      <RetroactiveTimeFields form={form} onSubmit={submit} />
+
+      {form.error && <p className="text-xs text-danger">{form.error}</p>}
+
+      <button
+        onClick={() => submit()}
+        disabled={form.saving}
+        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 text-white rounded-control transition-opacity disabled:opacity-50"
+      >
+        Adicionar
+      </button>
+    </div>
+  );
+}
+
+type WhatFieldsProps = Omit<RetroactiveEntryFormProps, "mode" | "onModeChange">;
+
+/** O "quê" da aba Formulário: nome, projeto, categoria com billable e campos personalizados. */
+function WhatFields({ form, projects, categories, customFields }: WhatFieldsProps) {
+  const { categoriesFor } = useProjectCategoryMap();
+  const categoryOptions = categoriesFor(categories, form.selectedProjectId);
+
+  return (
+    <>
       <Field label="Nome" htmlFor="retro-name">
         <Input
           id="retro-name"
@@ -96,75 +156,6 @@ export function RetroactiveEntryForm({
         compact
         className="space-y-3"
       />
-
-      <Field label="Duração" htmlFor="retro-duration" boxClassName="flex items-center">
-        <Input
-          id="retro-duration"
-          data-tour="retroactive-duration"
-          variant="bare"
-          value={form.durationInput}
-          onChange={(e) => form.setDurationInput(e.target.value)}
-          onBlur={form.commitDuration}
-          onKeyDown={(e) => {
-            // Consome porque tem trabalho próprio antes do submit: o Enter não
-            // dispara o `onBlur`, então a duração digitada precisa virar hora
-            // de fim aqui — senão a tarefa nasceria com o fim antigo.
-            if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-            e.preventDefault();
-            const newEnd = form.commitDuration();
-            void form.handleAdd(newEnd || undefined);
-          }}
-          placeholder="HH:MM"
-          title="Aceita: 1:30, 90, 1h, 1h 30m"
-          className="w-20!"
-        />
-        <span className="w-full pr-2.5 text-xs text-fg-muted truncate">Use: 1h30, 1h, 30...</span>
-      </Field>
-
-      <div data-tour="retroactive-timeinputs" className="flex gap-2">
-        <Field label="Início" htmlFor="retro-start" className="flex-1">
-          <Input
-            id="retro-start"
-            type="time"
-            variant="bare"
-            value={form.startTime}
-            onChange={(e) => form.handleStartChange(e.target.value)}
-            onBlur={(e) => form.handleStartCommit(e.target.value)}
-            onKeyDown={(e) => {
-              // Campo vazio: o Enter restaura o valor anterior e para por aqui —
-              // o segundo Enter é que adiciona. Preenchido, sobe para o submit.
-              if (e.key !== "Enter" || form.startTime) return;
-              e.preventDefault();
-              form.handleStartCommit("");
-            }}
-          />
-        </Field>
-        <Field label="Fim" htmlFor="retro-end" className="flex-1">
-          <Input
-            id="retro-end"
-            type="time"
-            variant="bare"
-            value={form.endTime}
-            onChange={(e) => form.handleEndChange(e.target.value)}
-            onBlur={(e) => form.handleEndCommit(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter" || form.endTime) return;
-              e.preventDefault();
-              form.handleEndCommit("");
-            }}
-          />
-        </Field>
-      </div>
-
-      {form.error && <p className="text-xs text-danger">{form.error}</p>}
-
-      <button
-        onClick={() => void form.handleAdd()}
-        disabled={form.saving}
-        className="w-full px-4 py-1.5 text-sm font-medium bg-accent hover:opacity-90 text-white rounded-control transition-opacity disabled:opacity-50"
-      >
-        Adicionar
-      </button>
-    </div>
+    </>
   );
 }

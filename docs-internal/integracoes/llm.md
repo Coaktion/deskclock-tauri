@@ -4,13 +4,20 @@
 > **Revisado em 2026-08-28**, quando o resumo saiu da tela de Tarefas, passou a resumir vários
 > dias, trocou o cache de config por tabela e passou a ser disparado pelo Histórico — hoje, pela
 > abertura da aba **Resumo**.
+> **Revisado em 2026-11-27**, com o segundo uso: **iniciar tarefa por texto** (§ abaixo; spec em
+> `docs-internal/specs/iniciar-tarefa-por-texto.md`).
 > Contrato comum a todas as integrações: `docs-internal/integracoes/README.md`.
 > A tela que consome o resultado está em `docs-internal/telas/historico.md`.
 
 ## O que a integração faz — e o que ela não faz
 
-Ela produz **um parágrafo por dia de trabalho**, exibido na tela de **Histórico**, sobre os dias
-que a busca ali trouxe. É a única coisa que faz.
+Ela tem **dois usos**, e só esses dois:
+
+1. **Resumo do dia** — **um parágrafo por dia de trabalho**, exibido na tela de **Histórico**, sobre
+   os dias que a busca ali trouxe. É o que o resto desta seção descreve.
+2. **Iniciar tarefa por texto** — um texto curto (`Alinhamento sprint P=tech int C=dev nb`) vira
+   nome, projeto, categoria, billable e campos personalizados numa **prévia** que o usuário
+   confirma. Seção própria: **Iniciar tarefa por texto**, abaixo.
 
 **Abrir a aba "Resumo" do Histórico dispara a geração**, sobre os dias que a busca trouxe, e é a
 tabela `day_summaries` que sustenta isso: o lote consulta o cache antes do provedor, então o dia já
@@ -33,10 +40,16 @@ resumido volta do banco sem custo e só o dia novo vira requisição. Foi decis�
 > pedindo por ele. Aqui o gatilho é um resultado que o usuário mandou buscar.
 
 **É leitura, sem escrita externa.** Não há envio de horas, não há import, não há nada gravado no
-provedor. O que sai do app é o que `buildWorkdayPrompt` monta: **nome da tarefa, nome do projeto e
-duração**, das tarefas concluídas daquele dia, já agrupadas. Não vão categoria, faturamento,
-cliente, horário, id, nem o nome do usuário. O que volta é texto, guardado na tabela
-`day_summaries` e mostrado na tela — nenhuma tarefa é criada ou alterada a partir dele.
+provedor — nos dois usos. O que sai do app, em cada um:
+
+- **Resumo:** o que `buildWorkdayPrompt` monta — **nome da tarefa, nome do projeto e duração**, das
+  tarefas concluídas daquele dia, já agrupadas. Não vão categoria, faturamento, cliente, horário,
+  id, nem o nome do usuário. O que volta é texto, guardado na tabela `day_summaries` e mostrado na
+  tela — nenhuma tarefa é criada ou alterada a partir dele.
+- **Texto da tarefa:** o que `buildTaskTextPrompt` monta — **o texto digitado e, de cada campo,
+  sigla, rótulo e tipo**. Nenhum projeto, categoria ou opção de campo vai. O que volta é JSON com
+  trechos do próprio texto, casados com o catálogo **no app**; o resultado **pode iniciar (ou
+  lançar) uma tarefa, mas só depois que o usuário confirma a prévia** — nada é criado sozinho.
 
 **Não é uma integração de sincronização**, e por isso ela não segue metade do roteiro do §9.5 do
 `docs-internal/guardrails.md`: não há `ISyncStrategy`, não há entrada em `AUTO_SYNC_INTEGRATIONS`,
@@ -341,6 +354,141 @@ aplica.**
 O workspace ativo entra em **três** lugares, e nos três é o mesmo: na busca das tarefas de cada
 dia, na gravação do resumo e na consulta da tabela. Ele é parte da **chave natural** de
 `day_summaries` — sem ele ali, trocar de workspace mostraria o texto do outro.
+
+---
+
+## Iniciar tarefa por texto
+
+O segundo uso (2026-11-27). Spec e decisões: `docs-internal/specs/iniciar-tarefa-por-texto.md`.
+Domínio em `src/domain/usecases/llm/taskText/`; a ponte para a apresentação em
+`src/presentation/integrations/taskText.ts` e `src/presentation/hooks/useTaskTextInterpretation.ts`;
+o desvio do Enter, comum às três superfícies (omnibox, popup, Lançamento Manual), em
+`src/presentation/hooks/taskTextEntry.ts`.
+
+### O contrato de privacidade
+
+**Ao provedor vão só o texto digitado e, de cada campo, rótulo, sigla e tipo**
+(`buildTaskTextPrompt`). Nunca a lista de projetos, de categorias ou as opções dos campos `select`.
+O rótulo do campo personalizado **vai**, e é nome que o usuário escolheu: um rótulo com nome de
+cliente sai da máquina.
+
+> **Projetos são nomes de clientes.** Mandar o catálogo a cada uso entregaria a carteira inteira a
+> um terceiro para separar meia dúzia de palavras. Foi decisão do usuário (opção A da spec); o
+> híbrido que mandaria só os candidatos empatados foi descartado porque vaza pouco, mas vaza, e o
+> contrato fica difícil de explicar.
+
+> **Os exemplos da instrução são locais.** "Ex.: Revisão, Tech interno, Development NB" vem do
+> catálogo e aparece na tela (`formatTaskFieldInstruction`), mas o `example` do `TaskFieldHint` não entra no
+> prompt. A API local devolve o exemplo em `taskText.fields` — ela é local, e a regra é sobre o que
+> vai ao provedor.
+
+### Os atalhos locais: siglas e posição
+
+`interpretTaskText` tenta quatro caminhos, nesta ordem, e **os dois primeiros não chamam o
+provedor** — o usuário já disse o que é cada coisa, e a requisição é paga:
+
+1. **Siglas** (`parseSiglaText`): sigla conhecida seguida de `=` (`P=`, `C=`, `PS=`). A sigla só
+   conta no começo ou depois de espaço/separador — `TOP=3` no meio do nome não é a sigla `P` —, e
+   as mais longas ganham das curtas (`PS=` nunca vira `P`).
+2. **Posição** (`parseOrderedText`): `Nome, Projeto, Categoria, Billable, …`, na ordem da
+   instrução, por vírgula ou ponto e vírgula. **Dá para pular campo**: cada trecho vai para o
+   primeiro campo, a partir do último preenchido, que o reconhece. Reconhecer é casar por
+   **igualdade ou prefixo de palavras** — o fuzzy fica de fora, senão um nome longo de projeto
+   engoliria qualquer trecho curto — ou ser sim/não. `b`/`nb`/sim/não são **reservados**: vão ao
+   Billable (ou checkbox) adiante mesmo que uma categoria tenha "NB" no nome. É a ordem que desempata — em
+   `Revisão, Pinecrest Travel, Development, Migration`, "Development" cai na Categoria, e depois
+   dela cairia no Project Stage. Trecho que nada reconhece fica **no campo da vez** e aparece como
+   **não encontrado** — saltar até um campo de texto adiante levaria o cursor junto e descartaria
+   calados os trechos seguintes, e trecho não reconhecido é quase sempre erro de digitação. Campo de
+   texto se preenche na própria posição ou por sigla. Se **nenhum** trecho depois
+   do nome foi reconhecido (campo de texto não conta), é texto livre com vírgula ("Reunião com o
+   time, sobre a sprint") e segue para o provedor.
+3. **Texto livre com provedor** (§ O prompt e a leitura da resposta).
+4. **Sem provedor**: o texto inteiro vira o nome, que é o que o campo fazia antes.
+
+> **Trecho curto vira campo**: `Ligar pro cliente, s` lê `s` como billable e `Ajustes, sistema`
+> acha o projeto "Sistema Interno" — os dois se resolvem no app, sem provedor. É o preço do atalho;
+> a prévia mostra e corrige.
+>
+> **Nome de projeto com vírgula se parte em dois** na leitura por posição. Digitar um pedaço do
+> nome funciona (`Pinecrest Travel Group` acha "[US] Pinecrest Travel Group Zendesk, Migration
+> 60-1"); o nome inteiro pede `P=`.
+
+A instrução anuncia **só a ordem** (decisão do usuário, 2026-11-27): as siglas seguem aceitas, mas
+não aparecem na tela.
+
+As siglas são **derivadas** das iniciais do rótulo, deduplicadas, em ordem fixa
+(`buildTaskFieldHints`) — a sigla é o que o usuário decora, e não pode mudar entre aberturas.
+
+### O prompt e a leitura da resposta
+
+- O texto vai **dentro de `<texto>`**, pelo mesmo motivo do `<tarefas>` do resumo (§ O prompt): é
+  digitado pelo usuário e chega ao modelo sem passar por ninguém. Os campos vão em `<campos>`.
+- **JSON pedido pelo prompt, sem `response_format`.** O request continua só `model`, `messages`,
+  `stream` (§ O subconjunto seguro): o adapter é um só, e um parâmetro que um provedor recusa
+  quebraria a integração inteira — o mesmo raciocínio do `max_tokens`. O prompt é curto porque o preset do Groq corta a
+  saída em 220 tokens e o JSON tem de caber.
+- **A leitura é tolerante** (`parseTaskTextResponse`): procura o primeiro objeto JSON no texto
+  (modelo pequeno põe cerca de código ou uma frase antes, mesmo com "sem markdown"), aceita sigla em
+  minúscula, descarta sigla desconhecida e valor que não é texto — um campo a menos se completa na
+  prévia. Sem objeto nenhum, ou com `fields` que não é objeto: **`TaskTextResponseError`**
+  (`taskText/errors.ts`), que mora em `domain/` porque `LlmEmptyResponseError` é de `infra/`.
+
+### O casamento é local
+
+`resolveTaskFields` + `matchCatalogItem`, sobre o catálogo do workspace, normalizado sem acento e
+sem caixa. Três níveis: **exato > prefixo de palavras** (`tech int` → "Tech interno") **>
+`fuzzyMatch`**, e **só o melhor nível conta** — um exato não fica ambíguo porque o fuzzy também
+bateu em outros dez.
+
+**Prefixo de palavras tolera flexão** (`wordMatches`): a palavra digitada casa a do alvo quando é
+prefixo dela **ou** quando as duas só diferem na terminação — raiz comum de 4+ letras, sobrando
+no máximo 2 letras na busca e 3 no alvo. "tech interno" acha "Tech Atividades Internas" e
+"reunião interna" acha "Reuniões internas"; "interno" **não** acha "intervalo" (sobra "valo").
+Vale para a resolução e para a prova da leitura por posição.
+
+> **Mais de um no melhor nível é ambíguo**, e a prévia mostra até 5 candidatos para o usuário
+> escolher. Escolher sozinho seria trocar o projeto do cliente em silêncio. Ambiguidade não
+> resolvida segue **vazia** no início da tarefa.
+
+A categoria é casada **no recorte do projeto** resolvido (`resolveCategoriesForProject`); projeto
+ambíguo ou ausente não recorta. `select` grava o **id da opção**; `checkbox` lê sim/não; texto vai
+cru.
+
+**Billable:** explícito no texto vence (`b`, `billable`, `nb`, `non-billable`, `sim`, `não`…,
+`parseYesNo.ts`); ausente, vale o `defaultBillable` da categoria resolvida, e sem categoria,
+`true` (§6.2).
+
+### Erros: um wrapper, e não uma edição do `describeLlmError`
+
+`describeTaskTextError` (`src/presentation/integrations/taskText.ts`) traduz a resposta ilegível
+(`TaskTextResponseError` ou `LlmEmptyResponseError`) em "tente novamente" e delega o resto —
+chave, cota, rede — ao `describeLlmError`.
+
+> **O `describeLlmError` ficou intocado de propósito.** A análise de impacto dele deu **HIGH**: é a
+> frase de erro do modal de conexão e do resumo do Histórico. Um wrapper que só acrescenta o caso
+> novo não muda nenhuma delas.
+
+Na tela, erro na análise **não trava**: o segundo Enter inicia o texto como nome. Na API local, o
+erro do provedor volta como 502 com a mesma frase.
+
+### Nada é criado sem confirmação
+
+A interpretação abre a **prévia**; só o Enter seguinte (ou o botão) inicia ou lança. A única
+exceção é o resultado **só com nome** (`isNameOnly`) — sem provedor e sem atalho local —, que inicia
+direto: não há o que conferir, e a prévia seria um Enter a mais por nada.
+
+> **A API local e o MCP só interpretam.** `taskText.fields` / `taskText.interpret` (tools
+> `get_task_text_fields` / `interpret_task_text`) devolvem a interpretação com os nomes ao lado, e
+> o chamador inicia com `start_task`/`log_past_task`/`plan_task`. O chamador do MCP já é uma IA:
+> interpretar e iniciar de uma vez pularia a confirmação que a tela exige.
+
+### Workspace
+
+O catálogo é o do **workspace ativo** (na API local, o `workspaceId` opcional; ausente, o ativo),
+pelo mesmo motivo do resumo (§ Escopo de workspace): o texto descreve a tarefa que o usuário está
+iniciando **na tela que tem aberta**, e casar com o catálogo de outro workspace trocaria o projeto
+por um que não está à vista.
 
 ---
 

@@ -5,6 +5,8 @@ import type { Category } from "@domain/entities/Category";
 import { CompleteToggle, Input, TaskRow } from "@presentation/components/ui";
 import { getProjectColor } from "@shared/utils/projectColor";
 import { Autocomplete } from "./Autocomplete";
+import { TaskTextHint } from "./taskText/TaskTextHint";
+import { TaskTextPreview } from "./taskText/TaskTextPreview";
 import {
   chipBillableClass,
   chipEmptyClass,
@@ -12,6 +14,7 @@ import {
   chipNonBillableClass,
 } from "./chipStyles";
 import type { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
+import type { UseTaskTextInterpretationResult } from "@presentation/hooks/useTaskTextInterpretation";
 import { useProjectCategoryMap } from "@presentation/hooks/useProjectCategoryMap";
 
 // ─── Chip ─────────────────────────────────────────────────────────────────────
@@ -44,6 +47,12 @@ function Chip({ label, filled, billable, isBillableChip, onClick }: ChipProps) {
 
 type DraftHookState = ReturnType<typeof useOmniboxDraft>;
 
+/** O que o omnibox desenha da interpretação do texto — instrução e prévia. */
+export type OmniboxTaskTextView = Pick<
+  UseTaskTextInterpretationResult,
+  "instruction" | "interpretation" | "error" | "hints" | "catalog" | "choose" | "setBillable"
+>;
+
 interface OmniboxIdleProps extends DraftHookState {
   projects: Project[];
   categories: Category[];
@@ -58,6 +67,7 @@ interface OmniboxIdleProps extends DraftHookState {
   onCompletePlanned: (task: PlannedTask) => void;
   /** Destino do "Ver semana →" no rodapé da lista. */
   onNavigatePlanning?: () => void;
+  taskText: OmniboxTaskTextView;
 }
 
 export function OmniboxIdle({
@@ -67,6 +77,7 @@ export function OmniboxIdle({
   onToggleBillable,
   onCompletePlanned,
   onNavigatePlanning,
+  taskText,
   draft,
   setDraft,
   focused,
@@ -80,10 +91,15 @@ export function OmniboxIdle({
   suggestions,
   startPlanned,
   handleStart,
+  changeName,
+  textStatus,
   handleInputKeyDown,
 }: OmniboxIdleProps) {
   const { categoriesFor } = useProjectCategoryMap();
   const categoryOptions = categoriesFor(categories, draft.projectId);
+  // Escolher na prévia tira o foco do campo; devolvê-lo é o que deixa o
+  // próximo Enter confirmar, em vez de reabrir o chip clicado.
+  const backToInput = () => inputRef.current?.focus();
 
   return (
     <div
@@ -107,10 +123,7 @@ export function OmniboxIdle({
           ref={inputRef}
           variant="plain"
           value={draft.name}
-          onChange={(e) => {
-            setDraft((d) => ({ ...d, name: e.target.value }));
-            setShowSuggestions(true);
-          }}
+          onChange={(e) => changeName(e.target.value)}
           onFocus={() => {
             setFocused(true);
             setShowSuggestions(true);
@@ -122,75 +135,101 @@ export function OmniboxIdle({
         />
       </div>
 
+      {/* Na largura toda, abaixo do Play: a linha é longa e, recuada até o texto, quebrava cedo. */}
+      <TaskTextHint instruction={taskText.instruction} className="px-3 pb-3" />
+
+      {/* Analisando o texto, a prévia toma o lugar dos chips do rascunho. */}
+      {textStatus !== "idle" && (
+        <div className="px-3 pb-3">
+          <TaskTextPreview
+            status={textStatus}
+            interpretation={taskText.interpretation}
+            error={taskText.error}
+            hints={taskText.hints}
+            catalog={taskText.catalog}
+            onChoose={(key, id) => {
+              taskText.choose(key, id);
+              backToInput();
+            }}
+            onToggleBillable={() => {
+              taskText.setBillable(!taskText.interpretation?.billable);
+              backToInput();
+            }}
+          />
+        </div>
+      )}
+
       {/* Chips row */}
-      <div className="flex gap-2 px-3 pb-3 flex-wrap">
-        {editingChip === "project" ? (
-          <div className="w-40">
-            <Autocomplete
-              value={draft.projectName}
-              onChange={(v) => setDraft((d) => ({ ...d, projectName: v }))}
-              onSelect={(o) => {
-                // Trocar o projeto zera a categoria: o recorte de opções mudou.
-                setDraft((d) => ({
-                  ...d,
-                  projectName: o.name,
-                  projectId: o.id,
-                  categoryName: "",
-                  categoryId: null,
-                }));
-                setEditingChip(null);
-              }}
-              onEnter={() => setEditingChip(null)}
-              options={projects}
-              placeholder="Projeto"
-              autoFocus
+      {textStatus === "idle" && (
+        <div className="flex gap-2 px-3 pb-3 flex-wrap">
+          {editingChip === "project" ? (
+            <div className="w-40">
+              <Autocomplete
+                value={draft.projectName}
+                onChange={(v) => setDraft((d) => ({ ...d, projectName: v }))}
+                onSelect={(o) => {
+                  // Trocar o projeto zera a categoria: o recorte de opções mudou.
+                  setDraft((d) => ({
+                    ...d,
+                    projectName: o.name,
+                    projectId: o.id,
+                    categoryName: "",
+                    categoryId: null,
+                  }));
+                  setEditingChip(null);
+                }}
+                onEnter={() => setEditingChip(null)}
+                options={projects}
+                placeholder="Projeto"
+                autoFocus
+              />
+            </div>
+          ) : (
+            <Chip
+              label={draft.projectName || "Projeto"}
+              filled={!!draft.projectName}
+              onClick={() => setEditingChip("project")}
             />
-          </div>
-        ) : (
-          <Chip
-            label={draft.projectName || "Projeto"}
-            filled={!!draft.projectName}
-            onClick={() => setEditingChip("project")}
-          />
-        )}
+          )}
 
-        {editingChip === "category" ? (
-          <div className="w-40">
-            <Autocomplete
-              value={draft.categoryName}
-              onChange={(v) => setDraft((d) => ({ ...d, categoryName: v }))}
-              onSelect={(o) => {
-                const cat = categories.find((c) => c.id === o.id);
-                setDraft((d) => ({
-                  ...d,
-                  categoryName: o.name,
-                  categoryId: o.id,
-                  billable: cat?.defaultBillable ?? d.billable,
-                }));
-                setEditingChip(null);
-              }}
-              onEnter={() => setEditingChip(null)}
-              options={categoryOptions}
-              placeholder="Categoria"
-              autoFocus
+          {editingChip === "category" ? (
+            <div className="w-40">
+              <Autocomplete
+                value={draft.categoryName}
+                onChange={(v) => setDraft((d) => ({ ...d, categoryName: v }))}
+                onSelect={(o) => {
+                  const cat = categories.find((c) => c.id === o.id);
+                  setDraft((d) => ({
+                    ...d,
+                    categoryName: o.name,
+                    categoryId: o.id,
+                    billable: cat?.defaultBillable ?? d.billable,
+                  }));
+                  setEditingChip(null);
+                }}
+                onEnter={() => setEditingChip(null)}
+                options={categoryOptions}
+                placeholder="Categoria"
+                autoFocus
+              />
+            </div>
+          ) : (
+            <Chip
+              label={draft.categoryName || "Categoria"}
+              filled={!!draft.categoryName}
+              onClick={() => setEditingChip("category")}
             />
-          </div>
-        ) : (
-          <Chip
-            label={draft.categoryName || "Categoria"}
-            filled={!!draft.categoryName}
-            onClick={() => setEditingChip("category")}
-          />
-        )}
+          )}
 
-        <Chip
-          label={draft.billable ? "Billable" : "Non-billable"}
-          filled
-          billable={draft.billable}
-          isBillableChip
-          onClick={() => setDraft((d) => ({ ...d, billable: !d.billable }))}
-        />
-      </div>
+          <Chip
+            label={draft.billable ? "Billable" : "Non-billable"}
+            filled
+            billable={draft.billable}
+            isBillableChip
+            onClick={() => setDraft((d) => ({ ...d, billable: !d.billable }))}
+          />
+        </div>
+      )}
 
       {/*
        * As planejadas do dia, penduradas no card e **fora do fluxo**: em fluxo,

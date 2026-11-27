@@ -9,13 +9,13 @@ use crate::api::models;
         title = "DeskClock Local API",
         description = "API REST local do DeskClock: controle do timer, Histórico, tarefas planejadas, \
 workspaces, projetos, categorias, campos personalizados, totais, envio às integrações, imports das integrações, lançamentos do Clockify e do Monday, resumo do dia por IA, \
-backup no Drive, exportação, configurações (inclusive os ajustes das integrações) e o link de compartilhar tarefa, para integrar com ferramentas externas \
+interpretação de texto curto em tarefa, backup no Drive, exportação, configurações (inclusive os ajustes das integrações) e o link de compartilhar tarefa, para integrar com ferramentas externas \
 (Alfred, Raycast, scripts, automações). Cada chamada é executada pelo próprio app, com as mesmas regras da tela.\n\n\
 **Base URL:** `http://localhost:{porta}` (padrão: 27420)\n\n\
 **Workspace:** onde houver escopo, `workspaceId` ausente = workspace ativo. Recursos buscados por id no path \
 (tarefa, planejada) valem em qualquer workspace.\n\n\
 **Erros:** 400 = formato ou regra violada; 404 = o recurso do path não existe; 409 = uma referência do corpo \
-ou da query não existe, ou o estado atual impede a ação; 502 = o serviço externo falhou (backup); \
+ou da query não existe, ou o estado atual impede a ação; 502 = o serviço externo falhou (backup, provedor de IA); \
 503 = o app ainda está carregando.\n\n\
 Somente `127.0.0.1` — acessível apenas a processos locais.",
         version = "1.0.0"
@@ -96,6 +96,8 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         handlers::services::get_monday_entries,
         handlers::services::get_day_summaries,
         handlers::services::post_day_summaries_generate,
+        handlers::task_text::get_task_text_fields,
+        handlers::task_text::post_task_text_interpret,
         handlers::services::get_drive_backup,
         handlers::services::post_drive_backup_run,
         handlers::entry_writes::post_clockify_entry,
@@ -244,6 +246,15 @@ Somente `127.0.0.1` — acessível apenas a processos locais.",
         models::GeneratedDaySummaryDto,
         models::DaySummaryErrorDto,
         models::GenerateDaySummariesResponse,
+        models::TaskTextFieldDto,
+        models::TaskTextFieldsDto,
+        models::InterpretTaskTextRequest,
+        models::TaskTextCandidateDto,
+        models::TaskTextAmbiguityDto,
+        models::TaskTextNotFoundDto,
+        models::TaskTextCustomFieldDto,
+        models::TaskTextSource,
+        models::TaskTextInterpretationDto,
         models::DriveBackupStatusDto,
         models::DriveBackupRunResponse,
         models::ClockifyEntryWriteRequest,
@@ -321,6 +332,9 @@ Usa o workspace configurado para cada integração, não o ativo \
 (o rastreio automático de reuniões da Agenda, que cria no ativo, não passa por aqui). Integração não conectada = 409."),
         (name = "day-summaries", description = "Resumo do dia por IA, como a aba Resumo do Histórico: ler os já gerados \
 (banco local) e gerar os que faltam. Workspace ausente = ativo. Provedor de IA não configurado = 409."),
+        (name = "task-text", description = "Iniciar tarefa por texto, como o campo da tela: a instrução dos campos \
+e a interpretação de um texto curto em nome, projeto, categoria, billable e campos personalizados. **Não inicia nem grava \
+nada**: confirme com o usuário e use `POST /tasks/start`, `POST /tasks` ou `POST /planned-tasks`."),
         (name = "backup", description = "Backup do banco no Google Drive: estado e \"Fazer backup agora\". Restaurar não tem UI \
 nem endpoint: é procedimento manual, com o app fechado."),
         (name = "export", description = "Exportação de tarefas: perfis (por workspace; `workspaceId` ausente = ativo; \

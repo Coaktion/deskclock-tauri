@@ -1,1 +1,1 @@
-["daySummaries.generate", "driveBackup.run"]
+["daySummaries.generate", "driveBackup.run", "taskText.interpret"]

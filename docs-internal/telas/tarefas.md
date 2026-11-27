@@ -71,9 +71,46 @@ achado de relance.
   tira a tarefa dela; reabrir é pelo Planejamento ou pelo popup.
 - **Clicar na linha inicia a tarefa na hora**, com o vínculo (`plannedTaskId`) e os campos
   personalizados da planejada. Pelo teclado: ↑/↓ andam pela lista e Enter inicia a ativa; com a
-  lista fechada ou vazia, Enter inicia o rascunho como tarefa avulsa. ESC fecha só a lista.
+  lista fechada ou vazia, Enter vai para o rascunho como tarefa avulsa — que, com texto, passa
+  pela interpretação abaixo. ESC fecha a lista antes de qualquer outra coisa.
 - Rodapé da lista: **"Ver semana →"**, que leva ao Planejamento.
 - **A lista suspensa do omnibox não oferece as ações** — quem as executa sem dar play nem abrir a edição é o menu ⋯ (e o clique direito) da linha do Planejamento e da lista de planejadas do popup, na seção que abre o menu. Durante a execução elas continuam como chips clicáveis no Popup Flyout (ver §6.5).
+
+#### O texto do omnibox interpretado (IA)
+
+2026-11-27, spec `docs-internal/specs/iniciar-tarefa-por-texto.md`; contrato com o provedor em
+`docs-internal/integracoes/llm.md` (§ Iniciar tarefa por texto). Código: `useOmniboxDraft`,
+`OmniboxIdle`, `taskText/TaskTextHint`, `taskText/TaskTextPreview` e o desvio comum
+`hooks/taskTextEntry.ts`.
+
+- **A instrução fica sempre visível**, abaixo da linha do Play e do campo, na largura toda e com
+  o ícone `Sparkles` antes do texto: os campos que a tarefa pede, na ordem em que se digitam, e um exemplo do catálogo (`Nome, Projeto, Categoria, Billable, …, nessa ordem e por
+  vírgula; dá para pular campo. Ex.: Revisão, Tech interno, Development NB, nb`). Ela aparece com
+  ou sem provedor de IA — texto por posição (e por sigla, `P=`, que segue aceito) se resolve no app.
+- **Enter (lista fechada ou vazia) e Play com texto analisam**, em vez de iniciar. Enquanto analisa,
+  Enter não faz nada.
+- **A prévia toma o lugar dos chips do rascunho**: nome, projeto, categoria, billable e campos
+  personalizados como chips. O ambíguo vem destacado e abre os candidatos; o não encontrado é chip
+  vazio; o billable alterna. Escolher na prévia devolve o foco ao campo, para o próximo Enter
+  confirmar em vez de reabrir o chip.
+- **O segundo Enter inicia** com os campos da prévia e com o `startTime` do **primeiro** envio do
+  texto.
+
+  > A espera pela IA não pode comer os segundos da tarefa: ela começou quando o usuário apertou
+  > Enter, não quando a resposta chegou. O instante sobrevive a reenvios e a fechar a prévia; só
+  > apagar o texto (ou iniciar) o esquece.
+
+- **Resultado só com nome inicia direto**, sem prévia — é o caso sem provedor e sem atalho local. Não há o
+  que conferir.
+- **Campo vazio inicia na hora**, como antes. **Chips escolhidos à mão** (projeto, categoria, ou
+  billable desligado) **pulam a análise**: o texto é só o nome.
+
+  > Analisá-lo deixaria a IA sobrescrever o que o usuário acabou de escolher.
+
+- **ESC, nesta ordem:** fecha a lista; depois, a prévia (ou a análise em voo, ou o erro). Editar o
+  texto também descarta a prévia.
+- **Erro na análise não trava:** a frase aparece no lugar da prévia (`describeTaskTextError`), e o
+  segundo Enter inicia o texto como nome, com o rascunho como está.
 
 > **Nota:** O lançamento retroativo foi movido para uma tela dedicada na sidebar (ver 5.8). A ideia de "botão que abre modal" foi descartada — a tela dedicada permite entrada em sequência de múltiplas tarefas com muito mais agilidade.
 
