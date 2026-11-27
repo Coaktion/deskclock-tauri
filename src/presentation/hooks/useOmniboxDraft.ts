@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import { matchPlannedTasks } from "@domain/utils/plannedPending";
 import type { RunningTaskContextValue } from "@presentation/contexts/RunningTaskContext";
+import type { TaskTextStartInput } from "@presentation/integrations/taskText";
+import { omniboxTextEntry, type OmniboxInterpreter } from "./omniboxTextEntry";
 
 export interface DraftState {
   name: string;
@@ -27,6 +29,8 @@ interface UseOmniboxDraftParams {
   today: string;
   startTask: RunningTaskContextValue["startTask"];
   onStarted?: () => void;
+  /** Ausente, o texto vira só o nome, como antes da interpretação por IA. */
+  interpreter?: OmniboxInterpreter;
 }
 
 export function useOmniboxDraft({
@@ -34,6 +38,7 @@ export function useOmniboxDraft({
   today,
   startTask,
   onStarted,
+  interpreter,
 }: UseOmniboxDraftParams) {
   const [draft, setDraft] = useState<DraftState>(INITIAL_DRAFT);
   const [focused, setFocused] = useState(false);
@@ -50,7 +55,14 @@ export function useOmniboxDraft({
   // A lista se reordena a cada tecla; o índice antigo apontaria para outra tarefa.
   useEffect(() => setActiveSuggIdx(0), [draft.name]);
 
-  async function handleStart() {
+  function finish() {
+    setDraft(INITIAL_DRAFT);
+    setShowSuggestions(false);
+    interpreter?.reset();
+    onStarted?.();
+  }
+
+  async function startRaw() {
     await startTask({
       name: draft.name.trim() || null,
       projectId: draft.projectId,
@@ -61,9 +73,33 @@ export function useOmniboxDraft({
       plannedTaskId: null,
       customValues: {},
     });
-    setDraft(INITIAL_DRAFT);
+    finish();
+  }
+
+  async function startInterpreted(input: TaskTextStartInput) {
+    await startTask(input);
+    finish();
+  }
+
+  const textEntry = omniboxTextEntry({
+    interpreter,
+    text: draft.name,
+    manualFields: draft.projectId !== null || draft.categoryId !== null || !draft.billable,
+    startRaw,
+    startInterpreted,
+  });
+
+  /** Enter e Play: inicia, analisa o texto ou confirma a prévia (`omniboxTextEntry`). */
+  async function handleStart() {
+    // A lista cobriria a prévia que a análise abre logo abaixo do campo.
     setShowSuggestions(false);
-    onStarted?.();
+    await textEntry.advance();
+  }
+
+  function changeName(name: string) {
+    setDraft((d) => ({ ...d, name }));
+    setShowSuggestions(true);
+    textEntry.textEdited(name);
   }
 
   /**
@@ -81,9 +117,7 @@ export function useOmniboxDraft({
       plannedTaskId: task.id,
       customValues: task.customValues,
     });
-    setDraft(INITIAL_DRAFT);
-    setShowSuggestions(false);
-    onStarted?.();
+    finish();
   }
 
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -102,9 +136,9 @@ export function useOmniboxDraft({
       } else {
         void handleStart();
       }
-    } else if (e.key === "Escape" && listOpen) {
+    } else if (e.key === "Escape" && (listOpen || textEntry.closePreview())) {
       // Sinaliza que o ESC foi consumido: sem isto ele desceria para quem
-      // escuta a tecla acima do campo.
+      // escuta a tecla acima do campo. A lista fecha antes da prévia.
       e.stopPropagation();
       e.preventDefault();
       setShowSuggestions(false);
@@ -132,6 +166,8 @@ export function useOmniboxDraft({
     inputRef,
     suggestions,
     handleStart,
+    changeName,
+    textStatus: textEntry.status,
     startPlanned,
     handleInputKeyDown,
     reset,

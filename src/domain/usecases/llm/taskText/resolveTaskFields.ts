@@ -36,7 +36,7 @@ function resolveNamed(
  * ou ausente não recorta nada: ainda não se sabe qual é, e recortar pelo
  * errado esconderia a categoria certa.
  */
-function categoriesInScope(projectId: UUID | null, catalog: TaskTextCatalog): Category[] {
+export function categoriesInScope(projectId: UUID | null, catalog: TaskTextCatalog): Category[] {
   if (!projectId) return catalog.categories;
   const allowed = catalog.projectCategoryMap.get(projectId) ?? NO_ASSOCIATION;
   return resolveCategoriesForProject(catalog.categories, allowed);
