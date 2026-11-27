@@ -1,5 +1,6 @@
 import type { ILlmApi } from "@domain/integrations/ILlmApi";
 import { buildTaskTextPrompt } from "./buildTaskTextPrompt";
+import { parseOrderedText } from "./parseOrderedText";
 import { parseSiglaText } from "./parseSiglaText";
 import { parseTaskTextResponse } from "./parseTaskTextResponse";
 import { resolveTaskFields } from "./resolveTaskFields";
@@ -16,12 +17,14 @@ export interface InterpretTaskTextInput {
 /**
  * O texto digitado → a tarefa preenchida para a prévia.
  *
- * Três caminhos, nesta ordem:
+ * Quatro caminhos, nesta ordem:
  * 1. **Com sigla** (`P=…`), separa localmente e **não chama o provedor** — o
  *    usuário já disse o que é cada coisa, e a requisição é paga.
- * 2. **Texto livre com provedor**: ele só separa os trechos; o casamento com o
+ * 2. **Por posição** (`Nome, Projeto, Categoria…`), também local e sem
+ *    provedor: a ordem da instrução diz o que é cada trecho.
+ * 3. **Texto livre com provedor**: ele só separa os trechos; o casamento com o
  *    catálogo continua local.
- * 3. **Sem provedor**: o texto inteiro vira o nome, que é o que o campo fazia
+ * 4. **Sem provedor**: o texto inteiro vira o nome, que é o que o campo fazia
  *    antes desta feature.
  *
  * **Erro do `ILlmApi` propaga**, como no resumo do dia: quem sabe o que dizer
@@ -40,6 +43,9 @@ export async function interpretTaskText(
       "local"
     );
   }
+
+  const viaOrder = parseOrderedText(text, input.hints, input.catalog);
+  if (viaOrder) return resolveTaskFields(viaOrder, input.hints, input.catalog, "local");
 
   if (!input.llm) {
     return resolveTaskFields({ name: text, fields: {} }, input.hints, input.catalog, "local");

@@ -424,7 +424,7 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("set_monday_project_board", false, Some(true), true),
         ("run_integration_sync_now", false, Some(false), true),
         // Iniciar tarefa por texto: nenhuma grava nada. A interpretação de texto
-        // livre manda o texto ao provedor de IA (mundo aberto); com sigla, não.
+        // livre manda o texto ao provedor de IA (mundo aberto); com sigla ou por posição, não.
         ("get_task_text_fields", true, None, false),
         ("interpret_task_text", true, None, true),
     ];

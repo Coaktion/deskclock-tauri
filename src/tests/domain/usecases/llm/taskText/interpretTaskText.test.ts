@@ -35,11 +35,40 @@ describe("interpretTaskText", () => {
     });
   });
 
+  it("texto por posição é resolvido localmente, sem chamar o provedor", async () => {
+    const llm = makeLlm("{}");
+    const result = await interpretTaskText({
+      llm,
+      text: "Alinhamento, tech int, Meeting",
+      hints,
+      catalog,
+    });
+    expect(llm.complete).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      name: "Alinhamento",
+      projectId: "p-tech",
+      categoryId: "c-meet",
+      source: "local",
+    });
+  });
+
+  it("texto livre com vírgula ainda vai ao provedor", async () => {
+    const llm = makeLlm('{"name":"Reunião com o time","fields":{}}');
+    const result = await interpretTaskText({
+      llm,
+      text: "Reunião com o time, sobre a sprint",
+      hints,
+      catalog,
+    });
+    expect(llm.complete).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ name: "Reunião com o time", source: "llm" });
+  });
+
   it("texto livre vai ao provedor e é casado localmente", async () => {
     const llm = makeLlm('```json\n{"name":"Alinhamento","fields":{"P":"acme corp","B":"nb"}}\n```');
     const result = await interpretTaskText({
       llm,
-      text: "Alinhamento na Acme, nb",
+      text: "Alinhamento na Acme nb",
       hints,
       catalog,
     });

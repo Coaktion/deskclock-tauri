@@ -6,8 +6,9 @@ interface TaskTextHintProps {
 }
 
 /**
- * A instrução acima do campo de texto da tarefa: os campos que ela pede, cada
- * um com a sigla e um exemplo do catálogo. É dica que se lê, então é `caption`.
+ * A instrução acima do campo de texto da tarefa: os campos que ela pede, na
+ * ordem em que se digitam, e um exemplo do catálogo. É dica que se lê, então é
+ * `caption`.
  */
 export function TaskTextHint({ instruction, className = "" }: TaskTextHintProps) {
   if (!instruction) return null;

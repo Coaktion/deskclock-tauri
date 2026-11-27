@@ -1,4 +1,4 @@
-//! Iniciar tarefa por texto: a instrução com as siglas e a interpretação de um
+//! Iniciar tarefa por texto: a instrução dos campos e a interpretação de um
 //! texto curto (`docs-internal/specs/iniciar-tarefa-por-texto.md`, item 12).
 //! **Nenhuma das duas inicia tarefa** — o cliente confirma com o usuário e chama
 //! `POST /tasks/start`, `POST /tasks` ou `POST /planned-tasks`. Só repassam à
@@ -49,7 +49,8 @@ pub async fn get_task_text_fields(
     tag = "task-text",
     request_body(
         content = InterpretTaskTextRequest,
-        description = "Texto com siglas é separado no app, sem chamar o provedor. Texto livre vai ao provedor \
+        description = "Texto com siglas (`P=acme`) ou por posição, separado por vírgula na ordem da instrução \
+            (`Daily, Acme, Development, nb`), é separado no app, sem chamar o provedor. Texto livre vai ao provedor \
             de IA, se houver um conectado — só o texto e, de cada campo, rótulo, sigla e tipo; o casamento com o \
             catálogo é local. Sem provedor, o texto livre vira o nome.",
         example = json!({ "text": "Alinhamento sprint P=tech int C=dev nb PS=dev" })

@@ -377,18 +377,45 @@ cliente sai da máquina.
 > híbrido que mandaria só os candidatos empatados foi descartado porque vaza pouco, mas vaza, e o
 > contrato fica difícil de explicar.
 
-> **Os exemplos da instrução são locais.** "P= Tech interno / C= Development NB" vem do catálogo e
-> aparece na tela (`formatTaskFieldInstruction`), mas o `example` do `TaskFieldHint` não entra no
+> **Os exemplos da instrução são locais.** "Ex.: Revisão, Tech interno, Development NB" vem do
+> catálogo e aparece na tela (`formatTaskFieldInstruction`), mas o `example` do `TaskFieldHint` não entra no
 > prompt. A API local devolve o exemplo em `taskText.fields` — ela é local, e a regra é sobre o que
 > vai ao provedor.
 
-### O atalho das siglas
+### Os atalhos locais: siglas e posição
 
-Texto com sigla conhecida seguida de `=` (`P=`, `C=`, `PS=`) **não chama o provedor**
-(`parseSiglaText`): o usuário já disse o que é cada coisa, e a requisição é paga. A sigla só conta
-no começo ou depois de espaço/separador — `TOP=3` no meio do nome não é a sigla `P` —, e as mais
-longas ganham das curtas (`PS=` nunca vira `P`). Sem provedor e sem sigla, o texto inteiro vira o
-nome, que é o que o campo fazia antes.
+`interpretTaskText` tenta quatro caminhos, nesta ordem, e **os dois primeiros não chamam o
+provedor** — o usuário já disse o que é cada coisa, e a requisição é paga:
+
+1. **Siglas** (`parseSiglaText`): sigla conhecida seguida de `=` (`P=`, `C=`, `PS=`). A sigla só
+   conta no começo ou depois de espaço/separador — `TOP=3` no meio do nome não é a sigla `P` —, e
+   as mais longas ganham das curtas (`PS=` nunca vira `P`).
+2. **Posição** (`parseOrderedText`): `Nome, Projeto, Categoria, Billable, …`, na ordem da
+   instrução, por vírgula ou ponto e vírgula. **Dá para pular campo**: cada trecho vai para o
+   primeiro campo, a partir do último preenchido, que o reconhece. Reconhecer é casar por
+   **igualdade ou prefixo de palavras** — o fuzzy fica de fora, senão um nome longo de projeto
+   engoliria qualquer trecho curto — ou ser sim/não. `b`/`nb`/sim/não são **reservados**: vão ao
+   Billable (ou checkbox) adiante mesmo que uma categoria tenha "NB" no nome. É a ordem que desempata — em
+   `Revisão, Pinecrest Travel, Development, Migration`, "Development" cai na Categoria, e depois
+   dela cairia no Project Stage. Trecho que nada reconhece fica **no campo da vez** e aparece como
+   **não encontrado** — saltar até um campo de texto adiante levaria o cursor junto e descartaria
+   calados os trechos seguintes, e trecho não reconhecido é quase sempre erro de digitação. Campo de
+   texto se preenche na própria posição ou por sigla. Se **nenhum** trecho depois
+   do nome foi reconhecido (campo de texto não conta), é texto livre com vírgula ("Reunião com o
+   time, sobre a sprint") e segue para o provedor.
+3. **Texto livre com provedor** (§ O prompt e a leitura da resposta).
+4. **Sem provedor**: o texto inteiro vira o nome, que é o que o campo fazia antes.
+
+> **Trecho curto vira campo**: `Ligar pro cliente, s` lê `s` como billable e `Ajustes, sistema`
+> acha o projeto "Sistema Interno" — os dois se resolvem no app, sem provedor. É o preço do atalho;
+> a prévia mostra e corrige.
+>
+> **Nome de projeto com vírgula se parte em dois** na leitura por posição. Digitar um pedaço do
+> nome funciona (`Pinecrest Travel Group` acha "[US] Pinecrest Travel Group Zendesk, Migration
+> 60-1"); o nome inteiro pede `P=`.
+
+A instrução anuncia **só a ordem** (decisão do usuário, 2026-11-27): as siglas seguem aceitas, mas
+não aparecem na tela.
 
 As siglas são **derivadas** das iniciais do rótulo, deduplicadas, em ordem fixa
 (`buildTaskFieldHints`) — a sigla é o que o usuário decora, e não pode mudar entre aberturas.
@@ -442,7 +469,7 @@ erro do provedor volta como 502 com a mesma frase.
 ### Nada é criado sem confirmação
 
 A interpretação abre a **prévia**; só o Enter seguinte (ou o botão) inicia ou lança. A única
-exceção é o resultado **só com nome** (`isNameOnly`) — sem provedor e sem sigla —, que inicia
+exceção é o resultado **só com nome** (`isNameOnly`) — sem provedor e sem atalho local —, que inicia
 direto: não há o que conferir, e a prévia seria um Enter a mais por nada.
 
 > **A API local e o MCP só interpretam.** `taskText.fields` / `taskText.interpret` (tools

@@ -332,7 +332,7 @@ Usa o workspace configurado para cada integração, não o ativo \
 (o rastreio automático de reuniões da Agenda, que cria no ativo, não passa por aqui). Integração não conectada = 409."),
         (name = "day-summaries", description = "Resumo do dia por IA, como a aba Resumo do Histórico: ler os já gerados \
 (banco local) e gerar os que faltam. Workspace ausente = ativo. Provedor de IA não configurado = 409."),
-        (name = "task-text", description = "Iniciar tarefa por texto, como o campo da tela: a instrução com as siglas \
+        (name = "task-text", description = "Iniciar tarefa por texto, como o campo da tela: a instrução dos campos \
 e a interpretação de um texto curto em nome, projeto, categoria, billable e campos personalizados. **Não inicia nem grava \
 nada**: confirme com o usuário e use `POST /tasks/start`, `POST /tasks` ou `POST /planned-tasks`."),
         (name = "backup", description = "Backup do banco no Google Drive: estado e \"Fazer backup agora\". Restaurar não tem UI \

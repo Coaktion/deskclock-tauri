@@ -19,11 +19,15 @@ Iniciar uma tarefa completa (nome, projeto, categoria, billable e os campos pers
 vários cliques. A feature aceita um **texto curto** — `Alinhamento sprint P=tech int C=dev nb
 PS=dev` — e devolve a tarefa preenchida numa **prévia** que o usuário confirma.
 
-Acima do input, o app mostra uma **instrução** com os campos que a tarefa pede, cada um com sigla e
-exemplo tirado das opções reais:
+Acima do input, o app mostra uma **instrução** com os campos que a tarefa pede, na ordem em que se
+digitam, e um exemplo tirado das opções reais:
 
-> Informe Projeto, Categoria, Billable, Project Stage e Non Billable reason. P= Tech interno / C=
-> Development NB / B= nb / PS= Development / NBR= Peer technical
+> Nome, Projeto, Categoria, Billable, Project Stage, Non Billable reason, nessa ordem e por vírgula;
+> dá para pular campo. Ex.: Revisão, CX Atividades Internas, 1:1 / PDI / Avaliações, nb, Closure,
+> Peer Technical Support
+
+(Revisão de 2026-11-27, decisão do usuário: a instrução anuncia a **ordem**, não as siglas. As
+siglas seguem aceitas; a primeira versão mostrava `Informe Projeto, … P= Tech interno / C= …`.)
 
 Restrições que decidiram o desenho:
 
@@ -52,6 +56,7 @@ Restrições que decidiram o desenho:
 | Casamento | C — híbrido, só candidatos empatados vão | contrato difícil de explicar, vaza pouco mas vaza |
 | IA devolvendo ids | — | exigiria B; id inventado passaria calado |
 | Só parser de siglas, sem IA | — | não atende texto livre; ficou como **atalho** (texto com siglas não chama o provedor) |
+| Instrução anunciando as siglas | — | decisão do usuário (revisão): prefere digitar por posição, com vírgula; siglas seguem aceitas, sem anúncio |
 | MCP que interpreta **e** inicia | — | o chamador do MCP já é uma IA; pularia a confirmação. A tool só interpreta |
 | Project Stage só p/ cliente na instrução | — | decisão do usuário: instrução sempre completa |
 
@@ -70,6 +75,14 @@ existentes (sem wireframe); verificação visual pelo usuário no app.
    ("Project Stage" → `PS`, "Non Billable reason" → `NBR`); exemplo local da primeira opção/catálogo.
 2. `parseSiglaText(text, hints)` → com siglas (`X=`), separa sem provedor; nome = o que vem antes da
    primeira sigla.
+   - *(revisão)* `parseOrderedText(text, hints, catalog)` → `Nome, Projeto, Categoria, …` por
+     vírgula/ponto e vírgula, na ordem dos hints; cada trecho vai ao primeiro campo, a partir do
+     último preenchido, que o reconhece (pular campo é permitido; só exato/prefixo de palavras, sem
+     fuzzy; `b`/`nb`/sim/não têm prioridade para Billable e checkbox); trecho que nada reconhece
+     fica no campo da vez (vira "não encontrado") — nunca salta para um campo de texto adiante,
+     que descartaria os trechos seguintes; nenhum trecho
+     reconhecido → `null` (texto livre). Nome de projeto com vírgula se parte: digitar um pedaço
+     funciona, o nome inteiro pede `P=`.
 3. `buildTaskTextPrompt(text, hints)` → texto em `<texto>`; pede JSON `{name, fields:{P,C,…}}`;
    proíbe inventar valor ausente. Sem catálogo, sem exemplos.
 4. `parseTaskTextResponse(raw)` → acha o JSON mesmo em texto/cerca de código; inválido →
@@ -79,8 +92,9 @@ existentes (sem wireframe); verificação visual pelo usuário no app.
    candidatos) / não encontrado. Categoria no recorte do projeto. Billable: `b`, `billable`,
    `nb`, `non-billable`, `sim`, `não`; ausente → `default_billable` da categoria. `select` → id da
    opção; `text`/`multiline` → cru; `checkbox` → sim/não.
-6. `interpretTaskText({ llm, text, hints, catalog })` → siglas: local; senão provedor se conectado;
-   sem provedor e sem siglas, o texto vira o nome. Devolve `TaskTextInterpretation` (nome, ids,
+6. `interpretTaskText({ llm, text, hints, catalog })` → siglas: local; senão **por posição**
+   (`parseOrderedText`), também local; senão provedor se conectado; sem provedor, o texto vira o
+   nome. Devolve `TaskTextInterpretation` (nome, ids,
    billable, customValues, ambíguos com candidatos, não encontrados, `source: "local" | "llm"`).
 
 ### 2. Apresentação compartilhada
@@ -128,9 +142,9 @@ acentos, `@code-quality-reviewer`.
 
 ### Testes
 
-Funções puras (siglas, colisão de sigla, ambíguo, recorte por projeto, billable padrão × explícito,
-JSON sujo, delimitador); use case com `ILlmApi` falso (local não chama; erro propaga); handler da
-API; paridade de ops no Rust; `useRetroactiveForm.applyInterpretation`.
+Funções puras (siglas, leitura por posição, colisão de sigla, ambíguo, recorte por projeto, billable
+padrão × explícito, JSON sujo, delimitador); use case com `ILlmApi` falso (local não chama; erro
+propaga); handler da API; paridade de ops no Rust; `useRetroactiveForm.applyInterpretation`.
 
 ## Rollback
 
@@ -161,6 +175,18 @@ inofensiva.
   `useTaskTextInterpretation` e dois casos de borda. Segunda rodada do `@code-quality-reviewer`:
   **PASS**. Os hashes anteriores a `f9ac333` mudaram num rebase local (reword de assunto > 72).
 
+- 2026-11-27 — Verificação manual, parte 1 (API/MCP de dev, 27421): `get_task_text_fields` e
+  `interpret_task_text` verificados por JSON-RPC — siglas (local), texto livre com o Groq
+  (`openai/gpt-oss-20b`), só nome, ambíguo (`P=cx`, 4 candidatos), não encontrado, texto vazio e
+  workspace inexistente; `GET /tasks/text/fields` e `POST /tasks/text/interpret` 200. Achado: o
+  provedor erra o texto por vírgula (`Nome, Projeto, Categoria, Stage`) por não conhecer o
+  catálogo, e o usuário pediu **leitura por posição** com vírgula — nome primeiro, campos na
+  ordem, podendo pular. Entrou como atalho local (`parseOrderedText`), a instrução passou a
+  anunciar a ordem em vez das siglas, e o review (2 rodadas, **PASS**) tirou o salto até campo de
+  texto que descartava trechos. Verificado ao vivo: o exemplo do usuário
+  (`Migration Service - Northwind JSM, Pinecrest Travel Group, Development, Migration`) resolve
+  tudo no app.
+
 **Desvios do plano** (registrados para o Review):
 
 - **`describeTaskTextError` embrulha o `describeLlmError`** em vez de editá-lo: o impacto dele deu
@@ -187,5 +213,6 @@ inofensiva.
 **Pendente — próximo passo:**
 
 - Verificação visual pelo usuário: `pnpm tauri dev` nos 2 modos × 4 acentos (omnibox, popup,
-  Lançamento Manual).
-- Ida e volta real com um provedor de IA (texto livre → prévia → início).
+  Lançamento Manual) — agora com a instrução por posição.
+- Ida e volta real na UI (texto → prévia → início); pela API/MCP já foi feita.
+- Aprovado, merge local `--no-ff` em develop e main. Sem push.

@@ -75,20 +75,30 @@ describe("buildTaskFieldHints", () => {
 });
 
 describe("formatTaskFieldInstruction", () => {
-  it("lista os rótulos e cada sigla com o seu exemplo", () => {
+  it("lista o nome e os rótulos na ordem, com um exemplo do catálogo", () => {
     const hints = buildTaskFieldHints([STAGE_FIELD, REASON_FIELD], makeCatalog());
     expect(formatTaskFieldInstruction(hints)).toBe(
-      "Informe Projeto, Categoria, Billable, Project Stage e Non Billable reason. " +
-        "P= Tech interno / C= Development NB / B= nb / PS= Development / NBR= Peer technical"
+      "Nome, Projeto, Categoria, Billable, Project Stage, Non Billable reason, nessa ordem e por " +
+        "vírgula; dá para pular campo. Ex.: Revisão, Tech interno, Development NB, nb, Development, " +
+        "Peer technical"
     );
   });
 
-  it("mostra a sigla sozinha quando não há exemplo", () => {
+  it("o exemplo pula o campo que não tem um", () => {
     const text = customField({ id: "t", label: "Ticket", sortOrder: 1 });
     const hints = buildTaskFieldHints([text], makeCatalog({ projects: [] }));
     expect(formatTaskFieldInstruction(hints)).toBe(
-      "Informe Projeto, Categoria, Billable e Ticket. P / C= Development NB / B= nb / T"
+      "Nome, Projeto, Categoria, Billable, Ticket, nessa ordem e por vírgula; dá para pular campo. " +
+        "Ex.: Revisão, Development NB, nb"
     );
+  });
+
+  it("sem nenhum exemplo, omite o Ex.", () => {
+    expect(
+      formatTaskFieldInstruction([
+        { key: "t", sigla: "T", label: "Ticket", kind: "text", fieldId: "t" },
+      ])
+    ).toBe("Nome, Ticket, nessa ordem e por vírgula; dá para pular campo.");
   });
 
   it("devolve vazio sem campos", () => {

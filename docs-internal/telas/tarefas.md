@@ -83,9 +83,10 @@ achado de relance.
 `OmniboxIdle`, `taskText/TaskTextHint`, `taskText/TaskTextPreview` e o desvio comum
 `hooks/taskTextEntry.ts`.
 
-- **A instrução fica sempre visível**, acima do campo: os campos que a tarefa pede, cada um com
-  sigla e um exemplo do catálogo (`P= Tech interno / C= Development NB / B= nb …`). Ela aparece com
-  ou sem provedor de IA — as siglas se resolvem no app.
+- **A instrução fica sempre visível**, acima do campo: os campos que a tarefa pede, na ordem em que
+  se digitam, e um exemplo do catálogo (`Nome, Projeto, Categoria, Billable, …, nessa ordem e por
+  vírgula; dá para pular campo. Ex.: Revisão, Tech interno, Development NB, nb`). Ela aparece com
+  ou sem provedor de IA — texto por posição (e por sigla, `P=`, que segue aceito) se resolve no app.
 - **Enter (lista fechada ou vazia) e Play com texto analisam**, em vez de iniciar. Enquanto analisa,
   Enter não faz nada.
 - **A prévia toma o lugar dos chips do rascunho**: nome, projeto, categoria, billable e campos
@@ -99,7 +100,7 @@ achado de relance.
   > Enter, não quando a resposta chegou. O instante sobrevive a reenvios e a fechar a prévia; só
   > apagar o texto (ou iniciar) o esquece.
 
-- **Resultado só com nome inicia direto**, sem prévia — é o caso sem provedor e sem sigla. Não há o
+- **Resultado só com nome inicia direto**, sem prévia — é o caso sem provedor e sem atalho local. Não há o
   que conferir.
 - **Campo vazio inicia na hora**, como antes. **Chips escolhidos à mão** (projeto, categoria, ou
   billable desligado) **pulam a análise**: o texto é só o nome.

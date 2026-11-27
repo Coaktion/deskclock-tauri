@@ -1,5 +1,6 @@
 import type { CustomField, CustomValues } from "@domain/entities/CustomField";
 import { serializeCustomValue } from "@domain/usecases/customFields/customValueCodec";
+import { optionCandidates } from "./candidates";
 import { valueFor, type Findings } from "./findings";
 import { matchCatalogItem } from "./matchCatalogItem";
 import { parseCheckbox } from "./parseYesNo";
@@ -13,8 +14,7 @@ function resolveCustomValue(
   findings: Findings
 ): string | null {
   if (field.type === "select") {
-    const options = field.options.map((o) => ({ id: o.id, label: o.label }));
-    return findings.record(hint, query, matchCatalogItem(query, options));
+    return findings.record(hint, query, matchCatalogItem(query, optionCandidates(field)));
   }
   if (field.type === "checkbox") {
     const checked = parseCheckbox(query);

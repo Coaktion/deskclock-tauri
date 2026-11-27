@@ -41,6 +41,20 @@ function score(query: string, queryWords: string[], target: string): number {
 }
 
 /**
+ * O trecho bate com algum item por igualdade ou prefixo de palavras — sem o
+ * fuzzy. É a prova que a leitura por posição usa para decidir o campo: frouxa
+ * como o fuzzy, um nome longo de projeto engoliria qualquer trecho curto.
+ */
+export function matchesStrictly(query: string, items: TaskTextCandidate[]): boolean {
+  const normalized = normalizeForMatch(query);
+  const queryWords = words(normalized);
+  if (queryWords.length === 0) return false;
+  return items.some(
+    (item) => score(normalized, queryWords, normalizeForMatch(item.label)) >= PREFIX
+  );
+}
+
+/**
  * Casa o que o usuário escreveu com uma lista do catálogo.
  *
  * **Só o melhor nível conta**: um exato não fica ambíguo porque o fuzzy, que é

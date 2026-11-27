@@ -37,7 +37,8 @@ describe("taskText.fields", () => {
     expect(res.body).toEqual({
       workspaceId: WS_ATIVO,
       instruction:
-        "Informe Projeto, Categoria, Billable e Project Stage. P= Cliente / C= Reuniões / B= nb / PS= Development",
+        "Nome, Projeto, Categoria, Billable, Project Stage, nessa ordem e por vírgula; dá para pular " +
+        "campo. Ex.: Revisão, Cliente, Reuniões, nb, Development",
       fields: [
         { sigla: "P", label: "Projeto", kind: "project", example: "Cliente" },
         { sigla: "C", label: "Categoria", kind: "category", example: "Reuniões" },
@@ -104,7 +105,7 @@ describe("taskText.interpret", () => {
       text: '{"name":"Daily","fields":{"P":"cliente","B":"b","PS":"qa"}}',
     });
     const res = await dispatchLocalApiRequest(deps, "taskText.interpret", {
-      body: { text: "daily do cliente, billable, em QA" },
+      body: { text: "daily do cliente billable em QA" },
     });
     expect(res.status).toBe(200);
     expect(llm.complete).toHaveBeenCalledTimes(1);

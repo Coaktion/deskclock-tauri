@@ -1,6 +1,7 @@
 import type { Category } from "@domain/entities/Category";
 import { resolveCategoriesForProject } from "@domain/usecases/projectCategories/resolveCategoriesForProject";
 import type { UUID } from "@shared/types";
+import { namedCandidates } from "./candidates";
 import { Findings, valueFor } from "./findings";
 import { matchCatalogItem } from "./matchCatalogItem";
 import { parseBillable } from "./parseYesNo";
@@ -27,8 +28,7 @@ function resolveNamed(
   findings: Findings
 ): UUID | null {
   if (!hint || !query) return null;
-  const candidates = items.map((item) => ({ id: item.id, label: item.name }));
-  return findings.record(hint, query, matchCatalogItem(query, candidates));
+  return findings.record(hint, query, matchCatalogItem(query, namedCandidates(items)));
 }
 
 /**
