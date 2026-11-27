@@ -122,6 +122,8 @@ pub const CREATE_MONDAY_CATALOG_FIELD: &str = "create_monday_catalog_field";
 pub const REFRESH_MONDAY_CATALOG_FIELD: &str = "refresh_monday_catalog_field";
 pub const SET_MONDAY_PROJECT_BOARD: &str = "set_monday_project_board";
 pub const RUN_INTEGRATION_SYNC_NOW: &str = "run_integration_sync_now";
+pub const GET_TASK_TEXT_FIELDS: &str = "get_task_text_fields";
+pub const INTERPRET_TASK_TEXT: &str = "interpret_task_text";
 
 pub const OP_STATUS: &str = "status.get";
 pub const OP_WORKSPACES: &str = "workspaces.list";
@@ -240,6 +242,8 @@ pub const OP_MONDAY_CREATE_CATALOG_FIELD: &str = "monday.createCatalogField";
 pub const OP_MONDAY_REFRESH_CATALOG_FIELD: &str = "monday.refreshCatalogField";
 pub const OP_MONDAY_SET_PROJECT_BOARD: &str = "monday.setProjectBoard";
 pub const OP_INTEGRATIONS_SYNC_NOW: &str = "integrations.syncNow";
+pub const OP_TASK_TEXT_FIELDS: &str = "taskText.fields";
+pub const OP_TASK_TEXT_INTERPRET: &str = "taskText.interpret";
 
 /// Uma chamada à ponte. `key` é onde a resposta entra no resultado da tool; `None`
 /// quando a tool devolve o corpo da `op` como veio.
@@ -581,6 +585,10 @@ pub const TOOL_OPS: &[(&str, &[OpCall])] = &[
         RUN_INTEGRATION_SYNC_NOW,
         &[pass_through(OP_INTEGRATIONS_SYNC_NOW)],
     ),
+    // Iniciar tarefa por texto: só leem e interpretam; quem inicia é start_task,
+    // log_past_task ou plan_task, depois de o usuário confirmar.
+    (GET_TASK_TEXT_FIELDS, &[pass_through(OP_TASK_TEXT_FIELDS)]),
+    (INTERPRET_TASK_TEXT, &[pass_through(OP_TASK_TEXT_INTERPRET)]),
 ];
 
 pub fn ops_of(tool: &str) -> &'static [OpCall] {

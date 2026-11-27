@@ -106,6 +106,8 @@ Todas do usuário, em 2026-09-18.
 | `run_integration_sync_now` | `integrations.syncNow` | "Enviar agora" do envio diário (Sheets e Monday); `idempotentHint: false`, `openWorldHint: true` (Fase D3b) |
 | `list_day_summaries` | `daySummaries.list` | Resumos já gerados do período, do banco local; `readOnlyHint`, `openWorldHint: false` (Fase D2) |
 | `generate_day_summaries` | `daySummaries.generate` | Regras da aba Resumo: até 5 dias, cache, hoje regerado, erro por dia, parada na cota; `openWorldHint: true`, `idempotentHint: false` (Fase D2) |
+| `get_task_text_fields` | `taskText.fields` | Instrução e campos do texto da tarefa (sigla, tipo, exemplo do catálogo); `readOnlyHint`, `openWorldHint: false` (`iniciar-tarefa-por-texto.md`) |
+| `interpret_task_text` | `taskText.interpret` | Interpreta o texto **sem iniciar nada**; a descrição manda confirmar ambíguos com o usuário e então chamar `start_task`/`log_past_task`/`plan_task` com os ids e `customValues` devolvidos. `readOnlyHint`, `openWorldHint: true` (texto livre vai ao provedor) (`iniciar-tarefa-por-texto.md`) |
 | `get_drive_backup_status` · `run_drive_backup` | `driveBackup.status` · `driveBackup.run` | Estado (só config, `readOnlyHint`) e "Fazer backup agora" (`openWorldHint: true`, `idempotentHint: false`) (Fase D2) |
 
 Ainda sem tool: só as que ficam de fora com motivo próprio (`tasks.toggle`, `history.get`, `plannedTasks.get`,

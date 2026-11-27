@@ -186,6 +186,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "get_shortcut_settings",
             "get_status",
             "get_task_share_link",
+            "get_task_text_fields",
             "get_totals",
             "get_week_totals",
             "get_zendesk_settings",
@@ -198,6 +199,7 @@ async fn tools_list_devolve_exatamente_as_tools_da_tabela() {
             "import_monday_projects",
             "import_projects",
             "import_zendesk_tickets",
+            "interpret_task_text",
             "list_catalog",
             "list_clockify_catalog",
             "list_clockify_entries",
@@ -421,6 +423,10 @@ async fn anotacoes_separam_leitura_de_escrita_e_marcam_as_destrutivas() {
         ("refresh_monday_catalog_field", false, Some(true), false),
         ("set_monday_project_board", false, Some(true), true),
         ("run_integration_sync_now", false, Some(false), true),
+        // Iniciar tarefa por texto: nenhuma grava nada. A interpretação de texto
+        // livre manda o texto ao provedor de IA (mundo aberto); com sigla, não.
+        ("get_task_text_fields", true, None, false),
+        ("interpret_task_text", true, None, true),
     ];
     // Toda tool está na tabela: tool nova sem anotação conferida reprova aqui.
     assert_eq!(expected.len(), TOOL_OPS.len());
@@ -3599,4 +3605,79 @@ async fn fase_d3b_com_erro_da_ponte_vira_is_error_com_a_mensagem() {
         error_text(&result),
         "Monday não conectado. Conecte o Monday em Integrações."
     );
+}
+
+fn task_text_responder(op: &str) -> (u16, Value) {
+    match op {
+        "taskText.fields" => (
+            200,
+            json!({ "instruction": "Informe Projeto.", "fields": [] }),
+        ),
+        "taskText.interpret" => (200, json!({ "name": "Daily", "source": "local" })),
+        other => (500, json!({ "error": format!("inesperada: {other}") })),
+    }
+}
+
+#[tokio::test]
+async fn tools_de_texto_da_tarefa_repassam_os_params_como_a_rest() {
+    let cases: Vec<(&str, Value, &str, Value)> = vec![
+        (
+            "get_task_text_fields",
+            json!({ "workspaceId": "ws-1" }),
+            "taskText.fields",
+            json!({ "workspaceId": "ws-1" }),
+        ),
+        (
+            "get_task_text_fields",
+            json!({}),
+            "taskText.fields",
+            json!({ "workspaceId": null }),
+        ),
+        (
+            "interpret_task_text",
+            json!({ "text": "Daily P=acme", "workspaceId": "ws-1" }),
+            "taskText.interpret",
+            json!({ "body": { "text": "Daily P=acme", "workspaceId": "ws-1" } }),
+        ),
+        (
+            "interpret_task_text",
+            json!({ "text": "Daily" }),
+            "taskText.interpret",
+            json!({ "body": { "text": "Daily" } }),
+        ),
+    ];
+    for (tool, arguments, op, params) in cases {
+        let (state, calls) = fake_state(true, task_text_responder);
+        let result = call_tool(state, tool, arguments).await;
+        assert_eq!(result["isError"], json!(false), "{tool}: {result}");
+        assert!(result["structuredContent"].is_object(), "{tool}: {result}");
+        let calls = calls.lock().unwrap().clone();
+        assert_eq!(calls, vec![(op.to_string(), params)], "{tool}");
+    }
+}
+
+#[tokio::test]
+async fn interpretar_sem_texto_vira_is_error_sem_chamar_a_ponte() {
+    for arguments in [json!({}), json!({ "text": 3 })] {
+        let (state, calls) = fake_state(true, task_text_responder);
+        let result = call_tool(state, "interpret_task_text", arguments.clone()).await;
+        error_text(&result);
+        assert!(calls.lock().unwrap().is_empty(), "{arguments}");
+    }
+}
+
+#[tokio::test]
+async fn interpretar_avisa_que_nao_inicia_e_aponta_as_tools_que_iniciam() {
+    let (state, _) = fake_state(true, task_text_responder);
+    let tools = list_tools(state).await;
+    let tool = tools
+        .iter()
+        .find(|t| t["name"] == "interpret_task_text")
+        .unwrap();
+    let description = tool["description"].as_str().unwrap();
+    assert!(description.contains("does NOT start"), "{description}");
+    for next in ["start_task", "log_past_task", "plan_task"] {
+        assert!(description.contains(next), "{next}: {description}");
+    }
+    assert_eq!(tool["inputSchema"]["required"], json!(["text"]), "{tool}");
 }

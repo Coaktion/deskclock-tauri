@@ -106,6 +106,7 @@ pub mod planned_tasks;
 pub mod services;
 pub mod settings;
 pub mod share;
+pub mod task_text;
 pub mod totals;
 pub mod workspaces;
 
