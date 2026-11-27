@@ -127,6 +127,26 @@ describe("chooseTaskTextCandidate", () => {
     ]);
   });
 
+  it("o projeto recorta a categoria ambígua; sobrando duas ou mais, a ambiguidade fica só com elas", () => {
+    const catalog = makeCatalog({
+      projectCategoryMap: new Map([["p-acme", new Set(["c-meet", "c-dev"])]]),
+    });
+    const wide: TaskTextAmbiguity = {
+      ...CATEGORY_AMBIGUITY,
+      candidates: [...CATEGORY_AMBIGUITY.candidates, { id: "c-sup", label: "Suporte" }],
+    };
+    const result = chooseTaskTextCandidate(
+      interpretation({ ambiguities: [PROJECT_AMBIGUITY, wide] }),
+      "project",
+      "p-acme",
+      catalog
+    );
+    expect(result.projectId).toBe("p-acme");
+    expect(result.categoryId).toBeNull();
+    expect(result.notFound).toEqual([]);
+    expect(result.ambiguities).toEqual([{ ...wide, candidates: CATEGORY_AMBIGUITY.candidates }]);
+  });
+
   it("escolher a categoria aplica o billable padrão dela", () => {
     const result = chooseTaskTextCandidate(
       interpretation({ ambiguities: [CATEGORY_AMBIGUITY] }),

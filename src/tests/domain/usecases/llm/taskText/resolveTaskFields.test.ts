@@ -123,6 +123,16 @@ describe("resolveTaskFields", () => {
     expect(resolve({ [sigla]: "não" }).customValues).toEqual({});
   });
 
+  it("checkbox ilegível vira não encontrado e não grava valor", () => {
+    const hints = buildTaskFieldHints([CHECK_FIELD], makeCatalog());
+    const sigla = hints[3].sigla;
+    const result = resolve({ [sigla]: "talvez" });
+    expect(result.customValues).toEqual({});
+    expect(result.notFound).toEqual([
+      { key: "f-check", sigla, label: "Hora extra", query: "talvez" },
+    ]);
+  });
+
   it("texto grava o valor cru, aparado", () => {
     expect(resolve({ T: "  #1234  " }).customValues).toEqual({ "f-ticket": "#1234" });
   });
