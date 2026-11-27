@@ -2,6 +2,7 @@ import type { Category } from "@domain/entities/Category";
 import type { CustomValues } from "@domain/entities/CustomField";
 import type { PlannedTask } from "@domain/entities/PlannedTask";
 import type { Project } from "@domain/entities/Project";
+import type { TaskTextInterpretation } from "@domain/usecases/llm/taskText/types";
 import { createRetroactiveTask } from "@domain/usecases/tasks/CreateRetroactiveTask";
 import { completePlannedTask } from "@domain/usecases/plannedTasks/CompletePlannedTask";
 import { DomainError } from "@shared/errors";
@@ -23,6 +24,15 @@ function isoToHHMM(iso: string): string {
   const d = new Date(iso);
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+
+/**
+ * O "quê" da tarefa — tudo menos os horários. É o que a aba IA entrega pronto,
+ * no lugar dos campos que o formulário lê um a um.
+ */
+export type RetroactiveTaskWhat = Pick<
+  TaskTextInterpretation,
+  "name" | "projectId" | "categoryId" | "billable" | "customValues"
+>;
 
 interface UseRetroactiveFormOptions {
   selectedDate: string;
@@ -80,7 +90,26 @@ export function useRetroactiveForm({
   const prefilledPlannedTaskId = useRef<string | null>(null);
   const prefilledDate = useRef<string | null>(null);
 
-  async function handleAdd(overrideEndHHMM?: string) {
+  /** O "quê" como os campos do formulário estão agora. */
+  function currentWhat(): RetroactiveTaskWhat {
+    return {
+      name: name.trim() || null,
+      projectId: projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null,
+      categoryId: categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null,
+      billable,
+      customValues,
+    };
+  }
+
+  /**
+   * Grava e encadeia a próxima. `what` vem pronto da aba IA: o estado que o
+   * `applyInterpretation` acabou de escrever só chega no próximo render, e lido
+   * daqui sairia o da tarefa anterior. `true` = gravou.
+   */
+  async function handleAdd(
+    overrideEndHHMM?: string,
+    what: RetroactiveTaskWhat = currentWhat()
+  ): Promise<boolean> {
     setError("");
     const st = startTime || prevStart.current;
     const et = overrideEndHHMM ?? (endTime || prevEnd.current);
@@ -93,9 +122,6 @@ export function useRetroactiveForm({
       (new Date(endISO).getTime() - new Date(startISO).getTime()) / 1000
     );
 
-    const pId = projects.find((p) => p.name === projectName)?.id ?? selectedProjectId ?? null;
-    const cId = categories.find((c) => c.name === categoryName)?.id ?? selectedCategoryId ?? null;
-
     setSaving(true);
     try {
       // O prefill da planejada não passa por `launchPlannedTaskRetroactively`:
@@ -105,14 +131,17 @@ export function useRetroactiveForm({
         taskRepo,
         {
           workspaceId,
-          name: name.trim() || null,
-          projectId: pId,
-          categoryId: cId,
-          billable,
+          // Campo a campo, e não por espalhamento: o que chega da aba IA é o
+          // início de tarefa do omnibox, com `startTime` e `plannedTaskId` que
+          // não são deste lançamento.
+          name: what.name,
+          projectId: what.projectId,
+          categoryId: what.categoryId,
+          billable: what.billable,
+          customValues: what.customValues,
           startTime: startISO,
           endTime: endISO,
           durationSeconds,
-          customValues,
         },
         new Date().toISOString()
       );
@@ -121,7 +150,7 @@ export function useRetroactiveForm({
       setSaving(false);
       if (e instanceof DomainError) {
         setError(e.message);
-        return;
+        return false;
       }
       throw e;
     }
@@ -150,6 +179,7 @@ export function useRetroactiveForm({
     setDurationInput(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     nameRef.current?.focus();
     await onTaskAdded();
+    return true;
   }
 
   function prefill(task: PlannedTask) {
@@ -165,6 +195,26 @@ export function useRetroactiveForm({
     setBillable(task.billable);
     setCustomValues(task.customValues);
     nameRef.current?.focus();
+  }
+
+  /**
+   * Leva a interpretação do texto para os campos do formulário. Projeto,
+   * categoria e campos ficam para a próxima da cadeia, como ficam quando
+   * digitados — e são o que a aba Formulário mostra se o usuário voltar a ela.
+   *
+   * Desfaz o vínculo com a planejada do pré-preenchimento: a tarefa agora é a
+   * que o texto descreveu, e concluir aquela seria marcar feito o que não foi.
+   */
+  function applyInterpretation(what: RetroactiveTaskWhat) {
+    prefilledPlannedTaskId.current = null;
+    prefilledDate.current = null;
+    setName(what.name ?? "");
+    setProjectName(projects.find((p) => p.id === what.projectId)?.name ?? "");
+    setSelectedProjectId(what.projectId);
+    setCategoryName(categories.find((c) => c.id === what.categoryId)?.name ?? "");
+    setSelectedCategoryId(what.categoryId);
+    setBillable(what.billable);
+    setCustomValues(what.customValues);
   }
 
   /**
@@ -222,6 +272,7 @@ export function useRetroactiveForm({
     commitDuration,
     handleAdd,
     prefill,
+    applyInterpretation,
     advanceChainStart,
   };
 }

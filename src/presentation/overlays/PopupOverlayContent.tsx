@@ -25,11 +25,22 @@ import { OverlayWorkspaceChip } from "@presentation/overlays/OverlayWorkspaceChi
 import { PlannedTaskEditSheet } from "@presentation/overlays/PlannedTaskEditSheet";
 import { PopupPlannedRow } from "@presentation/overlays/PopupPlannedRow";
 import { RunningTaskEditSheet } from "@presentation/overlays/RunningTaskEditSheet";
+import { TaskTextSheet } from "@presentation/overlays/TaskTextSheet";
 import { OVERLAY_EVENTS } from "@shared/types/overlayEvents";
 import { formatHHMMSS, parseStartTimeInput, todayISO } from "@shared/utils/time";
 import { POPUP_SIZE } from "@shared/utils/windowPosition";
 import { emit } from "@tauri-apps/api/event";
-import { ArrowRight, CalendarDays, CheckCircle2, Clock, Pen, Play, X, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  Clock,
+  Pen,
+  Play,
+  Sparkles,
+  X,
+  Zap,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 /*
@@ -77,6 +88,21 @@ const TABS_H = 37;
  */
 const SHOW_FULL_NAME = titleWhenTruncated("Editar tarefa");
 
+/**
+ * O que o popup sabe iniciar. `startTime` e `customValues` vêm do "Iniciar com
+ * IA" — o início vale o instante do primeiro envio do texto, e os campos
+ * personalizados são os que a interpretação preencheu.
+ */
+export interface PopupStartTaskInput {
+  name?: string | null;
+  projectId?: string | null;
+  categoryId?: string | null;
+  billable: boolean;
+  plannedTaskId?: string | null;
+  startTime?: string;
+  customValues?: CustomValues;
+}
+
 interface PopupOverlayContentProps {
   runningTask: Task | null;
   activePlannedTaskActions: PlannedTaskAction[];
@@ -87,13 +113,7 @@ interface PopupOverlayContentProps {
    * sumir no blur nem no ESC — fechar sozinho descartaria a edição em curso.
    */
   onModalOpenChange: (open: boolean) => void;
-  onStartTask: (input: {
-    name?: string | null;
-    projectId?: string | null;
-    categoryId?: string | null;
-    billable: boolean;
-    plannedTaskId?: string | null;
-  }) => Promise<void>;
+  onStartTask: (input: PopupStartTaskInput) => Promise<void>;
   onPlay: (task: PlannedTask) => Promise<void>;
   onPause: () => Promise<void>;
   onResume: () => Promise<void>;
@@ -464,22 +484,27 @@ export function PopupOverlayContent({
   const [editingTask, setEditingTask] = useState<PlannedTask | null>(null);
   const [editingCompleted, setEditingCompleted] = useState<TaskGroup | null>(null);
   const [editingRunning, setEditingRunning] = useState(false);
+  const [startingByText, setStartingByText] = useState(false);
 
   // Reset confirm state whenever the running task changes (started/stopped).
   // O painel da execução vai junto: sem tarefa ele editaria o que já não está em
   // execução, e o `Salvar` gravaria numa tarefa parada por outra janela.
+  // O "Iniciar com IA" sai no sentido inverso: com tarefa rodando — iniciada por
+  // ele ou por outra janela — ele seria a segunda tarefa que o rodapé impede.
   useEffect(() => {
     if (!runningTask) {
       setConfirmingStop(false);
       setEditingRunning(false);
+    } else {
+      setStartingByText(false);
     }
   }, [runningTask?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Os três painéis seguram o fechamento automático pelo mesmo motivo: o popup
+  // Os quatro painéis seguram o fechamento automático pelo mesmo motivo: o popup
   // some no blur, e todos eles guardam texto digitado que ninguém salvou ainda.
   useEffect(() => {
-    onModalOpenChange(!!editingTask || !!editingCompleted || editingRunning);
-  }, [editingTask, editingCompleted, editingRunning, onModalOpenChange]);
+    onModalOpenChange(!!editingTask || !!editingCompleted || editingRunning || startingByText);
+  }, [editingTask, editingCompleted, editingRunning, startingByText, onModalOpenChange]);
 
   // A janela é dimensionada **uma vez**, e não por estado: a altura é a mesma em
   // todo estado, e crescer a janela para editar tiraria o overlay do lugar onde
@@ -646,6 +671,16 @@ export function PopupOverlayContent({
           >
             Nova tarefa
           </Button>
+          {/* Sempre visível, com ou sem provedor de IA: as siglas se resolvem
+              no app. Mesma guarda do "Nova tarefa" — só existe no idle. */}
+          <Button
+            variant="ghost"
+            icon={<Sparkles size={14} />}
+            onClick={() => setStartingByText(true)}
+            className="ml-4"
+          >
+            Iniciar com IA
+          </Button>
         </div>
       )}
 
@@ -687,6 +722,11 @@ export function PopupOverlayContent({
           onSave={onUpdateTask}
           onClose={() => setEditingRunning(false)}
         />
+      )}
+
+      {/* O texto curto → a prévia → a tarefa, no mesmo desenho de painel. */}
+      {startingByText && !runningTask && (
+        <TaskTextSheet onStart={onStartTask} onClose={() => setStartingByText(false)} />
       )}
     </div>
   );

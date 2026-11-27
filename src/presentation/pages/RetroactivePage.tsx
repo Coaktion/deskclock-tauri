@@ -22,6 +22,7 @@ import { useCustomFields } from "@presentation/hooks/useCustomFields";
 import { usePersistedFlag } from "@presentation/hooks/usePersistedFlag";
 import { useProjects } from "@presentation/hooks/useProjects";
 import { useResizablePanel } from "@presentation/hooks/useResizablePanel";
+import { useRetroactiveEntryMode } from "@presentation/hooks/useRetroactiveEntryMode";
 import { useRetroactiveForm } from "@presentation/hooks/useRetroactiveForm";
 import { useTaskUndo } from "@presentation/hooks/useTaskUndo";
 import { useTour } from "@presentation/hooks/useTour";
@@ -91,6 +92,7 @@ export function RetroactivePage() {
 
   const { activeFields } = useCustomFields();
   const formColumn = usePersistedFlag("retroactiveFormCollapsed");
+  const entryMode = useRetroactiveEntryMode();
 
   // ── Altura da lista de planejadas ──────────────────────────────────────────
   // O teto do arraste é o **conteúdo**, não o limite duro: passado ele não há
@@ -161,6 +163,8 @@ export function RetroactivePage() {
       // Preencher um formulário recolhido não teria efeito visível nenhum — quem
       // chegou por deeplink veio para conferir e completar os campos.
       formColumn.set(false);
+      // Os campos que o deeplink preenche só existem na aba Formulário.
+      entryMode.setMode("form");
       if (p.date) setSelectedDate(p.date);
       if (p.name != null) form.setName(p.name);
       if (p.projectName != null) form.setProjectName(p.projectName);
@@ -356,6 +360,8 @@ export function RetroactivePage() {
             projects={projects}
             categories={categories}
             customFields={activeFields}
+            mode={entryMode.mode}
+            onModeChange={entryMode.setMode}
           />
         </CollapsibleFormColumn>
 
@@ -432,6 +438,7 @@ export function RetroactivePage() {
                               return;
                             }
                             formColumn.set(false);
+                            entryMode.setMode("form");
                             form.prefill(task);
                           }}
                           disabled={launchingAll}

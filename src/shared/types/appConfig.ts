@@ -61,6 +61,15 @@ export const DEFAULT_WEEK_START: WeekStart = 1;
 /** Desligado — o planejamento é de dias úteis para quase todo mundo. */
 export const DEFAULT_SHOW_WEEKEND = false;
 
+/**
+ * Aba da coluna de entrada do Lançamento Manual: os campos um a um, ou o texto
+ * curto que a IA interpreta (`docs-internal/specs/iniciar-tarefa-por-texto.md`).
+ */
+export type RetroactiveEntryMode = "form" | "ai";
+
+/** O formulário — o comportamento de antes das abas. */
+export const DEFAULT_RETROACTIVE_ENTRY_MODE: RetroactiveEntryMode = "form";
+
 export interface AppConfig extends IntegrationWorkspaceConfig {
   // Geral
   setupCompleted: boolean;
@@ -90,6 +99,12 @@ export interface AppConfig extends IntegrationWorkspaceConfig {
    * fazia com o `max-h-36` que este valor substituiu.
    */
   retroactivePlannedHeight: number;
+  /**
+   * Aba escolhida na coluna de entrada do Lançamento Manual. Memorizada pelo
+   * mesmo motivo do recolhido: quem lança pelo texto quer reabrir no texto. Não
+   * é segredo nem aparece em Configurações — o controle são as próprias abas.
+   */
+  retroactiveEntryMode: RetroactiveEntryMode;
   // Acessibilidade
   /**
    * Modo e acento são eixos independentes. Vazio significa "nunca escolhido" e

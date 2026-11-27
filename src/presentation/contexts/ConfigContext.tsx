@@ -2,7 +2,11 @@ import type { IConfigRepository } from "@domain/repositories/IConfigRepository";
 import { ConfigRepository } from "@infra/database/ConfigRepository";
 import { DEFAULT_LLM_PROVIDER_ID } from "@infra/integrations/llm/providers";
 import { FORM_COLUMN_WIDTH } from "@presentation/components/fieldStyles";
-import { DEFAULT_SHOW_WEEKEND, DEFAULT_WEEK_START } from "@shared/types/appConfig";
+import {
+  DEFAULT_RETROACTIVE_ENTRY_MODE,
+  DEFAULT_SHOW_WEEKEND,
+  DEFAULT_WEEK_START,
+} from "@shared/types/appConfig";
 import type {
   AppConfig,
   ConfigContextValue,
@@ -32,6 +36,7 @@ const DEFAULTS: AppConfig = {
   planningFormWidth: FORM_COLUMN_WIDTH.default,
   retroactiveFormWidth: FORM_COLUMN_WIDTH.default,
   retroactivePlannedHeight: 144,
+  retroactiveEntryMode: DEFAULT_RETROACTIVE_ENTRY_MODE,
   mode: "" as const,
   accent: "" as const,
   theme: "azul" as const,

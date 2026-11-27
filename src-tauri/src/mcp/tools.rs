@@ -1916,6 +1916,17 @@ pub struct RunIntegrationSyncNowArgs {
     pub integration: SyncNowIntegrationArg,
 }
 
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct InterpretTaskTextArgs {
+    /// The user's short text, as they typed it — with or without siglas
+    /// (`Daily sprint P=acme C=dev nb PS=dev`). Not empty.
+    pub text: String,
+    /// Workspace id (from list_catalog). Omit to use the active workspace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
+}
+
 #[tool_router]
 impl DeskClockMcp {
     pub fn new(bridge: Arc<Bridge>) -> Self {
@@ -4337,6 +4348,49 @@ impl DeskClockMcp {
             json!({ "id": serde_json::to_value(args.integration).unwrap_or(Value::Null) }),
         )
         .await
+    }
+
+    #[tool(
+        name = "get_task_text_fields",
+        description = "The fields a short task text can fill, as the app's \"start task by \
+            text\" input shows them: Project (`P`), Category (`C`), Billable (`B`) and each \
+            active custom field, with the sigla the user types before `=` (`PS=dev`), its kind \
+            and an example from the workspace catalog; plus `instruction`, the line the app \
+            shows above the input (name and fields in order, comma-separated). Use it to tell \
+            the user what they can write. Reads local data only.",
+        annotations(read_only_hint = true, open_world_hint = false)
+    )]
+    async fn get_task_text_fields(
+        &self,
+        Parameters(args): Parameters<WorkspaceArgs>,
+    ) -> CallToolResult {
+        self.call_single(GET_TASK_TEXT_FIELDS, args.params()).await
+    }
+
+    #[tool(
+        name = "interpret_task_text",
+        description = "Turn a short task text into task fields, like the app's \"start task \
+            by text\" preview. It does NOT start, log or plan anything. A text with siglas \
+            (`P=acme C=dev nb`) or positional, comma-separated in the instruction's order with \
+            fields skippable (`Daily, Acme, Development, nb`), is split in the app without \
+            calling the AI provider; free text goes to the user's AI provider when one is \
+            connected (only the text and each field's label, sigla and kind — never the \
+            catalog), and without one the whole text becomes the name. Matching to projects, categories and options is local. Returns \
+            `name`, `projectId`/`projectName`, `categoryId`/`categoryName`, `billable` \
+            (`billableExplicit` false = taken from the category default), `customValues` \
+            (field id → stored value) with `customFields` labelled for display, \
+            `ambiguities` (several candidates, up to 5) and `notFound`, and `source` (`local` \
+            or `llm`). Show the result to the user and confirm every ambiguity and missing \
+            value with them before acting; then call start_task, log_past_task or plan_task \
+            with the returned ids and customValues.",
+        annotations(read_only_hint = true, open_world_hint = true)
+    )]
+    async fn interpret_task_text(
+        &self,
+        Parameters(args): Parameters<InterpretTaskTextArgs>,
+    ) -> CallToolResult {
+        self.call_single(INTERPRET_TASK_TEXT, json!({ "body": args }))
+            .await
     }
 }
 

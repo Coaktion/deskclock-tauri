@@ -116,7 +116,9 @@
     "monday.createCatalogField": "create_monday_catalog_field",
     "monday.refreshCatalogField": "refresh_monday_catalog_field",
     "monday.setProjectBoard": "set_monday_project_board",
-    "integrations.syncNow": "run_integration_sync_now"
+    "integrations.syncNow": "run_integration_sync_now",
+    "taskText.fields": "get_task_text_fields",
+    "taskText.interpret": "interpret_task_text"
   },
   "excluded": {
     "tasks.toggle": "ambígua para o modelo: start/pause/resume cobrem as três intenções",

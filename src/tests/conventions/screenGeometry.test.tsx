@@ -323,6 +323,23 @@ describe("geometria: tela 3a contra o spec do design", () => {
         suggestions={[]}
         startPlanned={() => Promise.resolve()}
         handleStart={() => Promise.resolve()}
+        changeName={() => {}}
+        textStatus="idle"
+        taskText={{
+          // Sem instrução: a linha da dica não desenha, e o que se mede é o cartão do design.
+          instruction: "",
+          interpretation: null,
+          error: null,
+          hints: [],
+          catalog: {
+            projects: [],
+            categories: [],
+            projectCategoryMap: new Map(),
+            customFields: [],
+          },
+          choose: () => {},
+          setBillable: () => {},
+        }}
         handleInputKeyDown={() => {}}
         reset={() => {}}
       />

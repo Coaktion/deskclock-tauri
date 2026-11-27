@@ -2,7 +2,7 @@ use crate::api::guard::reject_foreign_origin;
 use crate::api::handlers;
 use crate::api::handlers::{
     catalog, custom_fields, entry_writes, export, history, imports, integration_settings,
-    integrations, planned_tasks, services, settings, share, totals, workspaces,
+    integrations, planned_tasks, services, settings, share, task_text, totals, workspaces,
 };
 use crate::api::openapi::ApiDoc;
 use crate::api::state::ApiState;
@@ -113,6 +113,11 @@ pub fn build_router(state: Arc<ApiState>) -> Router {
                 .delete(history::delete_task),
         )
         .route("/tasks/{id}/billable", put(history::put_task_billable))
+        .route("/tasks/text/fields", get(task_text::get_task_text_fields))
+        .route(
+            "/tasks/text/interpret",
+            post(task_text::post_task_text_interpret),
+        )
         .route("/totals", get(totals::get_totals))
         .route("/totals/week", get(totals::get_week_totals))
         .route(
@@ -687,6 +692,39 @@ mod tests {
             let (status, got) = send(method, uri, body).await;
             assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
             assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn texto_da_tarefa_chega_a_ponte_com_a_op_certa() {
+        let cases = [
+            ("GET", "/tasks/text/fields", "", "taskText.fields"),
+            (
+                "GET",
+                "/tasks/text/fields?workspaceId=ws-1",
+                "",
+                "taskText.fields",
+            ),
+            (
+                "POST",
+                "/tasks/text/interpret",
+                r#"{"text":"Daily P=acme"}"#,
+                "taskText.interpret",
+            ),
+        ];
+        for (method, uri, body, op) in cases {
+            let (status, got) = send(method, uri, body).await;
+            assert_eq!(got.as_deref(), Some(op), "{method} {uri}");
+            assert_eq!(status, StatusCode::GATEWAY_TIMEOUT, "{method} {uri}");
+        }
+    }
+
+    #[tokio::test]
+    async fn interpretar_sem_texto_e_400_sem_chegar_a_ponte() {
+        for body in ["", "{}", r#"{"text":3}"#] {
+            let (status, got) = send("POST", "/tasks/text/interpret", body).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+            assert_eq!(got, None, "{body}");
         }
     }
 

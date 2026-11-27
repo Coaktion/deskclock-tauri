@@ -6,6 +6,7 @@ import { actionsOfPlanned, indexPlannedById } from "@domain/utils/plannedActions
 import { useRunningTask } from "@presentation/hooks/useRunningTask";
 import { useTaskTimer } from "@presentation/hooks/useTaskTimer";
 import { useOmniboxDraft } from "@presentation/hooks/useOmniboxDraft";
+import { useTaskTextInterpretation } from "@presentation/hooks/useTaskTextInterpretation";
 import {
   useOmniboxRunningEdit,
   type OmniboxFocus,
@@ -56,7 +57,14 @@ export function Omnibox({
   const containerRef = useRef<HTMLDivElement>(null);
   const plannedIndex = useMemo(() => indexPlannedById(plannedTasks), [plannedTasks]);
 
-  const draft = useOmniboxDraft({ plannedTasks, today, startTask, onStarted });
+  const taskText = useTaskTextInterpretation();
+  const draft = useOmniboxDraft({
+    plannedTasks,
+    today,
+    startTask,
+    onStarted,
+    interpreter: taskText,
+  });
 
   const edit = useOmniboxRunningEdit({
     runningTask,
@@ -115,6 +123,7 @@ export function Omnibox({
       onToggleBillable={onTogglePlannedBillable}
       onCompletePlanned={onCompletePlanned}
       onNavigatePlanning={onNavigatePlanning}
+      taskText={taskText}
     />
   );
 }
